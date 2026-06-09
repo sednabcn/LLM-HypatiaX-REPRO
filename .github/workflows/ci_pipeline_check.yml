@@ -192,7 +192,7 @@ jobs:
 
     steps:
       - name: Checkout master
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -380,7 +380,7 @@ jobs:
 
     steps:
       - name: Checkout master
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -643,7 +643,7 @@ jobs:
 
     steps:
       - name: Checkout master
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -1117,7 +1117,7 @@ jobs:
 
     steps:
       - name: Checkout master
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true

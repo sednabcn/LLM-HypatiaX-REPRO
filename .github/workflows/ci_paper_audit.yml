@@ -157,7 +157,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5.3.0
@@ -224,7 +224,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token:               ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -508,7 +508,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
 
       - name: Download canonical assets from collect-figures-tables
         uses: actions/download-artifact@v4.1.8
@@ -579,7 +579,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token:               ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -678,7 +678,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token:               ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -928,7 +928,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token:               ${{ secrets.GITHUB_TOKEN }}
           persist-credentials: true
@@ -978,7 +978,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5.3.0
