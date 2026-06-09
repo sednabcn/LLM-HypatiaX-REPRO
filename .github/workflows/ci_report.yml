@@ -127,7 +127,7 @@ jobs:
       # workflow_dispatch triggers find the correct artifacts.
 
       - name: Download NB-01 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-01_Citation_Bibliography_Audit
           path: notebooks/NB-01
@@ -136,7 +136,7 @@ jobs:
         continue-on-error: true
 
       - name: Download NB-02 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-02_CrossReference_Label_Audit
           path: notebooks/NB-02
@@ -145,7 +145,7 @@ jobs:
         continue-on-error: true
 
       - name: Download NB-03 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-03_Section_Structure_Numbering
           path: notebooks/NB-03
@@ -154,7 +154,7 @@ jobs:
         continue-on-error: true
 
       - name: Download NB-04 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-04_Numerical_Consistency_Checker
           path: notebooks/NB-04
@@ -163,7 +163,7 @@ jobs:
         continue-on-error: true
 
       - name: Download NB-05 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-05_Figure_Image_Dependency_Checker
           path: notebooks/NB-05
@@ -172,7 +172,7 @@ jobs:
         continue-on-error: true
 
       - name: Download NB-06 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: NB-06_Code_Quality_Pipeline_Integrity
           path: notebooks/NB-06

@@ -260,7 +260,7 @@ jobs:
             github.event.inputs.experiment == 'exp3b'
           )
         continue-on-error: true
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v8
         with:
           run-id:         ${{ github.event.inputs.source_run_id }}
           github-token:   ${{ secrets.GITHUB_TOKEN }}
