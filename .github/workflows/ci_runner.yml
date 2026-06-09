@@ -666,7 +666,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -2196,7 +2196,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check_exp2.outputs.already_done != 'true'
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
@@ -2288,7 +2288,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check_exp1.outputs.already_done != 'true'
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
@@ -2378,7 +2378,7 @@ jobs:
 
       - name: Set up Python
         if: steps.check_exp1b.outputs.already_done != 'true'
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
@@ -2479,7 +2479,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
@@ -2701,7 +2701,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
@@ -2892,7 +2892,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
