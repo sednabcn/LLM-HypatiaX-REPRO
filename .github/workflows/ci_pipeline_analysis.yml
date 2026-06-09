@@ -177,7 +177,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -457,7 +457,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -839,7 +839,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -974,7 +974,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -1125,7 +1125,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
@@ -1314,7 +1314,7 @@ jobs:
           fetch-depth: 1
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: "3.12"
 
