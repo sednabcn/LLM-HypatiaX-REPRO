@@ -1,0 +1,47 @@
+.
+├── analysis
+│   ├── analyze_hybrid_performance.py
+│   └── statistical_analysis.py
+├── core
+│   ├── base_pure_llm
+│   │   └── baseline_pure_llm_defi_discovery.py
+│   ├── generation
+│   │   ├── hybrid_all_domains_llm_nn
+│   │   │   └── hybrid_system_llm_nn_all_domains.py
+│   │   ├── hybrid_defi_llm_nn
+│   │   │   └── hybrid_ensemble_system_defi_domain.py
+│   │   └── hybrid_defi_system
+│   │       └── hybrid_system_nn_defi_domain.py
+│   ├── metrics.py
+│   └── training
+│       ├── adaptive_config.py
+│       └── baseline_neural_network_defi_improved.py
+├── experiments
+│   ├── benchmarks
+│   │   ├── exp1_ablation.py
+│   │   ├── exp3_nguyen12_hybrid50v_02.py
+│   │   ├── extrap_r2_far.py
+│   │   ├── hypatiax_defi_benchmark_pca.py
+│   │   ├── hypatiax_defi_benchmark_v3c.py
+│   │   ├── run_comparative_suite_benchmark_pca.py
+│   │   ├── run_comparative_suite_benchmark_v2.py
+│   │   ├── run_hybrid_system_benchmark.py
+│   │   ├── run_instability_suite.py
+│   │   ├── run_noise_sweep_benchmark.py
+│   │   └── run_sample_complexity_benchmark.py
+│   └── tests
+│       └── test_enhanced_defi_extrapolation.py
+├── protocols
+│   ├── experiment_protocol_all_30.py
+│   ├── experiment_protocol_benchmark_v2.py
+│   ├── experiment_protocol_defi.py
+│   └── experiment_protocol_nguyen12.py
+├── tools
+│   ├── symbolic
+│   │   └── symbolic_engine.py
+│   └── utils
+│       ├── __init__.py
+│       └── pca_split_utils.py
+└── tree_rd.txt
+
+16 directories, 29 files

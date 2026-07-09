@@ -78,6 +78,7 @@ on:
         options:
           - exp1
           - exp1b
+          - exp1_ablation
           - exp1_pca
           - exp1b_pca
           - exp2_feynman_pca
@@ -96,7 +97,7 @@ on:
 
       # -- Sharding ----------------------------------------------------------
       n_shards:
-        description: "Number of parallel worker shards (1-4). exp1b and exp3b default to 4; all other experiments default to 1."
+        description: "Number of parallel worker shards (user input). exp1b/exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -142,6 +143,21 @@ on:
 
       dry_run:
         description: "Dry-run - print commands without executing (true/false)"
+        required: false
+        default: "false"
+
+      # -- Force clean rerun ---------------------------------------------------
+      # FIX (Bug #2, §10.7 investigation, 2026-06-30): the skip-guard below
+      # ("Check if exp2_feynman_pca results already exist") treats ANY .json
+      # file present in exp2_pca_4060/ as "already done" and silently skips
+      # the job. This previously made it impossible to regenerate a clean
+      # exp2_pca_4060_summary.json after fixing the aggregation bug in
+      # run_all.sh (method-name filter + cross-file double counting) without
+      # a manual local `git rm`/`mv` of the output directory first. Setting
+      # force_rerun=true clears stale exp2_pca_4060/*.json before the
+      # skip-guard check, for exp2_feynman_pca runs specifically.
+      force_rerun:
+        description: "exp2_feynman_pca only: clear stale exp2_pca_4060/*.json before running, bypassing the already-done skip-guard (true/false). Use after pipeline/aggregation fixes to force a clean regeneration."
         required: false
         default: "false"
 
@@ -228,6 +244,7 @@ jobs:
     outputs:
       shard_matrix:    ${{ steps.split.outputs.shard_matrix }}
       all_pending:     ${{ steps.split.outputs.all_pending }}
+      n_shards:        ${{ steps.split.outputs.n_shards }}
       exp_id:          ${{ steps.meta.outputs.exp_id }}
       script_path:     ${{ steps.meta.outputs.script_path }}
       needs_julia:     ${{ steps.meta.outputs.needs_julia }}
@@ -269,6 +286,21 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
+              ;;
+
+            # -- STEP 2a: Core-15 ablation (§10.6) ------------------------------------
+            # exp1_ablation.py benchmarks PySR-only vs HypatiaX on the Core-15 suite.
+            # Primary output: exp1_ablation_results.json (required by ci_postprocess).
+            # Also writes: exp1_ablation_table.tex, exp1_rf01_mannwhitney.json,
+            #              exp1_rf01_significant.tex, exp1_rf01_subdomain.tex,
+            #              exp1_instability_stats.json, instability_extrapolation_v2.csv,
+            #              provenance_map_exp1.json
+            # RESULT_SUBDIR mirrors the path RESULTS_DIR is set to inside run_all.sh.
+            exp1_ablation)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="ablation/exp1_ablation"
+              DEFAULT_SEEDS="42"
               ;;
 
             exp2_feynman)
@@ -333,7 +365,39 @@ jobs:
                 NEEDS_JULIA=false
                 echo "suppB: no juliacall/PySR import detected in ${SCRIPT} — NEEDS_JULIA=false."
               fi
-              RESULT_SUBDIR="comparison_results/feynman-tests/noise-sweep/noise-sweep"
+              # FIX-suppB-DOUBLED-PATH — CONFIRMED 2026-06-23 by reading
+              # run_noise_sweep_benchmark.py's actual source directly (user
+              # uploaded it):
+              #   _RESULTS_DIR = _OUT_BASE / "comparison_results/feynman-tests/noise-sweep"   (line 106)
+              # This is the ONLY suffix appended — single level, no further
+              # nesting. The subprocess (run_comparative_suite_benchmark_v2.py)
+              # receives this exact path via --output-dir and writes
+              # protocol_core_*.json / noise_sweep_*.json directly into it
+              # (its own _OUTPUT_DIR = Path(args.output_dir).resolve(), no
+              # extra suffix). Checkpoints go to that script's separate
+              # _FLAT_OUTPUT_DIR (bare comparison_results/ root, deliberately
+              # NOT nested under noise-sweep at all — see that script's
+              # _checkpoint_path()).
+              #
+              # So with OUT_BASE = plain results root (confirmed at job env
+              # level: OUT_BASE: "hypatiax/data/results"), the script's real
+              # output directory is the SINGLE-level path below. The doubled
+              # ".../noise-sweep/noise-sweep" path observed on disk in a prior
+              # run was traced to a DIFFERENT bug: the "Move results to
+              # RESULTS_DIR" step does TARGET="${RESULTS_DIR}/${RESULT_SUBDIR}"
+              # and then moves any matching files it finds under the workspace
+              # into TARGET — if RESULT_SUBDIR is ever set to the doubled path
+              # (as it was, mistakenly, in an earlier pass at this exact line),
+              # that move step relocates the script's correctly-written
+              # single-level output one level deeper, manufacturing the
+              # doubled structure after the fact. The fix belongs HERE
+              # (RESULT_SUBDIR must match the script's real single-level
+              # output), not by accepting the doubled path as canonical.
+              # ci_postprocess.yml's SUPPB_SUBDIR and ci_analysis.yml's
+              # MAPPING entry for suppB must be corrected to match this same
+              # single-level value — they currently still have the doubled
+              # path and need the same fix.
+              RESULT_SUBDIR="comparison_results/feynman-tests/noise-sweep"
               DEFAULT_SEEDS="42"
               ;;
 
@@ -414,27 +478,87 @@ jobs:
           N_SHARDS_RAW = int(os.environ["N_SHARDS"])
 
           # Per-experiment shard table — authoritative source.
-          # All experiments run with exactly 1 worker shard.
-          # Single-shard mode avoids checkpoint collisions, concurrent-push
-          # races, and wasted runner quota for all experiment sizes.
+          # Most experiments run with exactly 1 worker shard to avoid
+          # checkpoint collisions, concurrent-push races, and wasted runner
+          # quota. exp1b, exp1_ablation, exp3b use 4 shards (multi-task runs
+          # over DEFI_TASKS / multi-seed runs respectively).
+          #
+          # suppB uses 5 shards — NOT 4 — because its task list is built as
+          # [f"noise{nl}__{eq}" for nl in NOISE_LEVELS for eq in
+          # FEYNMAN_DOMAINS] (5 noise levels x 11 domains = 55 tasks,
+          # ordered as 5 contiguous blocks of 11). run_all.sh STEP 10 reads
+          # the FIRST task ID in each shard to pin a single NOISE_LEVEL for
+          # the whole shard (see run_noise_sweep_benchmark.py NOISE_LEVEL
+          # env var handling) — it assumes every task in a shard shares one
+          # noise level. The block-partition splitter below (_block_shards)
+          # divides 55 tasks evenly by COUNT, not by noise-level boundary:
+          # at N_SHARDS=4, divmod(55,4)=(13,3) gives shard sizes
+          # [14,14,14,13], and 14 does not divide evenly into blocks of 11,
+          # so every shard would straddle two noise levels and silently mis-
+          # pin (or fail to pin) NOISE_LEVEL for the tail tasks. N_SHARDS=5
+          # gives shard sizes [11,11,11,11,11] — exactly one noise level per
+          # shard, matching what STEP 10's pinning logic actually assumes.
+          # If NOISE_LEVELS or FEYNMAN_DOMAINS ever change, re-verify this
+          # alignment (shard count must equal len(NOISE_LEVELS) for the
+          # one-level-per-shard property to hold).
+          # FIX-suppB_sc-SHARD-6 (cost rationale, supersedes the old table=1):
+          # suppB_sc previously ran as a single shard covering all 66 tasks
+          # (6 sample sizes x 11 feynman domains) inside one 330-minute job.
+          # Per-task cost is NOT uniform across sample sizes — larger n means
+          # slower fits, especially for the two PySR-backed methods (5, 6),
+          # whose --pysr-timeout/--method-timeout bound per-fit time but not
+          # the job's total wall-clock. Six methods x 11 domains x worst-case
+          # PySR timeouts already triples the wall-clock estimate that
+          # justified --methods 3 4 as suppB_sc's own historical default (see
+          # FIX-suppB_sc-ALL-METHODS below) — at six methods, a single shard
+          # for the full sweep is no longer reliably within the job timeout,
+          # which is exactly the failure mode that silently truncated method
+          # coverage to begin with (a timed-out/killed shard can still leave
+          # a partial sample_complexity_*.json on disk from whichever
+          # methods finished first).
+          #   SHARD COUNT = 6 = len(SC_SAMPLE_COUNTS), one sample size n per
+          #   shard, mirroring suppB's one-noise-level-per-shard design.
+          #   SUPPB_SC_IDS below is built as an outer loop over n and an
+          #   inner loop over FEYNMAN_DOMAINS (11), so it is laid out in 6
+          #   contiguous blocks of 11 — divmod(66, 6) = (11, 0), so
+          #   _block_shards() partitions it into exactly 6 even shards of 11
+          #   tasks, each shard landing entirely within one sample size n.
+          #   This mirrors suppB's NOISE_LEVELS/FEYNMAN_DOMAINS alignment
+          #   requirement: if SUPPB_SC_SAMPLE_COUNTS or FEYNMAN_DOMAINS ever
+          #   change, re-verify that shard count still equals len(sample
+          #   sizes) for the one-n-per-shard property to hold.
+          #   PER-SHARD COST: 11 domains x 6 methods, methods 5/6 PySR-backed
+          #   at up to (pysr-timeout=1100s + method-timeout=900s) worst-case
+          #   each. Largest-n shard (n=1000) is the long pole; if it
+          #   approaches the 330-minute job timeout, the run_all.sh
+          #   FIX-suppB_sc-ALL-METHODS comment's options (b) and (c) — finer
+          #   sharding or dropping back to fewer methods for the largest n —
+          #   are the next things to try, NOT reverting to table=1.
           EXP_SHARD_TABLE = {
               "exp1":               1,
               "exp1b":              4,
+              "exp1_ablation":      4,
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
               "exp2":               1,
               "exp3":               1,
               "exp3b":              4,
               "suppA":              1,
-              "suppB":              1,
-              "suppB_sc":           1,
+              "suppB":              5,
+              "suppB_sc":           6,
               "instability":        1,
               "hybrid_all_domains": 1,
               "extrap":             1,
           }
           N_SHARDS_DEFAULT = EXP_SHARD_TABLE.get(EXP, 1)
           # Most experiments use exactly 1 shard to avoid concurrent-push races
-          # and checkpoint collisions.  exp1b and exp3b use 4 shards (multi-seed runs).
+          # and checkpoint collisions.  exp1b, exp1_ablation, and exp3b use 4 shards
+          # (multi-task runs over DEFI_TASKS / multi-seed runs respectively).
+          # suppB uses 5 shards (one per noise level — see EXP_SHARD_TABLE comment
+          # above for why 4 would silently mis-pin NOISE_LEVEL on some tasks).
+          # suppB_sc uses 6 shards (one per sample size n — see EXP_SHARD_TABLE
+          # comment above for the one-n-per-shard alignment requirement, and
+          # the FIX-suppB_sc-SHARD-6 block below for the cost rationale).
           # Any dispatch input is ignored for single-shard experiments.
           if N_SHARDS_DEFAULT == 1:
               N_SHARDS = 1
@@ -442,10 +566,31 @@ jobs:
                   print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for '{EXP}' "
                         f"— this experiment is single-shard only (table=1). "
                         f"Using N_SHARDS=1.")
+          elif N_SHARDS_DEFAULT > 4:
+              # suppB (table=5) and suppB_sc (table=6) require an EXACT shard
+              # count for the one-noise-level-per-shard / one-n-per-shard
+              # alignment documented above — NOT just a floor. The dispatch
+              # input is therefore fully ignored here, the same way it is for
+              # table=1 above. (The old `max(N_SHARDS_DEFAULT, min(4,
+              # N_SHARDS_RAW))` formula below this branch can never produce
+              # anything but N_SHARDS_DEFAULT when N_SHARDS_DEFAULT > 4 — the
+              # min(4, ...) term tops out at 4 — so it silently discarded the
+              # input while *looking* like it respected it whenever
+              # N_SHARDS_RAW happened to equal the table value. Make that
+              # explicit instead of implicit.)
+              N_SHARDS = N_SHARDS_DEFAULT
+              if N_SHARDS_RAW != N_SHARDS_DEFAULT:
+                  print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for '{EXP}' "
+                        f"— this experiment requires an exact shard count "
+                        f"(table={N_SHARDS_DEFAULT}) for correct noise-level/"
+                        f"sample-size alignment. Using N_SHARDS={N_SHARDS_DEFAULT}.")
           else:
               # Table default is the minimum — user input cannot go below it.
-              # exp1b/exp3b always get at least 4 shards even if the dispatch
-              # form is left at its default value of "1".
+              # exp1b/exp1_ablation/exp3b (table=4) always get at least 4
+              # shards; the dispatch input can raise that up to a cap of 4
+              # (i.e. it has no effect for this group in practice, since the
+              # table value already equals the cap — left in place in case a
+              # table value < 4 is ever added to this branch).
               N_SHARDS = max(N_SHARDS_DEFAULT, min(4, N_SHARDS_RAW))
               if N_SHARDS != N_SHARDS_RAW:
                   print(f"::notice::n_shards: input={N_SHARDS_RAW} "
@@ -529,6 +674,16 @@ jobs:
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
+              # exp1_ablation: Core-15 LLM ablation (PySR-only vs HypatiaX, §10.6).
+              # 5 domain slugs split 2/1/1/1 across 4 shards (block-partition):
+              #   shard 0: chemistry + defi_risk  → 6 equations  (~2.5 h)
+              #   shard 1: biology               → 3 equations  (~1.25 h)
+              #   shard 2: physics               → 3 equations  (~1.25 h)
+              #   shard 3: defi_amm              → 3 equations  (~1.25 h)
+              # exp1_ablation.py reads DOMAIN_FILTER to select its subset.
+              # Slug→equation mapping is defined in _SLUG_TO_EQ_KEYWORDS inside
+              # exp1_ablation.py.
+              "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               # exp2_feynman: shard by feynman domain keys (BenchmarkProtocol, benchmark=feynman)
               "exp2_feynman":       FEYNMAN_DOMAINS,
               # exp2_feynman_extrap: same 11-domain split, generates extrap_r2_far for Mann-Whitney
@@ -588,7 +743,26 @@ jobs:
                   start += size
               return shards
 
-          raw_shards = _block_shards(pending, N_SHARDS)
+          # FIX-SHARD-ALIGN: always partition all_ids (not pending) so that the
+          # shard boundaries are stable across resumes.  For suppB/suppB_sc/exp1b
+          # this preserves the one-noise-level-per-shard / one-sample-size-per-
+          # shard / one-seed-per-shard alignment even when some tasks are already
+          # done and pending is shorter than all_ids.  Partitioning pending
+          # directly (the old code) re-slices the remaining tasks into N_SHARDS
+          # equal chunks that no longer respect noise-level boundaries, causing
+          # run_all.sh to mis-pin NOISE_LEVEL for tasks in the tail of a shard.
+          pending_set        = set(pending)
+          raw_shards_all     = _block_shards(all_ids, N_SHARDS)
+          raw_shards         = [[t for t in s if t in pending_set]
+                                for s in raw_shards_all]
+          # Drop shards that became empty after filtering (all tasks already done
+          # in that position) so the matrix doesn't spawn zero-work runners.
+          # Re-assign shard indices to 0-based contiguous so matrix.shard is
+          # always the original global shard index (stable for cache keys).
+          # Keep original index paired with the filtered list.
+          raw_shards_indexed = [(orig_j, s)
+                                for orig_j, s in enumerate(raw_shards)
+                                if s]
 
           # Stable global index: position of each task in the FULL all_ids list
           # (not just pending), so IDs survive checkpoint restarts.
@@ -596,18 +770,30 @@ jobs:
 
           matrix = [
               {
-                  "shard":   j,
-                  "ids":     json.dumps(raw_shards[j]),
+                  "shard":    orig_j,
+                  "shard_id": orig_j + 1,
+                  "ids":      json.dumps(s),
                   # run_ids: "{exp}-{global_index}" — unique, stable, cross-ref-safe.
                   # consolidate uses these to match shard results to all_pending.
-                  "run_ids": json.dumps([f"{EXP}-{global_index[t]}" for t in raw_shards[j]]),
+                  "run_ids":  json.dumps([f"{EXP}-{global_index[t]}" for t in s]),
               }
-              for j in range(N_SHARDS)
+              for orig_j, s in raw_shards_indexed
           ]
+          N_SHARDS = len(matrix)  # actual number of non-empty shards dispatched
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
               fh.write(f"shard_matrix={json.dumps(matrix)}\n")
               fh.write(f"all_pending={json.dumps(pending)}\n")
+              # FEATURE-NSHARDS-SUFFIX: expose the FINAL resolved shard count
+              # (post table-forcing / cap logic above) as its own output, zero-
+              # padded to 2 digits, so worker steps can tag every output
+              # filename with _nshards{NN} — lets test runs at different shard
+              # counts for the same experiment coexist on disk without
+              # collisions or overwrites. This is the resolved N_SHARDS, NOT
+              # the raw dispatch input — for suppB/suppB_sc it will always be
+              # 5/6 respectively, matching what actually ran, not what was
+              # requested.
+              fh.write(f"n_shards={N_SHARDS}\n")
 
           print("Shard assignment (block-partition):")
           for s in matrix:
@@ -649,10 +835,22 @@ jobs:
       RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
       SHARD_IDS:      ${{ matrix.ids }}
       SHARD_INDEX:    ${{ matrix.shard }}
+      SHARD_ID:       ${{ matrix.shard_id }}
       # Stable unique run_id per task: "{exp}-{global_index}" (from plan matrix).
       # Workers write this into result JSON so consolidate can cross-reference.
       SHARD_RUN_IDS:  ${{ matrix.run_ids }}
       EFFECTIVE_SEEDS: ${{ needs.plan.outputs.effective_seeds }}
+      # N_SHARDS: the FINAL resolved total shard count (zero-padded to 2
+      # digits, e.g. "05"), forwarded for logging/diagnostics. NOT used to
+      # build the per-file _nshardsNN suffix -- that was tried initially but
+      # corrected in run_all.sh's suppB step: N_SHARDS is the same constant
+      # value across all concurrently-running matrix shards, so it would tag
+      # every shard's output identically (_nshards05 on all 5 shards) and
+      # could still collide on same-second-timestamped filenames. The suffix
+      # is instead derived from SHARD_INDEX (above, 0-based, +1 -> 01..05),
+      # which is unique per shard. See run_all.sh's suppB step,
+      # FEATURE-NSHARDS-SUFFIX comment, for the corrected derivation.
+      N_SHARDS:       ${{ needs.plan.outputs.n_shards }}
       # FIX-NOISE_LEVELS: forward from dispatch input so suppB worker receives the
       # correct sweep range.  Previously NOISE_LEVELS was only set inside the plan
       # job's Python step and never exported to worker jobs, so run_noise_sweep_benchmark.py
@@ -821,7 +1019,7 @@ jobs:
             "${OUT_BASE}/comparison_results/feynman-tests/exp2" \
             "${OUT_BASE}/comparison_results/feynman-tests/exp2_extrap" \
             "${OUT_BASE}/comparison_results/feynman-tests/exp2_multi" \
-            "${OUT_BASE}/comparison_results/feynman-tests/noise-sweep/noise-sweep" \
+            "${OUT_BASE}/comparison_results/feynman-tests/noise-sweep" \
             "${OUT_BASE}/comparison_results/feynman-tests/sample-complexity" \
             "${OUT_BASE}/comparison_results/noise-noiseless/noiseless/defi" \
             "${OUT_BASE}/comparison_results/noise-noiseless/15" \
@@ -945,6 +1143,22 @@ jobs:
           print(f"Domain-list validation OK: {sorted(actual_set)}")
           PYEOF
 
+      # -- suppB_sc: smoke-test that run_sample_complexity_benchmark.py accepts
+      # the flags the runner will pass (--samples, --pysr-timeout, --method-timeout).
+      # This surfaces argparse "unrecognized arguments" errors BEFORE the 5h run
+      # starts, giving a clear failure message rather than "produced NO output files".
+      - name: Smoke-test suppB_sc script flag acceptance
+        if: ${{ needs.plan.outputs.exp_id == 'suppB_sc' }}
+        run: |
+          set -euo pipefail
+          SCRIPT="hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py"
+          echo "=== suppB_sc flag smoke-test ==="
+          echo "  Testing: python3 ${SCRIPT} --help"
+          python3 "${SCRIPT}" --help > /dev/null
+          echo "  Testing: python3 ${SCRIPT} --samples 200 --pysr-timeout 1100 --method-timeout 900 --help"
+          python3 "${SCRIPT}" --samples 200 --pysr-timeout 1100 --method-timeout 900 --help > /dev/null
+          echo "  OK — all suppB_sc CLI flags accepted."
+
       - name: Run experiment tasks
         if: ${{ steps.resolve_ids.outputs.has_work == 'true' }}
         env:
@@ -984,6 +1198,26 @@ jobs:
           TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
           echo "TASK_IDS=${TASK_IDS}"
 
+          # FIX-INSTABILITY-PREFLIGHT: run_instability_suite.py reads its K-run
+          # cases from exp1's DeFi benchmark JSONs. If exp1 hasn't been run yet
+          # (or its output was never committed), the suite still exits 0 but
+          # with "Loaded 0 cases" and mean_stab=nan for every model class —
+          # see 2026-06-26 CI run 28252247591. Fail loudly here instead of
+          # letting that pass silently through to a degenerate output.
+          if [[ "${EXP}" == "instability" ]]; then
+            _DEFI_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi"
+            _DEFI_COUNT=$(find "${_DEFI_DIR}" -name "hypatiax_defi_benchmark_*results*.json" 2>/dev/null | wc -l)
+            echo "=== instability pre-flight: exp1 DeFi benchmark data ==="
+            echo "  Source dir : ${_DEFI_DIR}"
+            echo "  JSON count : ${_DEFI_COUNT}"
+            if [[ "${_DEFI_COUNT}" -eq 0 ]]; then
+              echo "::error::instability requires exp1 DeFi benchmark JSONs in ${_DEFI_DIR} — none found."
+              echo "  Run ci_runner.yml with experiment=exp1 first, then re-run instability."
+              exit 1
+            fi
+            echo "  OK: ${_DEFI_COUNT} exp1 benchmark JSON(s) found."
+          fi
+
           # Ensure log dir exists before run_all.sh tries to tee into it.
           mkdir -p "${OUT_BASE}"
 
@@ -1001,6 +1235,50 @@ jobs:
           EXPERIMENT_SEED="${PYSR_SEED}" \
           DOMAIN_FILTER="${TASK_IDS}" \
             bash run_all.sh --step "${EXP}"
+
+      # -- FIX-EXP1ABL-SHARD-CLOBBER --------------------------------------------
+      # exp1_ablation.py writes its primary output to fixed filenames
+      # (exp1_ablation_results.json / exp1_ablation_checkpoint.json) directly
+      # inside RESULT_SUBDIR, with no shard index in the name, even though this
+      # experiment always runs as 4 parallel matrix shards (one per DOMAIN_FILTER
+      # subset). Each shard's "Store results in canonical RESULT_SUBDIR" step
+      # prunes the previously-committed copy of that same fixed filename before
+      # its own commit, so whichever shard commits last silently overwrites
+      # every earlier shard's domain results in git — merge_shards.py then only
+      # ever sees the final shard's data (root cause of the 2026-07-02
+      # 3-record/0%-success _merged.json incident: all 4 _checkpoint_shardN.json
+      # files were 0-row CI bookkeeping stubs, and the real per-domain results
+      # were overwritten shard-by-shard because they shared one filename).
+      #
+      # Fix: snapshot this shard's copy of the primary output under a
+      # shard-suffixed name immediately after it's written, so each shard's
+      # contribution survives independently of commit ordering. merge_shards.py
+      # must also be updated to read exp1_ablation_results_shard*.json /
+      # exp1_ablation_checkpoint_shard*.json (glob) for this experiment instead
+      # of assuming a single combined file — that change is out of scope here
+      # since merge_shards.py wasn't provided.
+      - name: Preserve shard-specific exp1_ablation output
+        if: always() && env.EXP == 'exp1_ablation'
+        run: |
+          DEST="${OUT_BASE}/${RESULT_SUBDIR}"
+          for base in exp1_ablation_results.json exp1_ablation_checkpoint.json; do
+            SRC="${DEST}/${base}"
+            if [[ -f "${SRC}" ]]; then
+              shard_dest="${DEST}/${base%.json}_shard${SHARD_INDEX}.json"
+              # FIX-EXP1ABL-SHARD-CLOBBER (mv, not cp): a copy leaves the
+              # fixed-name file on disk, which still collides with every other
+              # shard's already-committed copy of the same fixed name at
+              # "Store results in canonical RESULT_SUBDIR" / commit time —
+              # whichever shard commits last silently overwrites the others'
+              # domain results. Moving removes the fixed-name file so only the
+              # shard-suffixed snapshot remains, matching how exp1b keeps each
+              # shard's output under a distinct filename.
+              mv "${SRC}" "${shard_dest}"
+              echo "Preserved ${SRC} → ${shard_dest}"
+            else
+              echo "::warning::Expected exp1_ablation output not found at ${SRC} — nothing to preserve for shard ${SHARD_INDEX}."
+            fi
+          done
 
       - name: Diagnostic - locate result files on disk
         if: always()
@@ -1063,20 +1341,74 @@ jobs:
 
               rescued = 0
               EXP = os.environ.get("EXP", "")
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b"}
+              # Experiments that write ONE combined output file per shard rather
+              # than one file per task ID.  For these, checkpoint.completed is
+              # empty until "Save shard checkpoint" runs (which comes AFTER this
+              # step), so rescue by filename pattern instead of task ID.
+              #
+              # suppB  writes one noise_sweep_noise{NL}_*.json per shard
+              #        (one file covering all 11 Feynman domains for a single
+              #        noise level).  Task IDs are "noise{NL}__{domain}" — the
+              #        dot in the noise level (e.g. 0.0) is replaced to "_" for
+              #        safe globbing, but the output filename uses the raw NL
+              #        value, making per-task-ID globs unreliable.
+              # suppB_sc writes one sample_complexity_n{N}_*.json per shard
+              #          (one file covering all 11 domains for a single sample
+              #          size).  Task IDs are "sc_n{N}__{domain}"; same issue.
+              # exp1/exp1b: one aggregated JSON for all tasks (see FIX-G5-EXP1).
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
+              # FIX-SHARD-IDS-SCOPE: assign shard_ids BEFORE the if/else so that
+              # the else branch (non-combined experiments) can reference it without
+              # a NameError.  Previously shard_ids was only assigned inside the
+              # if-block, causing "NameError: name 'shard_ids' is not defined" for
+              # any experiment not in COMBINED_OUTPUT_EXPS.
+              shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
 
               if EXP in COMBINED_OUTPUT_EXPS:
-                  # FIX-G5-EXP1: combined-output experiments write one file for all
-                  # tasks; checkpoint.completed is empty until "Save shard checkpoint"
-                  # runs, which comes AFTER this step.  Rescue by filename pattern
-                  # instead of by task ID so a crash-before-move is still handled.
-                  combined_globs = [
-                      "*hypatiax_defi_benchmark*results*.json",
-                      "*defi_benchmark*results*.json",
-                      "*comparison_FIXED_*.json",
-                  ]
+                  # FIX-SHARD-SCOPE: mirror the same shard-keyed glob logic used
+                  # in "Save shard checkpoint" so we rescue only THIS shard's
+                  # output files, not other shards' files that land in the shared
+                  # result_dir before this step runs.
+                  if EXP == "suppB":
+                      first_id = shard_ids[0] if shard_ids else ""
+                      nl_raw   = first_id.split("__")[0][len("noise"):] if first_id else ""
+                      nl_safe  = nl_raw.replace(".", "_")
+                      combined_globs = [
+                          f"noise_sweep_noise{nl_safe}_*.json",
+                          f"noise_sweep_noise{nl_safe}_*.csv",
+                          f"noise_sweep_noise{nl_raw}_*.json",
+                          f"noise_sweep_noise{nl_raw}_*.csv",
+                      ]
+                  elif EXP == "suppB_sc":
+                      first_id = shard_ids[0] if shard_ids else ""
+                      n_val    = first_id.split("__")[0][len("sc_n"):] if first_id else ""
+                      combined_globs = [
+                          f"sample_complexity_n{n_val}_*.json",
+                          f"sample_complexity_n{n_val}_*.csv",
+                      ]
+                  elif EXP == "exp1b":
+                      shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
+                      seeds_this_shard = [
+                          tid[len("portfolio_seed"):] for tid in shard_ids_local
+                      ]
+                      combined_globs = []
+                      for s in seeds_this_shard:
+                          combined_globs += [
+                              f"*comparison_FIXED_*seed{s}*.json",
+                              f"*comparison_FIXED_*seed{s}*.csv",
+                          ]
+                      if not combined_globs:
+                          combined_globs = ["*comparison_FIXED_*.json",
+                                            "*comparison_FIXED_*.csv"]
+                  else:
+                      # exp1: single shard — broad globs are safe.
+                      combined_globs = [
+                          "*hypatiax_defi_benchmark*results*.json",
+                          "*defi_benchmark*results*.json",
+                      ]
+
                   for pat in combined_globs:
-                      for src in glob.glob(pat):
+                      for src in glob.glob(pat):   # CWD only; non-recursive
                           dst = os.path.join(result_dir, os.path.basename(src))
                           if os.path.abspath(src) == os.path.abspath(dst):
                               continue
@@ -1098,339 +1430,6 @@ jobs:
                                   rescued += 1
               print(f"Safety-net rescue complete: {rescued} file(s) moved for shard {shard_idx}")
           PYEOF
-
-      # -- Move results to canonical RESULTS_DIR after each experiment ----------
-      # Picks up outputs written to CWD or a temp path and places them into the
-      # canonical ${OUT_BASE}/${RESULT_SUBDIR} location that the consolidate job
-      # and artifact upload expect.  Uses 'mv -v ... || true' so the step never
-      # fails when a file already lives in the right place or when a subset of
-      # tasks produced no output (partial shard).
-      - name: Move results to RESULTS_DIR
-        if: always()
-        env:
-          EXP:           ${{ needs.plan.outputs.exp_id }}
-          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
-          RESULTS_DIR:   ${{ github.workspace }}/${{ env.OUT_BASE }}
-        run: |
-          set -euo pipefail
-          TARGET="${RESULTS_DIR}/${RESULT_SUBDIR}"
-          mkdir -p "${TARGET}"
-
-          move_matching() {
-            local pattern="$1" dest="$2"
-            mkdir -p "$dest"
-            while IFS= read -r src; do
-              [[ -e "$src" ]] || continue
-              # Skip if src is already inside dest (file already in canonical location)
-              [[ "$(realpath "$src" 2>/dev/null || echo "$src")" == "$(realpath "$dest" 2>/dev/null || echo "$dest")"/* ]] && continue
-              fname=$(basename "$src")
-              dst="${dest}/${fname}"
-              if [[ -e "$dst" ]]; then
-                # BUG A FIX (universal): collision on same filename across shards/runs.
-                # Insert _shard<N>_run<run_id> before the extension so no result is lost.
-                stem="${fname%.*}"; ext="${fname##*.}"
-                if [[ "$stem" == "$fname" ]]; then
-                  dst="${dest}/${fname}_shard${SHARD_INDEX}_run${{ github.run_id }}"
-                else
-                  dst="${dest}/${stem}_shard${SHARD_INDEX}_run${{ github.run_id }}.${ext}"
-                fi
-                echo "  COLLISION: ${fname} already in ${dest} — writing to $(basename "$dst")"
-              fi
-              mv -v "$src" "$dst" 2>/dev/null || true
-            done < <(find . -maxdepth 8 \
-                       -name "$pattern" 2>/dev/null)
-          }
-
-          # prune_old: remove previously-committed (git-tracked) result files
-          # matching a glob from a destination directory before the current
-          # run's fresh outputs are moved in.  Without this, timestamp-named
-          # files from past runs accumulate in TARGET on every workflow run
-          # because move_matching only renames exact-name collisions, never
-          # removes older timestamped variants.
-          #
-          # Strategy:
-          #   1. find all files in dest matching the pattern (maxdepth 1).
-          #   2. For each, check git ls-files — only remove if git-tracked
-          #      (i.e. committed by a prior run, not a local-only file that
-          #      another step in this run might still need).
-          #   3. git rm --cached unstages the file; rm -f removes it from disk.
-          #      The subsequent "Commit and push" step will then stage the
-          #      deletion (D) alongside the newly moved files (A), keeping
-          #      the repo tree in sync with exactly one run's outputs.
-          prune_old() {
-            # Removes files matching pattern from dest before a fresh run moves
-            # new outputs in.  ONLY removes git-tracked (committed) files.
-            #
-            # FIX-E2: removed untracked-file deletion.  The original code also
-            # deleted untracked files as "stale partial-run leftovers", but this
-            # is indistinguishable from fresh outputs the current run just wrote
-            # directly into TARGET (e.g. via --output-dir in the Python script).
-            # For exp2_feynman_extrap this caused all 9+ protocol_core_extrap_*.json
-            # files to be silently wiped immediately after creation — they were
-            # present in TARGET but untracked, so prune_old deleted them before
-            # move_matching could stage them for the artifact upload and git commit.
-            #
-            # Correct semantics: only remove files that are git-tracked (i.e.
-            # committed by a prior workflow run).  Untracked files are either
-            # (a) fresh outputs of the current run — must NOT be deleted, or
-            # (b) leftover workspace noise — harmless to leave; move_matching
-            #     will skip them because their destination already exists.
-            local pattern="$1" dest="$2"
-            local pruned=0
-            while IFS= read -r f; do
-              [[ -f "$f" ]] || continue
-              if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-                echo "  prune_old: removing stale committed result: $f"
-                git rm --cached --quiet "$f" 2>/dev/null || true
-                rm -f "$f"
-                pruned=$((pruned + 1))
-              else
-                echo "  prune_old: skipping untracked file (may be current-run output): $f"
-              fi
-            done < <(find "$dest" -maxdepth 1 -name "$pattern" -type f 2>/dev/null)
-            [[ $pruned -gt 0 ]] && echo "  prune_old: removed ${pruned} stale committed file(s) matching '${pattern}' from ${dest}"
-            return 0
-          }
-
-          case "${EXP}" in
-
-            # -- exp1: noiseless DeFi benchmark -------------------------------
-            # hypatiax_defi_benchmark_v3c.py writes:
-            #   hypatiax_defi_benchmark_v3_results_<TS>.json   ← primary output
-            #   protocol_core_noiseless_<TS>.json              ← if protocol wrapper used
-            #   defi_v3_<TS>.json                              ← legacy name
-            # All three patterns are moved so the artifact upload finds them.
-            #
-            # STALE-FILE FIX: prune previously-committed output files from
-            # TARGET before moving in the current run's outputs, so that
-            # timestamp-named files from past runs do not accumulate in the
-            # repo tree (each run should own exactly one result set).
-            exp1)
-              prune_old "hypatiax_defi_benchmark_v3*results*.json" "${TARGET}"
-              prune_old "protocol_core_noiseless_*.json"           "${TARGET}"
-              prune_old "defi_v3_*.json"                           "${TARGET}"
-              move_matching "hypatiax_defi_benchmark_v3*results*.json" "${TARGET}"
-              move_matching "protocol_core_noiseless_*.json"           "${TARGET}"
-              move_matching "defi_v3_*.json"                           "${RESULTS_DIR}"
-              ;;
-
-            # -- exp1b: noisy DeFi benchmark (noise=15) -----------------------
-            # BUG A FIX: comparison_FIXED_<TS>.json files from concurrent or
-            # repeated shards collide if two runners produce the same timestamp.
-            # Rename each file to comparison_FIXED_<TS>_shard<N>_<runid>.json
-            # before moving so every shard's output has a unique repo path.
-            # The same logic applies to .txt companion files.
-            #
-            # STALE-FILE FIX: prune previously-committed outputs before moving
-            # in the current run's files (same pattern as exp1).
-            exp1b)
-              prune_old "comparison_FIXED_*.json"                  "${TARGET}"
-              prune_old "comparison_FIXED_*.txt"                   "${TARGET}"
-              prune_old "hypatiax_defi_benchmark_v3*results*.json" "${TARGET}"
-              prune_old "defi_v3_*.json"                           "${TARGET}"
-              prune_old "*portfolio*variance*.json"                 "${TARGET}"
-              DEST_15="${TARGET}"
-              mkdir -p "${DEST_15}"
-              while IFS= read -r src; do
-                [[ -e "$src" ]] || continue
-                base=$(basename "$src")
-                stem="${base%.*}"; ext="${base##*.}"
-                # Insert _shard<N>_run<run_id> before the extension so the filename
-                # is unique across shards and across repeated workflow runs.
-                dest="${DEST_15}/${stem}_shard${SHARD_INDEX}_run${{ github.run_id }}.${ext}"
-                mv -v "$src" "$dest" || true
-              done < <(find . -maxdepth 8 \
-                         \( -name "comparison_FIXED_*.json" -o \
-                            -name "comparison_FIXED_*.txt"  -o \
-                            -name "hypatiax_defi_benchmark_v3*results*.json" -o \
-                            -name "defi_v3_*.json" -o \
-                            -name "*portfolio*variance*.json" \) 2>/dev/null)
-              ;;
-
-            # -- exp2_feynman: comparative Feynman suite -----------------------
-            # Now runs all 6 methods (--skip-pysr removed) on 1 shard.
-            # Per-domain outputs: protocol_core_*.json, benchmark_results.json,
-            # protocol_core_*_checkpoint.json (one per domain from --checkpoint-name).
-            # All are saved to TARGET so the verify step and artifact upload find them.
-            exp2_feynman)
-              prune_old "protocol_core_*.json"            "${TARGET}"
-              prune_old "protocol_core_*_checkpoint.json" "${TARGET}"
-              prune_old "benchmark_results.json"          "${TARGET}"
-              move_matching "exp2_feynman_checkpoint_shard*.json" "${TARGET}"
-              move_matching "exp2_feynman_merged.*"               "${TARGET}"
-              move_matching "exp2_feynman_stats.json"             "${TARGET}"
-              move_matching "exp2_all*_checkpoint.json"           "${RESULTS_DIR}/comparison_results"
-              # Primary per-domain outputs written by run_comparative_suite_benchmark_v2.py
-              move_matching "protocol_core_*.json"                "${TARGET}"
-              move_matching "protocol_core_*_checkpoint.json"     "${TARGET}"
-              move_matching "benchmark_results.json"              "${TARGET}"
-              move_matching "feynman_exp2_checkpoint_*.json"      "${TARGET}"
-              ;;
-
-            # exp2_feynman_extrap: outputs use protocol_core_extrap_* prefix and
-            # go into their own feynman-tests/exp2_extrap dir (RESULT_SUBDIR).
-            # prune_old is scoped to the extrap prefix only — never touches
-            # the main exp2_feynman results in feynman-tests/exp2.
-            #
-            # benchmark_results_extrap.json is the new flat file written by
-            # run_comparative_suite_benchmark_v2.py v2.2 when --extrap is active.
-            # It carries both r2 (train) AND extrap_r2_far in one place and is
-            # the primary input to merge_extrap_into_benchmark.py --extrap-benchmark-dir.
-            # Without this move it lives only in the workspace root, misses the
-            # artifact upload, and is never committed to the repo.
-            exp2_feynman_extrap)
-              # FIX-NOISELESS_EXTRAP: benchmark_results_extrap.json must NOT be pruned.
-              # prune_old "benchmark_results_extrap.json" was here and deleted the file
-              # immediately after it was created, before move_matching could pick it up.
-              # This is the primary input to merge_extrap_into_benchmark.py
-              # --extrap-benchmark-dir; purging it caused ablation_paired.json to be
-              # empty and the Mann-Whitney test to report TOO_FEW_MW_PAIRS. REMOVED.
-              move_matching "protocol_core_extrap_*.json"         "${TARGET}"
-              move_matching "feynman_extrap_checkpoint_*.json"    "${TARGET}"
-              # FIX-E6: benchmark_results_extrap.json and benchmark_results.json have no
-              # timestamp or shard suffix, so concurrent shards or re-runs silently
-              # overwrite each other on git push.  Rename them to include the shard
-              # index and run_id so every run's output has a unique repo path.
-              # The merge script (merge_extrap_into_benchmark.py) reads the extrap dir
-              # via glob, so any _shard*_run*.json file is picked up correctly.
-              for _stable_name in "benchmark_results_extrap.json" "benchmark_results.json"; do
-                _stable_src=$(find . -maxdepth 8 -name "${_stable_name}" 2>/dev/null | head -1)
-                if [[ -n "${_stable_src}" && -e "${_stable_src}" ]]; then
-                  _stable_stem="${_stable_name%.json}"
-                  _stable_dst="${TARGET}/${_stable_stem}_shard${SHARD_INDEX}_run${{ github.run_id }}.json"
-                  # Skip if already inside TARGET
-                  [[ "$(realpath "${_stable_src}" 2>/dev/null || echo "${_stable_src}")" == "$(realpath "${TARGET}" 2>/dev/null || echo "${TARGET}")"/* ]] && continue
-                  mv -v "${_stable_src}" "${_stable_dst}" 2>/dev/null || true
-                  echo "  FIX-E6: renamed ${_stable_name} → $(basename "${_stable_dst}")"
-                fi
-              done
-              move_matching "exp2_extrap_run.log"                 "${TARGET}"
-              ;;
-
-            # -- exp2: multi-seed comparative suite ---------------------------
-            exp2)
-              prune_old "protocol_core_*.json"            "${TARGET}"
-              prune_old "protocol_core_*_checkpoint.json" "${TARGET}"
-              prune_old "benchmark_results.json"          "${TARGET}"
-              move_matching "exp2_checkpoint_shard*.json"        "${TARGET}"
-              move_matching "exp2_merged.*"                      "${TARGET}"
-              move_matching "exp2_stats.json"                    "${TARGET}"
-              # Primary per-domain outputs written by run_comparative_suite_benchmark_v2.py
-              move_matching "protocol_core_*.json"               "${TARGET}"
-              move_matching "protocol_core_*_checkpoint.json"    "${TARGET}"
-              move_matching "benchmark_results.json"             "${TARGET}"
-              move_matching "exp2_checkpoint_*.json"             "${TARGET}"
-              ;;
-
-            # -- exp3: Nguyen12 extrapolation (single seed) -------------------
-            exp3)
-              prune_old "full_run_*.json"          "${TARGET}"
-              prune_old "report_hybrid_*.json"     "${TARGET}"
-              prune_old "exp3_nguyen12_*.json"     "${TARGET}"
-              prune_old "*nguyen*seed*.json"        "${TARGET}"
-              move_matching "full_run_*.json"          "${TARGET}"
-              move_matching "report_hybrid_*.json"     "${TARGET}"
-              move_matching "hybrid_defi_*.json"       "${TARGET}"
-              move_matching "experiment_registry.json" "${TARGET}"
-              # ISSUE 2 FIX: xref lists exp3_nguyen12_*.json and *nguyen*seed*.json as
-              # expected outputs (tab:nguyen12) but these were never moved — files stayed
-              # at workspace root and were silently lost before artifact upload.
-              move_matching "exp3_nguyen12_*.json"     "${TARGET}"
-              move_matching "*nguyen*seed*.json"       "${TARGET}"
-              ;;
-
-            # BUG 2 FIX: exp3b outputs now go to extrapolation/multi_seed to avoid
-            # colliding with exp3 outputs in extrapolation/.
-            exp3b)
-              prune_old "full_run_*.json"          "${TARGET}"
-              prune_old "report_hybrid_*.json"     "${TARGET}"
-              prune_old "exp3_nguyen12_*.json"     "${TARGET}"
-              prune_old "*nguyen*seed*.json"        "${TARGET}"
-              move_matching "full_run_*.json"          "${TARGET}"
-              move_matching "report_hybrid_*.json"     "${TARGET}"
-              move_matching "hybrid_defi_*.json"       "${TARGET}"
-              move_matching "experiment_registry.json" "${TARGET}"
-              # ISSUE 2 FIX: same missing nguyen globs as exp3 — add them here too.
-              move_matching "exp3_nguyen12_*.json"     "${TARGET}"
-              move_matching "*nguyen*seed*.json"       "${TARGET}"
-              ;;
-
-            # -- suppA: hybrid PySR/DeFi benchmark ----------------------------
-            # RESULT_SUBDIR=hybrid_pysr/defi (set in meta step) - move must
-            # match so the artifact upload and consolidate job find the files.
-            suppA)
-              move_matching "consolidated_hybrid_*.json"          "${TARGET}"
-              # ISSUE 3 FIX: xref lists hybrid_system*.json and extrapolation_73cases*.json
-              # / *73cases*.json as primary suppA outputs (Tab 11-13) but these patterns
-              # were missing from the move block — files were never relocated to the
-              # canonical subdir and would be absent from the artifact upload.
-              move_matching "hybrid_system*.json"                 "${TARGET}"
-              move_matching "extrapolation_73cases*.json"         "${TARGET}"
-              move_matching "*73cases*.json"                      "${TARGET}"
-              move_matching "hybrid_llm_nn_all_domains_*.json"    "${RESULTS_DIR}/hybrid_llm_nn/all_domains"
-              move_matching "ablation_exp1_*.json"                "${RESULTS_DIR}"
-              move_matching "hypatiax_defi_benchmark_v3_results*" "${RESULTS_DIR}"
-              ;;
-
-            # -- suppB: noise sweep --------------------------------------------
-            # Top-level files + per-equation sub-directories (e.g. I.12.1-correction/)
-            suppB)
-              move_matching "noise_sweep_*.json" "${TARGET}"
-              move_matching "noise_sweep_*.csv"  "${TARGET}"
-              # Rescue per-equation sub-dirs preserving directory name
-              find . -maxdepth 8 \
-                -path "*/noise-sweep/*" \( -name "*.json" -o -name "*.csv" \) \
-                | while IFS= read -r f; do
-                    dir=$(basename "$(dirname "$f")")
-                    dest="${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep/${dir}"
-                    mkdir -p "$dest"
-                    mv -v "$f" "$dest/" 2>/dev/null || true
-                  done
-              ;;
-
-            # -- suppB_sc: sample-complexity sweep ----------------------------
-            suppB_sc)
-              move_matching "sample_complexity_*.json" "${TARGET}"
-              move_matching "sample_complexity_*.csv"  "${TARGET}"
-              ;;
-
-            # -- hybrid_all_domains: LLM+NN all-domains run -------------------
-            hybrid_all_domains)
-              move_matching "hybrid_llm_nn_all_domains_*.json" "${TARGET}"
-              ;;
-
-            # -- instability: instability index figures + CSVs -----------------
-            instability)
-              move_matching "instability_analysis.csv"     "${TARGET}"
-              # ISSUE 5a FIX: instability_extrapolation.csv (Stage 2 output, tab:instability)
-              # was never moved — add it alongside instability_analysis.csv.
-              move_matching "instability_extrapolation.csv" "${TARGET}"
-              # ISSUE 5b FIX: *.png and *.pdf globs were workspace-wide (maxdepth 8),
-              # which risks capturing runner debug images or Julia precompile artifacts.
-              # Scope to the canonical figure name stems produced by run_instability_suite.py.
-              move_matching "fig_paper_*.pdf"              "${TARGET}"
-              move_matching "fig_paper_*.png"              "${TARGET}"
-              move_matching "hypatiax_instability_*.pdf"   "${TARGET}"
-              move_matching "hypatiax_instability_*.png"   "${TARGET}"
-              ;;
-
-            # -- extrap: OOD extrapolation comparative -------------------------
-            # Also rescues standalone_llm_nn outputs written by some script variants
-            extrap)
-              move_matching "all_domains_extrap_v4_*.json" "${TARGET}"
-              move_matching "all_domains_extrap_v4_*.txt"  "${TARGET}"
-              # ISSUE 4 FIX: xref lists protocol_core_*.json as an extrap output
-              # (Tab 9 OOD columns) but this pattern was absent from the move block.
-              # The verify step (line ~1840) already checks for it; now actually move it.
-              move_matching "protocol_core_*.json"         "${TARGET}"
-              move_matching "standalone_llm_nn_*.json"      "${RESULTS_DIR}/standalone_llm_nn"
-              move_matching "standalone_real_methods_*.json" "${RESULTS_DIR}/standalone_llm_nn"
-              ;;
-
-          esac
-
-          echo "=== RESULTS_DIR contents after move ==="
-          find "${RESULTS_DIR}/${RESULT_SUBDIR}" -type f | sort || true
 
       # -- Store results in canonical RESULT_SUBDIR (all experiments) -----------
       # Some experiment scripts write their primary output to the OUT_BASE root
@@ -1479,7 +1478,13 @@ jobs:
               [[ -f "$f" ]] || continue
               fname=$(basename "$f")
               # Never prune merge_shards meta-files — they are intentionally stable.
+              # Also never prune shard-suffixed snapshots (e.g. *_shard0.json)
+              # such as exp1_ablation_results_shard${SHARD_INDEX}.json written by
+              # "Preserve shard-specific exp1_ablation output" above — each one
+              # belongs to a different shard and must not be clobbered by a
+              # later shard's prune-then-overwrite pass (FIX-EXP1ABL-SHARD-CLOBBER).
               [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
+              [[ "$fname" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
               if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
                 echo "  store prune: removing stale committed file: $f"
                 git rm --cached --quiet "$f" 2>/dev/null || true
@@ -1757,10 +1762,42 @@ jobs:
           echo "  instability_analysis.csv : ${COUNT_CSV}"
           echo "  Figure files (.png/.pdf) : ${COUNT_FIG}"
           find "${TARGET}" -type f 2>/dev/null | sort || true
+          # FIX-INSTABILITY-CSV-RESCUE (CI-side mirror): run_all.sh's instability
+          # step already attempts to rescue a misplaced instability_analysis.csv
+          # into TARGET, but as a second line of defense (e.g. if run_all.sh was
+          # invoked with an older revision, or the rescue's `find` missed it for
+          # some reason), retry the same rescue here before failing the gate.
+          # See 2026-06-26 CI run 28252247591: run_instability_suite.py exited 0,
+          # wrote all 46 figures correctly under TARGET, but the CSV landed at
+          # github.workspace/figures/instability_analysis.csv instead of TARGET.
           if [[ "${COUNT_CSV}" -eq 0 ]]; then
             echo "=== locating instability_analysis.csv ==="
-            find "${{ github.workspace }}" -name "instability_analysis.csv" 2>/dev/null || true
-            echo "::error::instability produced NO instability_analysis.csv in '${TARGET}'."
+            STRAY_CSV=$(find "${{ github.workspace }}" -name "instability_analysis.csv" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
+            echo "  Stray CSV found: ${STRAY_CSV:-<none>}"
+            if [[ -n "${STRAY_CSV}" && -s "${STRAY_CSV}" ]]; then
+              echo "  Rescuing into canonical location: ${TARGET}/instability_analysis.csv"
+              mkdir -p "${TARGET}"
+              cp "${STRAY_CSV}" "${TARGET}/instability_analysis.csv"
+              COUNT_CSV=1
+            fi
+          fi
+          if [[ "${COUNT_CSV}" -eq 0 ]]; then
+            echo "::error::instability produced NO instability_analysis.csv in '${TARGET}' (and no stray copy found anywhere in the workspace)."
+            exit 1
+          fi
+          # FIX-INSTABILITY-ZEROROWS: the file existing is not sufficient — a
+          # run with no exp1 DeFi data still writes a valid but empty CSV
+          # ("Loaded 0 cases", mean_stab=nan for Hybrid/NN/LLM) and passes this
+          # check as written. Count rows to catch that case explicitly.
+          # See 2026-06-26 CI run 28252247591 for the failure this guards against.
+          COUNT_ROWS=$(python3 -c "
+          import csv, pathlib
+          f = pathlib.Path('${TARGET}/instability_analysis.csv')
+          print(sum(1 for _ in csv.DictReader(f.open())) if f.exists() else 0)
+          " 2>/dev/null || echo 0)
+          echo "  instability_analysis.csv rows: ${COUNT_ROWS}"
+          if [[ "${COUNT_ROWS}" -eq 0 ]]; then
+            echo "::error::instability_analysis.csv exists but has 0 data rows — exp1 DeFi benchmark JSONs were missing or empty when the suite ran."
             exit 1
           fi
           echo "  OK instability output files present."
@@ -1873,35 +1910,99 @@ jobs:
           done_set = set(completed)
 
           EXP = os.environ.get("EXP", "")
-          # FIX-CKPT-EXP1: experiments that write ONE combined result file for
-          # all tasks rather than one file per task ID.  The per-task-ID glob
-          # below never matches these filenames, so the checkpoint always records
-          # 0 completed tasks and every resume re-runs the full shard.
+          # FIX-CKPT-EXP1/suppB/suppB_sc: experiments that write ONE combined
+          # result file per shard rather than one file per task ID.  The per-
+          # task-ID glob below never matches these filenames, so without this
+          # branch the checkpoint always records 0 completed tasks and every
+          # resume re-runs the full shard.
           #
           # Strategy: if any known combined output file is found in result_dir
           # or CWD, mark EVERY task in the shard as done — the combined file
           # implicitly covers all of them.
           #
           # Experiments in this set:
-          #   exp1  — hypatiax_defi_benchmark_v3c.py writes one aggregated JSON
-          #           named "hypatiax_defi_benchmark_v3_results.json"; task IDs
-          #           ("amm", "risk_var", …) never appear in the filename.
-          #   exp1b — same script in portfolio mode; writes comparison_FIXED_*.json
-          #           (filename contains a timestamp, not a task ID).
-          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b"}
+          #   exp1     — hypatiax_defi_benchmark_v3c.py writes one aggregated
+          #              JSON "hypatiax_defi_benchmark_v3_results.json"; task IDs
+          #              ("amm", "risk_var", …) never appear in the filename.
+          #   exp1b    — same script in portfolio mode; writes
+          #              comparison_FIXED_*.json (timestamp in name, not task ID).
+          #   suppB    — run_noise_sweep_benchmark.py writes one
+          #              noise_sweep_noise{NL}_*.json per shard (one noise level,
+          #              all 11 Feynman domains).  Task IDs are
+          #              "noise{NL}__{domain}" — the raw NL value (e.g. "0.0")
+          #              appears in the output filename but the dot is replaced
+          #              with "_" for safe-key globbing, making per-task-ID
+          #              pattern matches unreliable across all runs.
+          #   suppB_sc — run_sample_complexity_benchmark.py writes one
+          #              sample_complexity_n{N}_*.json per shard (one sample
+          #              size n, all 11 domains).  Task IDs "sc_n{N}__{domain}"
+          #              have the same per-shard-combined-file property.
+          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
           search_dirs = [result_dir, "."]
 
           if EXP in COMBINED_OUTPUT_EXPS:
-              combined_globs = [
-                  "*hypatiax_defi_benchmark*results*.json",  # exp1 primary
-                  "*defi_benchmark*results*.json",           # exp1 variant names
-                  "*comparison_FIXED_*.json",                # exp1b portfolio mode
-              ]
+              # FIX-SHARD-SCOPE: use shard-specific globs rather than broad
+              # wildcards so that this shard's checkpoint step cannot match
+              # another shard's already-committed output file and incorrectly
+              # mark this shard's tasks as done.
+              #
+              # Each combined-output experiment encodes the discriminating key
+              # (noise level, sample size, or seed) in its output filename:
+              #   suppB    → noise_sweep_noise{NL}_*.json  (NL = "0_0", "0_5", …)
+              #   suppB_sc → sample_complexity_n{N}_*.json (N = "50", "100", …)
+              #   exp1b    → comparison_FIXED_*_seed{S}_*.json  (S per shard)
+              #   exp1     → single shard, no collision risk; broad glob is safe.
+              #
+              # The discriminating key is derived from the FIRST task ID in
+              # shard_ids (the list is stable from plan-time partitioning).
+              if EXP == "suppB":
+                  first_id = shard_ids[0]   # "noise{NL}__{domain}"
+                  nl_raw   = first_id.split("__")[0][len("noise"):]  # e.g. "0.0"
+                  nl_safe  = nl_raw.replace(".", "_")                 # e.g. "0_0"
+                  combined_globs = [
+                      f"noise_sweep_noise{nl_safe}_*.json",
+                      f"noise_sweep_noise{nl_safe}_*.csv",
+                      f"noise_sweep_noise{nl_raw}_*.json",  # raw dot variant
+                      f"noise_sweep_noise{nl_raw}_*.csv",
+                  ]
+              elif EXP == "suppB_sc":
+                  first_id = shard_ids[0]   # "sc_n{N}__{domain}"
+                  n_val    = first_id.split("__")[0][len("sc_n"):]    # e.g. "50"
+                  combined_globs = [
+                      f"sample_complexity_n{n_val}_*.json",
+                      f"sample_complexity_n{n_val}_*.csv",
+                  ]
+              elif EXP == "exp1b":
+                  # Task IDs are "portfolio_seed{S}"; each shard owns 1-2 seeds.
+                  seeds_this_shard = [tid[len("portfolio_seed"):] for tid in shard_ids]
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*comparison_FIXED_*seed{s}*.json",
+                          f"*comparison_FIXED_*seed{s}*.csv",
+                      ]
+                  # Fallback: if the script doesn't embed the seed in the filename,
+                  # accept any comparison_FIXED file only when result_dir contains
+                  # NO files from other shards yet (detected by absence of
+                  # _checkpoint_shard files for other shard indices).  This is a
+                  # best-effort guard; the seed-in-filename fix in run_all.sh is
+                  # the definitive solution.
+                  if not combined_globs:
+                      combined_globs = ["*comparison_FIXED_*.json",
+                                        "*comparison_FIXED_*.csv"]
+              else:
+                  # exp1: single shard — broad globs are safe (no concurrent shards).
+                  combined_globs = [
+                      "*hypatiax_defi_benchmark*results*.json",
+                      "*defi_benchmark*results*.json",
+                  ]
+
               found_combined = False
               for d in search_dirs:
                   for pat in combined_globs:
-                      hits = (glob.glob(os.path.join(d, pat)) +
-                              glob.glob(os.path.join(d, "**", pat), recursive=True))
+                      # FIX: non-recursive glob only — prevents matching files
+                      # committed by other shards that share the same result_dir.
+                      hits = glob.glob(os.path.join(d, pat))
                       if hits:
                           print(f"  [{EXP}] Combined result file detected: {hits[0]}")
                           found_combined = True
@@ -2058,7 +2159,18 @@ jobs:
 
           commit_and_push() {
             # Rebase on any concurrent shard commits before staging.
-            git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
+            # --autostash saves/restores untracked+modified files around the
+            # rebase.  If the remote has committed a file that also exists
+            # untracked locally (e.g. fixc3_baseline.json written by a gate
+            # job between our checkout and this pull), git reset --hard will
+            # refuse to overwrite it and abort.  Detect that case and stash
+            # the conflicting untracked file aside before retrying.
+            if ! git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1; then
+              echo "::warning::git pull --rebase failed (possibly untracked file conflict) — stashing untracked files and retrying"
+              git stash --include-untracked --quiet || true
+              git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
+              git stash pop --quiet 2>/dev/null || true
+            fi
 
             # Stage every result file produced by this shard.
             # -f overrides any .gitignore rules that might exclude data/results/**
@@ -2078,12 +2190,43 @@ jobs:
 
             # Detect any MODIFIED (M) tracked files — means this shard would overwrite
             # a result from a previous shard or run (silent data loss).
-            OVERWRITTEN=$(git diff --cached --name-status | grep '^M' | awk '{print $2}' || true)
+            # EXCEPTION: _checkpoint_shard*.json files are intentionally re-written
+            # every run (they accumulate completed task IDs across resumptions) — a
+            # modified M status for these is expected and must NOT trigger the
+            # isolation guard.
+            OVERWRITTEN=$(git diff --cached --name-status \
+              | grep '^M' \
+              | awk '{print $2}' \
+              | grep -v '_checkpoint_shard[0-9].*\.json$' \
+              || true)
             if [[ -n "$OVERWRITTEN" ]]; then
-              echo "::warning::OVERWRITE DETECTED — shard ${SHARD} is overwriting committed result file(s):"
-              echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
-              echo "  The move_matching collision-guard should have disambiguated filenames."
-              echo "  Proceeding with push so results are not lost — investigate filename uniqueness."
+              # ISOLATION-GUARD: exp1b/exp1_ablation/exp3b/suppB/suppB_sc each carry
+              # a documented per-shard isolation suffix (HYPATIAX_NSHARDS_SUFFIX /
+              # _shard${SHARD_INDEX} tag — see run_all.sh STEP 2/8b/10/10b, and for
+              # exp1_ablation the "Preserve shard-specific exp1_ablation output" mv
+              # above) whose entire purpose is to make this overwrite impossible.
+              # For those five, a modified tracked file here means the suffix
+              # mechanism itself failed (e.g. SHARD_INDEX missing/blank, or a code
+              # path that bypassed the rename) — that is a real bug, not an
+              # expected re-run overwrite, so it hard-fails instead of warning.
+              case "${EXP}" in
+                exp1b|exp1_ablation|exp3b|suppB|suppB_sc)
+                  echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
+                  echo "  committed result file(s); the per-shard isolation suffix should have "
+                  echo "  prevented this:"
+                  echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+                  echo "  Check that SHARD_INDEX/HYPATIAX_NSHARDS_SUFFIX is actually set and"
+                  echo "  non-empty for this shard, and that the move/rename step in run_all.sh"
+                  echo "  ran before this commit step."
+                  exit 1
+                  ;;
+                *)
+                  echo "::warning::OVERWRITE DETECTED — shard ${SHARD} is overwriting committed result file(s):"
+                  echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+                  echo "  The move_matching collision-guard should have disambiguated filenames."
+                  echo "  Proceeding with push so results are not lost — investigate filename uniqueness."
+                  ;;
+              esac
             fi
 
             STAGED=$(git diff --cached --name-only | wc -l)
@@ -2179,6 +2322,7 @@ jobs:
         env:
           RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
           EXP: ${{ github.event.inputs.experiment }}
+          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
         run: |
           if [[ "$EXP" != "exp2_feynman_pca" ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
@@ -2186,6 +2330,19 @@ jobs:
             exit 0
           fi
           PCA_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060"
+          # FIX (Bug #2, §10.7 investigation, 2026-06-30): force_rerun=true
+          # clears stale result JSONs (everything except the disclosure file,
+          # which is regenerated fresh anyway) before the already-done check,
+          # so a clean exp2_pca_4060_summary.json can be regenerated under
+          # the fixed aggregation logic instead of silently no-oping because
+          # leftover files from a prior (possibly buggy-environment) run are
+          # still present.
+          if [[ "$FORCE_RERUN" == "true" ]]; then
+            if [ -d "${PCA_DIR}" ]; then
+              echo "[force_rerun] Clearing stale outputs in ${PCA_DIR} before rerun."
+              find "${PCA_DIR}" -maxdepth 1 -name '*.json' -delete
+            fi
+          fi
           if [ -d "${PCA_DIR}" ] && [ -n "$(ls -A "${PCA_DIR}"/*.json 2>/dev/null)" ]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
             echo "[skip] Results already present in ${PCA_DIR}."
@@ -2200,12 +2357,78 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
+      # FIX (Bug #1, §10.7 investigation): this job previously had no Julia
+      # setup at all, and its install step omitted `pint` — both required by
+      # _probe_pysr_method() in run_comparative_suite_benchmark_pca.py. This
+      # silently forced HYBRID_V50_2_AVAILABLE=False for the entire job,
+      # making every HybridDiscoverySystem (HypatiaX) row report
+      # "not available" regardless of actual code correctness. Mirrors the
+      # main worker job's Julia setup (see "Set up Julia 1.11" /
+      # "Precompile Julia / SymbolicRegression" steps above).
+      - name: Set up Julia 1.11
+        if: steps.check_exp2.outputs.already_done != 'true'
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        if: steps.check_exp2.outputs.already_done != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
       - name: Install dependencies
         if: steps.check_exp2.outputs.already_done != 'true'
         run: |
           pip install --upgrade pip
           if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
-          pip install numpy scipy scikit-learn pysr juliacall
+          # FIX: anthropic + torch required by run_comparative_suite_benchmark_pca.py
+          # (LLM methods 1/3/4 use anthropic; methods 2/3/4 use torch).
+          # python-dotenv needed for .env loading; psutil needed by subprocess worker.
+          pip install numpy scipy scikit-learn pysr juliacall pint \
+              anthropic torch --index-url https://download.pytorch.org/whl/cpu \
+              python-dotenv psutil
+
+      - name: Install Julia / SymbolicRegression
+        if: steps.check_exp2.outputs.already_done != 'true'
+        run: |
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Precompile Julia / SymbolicRegression
+        if: steps.check_exp2.outputs.already_done != 'true'
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+
+          warmup = """
+          import numpy as np
+          import pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          model = pysr.PySRRegressor(
+              niterations=5,
+              populations=1,
+              verbosity=0,
+              progress=False,
+              tempdir="/tmp/pysr_warmup",
+          )
+          model.fit(X, y)
+          print("Julia/PySR precompile warmup OK")
+          """
+          result = subprocess.run(
+              [sys.executable, "-c", warmup],
+              timeout=300,
+              capture_output=True,
+              text=True,
+          )
+          print(result.stdout or "")
+          if result.returncode != 0:
+              print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
+              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          PYEOF
 
       - name: Run exp2_feynman_pca via run_all.sh
         if: steps.check_exp2.outputs.already_done != 'true'
@@ -2224,8 +2447,18 @@ jobs:
           fi
           bash run_all.sh --step exp2_feynman_pca_4060
 
+      # FIX (CI-PCA-1): this step previously had no always(), so a failure or
+      # timeout in "Run exp2_feynman_pca via run_all.sh" (5h40m deadline,
+      # crash, network blip) caused GitHub Actions to skip this step entirely
+      # by default — silently dropping every domain result computed before
+      # the failure, since exp2_feynman_pca has no equivalent of the generic
+      # worker job's "Store results" step (which runs if: always()). always()
+      # here lets partial results still get committed; the inner git logic
+      # already no-ops cleanly via "git diff --cached --quiet" if nothing was
+      # produced at all.
       - name: Commit and push results
         if: |
+          always() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp2.outputs.already_done != 'true'
         env:
@@ -2242,11 +2475,32 @@ jobs:
             echo "Nothing new to commit."
           else
             git commit -m "ci: exp2_feynman_pca results (PCA 40/60) [skip ci]"
+            # FIX: stash any *other* unstaged changes left in the tree before
+            # rebasing — otherwise "git pull --rebase" refuses outright with
+            # "cannot pull with rebase: you have unstaged changes" on every
+            # retry, since sleep 5 doesn't clean the tree. Also: the loop could
+            # previously exhaust all 3 attempts, never push, and still print
+            # "Results committed and pushed." (the echo was unconditional).
+            # PUSHED now tracks the real outcome and the job fails loudly if a
+            # push never succeeds.
+            PUSHED=false
             for i in 1 2 3; do
-              git pull --rebase origin "${{ github.ref_name }}" && \
-              git push origin HEAD:"${{ github.ref_name }}" && break || sleep 5
+              git stash --include-untracked --quiet || true
+              if git pull --rebase origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
             done
-            echo "Results committed and pushed."
+            if [[ "${PUSHED}" == "true" ]]; then
+              echo "Results committed and pushed."
+            else
+              echo "::error::Failed to push exp2_feynman_pca results after 3 attempts."
+              exit 1
+            fi
           fi
 
   # ── C5c-1: exp1_pca (DeFi all-74, PCA 40/60) ───────────────────────────────
@@ -2292,12 +2546,71 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
+      # FIX (Bug #1, §10.7 investigation): see identical fix in exp2_feynman_pca
+      # job above. Same missing pint + Julia setup, same root cause.
+      - name: Set up Julia 1.11
+        if: steps.check_exp1.outputs.already_done != 'true'
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        if: steps.check_exp1.outputs.already_done != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
       - name: Install dependencies
         if: steps.check_exp1.outputs.already_done != 'true'
         run: |
           pip install --upgrade pip
           if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
-          pip install numpy scipy scikit-learn pysr juliacall
+          # FIX: anthropic + torch required by hypatiax_defi_benchmark_pca.py.
+          # python-dotenv for .env loading; psutil for subprocess worker.
+          pip install numpy scipy scikit-learn pysr juliacall pint \
+              anthropic torch --index-url https://download.pytorch.org/whl/cpu \
+              python-dotenv psutil
+
+      - name: Install Julia / SymbolicRegression
+        if: steps.check_exp1.outputs.already_done != 'true'
+        run: |
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Precompile Julia / SymbolicRegression
+        if: steps.check_exp1.outputs.already_done != 'true'
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+
+          warmup = """
+          import numpy as np
+          import pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          model = pysr.PySRRegressor(
+              niterations=5,
+              populations=1,
+              verbosity=0,
+              progress=False,
+              tempdir="/tmp/pysr_warmup",
+          )
+          model.fit(X, y)
+          print("Julia/PySR precompile warmup OK")
+          """
+          result = subprocess.run(
+              [sys.executable, "-c", warmup],
+              timeout=300,
+              capture_output=True,
+              text=True,
+          )
+          print(result.stdout or "")
+          if result.returncode != 0:
+              print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
+              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          PYEOF
 
       - name: Run exp1_pca via run_all.sh
         if: steps.check_exp1.outputs.already_done != 'true'
@@ -2316,8 +2629,11 @@ jobs:
           fi
           bash run_all.sh --step exp1_pca
 
+      # FIX (CI-PCA-1): see identical fix on exp2_feynman_pca's commit step
+      # above — same missing always(), same silent-loss-on-timeout risk.
       - name: Commit and push results
         if: |
+          always() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1.outputs.already_done != 'true'
         env:
@@ -2332,11 +2648,27 @@ jobs:
             echo "Nothing new to commit."
           else
             git commit -m "ci: exp1_pca results (DeFi all-74, PCA 40/60) [skip ci]"
+            # FIX: see exp2_feynman_pca step above — stash unstaged changes
+            # before each rebase retry, and only report success if a push
+            # actually went through.
+            PUSHED=false
             for i in 1 2 3; do
-              git pull --rebase origin "${{ github.ref_name }}" && \
-              git push origin HEAD:"${{ github.ref_name }}" && break || sleep 5
+              git stash --include-untracked --quiet || true
+              if git pull --rebase origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
             done
-            echo "Results committed and pushed."
+            if [[ "${PUSHED}" == "true" ]]; then
+              echo "Results committed and pushed."
+            else
+              echo "::error::Failed to push exp1_pca results after 3 attempts."
+              exit 1
+            fi
           fi
 
   # ── C5c-2: exp1b_pca (DeFi portfolio seed sweep, PCA 40/60) ────────────────
@@ -2382,12 +2714,71 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION || '3.12' }}
 
+      # FIX (Bug #1, §10.7 investigation): same missing pint + Julia setup
+      # as exp1_pca / exp2_feynman_pca above — same root cause.
+      - name: Set up Julia 1.11
+        if: steps.check_exp1b.outputs.already_done != 'true'
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        if: steps.check_exp1b.outputs.already_done != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
       - name: Install dependencies
         if: steps.check_exp1b.outputs.already_done != 'true'
         run: |
           pip install --upgrade pip
           if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
-          pip install numpy scipy scikit-learn pysr juliacall
+          # FIX: anthropic + torch required by hypatiax_defi_benchmark_pca.py.
+          # python-dotenv for .env loading; psutil for subprocess worker.
+          pip install numpy scipy scikit-learn pysr juliacall pint \
+              anthropic torch --index-url https://download.pytorch.org/whl/cpu \
+              python-dotenv psutil
+
+      - name: Install Julia / SymbolicRegression
+        if: steps.check_exp1b.outputs.already_done != 'true'
+        run: |
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Precompile Julia / SymbolicRegression
+        if: steps.check_exp1b.outputs.already_done != 'true'
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+
+          warmup = """
+          import numpy as np
+          import pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          model = pysr.PySRRegressor(
+              niterations=5,
+              populations=1,
+              verbosity=0,
+              progress=False,
+              tempdir="/tmp/pysr_warmup",
+          )
+          model.fit(X, y)
+          print("Julia/PySR precompile warmup OK")
+          """
+          result = subprocess.run(
+              [sys.executable, "-c", warmup],
+              timeout=300,
+              capture_output=True,
+              text=True,
+          )
+          print(result.stdout or "")
+          if result.returncode != 0:
+              print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
+              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          PYEOF
 
       - name: Run exp1b_pca via run_all.sh
         if: steps.check_exp1b.outputs.already_done != 'true'
@@ -2406,8 +2797,11 @@ jobs:
           fi
           bash run_all.sh --step exp1b_pca
 
+      # FIX (CI-PCA-1): see identical fix on exp2_feynman_pca's commit step
+      # above — same missing always(), same silent-loss-on-timeout risk.
       - name: Commit and push results
         if: |
+          always() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1b.outputs.already_done != 'true'
         env:
@@ -2422,11 +2816,31 @@ jobs:
             echo "Nothing new to commit."
           else
             git commit -m "ci: exp1b_pca results (DeFi portfolio seed sweep, PCA 40/60) [skip ci]"
+            # FIX: this is the block that actually failed in run 76608547410 —
+            #   "error: cannot pull with rebase: You have unstaged changes" on
+            #   all 3 attempts (sleep 5 doesn't clean the tree), yet
+            #   "Results committed and pushed." printed anyway because that
+            #   echo was unconditional and outside the loop. Stash any other
+            #   unstaged changes left in the tree before each rebase retry,
+            #   and only report success if a push actually went through.
+            PUSHED=false
             for i in 1 2 3; do
-              git pull --rebase origin "${{ github.ref_name }}" && \
-              git push origin HEAD:"${{ github.ref_name }}" && break || sleep 5
+              git stash --include-untracked --quiet || true
+              if git pull --rebase origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
             done
-            echo "Results committed and pushed."
+            if [[ "${PUSHED}" == "true" ]]; then
+              echo "Results committed and pushed."
+            else
+              echo "::error::Failed to push exp1b_pca results after 3 attempts."
+              exit 1
+            fi
           fi
 
 # ==============================================================================

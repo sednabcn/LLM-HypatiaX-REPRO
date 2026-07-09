@@ -338,7 +338,7 @@ DRY_RUN=false
 # FIX CRITICAL 1: instability → hybrid_all_domains
 # FIX CRITICAL 2: suppB_sc added after suppB
 # SPLIT STEP 4: hybrid_all_domains (one-shot run) + instability (K-run II analysis)
-_STEP_ORDER="env_check exp1 exp1b exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp3 exp3b suppA suppB suppB_sc tables figures validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp3 exp3b suppA suppB suppB_sc tables figures validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -667,6 +667,56 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
 
 
+# ── STEP 2a: exp1_ablation ────────────────────────────────────────────────────
+# Runs exp1_ablation.py (§10.6 Core-15 ablation: PySR-only vs HypatiaX).
+# Produces:
+#   exp1_ablation_results.json          ← primary; required by ci_postprocess figures/tables
+#   exp1_ablation_table.tex
+#   exp1_rf01_mannwhitney.json
+#   exp1_rf01_significant.tex
+#   exp1_rf01_subdomain.tex
+#   exp1_instability_stats.json
+#   instability_extrapolation_v2.csv
+#   provenance_map_exp1.json
+#
+# Output directory: ${RESULTS_DIR}/ablation/exp1_ablation/
+# (matches ci_experiment.yml RESULT_SUBDIR = ablation/exp1_ablation)
+#
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1_ablation
+# ─────────────────────────────────────────────────────────────────────────────
+run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" bash -c "
+  cd '${REPO_ROOT}'
+  _ABL_DIR='${RESULTS_DIR}/ablation/exp1_ablation'
+  mkdir -p \"\${_ABL_DIR}\"
+
+  PYTHONPATH='${REPO_ROOT}'"${PYTHONPATH:+:${PYTHONPATH}}" \
+  RESULTS_DIR=\"\${_ABL_DIR}\" \
+  PYSR_POPULATIONS='${PYSR_POPULATIONS}' \
+  PYSR_SEED='${PYSR_SEED}' \
+  METHOD_TIMEOUT='${METHOD_TIMEOUT}' \
+  PYSR_TIMEOUT='${FEYNMAN_TIMEOUT}' \
+  JOB_DEADLINE='${JOB_DEADLINE}' \
+    python3 '${EXPERIMENTS_DIR}/exp1_ablation.py' \
+    2>&1 | tee \"\${_ABL_DIR}/exp1_ablation_run.log\" \
+  || echo 'WARNING: exp1_ablation.py exited non-zero — check exp1_ablation_run.log'
+
+  echo '=== exp1_ablation verification ==='
+  find \"\${_ABL_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.tex' -o -name '*.csv' \) 2>/dev/null | sort
+  _NRESULT=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_ablation_results*.json' 2>/dev/null | wc -l)
+  _NRF01=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_rf01_mannwhitney*.json' 2>/dev/null | wc -l)
+  if [[ \"\${_NRESULT}\" -eq 0 ]]; then
+    echo 'WARNING: exp1_ablation_results.json not produced — ci_postprocess figures/tables will fail'
+    echo '         Ensure ANTHROPIC_API_KEY is set and HybridDiscoverySystem v5.1 is importable'
+  else
+    echo \"OK: \${_NRESULT} exp1_ablation_results*.json produced\"
+  fi
+  if [[ \"\${_NRF01}\" -eq 0 ]]; then
+    echo 'WARNING: exp1_rf01_mannwhitney.json not produced — Mann-Whitney stats will be missing'
+  fi
+  echo '=== end exp1_ablation ==='
+"
+
 # ── STEP 2b: exp1_pca ─────────────────────────────────────────────────────────
 # FIX-C3 DeFi variant: reruns all 74 DeFi cases via hypatiax_defi_benchmark_pca.py
 # (PCA-directed 40/60 split, method-level — mirrors exp2_feynman_pca_4060 for DeFi).
@@ -845,13 +895,46 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     done
   done
 
+  # FIX Bug 1: write split_protocol_disclosure.json for exp1b_pca.
+  # The exp1_pca step writes its own disclosure in defi_pca/.
+  # exp1b_pca previously wrote NOTHING here — Gate B key-presence check
+  # failed because random_split_used was absent from the 15_pca copy.
+  python3 - <<'PYEOF_DISC_1B'
+import json, pathlib, datetime
+PCA15_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca')
+DISC_FILE = PCA15_DIR / 'split_protocol_disclosure.json'
+PCA15_DIR.mkdir(parents=True, exist_ok=True)
+disclosure = {
+    'fixc3':              True,
+    'split_protocol':     'pca_40_60',
+    'split_function':     'pca_directed_split',
+    'split_level':        'outer_loop',
+    'force_fresh':        True,
+    'script':             'hypatiax_defi_benchmark_pca.py',
+    'test_size':          0.6,
+    'train_size':         0.4,
+    'random_split_used':  False,
+    'dfi_parity':         True,
+    'section_reference':  'sec:6.4 + sec:10.2-10.4',
+    'generated_by':       'run_all.sh exp1b_pca via hypatiax_defi_benchmark_pca.py',
+    'timestamp':          datetime.datetime.utcnow().isoformat() + 'Z',
+}
+DISC_FILE.write_text(json.dumps(disclosure, indent=2))
+print(f'  [exp1b_pca] split_protocol_disclosure.json written → {DISC_FILE}')
+PYEOF_DISC_1B
+
   # Verification
   echo '=== exp1b_pca verification ==='
   find \"\${_PCA15_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _COUNT=\$(find \"\${_PCA15_DIR}\" -type f 2>/dev/null | wc -l)
+  _NDISC=\$(find \"\${_PCA15_DIR}\" -name 'split_protocol_disclosure.json' 2>/dev/null | wc -l)
   echo \"Files produced: \${_COUNT}\"
+  echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
     echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+  fi
+  if [[ \"\${_NDISC}\" -eq 0 ]]; then
+    echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
   fi
   echo '=== end exp1b_pca ==='
 "
@@ -1044,6 +1127,34 @@ run instability "Instability Index analysis + all figures -- SS10.9 (Regime A/B/
     \${BENCH_ARG} \
     --format png pdf \
     2>&1 | tee '${RESULTS_DIR}'/instability_run.log
+
+  # FIX-INSTABILITY-CSV-RESCUE: run_instability_suite.py has been observed
+  # (CI run 2026-06-26) writing instability_analysis.csv to a CWD-relative
+  # 'figures/' directory (e.g. \${REPO_ROOT}/figures/instability_analysis.csv)
+  # instead of honouring --csv-out's full path, even though the 46 image/pdf
+  # figures from the SAME run land correctly under --out. Net effect: the run
+  # exits 0, figures are present, but \${RESULTS_DIR}/figures/instability_analysis.csv
+  # is missing and the CI 'Verify instability output files exist' step fails.
+  # Rescue: if the canonical CSV is absent but a same-named CSV exists
+  # elsewhere under REPO_ROOT (most recently written one wins), copy it into
+  # place instead of letting the whole step fail on what is otherwise a
+  # successful run. This mirrors the CI-side FIX-G5 safety-net pattern and
+  # the suppB doubled-path fix already applied above in this file.
+  _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
+  if [[ ! -s \"\${_CANON_CSV}\" ]]; then
+    echo \"[instability] WARNING: \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
+    _STRAY_CSV=\$(find '${REPO_ROOT}' -maxdepth 6 -name 'instability_analysis.csv' \
+                   -not -path \"\${_CANON_CSV}\" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
+    if [[ -n \"\${_STRAY_CSV}\" && -s \"\${_STRAY_CSV}\" ]]; then
+      echo \"[instability] Found stray CSV at \${_STRAY_CSV} -- copying into canonical location.\"
+      mkdir -p '${RESULTS_DIR}/figures'
+      cp \"\${_STRAY_CSV}\" \"\${_CANON_CSV}\"
+    else
+      echo '[instability] No stray instability_analysis.csv found anywhere under REPO_ROOT either.'
+      echo '              run_instability_suite.py likely failed internally before writing the CSV'
+      echo '              (e.g. \"Loaded 0 cases\") -- check instability_run.log above for the real cause.'
+    fi
+  fi
 "
 
 
@@ -1181,8 +1292,18 @@ def _rows(data):
 
 n_pass = n_total = 0
 source_files = []
+stray_pca_files = []
 for fp in sorted(LEG_DIR.glob('*.json')) if LEG_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint','disclosure','baseline')):
+        continue
+    # FIX-GATEC-PCA: protocol_core_*_pca_<ts>.json can only be produced by
+    # run_comparative_suite_benchmark_pca.py (see its _save() mode logic).
+    # exp2_feynman (this legacy step) only ever calls run_comparative_suite
+    # _benchmark_v2.py, so any '_pca' file found in LEG_DIR is a stray
+    # leftover from a mis-routed PCA run and must NOT be counted toward the
+    # legacy 9/30 baseline, nor allowed to collide with exp2_pca_4060/ output.
+    if '_pca' in fp.name:
+        stray_pca_files.append(fp.name)
         continue
     try:
         data = json.loads(fp.read_text())
@@ -1214,6 +1335,12 @@ baseline = {
 BASELINE.parent.mkdir(parents=True, exist_ok=True)
 BASELINE.write_text(json.dumps(baseline, indent=2))
 print(f'  [FIX-C3] Baseline locked: {n_pass}/{n_total} (random_80_20) → fixc3_baseline.json')
+if stray_pca_files:
+    print(f'  [WARN]  {len(stray_pca_files)} stray _pca file(s) found in legacy exp2/ dir')
+    print('          (excluded from baseline — they belong in exp2_pca_4060/):')
+    for _f in stray_pca_files[:10]:
+        print(f'            - {_f}')
+    print(f'          Move them: mv {LEG_DIR}/*_pca_*.json {LEG_DIR.parent}/exp2_pca_4060/  (verify timestamps first)')
 PYEOF
   fi
 
@@ -1255,7 +1382,34 @@ PYEOF
         --force-fresh \
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
     || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
+
+    # FIX-C3-E2 (mirrors exp2_feynman_extrap's E2-guard at FIX-E2 above):
+    # protocol_core_noiseless_pca_*.json is written by
+    # run_comparative_suite_benchmark_pca.py's _save() into _PCA_DIR, one file
+    # per domain iteration of this loop. Nothing was hard-linking these out of
+    # harm's way, so CI's prune_old could delete them out from under this step
+    # exactly as it once did to protocol_core_extrap_*.json (see FIX-E2).
+    # Run INSIDE the loop (not just after it, unlike the extrap step) so a
+    # prune_old sweep between domains can't destroy an earlier domain's only
+    # copy before this guard ever sees it.
+    mkdir -p \"\${_PCA_DIR}/_saved\"
+    while IFS= read -r _pf; do
+      _pfn=\$(basename \"\${_pf}\")
+      ln -f \"\${_pf}\" \"\${_PCA_DIR}/_saved/\${_pfn}\" 2>/dev/null \
+        || cp \"\${_pf}\" \"\${_PCA_DIR}/_saved/\${_pfn}\" \
+        || true
+    done < <(find \"\${_PCA_DIR}\" -maxdepth 1 -name 'protocol_core_noiseless_pca_*.json' 2>/dev/null)
   done
+
+  _PCA_SAVED=\$(find \"\${_PCA_DIR}/_saved\" -name 'protocol_core_noiseless_pca_*.json' 2>/dev/null | wc -l)
+  _PCA_PRIMARY=\$(find \"\${_PCA_DIR}\" -maxdepth 1 -name 'protocol_core_noiseless_pca_*.json' 2>/dev/null | wc -l)
+  echo \"[C3-E2-guard] \${_PCA_PRIMARY} primary / \${_PCA_SAVED} hard-linked into \${_PCA_DIR}/_saved/\"
+  if [[ \"\${_PCA_PRIMARY}\" -eq 0 && \"\${_PCA_SAVED}\" -gt 0 ]]; then
+    echo \"WARNING: primary protocol_core_noiseless_pca_*.json were deleted (prune_old E2); \${_PCA_SAVED} copies survived in _saved/ — restore with:\"
+    echo \"         cp \${_PCA_DIR}/_saved/protocol_core_noiseless_pca_*.json \${_PCA_DIR}/\"
+  elif [[ \"\${_PCA_PRIMARY}\" -eq 0 ]]; then
+    echo 'WARNING: exp2_feynman_pca_4060 produced no protocol_core_noiseless_pca_*.json — exp2_pca_4060_summary.json will be empty/incomplete'
+  fi
 
   # ── 3. Compute corrected summary (new solve rate) ─────────────────────────────
   echo '[FIX-C3] Computing corrected solve rate from exp2_pca_4060/ results...'
@@ -1282,6 +1436,26 @@ def _r2(row):
 
 def _rows(data):
     if isinstance(data, dict):
+        # FIX-C3-SCHEMA: protocol_core_noiseless_pca_*.json (the raw _save()
+        # output of run_comparative_suite_benchmark_pca.py) nests real
+        # per-method results under top-level "tests" -> [i] -> "results" ->
+        # {method_name: {..., "r2": ...}}. None of ('results','equation_results',
+        # 'data','rows') exist at the TOP level of this shape, so without this
+        # branch the generic case below falls through to `yield data`, handing
+        # back one useless pseudo-row per file with no r2 field — silently
+        # contributing 0/0 for every raw result file. Handle it explicitly.
+        if isinstance(data.get('tests'), list):
+            for test in data['tests']:
+                if not isinstance(test, dict):
+                    continue
+                results = test.get('results')
+                if isinstance(results, dict):
+                    for rec in results.values():
+                        if isinstance(rec, dict):
+                            yield rec
+                else:
+                    yield from _rows(test)
+            return
         for key in ('results','equation_results','data','rows'):
             v = data.get(key)
             if v is not None:
@@ -1296,7 +1470,15 @@ def _rows(data):
 n_pass = n_total = 0
 source_files = []
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
-    if any(x in fp.name for x in ('checkpoint','disclosure','summary','baseline')):
+    # FIX-C3-DEDUPE: benchmark_results_pca_4060.json and benchmark_results_
+    # extrap.json are flattened re-exports of the exact same per-test,
+    # per-method rows already present in protocol_core_noiseless_pca_*.json
+    # (confirmed: per-domain record counts in exp2_pca_4060_run.log match
+    # exactly between the two exports, every domain). Now that _rows() above
+    # can read the raw files directly, counting these too would double- (or
+    # with both exports present, triple-) count every row. Exclude them —
+    # protocol_core_noiseless_pca_*.json is the single source of truth.
+    if any(x in fp.name for x in ('checkpoint','disclosure','summary','baseline','benchmark_results')):
         continue
     try:
         data = json.loads(fp.read_text())
@@ -1530,13 +1712,25 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
-  # FIX-E6: copy benchmark_results_extrap.json to a shard-suffixed name so
-  # parallel shard pushes do not silently overwrite each other on master.
+  # FIX-E6 (updated): run_comparative_suite_benchmark_v2.py now writes
+  # benchmark_results_extrap.json directly into --output-dir (_EXT_DIR) —
+  # see that script's FIX-EXTRAP-OUTPUT-DIR change. This copy step now just
+  # renames it to a shard-suffixed name so parallel shard pushes do not
+  # collide on master. Fallback to the old parent comparison_results/
+  # location is kept in case an unpatched/older script version is deployed.
   _BENCH_EXT_SRC=\"\${_EXT_DIR}/benchmark_results_extrap.json\"
+  if [ ! -f \"\${_BENCH_EXT_SRC}\" ]; then
+    _BENCH_EXT_SRC=\"\${RESULTS_DIR}/comparison_results/benchmark_results_extrap.json\"
+    if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
+      echo \"WARNING: benchmark_results_extrap.json found in comparison_results/ root, not \${_EXT_DIR} — script may be an older/unpatched version (expected it to honor --output-dir).\"
+    fi
+  fi
   if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
     _BENCH_EXT_DST=\"\${_EXT_DIR}/benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
     cp \"\${_BENCH_EXT_SRC}\" \"\${_BENCH_EXT_DST}\"
-    echo \"[E6-guard] shard copy: benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
+    echo \"[E6-guard] copied \${_BENCH_EXT_SRC} -> benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
+  else
+    echo \"WARNING: benchmark_results_extrap.json not found in \${_EXT_DIR} or \${RESULTS_DIR}/comparison_results\"
   fi
 
   echo '=== exp2_feynman_extrap verification ==='
@@ -1545,7 +1739,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   COUNT_EXTRAP=\$(find \"\${_EXT_DIR}\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   COUNT_BENCH_EXTRAP=\$(find \"\${_EXT_DIR}\" \
-    -name 'benchmark_results_extrap.json' 2>/dev/null | wc -l)
+    -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | wc -l)
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   if [[ \"\${COUNT_EXTRAP}\" -eq 0 && \"\${COUNT_SAVED}\" -gt 0 ]]; then
@@ -1557,11 +1751,10 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: benchmark_results_extrap.json not found — ci_analysis.yml merge step will find nothing'
-    echo '  Ensure run_comparative_suite_benchmark_v2.py v2.2+ is in use (writes this file when --extrap is active)'
+    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/ — ci_analysis.yml merge step will find nothing'
   else
-    echo \"OK: benchmark_results_extrap.json present (shard copy: benchmark_results_extrap_shard\${_EXT_SHARD}.json)\"
-    echo '    ci_analysis.yml will merge into ablation_paired.json in exp2_extrap/'
+    echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
+    echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
   fi
 "
 
@@ -1727,11 +1920,30 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   # FIX-GLOB: exclude seed42 explicitly so exp3 output is never swept here.
   # FIX-OUTDIR-3: add CI-matching globs for exp3b (full_run_*, report_hybrid_*, hybrid_defi_*)
   # CI Move step moves all four patterns; run_all.sh was only moving *nguyen*.json.
+  #
+  # FEATURE-NSHARDS-SUFFIX (exp3b) — mirrors STEP 10/10b's suppB/suppB_sc
+  # isolation pattern. exp3b runs as EXP_SHARD_TABLE["exp3b"]=4 parallel CI
+  # matrix shards. Previously this move step moved matched files into
+  # extrapolation/multi_seed/ with their ORIGINAL names, with no per-shard
+  # tag — if two shards ever produced same-named outputs (e.g. a re-run, or
+  # any future change that lets two shards share a seed), the second push
+  # would silently overwrite the first on disk. Tag every moved filename
+  # with a zero-padded, 1-based SHARD_INDEX suffix (same convention as
+  # suppB/suppB_sc's HYPATIAX_NSHARDS_SUFFIX) so each shard's outputs are
+  # independently distinguishable on disk, the same guarantee suppB relies on.
+  printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
+  echo \"  [exp3b] SHARD_INDEX=\${SHARD_INDEX:-0} -> isolation suffix _nshards\${_SHARD_TAG}\"
+  _DEST_MS='${RESULTS_DIR}/extrapolation/multi_seed'
   find '${RESULTS_DIR}' -maxdepth 1 \
     \( -name '*nguyen*.json' -o -name 'full_run_*.json' \
        -o -name 'report_hybrid_*.json' -o -name 'hybrid_defi_*.json' \) \
-    ! -name '*seed42*' ! -name '*nguyen12*42*' \
-    -exec mv -v {} '${RESULTS_DIR}/extrapolation/multi_seed/' \;
+    ! -name '*seed42*' ! -name '*nguyen12*42*' | while IFS= read -r src; do
+      fname=\$(basename \"\$src\")
+      stem=\"\${fname%.*}\"
+      ext=\"\${fname##*.}\"
+      dst=\"\${_DEST_MS}/\${stem}_nshards\${_SHARD_TAG}.\${ext}\"
+      mv -v \"\$src\" \"\$dst\" || true
+  done
   find '${RESULTS_DIR}' -maxdepth 1 -name 'experiment_registry.json' \
     -exec cp -v {} '${RESULTS_DIR}/extrapolation/multi_seed/' \; 2>/dev/null || true
 "
@@ -1743,7 +1955,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
 # Mirrors the "Check symbolic equivalence (exp3/exp3b)" step in ci_analysis.yml.
 (
   set -euo pipefail
-  _SCRIPT="${REPO_ROOT}/scripts/check_symbolic_equivalence.py"
+  _SCRIPT="${REPO_ROOT}/.github/scripts/check_symbolic_equivalence.py"
   _SEED_DIR="${RESULTS_DIR}/extrapolation/multi_seed"
   _REPORT="${_SEED_DIR}/symbolic_equivalence_report.csv"
   _SUMMARY="${_SEED_DIR}/symbolic_equivalence_summary.txt"
@@ -1758,9 +1970,8 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     echo "[exp3_sym] Running check_symbolic_equivalence.py ..."
     mkdir -p "${_SEED_DIR}"
     python3 "${_SCRIPT}" \
-      --result-dir  "${_SEED_DIR}" \
-      --output-csv  "${_REPORT}" \
-      --output-txt  "${_SUMMARY}" \
+      --results-dir "${_SEED_DIR}" \
+      --output-dir  "${_SEED_DIR}" \
       2>&1 | tee "${_SEED_DIR}/symbolic_equivalence_run.log"
     if [[ -f "${_REPORT}" ]]; then
       _NR=$(wc -l < "${_REPORT}" || echo "?")
@@ -1819,6 +2030,34 @@ run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routin
 
 # ── STEP 10: suppB — noise sweep ─────────────────────────────────────────────
 # FIX CRITICAL 2: noise sweep now its own step; sample-complexity in suppB_sc
+#
+# FIX-suppB-ALL-METHODS: run_dual_sweep_benchmarks.py (the orchestrator that
+# wraps both run_noise_sweep_benchmark.py and run_sample_complexity_benchmark.py)
+# defaults --methods to [3, 4] for BOTH sweeps. run_sample_complexity_benchmark.py
+# confirms this is its own --methods default too (docstring: "top two methods").
+# run_noise_sweep_benchmark.py's source was not directly inspected here, but
+# ci_postprocess.yml's own comments group suppB and suppB_sc together as both
+# producing only "EnhancedHybridSystemDeFi (core)" + "HybridSystemLLMNN
+# all-domains (core)" — i.e. the same 2-method scope — so this is treated as
+# the same default and patched the same way as suppB_sc's FIX-suppB_sc-ALL-
+# METHODS fix. fig_runtime_comparison and fig_comparative_table in
+# generate_figures.py read EXCLUSIVELY from noise_sweep_*.json /
+# sample_complexity_*.json — there is no code path pulling method coverage
+# from exp2, suppA, or hybrid_all_domains for these two figures, so the
+# cross-experiment ALLEXP_FIGDIR regeneration pass in ci_postprocess.yml
+# cannot fill the gap no matter how complete those other experiments are.
+#
+# COST/RISK + MITIGATION: this is why EXP_SHARD_TABLE["suppB"] was bumped
+# from 1 to 5 shards (one per noise level — see that table's comment in
+# ci_runner.yml for why 4 shards would silently mis-pin NOISE_LEVEL). Each
+# shard now only needs to cover 1 noise level x 11 domains x 6 methods
+# instead of 5 noise levels x 11 domains x 2 methods on a single shard, so
+# total wall-clock per shard should stay comparable to (or lower than) the
+# pre-fix single-shard 2-method run. Methods 5/6 remain PySR-backed with
+# their own --pysr-timeout/--method-timeout per fit; if a shard still hits
+# its job timeout, verify run_noise_sweep_benchmark.py actually has a
+# --methods flag (the assumption above) before assuming the timeout is
+# purely a workload-size problem.
 run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Supplement B)" bash -c "
   # FIX-suppB-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug as all other steps.
   cd '${REPO_ROOT}'
@@ -1833,24 +2072,26 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
   #
   # CI task ID format: noise{NL}__{domain}  e.g. noise0.5__feynman_biology
   # SHARD_IDS / TASK_IDS contain the task IDs for this shard (space-separated).
-  # All tasks in one shard share the same noise level (plan groups by NL × domain).
+  # All tasks in one shard share the same noise level (plan groups by NL × domain,
+  # and EXP_SHARD_TABLE["suppB"]=5 guarantees one noise level per shard — see
+  # FIX-suppB-ALL-METHODS comment above and ci_runner.yml's EXP_SHARD_TABLE comment).
   # Extract sigma from the first task ID in this shard.
   # Task format: noise{PCT}__{domain}  e.g. noise0.5__feynman_biology
   # PCT values are percentages of signal std (0.0, 0.5, 1.0, 5.0, 10.0).
-  # The script expects NOISE_LEVEL as a fraction (÷100) OR as a value >1 which
-  # it divides by 100 itself.  To avoid the ambiguity for 0.5 and 1.0 (both ≤1
-  # but represent 0.5% and 1.0%), we convert all values to fractions here so
-  # the script receives unambiguous sigma fractions (0.0, 0.005, 0.01, 0.05, 0.10).
+  # The script (run_noise_sweep_benchmark.py) always does _ci_sigma = _raw / 100.0
+  # (line ~781). So NOISE_LEVEL must be passed in PERCENT (e.g. "0.5" = 0.5%),
+  # NOT as a pre-divided fraction. Pass _NL_PCT directly — do NOT divide by 100 here.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)
   if echo \"\${_FIRST_TASK}\" | grep -qE '^noise[0-9]'; then
     _NL_PCT=\$(echo \"\${_FIRST_TASK}\" | sed 's/^noise\([0-9][0-9.]*\)__.*/\1/')
-    # FIX-NOISE_LEVEL-FORMAT: use %.10g instead of :.6g so 0.0/100 → '0.0' not '0'.
-    # The script checks NOISE_LEVEL != '' to decide whether to pin a single level;
-    # '0' may be falsy in some Python contexts. Always emit a decimal to be safe.
-    _NL_FRAC=\$(python3 -c \"v=float('\${_NL_PCT}')/100; print(f'{v:.10g}')\")
-    export NOISE_LEVEL=\"\${_NL_FRAC}\"
-    echo \"  [suppB] NOISE_LEVEL=\${NOISE_LEVEL} (sigma fraction from task \${_FIRST_TASK}, pct=\${_NL_PCT}%)\"
+    # FIX-DOUBLE-DIVIDE: pass NOISE_LEVEL in PERCENT (not fraction).
+    # run_noise_sweep_benchmark.py line ~781 already divides by 100 (_ci_sigma = _raw / 100.0).
+    # Previously run_all.sh pre-divided by 100 here, causing a double-divide:
+    #   task noise0.5__ → _NL_PCT=0.5 → _NL_FRAC=0.005 → script: 0.005/100=0.00005 (WRONG)
+    # Fix: export _NL_PCT directly as NOISE_LEVEL so the script gets 0.5 → 0.5/100=0.005 (CORRECT)
+    export NOISE_LEVEL=\"\${_NL_PCT}\"
+    echo \"  [suppB] NOISE_LEVEL=\${NOISE_LEVEL}% → script will compute sigma=\$(python3 -c \"print(float('\${_NL_PCT}')/100)\") (task \${_FIRST_TASK})\"
   else
     echo \"  [suppB] WARNING: no noise{NL}__ task ID found in SHARD_IDS — full sweep will run\"
   fi
@@ -1862,38 +2103,216 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
   # _checkpoint_shard0.json committed from a prior failed run. Without this,
   # RESUME=true (set globally by CI) causes the script to read the committed
   # checkpoint, conclude all tasks are done, and exit silently with 0 outputs.
+  # FEATURE-NSHARDS-SUFFIX — CORRECTED 2026-06-23:
+  # Originally derived this suffix from N_SHARDS (the constant TOTAL shard
+  # count, e.g. 5 for suppB) — that gave every one of the 5 concurrently-
+  # running matrix shards the IDENTICAL suffix (_nshards05 on all of them),
+  # which defeats the purpose: shards run in parallel
+  # (strategy.matrix/fail-fast:false in ci_runner.yml) and write
+  # second-granularity timestamped filenames, so same-second saves from
+  # different shards would collide/overwrite on the SAME suffix.
+  #
+  # Fixed to use SHARD_INDEX instead (the per-shard 0-based index from
+  # ci_runner.yml's matrix: "shard": j for j in range(N_SHARDS) — see that
+  # file's plan job). +1 converts to the 1-based numbering requested
+  # (shard 0 -> _nshards01, shard 1 -> _nshards02, ... shard 4 -> _nshards05
+  # for suppB's 5-shard run), so every shard's output is independently
+  # distinguishable, not just every separate CI run.
+  printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
+  export HYPATIAX_NSHARDS_SUFFIX=\"\${_SHARD_TAG}\"
+  echo \"  [suppB] SHARD_INDEX=\${SHARD_INDEX:-0} -> HYPATIAX_NSHARDS_SUFFIX=_nshards\${HYPATIAX_NSHARDS_SUFFIX}\"
   NOISE_LEVELS='${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}' \\
-  OUT_BASE='${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep/noise-sweep' \\
+  OUT_BASE='${RESULTS_DIR}' \\
   RESULTS_DIR='${RESULTS_DIR}' \\
   RESUME='false' \\
+  HYPATIAX_NSHARDS_SUFFIX=\"\${HYPATIAX_NSHARDS_SUFFIX}\" \\
     python3 '${EXPERIMENTS_DIR}/run_noise_sweep_benchmark.py' \\
+    --methods 1 2 3 4 5 6 \\
     --samples ${FEYNMAN_SAMPLES} \\
     --pysr-timeout ${FEYNMAN_TIMEOUT} \\
     --method-timeout ${METHOD_TIMEOUT} \\
     2>&1 | tee '${RESULTS_DIR}'/suppB_run.log
+
+  # FIX-suppB-DOUBLED-PATH — CONFIRMED ROOT CAUSE 2026-06-23 (read
+  # run_noise_sweep_benchmark.py source directly; no more guessing):
+  #
+  #   _RESULTS_DIR = _OUT_BASE / 'comparison_results/feynman-tests/noise-sweep'
+  #   (that file, line 106) — single level, no further nesting anywhere in
+  #   that script or in run_comparative_suite_benchmark_v2.py (the subprocess
+  #   it calls via --output-dir=_RESULTS_DIR; that script own _OUTPUT_DIR =
+  #   Path(args.output_dir).resolve(), unmodified). So with OUT_BASE set to
+  #   the plain results root (as it is below, and at the job-level env:
+  #   OUT_BASE: hypatiax/data/results), the script real, single-level
+  #   output directory is:
+  #     \${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep/
+  #   This is correct and requires no OUT_BASE change here.
+  #
+  #   The doubled path observed in one run (.../noise-sweep/noise-sweep/) did
+  #   NOT come from this script. It came from ci_runner.yml Move-results-to-
+  #   RESULTS_DIR step, which computes TARGET equal to RESULTS_DIR joined with
+  #   RESULT_SUBDIR, and moves any matching result files it finds under the
+  #   workspace into TARGET. When RESULT_SUBDIR for suppB was (mistakenly, at
+  #   one point) set to the doubled value, that move step relocated this
+  #   script correctly-written single-level output one level deeper —
+  #   manufacturing the doubled structure AFTER the script had already run
+  #   correctly.
+  #
+  #   Fix landed in ci_runner.yml (suppB RESULT_SUBDIR), ci_postprocess.yml
+  #   (SUPPB_SUBDIR plus its MAPPING fallback), and ci_analysis.yml (MAPPING
+  #   fallback) — all three now use the single-level path to match this
+  #   script real, confirmed behavior. No change needed here in run_all.sh;
+  #   OUT_BASE='\${RESULTS_DIR}' (no suffix) was already correct.
 "
+
 
 # ── STEP 10b: suppB_sc — sample-complexity sweep ─────────────────────────────
 # FIX CRITICAL 2: new dedicated step, previously missing from CI and run_all.sh
 # Produces: Tab 29 sample-complexity columns · Supplement B §6
 # Task format: sc_n{n}__{feynman_id}  →  n ∈ {50,100,200,500,750,1000}, 30 equations
 # Output dir: comparison_results/feynman-tests/sample-complexity/
+#
+# FIX-suppB_sc-ALL-METHODS: run_sample_complexity_benchmark.py defaults to
+# --methods 3 4 (its own documented "top two methods" scope — see the
+# script's docstring / _DEFAULT_METHODS). That default is correct for the
+# script's own stated purpose, but it silently starves two downstream
+# figures: fig_runtime_comparison and fig_comparative_table in
+# generate_figures.py read EXCLUSIVELY from noise_sweep_*.json /
+# sample_complexity_*.json (the suppB / suppB_sc outputs) — there is no
+# code path that pulls method coverage from exp2, suppA, or
+# hybrid_all_domains for these two figures, so ci_postprocess.yml's
+# cross-experiment ALLEXP_FIGDIR regeneration pass cannot fill the gap no
+# matter how complete those other experiments are. Passing --methods
+# explicitly here is therefore the only way to get all 6 methods into
+# those two figures.
+#
+# FIX-suppB_sc-SHARD-6: this step now runs as 6 CI shards (ci_runner.yml
+# EXP_SHARD_TABLE["suppB_sc"] = 6), one per sample size n, mirroring suppB's
+# one-noise-level-per-shard design (STEP 10 above). Each shard covers
+# 1 sample size x 11 feynman domains x 6 methods instead of 6 sample sizes
+# x 11 domains x 6 methods on a single shard — this is what makes running
+# all 6 methods (instead of the 2-method default) tractable within a single
+# job timeout; see COST/RISK below for the per-shard budget this assumes.
+# SC_SAMPLE_COUNTS is pinned to the single n extracted from this shard's
+# first task ID (sc_n{n}__{domain}) below, the same way STEP 10 pins
+# NOISE_LEVEL from its shard's first task ID.
+#
+# FIX-suppB_sc-METHOD-ASSERT: after the run, this step now hard-fails if the
+# resulting sample_complexity_*.json for this shard's n does not contain all
+# 6 methods in method_summary. Without this check, a shard that times out or
+# is invoked without --methods (e.g. a future manual re-run, or a stale cached
+# checkpoint with RESUME=true) silently writes a partial 2-method JSON that
+# passes ci_pipeline_analysis.yml's content-based completion check (which
+# only verifies sample_sizes coverage, not method coverage — see that file's
+# "suppB / suppB_sc: content-based check (FIX 6)" comment) and produces
+# degraded fig_runtime_comparison / fig_comparative_table downstream with no
+# CI signal. This assertion turns that into a loud, immediate job failure.
+#
+# COST/RISK: each of the 6 shards covers 11 domains x 6 methods at one fixed
+# n. Methods 5 and 6 are PySR-backed (see run_sample_complexity_benchmark.py
+# --skip-pysr) with their own --pysr-timeout (1100s) and --method-timeout
+# (900s) per fit. Per-task cost is NOT uniform across n — larger n means
+# slower fits — so the n=1000 shard is expected to be the long pole among
+# the 6. Those per-method/per-PySR-fit timeouts bound worst-case time per
+# (equation, method) — they do NOT bound the job's TOTAL wall-clock, which
+# is gated only by the 330-minute job timeout and JOB_DEADLINE (19800s)
+# above it. If the largest-n shard starts hitting the job timeout, the
+# first things to try are: (a) sharding suppB_sc further by splitting the
+# n=1000 block across two shards (EXP_SHARD_TABLE bump from 6 to 7, with a
+# matching split in SUPPB_SC_IDS/ci_runner.yml's domain partition for that
+# one n), or (b) dropping back to --methods 3 4 5 6 (skip the two cheapest/
+# least informative methods instead of the two PySR ones) for the n=1000
+# shard only, via a per-shard SC_METHODS override mirroring SC_SAMPLE_COUNTS.
 run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6)" bash -c "
   # FIX-suppB_sc-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug.
   cd '${REPO_ROOT}'
   # FIX-suppB_sc-2: --output-dir, --populations, --parsimony are NOT in argparse — removed.
   # FIX-suppB_sc-3: bare \\ → \\\\ (line-continuations inside double-quoted bash -c string).
   # FIX-RESUME: RESUME=false so stale committed checkpoint doesn't skip all work silently.
+  #
+  # FIX-suppB_sc-SHARD-6: pin SC_SAMPLE_COUNTS to the single n carried by this
+  # shard's task IDs, the same way STEP 10 pins NOISE_LEVEL from SHARD_IDS.
+  # Task format: sc_n{n}__{domain}  e.g. sc_n500__feynman_biology
+  # EXP_SHARD_TABLE[\"suppB_sc\"]=6 + SUPPB_SC_IDS' n-outer/domain-inner layout
+  # (see ci_runner.yml) guarantees every task in a shard shares one n — see
+  # FIX-suppB_sc-SHARD-6 comment above for why 6 shards keeps that property.
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)
+  if echo \"\${_FIRST_TASK}\" | grep -qE '^sc_n[0-9]'; then
+    _SC_N=\$(echo \"\${_FIRST_TASK}\" | sed 's/^sc_n\([0-9]\+\)__.*/\1/')
+    export SC_SAMPLE_COUNTS=\"\${_SC_N}\"
+    echo \"  [suppB_sc] SC_SAMPLE_COUNTS=\${SC_SAMPLE_COUNTS} (n from task \${_FIRST_TASK})\"
+  else
+    export SC_SAMPLE_COUNTS='50,100,200,500,750,1000'
+    echo \"  [suppB_sc] WARNING: no sc_n{N}__ task ID found in SHARD_IDS — full sweep will run\"
+  fi
+  # FEATURE-NSHARDS-SUFFIX: per-shard suffix (1-based, zero-padded), mirrors
+  # run_all.sh STEP 10's suppB block. SUPPB_SC_IDS is n-outer/domain-inner
+  # (see ci_runner.yml) so with the locked 6-shard count each shard already
+  # gets a distinct n -- this suffix is therefore NOT replacing _shard_tag()
+  # (which exists for a different, currently-dormant concern: multiple
+  # shards sharing one n, which the n-outer layout + EXP_SHARD_TABLE=6
+  # together prevent) -- it is an independent, simpler distinguisher applied
+  # to THIS script's filenames the same way it is for suppB's.
+  printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
+  export HYPATIAX_NSHARDS_SUFFIX=\"\${_SHARD_TAG}\"
+  echo \"  [suppB_sc] SHARD_INDEX=\${SHARD_INDEX:-0} -> HYPATIAX_NSHARDS_SUFFIX=_nshards\${HYPATIAX_NSHARDS_SUFFIX}\"
   NOISE_LEVEL='5.0' \\
-  SC_SAMPLE_COUNTS='50,100,200,500,750,1000' \\
-  OUT_BASE='${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity' \\
+  OUT_BASE='${RESULTS_DIR}' \\
   RESULTS_DIR='${RESULTS_DIR}' \\
   RESUME='false' \\
+  HYPATIAX_NSHARDS_SUFFIX=\"\${HYPATIAX_NSHARDS_SUFFIX}\" \\
     python3 '${EXPERIMENTS_DIR}/run_sample_complexity_benchmark.py' \\
+    --methods 1 2 3 4 5 6 \\
     --samples ${FEYNMAN_SAMPLES} \\
     --pysr-timeout ${FEYNMAN_TIMEOUT} \\
     --method-timeout ${METHOD_TIMEOUT} \\
     2>&1 | tee '${RESULTS_DIR}'/suppB_sc_run.log
+
+  # FIX-suppB_sc-DOUBLED-PATH (root-caused, mirrors FIX-suppB-DOUBLED-PATH in STEP 10):
+  # run_sample_complexity_benchmark.py joins OUT_BASE with its own fixed suffix
+  # 'comparison_results/feynman-tests/sample-complexity' (see that script's
+  # _RESULTS_DIR construction). OUT_BASE must therefore be the plain results root,
+  # NOT a path that already contains that suffix. The previous value here
+  #   OUT_BASE='\${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
+  # pre-appended the suffix, so the script appended it AGAIN on top, producing:
+  #   \${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity/comparison_results/feynman-tests/sample-complexity/
+  # Setting OUT_BASE='\${RESULTS_DIR}' (no suffix) makes the script land outputs at
+  # the canonical single-level path:
+  #   \${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity/
+  # No rescue/move-based workaround is needed once the source path is correct.
+  _SC_CANON='${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
+  mkdir -p \"\${_SC_CANON}\"
+
+  # FIX-suppB_sc-METHOD-ASSERT: hard-fail this shard if its output JSON does
+  # not contain all 6 methods. ci_pipeline_analysis.yml's content-based
+  # completion check only verifies sample_sizes coverage (see its
+  # \"suppB / suppB_sc: content-based check (FIX 6)\" comment) — it cannot
+  # see method coverage, so a partial-method shard would otherwise pass
+  # completion checks silently and degrade fig_runtime_comparison /
+  # fig_comparative_table downstream with no CI signal at all.
+  python3 -c \"
+import glob, json, os, sys
+
+sc_n = '\${SC_SAMPLE_COUNTS}'.split(',')[0].strip()
+candidates = sorted(
+    glob.glob('\${_SC_CANON}/sample_complexity_*.json'),
+    key=os.path.getmtime,
+    reverse=True,
+)
+if not candidates:
+    print(f'[suppB_sc-METHOD-ASSERT] no sample_complexity_*.json found for n={sc_n} -- FAIL')
+    sys.exit(1)
+
+latest = candidates[0]
+data = json.load(open(latest))
+methods = data.get('methods', [])
+n_found = len(methods)
+print(f'[suppB_sc-METHOD-ASSERT] n={sc_n} file={latest} methods_found={n_found} methods={methods}')
+if n_found < 6:
+    print(f'[suppB_sc-METHOD-ASSERT] FAIL: expected 6 methods, found {n_found} for n={sc_n}')
+    sys.exit(1)
+print('[suppB_sc-METHOD-ASSERT] OK -- all 6 methods present')
+\"
 "
 
 # ── STEP 11: tables ──────────────────────────────────────────────────────────
@@ -1951,17 +2370,365 @@ run tables "Generate all LaTeX tables from result JSONs -> \${RESULTS_DIR}/table
 "
 
 # ── STEP 12: figures ─────────────────────────────────────────────────────────
-# FIX STEP-11-12: confirmed output dir is \${RESULTS_DIR}/figures/ — consistent
-# with Step 11 (tables) now also writing under \${RESULTS_DIR}/.
-run figures "Generate all paper figures from results -> \${RESULTS_DIR}/figures/" bash -c "
+# FIX STEP-11-12 : confirmed output dir is ${RESULTS_DIR}/figures/ — consistent
+#                  with Step 11 (tables) now also writing under ${RESULTS_DIR}/.
+#
+# FIX FIGURES-A  : generate_figures.py MUST be called with --experiment <id>
+#                  (mirrors ci_postprocess.yml A1–A14).  Calling it without
+#                  --experiment caused it to either do nothing or write to a
+#                  tools-level path (hypatiax/tools/figures/results.pdf) that
+#                  is never read by LaTeX — root cause of all suppB/instability
+#                  figure files being absent from ${RESULTS_DIR}/figures/.
+#
+# FIX FIGURES-B  : suppB figures must be read from AND written to the CANONICAL
+#                  suppB subdirectory (comparison_results/feynman-tests/
+#                  noise-sweep/figures/) — mirrors ci_postprocess.yml
+#                  A10 "CRITICAL" comment.  suppB_sc likewise uses its own subdir.
+#                  Previous code pointed --results-dir at ${RESULTS_DIR} root,
+#                  causing generate_figures.py to find no noise_sweep_*.json
+#                  and write empty placeholder PDFs.
+#
+# FIX FIGURES-C  : Group C (5 hand-crafted main-paper figures) are NEVER produced
+#                  by any runner or generate_figures.py call.  They must be copied
+#                  from their source locations under ${REPO_ROOT}/Figures/ into
+#                  ${RESULTS_DIR}/figures/ (the path LaTeX reads via
+#                  \graphicspath{{figures/}{../figures/}}).
+#                  Previously there was no copy step at all — all 5 were always
+#                  missing from the final figures/ directory.
+#
+# THREE GROUPS handled in this step:
+#
+#   GROUP A — per-experiment figures (runner output → generate_figures.py)
+#             exp1, exp1b, exp1_pca, exp1b_pca, extrap, hybrid_all_domains,
+#             instability, exp2_feynman, exp2_feynman_pca, exp2_feynman_extrap,
+#             exp2, exp3, exp3b, suppA
+#             → written to ${RESULTS_DIR}/figures/
+#
+#   GROUP B — suppB / suppB_sc sweep figures (noise_sweep_*.json → plots)
+#             → written to their canonical subdirs' figures/ then copied to
+#               ${RESULTS_DIR}/figures/ so LaTeX can find them
+#             Stems: fig1_r2_vs_noise … fig11_recovery_heatmap (PDFs, 11 stems)
+#                    fig_runtime_comparison.png, fig_comparative_table.png (2 stems)
+#
+#   GROUP C — hand-crafted / cosmetic figures (no runner, no generator)
+#             Must already exist under ${REPO_ROOT}/Figures/ subdirs.
+#             This step copies them into ${RESULTS_DIR}/figures/.
+#             Stems and source locations:
+#               hypatiaX_three_systems.pdf
+#                 ← Figures/architecture_figures/
+#               hypatiaX_algorithm1_routing_cascade_v2.pdf
+#                 ← Figures/architecture_figures/
+#               fig18_r2_heatmap_improved.pdf
+#                 ← Figures/figures-cosmetic-last/
+#               fig09_r2_heatmap_regimes.pdf
+#                 ← Figures/figures-cosmetic-last/
+#               fig1_seed_sweep.pdf  (also .png accepted)
+#                 ← Figures/figures-portfolio-variance/
+#             If a source file is absent → [MISSING] warning printed; build
+#             will fail at LaTeX compile time but this step remains non-fatal
+#             so other figures are still deployed.
+# ─────────────────────────────────────────────────────────────────────────────
+run figures "Generate + deploy all paper figures (Groups A/B/C) -> \${RESULTS_DIR}/figures/" bash -c "
+  set -euo pipefail
   mkdir -p '${RESULTS_DIR}/figures'
   cd '${REPO_ROOT}'
-  python3 scripts/generate_figures.py \
-    --results-dir '${RESULTS_DIR}' \
-    --output-dir  '${RESULTS_DIR}/figures' \
-    2>&1 | tee '${RESULTS_DIR}'/figures_run.log
+
+  # ── Helper: call generate_figures.py with required --experiment flag ────────
+  # Mirrors ci_postprocess.yml A1–A16 exactly.
+  # Skips gracefully when --results-dir does not contain expected source files.
+  _gen_figs() {
+    local exp=\"\$1\" rdir=\"\$2\" fdir=\"\$3\"
+    mkdir -p \"\${fdir}\"
+    if python3 scripts/generate_figures.py \
+        --experiment  \"\${exp}\" \
+        --results-dir \"\${rdir}\" \
+        --figures-dir \"\${fdir}\" \
+        --source      auto \
+        2>&1 | tee -a '${RESULTS_DIR}'/figures_run.log; then
+      echo \"  [OK] \${exp}: figures written to \${fdir}\"
+    else
+      echo \"  [WARN] \${exp}: generate_figures.py returned non-zero — continuing\"
+    fi
+  }
+
+  echo '=== STEP 12 figures — GROUP A: per-experiment figures ===' | tee '${RESULTS_DIR}'/figures_run.log
+
+  # A1: exp1
+  _gen_figs exp1 \
+    '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi' \
+    '${RESULTS_DIR}/figures'
+
+  # A2: exp1b
+  _gen_figs exp1b \
+    '${RESULTS_DIR}/comparison_results/noise-noiseless/15' \
+    '${RESULTS_DIR}/figures'
+
+  # A3: exp2_feynman
+  _gen_figs exp2_feynman \
+    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
+    '${RESULTS_DIR}/figures'
+
+  # A4: exp2_feynman_extrap
+  _gen_figs exp2_feynman_extrap \
+    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap' \
+    '${RESULTS_DIR}/figures'
+
+  # A5: exp2_feynman_pca (FIX-C3 corrected run)
+  _gen_figs exp2_feynman_pca \
+    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060' \
+    '${RESULTS_DIR}/figures'
+
+  # A6: exp2
+  _gen_figs exp2 \
+    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
+    '${RESULTS_DIR}/figures'
+
+  # A7: exp3
+  _gen_figs exp3 \
+    '${RESULTS_DIR}/extrapolation' \
+    '${RESULTS_DIR}/figures'
+
+  # A8: exp3b
+  _gen_figs exp3b \
+    '${RESULTS_DIR}/extrapolation/multi_seed' \
+    '${RESULTS_DIR}/figures'
+
+  # A9: suppA
+  _gen_figs suppA \
+    '${RESULTS_DIR}/hybrid_pysr/defi' \
+    '${RESULTS_DIR}/figures'
+
+  # A10: hybrid_all_domains
+  _gen_figs hybrid_all_domains \
+    '${RESULTS_DIR}/hybrid_llm_nn/all_domains' \
+    '${RESULTS_DIR}/figures'
+
+  # A11: instability (§10.9 — 12 fig_paper_* / hypatiax_instability_* stems)
+  # NOTE: run_all.sh --step instability already calls run_instability_suite.py
+  # which writes directly to ${RESULTS_DIR}/figures/.  _gen_figs here covers
+  # the generate_figures.py pass that post-processes those outputs.
+  _gen_figs instability \
+    '${RESULTS_DIR}/figures' \
+    '${RESULTS_DIR}/figures'
+
+  # A12: extrap
+  _gen_figs extrap \
+    '${RESULTS_DIR}/comparison_results/extrapolation' \
+    '${RESULTS_DIR}/figures'
+
+  # A13: exp1_pca (FIX-C3)
+  _gen_figs exp1_pca \
+    '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca' \
+    '${RESULTS_DIR}/figures'
+
+  # A14: exp1b_pca (FIX-C3)
+  _gen_figs exp1b_pca \
+    '${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca' \
+    '${RESULTS_DIR}/figures'
+
+  echo ''
+  echo '=== STEP 12 figures — GROUP B: suppB / suppB_sc sweep figures ===' | tee -a '${RESULTS_DIR}'/figures_run.log
+
+  # FIX FIGURES-B: suppB reads noise_sweep_*.json from its OWN canonical subdir.
+  # After generate_figures.py writes to the subdir's figures/, we sync the stems
+  # LaTeX needs into ${RESULTS_DIR}/figures/ where \graphicspath looks.
+
+  _SUPPB_RDIR='${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep'
+  _SUPPB_FDIR=\"\${_SUPPB_RDIR}/figures\"
+  _SUPPB_SC_RDIR='${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
+  _SUPPB_SC_FDIR=\"\${_SUPPB_SC_RDIR}/figures\"
+
+  # FIX FIGURES-B2 (suppB_sc cross-contamination): _SUPPB_FDIR / _SUPPB_SC_FDIR
+  # have been observed accumulating unrelated figures from OTHER experiment
+  # steps (instability fig_instability_*, fig_paper_*, hypatiax_instability_*,
+  # cosmetic fig07-fig22, stray REPO_AUDIT.md_shard*.pdf artifacts, and
+  # double-prefixed 'figures__*' duplicates) when --figures-dir was pointed
+  # here incorrectly on a prior run. Because the old sync loop below only
+  # checked '[ ! -f dest ]' before copying, such contamination would
+  # (a) permanently mask whether THIS run's suppB_sc figure generation
+  # actually produced anything (a silent [OK] from _gen_figs means exit-0,
+  # not non-empty output), and (b) leak unrelated files into
+  # \${RESULTS_DIR}/figures/ whenever their stem didn't collide with a
+  # Group A/C stem.
+  #
+  # Fix: wipe both dirs immediately before generating, so every run starts
+  # from a known-empty state and the only files present afterward are ones
+  # THIS run's _gen_figs call actually wrote.
+  rm -rf \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"
+  mkdir -p \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"
+
+  # B1: suppB noise-sweep figures (Supp B §noise: fig1_r2_vs_noise … fig11_recovery_heatmap)
+  _gen_figs suppB \"\${_SUPPB_RDIR}\" \"\${_SUPPB_FDIR}\"
+
+  # B2: suppB_sc sample-complexity figures (Supp B §sc)
+  _gen_figs suppB_sc \"\${_SUPPB_SC_RDIR}\" \"\${_SUPPB_SC_FDIR}\"
+
+  # FIX FIGURES-B3: report what each dir actually contains right after
+  # generation, BEFORE syncing, so an empty/wrong output is visible at the
+  # exact step that produced it rather than discovered later from the
+  # aggregate required-figure count at the end of this step.
+  for _label_dir in \"suppB:\${_SUPPB_FDIR}\" \"suppB_sc:\${_SUPPB_SC_FDIR}\"; do
+    _label=\"\${_label_dir%%:*}\"; _dir=\"\${_label_dir#*:}\"
+    _n=\$(find \"\${_dir}\" -maxdepth 1 \\( -name 'fig*.png' -o -name 'fig*.pdf' \\) 2>/dev/null | wc -l)
+    echo \"  [B-inventory] \${_label}: \${_n} fig*.png/pdf file(s) in \${_dir}\" | tee -a '${RESULTS_DIR}'/figures_run.log
+    if [ \"\${_n}\" -eq 0 ]; then
+      echo \"    [WARN] \${_label} produced ZERO figures. Check the [SKIP]/[INFO] noise_sweep/sample_complexity\" | tee -a '${RESULTS_DIR}'/figures_run.log
+      echo \"           source lines above, and confirm the JSON schema matches what _sweep_rows expects\" | tee -a '${RESULTS_DIR}'/figures_run.log
+      echo \"           (a list of row-dicts with sigma/n_samples keys, not a dict keyed by equation name).\" | tee -a '${RESULTS_DIR}'/figures_run.log
+    fi
+  done
+
+  # Sync suppB/suppB_sc figure stems to ${RESULTS_DIR}/figures/ (LaTeX target)
+  # Stems needed per supp_benchmark_report.tex Table A.1:
+  #   fig1_r2_vs_noise … fig11_recovery_heatmap (PDFs)
+  #   fig_runtime_comparison.png  fig_comparative_table.png
+  #
+  # FIX FIGURES-B4: restrict the sync to the KNOWN suppB/suppB_sc stem list
+  # (same list used in the final required-figure check below) instead of a
+  # bare 'fig*' glob, so even if either source dir is contaminated again in
+  # the future, only legitimate suppB/suppB_sc stems can be copied into
+  # \${RESULTS_DIR}/figures/ — contamination stays contained to the source
+  # subdir and visible there via [B-inventory] above, instead of silently
+  # leaking into the LaTeX-facing directory.
+  _SUPPB_STEMS=\"fig1_r2_vs_noise fig2_rmse_vs_noise fig3_time_vs_noise fig4_r2_vs_n fig5_rmse_vs_n fig6_time_vs_n fig7_recovery_vs_noise fig8_recovery_vs_n fig9_minr2_vs_noise fig10_r2_boxplot_noise fig11_recovery_heatmap fig_runtime_comparison fig_comparative_table\"
+  echo '  [B] Syncing known suppB/suppB_sc figure stems → ${RESULTS_DIR}/figures/'
+  for _src_fdir in \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"; do
+    if [ -d \"\${_src_fdir}\" ]; then
+      for _stem in \${_SUPPB_STEMS}; do
+        for _ext in png pdf; do
+          _f=\"\${_src_fdir}/\${_stem}.\${_ext}\"
+          if [ -f \"\${_f}\" ]; then
+            cp \"\${_f}\" '${RESULTS_DIR}/figures/'\"\${_stem}.\${_ext}\" && echo \"    copied: \${_stem}.\${_ext}\"
+          fi
+        done
+      done
+    fi
+  done
+
+  echo ''
+  echo '=== STEP 12 figures — GROUP C: hand-crafted figures (copy from Figures/) ===' | tee -a '${RESULTS_DIR}'/figures_run.log
+  echo '    (FIX FIGURES-C: these are never produced by runners or generate_figures.py)'
+
+  # FIX FIGURES-C: copy each hand-crafted figure from its source tree into figures/.
+  # Source locations mirror NB-05 FIGURES_INVENTORY and ci_report.yml FIX-F1–F4.
+  # Non-fatal: a MISSING warning is printed but the step continues.
+
+  _copy_fig() {
+    local stem=\"\$1\" src=\"\$2\"
+    local dest='${RESULTS_DIR}/figures/'\"\\$(basename \"\${src}\")\"
+    if [ -f \"\${src}\" ]; then
+      cp -v \"\${src}\" \"\${dest}\" 2>&1 | tee -a '${RESULTS_DIR}'/figures_run.log
+      echo \"  [OK-C] \${stem}: copied from \${src}\"
+    else
+      echo \"  [MISSING-C] \${stem}: source not found: \${src}\" | tee -a '${RESULTS_DIR}'/figures_run.log
+      echo \"              Place the file at the source path and re-run --step figures.\"
+    fi
+  }
+
+  # FIX-F1 (ci_report.yml): architecture diagram — §7.1 fig:architecture
+  # Source: Figures/architecture_figures/hypatiaX_three_systems.pdf
+  _copy_fig hypatiaX_three_systems \
+    '${REPO_ROOT}/Figures/architecture_figures/hypatiaX_three_systems.pdf'
+
+  # FIX-F2 (ci_report.yml): routing cascade — §7.4 fig:routing_cascade
+  # Source: Figures/architecture_figures/hypatiaX_algorithm1_routing_cascade_v2.pdf
+  _copy_fig hypatiaX_algorithm1_routing_cascade_v2 \
+    '${REPO_ROOT}/Figures/architecture_figures/hypatiaX_algorithm1_routing_cascade_v2.pdf'
+
+  # FIX-F3 (ci_report.yml): R² heatmap clipped — §10.2 fig:r2_heatmap_clipped
+  # Source: Figures/figures-cosmetic-last/fig18_r2_heatmap_improved.pdf
+  _copy_fig fig18_r2_heatmap_improved \
+    '${REPO_ROOT}/Figures/figures-cosmetic-last/fig18_r2_heatmap_improved.pdf'
+
+  # FIX-F4 (ci_report.yml): R² heatmap raw — §10.2 fig:r2_heatmap_raw
+  # Source: Figures/figures-cosmetic-last/fig09_r2_heatmap_regimes.pdf
+  _copy_fig fig09_r2_heatmap_regimes \
+    '${REPO_ROOT}/Figures/figures-cosmetic-last/fig09_r2_heatmap_regimes.pdf'
+
+  # FIX-F5: portfolio seed sweep — §10.5 fig:portfolio_seed_sweep
+  # Source: Figures/figures-portfolio-variance/fig1_seed_sweep.pdf (or .png)
+  if [ -f '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.pdf' ]; then
+    _copy_fig fig1_seed_sweep \
+      '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.pdf'
+  elif [ -f '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.png' ]; then
+    _copy_fig fig1_seed_sweep \
+      '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.png'
+  else
+    echo '  [MISSING-C] fig1_seed_sweep: not found at Figures/figures-portfolio-variance/fig1_seed_sweep.{pdf,png}' | tee -a '${RESULTS_DIR}'/figures_run.log
+  fi
+
+  # ── Sync ${RESULTS_DIR}/figures/*.* into \${REPO_ROOT}/figures/ (LaTeX target) ─
+  # FIX FIGURES-ROOT-SYNC: run_all.sh previously only ever wrote figures under
+  # \${RESULTS_DIR}/figures/ (hypatiax/data/results/figures by default). The CI
+  # pipeline (ci_paper_audit.yml \"Copy hypatiax/data/results/figures/*.* into
+  # repo-root figures/\") additionally deploys a flat copy to \${REPO_ROOT}/figures/,
+  # which is what \\includegraphics resolves via \\graphicspath{{figures/}{../figures/}}
+  # when pdflatex is invoked from \${REPO_ROOT}. Without this step, a local
+  # `run_all.sh` reproduction would leave \${REPO_ROOT}/figures/ empty/stale even
+  # though \${RESULTS_DIR}/figures/ is fully populated, and a local pdflatex build
+  # would silently diverge from what CI produces.
+  #
+  # Mirrors the CI step's semantics exactly:
+  #   - non-recursive: only files directly inside \${RESULTS_DIR}/figures/ are
+  #     copied (cp, not cp -r), so no nested figures/figures/ can be created
+  #     even if a stray subdirectory (e.g. a leftover tables/) exists there.
+  #   - destination basenames only: cp -f \"\${FILES[@]}\" \"\${REPO_ROOT}/figures/\"
+  #     always lands files flat inside figures/, never inside a path that
+  #     reproduces source subdirectory structure.
+  #   - additive, not mirrored: cp -f (not rsync --delete), so hand-crafted or
+  #     previously-deployed files at \${REPO_ROOT}/figures/ are never removed.
+  echo ''
+  echo '=== STEP 12 figures — sync \${RESULTS_DIR}/figures/*.* -> \${REPO_ROOT}/figures/ ===' | tee -a '${RESULTS_DIR}'/figures_run.log
+  mkdir -p '${REPO_ROOT}/figures'
+  _ROOT_SRC='${RESULTS_DIR}/figures'
+  if [ -d \"\${_ROOT_SRC}\" ]; then
+    shopt -s nullglob
+    _ROOT_FILES=( \"\${_ROOT_SRC}\"/*.* )
+    shopt -u nullglob
+    if [ \"\${#_ROOT_FILES[@]}\" -gt 0 ]; then
+      cp -f \"\${_ROOT_FILES[@]}\" '${REPO_ROOT}/figures/'
+      echo \"  Copied \${#_ROOT_FILES[@]} file(s) from \${_ROOT_SRC}/ into ${REPO_ROOT}/figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
+    else
+      echo \"  [WARN] \${_ROOT_SRC} exists but has no files matching *.* — nothing synced to repo-root figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
+    fi
+  else
+    echo \"  [WARN] \${_ROOT_SRC} not found — skipping sync to repo-root figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
+  fi
+
+  # ── Final inventory ──────────────────────────────────────────────────────────
+  echo ''
+  echo '=== STEP 12 figures — final inventory ===' | tee -a '${RESULTS_DIR}'/figures_run.log
   echo 'Figures written to: ${RESULTS_DIR}/figures/'
-  ls '${RESULTS_DIR}/figures/'
+  ls '${RESULTS_DIR}/figures/' 2>/dev/null || echo '  (directory empty)'
+  echo 'Figures synced to:  ${REPO_ROOT}/figures/'
+  ls '${REPO_ROOT}/figures/' 2>/dev/null || echo '  (directory empty)'
+
+  # Report against the 18-stem required list (5 embedded + 13 inventory)
+  echo ''
+  echo 'Required-figure status check:' | tee -a '${RESULTS_DIR}'/figures_run.log
+  _REQUIRED=\"hypatiaX_three_systems hypatiaX_algorithm1_routing_cascade_v2 fig18_r2_heatmap_improved fig09_r2_heatmap_regimes fig1_seed_sweep fig1_r2_vs_noise fig2_rmse_vs_noise fig3_time_vs_noise fig4_r2_vs_n fig5_rmse_vs_n fig6_time_vs_n fig7_recovery_vs_noise fig8_recovery_vs_n fig9_minr2_vs_noise fig10_r2_boxplot_noise fig11_recovery_heatmap fig_runtime_comparison fig_comparative_table\"
+  _n_ok=0; _n_miss=0
+  for _stem in \${_REQUIRED}; do
+    _found=false
+    for _ext in pdf png jpg eps svg; do
+      if [ -f '${RESULTS_DIR}/figures/'\"\${_stem}.\${_ext}\" ]; then
+        _found=true; break
+      fi
+    done
+    if \"\${_found}\"; then
+      echo \"  [OK]      \${_stem}\" | tee -a '${RESULTS_DIR}'/figures_run.log
+      _n_ok=\$(( _n_ok + 1 ))
+    else
+      echo \"  [MISSING] \${_stem}\" | tee -a '${RESULTS_DIR}'/figures_run.log
+      _n_miss=\$(( _n_miss + 1 ))
+    fi
+  done
+  echo ''
+  echo \"Required figures: \${_n_ok} present, \${_n_miss} still missing.\" | tee -a '${RESULTS_DIR}'/figures_run.log
+  if [ \"\${_n_miss}\" -gt 0 ]; then
+    echo \"  Group C figures must be placed manually under \${REPO_ROOT}/Figures/ before re-running.\"
+    echo \"  Group B figures require suppB/suppB_sc experiment steps to complete first.\"
+  fi
 "
 
 # ── STEP 13: validate ────────────────────────────────────────────────────────
@@ -2059,8 +2826,8 @@ print(f"  [{_tag}] sample-complexity outputs: {len(sc)} file(s)")
 # tables-generator uses glob 'noise_sweep_*.json' to find suppB results.
 # If run_noise_sweep_benchmark.py writes files under a different prefix,
 # all suppB tables will contain placeholder text.
-noise_sweep_matched = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/noise-sweep/noise_sweep_*.json")
-noise_sweep_all     = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/noise-sweep/*.json")
+noise_sweep_matched = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/noise_sweep_*.json")
+noise_sweep_all     = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/*.json")
 if noise_sweep_all:
     ok = bool(noise_sweep_matched)
     checks.append(("suppB output matches noise_sweep_*.json glob (CRITICAL 4)", 1.0 if ok else 0.0, 1.0, ok))
@@ -2327,7 +3094,7 @@ EXPERIMENTS = {
     "exp3":                   RESULTS / "extrapolation",
     "exp3b":                  RESULTS / "extrapolation/multi_seed",
     "suppA":                  RESULTS / "hybrid_pysr/defi",
-    "suppB":                  RESULTS / "comparison_results/feynman-tests/noise-sweep/noise-sweep",
+    "suppB":                  RESULTS / "comparison_results/feynman-tests/noise-sweep",
     "suppB_sc":               RESULTS / "comparison_results/feynman-tests/sample-complexity",
 }
 
@@ -4123,6 +4890,6 @@ echo "    notebooks/NB-04_Numerical_Consistency_Checker.ipynb"
 echo "    notebooks/NB-05_Figure_Image_Dependency_Checker.ipynb"
 echo ""
 echo "  To rebuild the paper PDF:"
-echo "    cd ${REPO_ROOT} && pdflatex jmlr-hypatiax-paper-final.tex"
+echo "    cd ${REPO_ROOT} && pdflatex jmlr_paper_main.tex"
 echo ""
 log "Done. See individual *_run.log files in ${RESULTS_DIR}/ for per-step output."

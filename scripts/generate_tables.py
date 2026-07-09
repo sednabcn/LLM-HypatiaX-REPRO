@@ -93,6 +93,26 @@ RESULTS    = _ARGS.results_dir  or (_ROOT / "hypatiax" / "data" / "results")
 TABLES_DIR = _ARGS.output_dir   or (_ROOT / "paper" / "tables")
 TABLES_DIR.mkdir(parents=True, exist_ok=True)
 
+# ── Normalise RESULTS against known suppB/suppB_sc canonical subdirs ──────────
+# load_sweep_json() and load_best() always append a hardcoded subdir such as
+# "comparison_results/feynman-tests/sample-complexity" to RESULTS.  When CI
+# passes the already-resolved canonical dir as --results-dir (e.g.
+# hypatiax/data/results/comparison_results/feynman-tests/sample-complexity),
+# RESULTS / subdir produces a self-nested doubled path that does not exist and
+# causes sc_data / noise_data to come back None, silently falling back to
+# placeholder tables.  Strip the suffix when present so the join always lands
+# at the correct location regardless of which --results-dir the caller supplies.
+_CANONICAL_SUFFIXES = (
+    "comparison_results/feynman-tests/sample-complexity",
+    "comparison_results/feynman-tests/noise-sweep/noise-sweep",
+    "comparison_results/feynman-tests/noise-sweep",
+)
+for _suffix in _CANONICAL_SUFFIXES:
+    _parts = Path(_suffix).parts
+    if RESULTS.parts[-len(_parts):] == _parts:
+        RESULTS = RESULTS.parents[len(_parts) - 1]
+        break
+
 GENERATED = 0
 
 # ── JSON location map (run_all.sh → tables-generator) ────────────────────────
@@ -128,6 +148,35 @@ GENERATED = 0
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+# FIX SC-CHECKPOINT-POLLUTION: per-shard checkpoint files (e.g.
+# sample_complexity_n1000_checkpoint.json, written mid-run by
+# run_sample_complexity_benchmark.py and left behind alongside the final
+# consolidated sample_complexity_<timestamp>.json) match the same
+# "*sample_complexity*.json" / glob patterns used below. Neither load_best()
+# nor load_sweep_json() excluded them, and both sort candidates by mtime —
+# so whichever file happens to have the latest mtime wins, which has been
+# the checkpoint shard (confirmed against real CI runs: it silently loaded
+# instead of the canonical file in every run checked, producing a
+# header-only suppb_sc_metrics.tex with 0 data rows every time, including
+# before and after the per_equation rmse fix above). The bash step in
+# ci_postprocess.yml that invokes this script DOES exclude these correctly
+# when computing $SC_DATA for its own log line, but never passes that value
+# through via --sample-complexity-json — so auto-detection here is the only
+# thing actually selecting the file used. Mirrors generate_figures.py's
+# _SWEEP_EXCLUDE_SUBSTRINGS so both scripts agree on what counts as a
+# "real" result file for the same family of inputs.
+_EXCLUDE_SUBSTRINGS = ("checkpoint", "_sig", "MISSING")
+
+
+def _filtered_glob(d: Path, glob_pat: str) -> list[Path]:
+    """d.glob(glob_pat), minus any candidate whose basename contains one of
+    _EXCLUDE_SUBSTRINGS (checkpoint shards, per-sigma shards, MISSING
+    placeholders) — see _EXCLUDE_SUBSTRINGS docstring above for why this
+    can't be skipped."""
+    return [p for p in d.glob(glob_pat)
+            if not any(s in p.name for s in _EXCLUDE_SUBSTRINGS)]
+
+
 def load_best(subdir: str, glob_pat: str,
               extra_subdirs: list[str] | None = None) -> tuple[dict | None, Path | None]:
     """Return (data, path) for the newest matching JSON.
@@ -147,7 +196,7 @@ def load_best(subdir: str, glob_pat: str,
     for d in search_dirs:
         if not d.exists():
             continue
-        candidates = sorted(d.glob(glob_pat), key=os.path.getmtime, reverse=True)
+        candidates = sorted(_filtered_glob(d, glob_pat), key=os.path.getmtime, reverse=True)
         if candidates:
             try:
                 return json.loads(candidates[0].read_text()), candidates[0]
@@ -166,7 +215,7 @@ def load_sweep_json(explicit: Path | None, subdir: str, glob_pat: str) -> dict |
     # auto-detect: newest matching file under noise-sweep subdir
     sweep_dir = RESULTS / subdir
     if sweep_dir.exists():
-        candidates = sorted(sweep_dir.glob(glob_pat), key=os.path.getmtime, reverse=True)
+        candidates = sorted(_filtered_glob(sweep_dir, glob_pat), key=os.path.getmtime, reverse=True)
         for c in candidates:
             try:
                 return json.loads(c.read_text())
@@ -175,13 +224,15 @@ def load_sweep_json(explicit: Path | None, subdir: str, glob_pat: str) -> dict |
     # also try the parent comparison_results level
     alt_dir = RESULTS / "comparison_results" / "feynman-tests" / "noise-sweep"
     if alt_dir.exists():
-        candidates = sorted(alt_dir.glob(glob_pat), key=os.path.getmtime, reverse=True)
+        candidates = sorted(_filtered_glob(alt_dir, glob_pat), key=os.path.getmtime, reverse=True)
         for c in candidates:
             try:
                 return json.loads(c.read_text())
             except Exception:
                 continue
     return None
+
+
 
 
 def write_table(name: str, content: str) -> None:
@@ -1193,6 +1244,53 @@ def _pick_method(method_summary: dict, frags: tuple[str, ...]) -> dict:
     return {}
 
 
+def _pick_method_key(method_summary: dict, frags: tuple[str, ...]) -> str | None:
+    """Like _pick_method, but returns the matched key itself rather than its
+    metrics dict. Needed to look up the same method's rows in a sibling
+    per_equation dict, which is keyed by the literal method name rather than
+    by metric — _pick_method alone discards that name.
+    """
+    for key in method_summary:
+        kl = key.lower().replace(" ", "").replace("-", "").replace("_", "")
+        if any(f in kl for f in frags):
+            return key
+    return None
+
+
+def _median_rmse_from_per_equation(level: dict, method_key: str | None) -> float | None:
+    """Median rmse for one method across every equation in level["per_equation"].
+
+    method_summary for the sample-complexity sweep never carries
+    median_rmse (confirmed 2026-06-18 schema: median_r2, mean_r2, std_r2,
+    recovery_rate, n_success, n_total, threshold_used only) — but
+    per_equation has a real per-equation rmse for every method at every n,
+    with full 30/30 coverage. This replaces the previous
+    sqrt(1 - median_r2) approximation, which assumes a fixed output scale
+    and is off by an order of magnitude versus the real per-equation rmse
+    (e.g. n=50, M3: approx ≈ 1.8e-4 vs actual median ≈ 4.0e-3) because
+    per-equation y-scales vary by 1-2 orders of magnitude across the
+    benchmark set.
+    """
+    if not method_key or not isinstance(level, dict):
+        return None
+    per_eq = level.get("per_equation")
+    if not isinstance(per_eq, dict) or not per_eq:
+        return None
+    vals = []
+    for eq_methods in per_eq.values():
+        if not isinstance(eq_methods, dict):
+            continue
+        entry = eq_methods.get(method_key)
+        if isinstance(entry, dict):
+            v = entry.get("rmse")
+            if isinstance(v, (int, float)):
+                vals.append(float(v))
+    if not vals:
+        return None
+    import statistics
+    return statistics.median(vals)
+
+
 def gen_suppb_r2_noise(noise_data: dict | None) -> None:
     """tab:r2_noise — Median R², Min R², Std by σ for M3 and M4."""
     if not noise_data:
@@ -1377,23 +1475,23 @@ $n$ & Med $R^2$ & Min $R^2$ & Med RMSE & Med $R^2$ & Min $R^2$ & Med RMSE\\
         ms  = pnd.get("method_summary", {}) if isinstance(pnd, dict) else {}
         m3  = _pick_method(ms, _M3_FRAG)
         m4  = _pick_method(ms, _M4_FRAG)
+        m3_key = _pick_method_key(ms, _M3_FRAG)
+        m4_key = _pick_method_key(ms, _M4_FRAG)
 
         def _v(d, k):
             v = d.get(k)
             return f"{v:.7f}" if isinstance(v, float) else "---"
 
-        # RMSE ≈ sqrt(1 - median_R²) for near-perfect fits
-        def _rmse(d):
-            v = d.get("median_r2")
-            if isinstance(v, float) and v <= 1.0:
-                import math
-                rmse_approx = math.sqrt(max(0, 1 - v))
-                return f"{rmse_approx:.4f}"
-            return "---"
+        # FIX SUPPB_SC-RMSE: real per-equation median, not the
+        # sqrt(1 - median_r2) placeholder this used to compute (see
+        # _median_rmse_from_per_equation's docstring for why that was wrong).
+        def _rmse(method_key):
+            v = _median_rmse_from_per_equation(pnd, method_key)
+            return f"{v:.4f}" if isinstance(v, (int, float)) else "---"
 
         tex += (
-            f"{n:4d} & {_v(m3,'median_r2')} & --- & {_rmse(m3)}"
-            f" & {_v(m4,'median_r2')} & --- & {_rmse(m4)} \\\\\n"
+            f"{n:4d} & {_v(m3,'median_r2')} & --- & {_rmse(m3_key)}"
+            f" & {_v(m4,'median_r2')} & --- & {_rmse(m4_key)} \\\\\n"
         )
 
     tex += r"""\bottomrule
@@ -1401,6 +1499,215 @@ $n$ & Med $R^2$ & Min $R^2$ & Med RMSE & Med $R^2$ & Min $R^2$ & Med RMSE\\
 \end{table}
 """
     write_table("suppb_sc_metrics.tex", tex)
+
+
+def gen_suppb_sc_summary(sc_data: dict | None) -> None:
+    """tab:sc_summary — Aggregate summary across all sample sizes for each method.
+
+    Columns: Method | Best n (min n where recovery_rate ≥ threshold) |
+             Max Median R² | Recovery Rate at max n | Data Efficiency Note.
+    This is the cross-n aggregate view that complements the per-n breakdown
+    already produced by gen_suppb_sc_metrics().
+    """
+    if not sc_data:
+        write_table("suppb_sc_summary.tex", "% suppB sample_complexity data not available\n")
+        return
+
+    sample_sizes = sorted(sc_data.get("sample_sizes", []))
+    per_n        = sc_data.get("per_n", {})
+    src          = "sample_complexity_*.json"
+
+    # Collect per-(method, n) metrics so we can aggregate across n.
+    from collections import defaultdict
+    method_records: dict[str, dict] = defaultdict(lambda: {
+        "r2_by_n": {}, "rr_by_n": {}, "n_success_by_n": {}, "n_total_by_n": {}
+    })
+
+    for n in sample_sizes:
+        ns  = str(n)
+        pnd = per_n.get(ns) or {}
+        ms  = pnd.get("method_summary", {}) if isinstance(pnd, dict) else {}
+        for mname, metrics in ms.items():
+            if not isinstance(metrics, dict):
+                continue
+            rec = method_records[mname]
+            r2  = metrics.get("median_r2")
+            rr  = metrics.get("recovery_rate")
+            ns_ = metrics.get("n_success")
+            nt  = metrics.get("n_total")
+            if isinstance(r2, float):  rec["r2_by_n"][n] = r2
+            if isinstance(rr, float):  rec["rr_by_n"][n] = rr
+            if isinstance(ns_, int):   rec["n_success_by_n"][n] = ns_
+            if isinstance(nt,  int):   rec["n_total_by_n"][n]   = nt
+
+    if not method_records:
+        write_table("suppb_sc_summary.tex", "% suppB sc_data has no method_summary entries\n")
+        return
+
+    # Per-method summary stats
+    # sc_data["threshold"] is sometimes a per-method dict rather than a scalar
+    # (e.g. {"EnhancedHybridSystemDeFi": 0.999999, ...}).  Fall back to 0.8
+    # whenever the value is not a plain number.
+    _raw_thresh = sc_data.get("threshold", 0.8)
+    threshold = _raw_thresh if isinstance(_raw_thresh, (int, float)) else 0.8
+
+    rows = []
+    for mname, rec in sorted(method_records.items()):
+        r2s = rec["r2_by_n"]
+        rrs = rec["rr_by_n"]
+        max_r2  = max(r2s.values()) if r2s else float("nan")
+        max_rr  = max(rrs.values()) if rrs else float("nan")
+        # Best (highest) recovery-rate n
+        best_n_rr = min((n for n, rr in rrs.items() if rr >= threshold),
+                        default=None)
+        # Recovery rate at the largest sample size tested
+        final_n   = max(r2s.keys()) if r2s else None
+        final_rr  = rrs.get(final_n, float("nan")) if final_n else float("nan")
+        note = (
+            f"≥{threshold:.0%} at n={best_n_rr}" if best_n_rr is not None
+            else f"<{threshold:.0%} at all n"
+        )
+        rows.append((mname, best_n_rr, max_r2, max_rr, final_rr, note))
+
+    def _r(v):
+        return f"{v:.4f}" if isinstance(v, float) and v == v else "---"
+    def _n(v):
+        return str(v) if v is not None else "---"
+    def _pct(v):
+        return f"{v*100:.1f}\\%" if isinstance(v, float) and v == v else "---"
+
+    tex = header_comment(src) + r"""
+\begin{table}[H]
+\centering
+\caption{Sample-complexity sweep aggregate summary ($\sigma=5\%$, 30 equations).
+  \textbf{Best n}: smallest $n$ achieving recovery rate $\ge """ + f"{threshold:.0%}" + r"""$.
+  \textbf{Max Med $R^2$}: peak median $R^2$ across all $n$.
+  \textbf{Final RR}: recovery rate at the largest $n$ tested.}
+\label{tab:sc_summary}
+\small
+\begin{tabular}{l r r r r l}
+\toprule
+\textbf{Method} & \textbf{Best $n$} & \textbf{Max Med $R^2$} & \textbf{Max RR} & \textbf{Final RR} & \textbf{Data Efficiency} \\
+\midrule
+"""
+    for (mname, best_n, max_r2, max_rr, final_rr, note) in rows:
+        short = mname[:32]
+        tex += f"{short} & {_n(best_n)} & {_r(max_r2)} & {_pct(max_rr)} & {_pct(final_rr)} & {note} \\\\\n"
+
+    tex += r"""\bottomrule
+\end{tabular}
+\end{table}
+"""
+    write_table("suppb_sc_summary.tex", tex)
+
+
+def gen_suppb_sc_by_sample(sc_data: dict | None) -> None:
+    """tab:sc_by_sample — Full per-(n, method) breakdown with all available metrics.
+
+    This is a wider version of suppb_sc_metrics.tex: where gen_suppb_sc_metrics
+    shows only M3 and M4 with three columns each, this table shows every method
+    present in the data with all numeric metrics from method_summary so readers
+    can compare the full six-method suite at a glance.
+
+    Columns (per method): Median R² | Mean R² | Std R² | Recovery Rate | n_success/n_total
+    """
+    if not sc_data:
+        write_table("suppb_sc_by_sample.tex", "% suppB sample_complexity data not available\n")
+        return
+
+    sample_sizes = sorted(sc_data.get("sample_sizes", []))
+    per_n        = sc_data.get("per_n", {})
+    src          = "sample_complexity_*.json"
+
+    # Discover all methods across all sample sizes
+    all_methods: list[str] = []
+    seen: set[str] = set()
+    for n in sample_sizes:
+        ns  = str(n)
+        pnd = per_n.get(ns) or {}
+        ms  = pnd.get("method_summary", {}) if isinstance(pnd, dict) else {}
+        for mname in ms:
+            if mname not in seen:
+                all_methods.append(mname)
+                seen.add(mname)
+
+    if not all_methods:
+        write_table("suppb_sc_by_sample.tex", "% suppB sc_data has no method_summary entries\n")
+        return
+
+    def _v(d: dict, k: str) -> str:
+        v = d.get(k)
+        return f"{v:.5f}" if isinstance(v, float) else "---"
+
+    def _rr(d: dict) -> str:
+        v = d.get("recovery_rate")
+        return f"{v*100:.1f}\\%" if isinstance(v, float) else "---"
+
+    def _succ(d: dict) -> str:
+        ns = d.get("n_success")
+        nt = d.get("n_total")
+        if isinstance(ns, int) and isinstance(nt, int):
+            return f"{ns}/{nt}"
+        return "---"
+
+    # Shorten method names for column headers
+    def _short(name: str) -> str:
+        name = name.replace("EnhancedHybridSystemDeFi", "EHD")
+        name = name.replace("HybridSystemLLMNN all-domains", "HSL")
+        return name[:18]
+
+    n_methods = len(all_methods)
+    col_spec = "r" + " rrrrr" * n_methods
+
+    tex = header_comment(src) + r"""
+\begin{table}[H]
+\centering
+\caption{Full sample-complexity results by sample size and method
+  ($\sigma=5\%$, 30 equations). Each method block: Med $R^2$, Mean $R^2$, Std, RR, Success.}
+\label{tab:sc_by_sample}
+\renewcommand{\arraystretch}{1.1}
+\scriptsize
+\begin{tabular}{""" + col_spec + r"""}
+\toprule
+"""
+    # Header row 1: method names spanning 5 columns each
+    hdr1 = "$n$"
+    for mname in all_methods:
+        hdr1 += f" & \\multicolumn{{5}}{{c}}{{\\textbf{{{_short(mname)}}}}}"
+    tex += hdr1 + " \\\\\n"
+
+    # Sub-header cmidrules
+    cmidrule_parts = []
+    for i, _ in enumerate(all_methods):
+        lo = 2 + i * 5
+        hi = lo + 4
+        cmidrule_parts.append(f"\\cmidrule(lr){{{lo}-{hi}}}")
+    tex += " ".join(cmidrule_parts) + "\n"
+
+    # Header row 2: metric labels
+    hdr2 = ""
+    for _ in all_methods:
+        hdr2 += " & Med $R^2$ & Mean $R^2$ & Std & RR & Succ"
+    tex += hdr2 + " \\\\\n\\midrule\n"
+
+    for n in sample_sizes:
+        ns  = str(n)
+        pnd = per_n.get(ns) or {}
+        ms  = pnd.get("method_summary", {}) if isinstance(pnd, dict) else {}
+        row = str(n)
+        for mname in all_methods:
+            d = ms.get(mname, {})
+            row += (
+                f" & {_v(d,'median_r2')} & {_v(d,'mean_r2')}"
+                f" & {_v(d,'std_r2')} & {_rr(d)} & {_succ(d)}"
+            )
+        tex += row + " \\\\\n"
+
+    tex += r"""\bottomrule
+\end{tabular}
+\end{table}
+"""
+    write_table("suppb_sc_by_sample.tex", tex)
 
 
 def gen_suppb_winrate(noise_data: dict | None, sc_data: dict | None) -> None:
@@ -1664,6 +1971,8 @@ def main() -> None:
     def _suppb_sc_section():
         return ("── Supplement B — sample complexity (suppB STEP 10) ────────", [
             lambda: gen_suppb_sc_metrics(sc_data),
+            lambda: gen_suppb_sc_summary(sc_data),
+            lambda: gen_suppb_sc_by_sample(sc_data),
         ])
 
     def _suppb_winrate_section():
@@ -1679,6 +1988,7 @@ def main() -> None:
         "exp1b":               [_main_paper_section()],
         "exp1_pca":            [_main_paper_section()],
         "exp1b_pca":           [_main_paper_section()],
+        "exp1_ablation":       [_main_paper_section()],
         "exp2_feynman":        [_main_paper_section()],
         "exp2_feynman_extrap": [_main_paper_section()],
         # exp2_feynman_pca: --results-dir is set to the repo root in ci_postprocess.yml
@@ -1718,6 +2028,8 @@ def main() -> None:
     \\input{tables/suppb_rr_noise.tex}
     \\input{tables/suppb_time_noise.tex}
     \\input{tables/suppb_sc_metrics.tex}
+    \\input{tables/suppb_sc_summary.tex}
+    \\input{tables/suppb_sc_by_sample.tex}
     \\input{tables/suppb_winrate.tex}
     \\input{tables/suppb_noiseless.tex}
 

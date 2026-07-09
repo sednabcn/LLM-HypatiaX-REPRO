@@ -9,14 +9,17 @@
 #
 #  NOTE: ci_runner.yml has NO consolidate job — each worker shard
 #    commits its own result files directly to the repo.  _merged.json is NOT
-#    automatically produced for most experiments; for exp1b and exp3b it is
-#    produced inline by the "Merge shards" step in this workflow (see below).
+#    automatically produced for most experiments; for exp1b, exp1_ablation,
+#    exp3b, suppB, and suppB_sc (i.e. MERGE_REQUIRED_EXPERIMENTS in
+#    merge_shards.py) it is produced inline by the "Merge shards" step in
+#    this workflow (see below).
 #    ci_consolidate_experiment.yml does not exist; no manual consolidation
 #    step is required.
 #
 #  Input modes (set by "Locate analysis input" → $INPUT_MODE env var):
 #
-#    MERGED  (exp1b, exp3b only):
+#    MERGED  (exp1b, exp1_ablation, exp3b, suppB, suppB_sc — i.e.
+#             MERGE_REQUIRED_EXPERIMENTS in merge_shards.py):
 #      Reads _merged.json produced inline by the "Merge shards" step, which
 #      calls merge_shards.py against the committed shard files in RESULT_DIR.
 #      Hard-fails if _merged.json is absent after the merge step.
@@ -172,10 +175,12 @@ jobs:
 
           python -m pip install --upgrade pip
 
-          if [[ -f requirements.txt ]]; then
-            pip install -r requirements.txt
-          fi
-
+          # Install only the lightweight packages run_analysis.py actually needs.
+          # Do NOT install requirements.txt here — it pins torch + triton for the
+          # experiment workers, and those versions can conflict with each other
+          # (e.g. torch 2.9.1 requires triton==3.5.1 but requirements.txt may pin
+          # triton==3.5.0), causing ResolutionImpossible on the analysis runner.
+          # run_analysis.py has no dependency on torch, triton, or any ML framework.
           pip install "numpy>=1.26" "scipy>=1.11" "pandas>=2.0" "tabulate>=0.9"
 
       # -----------------------------------------------------------------------
@@ -203,14 +208,17 @@ jobs:
               'exp1b':               'comparison_results/noise-noiseless/15',
               'exp1_pca':            'comparison_results/noise-noiseless/noiseless/defi_pca',
               'exp1b_pca':           'comparison_results/noise-noiseless/15_pca',
+              'exp1_ablation':       'ablation/exp1_ablation',
               'exp2_feynman':        'comparison_results/feynman-tests/exp2',
               'exp2_feynman_extrap': 'comparison_results/feynman-tests/exp2_extrap',
               'exp2_feynman_pca':    'comparison_results/feynman-tests/exp2_pca_4060',
+              'exp2_feyman_pca':     'comparison_results/feynman-tests/exp2_pca_4060',  # typo alias (missing 'n')
+              'exp2_feyman_extrap':  'comparison_results/feynman-tests/exp2_extrap',    # typo alias (missing 'n')
               'exp2':                'comparison_results/feynman-tests/exp2_multi',
               'exp3':                'extrapolation',
               'exp3b':               'extrapolation/multi_seed',
               'suppA':               'hybrid_pysr/defi',
-              'suppB':               'comparison_results/feynman-tests/noise-sweep/noise-sweep',
+              'suppB':               'comparison_results/feynman-tests/noise-sweep',
               'suppB_sc':            'comparison_results/feynman-tests/sample-complexity',
               'hybrid_all_domains':  'hybrid_llm_nn/all_domains',
               'instability':         'figures',
@@ -240,10 +248,12 @@ jobs:
       # source_run_id is provided by ci_pipeline.yml; omit when
       # re-running analysis manually against already-committed files.
       #
-      # MERGE-REQUIRED GATE: exp1b and exp3b are multi-shard experiments.
-      # Their _merged.json is now produced inline by the "Merge shards" step
-      # below rather than by a separate consolidation workflow.  This download
-      # step is therefore a no-op for exp1b/exp3b in the normal pipeline
+      # MERGE-REQUIRED GATE: exp1b, exp1_ablation, exp3b, suppB, and suppB_sc
+      # (MERGE_REQUIRED_EXPERIMENTS in merge_shards.py) are multi-shard
+      # experiments. Their _merged.json is now produced inline by the
+      # "Merge shards" step below rather than by a separate consolidation
+      # workflow.  This download step is therefore a no-op for these
+      # experiments in the normal pipeline
       # (no consolidated artifact is ever uploaded), but is kept so that a
       # future ci_consolidate_experiment.yml can slot in without YAML changes:
       # if the artifact IS present it is downloaded and the merge step below
@@ -252,13 +262,22 @@ jobs:
       # PURGE RESILIENCE: continue-on-error: true prevents hard-failing when
       # the referenced run has been deleted by purge_old_runs.  The inline
       # "Merge shards" step reads directly from the committed repo files.
-      - name: Download merged artifact (exp1b / exp3b only)
+      - name: Download merged artifact (MERGE_REQUIRED_EXPERIMENTS only)
         if: |
           github.event.inputs.source_run_id != '' &&
           (
             github.event.inputs.experiment == 'exp1b' ||
-            github.event.inputs.experiment == 'exp3b'
+            github.event.inputs.experiment == 'exp1_ablation' ||
+            github.event.inputs.experiment == 'exp3b' ||
+            github.event.inputs.experiment == 'suppB' ||
+            github.event.inputs.experiment == 'suppB_sc'
           )
+        # NOTE: the explicit list above mirrors MERGE_REQUIRED_EXPERIMENTS in
+        # merge_shards.py. If a new multi-shard experiment is added to that set,
+        # add it here too. The condition is intentionally kept as a literal list
+        # (rather than a shell script call) because GitHub Actions evaluates `if:`
+        # expressions before any run: steps execute — a script-based check is not
+        # possible at this point in the job lifecycle.
         continue-on-error: true
         uses: actions/download-artifact@v4.1.8
         with:
@@ -331,6 +350,27 @@ jobs:
         run: |
           set -euo pipefail
 
+          # FIX-NSHARDS1-NOMERGE: ci_runner.yml's EXP_SHARD_TABLE forces these
+          # experiments to N_SHARDS=1 unconditionally (dispatch input is ignored
+          # — see ci_runner.yml lines ~522-553). A single-shard experiment commits
+          # exactly one result set directly to RESULT_DIR; there is nothing to
+          # merge, and merge_shards.py's _find_shard_files() against that single
+          # committed tree legitimately finds zero shard files, hits "FATAL: merge
+          # produced zero rows", and aborts the workflow (see CI run 28255696132).
+          # This list is an explicit, YAML-side override of MERGE_REQUIRED_EXPERIMENTS
+          # for the single-shard table — it short-circuits BEFORE that check so a
+          # single-shard experiment can never be merge-routed even if it is ever
+          # mistakenly added to (or never excluded from) MERGE_REQUIRED_EXPERIMENTS
+          # in merge_shards.py. Keep this in sync with EXP_SHARD_TABLE entries
+          # whose value is 1 in ci_runner.yml.
+          SINGLE_SHARD_EXPERIMENTS="exp1 exp2_feynman exp2_feynman_extrap exp2 exp3 suppA instability hybrid_all_domains extrap"
+          for _s in $SINGLE_SHARD_EXPERIMENTS; do
+            if [[ "$EXPERIMENT" == "$_s" ]]; then
+              echo "Experiment '${EXPERIMENT}' is single-shard (N_SHARDS=1 per ci_runner.yml EXP_SHARD_TABLE) — no merge required, skipping."
+              exit 0
+            fi
+          done
+
           # MERGE_REQUIRED_EXPERIMENTS in merge_shards.py is the single source
           # of truth for which experiments need shard merging.  No hardcoded
           # list here — adding an experiment to that set is the only change
@@ -349,11 +389,28 @@ jobs:
 
           # locate_analysis_input.sh may have already run merge_shards.py
           # (its REQUIRE_MERGE fallback path) and set INPUT_MODE=merged.
-          # If _merged.json is already present, skip to avoid a double merge.
+          # If _merged.json is already present AND non-empty, skip to avoid
+          # a double merge.
+          # FIX-SKIP-EMPTY-MERGED: previously skipped on file existence alone,
+          # so an empty _merged.json (0 equation records) produced by a prior
+          # failed run would cause this step to exit 0 and the analysis step
+          # to fail with "FATAL: EMPTY DATASET". Now we count records first:
+          # Shape S (suppB/suppB_sc): sum per_equation across all sweep points.
+          # Shape A/B: count top-level non-underscore keys.
           MERGED_JSON="${RESULT_DIR}/_merged.json"
           if [[ -f "$MERGED_JSON" && "${INPUT_MODE:-}" == "merged" ]]; then
-            echo "  _merged.json already produced by locate step — skipping re-merge."
-            exit 0
+            # FIX-SKIP-EMPTY-MERGED: only skip re-merge if _merged.json is non-empty.
+            # Previously skipped on file existence alone, so an empty _merged.json
+            # (0 equation records) caused "FATAL: EMPTY DATASET" in the analysis step.
+            # Shape S (suppB/suppB_sc): count per_equation entries across sweep points.
+            # Shape A/B: count non-underscore top-level keys.
+            _n_records=$(python3 -c "import json,sys; d=json.load(open('${MERGED_JSON}')); total=sum(len(pt.get('per_equation',{})) for ak in ('per_noise','per_n') for pt in d.get(ak,{}).values() if isinstance(pt,dict)); total=total or sum(1 for k in d if isinstance(k,str) and not k.startswith('_')); print(total)" 2>/dev/null || echo 0)
+            if [[ "${_n_records:-0}" -gt 0 ]]; then
+              echo "  _merged.json already produced by locate step (${_n_records} record(s)) — skipping re-merge."
+              exit 0
+            else
+              echo "  _merged.json exists but has 0 records — ignoring and re-merging."
+            fi
           fi
 
           python3 .github/scripts/merge_shards.py \
@@ -368,8 +425,45 @@ jobs:
             exit 1
           fi
 
-          N_MERGED=$(python3 -c "import json; d=json.load(open('${MERGED_JSON}')); print(len(d))")
-          echo "  _merged.json: ${N_MERGED} unique task record(s)"
+          # GUARANTEE-NSHARDS-MERGE: _merged.json for suppB / suppB_sc (Shape
+          # S — see merge_shards.py's merge_sweep_files()) is a sweep dict
+          # keyed by noise_levels/per_noise or sample_sizes/per_n, NOT a flat
+          # task-row list. The generic `len(d)` below (written for the
+          # task-row shape used by every other experiment) would just count
+          # top-level dict keys for these two — a number that happens to look
+          # plausible but says nothing about whether all 5 (suppB) / 6
+          # (suppB_sc) sweep points actually merged. merge_sweep_files()
+          # itself only WARNS on a missing point or missing methods; it does
+          # not fail the build — so without an explicit check here, a merge
+          # that silently dropped a shard (a missing/corrupt
+          # noise_sweep_*_nshardsNN.json, a shard that crashed before saving,
+          # etc.) would pass this step with no signal until someone notices
+          # a gap in a downstream figure.
+          if [[ "$EXPERIMENT" == "suppB" || "$EXPERIMENT" == "suppB_sc" ]]; then
+            read N_MERGED N_METHODS_MERGED <<< "$(python3 -c "
+          import json, sys
+          d = json.load(open('${MERGED_JSON}'))
+          exp = '${EXPERIMENT}'
+          list_key = 'noise_levels' if exp == 'suppB' else 'sample_sizes'
+          dict_key = 'per_noise'    if exp == 'suppB' else 'per_n'
+          points  = d.get(dict_key, {})
+          methods = d.get('methods', [])
+          print(len(points), len(methods))
+          ")"
+            EXPECTED_POINTS=5
+            [[ "$EXPERIMENT" == "suppB_sc" ]] && EXPECTED_POINTS=6
+            echo "  _merged.json (Shape S): ${N_MERGED}/${EXPECTED_POINTS} sweep point(s), ${N_METHODS_MERGED} method(s)"
+            if [[ "$N_MERGED" -lt "$EXPECTED_POINTS" ]]; then
+              echo "::error::${EXPERIMENT} merge produced only ${N_MERGED}/${EXPECTED_POINTS} sweep points — at least one shard's output is missing, unreadable, or failed to write. Check the per-shard *_nshardsNN.json files in ${RESULT_DIR} (one expected per shard: nshards01..nshards0$([ "$EXPECTED_POINTS" = 6 ] && echo 6 || echo 5)) and re-run the missing shard(s) via ci_runner.yml before re-merging."
+              exit 1
+            fi
+            if [[ "$N_METHODS_MERGED" -lt 6 ]]; then
+              echo "::warning::${EXPERIMENT} merge has all ${EXPECTED_POINTS} sweep points but only ${N_METHODS_MERGED}/6 methods — fig_runtime_comparison / fig_comparative_table may be incomplete. See FIX-suppB-ALL-METHODS / FIX-suppB_sc-ALL-METHODS comments in run_all.sh."
+            fi
+          else
+            N_MERGED=$(python3 -c "import json; d=json.load(open('${MERGED_JSON}')); print(len(d))")
+            echo "  _merged.json: ${N_MERGED} unique task record(s)"
+          fi
 
           echo "INPUT_MODE=merged"          >> "$GITHUB_ENV"
           echo "INPUT_JSON=${MERGED_JSON}"  >> "$GITHUB_ENV"
@@ -789,8 +883,10 @@ jobs:
             "$RESULT_DIR/_report.md" \
             "$RESULT_DIR/_analysis.json"
 
-          # Commit _merged.json for merge-required experiments (exp1b, exp3b) so
-          # that ci_postprocess.yml can read it without re-running ci_analysis.yml.
+          # Commit _merged.json for merge-required experiments (exp1b,
+          # exp1_ablation, exp3b, suppB, suppB_sc — see MERGE_REQUIRED_EXPERIMENTS
+          # in merge_shards.py) so that ci_postprocess.yml can read it without
+          # re-running ci_analysis.yml.
           # merge_shards.py produces _merged.json in RESULT_DIR; it is never
           # staged elsewhere, so this is the only place it reaches the repo.
           NEEDS_MERGE=$(python3 -c "
@@ -835,6 +931,26 @@ jobs:
       # Non-zero exit here fails the workflow, which can block PR merges via
       # branch protection rules.  This step runs AFTER the commit so the
       # report is always available even when the run is aborted.
+      #
+      # SOFT-CONDITION CONTRACT (WARN_ / INFO_ prefixes):
+      #   Conditions prefixed with WARN_ or INFO_ are treated as soft warnings —
+      #   they are logged but do NOT cause a non-zero exit.  Hard conditions
+      #   (any other prefix) fail the workflow.
+      #
+      #   Example — TOO_FEW_MW_PAIRS as a warning instead of a hard fatal:
+      #   In run_analysis.py, use the WARN_ prefix so the test is skipped
+      #   gracefully rather than blocking the pipeline:
+      #
+      #     if paired_far_r2_count < 3:
+      #         fatal_conditions.append(
+      #             f"WARN_TOO_FEW_MW_PAIRS: only {paired_far_r2_count} finite "
+      #             f"paired far-R² values (need ≥ 3 for Mann-Whitney test); "
+      #             f"test skipped."
+      #         )
+      #     # NOT: fatal_conditions.append("TOO_FEW_MW_PAIRS: ...")
+      #
+      #   Any condition string that does NOT start with WARN_ or INFO_ is
+      #   treated as a hard fatal and will exit 1 here.
       # -----------------------------------------------------------------------
 
       - name: Abort on fatal conditions

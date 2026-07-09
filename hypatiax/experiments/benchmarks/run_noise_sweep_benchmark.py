@@ -41,8 +41,8 @@ What it does
    collisions between the three noisy passes that all write
    protocol_core_noisy_*.json.
 4. Saves
-       data/results/comparison_results/noise_sweep_<TS>.json
-       data/results/comparison_results/noise_sweep_<TS>.csv
+       data/results/comparison_results/feynman-tests/noise-sweep/noise_sweep_<TS>.json
+       data/results/comparison_results/feynman-tests/noise-sweep/noise_sweep_<TS>.csv
 
 Usage
 -----
@@ -64,8 +64,8 @@ Usage
 
 Outputs
 -------
-  data/results/comparison_results/noise_sweep_<TS>.json
-  data/results/comparison_results/noise_sweep_<TS>.csv
+  data/results/comparison_results/feynman-tests/noise-sweep/noise_sweep_<TS>.json
+  data/results/comparison_results/feynman-tests/noise-sweep/noise_sweep_<TS>.csv
 """
 
 from __future__ import annotations
@@ -105,6 +105,18 @@ _RUNNER      = _HERE / "run_comparative_suite_benchmark_v2.py"
 _OUT_BASE    = Path(os.environ["OUT_BASE"]) if "OUT_BASE" in os.environ else (_PKG_ROOT / "data/results")
 _RESULTS_DIR = _OUT_BASE / "comparison_results/feynman-tests/noise-sweep"
 _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# FEATURE-NSHARDS-SUFFIX (corrected 2026-06-23): when set, append "_nshardsNN"
+# to every output filename this script writes. NN is the per-shard index
+# (1-based, zero-padded), not the total shard count -- run_all.sh's suppB
+# step derives it from SHARD_INDEX+1, so each of the N concurrently-running
+# matrix shards gets a DISTINCT suffix (01, 02, ... for shard 0, 1, ...).
+# Using the total count instead would tag every shard identically and risk
+# collisions, since shards run in parallel and write second-granularity
+# timestamped filenames. Empty string when unset (e.g. local runs outside
+# CI) so filenames are unchanged from before this feature existed.
+_NSHARDS_SUFFIX = os.environ.get("HYPATIAX_NSHARDS_SUFFIX", "").strip()
+_SHARD_TAG = f"_nshards{_NSHARDS_SUFFIX}" if _NSHARDS_SUFFIX else ""
 
 # Full 5-level sweep matching CI `noise_levels` default "0.0,0.5,1.0,5.0,10.0"
 # (fractions: 0.0, 0.005, 0.01, 0.05, 0.10).
@@ -220,11 +232,28 @@ def _build_runner_cmd(
     sigma_label = f"sig{int(round(noise_level * 1000)):04d}"
     cmd = [sys.executable, str(runner)]
 
+    # Per-sigma threshold — use the fine-grained map when available so each
+    # noise level gets the right R2 floor (0.999999 for sigma=0, 0.995 for
+    # sigma=0.5%, ..., 0.90 for sigma=10%).
+    _PER_SIGMA_DEFAULTS: dict = {
+        0.0:   args.threshold_noiseless,      # 0.999999
+        0.005: 0.995,
+        0.01:  0.990,
+        0.05:  args.threshold_noisy,          # 0.950
+        0.10:  0.900,
+    }
+    # Override defaults with any --threshold-per-sigma tokens
+    for _tok in getattr(args, "threshold_per_sigma", []):
+        try:
+            _s, _v = _tok.split(":")
+            _PER_SIGMA_DEFAULTS[float(_s)] = float(_v)
+        except ValueError:
+            pass
+    _sigma_threshold = _PER_SIGMA_DEFAULTS.get(noise_level, args.threshold_noisy)
+
     if noise_level == 0.0:
         cmd.append("--noiseless")
-        cmd += ["--threshold", str(args.threshold_noiseless)]
-    else:
-        cmd += ["--threshold", str(args.threshold_noisy)]
+    cmd += ["--threshold", str(_sigma_threshold)]
 
     cmd += ["--samples",        str(args.samples)]
     cmd += ["--nn-seeds",       str(args.nn_seeds)]
@@ -273,14 +302,18 @@ def _build_runner_cmd(
     if getattr(args, "no_llm_cache", False):
         cmd.append("--no-llm-cache")
 
-    # Direct the inner runner to write protocol_core_*.json into the same
-    # directory that _find_result_written_after() globs — without this the
-    # inner runner writes to its default comparison_results/ root and the
-    # mtime scan finds nothing.
+    # ALL sigma levels — including sigma=0 (noiseless) — write to _RESULTS_DIR
+    # (noise-sweep/).  suppB needs every protocol_core_*.json in the same dir
+    # so the aggregate glob finds all five sigma values.
     cmd += ["--output-dir", str(_RESULTS_DIR)]
 
     # Unique checkpoint per sigma — prevents noisy passes colliding.
-    cmd += ["--checkpoint-name", f"noise_sweep_{sigma_label}_checkpoint"]
+    # FEATURE-NSHARDS-SUFFIX: also tag with the per-shard-index _nshardsNN
+    # suffix so concurrently-running shards (each pinned to a different sigma
+    # via NOISE_LEVEL, but all five sharing this same _FLAT_OUTPUT_DIR
+    # checkpoint location -- see that script's _checkpoint_path()) never
+    # collide with each other, regardless of sigma.
+    cmd += ["--checkpoint-name", f"noise_sweep_{sigma_label}_checkpoint{_SHARD_TAG}"]
 
     # NOTE: The TASK_ID env-var → --test forwarding block that previously lived
     # here has been removed.  The CI suppB dispatch shards by feynman *domain*
@@ -604,7 +637,40 @@ def _print_noise_sweep_table(agg: dict) -> None:
 
 
 def _save_sweep_json(agg: dict, ts: str) -> Path:
-    path = _RESULTS_DIR / f"noise_sweep_{ts}.json"
+    # FIX-EMPTY-SHARD-WRITE: refuse to write a noise_sweep_*.json (the Shape S
+    # shard file that merge_shards.py will later read) when every per_noise
+    # point's per_equation dict is empty.  An empty shard file passes
+    # merge_sweep_files()'s is_sweep_file() check (it has the correct top-level
+    # keys) but contributes zero equation records, so the merged _merged.json
+    # ends up with 0 records and the analysis step dies with "FATAL: EMPTY
+    # DATASET" several pipeline steps later with no pointer back to here.
+    #
+    # Raising here gives an immediate, actionable error message in the worker
+    # job log — the correct place to diagnose why the inner benchmark produced
+    # no results — rather than a cryptic downstream failure in the analysis job.
+    #
+    # Note: agg["noise_levels"] may legitimately contain only one sigma when
+    # running in CI single-level mode (NOISE_LEVEL env var).  The guard checks
+    # per_equation across ALL sigma points that are present, so a single empty
+    # point still triggers the error.
+    n_eq_total = sum(
+        len(pt.get("per_equation", {}))
+        for pt in agg.get("per_noise", {}).values()
+        if isinstance(pt, dict)
+    )
+    if n_eq_total == 0:
+        sigmas_present = list(agg.get("per_noise", {}).keys())
+        raise RuntimeError(
+            f"FATAL: noise sweep produced 0 equation records across all "
+            f"sigma points {sigmas_present} — the inner benchmark run(s) "
+            f"failed or timed out for every equation.  The shard file "
+            f"'{_RESULTS_DIR / f'noise_sweep_{ts}{_SHARD_TAG}.json'}' will "
+            f"NOT be written to prevent poisoning the downstream merge step.  "
+            f"Check the run_comparative_suite_benchmark_v2.py output above "
+            f"for the underlying failure cause (missing runner, API key "
+            f"error, timeout, etc.)."
+        )
+    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SHARD_TAG}.json"
     with open(path, "w") as f:
         json.dump(agg, f, indent=2, default=str)
     print(f"  Saved noise sweep JSON  -> {path}")
@@ -617,7 +683,7 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
       section=aggregate    : one row per (method, sigma) -- summary stats
       section=per_equation : one row per (method, sigma, equation) -- individual R2
     """
-    path = _RESULTS_DIR / f"noise_sweep_{ts}.csv"
+    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SHARD_TAG}.csv"
     fieldnames = [
         "section", "method", "noise_level_fraction", "noise_level_pct", "equation",
         "median_r2", "mean_r2", "std_r2", "recovery_rate",
@@ -755,10 +821,17 @@ def main() -> None:
     _ci_noise_env = os.environ.get("NOISE_LEVEL", "").strip()
     if _ci_noise_env:
         try:
-            _ci_sigma = float(_ci_noise_env) / 100.0 if float(_ci_noise_env) > 1 else float(_ci_noise_env)
+            _raw = float(_ci_noise_env)
+            # NOISE_LEVEL is always in PERCENT units (e.g. "0.5" = 0.5%, "1.0" = 1%).
+            # Always divide by 100 to get the fraction used internally.
+            # The previous '>1' guard was wrong: it passed NOISE_LEVEL="0.5" as
+            # sigma=0.5 (50%) and NOISE_LEVEL="1.0" as sigma=1.0 (100%),
+            # which are 100x too large and caused those sigma runs to produce
+            # near-zero R² across all equations.
+            _ci_sigma = _raw / 100.0
             if args.noise_levels == _DEFAULT_NOISE_LEVELS:  # not overridden on CLI
                 args.noise_levels = [_ci_sigma]
-                print(f"  [CI] NOISE_LEVEL={_ci_noise_env!r} → sigma={_ci_sigma:.4f} (single-level run)")
+                print(f"  [CI] NOISE_LEVEL={_ci_noise_env!r}% → sigma={_ci_sigma:.4f} (single-level run)")
         except ValueError:
             print(f"  WARNING: could not parse NOISE_LEVEL={_ci_noise_env!r} — using CLI default")
 

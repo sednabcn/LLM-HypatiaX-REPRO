@@ -60,13 +60,18 @@ Two tiers of schema handling are provided:
                        { "N1": { "equation_id": "N1", "test_r2": 0.9 } }
 
     noise_sweep_per_noise
-                       suppB noise-sweep runner output.  Top-level dict with
-                       a "per_noise" key mapping noise levels to method dicts,
-                       each containing an "equations" sub-dict of per-equation
-                       records.  Aggregate stats (median_r2, recovery_rate,
-                       etc.) are hoisted onto every extracted record.
-                       { "per_noise": { "0.0": { "MethodA": {
-                           "equations": { "Eq1": {r2, rmse, ...} } } } } }
+                       suppB noise-sweep runner output, as produced by
+                       merge_shards.py.  Top-level dict with a "per_noise" key
+                       mapping noise levels to dicts containing
+                       "method_summary" (aggregate stats per method) and
+                       "per_equation" (equation -> method -> {r2, rmse, ...}).
+                       Aggregate stats from method_summary (median_r2,
+                       recovery_rate, etc.) are hoisted onto every extracted
+                       record.
+                       { "per_noise": { "0.0": {
+                           "method_summary": { "MethodA": {median_r2, ...} },
+                           "per_equation": { "Eq1": { "MethodA": {r2, rmse, ...} } }
+                       } } }
 
     sample_complexity_per_n
                        suppC sample-complexity runner output.  Top-level dict
@@ -234,13 +239,25 @@ _TIER2_EXTRACTORS = [
             if isinstance(v, dict)
         ],
     ),
-    # suppB noise-sweep runner output:
+    # suppB noise-sweep runner output, AS PRODUCED BY merge_shards.py:
     #   { "generated": ..., "noise_levels": [...], "methods": [...],
-    #     "per_noise": { "0.0": { "MethodA": { "equations": { "EqName": {r2, rmse, ...} } } } },
+    #     "per_noise": {
+    #       "0.0": {
+    #         "method_summary": { "MethodA": {median_r2, recovery_rate, ...} },
+    #         "per_equation":   { "EqName":  { "MethodA": {r2, rmse, ...}, ... } }
+    #       }, ...
+    #     },
     #     "cross_noise_summary": { ... } }
     # The meaningful unit for analysis is one (noise_level x method x equation) triple.
-    # Aggregate stats under per_noise[nl][method] (median_r2, recovery_rate, etc.) are
-    # hoisted onto every record so run_analysis.py has full context without a join.
+    # Aggregate stats under per_noise[nl]["method_summary"][method] (median_r2,
+    # recovery_rate, etc.) are hoisted onto every record so run_analysis.py has
+    # full context without a join.
+    #
+    # NOTE: this mirrors the merged shape of sample_complexity_per_n below (it's
+    # the same merge_shards.py output convention, just keyed by noise_level
+    # instead of sample_size). The previous version of this extractor expected
+    # the old raw-shard shape (per_noise[nl][method]["equations"][eq]), which
+    # merge_shards.py no longer emits.
     (
         "noise_sweep_per_noise",
         lambda d: (
@@ -253,21 +270,21 @@ _TIER2_EXTRACTORS = [
                 "noise_level":          nl,
                 "method":               method,
                 "equation":             eq,
-                "median_r2":            m_val.get("median_r2"),
-                "mean_r2":              m_val.get("mean_r2"),
-                "std_r2":               m_val.get("std_r2"),
-                "recovery_rate":        m_val.get("recovery_rate"),
-                "n_success":            m_val.get("n_success"),
-                "n_total":              m_val.get("n_total"),
-                "threshold_used":       m_val.get("threshold_used"),
-                "n_catastrophic":       m_val.get("n_catastrophic"),
+                "median_r2":            nl_val.get("method_summary", {}).get(method, {}).get("median_r2"),
+                "mean_r2":              nl_val.get("method_summary", {}).get(method, {}).get("mean_r2"),
+                "std_r2":               nl_val.get("method_summary", {}).get(method, {}).get("std_r2"),
+                "recovery_rate":        nl_val.get("method_summary", {}).get(method, {}).get("recovery_rate"),
+                "n_success":            nl_val.get("method_summary", {}).get(method, {}).get("n_success"),
+                "n_total":              nl_val.get("method_summary", {}).get(method, {}).get("n_total"),
+                "threshold_used":       nl_val.get("method_summary", {}).get(method, {}).get("threshold_used"),
+                "n_catastrophic":       nl_val.get("method_summary", {}).get(method, {}).get("n_catastrophic"),
                 **({k: v for k, v in eq_val.items()} if isinstance(eq_val, dict) else {}),
             }
             for nl, nl_val in d["per_noise"].items()
             if isinstance(nl_val, dict)
-            for method, m_val in nl_val.items()
-            if isinstance(m_val, dict)
-            for eq, eq_val in m_val.get("equations", {}).items()
+            for eq, eq_methods in nl_val.get("per_equation", {}).items()
+            if isinstance(eq_methods, dict)
+            for method, eq_val in eq_methods.items()
             if isinstance(eq_val, dict)
         ],
     ),
@@ -404,6 +421,7 @@ def main():
 
     mode = os.environ["INPUT_MODE"]
     total = 0
+    summary_only_input = False
 
     if mode in ("merged", "direct"):
         path = os.environ["INPUT_JSON"]
@@ -415,6 +433,22 @@ def main():
         records = load_records(path)
         print(f"Records: {len(records)}")
         total += len(records)
+
+        if len(records) == 0:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if (
+                    isinstance(data, dict)
+                    and {"n_pass", "n_total", "solve_rate"}.issubset(data.keys())
+                    and not isinstance(data.get("results"), (list, dict))
+                    and not isinstance(data.get("tests"), list)
+                    and not isinstance(data.get("per_noise"), dict)
+                    and not isinstance(data.get("per_n"), dict)
+                ):
+                    summary_only_input = True
+            except Exception:
+                pass
 
     elif mode == "shards":
         manifest_path = os.environ.get("SHARD_MANIFEST", "")
@@ -445,7 +479,8 @@ def main():
     # Fail only when there are zero records AND no shard was a recognised
     # summary/metadata file (which legitimately contributes 0 records).
     _n_summary = n_summary_shards if mode == "shards" else 0
-    if total == 0 and _n_summary == 0:
+
+    if total == 0 and _n_summary == 0 and not summary_only_input:
         print()
         print("FATAL: EMPTY DATASET")
         sys.exit(1)
@@ -552,44 +587,47 @@ _SELF_TEST_CASES = [
         expected_n=2, expected_fmt="toplevel_generic_dicts", tier=2,
     ),
     dict(
-        name="tier2 / noise_sweep_per_noise  (suppB runner)",
+        name="tier2 / noise_sweep_per_noise  (suppB runner, merge_shards.py output)",
         payload={
             "generated": "2026-05-22T18:22:26",
             "noise_levels": [0.0, 0.05],
             "methods": ["MethodA", "MethodB"],
             "per_noise": {
                 "0.0": {
-                    "MethodA": {
-                        "median_r2": 0.999, "mean_r2": 0.998, "std_r2": 0.001,
-                        "recovery_rate": 0.9, "n_success": 9, "n_total": 10,
-                        "threshold_used": 0.95, "n_catastrophic": 0,
-                        "equations": {
-                            "Eq1": {"r2": 1.0, "rmse": 0.0, "success": True, "catastrophic": False},
-                            "Eq2": {"r2": 0.99, "rmse": 0.01, "success": True, "catastrophic": False},
-                        },
+                    "method_summary": {
+                        "MethodA": {"median_r2": 0.999, "mean_r2": 0.998, "std_r2": 0.001,
+                                    "recovery_rate": 0.9, "n_success": 9, "n_total": 10,
+                                    "threshold_used": 0.95, "n_catastrophic": 0},
+                        "MethodB": {"median_r2": 0.95, "mean_r2": 0.94, "std_r2": 0.02,
+                                    "recovery_rate": 0.8, "n_success": 8, "n_total": 10,
+                                    "threshold_used": 0.95, "n_catastrophic": 1},
                     },
-                    "MethodB": {
-                        "median_r2": 0.95, "mean_r2": 0.94, "std_r2": 0.02,
-                        "recovery_rate": 0.8, "n_success": 8, "n_total": 10,
-                        "threshold_used": 0.95, "n_catastrophic": 1,
-                        "equations": {
-                            "Eq1": {"r2": 0.95, "rmse": 0.1, "success": True, "catastrophic": False},
+                    "per_equation": {
+                        "Eq1": {
+                            "MethodA": {"r2": 1.0,  "rmse": 0.0,  "success": True, "catastrophic": False},
+                            "MethodB": {"r2": 0.95, "rmse": 0.1,  "success": True, "catastrophic": False},
+                        },
+                        "Eq2": {
+                            "MethodA": {"r2": 0.99, "rmse": 0.01, "success": True, "catastrophic": False},
                         },
                     },
                 },
                 "0.05": {
-                    "MethodA": {
-                        "median_r2": 0.97, "mean_r2": 0.96, "std_r2": 0.02,
-                        "recovery_rate": 0.7, "n_success": 7, "n_total": 10,
-                        "threshold_used": 0.95, "n_catastrophic": 1,
-                        "equations": {
-                            "Eq1": {"r2": 0.97, "rmse": 0.05, "success": True, "catastrophic": False},
+                    "method_summary": {
+                        "MethodA": {"median_r2": 0.97, "mean_r2": 0.96, "std_r2": 0.02,
+                                    "recovery_rate": 0.7, "n_success": 7, "n_total": 10,
+                                    "threshold_used": 0.95, "n_catastrophic": 1},
+                    },
+                    "per_equation": {
+                        "Eq1": {
+                            "MethodA": {"r2": 0.97, "rmse": 0.05, "success": True, "catastrophic": False},
                         },
                     },
                 },
             },
             "cross_noise_summary": {},
         },
+        # 0.0: Eq1 x 2 methods + Eq2 x 1 method = 3, 0.05: Eq1 x 1 method = 1 → total 4
         expected_n=4, expected_fmt="noise_sweep_per_noise", tier=2,
     ),
     dict(
@@ -640,6 +678,57 @@ _SELF_TEST_CASES = [
         },
         # 50: 2 eq x 2 methods = 4, 100: 1 eq x 1 method = 1  → total 5
         expected_n=5, expected_fmt="sample_complexity_per_n", tier=2,
+    ),
+    dict(
+        name="tier2 / sample_complexity_per_n  (suppC runner, nshards=6 merged)",
+        # Simulates merge_shards.py combining 6 per-sample-size shards (one
+        # shard per sample_size: 25, 50, 100, 200, 400, 800) into a single
+        # per_n dict. Each shard contributes "method_summary" + "per_equation"
+        # for its sample size, same shape as the 2-shard case above, just at
+        # nshards=6 scale with 1 equation x 1 method per shard.
+        payload={
+            "generated": "2026-05-22T19:11:12",
+            "sample_sizes": [25, 50, 100, 200, 400, 800],
+            "mode": "noisy",
+            "threshold": {str(n): 0.995 for n in (25, 50, 100, 200, 400, 800)},
+            "methods": ["MethodA"],
+            "per_n": {
+                str(n): {
+                    "method_summary": {
+                        "MethodA": {
+                            "median_r2": min(0.5 + i * 0.1, 1.0),
+                            "mean_r2": min(0.5 + i * 0.1, 1.0),
+                            "std_r2": 0.01,
+                            "recovery_rate": min(0.2 + i * 0.15, 1.0),
+                            "n_success": i + 1,
+                            "n_total": 6,
+                            "threshold_used": 0.995,
+                        },
+                    },
+                    "per_equation": {
+                        "Eq1": {
+                            "MethodA": {
+                                "r2": min(0.5 + i * 0.1, 1.0),
+                                "rmse": max(0.5 - i * 0.08, 0.0),
+                                "success": i >= 3,
+                            },
+                        },
+                    },
+                }
+                for i, n in enumerate((25, 50, 100, 200, 400, 800))
+            },
+            "data_efficiency": {
+                "MethodA": {
+                    "min_n_above_threshold": 400,
+                    "recovery_curve": {
+                        str(n): min(0.2 + i * 0.15, 1.0)
+                        for i, n in enumerate((25, 50, 100, 200, 400, 800))
+                    },
+                },
+            },
+        },
+        # 6 shards x 1 eq x 1 method = 6 records total
+        expected_n=6, expected_fmt="sample_complexity_per_n", tier=2,
     ),
     dict(
         name="tier2 / experiment_summary_dict  (exp2_pca_4060_summary.json)",

@@ -25,8 +25,8 @@ What it does
    method first exceeds the recovery-rate threshold — to give a single
    headline number per method.
 4. Saves
-       data/results/comparison_results/sample_complexity_<TS>.json
-       data/results/comparison_results/sample_complexity_<TS>.csv
+       data/results/comparison_results/feynman-tests/sample-complexity/sample_complexity_<TS>.json
+       data/results/comparison_results/feynman-tests/sample-complexity/sample_complexity_<TS>.csv
 
 Usage
 -----
@@ -35,6 +35,9 @@ Usage
 
     # Custom sample sizes
     python run_sample_complexity_benchmark.py --sample-sizes 50 100 200 500
+
+    # CI runner shorthand (adds 200 as an anchor into the default sweep)
+    python run_sample_complexity_benchmark.py --samples 200
 
     # Only methods 1 and 2 (fastest smoke-test)
     python run_sample_complexity_benchmark.py --methods 1 2
@@ -59,9 +62,9 @@ Usage
 
 Outputs
 -------
-  data/results/comparison_results/sample_complexity_<TS>.json
-  data/results/comparison_results/sample_complexity_<TS>.csv
-  data/results/comparison_results/sample_complexity_<TS>.log  (if --log)
+  data/results/comparison_results/feynman-tests/sample-complexity/sample_complexity_<TS>.json
+  data/results/comparison_results/feynman-tests/sample-complexity/sample_complexity_<TS>.csv
+  data/results/comparison_results/feynman-tests/sample-complexity/sample_complexity_<TS>.log  (if --log)
 """
 
 from __future__ import annotations
@@ -100,6 +103,17 @@ _RUNNER      = _HERE / "run_comparative_suite_benchmark_v2.py"
 _OUT_BASE    = Path(os.environ["OUT_BASE"]) if "OUT_BASE" in os.environ else (_PKG_ROOT / "data/results")
 _RESULTS_DIR = _OUT_BASE / "comparison_results/feynman-tests/sample-complexity"
 _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+# FEATURE-NSHARDS-SUFFIX: when set (by run_all.sh's suppB_sc step, forwarding
+# the per-shard SHARD_INDEX+1, zero-padded), append "_nshardsNN" to every
+# output filename this script writes. NN distinguishes THIS shard's output
+# from every other concurrently-running shard in the same matrix run.
+# Independent of _shard_tag() below, which exists for a different concern
+# (multiple shards sharing the same n — see that function's docstring).
+# Empty string when unset (e.g. local runs outside CI) so filenames are
+# unchanged from before this feature existed.
+_NSHARDS_SUFFIX = os.environ.get("HYPATIAX_NSHARDS_SUFFIX", "").strip()
+_SHARD_TAG = f"_nshards{_NSHARDS_SUFFIX}" if _NSHARDS_SUFFIX else ""
 
 # Default sample sizes (training points per equation).
 # Tab 29 requires n ∈ {50, 100, 200, 500}.  750 and 1000 are EXCLUDED from
@@ -186,6 +200,41 @@ def _load_results(path: Path) -> dict:
 
 
 # ============================================================================
+# SHARD DISAMBIGUATION
+# ============================================================================
+
+def _shard_tag() -> str:
+    """
+    Build a filesystem-safe tag identifying *this* CI shard.
+
+    The suppB_sc matrix dispatches one job per (n, domain-subset) pair —
+    task IDs look like "sc_n200__feynman_biology" — so several shards with
+    the SAME n (different domains) run concurrently.  Without this tag,
+    every one of those shards calls _build_runner_cmd() with the identical
+    "--checkpoint-name sample_complexity_n0200_checkpoint", so they all read
+    and write the *same* checkpoint file on the *same* shared _RESULTS_DIR.
+    Whichever process touches it last truncates/restarts it for everyone
+    else, which is exactly what produces "checkpoint present (1) but 0
+    tasks completed" — the other shards' progress was wiped out mid-run.
+
+    Falls back to TASK_ID/TASK_IDS, then to "shared" when run locally
+    outside CI (no collision risk there since nothing else is racing it).
+    """
+    domain_filter = os.environ.get("DOMAIN_FILTER", "").strip()
+    if domain_filter:
+        tag = "-".join(d.replace("feynman_", "") for d in domain_filter.split())
+    else:
+        tag = (
+            os.environ.get("TASK_ID", "").strip()
+            or os.environ.get("TASK_IDS", "").strip()
+            or "shared"
+        )
+    # Filesystem-safe and length-bounded.
+    tag = "".join(c if c.isalnum() or c in "-_" else "-" for c in tag)
+    return tag[:40] or "shared"
+
+
+# ============================================================================
 # SUBPROCESS BUILDER
 # ============================================================================
 
@@ -237,8 +286,15 @@ def _build_runner_cmd(
     if getattr(args, "no_llm_cache", False):
         cmd.append("--no-llm-cache")
 
-    # ── Give each n its own checkpoint to prevent run collisions ─────────────
-    cmd += ["--checkpoint-name", f"sample_complexity_n{n_samples:04d}_checkpoint"]
+    # ── Give each (n, shard) its own checkpoint to prevent run collisions ────
+    # Tagging by n alone is not enough: the suppB_sc matrix runs several
+    # shards with the SAME n in parallel (split by DOMAIN_FILTER), and they
+    # would otherwise all fight over one checkpoint file. See _shard_tag().
+    # FEATURE-NSHARDS-SUFFIX: _SHARD_TAG appended in addition to
+    # _shard_tag() — independent distinguishers for two different concerns
+    # (domain-subset identity vs. matrix shard index). Empty string when
+    # HYPATIAX_NSHARDS_SUFFIX is unset, so this is a no-op outside CI.
+    cmd += ["--checkpoint-name", f"sample_complexity_n{n_samples:04d}_{_shard_tag()}_checkpoint{_SHARD_TAG}"]
 
     # Direct the inner runner to write protocol_core_*.json into the same
     # directory that _find_result_written_after() globs — without this the
@@ -611,7 +667,7 @@ def _print_sample_complexity_table(agg: dict) -> None:
 
 
 def _save_complexity_json(agg: dict, ts: str) -> Path:
-    path = _RESULTS_DIR / f"sample_complexity_{ts}.json"
+    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SHARD_TAG}.json"
     with open(path, "w") as f:
         json.dump(agg, f, indent=2, default=str)
     print(f"  💾 Sample complexity JSON → {path}")
@@ -624,7 +680,7 @@ def _save_complexity_csv(agg: dict, ts: str) -> Path:
     Section 1 — per (method, n) aggregate metrics.
     Section 2 — per (method, n, equation) individual R² values.
     """
-    path = _RESULTS_DIR / f"sample_complexity_{ts}.csv"
+    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SHARD_TAG}.csv"
 
     # Unified fieldnames covering both sections.  Aggregate-only columns are
     # empty strings in per-equation rows; equation-level columns are empty in
@@ -728,6 +784,30 @@ def main() -> None:
             "Training-set sizes to sweep (Tab 29 requires n ∈ {50,100,200,500}). "
             "Add 750 and 1000 explicitly for extended coverage. "
             f"Default: {_DEFAULT_SAMPLE_SIZES}"
+        ),
+    )
+
+    # ── --samples / --n-samples / --n_samples (single-value shorthand) ────────
+    # The CI runner (run_all.sh suppB_sc step) passes  --samples ${FEYNMAN_SAMPLES}
+    # (a single integer, e.g. 200).  This script sweeps multiple sample sizes,
+    # so --samples is treated as an additional *anchor* n to ensure is included
+    # in the sweep; it does not replace --sample-sizes.
+    # Accepts all common flag variants to be robust to runner spelling differences.
+    # Falls back to the FEYNMAN_SAMPLES env var when the flag is not supplied.
+    _feynman_samples_env = os.environ.get("FEYNMAN_SAMPLES", "").strip()
+    _samples_default: int | None = int(_feynman_samples_env) if _feynman_samples_env.isdigit() else None
+    parser.add_argument(
+        "--samples", "--n-samples", "--n_samples",
+        type=int,
+        default=_samples_default,
+        dest="samples_anchor",
+        metavar="N",
+        help=(
+            "Single sample-count shorthand used by the CI runner "
+            "(e.g. --samples 200).  When supplied, this value is added to "
+            "--sample-sizes if not already present.  "
+            "Env fallback: FEYNMAN_SAMPLES.  "
+            "Does NOT replace --sample-sizes."
         ),
     )
 
@@ -835,6 +915,15 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # ── Merge --samples anchor into sample_sizes ──────────────────────────────
+    # When run_all.sh (or the CI runner) passes --samples ${FEYNMAN_SAMPLES}
+    # (e.g. --samples 200) the value is treated as an additional anchor n that
+    # must appear in the sweep.  It is inserted into args.sample_sizes if not
+    # already present, preserving whatever other sizes are configured.
+    if args.samples_anchor is not None and args.samples_anchor not in args.sample_sizes:
+        args.sample_sizes = sorted(set(args.sample_sizes) | {args.samples_anchor})
+        print(f"  [--samples] Added anchor n={args.samples_anchor} to sample_sizes: {args.sample_sizes}")
 
     # ── CI env integration ────────────────────────────────────────────────────
     # The CI suppB_sc dispatch sets three env vars before launching this script:

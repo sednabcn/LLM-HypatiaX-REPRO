@@ -37,14 +37,13 @@ Each experiment ID maps to a mode that controls which fatals fire:
   "standard"     — exp1, exp1b, suppA, suppB, suppB_sc
                    Full analysis; all fatals active.
 
-  "ablation"     — exp2_feynman
+  "ablation"     — exp1_ablation, exp2_feynman
                    Paired pysr_only vs hypatia comparison on extrap_r2_far.
                    Three-tier MW (all-N / excl-train-fail / success-subset),
                    Fisher, Spearman, complexity distributions, threshold sweep,
                    and LOO sensitivity.  Routes to analyse_ablation().
-                   NOTE: exp1_ablation is NOT dispatched by ci_experiment.yml
-                   or ci_schedule_all.yml — it has no worker or result_subdir.
-                   It is kept in EXPERIMENT_MODE for manual standalone use only.
+                   exp1_ablation runs with NSHARDS=4; merged to _merged.json
+                   by ci_analysis.yml before this script is called.
 
   "ood"          — extrap
                    OOD/out-of-distribution run. Hybrid legitimately loses NN.
@@ -138,13 +137,28 @@ EXPERIMENT_MODE: dict[str, str] = {
     "instability":        "instability",
     "exp2":               "multi_method",
     "hybrid_all_domains": "multi_method",
+    # exp2_feynman_pca: protocol_core_noiseless_pca_*.json uses the IDENTICAL
+    # 6 long-form method keys as exp2 ("PureLLM Baseline (core)", "ImprovedNN
+    # (core)", "EnhancedHybridSystemDeFi (core)", "HybridSystemLLMNN
+    # all-domains (core)", "SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem
+    # v50_2 (tools)") — none of which map to pure_llm/neural_network/hybrid via
+    # _normalise_protocol_record(). Without an EXPERIMENT_MODE entry this defaulted
+    # to "standard", where method_summary[m]["n_records"]==0 for all m in METHODS
+    # makes `all(... for m in METHODS if n_records>0)` vacuously True, firing the
+    # hard TOTAL_FAILURE fatal and aborting the job — even though n_total=30 records
+    # were loaded correctly. "multi_method" demotes this expected 0-on-canonical-keys
+    # situation to the existing soft WARN_MULTI_METHOD, exactly as for exp2.
+    "exp2_feynman_pca":   "multi_method",
+    "exp2_feyman_pca":    "multi_method",  # typo alias (missing 'n'), see RESULT_SUBDIR
     # exp1_ablation / exp2_feynman: paired pysr_only vs hypatia comparison using
     # extrap_r2_far. Uses dedicated helpers; standard method schema
     # (pure_llm/neural_network/hybrid) is absent — method-comparison sections suppressed.
     # Three-tier MW (all-N / excl-train-fail / success-subset), Fisher, Spearman,
     # complexity distributions, threshold sweep, and LOO all run under this mode.
+    # exp1_ablation runs with NSHARDS=4; shards are merged to _merged.json by
+    # ci_analysis.yml before this script is called (INPUT_MODE=merged).
     "exp1_ablation":          "ablation",
-    "exp2_feynman":           "standard",
+    "exp2_feynman":           "ablation",
     # exp2_feynman_extrap: OOD extrap step — produces ablation_paired.json;
     # run_analysis.py reads it in ablation mode (extrap_r2_far present).
     "exp2_feynman_extrap":    "ablation",
@@ -157,22 +171,26 @@ EXPERIMENT_MODE: dict[str, str] = {
 RESULT_SUBDIR: dict[str, str] = {
     "exp1":               "comparison_results/noise-noiseless/noiseless/defi",
     "exp1b":              "comparison_results/noise-noiseless/15",
+    "exp1_pca":           "comparison_results/noise-noiseless/noiseless/defi_pca",
+    "exp1b_pca":          "comparison_results/noise-noiseless/15_pca",
     "exp2_feynman":           "comparison_results/feynman-tests/exp2",
     # exp2_feynman_extrap: NSHARDS=1, DIRECT mode. ablation_paired.json written here
     # after merge_extrap_into_benchmark.py. Mirrors ci_analysis.yml MAPPING.
     "exp2_feynman_extrap":    "comparison_results/feynman-tests/exp2_extrap",
+    "exp2_feynman_pca":       "comparison_results/feynman-tests/exp2_pca_4060",
+    "exp2_feyman_pca":        "comparison_results/feynman-tests/exp2_pca_4060",  # typo alias (missing 'n')
     "exp2":               "comparison_results/feynman-tests/exp2_multi",
     "exp3":               "extrapolation",
     "exp3b":              "extrapolation/multi_seed",
     "suppA":              "hybrid_pysr/defi",
-    "suppB":              "comparison_results/feynman-tests/noise-sweep",
+    "suppB":              "comparison_results/feynman-tests/noise-sweep/noise-sweep",
     "suppB_sc":           "comparison_results/feynman-tests/sample-complexity",
     "hybrid_all_domains": "hybrid_llm_nn/all_domains",
     "instability":        "figures",
     "extrap":             "comparison_results/extrapolation",
-    # exp1_ablation: manual-only; no CI worker. Subdir mirrors merge_shards.py EXP_CONFIG.
-    # If promoted to CI, add entries in ci_experiment.yml and ci_analysis.yml too.
-    "exp1_ablation":      "comparison_results/feynman-tests/exp1_ablation",
+    # exp1_ablation: now CI-dispatched with NSHARDS=4; result_subdir mirrors
+    # ci_runner.yml plan meta step and ci_analysis.yml MAPPING exactly.
+    "exp1_ablation":      "ablation/exp1_ablation",
 }
 
 
@@ -267,7 +285,7 @@ def _mann_whitney_paired_ablation(pairs: list[tuple[float, float]]) -> dict:
     """
     if not _SCIPY_OK:
         return {"available": False, "reason": "scipy not installed"}
-    if len(pairs) < 2:
+    if len(pairs) < MIN_RECORDS_FOR_STATS:
         return {"available": False, "reason": "insufficient pairs after filtering"}
     p_vals = [p for p, _ in pairs]
     h_vals = [h for _, h in pairs]
@@ -921,8 +939,11 @@ def analyse_ablation(records: list[dict], experiment: str,
 
     if len(mw_pairs_all) < MIN_RECORDS_FOR_STATS:
         fatal.append(
-            f"TOO_FEW_MW_PAIRS: only {len(mw_pairs_all)} finite paired far-R² values "
-            f"(need ≥ {MIN_RECORDS_FOR_STATS}) for Mann-Whitney test."
+            f"WARN_TOO_FEW_MW_PAIRS: only {len(mw_pairs_all)} finite paired far-R² values "
+            f"(need ≥ {MIN_RECORDS_FOR_STATS}) for Mann-Whitney test; test skipped. "
+            f"Likely cause: extrap_r2_far absent from records — confirm workers ran the "
+            f"extrapolation evaluation step and that merge_extrap_into_benchmark.py was "
+            f"called before this analysis. Workflow continues."
         )
 
     if failures:
@@ -1528,15 +1549,39 @@ def analyse(records: list[dict], experiment: str,
     # a partially-mapped 4-method schema (multi_method) where 0% on canonical
     # keys is expected rather than indicative of a bug.
     if mode == "standard" or mode == "ood":
-        all_zero_success = all(
-            method_summary.get(m, {}).get("success_rate_flag", 0.0) == 0.0
-            for m in METHODS
+        # Only fire TOTAL_FAILURE when at least one method actually has records.
+        # If n_records == 0 for *all* methods (e.g. wrong method-key schema),
+        # all() over an empty generator returns True (vacuous truth), which
+        # incorrectly fires the fatal even though there is no real 0% success —
+        # just a schema mismatch.  Guard with `any_method_has_records` so the
+        # fatal only fires when methods genuinely returned results and ALL of
+        # them scored 0%.
+        methods_with_records = [
+            m for m in METHODS
             if method_summary.get(m, {}).get("n_records", 0) > 0
+        ]
+        any_method_has_records = len(methods_with_records) > 0
+        all_zero_success = any_method_has_records and all(
+            method_summary.get(m, {}).get("success_rate_flag", 0.0) == 0.0
+            for m in methods_with_records
         )
         if all_zero_success and n_standard > 0:
             fatal.append(
                 "TOTAL_FAILURE: all methods report 0% success across all standard equations. "
                 "Check experiment scripts for systematic errors."
+            )
+        elif not any_method_has_records and n_standard > 0:
+            # Records were loaded but none matched the canonical method keys
+            # (pure_llm / neural_network / hybrid).  This is a schema-mismatch,
+            # not a genuine 0% result — warn rather than hard-failing.
+            fatal.append(
+                "WARN_NO_METHOD_RECORDS: records were loaded but none contained results "
+                "under canonical keys (pure_llm, neural_network, hybrid). "
+                "This usually means the JSON uses non-standard method names that were "
+                "not translated by merge_shards.py, or the experiment should be mapped "
+                "to 'multi_method' mode in EXPERIMENT_MODE. "
+                "Verify _normalise_protocol_record() output or add an EXPERIMENT_MODE entry. "
+                "Workflow continues."
             )
 
     # HYBRID_NEVER_BEATS_NN — mode-dependent.
@@ -1891,6 +1936,67 @@ def parse_args() -> argparse.Namespace:
     return ap.parse_args()
 
 
+# Shared method-key map for sweep-shape extraction (Shape S / Shape N below).
+# Maps the long-form method names emitted by merge_shards.py to the canonical
+# short keys expected by analyse(). Mirrors the mapping inside
+# _load_records_from_json's Shape-P fallback — keep all three in sync if
+# merge_shards.py's naming changes.
+_SWEEP_METHOD_KEY_MAP: dict[str, str] = {
+    "PureLLM Baseline":                "pure_llm",
+    "PureLLM Baseline (core)":         "pure_llm",
+    "ImprovedNN":                      "neural_network",
+    "ImprovedNN (core)":               "neural_network",
+    "EnhancedHybridSystemDeFi":        "hybrid",
+    "EnhancedHybridSystemDeFi (core)": "hybrid",
+    "pure_llm":                        "pure_llm",
+    "neural_network":                  "neural_network",
+    "hybrid":                          "hybrid",
+}
+
+
+def _records_from_sweep_dict(
+    sweep: dict, sweep_key_label: str
+) -> list[dict]:
+    """
+    Shared extraction for merge_shards.py sweep shapes that nest
+    {sweep_point: {"method_summary": {...}, "per_equation": {eq: {method: {...}}}}}.
+
+    Used by both Shape S (per_noise, keyed by noise_level) and Shape N
+    (per_n, keyed by sample_size). One record per (sweep_point, equation)
+    pair; "results" built from per_equation with method names canonicalised
+    via _SWEEP_METHOD_KEY_MAP where possible. method_summary stats are
+    hoisted onto each record under "_method_summary" for provenance only.
+
+    sweep_key_label is the record field name to store the sweep point under
+    (e.g. "noise_level" or "sample_size").
+    """
+    records: list[dict] = []
+    for point, point_val in sweep.items():
+        if not isinstance(point_val, dict):
+            continue
+        method_summary = point_val.get("method_summary", {}) or {}
+        per_equation = point_val.get("per_equation", {}) or {}
+        for eq, eq_methods in per_equation.items():
+            if not isinstance(eq_methods, dict):
+                continue
+            results: dict = {}
+            for raw_method, mval in eq_methods.items():
+                if not isinstance(mval, dict):
+                    continue
+                canonical = _SWEEP_METHOD_KEY_MAP.get(raw_method, raw_method)
+                results[canonical] = mval
+            records.append({
+                "equation_id":               eq,
+                sweep_key_label:             point,
+                "difficulty":                None,
+                "formula_type":              None,
+                "extrapolation_intractable": False,
+                "results":                   results,
+                "_method_summary":           method_summary,
+            })
+    return records
+
+
 def _load_records_from_json(json_path: Path, experiment: str) -> list[dict]:
     """
     Load records from a single JSON file using the same shape-detection logic
@@ -1905,6 +2011,26 @@ def _load_records_from_json(json_path: Path, experiment: str) -> list[dict]:
                — protocol_core_*.json / _merged_benchmark.json from the
                  "Locate analysis input" step.  Normalised via
                  _normalise_protocol_record() unless ablation.
+      Shape S  {"noise_levels":[...], "methods":[...],
+                "per_noise": {nl: {"method_summary": {...},
+                                    "per_equation": {eq: {method: {...}}}}}}
+               — suppB noise-sweep _merged.json from merge_shards.py
+                 (merge_shards.py's own log calls this "Shape S sweep file").
+                 One record per (noise_level, equation), with a "results"
+                 dict keyed by canonical method name where the raw long-form
+                 method name maps via _SWEEP_METHOD_KEY_MAP; unmapped methods
+                 are kept under their raw name so WARN_NO_METHOD_RECORDS /
+                 report sections can still see them, but are excluded from
+                 the canonical pure_llm/neural_network/hybrid comparisons.
+                 method_summary stats are hoisted onto every record as
+                 "_method_summary" for provenance (not consumed by analyse()).
+      Shape N  {"sample_sizes":[...], "methods":[...],
+                "per_n": {n: {"method_summary": {...},
+                               "per_equation": {eq: {method: {...}}}}}}
+               — suppB_sc sample-complexity-sweep _merged.json from
+                 merge_shards.py. Same structure and extraction as Shape S,
+                 keyed by sample_size instead of noise_level (one record per
+                 (sample_size, equation) pair). See _records_from_sweep_dict().
     """
     with open(json_path, encoding="utf-8") as f:
         raw = json.load(f)
@@ -1914,8 +2040,79 @@ def _load_records_from_json(json_path: Path, experiment: str) -> list[dict]:
     # a "results" dict with method sub-dicts (r2 / success).
     # This is the shape produced by the single NSHARDS=1 worker for exp1 and
     # assembled in-memory by ci_analysis.yml for other single-shard experiments.
-    from merge_shards import _is_protocol_file, _normalise_protocol_record  # type: ignore
-    _ABLATION_EXPERIMENTS = {"exp1_ablation"}
+    #
+    # Import merge_shards helpers with a graceful fallback so this script does
+    # not crash when merge_shards.py is absent (e.g. standalone invocations or
+    # environments that only deploy run_analysis.py).  The fallback
+    # _is_protocol_file / _normalise_protocol_record reproduce the minimal
+    # behaviour needed: Shape P detection and canonical-key remapping.
+    try:
+        from merge_shards import _is_protocol_file, _normalise_protocol_record  # type: ignore
+    except ImportError:
+        print(
+            "WARNING: merge_shards.py not found on sys.path — "
+            "using built-in Shape-P detection and normalisation fallback. "
+            "Protocol wrapper files (Shape P) will be detected by the presence "
+            "of a non-empty 'tests' list; method keys will be remapped via the "
+            "inline METHOD_KEY_MAP.",
+            file=sys.stderr,
+        )
+
+        # Minimal inline reimplementation ----------------------------------------
+        # Maps the long-form method names used in protocol_core_*.json to the
+        # canonical short keys expected by run_analysis.py.  Mirrors the mapping
+        # in merge_shards.py — keep in sync if merge_shards.py is updated.
+        _METHOD_KEY_MAP: dict[str, str] = {
+            # Standard experiments (exp1, exp1b, suppA, suppB, suppB_sc)
+            "PureLLM Baseline":             "pure_llm",
+            "PureLLM Baseline (core)":      "pure_llm",
+            "ImprovedNN":                   "neural_network",
+            "ImprovedNN (core)":            "neural_network",
+            "EnhancedHybridSystemDeFi":     "hybrid",
+            "EnhancedHybridSystemDeFi (core)": "hybrid",
+            # Also accept already-canonical keys (idempotent)
+            "pure_llm":                     "pure_llm",
+            "neural_network":               "neural_network",
+            "hybrid":                       "hybrid",
+        }
+
+        def _is_protocol_file(data: dict) -> bool:  # type: ignore[misc]
+            """Return True if data looks like a protocol_core_*.json wrapper."""
+            tests = data.get("tests")
+            if not isinstance(tests, list) or not tests:
+                return False
+            first = tests[0] if tests else {}
+            return isinstance(first, dict) and isinstance(first.get("results"), dict)
+
+        def _normalise_protocol_record(test: dict) -> dict:  # type: ignore[misc]
+            """
+            Convert a Shape-P test entry to the standard run_analysis record shape:
+              {"equation_id": ..., "difficulty": ..., "formula_type": ...,
+               "extrapolation_intractable": ...,
+               "results": {"pure_llm": {...}, "neural_network": {...}, "hybrid": {...}}}
+            """
+            raw_results: dict = test.get("results", {}) or {}
+            normalised_results: dict = {}
+            for raw_key, data in raw_results.items():
+                canonical = _METHOD_KEY_MAP.get(raw_key)
+                if canonical:
+                    normalised_results[canonical] = data
+                # Unknown keys are silently dropped (multi_method 4th key, etc.)
+            return {
+                "equation_id":               test.get("description", test.get("equation_id", "?")),
+                "difficulty":                test.get("difficulty"),
+                "formula_type":              test.get("formula_type"),
+                "extrapolation_intractable": bool(test.get("extrapolation_intractable", False)),
+                "results":                   normalised_results,
+            }
+        # -------------------------------------------------------------------------
+
+    # Keep in sync with EXPERIMENT_MODE entries that map to "ablation".
+    # Ablation records use the paired hypatia/pysr_only schema and must NOT
+    # be normalised through _normalise_protocol_record().
+    _ABLATION_EXPERIMENTS = {
+        k for k, v in EXPERIMENT_MODE.items() if v == "ablation"
+    } | {"exp1_ablation"}   # always include the canonical name
     is_ablation = experiment in _ABLATION_EXPERIMENTS
 
     if isinstance(raw, dict) and _is_protocol_file(raw):
@@ -1929,6 +2126,38 @@ def _load_records_from_json(json_path: Path, experiment: str) -> list[dict]:
                 records.append(_normalise_protocol_record(test))
         print(f"  Shape P (protocol wrapper / NSHARDS=1 direct): "
               f"{len(records)} records from 'tests' key.")
+        return records
+
+    # Shape S — suppB noise-sweep _merged.json from merge_shards.py.
+    # Detected by a non-empty "per_noise" dict at top level (same guard used
+    # by validate_analysis_input.py's "noise_sweep_per_noise" Tier-2 extractor).
+    # Must be checked BEFORE Shape A/B, since "per_noise" is itself a dict and
+    # would otherwise be swallowed whole as a single Shape-B "record" — this
+    # was the root cause of TOO_FEW_RECORDS firing on a 900-record sweep file
+    # (Shape B reported 1 record: "per_noise" itself, treated as one task).
+    #
+    # The meaningful unit is one (noise_level x equation) pair. See
+    # _records_from_sweep_dict() for the shared extraction logic (also used
+    # by Shape N below for the suppB_sc sample-complexity sweep).
+    if isinstance(raw, dict) and isinstance(raw.get("per_noise"), dict) and raw["per_noise"]:
+        records = _records_from_sweep_dict(raw["per_noise"], "noise_level")
+        print(f"  Shape S (noise-sweep _merged.json from merge_shards.py): "
+              f"{len(records)} records across {len(raw['per_noise'])} noise level(s).")
+        return records
+
+    # Shape N — suppB_sc sample-complexity-sweep _merged.json from
+    # merge_shards.py. Detected by a non-empty "per_n" dict at top level
+    # (same guard used by validate_analysis_input.py's
+    # "sample_complexity_per_n" Tier-2 extractor). Same root-cause fix as
+    # Shape S above: "per_n" is itself a dict and was previously swallowed
+    # whole as a single Shape-B "record", firing TOO_FEW_RECORDS on a
+    # 1080-record sweep file.
+    #
+    # The meaningful unit is one (sample_size x equation) pair.
+    if isinstance(raw, dict) and isinstance(raw.get("per_n"), dict) and raw["per_n"]:
+        records = _records_from_sweep_dict(raw["per_n"], "sample_size")
+        print(f"  Shape N (sample-complexity-sweep _merged.json from merge_shards.py): "
+              f"{len(records)} records across {len(raw['per_n'])} sample size(s).")
         return records
 
     if isinstance(raw, dict) and isinstance(raw.get("results"), dict):

@@ -612,6 +612,38 @@ def compute_extrap_r2_far(
 random.seed(42)
 np.random.seed(42)
 
+# ---------------------------------------------------------------------------
+# HYPATIAX_NOISE_LEVEL — injected by run_noise_sweep_benchmark.py orchestrator.
+# When present, real Gaussian noise scaled to σ * std(y) is added to every
+# test case's y values after load_test_data().  When absent (or 0.0), this
+# script runs in its usual noiseless-or-fixed-noisy mode.
+# ---------------------------------------------------------------------------
+_HYPATIAX_NOISE_LEVEL: float = 0.0
+_raw_noise_env = os.environ.get("HYPATIAX_NOISE_LEVEL", "").strip()
+if _raw_noise_env:
+    try:
+        _HYPATIAX_NOISE_LEVEL = float(_raw_noise_env)
+    except ValueError:
+        print(f"WARNING: Could not parse HYPATIAX_NOISE_LEVEL={_raw_noise_env!r} — defaulting to 0.0")
+
+# ---------------------------------------------------------------------------
+# FEATURE-NSHARDS-SUFFIX (corrected 2026-06-23) — injected by
+# run_noise_sweep_benchmark.py / run_sample_complexity_benchmark.py
+# orchestrators, forwarded from run_all.sh's per-shard SHARD_INDEX (1-based,
+# zero-padded), NOT the total shard count. When present, every output
+# filename this script writes (protocol_core_*.json, benchmark_results.json,
+# benchmark_results_extrap.json) gets "_nshardsNN" appended before the
+# extension, where NN distinguishes THIS shard from every other
+# concurrently-running shard in the same matrix run — necessary because all
+# shards share the same --output-dir and write second-granularity
+# timestamped filenames, so same-second saves from different shards would
+# otherwise collide. Empty string when unset (e.g. local runs, or any other
+# orchestrator that doesn't set it) — filenames are then unchanged from
+# before this feature.
+# ---------------------------------------------------------------------------
+_SHARD_ID = os.environ.get("HYPATIAX_SHARD_ID", "").strip()
+_SHARD_TAG = f"_shrd{_SHARD_ID}" if _SHARD_ID else ""
+
 # PySR subprocess timeout — overridden by --pysr-timeout at runtime.
 # Paper-quality default (repro.yaml timeouts.feynman_pysr_seconds = 1100).
 _PYSR_TIMEOUT: int = 1100
@@ -630,6 +662,15 @@ sys.path.insert(0, str(_PKG_ROOT.parent))      # parent of hypatiax/ → import 
 # prevent the two passes from colliding on the same JSON.
 _CHECKPOINT_NAME: str = "protocol_core_checkpoint"
 _OUTPUT_DIR: Path = _PKG_ROOT / "data/results/comparison_results"
+# _FLAT_OUTPUT_DIR: always comparison_results/ root — never overridden by
+# --output-dir.  benchmark_results.json lands here so it is NOT buried or
+# clobbered across multi-run sweeps (noise-sweep/, sample-complexity/).
+# Checkpoints also land here.
+# NOTE: benchmark_results_extrap.json no longer uses this — see the
+# FIX-EXTRAP-OUTPUT-DIR comment near its write site — it now uses
+# _OUTPUT_DIR (honors --output-dir) so it lands alongside
+# protocol_core_extrap_*.json in the per-experiment directory.
+_FLAT_OUTPUT_DIR: Path = _OUTPUT_DIR
 
 # ---------------------------------------------------------------------------
 # juliacall MUST be imported before torch to prevent a segfault when PySR
@@ -3909,7 +3950,7 @@ class ProtocolBenchmarkSuite:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
                     _flat_records.append(_row)
-            _json_path = _OUTPUT_DIR / "benchmark_results.json"
+            _json_path = _FLAT_OUTPUT_DIR / f"benchmark_results{_SHARD_TAG}.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
             # FIX: append/merge so multi-domain runs accumulate all results
             _existing: list = []
@@ -3988,7 +4029,18 @@ class ProtocolBenchmarkSuite:
                         "extrap_far_ceiling": _far_ceiling,
                     })
             if _extrap_rows:
-                _ext_path = _OUTPUT_DIR / "benchmark_results_extrap.json"
+                # FIX-EXTRAP-OUTPUT-DIR: previously used _FLAT_OUTPUT_DIR
+                # (hardcoded to comparison_results/ root), which silently
+                # ignored --output-dir and left this file outside the
+                # per-experiment directory (e.g. feynman-tests/exp2_extrap/)
+                # that protocol_core_extrap_*.json and downstream tooling
+                # (merge_extrap_into_benchmark.py --extrap-benchmark-dir)
+                # expect it in. _OUTPUT_DIR DOES honor --output-dir (see
+                # main()), so use that here instead. benchmark_results.json
+                # (non-extrap, line ~3950) and checkpoints intentionally
+                # keep using _FLAT_OUTPUT_DIR — this change is scoped only
+                # to the extrap export.
+                _ext_path = _OUTPUT_DIR / f"benchmark_results_extrap{_SHARD_TAG}.json"
                 _ext_path.parent.mkdir(parents=True, exist_ok=True)
                 _ext_existing: list = []
                 if _ext_path.exists():
@@ -4012,8 +4064,6 @@ class ProtocolBenchmarkSuite:
             print(f"\n⚠️  Could not export benchmark_results_extrap.json: {_eje}")
 
     def _save(self, noiseless: bool = False, threshold: float = 0.995, extrap: bool = False):
-        out_dir = _OUTPUT_DIR
-        out_dir.mkdir(parents=True, exist_ok=True)
         ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
         if extrap:
             mode = "extrap"
@@ -4021,7 +4071,14 @@ class ProtocolBenchmarkSuite:
             mode = "noiseless"
         else:
             mode = "noisy"
-        path = out_dir / f"protocol_core_{mode}_{ts}.json"
+
+        # Always write to _OUTPUT_DIR — the orchestrator sets --output-dir to
+        # the correct destination (noise-sweep/) for ALL sigma levels including
+        # sigma=0 (noiseless).  suppB needs every protocol_core_*.json in the
+        # same noise-sweep/ dir so the aggregate can find them all.
+        out_dir = _OUTPUT_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / f"protocol_core_{mode}_{ts}{_SHARD_TAG}.json"
 
         # Build PureLLM truncation audit
         truncation_audit = {}
@@ -4041,7 +4098,7 @@ class ProtocolBenchmarkSuite:
             "script":      "run_protocol_benchmark_core.py v2.2 (sign-fix + log-widen + domain-guard + formula-hash + complexity-score + json-export + extrap_r2_far-fix)",
             "protocol": {
                 "mode":        mode,
-                "noise_level": 0.0 if noiseless else 0.05,
+                "noise_level": 0.0 if noiseless else _HYPATIAX_NOISE_LEVEL,
                 "threshold":   threshold,
                 "note": (
                     "Noiseless run — directly comparable to published SR literature: "
@@ -4078,7 +4135,12 @@ class ProtocolBenchmarkSuite:
 
     @staticmethod
     def _checkpoint_path() -> Path:
-        out_dir = _OUTPUT_DIR
+        # Checkpoints go to _FLAT_OUTPUT_DIR (comparison_results/ root), NOT
+        # _OUTPUT_DIR.  When the orchestrator points --output-dir at a
+        # per-experiment subdir (noise-sweep/, sample-complexity/), the
+        # checkpoint must still be findable by --resume without knowing which
+        # subdir was used for that run.
+        out_dir = _FLAT_OUTPUT_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir / f"{_CHECKPOINT_NAME}.json"
 
@@ -4452,7 +4514,7 @@ Examples
             print("=" * 70)
         else:
             print("=" * 70)
-            print("  NOISY MODE  —  noise_level = 0.05")
+            print(f"  NOISY MODE  —  noise_level = {_HYPATIAX_NOISE_LEVEL:.4f}  (HYPATIAX_NOISE_LEVEL)")
             print(f"  R² threshold    :  {_threshold}  (practical)")
             print("  R² ceiling      :  ~0.9982  (noise floor)")
             print("  NOT comparable to published noiseless figures.")
@@ -4573,6 +4635,33 @@ Examples
             for case in protocol.load_test_data(resolved, num_samples=args.samples):
                 all_tests.append((*case, resolved))
 
+    # ── NOISE INJECTION — apply HYPATIAX_NOISE_LEVEL to all collected y values ──
+    # The noise-sweep orchestrator (run_noise_sweep_benchmark.py) sets
+    # HYPATIAX_NOISE_LEVEL before launching this script.  Without this block
+    # the env var was silently ignored and all five sigma levels produced
+    # identical data, making the noise-sweep a no-op.
+    #
+    # Noise model: y_noisy = y + N(0, sigma * std(y))
+    # where sigma = _HYPATIAX_NOISE_LEVEL (fraction of signal std, e.g. 0.01=1%).
+    # A per-equation RNG seeded from the description hash ensures reproducibility
+    # across runs with the same sigma.
+    if _HYPATIAX_NOISE_LEVEL > 0.0 and not _noiseless:
+        _n_injected = 0
+        _noisy_tests: List[tuple] = []
+        for _tup in all_tests:
+            _desc, _X, _y, _vnames, _meta, _dom = _tup
+            _y_std = float(np.std(_y))
+            if _y_std > 0.0:
+                _rng_seed = int(abs(hash(_desc)) % (2**31))
+                _rng = np.random.default_rng(seed=_rng_seed)
+                _noise = _rng.normal(0.0, _HYPATIAX_NOISE_LEVEL * _y_std, size=len(_y))
+                _y = _y + _noise
+                _n_injected += 1
+            _noisy_tests.append((_desc, _X, _y, _vnames, _meta, _dom))
+        all_tests = _noisy_tests
+        print(f"INFO  Noise injection: sigma={_HYPATIAX_NOISE_LEVEL*100:.4g}% of std(y) "
+              f"applied to {_n_injected}/{len(all_tests)} test case(s).")
+
     # ── --equations: filter to specific 1-based indices ─────────────────────
     if _equation_indices:
         _eq_set = set(_equation_indices)
@@ -4689,6 +4778,10 @@ Examples
     if getattr(args, "output_dir", None):
         _OUTPUT_DIR = Path(args.output_dir).resolve()
         _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        # _FLAT_OUTPUT_DIR intentionally NOT updated — benchmark_results.json
+        # and checkpoints always go to the comparison_results root, not the
+        # per-experiment subdir (noise-sweep/, sample-complexity/) so they
+        # are not buried or clobbered across multi-run sweeps.
 
     # ── --clear-checkpoint ───────────────────────────────────────────────────
     if getattr(args, "clear_checkpoint", False):
