@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1
-aiohttp==3.14.0
+aiohttp==3.14.1
 aiosignal==1.4.0
 alabaster==1.0.0
 annotated-doc==0.0.4
@@ -41,7 +41,7 @@ comm==0.2.3
 confection==0.1.5
 contourpy==1.3.2
 coverage==7.12.0
-cryptography==46.0.7
+cryptography==48.0.1
 cuda-bindings==12.9.4
 cuda-pathfinder==1.3.3
 cycler==0.12.1
@@ -152,7 +152,7 @@ jupyter_client==8.6.3
 jupyter_core==5.9.1
 jupyter_server==2.20.0
 jupyter_server_terminals==0.5.3
-jupyterlab==4.5.7
+jupyterlab==4.5.9
 jupyterlab_pygments==0.3.0
 jupyterlab_server==2.28.0
 jupyterlab_widgets==3.0.16
@@ -189,7 +189,7 @@ nbconvert==7.17.1
 nbformat==5.10.4
 nest-asyncio==1.6.0
 networkx==3.5
-nltk==3.9.4
+nltk==3.10.0rc1  # NOTE: only pre-release fix currently available for GHSA-p4gq-832x-fm9v (path traversal); no stable 3.10.0 release yet as of Jul 2026
 nodeenv==1.9.1
 notebook==7.5.6
 notebook_shim==0.2.4
