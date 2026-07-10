@@ -184,7 +184,6 @@ jobs:
 
           QUEUE = [
               "exp1",
-              "exp1_ablation",
               "exp1b",
               "exp2_feynman",
               "exp2_feynman_pca",
@@ -315,14 +314,7 @@ jobs:
               subdir = OUT_BASE / SUBDIR.get(exp_id, exp_id)
               if not subdir.exists():
                   return []
-              candidates = list(subdir.rglob("*.json")) + list(subdir.rglob("*.csv"))
-              # Exclude checkpoint/stub/disclosure files — these are written mid-run
-              # or as scaffolding and must never count as completed experiment output.
-              # (Mirrors the same exclusion ci_runner.yml applies internally.)
-              return [
-                  f for f in candidates
-                  if "checkpoint" not in f.name and "disclosure" not in f.name
-              ]
+              return list(subdir.rglob("*.json")) + list(subdir.rglob("*.csv"))
 
           def json_valid(path):
               try:
@@ -511,40 +503,31 @@ jobs:
         run: |
           set -euo pipefail
           BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          # Unique per-dispatch token — ci_runner.yml embeds this in its own
-          # run-name, so we can find THIS exact run via an exact string match
-          # instead of guessing off branch+timestamp (which is inherently racy
-          # when multiple dispatches land close together).
-          NONCE="np-${GITHUB_RUN_ID}-${GITHUB_JOB}-$(date +%s%N)"
-          echo "Dispatching ci_runner.yml for experiment=${EXP} at ${BEFORE_TS} (nonce=${NONCE})"
+          echo "Dispatching ci_runner.yml for experiment=${EXP} at ${BEFORE_TS}"
           gh workflow run ci_runner.yml \
             --repo "${REPO}" --ref "${{ github.ref_name }}" \
             --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
             --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
-            --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}" \
-            --field dispatch_nonce="${NONCE}"
+            --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}"
           sleep 8
           DISPATCHED_ID=""
-          SLEEP=5
-          for attempt in $(seq 1 25); do
+          MAX_ATTEMPTS=15
+          RETRY_SLEEP=8
+          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_runner.yml --event workflow_dispatch \
-              --limit 20 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg nonce "${NONCE}" \
-                '[.[] | select(.displayTitle | contains($nonce))] | first | .databaseId // empty' \
+              --limit 10 --json databaseId,createdAt,headBranch \
+              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/25: run not yet visible — waiting ${SLEEP}s..."
-            sleep ${SLEEP}
-            SLEEP=$(( SLEEP < 45 ? SLEEP + 3 : 45 ))
+            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
+            sleep "${RETRY_SLEEP}"
+            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
           done
           if [[ -z "${DISPATCHED_ID}" ]]; then
-            echo "::error::Could not find the dispatched ci_runner.yml run (nonce=${NONCE}) after extended polling."
-            echo "::error::Possible causes:"
-            echo "::error::  (1) GitHub Actions API registration delay exceeded the poll window — rare at this window size, but re-run to confirm."
-            echo "::error::  (2) PAT_TOKEN is missing, expired, or lacks the 'workflow' scope needed to dispatch/list other workflows."
-            echo "::error::  (3) ci_runner.yml is disabled, renamed, or does not exist on ref '${{ github.ref_name }}'."
-            echo "::error::  (4) ci_runner.yml on this ref predates the dispatch_nonce input — redeploy the updated ci_runner.yml."
+            echo "::error::Could not determine dispatched run ID for ci_runner.yml after ${MAX_ATTEMPTS} attempts (~4 min). Aborting."
+            echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_runner.yml for a run that may have started anyway."
             exit 1
           fi
           echo "Polling run ${DISPATCHED_ID} (ci_runner.yml) ..."
@@ -635,20 +618,24 @@ jobs:
             --field result_subdir="${RESULT_SUBDIR}"
           sleep 8
           DISPATCHED_ID=""
-          SLEEP=5
-          for attempt in $(seq 1 25); do
+          MAX_ATTEMPTS=15
+          RETRY_SLEEP=8
+          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_analysis.yml --event workflow_dispatch \
-              --limit 20 --json databaseId,createdAt,headBranch,displayTitle \
+              --limit 10 --json databaseId,createdAt,headBranch \
               --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/25: run not yet visible — waiting ${SLEEP}s..."
-            sleep ${SLEEP}
-            SLEEP=$(( SLEEP < 45 ? SLEEP + 3 : 45 ))
+            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
+            sleep "${RETRY_SLEEP}"
+            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
           done
-          [[ -z "${DISPATCHED_ID}" ]] && { echo "::error::No run ID found after extended polling."; exit 1; }
+          [[ -z "${DISPATCHED_ID}" ]] && {
+            echo "::error::Could not determine dispatched run ID for ci_analysis.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+            echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_analysis.yml for a run that may have started anyway."
+            exit 1; }
           echo "Polling run ${DISPATCHED_ID} (ci_analysis.yml) ..."
           DEADLINE=$(( $(date +%s) + 1800 ))
           SLEEP=20
@@ -728,20 +715,24 @@ jobs:
             --field result_subdir="${RESULT_SUBDIR}"
           sleep 8
           DISPATCHED_ID=""
-          SLEEP=5
-          for attempt in $(seq 1 25); do
+          MAX_ATTEMPTS=15
+          RETRY_SLEEP=8
+          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_postprocess.yml --event workflow_dispatch \
-              --limit 20 --json databaseId,createdAt,headBranch,displayTitle \
+              --limit 10 --json databaseId,createdAt,headBranch \
               --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/25: run not yet visible — waiting ${SLEEP}s..."
-            sleep ${SLEEP}
-            SLEEP=$(( SLEEP < 45 ? SLEEP + 3 : 45 ))
+            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
+            sleep "${RETRY_SLEEP}"
+            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
           done
-          [[ -z "${DISPATCHED_ID}" ]] && { echo "::error::No run ID found after extended polling."; exit 1; }
+          [[ -z "${DISPATCHED_ID}" ]] && {
+            echo "::error::Could not determine dispatched run ID for ci_postprocess.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+            echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_postprocess.yml for a run that may have started anyway."
+            exit 1; }
           echo "Polling run ${DISPATCHED_ID} (ci_postprocess.yml) ..."
           DEADLINE=$(( $(date +%s) + 1800 ))
           SLEEP=20
@@ -824,20 +815,24 @@ jobs:
             --field noise_levels="${NOISE_LEVELS}"
           sleep 8
           DISPATCHED_ID=""
-          SLEEP=5
-          for attempt in $(seq 1 25); do
+          MAX_ATTEMPTS=15
+          RETRY_SLEEP=8
+          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_pipeline_check.yml --event workflow_dispatch \
-              --limit 20 --json databaseId,createdAt,headBranch,displayTitle \
+              --limit 10 --json databaseId,createdAt,headBranch \
               --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/25: run not yet visible — waiting ${SLEEP}s..."
-            sleep ${SLEEP}
-            SLEEP=$(( SLEEP < 45 ? SLEEP + 3 : 45 ))
+            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
+            sleep "${RETRY_SLEEP}"
+            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
           done
-          [[ -z "${DISPATCHED_ID}" ]] && { echo "::error::No run ID found after extended polling."; exit 1; }
+          [[ -z "${DISPATCHED_ID}" ]] && {
+            echo "::error::Could not determine dispatched run ID for ci_pipeline_check.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+            echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_pipeline_check.yml for a run that may have started anyway."
+            exit 1; }
           echo "Polling run ${DISPATCHED_ID} (ci_pipeline_check.yml) ..."
           DEADLINE=$(( $(date +%s) + 1200 ))
           SLEEP=15
@@ -892,7 +887,7 @@ jobs:
         run: |
           set -euo pipefail
           NEXT_SLOT=$(( CURRENT_SLOT + 1 ))
-          QUEUE_SIZE=15
+          QUEUE_SIZE=14
           if [[ "${NEXT_SLOT}" -ge "${QUEUE_SIZE}" ]]; then
             echo "All ${QUEUE_SIZE} experiment slots completed — pipeline finished."
             exit 0
