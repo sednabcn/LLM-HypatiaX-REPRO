@@ -502,40 +502,57 @@ jobs:
           REPO:      ${{ github.repository }}
         run: |
           set -euo pipefail
-          BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "Dispatching ci_runner.yml for experiment=${EXP} at ${BEFORE_TS}"
-          gh workflow run ci_runner.yml \
-            --repo "${REPO}" --ref "${{ github.ref_name }}" \
-            --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
-            --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
-            --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}"
-          sleep 8
-          DISPATCHED_ID=""
-          MAX_ATTEMPTS=15
-          RETRY_SLEEP=8
-          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
-            DISPATCHED_ID=$(gh run list \
-              --repo "${REPO}" --workflow ci_runner.yml --event workflow_dispatch \
-              --limit 10 --json databaseId,createdAt,headBranch \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
-              2>/dev/null || echo "")
-            [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
-            sleep "${RETRY_SLEEP}"
-            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
-          done
+          echo "Dispatching ci_runner.yml for experiment=${EXP}"
+
+          RUN_OUTPUT="$(
+            gh workflow run ci_runner.yml \
+              --repo "${REPO}" --ref "${{ github.ref_name }}" \
+              --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
+              --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
+              --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}" \
+              2>&1
+          )"
+          echo "${RUN_OUTPUT}"
+
+          # Fast path: newer gh versions print the run URL directly —
+          # https://github.com/<repo>/actions/runs/<id> — no indexing race, no timestamp/branch guessing.
+          DISPATCHED_ID="$(
+            echo "${RUN_OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1
+          )"
+
+          # Fallback for older gh versions that don't print the run URL.
           if [[ -z "${DISPATCHED_ID}" ]]; then
-            echo "::error::Could not determine dispatched run ID for ci_runner.yml after ${MAX_ATTEMPTS} attempts (~4 min). Aborting."
+            echo "Run URL not returned by gh; discovering newest workflow_dispatch run..."
+            for attempt in $(seq 1 30); do
+              DISPATCHED_ID="$(
+                gh run list \
+                  --repo "${REPO}" --workflow ci_runner.yml --event workflow_dispatch \
+                  --limit 20 --json databaseId,createdAt \
+                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
+                  2>/dev/null || true
+              )"
+              [[ -n "${DISPATCHED_ID}" ]] && break
+              echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
+              sleep 5
+            done
+          fi
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "::error::Unable to determine dispatched run ID for ci_runner.yml."
             echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_runner.yml for a run that may have started anyway."
             exit 1
           fi
+          echo "Detected run ${DISPATCHED_ID}"
+
           echo "Polling run ${DISPATCHED_ID} (ci_runner.yml) ..."
           DEADLINE=$(( $(date +%s) + 22800 ))
           SLEEP=30
           while true; do
-            RUN_JSON=$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null \
-              || echo '{"status":"unknown","conclusion":"none"}')
+            if ! RUN_JSON="$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null)"; then
+              echo "  [$(date -u +%H:%M:%SZ)] run ${DISPATCHED_ID} not visible yet — retrying..."
+              sleep 10
+              continue
+            fi
             READ_STATUS=$(echo "${RUN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
             CONCLUSION=$(echo "${RUN_JSON}"  | python3 -c "import json,sys; print(json.load(sys.stdin).get('conclusion') or 'none')")
             echo "  [$(date -u +%H:%M:%SZ)] runner run=${DISPATCHED_ID} status=${READ_STATUS} conclusion=${CONCLUSION}"
@@ -609,39 +626,54 @@ jobs:
           REPO:          ${{ github.repository }}
         run: |
           set -euo pipefail
-          BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "Dispatching ci_analysis.yml for experiment=${EXP}"
-          gh workflow run ci_analysis.yml \
-            --repo "${REPO}" --ref "${{ github.ref_name }}" \
-            --field experiment="${EXP}" \
-            --field source_run_id="${SOURCE_RUN_ID}" \
-            --field result_subdir="${RESULT_SUBDIR}"
-          sleep 8
-          DISPATCHED_ID=""
-          MAX_ATTEMPTS=15
-          RETRY_SLEEP=8
-          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
-            DISPATCHED_ID=$(gh run list \
-              --repo "${REPO}" --workflow ci_analysis.yml --event workflow_dispatch \
-              --limit 10 --json databaseId,createdAt,headBranch \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
-              2>/dev/null || echo "")
-            [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
-            sleep "${RETRY_SLEEP}"
-            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
-          done
-          [[ -z "${DISPATCHED_ID}" ]] && {
-            echo "::error::Could not determine dispatched run ID for ci_analysis.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+
+          RUN_OUTPUT="$(
+            gh workflow run ci_analysis.yml \
+              --repo "${REPO}" --ref "${{ github.ref_name }}" \
+              --field experiment="${EXP}" \
+              --field source_run_id="${SOURCE_RUN_ID}" \
+              --field result_subdir="${RESULT_SUBDIR}" \
+              2>&1
+          )"
+          echo "${RUN_OUTPUT}"
+
+          DISPATCHED_ID="$(
+            echo "${RUN_OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1
+          )"
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "Run URL not returned by gh; discovering newest workflow_dispatch run..."
+            for attempt in $(seq 1 30); do
+              DISPATCHED_ID="$(
+                gh run list \
+                  --repo "${REPO}" --workflow ci_analysis.yml --event workflow_dispatch \
+                  --limit 20 --json databaseId,createdAt \
+                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
+                  2>/dev/null || true
+              )"
+              [[ -n "${DISPATCHED_ID}" ]] && break
+              echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
+              sleep 5
+            done
+          fi
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "::error::Unable to determine dispatched run ID for ci_analysis.yml."
             echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_analysis.yml for a run that may have started anyway."
-            exit 1; }
+            exit 1
+          fi
+          echo "Detected run ${DISPATCHED_ID}"
+
           echo "Polling run ${DISPATCHED_ID} (ci_analysis.yml) ..."
           DEADLINE=$(( $(date +%s) + 1800 ))
           SLEEP=20
           while true; do
-            RUN_JSON=$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null \
-              || echo '{"status":"unknown","conclusion":"none"}')
+            if ! RUN_JSON="$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null)"; then
+              echo "  [$(date -u +%H:%M:%SZ)] run ${DISPATCHED_ID} not visible yet — retrying..."
+              sleep 10
+              continue
+            fi
             READ_STATUS=$(echo "${RUN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
             CONCLUSION=$(echo "${RUN_JSON}"  | python3 -c "import json,sys; print(json.load(sys.stdin).get('conclusion') or 'none')")
             echo "  [$(date -u +%H:%M:%SZ)] analysis run=${DISPATCHED_ID} status=${READ_STATUS} conclusion=${CONCLUSION}"
@@ -707,38 +739,53 @@ jobs:
           REPO:          ${{ github.repository }}
         run: |
           set -euo pipefail
-          BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "Dispatching ci_postprocess.yml for experiment=${EXP}"
-          gh workflow run ci_postprocess.yml \
-            --repo "${REPO}" --ref "${{ github.ref_name }}" \
-            --field experiment="${EXP}" \
-            --field result_subdir="${RESULT_SUBDIR}"
-          sleep 8
-          DISPATCHED_ID=""
-          MAX_ATTEMPTS=15
-          RETRY_SLEEP=8
-          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
-            DISPATCHED_ID=$(gh run list \
-              --repo "${REPO}" --workflow ci_postprocess.yml --event workflow_dispatch \
-              --limit 10 --json databaseId,createdAt,headBranch \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
-              2>/dev/null || echo "")
-            [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
-            sleep "${RETRY_SLEEP}"
-            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
-          done
-          [[ -z "${DISPATCHED_ID}" ]] && {
-            echo "::error::Could not determine dispatched run ID for ci_postprocess.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+
+          RUN_OUTPUT="$(
+            gh workflow run ci_postprocess.yml \
+              --repo "${REPO}" --ref "${{ github.ref_name }}" \
+              --field experiment="${EXP}" \
+              --field result_subdir="${RESULT_SUBDIR}" \
+              2>&1
+          )"
+          echo "${RUN_OUTPUT}"
+
+          DISPATCHED_ID="$(
+            echo "${RUN_OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1
+          )"
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "Run URL not returned by gh; discovering newest workflow_dispatch run..."
+            for attempt in $(seq 1 30); do
+              DISPATCHED_ID="$(
+                gh run list \
+                  --repo "${REPO}" --workflow ci_postprocess.yml --event workflow_dispatch \
+                  --limit 20 --json databaseId,createdAt \
+                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
+                  2>/dev/null || true
+              )"
+              [[ -n "${DISPATCHED_ID}" ]] && break
+              echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
+              sleep 5
+            done
+          fi
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "::error::Unable to determine dispatched run ID for ci_postprocess.yml."
             echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_postprocess.yml for a run that may have started anyway."
-            exit 1; }
+            exit 1
+          fi
+          echo "Detected run ${DISPATCHED_ID}"
+
           echo "Polling run ${DISPATCHED_ID} (ci_postprocess.yml) ..."
           DEADLINE=$(( $(date +%s) + 1800 ))
           SLEEP=20
           while true; do
-            RUN_JSON=$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null \
-              || echo '{"status":"unknown","conclusion":"none"}')
+            if ! RUN_JSON="$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null)"; then
+              echo "  [$(date -u +%H:%M:%SZ)] run ${DISPATCHED_ID} not visible yet — retrying..."
+              sleep 10
+              continue
+            fi
             READ_STATUS=$(echo "${RUN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
             CONCLUSION=$(echo "${RUN_JSON}"  | python3 -c "import json,sys; print(json.load(sys.stdin).get('conclusion') or 'none')")
             echo "  [$(date -u +%H:%M:%SZ)] postprocess run=${DISPATCHED_ID} status=${READ_STATUS} conclusion=${CONCLUSION}"
@@ -805,40 +852,55 @@ jobs:
           REPO:               ${{ github.repository }}
         run: |
           set -euo pipefail
-          BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "Dispatching ci_pipeline_check.yml for experiment=${EXP}"
-          gh workflow run ci_pipeline_check.yml \
-            --repo "${REPO}" --ref "${{ github.ref_name }}" \
-            --field experiment="${EXP}" \
-            --field fail_on_incomplete="${FAIL_ON_INCOMPLETE}" \
-            --field seeds="${SEEDS}" \
-            --field noise_levels="${NOISE_LEVELS}"
-          sleep 8
-          DISPATCHED_ID=""
-          MAX_ATTEMPTS=15
-          RETRY_SLEEP=8
-          for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
-            DISPATCHED_ID=$(gh run list \
-              --repo "${REPO}" --workflow ci_pipeline_check.yml --event workflow_dispatch \
-              --limit 10 --json databaseId,createdAt,headBranch \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | sort_by(.createdAt) | last | .databaseId // empty' \
-              2>/dev/null || echo "")
-            [[ -n "${DISPATCHED_ID}" ]] && break
-            echo "  Attempt ${attempt}/${MAX_ATTEMPTS}: run not yet visible — waiting ${RETRY_SLEEP}s..."
-            sleep "${RETRY_SLEEP}"
-            RETRY_SLEEP=$(( RETRY_SLEEP < 20 ? RETRY_SLEEP + 3 : 20 ))
-          done
-          [[ -z "${DISPATCHED_ID}" ]] && {
-            echo "::error::Could not determine dispatched run ID for ci_pipeline_check.yml after ${MAX_ATTEMPTS} attempts (~4 min)."
+
+          RUN_OUTPUT="$(
+            gh workflow run ci_pipeline_check.yml \
+              --repo "${REPO}" --ref "${{ github.ref_name }}" \
+              --field experiment="${EXP}" \
+              --field fail_on_incomplete="${FAIL_ON_INCOMPLETE}" \
+              --field seeds="${SEEDS}" \
+              --field noise_levels="${NOISE_LEVELS}" \
+              2>&1
+          )"
+          echo "${RUN_OUTPUT}"
+
+          DISPATCHED_ID="$(
+            echo "${RUN_OUTPUT}" | grep -Eo 'actions/runs/[0-9]+' | cut -d/ -f3 | tail -1
+          )"
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "Run URL not returned by gh; discovering newest workflow_dispatch run..."
+            for attempt in $(seq 1 30); do
+              DISPATCHED_ID="$(
+                gh run list \
+                  --repo "${REPO}" --workflow ci_pipeline_check.yml --event workflow_dispatch \
+                  --limit 20 --json databaseId,createdAt \
+                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
+                  2>/dev/null || true
+              )"
+              [[ -n "${DISPATCHED_ID}" ]] && break
+              echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
+              sleep 5
+            done
+          fi
+
+          if [[ -z "${DISPATCHED_ID}" ]]; then
+            echo "::error::Unable to determine dispatched run ID for ci_pipeline_check.yml."
             echo "::error::Check https://github.com/${REPO}/actions/workflows/ci_pipeline_check.yml for a run that may have started anyway."
-            exit 1; }
+            exit 1
+          fi
+          echo "Detected run ${DISPATCHED_ID}"
+
           echo "Polling run ${DISPATCHED_ID} (ci_pipeline_check.yml) ..."
           DEADLINE=$(( $(date +%s) + 1200 ))
           SLEEP=15
           while true; do
-            RUN_JSON=$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null \
-              || echo '{"status":"unknown","conclusion":"none"}')
+            if ! RUN_JSON="$(gh run view "${DISPATCHED_ID}" --repo "${REPO}" --json status,conclusion 2>/dev/null)"; then
+              echo "  [$(date -u +%H:%M:%SZ)] run ${DISPATCHED_ID} not visible yet — retrying..."
+              sleep 10
+              continue
+            fi
             READ_STATUS=$(echo "${RUN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['status'])")
             CONCLUSION=$(echo "${RUN_JSON}"  | python3 -c "import json,sys; print(json.load(sys.stdin).get('conclusion') or 'none')")
             echo "  [$(date -u +%H:%M:%SZ)] checkpoint run=${DISPATCHED_ID} status=${READ_STATUS} conclusion=${CONCLUSION}"
