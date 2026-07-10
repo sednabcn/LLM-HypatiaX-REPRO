@@ -9,3 +9,11 @@ build/
 .DS_Store
 scan_result.json
 scan_report.html
+
+# Transient mid-run checkpoint/stub files written by ci_runner.yml (FIX-G4/G6).
+# These are resume markers, not completed experiment output, and must never be
+# committed — a committed checkpoint file can fool the pipeline's diagnose job
+# into classifying an experiment as "done" when it never actually ran.
+**/_checkpoint_shard*.json
+**/*_checkpoint.json
+**/checkpoint_plan.json
