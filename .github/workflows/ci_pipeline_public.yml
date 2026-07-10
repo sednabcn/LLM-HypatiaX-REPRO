@@ -516,8 +516,8 @@ jobs:
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_runner.yml --event workflow_dispatch \
               --limit 10 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" --arg exp "${EXP}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts and (.displayTitle | test($exp; "i")))] | first | .databaseId // empty' \
+              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
             echo "  Attempt ${attempt}/14: run not yet visible — waiting ${SLEEP}s..."
@@ -620,8 +620,8 @@ jobs:
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_analysis.yml --event workflow_dispatch \
               --limit 10 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" --arg exp "${EXP}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts and (.displayTitle | test($exp; "i")))] | first | .databaseId // empty' \
+              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
             echo "  Attempt ${attempt}/14: run not yet visible — waiting ${SLEEP}s..."
@@ -713,8 +713,8 @@ jobs:
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_postprocess.yml --event workflow_dispatch \
               --limit 10 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" --arg exp "${EXP}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts and (.displayTitle | test($exp; "i")))] | first | .databaseId // empty' \
+              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
             echo "  Attempt ${attempt}/14: run not yet visible — waiting ${SLEEP}s..."
@@ -809,8 +809,8 @@ jobs:
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_pipeline_check.yml --event workflow_dispatch \
               --limit 10 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" --arg exp "${EXP}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts and (.displayTitle | test($exp; "i")))] | first | .databaseId // empty' \
+              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
+                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
             echo "  Attempt ${attempt}/14: run not yet visible — waiting ${SLEEP}s..."
