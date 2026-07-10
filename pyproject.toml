@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hypatiax"
+version = "0.0.0"
+description = "HypatiaX: LLM-guided symbolic regression for scientific discovery"
+requires-python = ">=3.8"
+dynamic = []
+
+# The repo ships no packaging config, so pip's automatic package discovery
+# sees both config/ (a plain YAML folder, not a Python package) and hypatiax/
+# as top-level candidates and refuses to guess. Explicitly scoping discovery
+# to hypatiax* resolves that.
+[tool.setuptools.packages.find]
+include = ["hypatiax*"]

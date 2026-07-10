@@ -196,7 +196,6 @@
 | `notebooks/NB-06_Code_Quality_Pipeline_Integrity.ipynb` | notebook |
 | `requirements.txt` | other |
 | `run_all.sh` | shell |
-| `run_all_checkpoint.py` | python |
 | `scripts/generate_figures.py` | python |
 | `scripts/generate_tables.py` | python |
 | `scripts/patches/apply_patches.py` | python |
