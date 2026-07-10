@@ -1189,6 +1189,17 @@ jobs:
 
           mkdir -p "${RESULTS_DIR}/${RESULT_SUBDIR}"
 
+          # RUN-START MARKER FIX: record the time this shard's experiment step
+          # started, so the later "Store results in canonical RESULT_SUBDIR"
+          # step can distinguish files that are genuinely stale (written by a
+          # prior CI run, before this marker existed) from files this run just
+          # wrote into an already git-tracked canonical path (e.g. exp1b's
+          # hypatiax_defi_benchmark_v3_results.json). Only mtime, not git
+          # tracked-status, can tell those apart.
+          RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
+          touch "${RUN_START_MARKER}"
+          echo "Run start marker created: ${RUN_START_MARKER}"
+
           python3 -c "import json,os; print('\n'.join(json.loads(os.environ['PENDING_IDS'])))" \
             > /tmp/pending_ids.txt
 
@@ -1473,6 +1484,21 @@ jobs:
           # upload and git commit can pick them up.
           _extrap_dest="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
           if [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
+            # RUN-START MARKER FIX: git-tracked status alone can't tell a
+            # genuinely stale committed file (from a prior run) apart from a
+            # file this run just wrote into a path that happens to already be
+            # git-tracked (e.g. exp1b writing straight into its canonical,
+            # previously-committed RESULT_SUBDIR). Use the marker touched at
+            # the start of "Run experiment tasks" as the cutoff: anything
+            # written at or after that time belongs to THIS run and must never
+            # be pruned, tracked or not.
+            RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
+            if [[ -f "${RUN_START_MARKER}" ]]; then
+              RUN_START_EPOCH=$(stat -c %Y "${RUN_START_MARKER}" 2>/dev/null || stat -f %m "${RUN_START_MARKER}" 2>/dev/null || echo 0)
+            else
+              echo "  store prune: WARNING - run start marker not found (${RUN_START_MARKER}); treating all files as prunable by git status only."
+              RUN_START_EPOCH=0
+            fi
             pruned_store=0
             while IFS= read -r f; do
               [[ -f "$f" ]] || continue
@@ -1485,6 +1511,11 @@ jobs:
               # later shard's prune-then-overwrite pass (FIX-EXP1ABL-SHARD-CLOBBER).
               [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
               [[ "$fname" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
+              f_mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null || echo 0)
+              if [[ "$f_mtime" -ge "$RUN_START_EPOCH" ]]; then
+                echo "  store prune: SKIP (written this run, mtime >= run-start marker): $f"
+                continue
+              fi
               if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
                 echo "  store prune: removing stale committed file: $f"
                 git rm --cached --quiet "$f" 2>/dev/null || true
