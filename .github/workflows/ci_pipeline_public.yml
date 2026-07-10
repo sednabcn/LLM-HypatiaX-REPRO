@@ -184,6 +184,7 @@ jobs:
 
           QUEUE = [
               "exp1",
+              "exp1_ablation",
               "exp1b",
               "exp2_feynman",
               "exp2_feynman_pca",
@@ -872,7 +873,7 @@ jobs:
         run: |
           set -euo pipefail
           NEXT_SLOT=$(( CURRENT_SLOT + 1 ))
-          QUEUE_SIZE=14
+          QUEUE_SIZE=15
           if [[ "${NEXT_SLOT}" -ge "${QUEUE_SIZE}" ]]; then
             echo "All ${QUEUE_SIZE} experiment slots completed — pipeline finished."
             exit 0
