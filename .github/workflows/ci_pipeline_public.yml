@@ -511,12 +511,18 @@ jobs:
         run: |
           set -euo pipefail
           BEFORE_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          echo "Dispatching ci_runner.yml for experiment=${EXP} at ${BEFORE_TS}"
+          # Unique per-dispatch token — ci_runner.yml embeds this in its own
+          # run-name, so we can find THIS exact run via an exact string match
+          # instead of guessing off branch+timestamp (which is inherently racy
+          # when multiple dispatches land close together).
+          NONCE="np-${GITHUB_RUN_ID}-${GITHUB_JOB}-$(date +%s%N)"
+          echo "Dispatching ci_runner.yml for experiment=${EXP} at ${BEFORE_TS} (nonce=${NONCE})"
           gh workflow run ci_runner.yml \
             --repo "${REPO}" --ref "${{ github.ref_name }}" \
             --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
             --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
-            --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}"
+            --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}" \
+            --field dispatch_nonce="${NONCE}"
           sleep 8
           DISPATCHED_ID=""
           SLEEP=5
@@ -524,8 +530,8 @@ jobs:
             DISPATCHED_ID=$(gh run list \
               --repo "${REPO}" --workflow ci_runner.yml --event workflow_dispatch \
               --limit 20 --json databaseId,createdAt,headBranch,displayTitle \
-              --jq --arg ts "${BEFORE_TS}" --arg branch "${{ github.ref_name }}" \
-                '[.[] | select(.headBranch == $branch and .createdAt >= $ts)] | first | .databaseId // empty' \
+              --jq --arg nonce "${NONCE}" \
+                '[.[] | select(.displayTitle | contains($nonce))] | first | .databaseId // empty' \
               2>/dev/null || echo "")
             [[ -n "${DISPATCHED_ID}" ]] && break
             echo "  Attempt ${attempt}/25: run not yet visible — waiting ${SLEEP}s..."
@@ -533,7 +539,13 @@ jobs:
             SLEEP=$(( SLEEP < 45 ? SLEEP + 3 : 45 ))
           done
           if [[ -z "${DISPATCHED_ID}" ]]; then
-            echo "::error::Could not determine dispatched run ID after extended polling. Aborting."; exit 1
+            echo "::error::Could not find the dispatched ci_runner.yml run (nonce=${NONCE}) after extended polling."
+            echo "::error::Possible causes:"
+            echo "::error::  (1) GitHub Actions API registration delay exceeded the poll window — rare at this window size, but re-run to confirm."
+            echo "::error::  (2) PAT_TOKEN is missing, expired, or lacks the 'workflow' scope needed to dispatch/list other workflows."
+            echo "::error::  (3) ci_runner.yml is disabled, renamed, or does not exist on ref '${{ github.ref_name }}'."
+            echo "::error::  (4) ci_runner.yml on this ref predates the dispatch_nonce input — redeploy the updated ci_runner.yml."
+            exit 1
           fi
           echo "Polling run ${DISPATCHED_ID} (ci_runner.yml) ..."
           DEADLINE=$(( $(date +%s) + 22800 ))
