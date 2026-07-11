@@ -1294,7 +1294,31 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     _base_results_dir = RESULTS_DIR
     _orig_checkpoint, _orig_final = CHECKPOINT_FILE, FINAL_OUTPUT
     seed_list   = seeds if seeds else [None]
-    multi_seed  = len(seed_list) > 1
+    # FIX-SINGLE-SEED-SHARD (2026-07-11): ci_runner.yml's exp1b EXP_SHARD_TABLE
+    # now dispatches ONE seed per shard (5 shards, one seed each, instead of
+    # the previous 4-shard split where one shard carried two seeds). That
+    # means DEFI_SEEDS is passed to every shard's invocation of this script
+    # with exactly ONE value, so `len(seed_list) > 1` is now ALWAYS False for
+    # every exp1b shard — the multi-seed branch below (which writes the
+    # seed-suffixed filename hypatiax_defi_benchmark_v3_results_seed{S}.json)
+    # never triggers. Every shard then falls back to the fixed, unsuffixed
+    # filename (hypatiax_defi_benchmark_v3_results.json), so all 5 shards
+    # collide on the same output name — only the last-committed shard
+    # survives, and none of the seed sentinels (ci_runner.yml's
+    # combined_globs, ci_pipeline_check.yml's REGISTRY["exp1b"] substring
+    # match) can find a matching file, so every seed reports as incomplete
+    # even on a fully successful run (see CI run 78899826639).
+    #
+    # Fix: trigger seed-suffixed naming whenever DEFI_SEEDS was explicitly
+    # set by the CI harness — regardless of how many seeds it contains —
+    # not just when more than one seed is present. A CI-driven single-seed
+    # shard run is still logically part of a seed sweep and must get a
+    # distinct, seed-tagged output filename so its result survives
+    # alongside every other shard's. Local/Colab runs that pass a bare
+    # SEED override (not DEFI_SEEDS) are unaffected — they still get the
+    # plain fixed filename, matching the historical exp1/exp1_ablation
+    # single-seed convention.
+    multi_seed  = len(seed_list) > 1 or bool(_seeds_env)
     all_seed_results = []
 
     for _seed_idx, _seed in enumerate(seed_list, 1):
