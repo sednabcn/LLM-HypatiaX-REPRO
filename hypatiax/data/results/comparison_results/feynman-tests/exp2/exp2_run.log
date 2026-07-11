@@ -1,0 +1,2071 @@
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/3                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/3 done  |  elapsed: 0s  |  ETA: calculating…  |  3 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 3 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_biology.json
+
+
+================================================================================
+  Michaelis-Menten enzyme kinetics — cross-benchmark consistency check
+  Domain: feynman_biology  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=0.012916  (1.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: overflow encountered in cast
+  return pred_s * t_std + t_mean
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: invalid value encountered in add
+  return pred_s * t_std + t_mean
+R²=1.0000  RMSE=0.014483  (2.2s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=5.2086e-15  (1.3s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 87 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.2dec, vars=1, score=0.18)
+   [SE-TRACE] domain='biology' | eq='Michaelis-Menten enzyme kinetics — cross-benchmark consistency check' | vars=['x0'] | n=200 | niter=87 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(3, '(x0 * 50.00028) / (x0 + 10.000308)', 1.0), (2, '(log(x0) + 0.43950096) * 9.381429', 0.9817), (1, 'log(x0) * 10.458312', 0.9678), (0, '37.583084', -0.0)] | best_r2=1.0000 | best_expr=(x0 * 50.00028) / (x0 + 10.000308)
+R²=1.0000  RMSE=1.2604e-04  (34.6s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 63 iters (spread=1.2dec, vars=1, depth=2, diff=medium, score=0.18) — eq='fey_bio_mm'
+R²=1.0000  RMSE=9.8663e-05  (41.8s)
+
+  📐 Target scale:  std=9.16  mean|y|=37.6  range=42.3  (~10^1)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   0.013            0.0014   1.5      3
+  EnhancedHybridSystemDeFi (core)            1.0000   0.014            0.0016   2.2      4
+  HybridSystemLLMNN all-domains (core)       1.0000   5.2086e-15       0.0000   1.3      2
+  SymbolicEngineWithLLM (tools)              1.0000   1.2604e-04       0.0000   34.6     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   9.8663e-05       0.0000   41.8     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████░░░░░░░░░░░░░░░░░░░░]  1/3 done  |  this test: 1m 21s  |  avg: 1m 21s/test  |  ETA: 2m 42s  |  2 left
+
+================================================================================
+                                     TEST 2/3                                   
+  [██████████░░░░░░░░░░░░░░░░░░░░]  1/3 done  |  elapsed: 1m 21s  |  ETA: 2m 42s  |  2 left
+================================================================================
+
+================================================================================
+  Logistic growth rate — cross-benchmark consistency check
+  Domain: feynman_biology  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9998  RMSE=0.267926  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/numpy/_core/_methods.py:190: RuntimeWarning: overflow encountered in square
+  x = um.square(x, out=x)
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: overflow encountered in cast
+  return pred_s * t_std + t_mean
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: invalid value encountered in add
+  return pred_s * t_std + t_mean
+R²=0.9999  RMSE=0.190197  (0.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.2833e-14  (1.3s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 110 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.4dec, vars=1, score=0.27)
+   [SE-TRACE] domain='biology' | eq='Logistic growth rate — cross-benchmark consistency check' | vars=['x0'] | n=200 | niter=110 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(4, 'x0 * ((x0 * -0.00029999984) + 0.2999999)', 1.0), (5, 'x0 * (((x0 * 0.008085699) + -8.085699) * -0.037102543)', 1.0), (6, '((0.008085699 * x0) + -8.085699) * (-0.037102543 * (x0 + (((x0 + 0.2039047) * ((-0.04346982 + 0.008085699) * -0.5286075)) * (0.008085699 - 0.008085699))))', 1.0), (3, '(-284.68005 / sqrt(x0)) + 69.63731', 0.3278), (2, '(-1008.0814 / x0) - -58.06221', 0.2909)] | best_r2=1.0000 | best_expr=x0 * (((x0 * 0.008085699) + -8.085699) * -0.037102543)
+R²=1.0000  RMSE=9.7567e-07  (38.3s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 74 iters (spread=1.4dec, vars=1, depth=3, diff=medium, score=0.27) — eq='fey_bio_log'
+R²=1.0000  RMSE=4.5627e-06  (44.7s)
+
+  📐 Target scale:  std=20.2  mean|y|=52.9  range=71.9  (~10^1)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          0.9998   0.268            0.0133   0.5      4
+  EnhancedHybridSystemDeFi (core)            0.9999   0.190            0.0094   0.8      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.2833e-14       0.0000   1.3      2
+  SymbolicEngineWithLLM (tools)              1.0000   9.7567e-07       0.0000   38.3     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   4.5627e-06       0.0000   44.7     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [████████████████████░░░░░░░░░░]  2/3 done  |  this test: 1m 25s  |  avg: 1m 23s/test  |  ETA: 1m 23s  |  1 left
+
+================================================================================
+                                     TEST 3/3                                   
+  [████████████████████░░░░░░░░░░]  2/3 done  |  elapsed: 2m 47s  |  ETA: 1m 23s  |  1 left
+================================================================================
+
+================================================================================
+  Allometric scaling law (metabolic rate vs mass)
+  Domain: feynman_biology  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=0.750299  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/numpy/_core/_methods.py:190: RuntimeWarning: overflow encountered in square
+  x = um.square(x, out=x)
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: overflow encountered in cast
+  return pred_s * t_std + t_mean
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: invalid value encountered in add
+  return pred_s * t_std + t_mean
+R²=1.0000  RMSE=0.624745  (1.6s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.0122e-13  (2.1s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 71 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.9dec, vars=1, score=0.12)
+   [SE-TRACE] domain='biology' | eq='Allometric scaling law (metabolic rate vs mass)' | vars=['x0'] | n=200 | niter=71 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(4, '(x0 / sqrt(sqrt(x0))) * 3.5', 1.0), (3, '(x0 * 4.454675) / log(x0)', 0.9937), (2, '(x0 / 1.7267009) + 65.69478', 0.9923), (1, 'x0 * 0.67693704', 0.9539), (0, '352.34378', -0.0)] | best_r2=1.0000 | best_expr=(x0 / sqrt(sqrt(x0))) * 3.5
+R²=1.0000  RMSE=0.000000  (31.5s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 55 iters (spread=1.9dec, vars=1, depth=2, diff=easy, score=0.12) — eq='fey_bio_allo'
+R²=1.0000  RMSE=5.5519e-04  (44.0s)
+
+  📐 Target scale:  std=172  mean|y|=352  range=613  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   0.750            0.0044   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   0.625            0.0036   1.6      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.0122e-13       0.0000   2.1      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   31.5     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   5.5519e-04       0.0000   44.0     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  3/3 done  |  this test: 1m 19s  |  avg: 1m 22s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 3
+
+📊 R² / NRMSE summary  (all finite results, n=3):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0036   0.0000         —       —  100%
+   ImprovedNN (core)                            1.0000     0.0044   0.0001         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     3/3  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_165300.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (18 records)
+
+📋  Checkpoint retained — all 3 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/2                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/2 done  |  elapsed: 0s  |  ETA: calculating…  |  2 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 2 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_chemistry.json
+
+
+================================================================================
+  Arrhenius rate constant (Feynman variant) — cross-benchmark consistency ch
+  Domain: feynman_chemistry  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Arrhenius rate constant (Feynman variant) — cross-' output spans 12.3 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (7.8s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=0.532553  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … /opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/numpy/_core/_methods.py:190: RuntimeWarning: overflow encountered in square
+  x = um.square(x, out=x)
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: overflow encountered in cast
+  return pred_s * t_std + t_mean
+/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1197: RuntimeWarning: invalid value encountered in add
+  return pred_s * t_std + t_mean
+R²=1.0000  RMSE=0.111408  (10.0s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=3.7926e-15  (10.2s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 181 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=12.3dec, vars=1, score=0.53)
+   [SE-TRACE] domain='chemistry' | eq='Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check' | vars=['x0'] | n=200 | niter=181 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(12, 'exp(-1.2329832 / (0.2833513 + exp(-16.465487 + (x0 / 24.596273)))) * exp((x0 / 25.57695) + -13.431801)', 1.0), (13, '(exp((x0 / 30.73292) + -9.798398) + -1.1625067) * exp(-1.7560893 / exp(((x0 / 23.19793) + -17.641155) * 0.38986656))', 1.0), (11, 'exp(-1.2329832 / exp((x0 / 24.596273) + -16.465487)) * exp((x0 / 25.57695) + -13.431801)', 0.9999), (8, '(x0 * -0.024801135) + (exp((x0 / 24.348972) + -14.415276) + 6.41345)', 0.9997), (9, '((x0 * -0.0252094) + 6.834509) + (exp((x0 / 24.348724) + -14.4151745) - 0.29012442)', 0.9997)] | best_r2=1.0000 | best_expr=(exp((x0 / 30.73292) + -9.798398) + -1.1625067) * exp(-1.7560893 / exp(((x0 / 23
+R²=1.0000  RMSE=0.213753  (55.1s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 109 iters (spread=12.3dec, vars=1, depth=3, diff=hard, score=0.53) — eq='fey_chem_arr'
+R²=0.9996  RMSE=8.022543  (72.3s)
+
+  📐 Target scale:  std=74.3  mean|y|=32.4  range=377  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   7.8      1 🏆
+  ImprovedNN (core)                          0.9999   0.533            0.0072   1.4      4
+  EnhancedHybridSystemDeFi (core)            1.0000   0.111            0.0015   10.0     3
+  HybridSystemLLMNN all-domains (core)       1.0000   3.7926e-15       0.0000   10.2     2
+  SymbolicEngineWithLLM (tools)              1.0000   0.214            0.0029   55.1     5
+  HybridDiscoverySystem v50_2 (tools)        0.9996   8.023            0.1079   72.3     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  this test: 2m 36s  |  avg: 2m 36s/test  |  ETA: 2m 36s  |  1 left
+
+================================================================================
+                                     TEST 2/2                                   
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  elapsed: 2m 36s  |  ETA: 2m 36s  |  1 left
+================================================================================
+
+================================================================================
+  Henderson-Hasselbalch equation for buffer pH
+  Domain: feynman_chemistry  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=3.5139e-12  (11.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9998  RMSE=0.007987  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=3.3377e-05  (10.7s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=2.7806e-14  (11.0s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 121 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=0.2dec, vars=2, score=0.31)
+   [SE-TRACE] domain='chemistry' | eq='Henderson-Hasselbalch equation for buffer pH' | vars=['A_minus', 'HA'] | n=200 | niter=121 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_A_minus_HA', 'ratio_HA_A_minus'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(121→85) | pareto_top5=[(4, '6.5 - (log(ratio_A_minus_HA) * -0.4342945)', 1.0), (5, '6.5 - (((A_minus * log(ratio_A_minus_HA * ratio_A_minus_HA)) / A_minus) * -0.21714725)', 1.0), (3, 'log(662.1192 / sqrt(ratio_HA_A_minus))', 0.9771), (2, 'sqrt(ratio_A_minus_HA + 40.19558)', 0.5444), (1, 'A_minus + 5.4968886', 0.1178)] | best_r2=1.0000 | best_expr=6.5 - (log(ratio_A_minus_HA) * -0.4342945)
+R²=1.0000  RMSE=2.2589e-08  (37.8s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 80 iters (spread=0.2dec, vars=2, depth=3, diff=medium, score=0.31) — eq='fey_chem_hh'
+R²=1.0000  RMSE=2.2589e-08  (56.9s)
+
+  📐 Target scale:  std=0.541  mean|y|=6.53  range=3.11  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   3.5139e-12       0.0000   11.0     1 🏆
+  ImprovedNN (core)                          0.9998   0.008            0.0148   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   3.3377e-05       0.0001   10.7     3
+  HybridSystemLLMNN all-domains (core)       1.0000   2.7806e-14       0.0000   11.0     2
+  SymbolicEngineWithLLM (tools)              1.0000   2.2589e-08       0.0000   37.8     6
+  HybridDiscoverySystem v50_2 (tools)        1.0000   2.2589e-08       0.0000   56.9     5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  2/2 done  |  this test: 2m 07s  |  avg: 2m 22s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 2
+
+📊 R² / NRMSE summary  (all finite results, n=2):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0008   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0014   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9999     0.0110   0.0001         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9998     0.0540   0.0003         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     2/2  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_165753.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (12 records)
+
+📋  Checkpoint retained — all 2 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_electrochemistry.json
+
+
+================================================================================
+  Nernst equation for electrode potential — cross-benchmark consistency chec
+  Domain: feynman_electrochemistry  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=7.3760e-14  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=4.6976e-05  (2.0s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=3.2219e-06  (1.0s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=4.4520e-16  (1.0s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 179 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=0.1dec, vars=3, score=0.53)
+   [SE-TRACE] domain='electrochemistry' | eq='Nernst equation for electrode potential — cross-benchmark consistency check' | vars=['x0', 'ox', 'red'] | n=200 | niter=179 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_x0_ox', 'ratio_x0_red', 'ratio_red_ox', 'ratio_ox_red', 'ratio_red_x0', 'ratio_ox_x0'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(179→103) | pareto_top5=[(12, 'sqrt(((-0.013598901 + (2.1061833 / x0)) * ((3.0164235 + (log(ratio_ox_red) * (-0.01534112 * 1.774867))) * log(ratio_ox_red))) - -0.5776709)', 0.9999), (13, 'sqrt((((-0.013598901 + (2.1061833 / (x0 - 0.34128538))) * (3.0164235 + (-0.01534112 * (log(ratio_ox_red) * 1.774867)))) * log(ratio_ox_red)) - -0.5776709)', 0.9999), (14, 'sqrt(((((2.1061833 / x0) + -0.013598901) * (((log(ratio_ox_red) * 2.925073) * ((2.1061342 / x0) + -0.01534112)) + 3.0164235)) * log(ratio_ox_red)) - -0.5776709)', 0.9999), (15, 'sqrt(((-0.013598901 + (2.1061833 / (ratio_x0_red * red))) * (((2.925073 * (log(ratio_ox_red) * ((2.1061342 / x0) + -0.01534112))) + 3.0164235) * log(ratio_ox_red))) - -0.5776709)', 0.9999), (11, 'sqrt((((-0.013598901 + (2.1061833 / x0)) * (3.0164235 + (log(ratio_ox_red) * -0.01534112))) * log(ratio_ox_red)) - -0.5776709)', 0.9998)] | best_r2=0.9999 | best_expr=sqrt(((((2.1061833 / x0) + -0.013598901) * (((log(ratio_ox_red) * 2.925073) * ((
+R²=0.9999  RMSE=1.6542e-04  (48.2s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 108 iters (spread=0.1dec, vars=3, depth=4, diff=hard, score=0.53) — eq='fey_chem_nernst'
+R²=0.9992  RMSE=5.7667e-04  (164.9s)
+
+  📐 Target scale:  std=0.0205  mean|y|=0.76  range=0.123  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   7.3760e-14       0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   4.6976e-05       0.0023   2.0      4
+  EnhancedHybridSystemDeFi (core)            1.0000   3.2219e-06       0.0002   1.0      3
+  HybridSystemLLMNN all-domains (core)       1.0000   4.4520e-16       0.0000   1.0      2
+  SymbolicEngineWithLLM (tools)              0.9999   1.6542e-04       0.0081   48.2     5
+  HybridDiscoverySystem v50_2 (tools)        0.9992   5.7667e-04       0.0282   164.9    6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  1/1 done  |  this test: 3m 37s  |  avg: 3m 37s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0002   0.0000         —       —  100%
+   ImprovedNN (core)                            1.0000     0.0023   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                0.9999     0.0081   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9992     0.0282   0.0000         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_170139.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/5                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/5 done  |  elapsed: 0s  |  ETA: calculating…  |  5 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 5 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_electromagnetism.json
+
+
+================================================================================
+  Clausius-Mossotti: effective field in dielectric
+  Domain: feynman_electromagnetism  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=1.024017  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.002986  (2.2s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=8.3881e-14  (1.4s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 133 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=2.7dec, vars=2, score=0.35)
+   [SE-TRACE] domain='electromagnetism' | eq='Clausius-Mossotti: effective field in dielectric' | vars=['epsilon', 'E0'] | n=200 | niter=133 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(5, '((epsilon - 0.99999446) * E0) / (epsilon - -2.000015)', 1.0), (4, '(E0 * sqrt(epsilon + -1.0805357)) * 0.27205586', 0.9927), (3, 'E0 - (E0 / sqrt(epsilon))', 0.9841), (2, '(E0 * 0.09392114) * epsilon', 0.9126), (1, 'E0 * 0.526511', 0.6597)] | best_r2=1.0000 | best_expr=((epsilon - 0.99999446) * E0) / (epsilon - -2.000015)
+R²=1.0000  RMSE=2.8838e-04  (39.7s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 85 iters (spread=2.7dec, vars=2, depth=3, diff=medium, score=0.35) — eq='ii.6.15a'
+R²=1.0000  RMSE=0.003592  (52.2s)
+
+  📐 Target scale:  std=183  mean|y|=269  range=681  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   1.024            0.0056   1.4      4
+  EnhancedHybridSystemDeFi (core)            1.0000   0.003            0.0000   2.2      3
+  HybridSystemLLMNN all-domains (core)       1.0000   8.3881e-14       0.0000   1.4      2
+  SymbolicEngineWithLLM (tools)              1.0000   2.8838e-04       0.0000   39.7     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.004            0.0000   52.2     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████░░░░░░░░░░░░░░░░░░░░░░░░]  1/5 done  |  this test: 1m 36s  |  avg: 1m 36s/test  |  ETA: 6m 27s  |  4 left
+
+================================================================================
+                                     TEST 2/5                                   
+  [██████░░░░░░░░░░░░░░░░░░░░░░░░]  1/5 done  |  elapsed: 1m 36s  |  ETA: 6m 27s  |  4 left
+================================================================================
+
+================================================================================
+  Dielectric polarisation: P = n * alpha * E (dilute limit)
+  Domain: feynman_electromagnetism  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Dielectric polarisation: P = n * alpha * E (dilute' output spans 5.1 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (9.1s)
+
+  [2/6] ImprovedNN (core) … R²=0.9990  RMSE=4.403366  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.001443  (12.3s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.4374e-13  (11.4s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 119 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=5.1dec, vars=3, score=0.30)
+   [SE-TRACE] domain='electromagnetism' | eq='Dielectric polarisation: P = n * alpha * E (dilute limit)' | vars=['n', 'alpha', 'x0'] | n=200 | niter=119 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['n', 'alpha'] | ratio_features=['ratio_x0_n', 'ratio_x0_alpha', 'ratio_alpha_n', 'ratio_n_alpha', 'ratio_n_x0', 'ratio_alpha_x0'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(119→68) | pareto_top5=[(3, 'alpha * ((x0 * n) * 0.00025723514)', 1.0), (4, '((alpha * (x0 * n)) * 0.00025723508) + ratio_n_x0', 1.0), (5, '(((((0.090701215 - 2.3279724) / (log(0.10701571) * alpha)) * (0.00021886748 * -0.00022873569)) * 0.00025723508) + n) * ((alpha * x0) * 0.00025723508)', 1.0), (6, '((((0.42634925 / ((((ratio_n_x0 / (log(0.10701571) * alpha)) * (0.00021886748 * -0.00022873569)) * 0.00025723508) + n)) * ((0.00021886748 * -0.00022873569) * 0.00025723508)) + n) * (alpha * x0)) * 0.00025723508', 1.0), (2, 'x0 * (alpha * 0.00024190737)', 0.5636)] | best_r2=1.0000 | best_expr=(((((0.090701215 - 2.3279724) / (log(0.10701571) * alpha)) * (0.00021886748 * -0
+R²=1.0000  RMSE=1.2556e-06  (38.4s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 78 iters (spread=5.1dec, vars=3, depth=2, diff=easy, score=0.30) — eq='ii_11_3_simplified'
+R²=0.9955  RMSE=nan  (120.3s)
+
+  📐 Target scale:  std=138  mean|y|=118  range=812  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   9.1      1 🏆
+  ImprovedNN (core)                          0.9990   4.403            0.0320   1.1      4
+  EnhancedHybridSystemDeFi (core)            1.0000   0.001            0.0000   12.3     3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.4374e-13       0.0000   11.4     2
+  SymbolicEngineWithLLM (tools)              1.0000   1.2556e-06       0.0000   38.4     5
+  HybridDiscoverySystem v50_2 (tools)        0.9955   nan              nan      120.3    6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [████████████░░░░░░░░░░░░░░░░░░]  2/5 done  |  this test: 3m 12s  |  avg: 2m 24s/test  |  ETA: 7m 14s  |  3 left
+
+================================================================================
+                                     TEST 3/5                                   
+  [████████████░░░░░░░░░░░░░░░░░░]  2/5 done  |  elapsed: 4m 49s  |  ETA: 7m 14s  |  3 left
+================================================================================
+
+================================================================================
+  Lorentz force on moving charge in magnetic field: F = qvB
+  Domain: feynman_electromagnetism  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=5.8813e-13  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=1.4342e-15  (2.9s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.9651e-25  (1.5s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 112 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.7dec, vars=3, score=0.27)
+   [SE-TRACE] domain='electromagnetism' | eq='Lorentz force on moving charge in magnetic field: F = qvB' | vars=['q', 'v', 'B'] | n=200 | niter=112 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['q', 'v'] | ratio_features=['ratio_B_v', 'ratio_B_q', 'ratio_v_B', 'ratio_q_B', 'ratio_v_q', 'ratio_q_v'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(112→64) | pareto_top5=[(3, 'B * ((q * v) * 0.15380171)', 1.0), (2, '(q * B) * 0.17128965', 0.6419), (1, 'v * q', 0.5554), (0, 'v', 0.2436)] | best_r2=1.0000 | best_expr=B * ((q * v) * 0.15380171)
+R²=1.0000  RMSE=3.7717e-18  (38.6s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 75 iters (spread=3.7dec, vars=3, depth=2, diff=easy, score=0.27) — eq='ii.34.2'
+R²=1.0000  RMSE=nan  (58.8s)
+
+  📐 Target scale:  std=1.58e-10  mean|y|=1.29e-10  range=7.54e-10  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   5.8813e-13       0.0037   1.1      4
+  EnhancedHybridSystemDeFi (core)            1.0000   1.4342e-15       0.0000   2.9      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.9651e-25       0.0000   1.5      2
+  SymbolicEngineWithLLM (tools)              1.0000   3.7717e-18       0.0000   38.6     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   nan              nan      58.8     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████░░░░░░░░░░░░]  3/5 done  |  this test: 1m 42s  |  avg: 2m 10s/test  |  ETA: 4m 21s  |  2 left
+
+================================================================================
+                                     TEST 4/5                                   
+  [██████████████████░░░░░░░░░░░░]  3/5 done  |  elapsed: 6m 32s  |  ETA: 4m 21s  |  2 left
+================================================================================
+
+================================================================================
+  Ohm's law: voltage as product of current and resistance
+  Domain: feynman_electromagnetism  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (6.9s)
+
+  [2/6] ImprovedNN (core) … R²=0.9998  RMSE=28.610850  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.035741  (8.3s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.6688e-12  (7.3s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 70 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.1dec, vars=2, score=0.12)
+   [SE-TRACE] domain='electromagnetism' | eq="Ohm's law: voltage as product of current and resistance" | vars=['x0', 'R'] | n=200 | niter=70 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(1, 'R * x0', 1.0), (0, '2605.2822', -0.0)] | best_r2=1.0000 | best_expr=R * x0
+R²=1.0000  RMSE=0.000000  (29.2s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 55 iters (spread=3.1dec, vars=2, depth=1, diff=easy, score=0.12) — eq='ii_11_27_ohm'
+R²=1.0000  RMSE=0.000000  (38.4s)
+
+  📐 Target scale:  std=2.16e+03  mean|y|=2.61e+03  range=9e+03  (~10^3)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   6.9      1 🏆
+  ImprovedNN (core)                          0.9998   28.611           0.0133   0.5      6
+  EnhancedHybridSystemDeFi (core)            1.0000   0.036            0.0000   8.3      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.6688e-12       0.0000   7.3      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   29.2     4
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.000            0.0000   38.4     5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [████████████████████████░░░░░░]  4/5 done  |  this test: 1m 30s  |  avg: 2m 00s/test  |  ETA: 2m 00s  |  1 left
+
+================================================================================
+                                     TEST 5/5                                   
+  [████████████████████████░░░░░░]  4/5 done  |  elapsed: 8m 03s  |  ETA: 2m 00s  |  1 left
+================================================================================
+
+================================================================================
+  Energy stored in a capacitor: E = 0.5 * C * V^2
+  Domain: feynman_electromagnetism  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Energy stored in a capacitor: E = 0.5 * C * V^2' output spans 4.9 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (7.1s)
+
+  [2/6] ImprovedNN (core) … R²=0.9998  RMSE=0.355343  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.002138  (8.1s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=6.0346e-14  (8.5s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 101 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=4.9dec, vars=2, score=0.23)
+   [SE-TRACE] domain='electromagnetism' | eq='Energy stored in a capacitor: E = 0.5 * C * V^2' | vars=['x0', 'V'] | n=200 | niter=101 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(4, '(V * V) * (x0 * 0.5)', 1.0), (3, 'x0 * (V * 185.59517)', 0.8912), (2, 'V * 0.08882818', 0.455), (1, 'sqrt(V)', 0.2176), (0, '18.527449', -0.0)] | best_r2=1.0000 | best_expr=(V * V) * (x0 * 0.5)
+R²=1.0000  RMSE=0.000000  (34.3s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 70 iters (spread=4.9dec, vars=2, depth=2, diff=easy, score=0.23) — eq='ii_11_28_capacitor'
+R²=1.0000  RMSE=0.246144  (58.9s)
+
+  📐 Target scale:  std=24.3  mean|y|=18.5  range=116  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   7.1      1 🏆
+  ImprovedNN (core)                          0.9998   0.355            0.0146   0.5      5
+  EnhancedHybridSystemDeFi (core)            1.0000   0.002            0.0001   8.1      3
+  HybridSystemLLMNN all-domains (core)       1.0000   6.0346e-14       0.0000   8.5      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   34.3     4
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.246            0.0101   58.9     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  5/5 done  |  this test: 1m 57s  |  avg: 2m 00s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 5
+
+📊 R² / NRMSE summary  (all finite results, n=5):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0020         —       —  100%
+   ImprovedNN (core)                            0.9998     0.0133   0.0004         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     5/5  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_171148.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (30 records)
+
+📋  Checkpoint retained — all 5 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/2                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/2 done  |  elapsed: 0s  |  ETA: calculating…  |  2 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 2 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_electrostatics.json
+
+
+================================================================================
+  Coulomb force between two point charges (1D, simplified)
+  Domain: feynman_electrostatics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Coulomb force between two point charges (1D, simpl' output spans 6.1 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=1.7503e-18  (9.3s)
+
+  [2/6] ImprovedNN (core) … R²=0.9951  RMSE=0.001748  (2.0s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=5.8851e-07  (10.4s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=6.6308e-17  (10.0s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 165 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=6.1dec, vars=3, score=0.47)
+   [SE-TRACE] domain='electrostatics' | eq='Coulomb force between two point charges (1D, simplified)' | vars=['q1', 'q2', 'r'] | n=200 | niter=165 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['q1', 'q2'] | ratio_features=['ratio_r_q2', 'ratio_r_q1', 'ratio_q2_q1', 'ratio_q1_q2', 'ratio_q2_r', 'ratio_q1_r'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(165→95) | pareto_top5=[(3, '(ratio_q2_r * 0.0021985916) / ratio_r_q1', 1.0), (4, '(0.0021985914 / ratio_r_q2) * ((1.1580159e-10 * sqrt(ratio_q1_q2)) + ratio_q1_r)', 1.0), (2, 'exp(ratio_r_q1 / -0.06076932)', 0.9608), (1, 'ratio_q1_r * 0.012721064', 0.7417), (0, '0.0054241535', -0.0)] | best_r2=1.0000 | best_expr=(0.0021985914 / ratio_r_q2) * ((1.1580159e-10 * sqrt(ratio_q1_q2)) + ratio_q1_r)
+R²=1.0000  RMSE=1.0362e-09  (44.0s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 101 iters (spread=6.1dec, vars=3, depth=3, diff=medium, score=0.47) — eq='i.9.18_1d'
+R²=1.0000  RMSE=nan  (60.2s)
+
+  📐 Target scale:  std=0.0249  mean|y|=0.00542  range=0.221  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   1.7503e-18       0.0000   9.3      1 🏆
+  ImprovedNN (core)                          0.9951   0.002            0.0702   2.0      6
+  EnhancedHybridSystemDeFi (core)            1.0000   5.8851e-07       0.0000   10.4     3
+  HybridSystemLLMNN all-domains (core)       1.0000   6.6308e-17       0.0000   10.0     2
+  SymbolicEngineWithLLM (tools)              1.0000   1.0362e-09       0.0000   44.0     4
+  HybridDiscoverySystem v50_2 (tools)        1.0000   nan              nan      60.2     5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  this test: 2m 16s  |  avg: 2m 16s/test  |  ETA: 2m 16s  |  1 left
+
+================================================================================
+                                     TEST 2/2                                   
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  elapsed: 2m 16s  |  ETA: 2m 16s  |  1 left
+================================================================================
+
+================================================================================
+  Coulomb's law: electric force between charges
+  Domain: feynman_electrostatics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Coulomb's law: electric force between charges' output spans 8.2 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=4.0149e-11  (7.5s)
+
+  [2/6] ImprovedNN (core) … R²=0.9991  RMSE=16057.655325  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=9.007288  (11.4s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=3.3288e-07  (10.2s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 175 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=8.2dec, vars=3, score=0.51)
+   [SE-TRACE] domain='electrostatics' | eq="Coulomb's law: electric force between charges" | vars=['q1', 'q2', 'r'] | n=200 | niter=175 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_r_q2', 'ratio_r_q1', 'ratio_q2_q1', 'ratio_q1_q2', 'ratio_q1_r', 'ratio_q2_r'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(175→101) | pareto_top5=[(2, 'ratio_q2_r * (ratio_q1_r / 5.8506615e-5)', 1.0), (1, '191.29266 / ratio_r_q2', 0.6652), (0, '0.3041238', -0.0)] | best_r2=1.0000 | best_expr=ratio_q2_r * (ratio_q1_r / 5.8506615e-5)
+R²=1.0000  RMSE=1.896397  (44.5s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 106 iters (spread=8.2dec, vars=3, depth=3, diff=medium, score=0.51) — eq='i.12.2'
+R²=0.9966  RMSE=124483.709054  (201.6s)
+
+  📐 Target scale:  std=5.26e+05  mean|y|=1.6e+05  range=3.82e+06  (~10^6)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   4.0149e-11       0.0000   7.5      1 🏆
+  ImprovedNN (core)                          0.9991   16057.655        0.0305   1.1      5
+  EnhancedHybridSystemDeFi (core)            1.0000   9.007            0.0000   11.4     3
+  HybridSystemLLMNN all-domains (core)       1.0000   3.3288e-07       0.0000   10.2     2
+  SymbolicEngineWithLLM (tools)              1.0000   1.896            0.0000   44.5     4
+  HybridDiscoverySystem v50_2 (tools)        0.9966   124483.709       0.2367   201.6    6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  2/2 done  |  this test: 4m 36s  |  avg: 3m 26s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 2
+
+📊 R² / NRMSE summary  (all finite results, n=2):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9983     0.2367   0.0024         —       —  100%
+   ImprovedNN (core)                            0.9971     0.0504   0.0028         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     2/2  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_171849.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (12 records)
+
+📋  Checkpoint retained — all 2 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_magnetism.json
+
+
+================================================================================
+  Curie's law for magnetic susceptibility: chi = C/T
+  Domain: feynman_magnetism  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (7.1s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=4.2437e-04  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=1.3619e-06  (12.7s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=6.1138e-18  (9.8s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 73 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.7dec, vars=2, score=0.13)
+   [SE-TRACE] domain='magnetism' | eq="Curie's law for magnetic susceptibility: chi = C/T" | vars=['x0', 'x1'] | n=200 | niter=73 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_x1_x0', 'ratio_x0_x1'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(73→51) | pareto_top5=[(0, 'ratio_x0_x1', 1.0)] | best_r2=1.0000 | best_expr=ratio_x0_x1
+R²=1.0000  RMSE=0.000000  (31.1s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 56 iters (spread=3.7dec, vars=2, depth=1, diff=easy, score=0.13) — eq='ii_11_17_curie'
+R²=1.0000  RMSE=0.000000  (48.5s)
+
+  📐 Target scale:  std=0.0429  mean|y|=0.0222  range=0.401  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   7.1      1 🏆
+  ImprovedNN (core)                          0.9999   4.2437e-04       0.0099   1.4      4
+  EnhancedHybridSystemDeFi (core)            1.0000   1.3619e-06       0.0000   12.7     3
+  HybridSystemLLMNN all-domains (core)       1.0000   6.1138e-18       0.0000   9.8      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   31.1     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.000            0.0000   48.5     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  1/1 done  |  this test: 1m 50s  |  avg: 1m 50s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9999     0.0099   0.0000         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_172049.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/4                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/4 done  |  elapsed: 0s  |  ETA: calculating…  |  4 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 4 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_mechanics.json
+
+
+================================================================================
+  Newton's gravitational force between two masses
+  Domain: feynman_mechanics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Newton's gravitational force between two masses' output spans 6.1 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (7.3s)
+
+  [2/6] ImprovedNN (core) … R²=0.9959  RMSE=6.0939e-12  (2.0s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=1.1431e-15  (11.9s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=2.9171e-25  (10.7s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 165 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=6.1dec, vars=3, score=0.47)
+   [SE-TRACE] domain='mechanics' | eq="Newton's gravitational force between two masses" | vars=['m1', 'm2', 'r'] | n=200 | niter=165 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_r_m2', 'ratio_r_m1', 'ratio_m2_m1', 'ratio_m1_m2', 'ratio_m2_r', 'ratio_m1_r'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(165→95) | pareto_top5=[(3, 'ratio_m1_r * (ratio_m2_r / 1.4253988)', 1.0), (4, '(ratio_m2_r * 0.4132358) * log(exp(1.6977258 / ratio_r_m1))', 1.0), (2, 'ratio_m1_r / sqrt(ratio_r_m2)', 0.9457), (1, 'ratio_m2_r / ratio_r_m1', 0.8127), (0, 'ratio_m1_r', 0.6558)] | best_r2=1.0000 | best_expr=(ratio_m2_r * 0.4132358) * log(exp(1.6977258 / ratio_r_m1))
+R²=1.0000  RMSE=1.8369e-18  (49.5s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 101 iters (spread=6.1dec, vars=3, depth=3, diff=medium, score=0.47) — eq='i.12.1'
+R²=1.0000  RMSE=6.2940e-17  (62.2s)
+
+  📐 Target scale:  std=9.51e-11  mean|y|=1.78e-11  range=8.99e-10  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   7.3      1 🏆
+  ImprovedNN (core)                          0.9959   6.0939e-12       0.0641   2.0      6
+  EnhancedHybridSystemDeFi (core)            1.0000   1.1431e-15       0.0000   11.9     3
+  HybridSystemLLMNN all-domains (core)       1.0000   2.9171e-25       0.0000   10.7     2
+  SymbolicEngineWithLLM (tools)              1.0000   1.8369e-18       0.0000   49.5     4
+  HybridDiscoverySystem v50_2 (tools)        1.0000   6.2940e-17       0.0000   62.2     5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████░░░░░░░░░░░░░░░░░░░░░░░]  1/4 done  |  this test: 2m 23s  |  avg: 2m 23s/test  |  ETA: 7m 11s  |  3 left
+
+================================================================================
+                                     TEST 2/4                                   
+  [███████░░░░░░░░░░░░░░░░░░░░░░░]  1/4 done  |  elapsed: 2m 23s  |  ETA: 7m 11s  |  3 left
+================================================================================
+
+================================================================================
+  Kinetic energy (classical): KE = 0.5 * m * v²
+  Domain: feynman_mechanics  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Kinetic energy (classical): KE = 0.5 * m * v²' output spans 7.1 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (6.8s)
+
+  [2/6] ImprovedNN (core) … R²=0.9997  RMSE=44.293605  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.150391  (10.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=5.6088e-10  (7.7s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 112 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=7.1dec, vars=2, score=0.27)
+   [SE-TRACE] domain='mechanics' | eq='Kinetic energy (classical): KE = 0.5 * m * v²' | vars=['m', 'v'] | n=200 | niter=112 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(3, '(v * (v * m)) * 0.5', 1.0), (4, '(v * ((m * 0.50000006) * v)) - (((((m + sqrt(v)) - 0.23107184) - (-0.0048667807 - (m + (-0.9612351 - v)))) - v) * -6.9740454e-6)', 1.0), (2, '(m * v) * 19.000038', 0.9041), (1, 'v * 103.82625', 0.5488), (0, '2285.7778', -0.0)] | best_r2=1.0000 | best_expr=(v * (v * m)) * 0.5
+R²=1.0000  RMSE=3.0597e-13  (35.8s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 75 iters (spread=7.1dec, vars=2, depth=2, diff=easy, score=0.27) — eq='fey_mech_ke'
+R²=0.9999  RMSE=65.956033  (73.7s)
+
+  📐 Target scale:  std=2.62e+03  mean|y|=2.29e+03  range=1.14e+04  (~10^4)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   6.8      1 🏆
+  ImprovedNN (core)                          0.9997   44.294           0.0169   0.5      5
+  EnhancedHybridSystemDeFi (core)            1.0000   0.150            0.0001   10.8     3
+  HybridSystemLLMNN all-domains (core)       1.0000   5.6088e-10       0.0000   7.7      2
+  SymbolicEngineWithLLM (tools)              1.0000   3.0597e-13       0.0000   35.8     4
+  HybridDiscoverySystem v50_2 (tools)        0.9999   65.956           0.0252   73.7     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████████████░░░░░░░░░░░░░░░]  2/4 done  |  this test: 2m 15s  |  avg: 2m 19s/test  |  ETA: 4m 39s  |  2 left
+
+================================================================================
+                                     TEST 3/4                                   
+  [███████████████░░░░░░░░░░░░░░░]  2/4 done  |  elapsed: 4m 39s  |  ETA: 4m 39s  |  2 left
+================================================================================
+
+================================================================================
+  Reduced mass of a two-body system
+  Domain: feynman_mechanics  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (7.5s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=0.006098  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=4.3500e-05  (8.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.4037e-16  (8.1s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 86 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.6dec, vars=2, score=0.17)
+   [SE-TRACE] domain='mechanics' | eq='Reduced mass of a two-body system' | vars=['m1', 'm2'] | n=200 | niter=86 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(5, '(m2 * m1) / (m1 + m2)', 1.0), (4, 'sqrt((m2 * 0.22582376) * m1)', 0.9709), (3, '(m2 + m1) * 0.21671754', 0.8175), (2, 'sqrt(m1 - 0.11608667)', 0.4775), (1, 'sqrt(m1)', 0.4734)] | best_r2=1.0000 | best_expr=(m2 * m1) / (m1 + m2)
+R²=1.0000  RMSE=0.000000  (31.9s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 62 iters (spread=1.6dec, vars=2, depth=2, diff=easy, score=0.17) — eq='i.18.4'
+R²=1.0000  RMSE=0.000000  (50.8s)
+
+  📐 Target scale:  std=1.22  mean|y|=2.06  range=4.65  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   7.5      1 🏆
+  ImprovedNN (core)                          1.0000   0.006            0.0050   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   4.3500e-05       0.0000   8.8      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.4037e-16       0.0000   8.1      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   31.9     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.000            0.0000   50.8     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████░░░░░░░░]  3/4 done  |  this test: 1m 47s  |  avg: 2m 08s/test  |  ETA: 2m 08s  |  1 left
+
+================================================================================
+                                     TEST 4/4                                   
+  [██████████████████████░░░░░░░░]  3/4 done  |  elapsed: 6m 26s  |  ETA: 2m 08s  |  1 left
+================================================================================
+
+================================================================================
+  Total mechanical energy: spring potential + kinetic
+  Domain: feynman_mechanics  |  Samples: 200  |  Vars: 4
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (8.4s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=0.536569  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=0.002638  (8.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.7999e-14  (9.7s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 168 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.1dec, vars=4, score=0.48)
+   [SE-TRACE] domain='mechanics' | eq='Total mechanical energy: spring potential + kinetic' | vars=['k', 'x', 'm', 'v'] | n=200 | niter=168 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_capped=12→10 | ratio_features=['ratio_v_x', 'ratio_k_x', 'ratio_m_x', 'ratio_v_m', 'ratio_k_m', 'ratio_m_v', 'ratio_v_k', 'ratio_x_m', 'ratio_k_v', 'ratio_m_k'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.53(168→89) | pareto_top5=[(11, '(((v * v) * m) - (-1.5933299e-6 - (x * (k * x)))) * 0.5', 1.0), (10, '(v * ((m * 0.50014234) * v)) - (k * (0.34330502 - x))', 0.9999), (9, '(v * (m * (v * 0.49523985))) + (x * k)', 0.9997), (8, '((m * (v * v)) + exp(x)) * 0.50204825', 0.9993), (7, '((m * 0.50495887) * (v * v)) + x', 0.999)] | best_r2=1.0000 | best_expr=(((v * v) * m) - (-1.5933299e-6 - (x * (k * x)))) * 0.5
+R²=1.0000  RMSE=7.9666e-07  (48.1s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 102 iters (spread=3.1dec, vars=4, depth=3, diff=medium, score=0.48) — eq='i.24.6'
+R²=1.0000  RMSE=6.1739e-15  (76.7s)
+
+  📐 Target scale:  std=51.5  mean|y|=46.7  range=236  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   8.4      1 🏆
+  ImprovedNN (core)                          0.9999   0.537            0.0104   1.4      4
+  EnhancedHybridSystemDeFi (core)            1.0000   0.003            0.0001   8.8      3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.7999e-14       0.0000   9.7      2
+  SymbolicEngineWithLLM (tools)              1.0000   7.9666e-07       0.0000   48.1     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   6.1739e-15       0.0000   76.7     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  4/4 done  |  this test: 2m 33s  |  avg: 2m 14s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 4
+
+📊 R² / NRMSE summary  (all finite results, n=4):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0001         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9998     0.0137   0.0020         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     4/4  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_172958.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (24 records)
+
+📋  Checkpoint retained — all 4 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/2                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/2 done  |  elapsed: 0s  |  ETA: calculating…  |  2 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 2 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_optics.json
+
+
+================================================================================
+  Snell's law: refracted angle from incident angle and refractive indices
+  Domain: feynman_optics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=3.0150e-17  (9.8s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=8.8346e-04  (2.0s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=7.6333e-06  (10.9s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.2534e-17  (11.3s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 146 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=2.0dec, vars=3, score=0.40)
+   [SE-TRACE] domain='optics' | eq="Snell's law: refracted angle from incident angle and refractive indices" | vars=['n1', 'theta1', 'n2'] | n=200 | niter=146 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | trig=sin,cos,safe_asin,safe_acos | explog=skipped | eq_file_kwarg='temp_equation_file' | parsimony=0.0006(auto-trig) | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(6, 'safe_asin((n1 * sin(theta1)) / n2)', 1.0), (7, 'safe_asin((n1 / sqrt(n2 * n2)) * sin(theta1))', 1.0), (5, 'n1 * safe_asin(theta1 / n2)', 0.9987), (4, 'n1 / (n2 / theta1)', 0.9979), (3, 'theta1 / sqrt(n2)', 0.7174)] | best_r2=1.0000 | best_expr=safe_asin((n1 * sin(theta1)) / n2)
+R²=1.0000  RMSE=0.000000  (52.6s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 92 iters (spread=2.0dec, vars=3, depth=3, diff=medium, score=0.40) — eq='i.26.2'
+R²=1.0000  RMSE=0.000000  (73.0s)
+
+  📐 Target scale:  std=0.163  mean|y|=0.236  range=0.752  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   3.0150e-17       0.0000   9.8      1 🏆
+  ImprovedNN (core)                          1.0000   8.8346e-04       0.0054   2.0      4
+  EnhancedHybridSystemDeFi (core)            1.0000   7.6333e-06       0.0000   10.9     3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.2534e-17       0.0000   11.3     2
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   52.6     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.000            0.0000   73.0     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  this test: 2m 39s  |  avg: 2m 39s/test  |  ETA: 2m 39s  |  1 left
+
+================================================================================
+                                     TEST 2/2                                   
+  [███████████████░░░░░░░░░░░░░░░]  1/2 done  |  elapsed: 2m 39s  |  ETA: 2m 39s  |  1 left
+================================================================================
+
+================================================================================
+  Double-slit wave interference intensity
+  Domain: feynman_optics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (10.9s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=0.045814  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=5.5011e-05  (11.6s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.0021e-15  (10.9s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 174 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.6dec, vars=3, score=0.50)
+   [SE-TRACE] domain='optics' | eq='Double-slit wave interference intensity' | vars=['I1', 'I2', 'delta'] | n=200 | niter=174 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | trig=sin,cos | explog=skipped | eq_file_kwarg='temp_equation_file' | parsimony=0.0006(auto-trig) | x_scaled=none | gm_features=['gm_I1_I2', 'gm_I1_delta', 'gm_I2_delta'] | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(174→123) | pareto_top5=[(5, '(I2 + I1) + (cos(delta) * (gm_I1_I2 + gm_I1_I2))', 1.0), (6, '((I2 + -3.118047e-8) + I1) + ((cos(delta) * gm_I1_I2) + (cos(delta) * gm_I1_I2))', 1.0), (7, '((cos(delta) * gm_I1_I2) + (I2 + -2.2571236e-8)) + (I1 + (gm_I1_I2 * ((cos(delta) * 1.0) + -1.6329352e-8)))', 1.0), (4, '(gm_I1_I2 * 1.9771591) * (cos(delta) + 1.0686957)', 0.9775), (3, '((2.975206 - delta) * gm_I1_I2) * 1.5210322', 0.97)] | best_r2=1.0000 | best_expr=(I2 + I1) + (cos(delta) * (gm_I1_I2 + gm_I1_I2))
+R²=1.0000  RMSE=0.000000  (54.4s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 105 iters (spread=3.6dec, vars=3, depth=3, diff=hard, score=0.50) — eq='i.37.4'
+R²=1.0000  RMSE=2.9996e-09  (66.5s)
+
+  📐 Target scale:  std=4.73  mean|y|=5.65  range=17.3  (~10^1)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   10.9     2
+  ImprovedNN (core)                          0.9999   0.046            0.0097   1.1      4
+  EnhancedHybridSystemDeFi (core)            1.0000   5.5011e-05       0.0000   11.6     3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.0021e-15       0.0000   10.9     1 🏆
+  SymbolicEngineWithLLM (tools)              1.0000   0.000            0.0000   54.4     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   2.9996e-09       0.0000   66.5     6
+
+  🎯 Winner: HybridSystemLLMNN all-domains (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  2/2 done  |  this test: 2m 35s  |  avg: 2m 37s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 2
+
+📊 R² / NRMSE summary  (all finite results, n=2):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9999     0.0076   0.0000         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     1/2  ████████████████████
+   HybridSystemLLMNN all-domains (core)        1/2  ████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_173522.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (12 records)
+
+📋  Checkpoint retained — all 2 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_probability.json
+
+
+================================================================================
+  Gaussian/normal distribution probability density
+  Domain: feynman_probability  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Gaussian/normal distribution probability density' output spans 6.5 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9995  RMSE=0.002696  (1.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=2.9083e-06  (2.0s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=4.0754e-14  (1.4s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 151 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=6.5dec, vars=2, score=0.42)
+   [SE-TRACE] domain='probability' | eq='Gaussian/normal distribution probability density' | vars=['theta', 'sigma'] | n=200 | niter=151 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped(insufficient_pos_cols) | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(8, '(0.39895892 / sigma) * exp(theta / (((sigma * -1.9999219) * sigma) / theta))', 1.0), (9, '(0.39894074 / sigma) * sqrt(exp((theta / ((sigma / theta) * -1.0000148)) / sigma))', 1.0), (10, '(sqrt(exp(theta / (sigma * (-0.36809635 / (theta * (0.36809617 / sigma)))))) * 0.39894292) / sigma', 1.0), (11, '(exp(theta / ((sigma * -0.3680995) / (0.368101 * (theta / (sigma + sigma))))) / ((sigma * theta) / theta)) * 0.3989426', 1.0), (12, 'exp(theta / ((sigma * -0.3680995) / ((0.368101 / (sigma + sigma)) * theta))) * ((0.3989426 / sqrt(theta / theta)) / sigma)', 1.0)] | best_r2=1.0000 | best_expr=(exp(theta / ((sigma * -0.3680995) / (0.368101 * (theta / (sigma + sigma))))) / 
+R²=1.0000  RMSE=3.0091e-07  (41.9s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 94 iters (spread=6.5dec, vars=2, depth=3, diff=medium, score=0.42) — eq='i.6.20'
+R²=0.9998  RMSE=0.002143  (43.4s)
+
+  📐 Target scale:  std=0.126  mean|y|=0.153  range=0.702  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          0.9995   0.003            0.0214   1.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   2.9083e-06       0.0000   2.0      3
+  HybridSystemLLMNN all-domains (core)       1.0000   4.0754e-14       0.0000   1.4      2
+  SymbolicEngineWithLLM (tools)              1.0000   3.0091e-07       0.0000   41.9     5
+  HybridDiscoverySystem v50_2 (tools)        0.9998   0.002            0.0170   43.4     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  1/1 done  |  this test: 1m 30s  |  avg: 1m 30s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9998     0.0170   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9995     0.0214   0.0000         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_173701.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/5                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/5 done  |  elapsed: 0s  |  ETA: calculating…  |  5 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 5 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_quantum.json
+
+
+================================================================================
+  Photon energy: E = h * f (Planck relation)
+  Domain: feynman_quantum  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (8.1s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=7.4081e-22  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=8.8933e-22  (9.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=7.7211e-34  (10.0s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 50 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=2.2dec, vars=1, score=0.04)
+   [SE-TRACE] domain='quantum' | eq='Photon energy: E = h * f (Planck relation)' | vars=['f'] | n=200 | niter=50 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['f'] | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(1, 'f * 1.6488248', 1.0), (2, '((f * -0.21972534) + f) + sqrt((f * f) / 1.3255929)', 1.0), (0, 'f', 0.4242)] | best_r2=1.0000 | best_expr=((f * -0.21972534) + f) + sqrt((f * f) / 1.3255929)
+R²=1.0000  RMSE=8.2980e-28  (26.8s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 44 iters (spread=2.2dec, vars=1, depth=1, diff=easy, score=0.04) — eq='i.34.27'
+R²=1.0000  RMSE=3.7548e-19  (37.7s)
+
+  📐 Target scale:  std=1.95e-19  mean|y|=3.21e-19  range=6.5e-19  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   8.1      1 🏆
+  ImprovedNN (core)                          1.0000   7.4081e-22       0.0038   1.4      3
+  EnhancedHybridSystemDeFi (core)            1.0000   8.8933e-22       0.0046   9.8      4
+  HybridSystemLLMNN all-domains (core)       1.0000   7.7211e-34       0.0000   10.0     2
+  SymbolicEngineWithLLM (tools)              1.0000   8.2980e-28       0.0000   26.8     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   3.7548e-19       1.9284   37.7     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████░░░░░░░░░░░░░░░░░░░░░░░░]  1/5 done  |  this test: 1m 33s  |  avg: 1m 33s/test  |  ETA: 6m 15s  |  4 left
+
+================================================================================
+                                     TEST 2/5                                   
+  [██████░░░░░░░░░░░░░░░░░░░░░░░░]  1/5 done  |  elapsed: 1m 33s  |  ETA: 6m 15s  |  4 left
+================================================================================
+
+================================================================================
+  Zeeman energy: electron spin in magnetic field
+  Domain: feynman_quantum  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=4.9320e-27  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=3.5416e-25  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=1.0676e-27  (2.5s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=4.2363e-29  (1.5s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 112 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.1dec, vars=2, score=0.27)
+   [SE-TRACE] domain='quantum' | eq='Zeeman energy: electron spin in magnetic field' | vars=['ms', 'B'] | n=200 | niter=112 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped(insufficient_pos_cols) | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(2, '(ms * -0.6079272) * B', 1.0), (3, '((((ms * -0.14919153) - ms) * B) * 0.750954) / 1.4195613', 1.0), (1, 'ms * -2.9498627', 0.7144), (0, '-0.10671525', -0.0)] | best_r2=1.0000 | best_expr=((((ms * -0.14919153) - ms) * B) * 0.750954) / 1.4195613
+R²=1.0000  RMSE=7.7556e-31  (36.6s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 75 iters (spread=3.1dec, vars=2, depth=2, diff=medium, score=0.27) — eq='ii_36_38'
+R²=1.0000  RMSE=8.7619e-31  (37.8s)
+
+  📐 Target scale:  std=3.05e-23  mean|y|=2.3e-23  range=1.6e-22  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   4.9320e-27       0.0002   0.0      3
+  ImprovedNN (core)                          0.9999   3.5416e-25       0.0116   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   1.0676e-27       0.0000   2.5      2
+  HybridSystemLLMNN all-domains (core)       1.0000   4.2363e-29       0.0000   1.5      1 🏆
+  SymbolicEngineWithLLM (tools)              1.0000   7.7556e-31       0.0000   36.6     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   8.7619e-31       0.0000   37.8     6
+
+  🎯 Winner: HybridSystemLLMNN all-domains (core)  R²=1.0000  NRMSE=0.0000
+
+  [████████████░░░░░░░░░░░░░░░░░░]  2/5 done  |  this test: 1m 18s  |  avg: 1m 26s/test  |  ETA: 4m 19s  |  3 left
+
+================================================================================
+                                     TEST 3/5                                   
+  [████████████░░░░░░░░░░░░░░░░░░]  2/5 done  |  elapsed: 2m 52s  |  ETA: 4m 19s  |  3 left
+================================================================================
+
+================================================================================
+  Bose-Einstein occupation number for bosons
+  Domain: feynman_quantum  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Bose-Einstein occupation number for bosons' output spans 14.0 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=0.130206  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=0.9999  RMSE=0.195043  (1.6s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.0591e-16  (1.2s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 205 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=14.0dec, vars=2, score=0.62)
+   [SE-TRACE] domain='quantum' | eq='Bose-Einstein occupation number for bosons' | vars=['f', 'x0'] | n=200 | niter=205 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['f'] | ratio_features=['ratio_x0_f', 'ratio_f_x0'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(205→144) | pareto_top5=[(3, '(ratio_x0_f + -91.51826) * 0.00420783', 1.0), (4, '(ratio_f_x0 + (ratio_x0_f * 0.0042080497)) + -0.39280492', 1.0), (5, 'exp(-124.8163 / ratio_x0_f) * (ratio_x0_f * 0.00421177)', 1.0), (6, '((ratio_x0_f * 0.0042108954) + 0.33922336) * exp(-198.34413 / ratio_x0_f)', 1.0), (7, '(exp(-198.34479 / ratio_x0_f) * ((ratio_x0_f * 0.0042108847) + 0.34042493)) - 0.0007417331', 1.0)] | best_r2=1.0000 | best_expr=(exp(-198.34479 / ratio_x0_f) * ((ratio_x0_f * 0.0042108847) + 0.34042493)) - 0.
+R²=1.0000  RMSE=0.001260  (58.2s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 121 iters (spread=14.0dec, vars=2, depth=3, diff=hard, score=0.62) — eq='iii.4.33'
+R²=0.9946  RMSE=1.463229  (172.3s)
+
+  📐 Target scale:  std=21.7  mean|y|=3.45  range=302  (~10^2)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          1.0000   0.130            0.0060   0.5      3
+  EnhancedHybridSystemDeFi (core)            0.9999   0.195            0.0090   1.6      4
+  HybridSystemLLMNN all-domains (core)       1.0000   1.0591e-16       0.0000   1.2      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.001            0.0001   58.2     5
+  HybridDiscoverySystem v50_2 (tools)        0.9946   1.463            0.0674   172.3    6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████░░░░░░░░░░░░]  3/5 done  |  this test: 3m 53s  |  avg: 2m 15s/test  |  ETA: 4m 31s  |  2 left
+
+================================================================================
+                                     TEST 4/5                                   
+  [██████████████████░░░░░░░░░░░░]  3/5 done  |  elapsed: 6m 46s  |  ETA: 4m 31s  |  2 left
+================================================================================
+
+================================================================================
+  Fermi-Dirac occupation number for fermions
+  Domain: feynman_quantum  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Fermi-Dirac occupation number for fermions' output spans 172.0 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (10.4s)
+
+  [2/6] ImprovedNN (core) … R²=0.9991  RMSE=0.014142  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=3.6660e-06  (11.8s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=1.0196e-17  (11.6s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 250 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=172.0dec, vars=3, score=0.79)
+   [SE-TRACE] domain='quantum' | eq='Fermi-Dirac occupation number for fermions' | vars=['x0', 'mu', 'x1'] | n=200 | niter=250 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped(insufficient_pos_cols) | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(17, 'sqrt(sqrt(exp(exp((((105.79756 - (sqrt(x1 / 0.165162) * 1.6709214)) * (x0 - mu)) - -0.6188486) / exp(x0)) / (log(x1) * -0.11885716))))', 0.9988), (18, 'sqrt(sqrt(exp(exp((((x0 - mu) * (105.79756 - ((x0 + sqrt(x1 / 0.16546264)) * 1.6708943))) - -0.61886233) / exp(x0)) / (log(x1) * -0.118752755))))', 0.9988), (19, 'sqrt(sqrt(exp(exp((((105.79756 + ((mu - (sqrt(x1 / 0.16546264) + x0)) * 1.6708943)) * (x0 - mu)) - -0.61886233) / exp(x0)) / (log(x1) * -0.118752755))))', 0.9988), (16, 'sqrt(exp(exp(((106.881325 - (sqrt((x1 / 0.101219036) * 1.6746175) + 3.2980473)) * (x0 - mu)) / exp(x0)) / (log(x1) * -0.13065723)))', 0.9987), (15, 'sqrt(exp(exp(((106.881325 - sqrt((x1 / 0.101219036) * 1.6746175)) * (x0 - mu)) / exp(x0)) / (log(x1) * -0.13065723)))', 0.9985)] | best_r2=0.9988 | best_expr=sqrt(sqrt(exp(exp((((105.79756 + ((mu - (sqrt(x1 / 0.16546264) + x0)) * 1.670894
+R²=0.9988  RMSE=0.016501  (64.0s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 142 iters (spread=172.0dec, vars=3, depth=3, diff=hard, score=0.79) — eq='iii.4.32'
+R²=0.9990  RMSE=0.015264  (146.1s)
+
+  📐 Target scale:  std=0.478  mean|y|=0.504  range=1  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   10.4     1 🏆
+  ImprovedNN (core)                          0.9991   0.014            0.0296   1.1      4
+  EnhancedHybridSystemDeFi (core)            1.0000   3.6660e-06       0.0000   11.8     3
+  HybridSystemLLMNN all-domains (core)       1.0000   1.0196e-17       0.0000   11.6     2
+  SymbolicEngineWithLLM (tools)              0.9988   0.017            0.0346   64.0     6
+  HybridDiscoverySystem v50_2 (tools)        0.9990   0.015            0.0320   146.1    5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [████████████████████████░░░░░░]  4/5 done  |  this test: 4m 04s  |  avg: 2m 42s/test  |  ETA: 2m 42s  |  1 left
+
+================================================================================
+                                     TEST 5/5                                   
+  [████████████████████████░░░░░░]  4/5 done  |  elapsed: 10m 51s  |  ETA: 2m 42s  |  1 left
+================================================================================
+
+================================================================================
+  Rabi frequency of two-level atom in magnetic field
+  Domain: feynman_quantum  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (8.1s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=207224509.605172  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=420200.213349  (11.3s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=5.2676e-05  (10.1s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 89 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=2.3dec, vars=2, score=0.19)
+   [SE-TRACE] domain='quantum' | eq='Rabi frequency of two-level atom in magnetic field' | vars=['mu', 'B'] | n=200 | niter=89 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=['mu'] | ratio_features=['ratio_mu_B', 'ratio_B_mu'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(89→62) | pareto_top5=[(3, '(B * mu) * 3.3374522', 1.0), (2, 'B * 3.3325455', 0.9963), (1, 'exp(B)', 0.733), (0, '1.5632762', -0.0)] | best_r2=1.0000 | best_expr=(B * mu) * 3.3374522
+R²=1.0000  RMSE=1093.805662  (35.9s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 64 iters (spread=2.3dec, vars=2, depth=2, diff=easy, score=0.19) — eq='iii.7.38'
+R²=1.0000  RMSE=nan  (52.3s)
+
+  📐 Target scale:  std=2.7e+10  mean|y|=4.21e+10  range=9.35e+10  (~10^10)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   8.1      1 🏆
+  ImprovedNN (core)                          0.9999   2.0722e+08       0.0077   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   420200.213       0.0000   11.3     3
+  HybridSystemLLMNN all-domains (core)       1.0000   5.2676e-05       0.0000   10.1     2
+  SymbolicEngineWithLLM (tools)              1.0000   1093.806         0.0000   35.9     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   nan              nan      52.3     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  5/5 done  |  this test: 1m 58s  |  avg: 2m 33s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 5
+
+📊 R² / NRMSE summary  (all finite results, n=5):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0005         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0497   0.0023         —       —  100%
+   ImprovedNN (core)                            0.9999     0.0077   0.0004         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     4/5  ████████████████████████████████
+   HybridSystemLLMNN all-domains (core)        1/5  ████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_175000.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (30 records)
+
+📋  Checkpoint retained — all 5 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+
+================================================================================
+                                     TEST 1/4                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/4 done  |  elapsed: 0s  |  ETA: calculating…  |  4 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=feynman)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 4 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman_exp2_checkpoint_feynman_thermodynamics.json
+
+
+================================================================================
+  Planck blackbody spectral radiance (dimensionless: x=hf/kT)
+  Domain: feynman_thermodynamics  |  Samples: 200  |  Vars: 1
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=0.004059  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=0.9981  RMSE=0.022279  (1.0s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=2.5730e-17  (1.3s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 162 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.4dec, vars=1, score=0.46)
+   [SE-TRACE] domain='thermodynamics' | eq='Planck blackbody spectral radiance (dimensionless: x=hf/kT)' | vars=['x'] | n=200 | niter=162 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(6, '(x * x) * (x / (exp(x) - 0.99998164))', 1.0), (7, 'x * (x * (x / (exp(x) - (x / x))))', 1.0), (5, '(x * x) * (x / exp(x))', 0.9787), (4, 'x / sqrt(exp(x) / x)', 0.9111), (3, 'x / exp(x * 0.37030822)', 0.8372)] | best_r2=1.0000 | best_expr=x * (x * (x / (exp(x) - (x / x))))
+R²=1.0000  RMSE=6.7404e-17  (44.0s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 99 iters (spread=3.4dec, vars=1, depth=4, diff=hard, score=0.46) — eq='i_41_16_simplified'
+R²=1.0000  RMSE=0.000000  (61.5s)
+
+  📐 Target scale:  std=0.507  mean|y|=0.447  range=1.42  (~10^0)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          0.9999   0.004            0.0080   1.4      3
+  EnhancedHybridSystemDeFi (core)            0.9981   0.022            0.0440   1.0      6
+  HybridSystemLLMNN all-domains (core)       1.0000   2.5730e-17       0.0000   1.3      2
+  SymbolicEngineWithLLM (tools)              1.0000   6.7404e-17       0.0000   44.0     4
+  HybridDiscoverySystem v50_2 (tools)        1.0000   0.000            0.0000   61.5     5
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████░░░░░░░░░░░░░░░░░░░░░░░]  1/4 done  |  this test: 1m 49s  |  avg: 1m 49s/test  |  ETA: 5m 27s  |  3 left
+
+================================================================================
+                                     TEST 2/4                                   
+  [███████░░░░░░░░░░░░░░░░░░░░░░░]  1/4 done  |  elapsed: 1m 49s  |  ETA: 5m 27s  |  3 left
+================================================================================
+
+================================================================================
+  Fourier's law of heat conduction: heat flux across material
+  Domain: feynman_thermodynamics  |  Samples: 200  |  Vars: 4
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Fourier's law of heat conduction: heat flux across' output spans 6.7 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (0.0s)
+
+  [2/6] ImprovedNN (core) … R²=0.9826  RMSE=273190.292341  (1.4s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=33.812769  (1.9s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=7.0822e-09  (1.2s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 143 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=6.7dec, vars=4, score=0.39)
+   [SE-TRACE] domain='thermodynamics' | eq="Fourier's law of heat conduction: heat flux across material" | vars=['kappa', 'T2', 'T1', 'd'] | n=200 | niter=143 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_capped=12→10 | ratio_features=['ratio_T2_d', 'ratio_T1_d', 'ratio_kappa_d', 'ratio_T2_kappa', 'ratio_T1_kappa', 'ratio_T2_T1', 'ratio_kappa_T1', 'ratio_T1_T2', 'ratio_kappa_T2', 'ratio_d_kappa'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.53(143→76) | pareto_top5=[(10, '(ratio_T2_d * 2.8257136e-6) * (T1 / ((ratio_T2_kappa * (ratio_T1_T2 / (ratio_T1_T2 + 0.077997245))) / exp(ratio_T1_T2 / -0.26000628)))', 1.0), (11, '((T1 * ratio_T2_d) * -2.8164807e-6) / (((-0.03724145 - (ratio_T1_T2 + ratio_T1_T2)) * ratio_T2_kappa) / (exp(ratio_T1_T2 / -2.1242764) - 0.61241895))', 1.0), (12, '((T1 * ratio_T2_d) * -2.8164807e-6) / ((ratio_d_kappa - ((0.039210927 + ratio_T1_T2) + ratio_T1_T2)) * (ratio_T2_kappa / (exp(ratio_T1_T2 / -2.1242764) - 0.61241895)))', 1.0), (13, 'T1 * (((ratio_T2_d / ((ratio_T2_kappa / (exp(ratio_T1_T2 / -2.1242764) - 0.61241895)) * (ratio_d_kappa - ((ratio_T1_T2 + ratio_T1_T2) + 0.039210927)))) + ratio_T1_T2) * -2.8164807e-6)', 1.0), (14, '(((T1 / ((ratio_d_kappa - ((ratio_T1_T2 + 0.037362143) + ratio_T1_T2)) * (ratio_T2_kappa / (exp(ratio_T1_T2 / -2.5402513) - 0.6668288)))) * 5.245967e-6) * (ratio_T2_d + -0.098079056)) / -1.61985', 1.0)] | best_r2=1.0000 | best_expr=5.245967e-6 * ((((-1.337549 + (ratio_T2_d / -1.61985)) * T1) / (((ratio_d_kappa 
+R²=1.0000  RMSE=2541.330594  (42.1s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 90 iters (spread=6.7dec, vars=4, depth=2, diff=easy, score=0.39) — eq='ii.2.42'
+R²=1.0000  RMSE=1327.093948  (66.9s)
+
+  📐 Target scale:  std=2.07e+06  mean|y|=5.45e+05  range=2.55e+07  (~10^7)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   0.0      1 🏆
+  ImprovedNN (core)                          0.9826   273190.292       0.1321   1.4      6
+  EnhancedHybridSystemDeFi (core)            1.0000   33.813           0.0000   1.9      3
+  HybridSystemLLMNN all-domains (core)       1.0000   7.0822e-09       0.0000   1.2      2
+  SymbolicEngineWithLLM (tools)              1.0000   2541.331         0.0012   42.1     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   1327.094         0.0006   66.9     4
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [███████████████░░░░░░░░░░░░░░░]  2/4 done  |  this test: 1m 53s  |  avg: 1m 51s/test  |  ETA: 3m 42s  |  2 left
+
+================================================================================
+                                     TEST 3/4                                   
+  [███████████████░░░░░░░░░░░░░░░]  2/4 done  |  elapsed: 3m 42s  |  ETA: 3m 42s  |  2 left
+================================================================================
+
+================================================================================
+  Stefan-Boltzmann law: blackbody radiated power
+  Domain: feynman_thermodynamics  |  Samples: 200  |  Vars: 2
+================================================================================
+
+  ⚠️  [SCALE-WARN] 'Stefan-Boltzmann law: blackbody radiated power' output spans 5.6 decades → NN log-space training will be attempted
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (10.2s)
+
+  [2/6] ImprovedNN (core) … R²=0.9999  RMSE=1055534.023067  (0.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=2577.816229  (10.3s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=9.5511e-07  (9.0s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 104 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=5.6dec, vars=2, score=0.24)
+   [SE-TRACE] domain='thermodynamics' | eq='Stefan-Boltzmann law: blackbody radiated power' | vars=['A', 'x0'] | n=200 | niter=104 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_x0_A', 'ratio_A_x0'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.71(104→73) | pareto_top5=[(5, '(((x0 * (A * 4.788031e-16)) * x0) * x0) * x0', 1.0), (6, '(((x0 * (x0 - 0.7044885)) * x0) * (4.788031e-16 * A)) * x0', 1.0), (7, '(A * ((x0 - (1.7130804 / exp(0.89864546))) * ((x0 * 4.788031e-16) * (x0 * A)))) / ratio_A_x0', 1.0), (4, 'exp(sqrt(x0) * 0.1464669) / (ratio_x0_A / 0.046187878)', 0.9985), (3, 'exp(sqrt(x0) * 0.10341036) / ratio_x0_A', 0.9393)] | best_r2=1.0000 | best_expr=(A * ((x0 - (1.7130804 / exp(0.89864546))) * ((x0 * 4.788031e-16) * (x0 * A)))) 
+R²=1.0000  RMSE=2106.996624  (35.0s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 71 iters (spread=5.6dec, vars=2, depth=2, diff=easy, score=0.24) — eq='fey_thermo_sb'
+R²=1.0000  RMSE=4454.874040  (65.5s)
+
+  📐 Target scale:  std=1.18e+08  mean|y|=7.56e+07  range=5.41e+08  (~10^8)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   10.2     2
+  ImprovedNN (core)                          0.9999   1.0555e+06       0.0089   0.5      4
+  EnhancedHybridSystemDeFi (core)            1.0000   2577.816         0.0000   10.3     3
+  HybridSystemLLMNN all-domains (core)       1.0000   9.5511e-07       0.0000   9.0      1 🏆
+  SymbolicEngineWithLLM (tools)              1.0000   2106.997         0.0000   35.0     6
+  HybridDiscoverySystem v50_2 (tools)        1.0000   4454.874         0.0000   65.5     5
+
+  🎯 Winner: HybridSystemLLMNN all-domains (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████░░░░░░░░]  3/4 done  |  this test: 2m 10s  |  avg: 1m 57s/test  |  ETA: 1m 57s  |  1 left
+
+================================================================================
+                                     TEST 4/4                                   
+  [██████████████████████░░░░░░░░]  3/4 done  |  elapsed: 5m 53s  |  ETA: 1m 57s  |  1 left
+================================================================================
+
+================================================================================
+  Ideal gas law: pressure from moles, temperature, volume
+  Domain: feynman_thermodynamics  |  Samples: 200  |  Vars: 3
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=1.0000  RMSE=0.000000  (8.1s)
+
+  [2/6] ImprovedNN (core) … R²=1.0000  RMSE=3907.646074  (1.1s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=15.775042  (8.9s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=4.0554e-10  (8.6s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 113 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.8dec, vars=3, score=0.28)
+   [SE-TRACE] domain='thermodynamics' | eq='Ideal gas law: pressure from moles, temperature, volume' | vars=['n', 'x0', 'V'] | n=200 | niter=113 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=False | explog=exp,log | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=['ratio_x0_V', 'ratio_x0_n', 'ratio_n_V', 'ratio_V_n', 'ratio_n_x0', 'ratio_V_x0'] | pop_scale=skipped(multithreading,pops=30) | iter_scale=0.58(113→65) | pareto_top5=[(2, '(ratio_n_V * 1.1149408e-5) * x0', 1.0), (3, '((ratio_x0_V * 0.70773613) / 0.71651626) * (x0 / ((ratio_x0_n / 2.9832497e-6) / 3.7837012))', 1.0), (1, 'ratio_n_V * 0.004617379', 0.9873), (0, '0.24072228', -0.0)] | best_r2=1.0000 | best_expr=(ratio_n_V * 1.1149408e-5) * x0
+R²=1.0000  RMSE=0.025761  (35.8s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 75 iters (spread=3.8dec, vars=3, depth=2, diff=easy, score=0.28) — eq='fey_thermo_ig'
+R²=1.0000  RMSE=3.132758  (49.6s)
+
+  📐 Target scale:  std=7.46e+05  mean|y|=1.8e+05  range=6.83e+06  (~10^6)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    1.0000   0.000            0.0000   8.1      1 🏆
+  ImprovedNN (core)                          1.0000   3907.646         0.0052   1.1      4
+  EnhancedHybridSystemDeFi (core)            1.0000   15.775           0.0000   8.9      3
+  HybridSystemLLMNN all-domains (core)       1.0000   4.0554e-10       0.0000   8.6      2
+  SymbolicEngineWithLLM (tools)              1.0000   0.026            0.0000   35.8     5
+  HybridDiscoverySystem v50_2 (tools)        1.0000   3.133            0.0000   49.6     6
+
+  🎯 Winner: PureLLM Baseline (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  4/4 done  |  this test: 1m 51s  |  avg: 1m 56s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 4
+
+📊 R² / NRMSE summary  (all finite results, n=4):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   PureLLM Baseline (core)                      1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0000   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                1.0000     0.0000   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          1.0000     0.0000   0.0000         —       —  100%
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0010         —       —  100%
+   ImprovedNN (core)                            0.9999     0.0085   0.0087         —       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   PureLLM Baseline (core)                     3/4  ██████████████████████████████
+   HybridSystemLLMNN all-domains (core)        1/4  ██████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260711_175754.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (24 records)
+
+📋  Checkpoint retained — all 4 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
