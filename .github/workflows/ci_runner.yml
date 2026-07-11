@@ -534,9 +534,23 @@ jobs:
           #   FIX-suppB_sc-ALL-METHODS comment's options (b) and (c) — finer
           #   sharding or dropping back to fewer methods for the largest n —
           #   are the next things to try, NOT reverting to table=1.
+          # UPDATE (2026-07-11): exp1b bumped 4 -> 5 = len(DEFAULT_SEEDS) so every
+          # seed gets its own shard (one-seed-per-shard, mirroring suppB's
+          # one-noise-level-per-shard and suppB_sc's one-n-per-shard design).
+          # Previously, at table=4, _block_shards() split 5 seeds into
+          # [2,1,1,1] — shard 0 owned BOTH seed42 and seed99, so a single
+          # crashed/timed-out shard-0 worker could take out two seeds' worth
+          # of progress at once. At table=5, divmod(5,5)=(1,0) gives 5 even
+          # shards of 1 seed each, so a worker failure only ever costs one
+          # seed. This is a resilience/isolation change, NOT a bug fix — the
+          # actual bug (shard 0's real output being discarded due to a glob
+          # mismatch against the script's true "*_results_seed{S}.json"
+          # filename) is fixed separately above in the exp1b combined_globs
+          # block. Cost: exp1b dispatch now spins up 5 concurrent workers
+          # instead of 4.
           EXP_SHARD_TABLE = {
               "exp1":               1,
-              "exp1b":              4,
+              "exp1b":              5,
               "exp1_ablation":      4,
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
