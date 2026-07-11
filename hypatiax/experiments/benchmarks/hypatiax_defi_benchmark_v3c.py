@@ -1280,189 +1280,224 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         print(f"\n🔍 Case filter active: running {total} case(s) — "
               f"{[tc['name'] for tc in test_cases]}")
 
-    # NSHARDS=1 FIX: on a fresh (non-resume) run, remove any stale checkpoint
-    # and final-output JSON left over from a prior run.  Without this, a second
-    # run in the same workspace smuggles the prior run's cases through
-    # _load_checkpoint, producing duplicate records and a bloated output file
-    # that ci_analysis misreads as multiple seeds.
-    if not resume:
-        if CHECKPOINT_FILE.exists():
-            CHECKPOINT_FILE.unlink()
-            print(f"  [fresh run] Removed stale checkpoint: {CHECKPOINT_FILE}")
-        if FINAL_OUTPUT.exists():
-            FINAL_OUTPUT.unlink()
-            print(f"  [fresh run] Removed stale output: {FINAL_OUTPUT}")
+    global CHECKPOINT_FILE, FINAL_OUTPUT
 
-    existing, n_done = _load_checkpoint() if resume else ([], 0)
-    all_results      = list(existing)
+    # ── Multi-seed sweep support ───────────────────────────────────────────
+    # `seeds` (from DEFI_SEEDS env or a single SEED override) previously had
+    # no effect beyond being parsed: run_benchmark only ever executed once,
+    # silently dropping every seed but whichever _resolve_seed() happened to
+    # return (or the module default of 42). We now loop over every seed in
+    # `seeds`, reseeding all RNGs and writing a DISTINCT, seed-tagged
+    # checkpoint/output file per seed when more than one seed is requested.
+    # Single-seed / no-seed runs (exp1, exp1_ablation, etc.) are unaffected —
+    # they keep writing the original fixed filenames.
+    _base_results_dir = RESULTS_DIR
+    _orig_checkpoint, _orig_final = CHECKPOINT_FILE, FINAL_OUTPUT
+    seed_list   = seeds if seeds else [None]
+    multi_seed  = len(seed_list) > 1
+    all_seed_results = []
 
-    print("=" * 80)
-    print("HypatiaX DeFi Extrapolation Benchmark v3.0")
-    print("=" * 80)
-    print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
-          f"Cases: {total} | Fresh run")
-    print(f"Checkpoint: {CHECKPOINT_FILE}")
-    print(f"Output    : {FINAL_OUTPUT}")
-    print("=" * 80)
+    for _seed_idx, _seed in enumerate(seed_list, 1):
+        if _seed is not None:
+            random.seed(_seed)
+            np.random.seed(_seed)
+            torch.manual_seed(_seed)
+            if multi_seed:
+                print(f"\n🌱 Seed sweep {_seed_idx}/{len(seed_list)}: seed={_seed}")
+            else:
+                print(f"\n🌱 Seed = {_seed}")
 
-    for i, tc in enumerate(test_cases, 1):
-        # Skip already-done cases when resuming
-        if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
-            print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
-            continue
+        if multi_seed:
+            CHECKPOINT_FILE = _base_results_dir / f"hypatiax_defi_benchmark_v3_checkpoint_seed{_seed}.json"
+            FINAL_OUTPUT    = _base_results_dir / f"hypatiax_defi_benchmark_v3_results_seed{_seed}.json"
+        else:
+            CHECKPOINT_FILE, FINAL_OUTPUT = _orig_checkpoint, _orig_final
 
-        is_intractable = tc.get("extrapolation_intractable", False)
-        print(f"\n[{i:02d}/{total}] {tc['name']}  "
-              f"({tc['difficulty'].upper()}"
-              f"{' — INTRACTABLE' if is_intractable else ''})")
+        # NSHARDS=1 FIX: on a fresh (non-resume) run, remove any stale checkpoint
+        # and final-output JSON left over from a prior run.  Without this, a second
+        # run in the same workspace smuggles the prior run's cases through
+        # _load_checkpoint, producing duplicate records and a bloated output file
+        # that ci_analysis misreads as multiple seeds.
+        if not resume:
+            if CHECKPOINT_FILE.exists():
+                CHECKPOINT_FILE.unlink()
+                print(f"  [fresh run] Removed stale checkpoint: {CHECKPOINT_FILE}")
+            if FINAL_OUTPUT.exists():
+                FINAL_OUTPUT.unlink()
+                print(f"  [fresh run] Removed stale output: {FINAL_OUTPUT}")
 
-        try:
-            # Load protocol data
-            protocol_cases = protocol.load_test_data(
-                tc["domain"], num_samples=tc["num_samples"]
-            )
-            match = next(
-                ((d, X, y, v, m) for d, X, y, v, m in protocol_cases
-                 if tc["name"].lower() in d.lower()),
-                None,
-            )
-            if not match:
-                print(f"  ⚠️  No protocol match for '{tc['name']}' — skipping")
+        existing, n_done = _load_checkpoint() if resume else ([], 0)
+        all_results      = list(existing)
+
+        print("=" * 80)
+        print("HypatiaX DeFi Extrapolation Benchmark v3.0")
+        print("=" * 80)
+        print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
+              f"Cases: {total} | Fresh run")
+        print(f"Checkpoint: {CHECKPOINT_FILE}")
+        print(f"Output    : {FINAL_OUTPUT}")
+        print("=" * 80)
+
+        for i, tc in enumerate(test_cases, 1):
+            # Skip already-done cases when resuming
+            if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
+                print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
                 continue
 
-            desc, X_full, y_full, var_names, metadata = match
-            metadata.update({
-                "extrapolation_test": True,
-                "difficulty":         tc["difficulty"],
-                "formula_type":       tc["formula_type"],
-            })
-            tc.setdefault("description", desc)
+            is_intractable = tc.get("extrapolation_intractable", False)
+            print(f"\n[{i:02d}/{total}] {tc['name']}  "
+                  f"({tc['difficulty'].upper()}"
+                  f"{' — INTRACTABLE' if is_intractable else ''})")
 
-            X_tr, y_tr, X_te, y_te = _aggressive_split(X_full, y_full, tc["config"])
-            print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
-
-            case_results = {}
-
-            # ── Pure LLM ────────────────────────────────────────────────────
             try:
-                _t0_llm = time.time()
-                from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
-                    PureLLMBaseline,
+                # Load protocol data
+                protocol_cases = protocol.load_test_data(
+                    tc["domain"], num_samples=tc["num_samples"]
                 )
-                llm_base  = PureLLMBaseline()
-                llm_res   = llm_base.generate_formula(desc, tc["domain"],
-                                                      var_names, metadata)
-                llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
-                                                           var_names, verbose=False)
-                llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
-                                                           var_names, verbose=False)
-                case_results["pure_llm"] = {
-                    "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
-                    "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                    "success":  llm_te_m.get("success", False),
-                    "time_s":   round(time.time() - _t0_llm, 3),
-                }
-            except Exception as e:
-                case_results["pure_llm"] = {
-                    "train_r2": float("nan"), "test_r2": float("nan"),
-                    "success": False, "time_s": 0.0, "error": str(e),
-                }
-
-            # ── Neural Network ───────────────────────────────────────────────
-            try:
-                _t0_nn = time.time()
-                nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
-                case_results["neural_network"] = {
-                    "train_r2":    nn_m["train_r2"],
-                    "test_r2":     nn_m["test_r2"],
-                    "success":     True,
-                    "timed_out":   nn_m.get("timed_out", False),
-                    "time_s":      round(time.time() - _t0_nn, 3),
-                    "y_pred_train": nn_m["y_pred_train"].tolist(),
-                    "y_pred_test":  nn_m["y_pred_test"].tolist(),
-                }
-            except Exception as e:
-                case_results["neural_network"] = {
-                    "train_r2": float("nan"), "test_r2": float("nan"),
-                    "success": False, "time_s": 0.0, "error": str(e),
-                }
-
-            # ── Hybrid (all Fixes applied) ────────────────────────────────────
-            try:
-                _t0_hyb = time.time()
-                hy_m = _hybrid_predict_and_eval(
-                    desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                match = next(
+                    ((d, X, y, v, m) for d, X, y, v, m in protocol_cases
+                     if tc["name"].lower() in d.lower()),
+                    None,
                 )
-                _hyb_wall = round(time.time() - _t0_hyb, 3)
+                if not match:
+                    print(f"  ⚠️  No protocol match for '{tc['name']}' — skipping")
+                    continue
 
-                # Issue 3 fix: when hybrid fell back to NN, the time already
-                # recorded for the standalone NN run CANNOT be reused — the
-                # hybrid must pay the full NN training cost itself.
-                # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
-                # fallback cases so the reported hybrid time is self-contained.
-                hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
+                desc, X_full, y_full, var_names, metadata = match
+                metadata.update({
+                    "extrapolation_test": True,
+                    "difficulty":         tc["difficulty"],
+                    "formula_type":       tc["formula_type"],
+                })
+                tc.setdefault("description", desc)
 
-                case_results["hybrid"] = {
-                    "train_r2":        hy_m["train_r2"],
-                    "test_r2":         hy_m["test_r2"],
-                    "decision":        hy_m["decision"],
-                    "success":         True,
-                    "time_s":          round(hyb_time, 3),
-                    "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
+                X_tr, y_tr, X_te, y_te = _aggressive_split(X_full, y_full, tc["config"])
+                print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
+
+                case_results = {}
+
+                # ── Pure LLM ────────────────────────────────────────────────────
+                try:
+                    _t0_llm = time.time()
+                    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
+                        PureLLMBaseline,
+                    )
+                    llm_base  = PureLLMBaseline()
+                    llm_res   = llm_base.generate_formula(desc, tc["domain"],
+                                                          var_names, metadata)
+                    llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
+                                                               var_names, verbose=False)
+                    llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
+                                                               var_names, verbose=False)
+                    case_results["pure_llm"] = {
+                        "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
+                        "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
+                        "success":  llm_te_m.get("success", False),
+                        "time_s":   round(time.time() - _t0_llm, 3),
+                    }
+                except Exception as e:
+                    case_results["pure_llm"] = {
+                        "train_r2": float("nan"), "test_r2": float("nan"),
+                        "success": False, "time_s": 0.0, "error": str(e),
+                    }
+
+                # ── Neural Network ───────────────────────────────────────────────
+                try:
+                    _t0_nn = time.time()
+                    nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
+                    case_results["neural_network"] = {
+                        "train_r2":    nn_m["train_r2"],
+                        "test_r2":     nn_m["test_r2"],
+                        "success":     True,
+                        "timed_out":   nn_m.get("timed_out", False),
+                        "time_s":      round(time.time() - _t0_nn, 3),
+                        "y_pred_train": nn_m["y_pred_train"].tolist(),
+                        "y_pred_test":  nn_m["y_pred_test"].tolist(),
+                    }
+                except Exception as e:
+                    case_results["neural_network"] = {
+                        "train_r2": float("nan"), "test_r2": float("nan"),
+                        "success": False, "time_s": 0.0, "error": str(e),
+                    }
+
+                # ── Hybrid (all Fixes applied) ────────────────────────────────────
+                try:
+                    _t0_hyb = time.time()
+                    hy_m = _hybrid_predict_and_eval(
+                        desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                    )
+                    _hyb_wall = round(time.time() - _t0_hyb, 3)
+
+                    # Issue 3 fix: when hybrid fell back to NN, the time already
+                    # recorded for the standalone NN run CANNOT be reused — the
+                    # hybrid must pay the full NN training cost itself.
+                    # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
+                    # fallback cases so the reported hybrid time is self-contained.
+                    hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
+
+                    case_results["hybrid"] = {
+                        "train_r2":        hy_m["train_r2"],
+                        "test_r2":         hy_m["test_r2"],
+                        "decision":        hy_m["decision"],
+                        "success":         True,
+                        "time_s":          round(hyb_time, 3),
+                        "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
+                    }
+                except Exception as e:
+                    case_results["hybrid"] = {
+                        "train_r2": float("nan"), "test_r2": float("nan"),
+                        "success": False, "time_s": 0.0, "error": str(e),
+                    }
+
+                # ── Augment with extrapolation gap and stability score ────────────
+                for method, res in case_results.items():
+                    tr_ = res.get("train_r2", float("nan"))
+                    te_ = res.get("test_r2",  float("nan"))
+                    res["extrapolation_gap"] = (
+                        float(tr_ - te_) if not (np.isnan(tr_) or np.isnan(te_)) else float("nan")
+                    )
+                    res["stability_score"] = (
+                        float(te_ / tr_)
+                        if (not np.isnan(tr_) and not np.isnan(te_) and abs(tr_) > 1e-6)
+                        else float("nan")
+                    )
+
+                # ── Print per-case summary ────────────────────────────────────────
+                def _fmt(v):
+                    return "   nan" if (v is None or (isinstance(v, float) and np.isnan(v))) else f"{v:6.4f}"
+
+                for method, res in case_results.items():
+                    dec = f" [{res.get('decision', '')}]" if method == "hybrid" else ""
+                    print(f"  {method:15s}: train={_fmt(res.get('train_r2'))}, "
+                          f"test={_fmt(res.get('test_r2'))}{dec}")
+
+                record = {
+                    "equation_id":            tc["name"],
+                    "difficulty":           tc["difficulty"],
+                    "formula_type":         tc["formula_type"],
+                    "extrapolation_intractable": is_intractable,
+                    "results":              case_results,
                 }
-            except Exception as e:
-                case_results["hybrid"] = {
-                    "train_r2": float("nan"), "test_r2": float("nan"),
-                    "success": False, "time_s": 0.0, "error": str(e),
-                }
+                all_results.append(record)
+                _save_checkpoint(all_results)
+                print(f"  💾 Checkpoint saved ({len(all_results)}/{total})")
 
-            # ── Augment with extrapolation gap and stability score ────────────
-            for method, res in case_results.items():
-                tr_ = res.get("train_r2", float("nan"))
-                te_ = res.get("test_r2",  float("nan"))
-                res["extrapolation_gap"] = (
-                    float(tr_ - te_) if not (np.isnan(tr_) or np.isnan(te_)) else float("nan")
-                )
-                res["stability_score"] = (
-                    float(te_ / tr_)
-                    if (not np.isnan(tr_) and not np.isnan(te_) and abs(tr_) > 1e-6)
-                    else float("nan")
-                )
+            except Exception as outer_e:
+                print(f"  ❌ Outer error: {outer_e}")
+                continue
 
-            # ── Print per-case summary ────────────────────────────────────────
-            def _fmt(v):
-                return "   nan" if (v is None or (isinstance(v, float) and np.isnan(v))) else f"{v:6.4f}"
+        # Final report + save
+        _generate_report(all_results)
+        _save_final(all_results)
 
-            for method, res in case_results.items():
-                dec = f" [{res.get('decision', '')}]" if method == "hybrid" else ""
-                print(f"  {method:15s}: train={_fmt(res.get('train_r2'))}, "
-                      f"test={_fmt(res.get('test_r2'))}{dec}")
+        # Remove checkpoint on clean completion (not on verify-fix5 partial run)
+        if not verify_fix5 and CHECKPOINT_FILE.exists():
+            CHECKPOINT_FILE.unlink()
+            print("🗑️  Checkpoint removed (run complete)")
 
-            record = {
-                "equation_id":            tc["name"],
-                "difficulty":           tc["difficulty"],
-                "formula_type":         tc["formula_type"],
-                "extrapolation_intractable": is_intractable,
-                "results":              case_results,
-            }
-            all_results.append(record)
-            _save_checkpoint(all_results)
-            print(f"  💾 Checkpoint saved ({len(all_results)}/{total})")
+        all_seed_results.append(all_results)
 
-        except Exception as outer_e:
-            print(f"  ❌ Outer error: {outer_e}")
-            continue
-
-    # Final report + save
-    _generate_report(all_results)
-    _save_final(all_results)
-
-    # Remove checkpoint on clean completion (not on verify-fix5 partial run)
-    if not verify_fix5 and CHECKPOINT_FILE.exists():
-        CHECKPOINT_FILE.unlink()
-        print("🗑️  Checkpoint removed (run complete)")
-
-    return all_results
+    return all_seed_results[0] if len(all_seed_results) == 1 else all_seed_results
 
 
 def report_only():

@@ -560,8 +560,28 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
 #   AFTER the benchmark JSON exists, not simultaneously with it.
 run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c "
   cd '${REPO_ROOT}'
+
+  # FIX-exp1b-SEED-SHARD: previously DEFI_SEEDS was hardcoded to the FULL
+  # 5-seed list on every shard, ignoring the per-shard portfolio_seedNN task
+  # IDs that ci_runner.yml's plan step already computed (SHARD_IDS/TASK_IDS,
+  # e.g. 'portfolio_seed42 portfolio_seed99' for shard 0). Since
+  # hypatiax_defi_benchmark_v3c.py's run_benchmark() now actually loops over
+  # every seed in DEFI_SEEDS (see companion fix in that file), passing all 5
+  # seeds to all 4 shards would make every shard redundantly re-run the full
+  # sweep. Extract just THIS shard's seed(s) from SHARD_IDS/TASK_IDS, mirroring
+  # the suppB / suppB_sc task-ID-parsing pattern above. Falls back to the full
+  # default list when SHARD_IDS/TASK_IDS are unset (local / standalone runs).
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1b] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1b] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
   DEFI_TASK_FILTER=portfolio \
-  DEFI_SEEDS='42,99,123,777,2024' \
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
@@ -588,7 +608,12 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   # Rename each file to include SHARD_INDEX (from CI env) and a short seed tag so
   # every output has a distinct name.  SHARD_INDEX defaults to 0 for local runs.
   _SHARD=\${SHARD_INDEX:-0}
-  _SEED_TAG=\$(echo \"\${DEFI_SEEDS:-42}\" | tr ',' '_')
+  # FIX-exp1b-SEEDTAG: DEFI_SEEDS above is only a command-prefix env var
+  # scoped to the python3 invocation — it was never visible to this later
+  # shell command, so \${DEFI_SEEDS:-42} always silently fell back to '42',
+  # mislabeling every shard's output as seed42 regardless of which seed(s)
+  # it actually ran. Use \${_SHARD_SEEDS}, the real value we resolved above.
+  _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
 
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
 

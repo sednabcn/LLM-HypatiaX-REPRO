@@ -1402,16 +1402,33 @@ jobs:
                       seeds_this_shard = [
                           tid[len("portfolio_seed"):] for tid in shard_ids_local
                       ]
-                      # FIX-PVA: hypatiax_defi_benchmark_v3c.py (portfolio mode)
-                      # writes its per-seed audit output into a NESTED subdir,
-                      # hypatiax/data/results/portfolio_variance_audit/, not into
-                      # CWD root. The original comparison_FIXED_* patterns below
-                      # never match that location, so shard results were silently
-                      # left stranded there — 0 tasks ever got rescued/marked done.
-                      # Cover both the flat legacy filename and the nested audit
-                      # dir (one level and recursive, in case the script versions
-                      # its output into a further subfolder).
+                      # FIX-PVA (corrected): confirmed by reading
+                      # hypatiax_defi_benchmark_v3c.py directly —
+                      # comparison_FIXED_*seed{s}* is NOT a filename this
+                      # script ever produces. Its only outputs are the fixed,
+                      # UNsuffixed names FINAL_OUTPUT/CHECKPOINT_FILE =
+                      # hypatiax_defi_benchmark_v3_results.json /
+                      # hypatiax_defi_benchmark_v3_checkpoint.json (no seed
+                      # or task ID embedded) — per-shard isolation is meant
+                      # to happen via a shard-specific RESULT_SUBDIR/OUT_BASE
+                      # set by the caller, not via the filename. If that
+                      # subdir wiring points at the wrong place for a given
+                      # shard (e.g. a stray "portfolio_variance_audit/" dir
+                      # instead of the canonical comparison_results/
+                      # noise-noiseless/15/), the file still lands somewhere
+                      # under hypatiax/data/results/ — just not where the
+                      # canonical RESULT_SUBDIR-scoped search below looks.
+                      # Keep the comparison_FIXED_*seed{s}* patterns as a
+                      # harmless no-op in case a future script variant uses
+                      # them, but the patterns that actually matter are the
+                      # real filenames, searched recursively under OUT_BASE
+                      # root (not just the one known stray dir name, since
+                      # the wrong-subdir bug can point anywhere).
                       PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
+                      REAL_NAMES = [
+                          "hypatiax_defi_benchmark_v3*results*.json",
+                          "hypatiax_defi_benchmark_v3*checkpoint*.json",
+                      ]
                       combined_globs = []
                       for s in seeds_this_shard:
                           combined_globs += [
@@ -1421,6 +1438,13 @@ jobs:
                               f"{PVA_DIR}/*seed{s}*.csv",
                               f"{PVA_DIR}/**/*seed{s}*.json",
                               f"{PVA_DIR}/**/*seed{s}*.csv",
+                          ]
+                      for pat in REAL_NAMES:
+                          combined_globs += [
+                              pat,                      # CWD root
+                              f"{PVA_DIR}/{pat}",        # known stray dir, flat
+                              f"{PVA_DIR}/**/{pat}",     # known stray dir, nested
+                              f"hypatiax/data/results/**/{pat}",  # anywhere under OUT_BASE
                           ]
                       if not combined_globs:
                           combined_globs = ["*comparison_FIXED_*.json",
