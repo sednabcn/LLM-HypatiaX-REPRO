@@ -71,7 +71,12 @@ logger = logging.getLogger("hypatiax.merge")
 #   from merge_shards import MERGE_REQUIRED_EXPERIMENTS
 # Adding an experiment here is the ONLY change needed to activate merge mode for it.
 #
-# exp1b      — 4-shard multi-seed DeFi portfolio sweep (seeds 42/99/123/777/2024)
+# exp1b      — 5-shard multi-seed DeFi portfolio sweep (seeds 42/99/123/777/2024,
+#              one seed per shard as of EXP_SHARD_TABLE update 2026-07-11 —
+#              previously 4-shard with a 2-seed fat shard; see ci_runner.yml
+#              EXP_SHARD_TABLE comment for the isolation rationale). Comment-
+#              only note: this constant is name-keyed, not count-keyed, so no
+#              functional change was needed here when the shard count changed.
 # exp1_ablation — 4-shard Core-15 ablation (PySR-only vs HypatiaX, DEFI_TASKS × 4 workers)
 # exp3b      — 4-shard Nguyen-12 multi-seed (seeds 99/123/777/2024)
 # suppB      — 5-shard noise sweep (one noise level per shard, EXP_SHARD_TABLE=5).
