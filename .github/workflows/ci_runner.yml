@@ -2104,9 +2104,26 @@ jobs:
                   # (and downstream ci_pipeline_check.yml) reports those seeds as
                   # never completed even though the script ran successfully.
                   PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
+                  # FIX-SEEDFILE (2026-07-11): neither pattern family above ever
+                  # matches this script's actual multi-seed output. run_benchmark()'s
+                  # multi-seed branch (hypatiax_defi_benchmark_v3c.py ~line 1311-1312)
+                  # writes FINAL_OUTPUT directly into RESULTS_DIR (== result_dir),
+                  # NOT into PVA_DIR, as:
+                  #     hypatiax_defi_benchmark_v3_results_seed{S}.json
+                  # — neither "comparison_FIXED_*" nor under portfolio_variance_audit/.
+                  # Confirmed against a live shard 0 run: _checkpoint_shard0.json
+                  # still recorded "completed": [] (41-byte empty stub) despite
+                  # hypatiax_defi_benchmark_v3_results_seed42.json and _seed99.json
+                  # existing on disk in result_dir (17001 / 16999 bytes) — shard 0
+                  # genuinely succeeded but was recorded as 0/2 done, which is why
+                  # the qualification gate flagged ALL 5 seeds (not just the 3 that
+                  # never ran) as incomplete. Add the real filename pattern so a
+                  # shard's true output gets credited.
                   combined_globs = []
                   for s in seeds_this_shard:
                       combined_globs += [
+                          f"*hypatiax_defi_benchmark_v3_results_seed{s}*.json",
+                          f"*_results_seed{s}*.json",
                           f"*comparison_FIXED_*seed{s}*.json",
                           f"*comparison_FIXED_*seed{s}*.csv",
                           f"{PVA_DIR}/*seed{s}*.json",
