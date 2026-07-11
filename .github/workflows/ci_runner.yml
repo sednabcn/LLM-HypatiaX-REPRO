@@ -1402,15 +1402,33 @@ jobs:
                       seeds_this_shard = [
                           tid[len("portfolio_seed"):] for tid in shard_ids_local
                       ]
+                      # FIX-PVA: hypatiax_defi_benchmark_v3c.py (portfolio mode)
+                      # writes its per-seed audit output into a NESTED subdir,
+                      # hypatiax/data/results/portfolio_variance_audit/, not into
+                      # CWD root. The original comparison_FIXED_* patterns below
+                      # never match that location, so shard results were silently
+                      # left stranded there — 0 tasks ever got rescued/marked done.
+                      # Cover both the flat legacy filename and the nested audit
+                      # dir (one level and recursive, in case the script versions
+                      # its output into a further subfolder).
+                      PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
                       combined_globs = []
                       for s in seeds_this_shard:
                           combined_globs += [
                               f"*comparison_FIXED_*seed{s}*.json",
                               f"*comparison_FIXED_*seed{s}*.csv",
+                              f"{PVA_DIR}/*seed{s}*.json",
+                              f"{PVA_DIR}/*seed{s}*.csv",
+                              f"{PVA_DIR}/**/*seed{s}*.json",
+                              f"{PVA_DIR}/**/*seed{s}*.csv",
                           ]
                       if not combined_globs:
                           combined_globs = ["*comparison_FIXED_*.json",
-                                            "*comparison_FIXED_*.csv"]
+                                            "*comparison_FIXED_*.csv",
+                                            f"{PVA_DIR}/*.json",
+                                            f"{PVA_DIR}/*.csv",
+                                            f"{PVA_DIR}/**/*.json",
+                                            f"{PVA_DIR}/**/*.csv"]
                   else:
                       # exp1: single shard — broad globs are safe.
                       combined_globs = [
@@ -1419,7 +1437,10 @@ jobs:
                       ]
 
                   for pat in combined_globs:
-                      for src in glob.glob(pat):   # CWD only; non-recursive
+                      # recursive=True is required for the exp1b "**" patterns
+                      # above; it is a no-op for patterns without "**" so this
+                      # does not change behavior for suppB/suppB_sc/exp1.
+                      for src in glob.glob(pat, recursive=True):
                           dst = os.path.join(result_dir, os.path.basename(src))
                           if os.path.abspath(src) == os.path.abspath(dst):
                               continue
@@ -1463,6 +1484,7 @@ jobs:
         env:
           RESULTS_DIR:   ${{ github.workspace }}/${{ env.OUT_BASE }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          EXP:           ${{ needs.plan.outputs.exp_id }}
         run: |
           set -euo pipefail
           SRC="${RESULTS_DIR}"
@@ -1569,6 +1591,49 @@ jobs:
           else
             echo "Store results: no stray root-level files found (all outputs already in subdir)."
           fi
+
+          # FIX-PVA: hypatiax_defi_benchmark_v3c.py (portfolio mode, exp1b) writes
+          # its per-seed audit output into a NESTED subdirectory,
+          # ${RESULTS_DIR}/portfolio_variance_audit/, one level below OUT_BASE
+          # root. The root scan above is "maxdepth 1" by design and never
+          # descends into it, so this data was previously left stranded there —
+          # never copied into DEST, never staged/committed, and never counted
+          # by the checkpoint or ci_pipeline_check.yml's completion gate.
+          # Recurse into it explicitly and copy (not move, matching the
+          # cp-not-mv policy above) everything into DEST.
+          if [[ "${EXP:-}" == "exp1b" ]]; then
+            PVA_DIR="${RESULTS_DIR}/portfolio_variance_audit"
+            if [[ -d "${PVA_DIR}" ]]; then
+              pva_copied=0
+              while IFS= read -r f; do
+                [[ -e "$f" ]] || continue
+                fname=$(basename "$f")
+                [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
+                dest_f="${DEST}/${fname}"
+                if [[ -e "$dest_f" ]]; then
+                  if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
+                    echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
+                    continue
+                  fi
+                  stem="${fname%.*}"; ext="${fname##*.}"
+                  if [[ "$stem" == "$fname" ]]; then
+                    dest_f="${DEST}/${fname}_shard${SHARD_INDEX}_run${{ github.run_id }}"
+                  else
+                    dest_f="${DEST}/${stem}_shard${SHARD_INDEX}_run${{ github.run_id }}.${ext}"
+                  fi
+                  echo "  COLLISION: ${fname} already in dest — storing as $(basename "$dest_f")"
+                fi
+                cp -v "$f" "${dest_f}"
+                pva_copied=$((pva_copied + 1))
+              done < <(find "${PVA_DIR}" -type f \( -name "*.json" -o -name "*.csv" \))
+              if [[ $pva_copied -gt 0 ]]; then
+                echo "Store results: ${pva_copied} file(s) rescued from portfolio_variance_audit/ → ${DEST}"
+              else
+                echo "Store results: portfolio_variance_audit/ exists but contained no JSON/CSV files."
+              fi
+            fi
+          fi
+
           find "${DEST}" -type f | sort || true
 
       # -- Verify exp1 output files exist before upload -------------------------
@@ -2006,21 +2071,38 @@ jobs:
               elif EXP == "exp1b":
                   # Task IDs are "portfolio_seed{S}"; each shard owns 1-2 seeds.
                   seeds_this_shard = [tid[len("portfolio_seed"):] for tid in shard_ids]
+                  # FIX-PVA: hypatiax_defi_benchmark_v3c.py (portfolio mode)
+                  # writes its per-seed audit output into a NESTED subdir,
+                  # hypatiax/data/results/portfolio_variance_audit/, which the
+                  # comparison_FIXED_* patterns below never match. Without this,
+                  # found_combined stays False for every exp1b shard whose output
+                  # lands there, so done_set is never updated and the checkpoint
+                  # (and downstream ci_pipeline_check.yml) reports those seeds as
+                  # never completed even though the script ran successfully.
+                  PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
                   combined_globs = []
                   for s in seeds_this_shard:
                       combined_globs += [
                           f"*comparison_FIXED_*seed{s}*.json",
                           f"*comparison_FIXED_*seed{s}*.csv",
+                          f"{PVA_DIR}/*seed{s}*.json",
+                          f"{PVA_DIR}/*seed{s}*.csv",
+                          f"{PVA_DIR}/**/*seed{s}*.json",
+                          f"{PVA_DIR}/**/*seed{s}*.csv",
                       ]
                   # Fallback: if the script doesn't embed the seed in the filename,
-                  # accept any comparison_FIXED file only when result_dir contains
-                  # NO files from other shards yet (detected by absence of
-                  # _checkpoint_shard files for other shard indices).  This is a
-                  # best-effort guard; the seed-in-filename fix in run_all.sh is
-                  # the definitive solution.
+                  # accept any comparison_FIXED file (or any file in the audit
+                  # dir) only when result_dir contains NO files from other shards
+                  # yet (detected by absence of _checkpoint_shard files for other
+                  # shard indices). This is a best-effort guard; the seed-in-
+                  # filename fix in run_all.sh is the definitive solution.
                   if not combined_globs:
                       combined_globs = ["*comparison_FIXED_*.json",
-                                        "*comparison_FIXED_*.csv"]
+                                        "*comparison_FIXED_*.csv",
+                                        f"{PVA_DIR}/*.json",
+                                        f"{PVA_DIR}/*.csv",
+                                        f"{PVA_DIR}/**/*.json",
+                                        f"{PVA_DIR}/**/*.csv"]
               else:
                   # exp1: single shard — broad globs are safe (no concurrent shards).
                   combined_globs = [
@@ -2031,9 +2113,12 @@ jobs:
               found_combined = False
               for d in search_dirs:
                   for pat in combined_globs:
-                      # FIX: non-recursive glob only — prevents matching files
-                      # committed by other shards that share the same result_dir.
-                      hits = glob.glob(os.path.join(d, pat))
+                      # recursive=True is required for the exp1b "**" patterns
+                      # above (PVA_DIR); it is a no-op for patterns without "**"
+                      # so this does not change matching behavior for
+                      # suppB/suppB_sc/exp1, which still effectively stay
+                      # single-directory (non-recursive) matches.
+                      hits = glob.glob(os.path.join(d, pat), recursive=True)
                       if hits:
                           print(f"  [{EXP}] Combined result file detected: {hits[0]}")
                           found_combined = True

@@ -299,11 +299,19 @@ jobs:
               globs      = RESULT_GLOBS.get(exp_id, ["*.json"])
 
               # Count non-meta result files matching any primary glob
+              # FIX-RECURSE: prefix each pattern with "**/" so pathlib's glob
+              # searches result_dir recursively, not just its direct children.
+              # A plain "*portfolio*variance*.json" pattern only matched files
+              # sitting straight in result_dir; anything nested one level
+              # deeper (as exp1b's portfolio_variance_audit/ output was,
+              # before ci_runner.yml's FIX-PVA patch) was invisible here.
+              # "**/" still matches result_dir's own top level too, so this
+              # is purely additive — no previously-found files stop matching.
               data_files = []
               if result_dir.exists():
                   for pattern in globs:
                       data_files.extend(
-                          f for f in result_dir.glob(pattern)
+                          f for f in result_dir.glob(f"**/{pattern}")
                           if not f.name.startswith("_")
                       )
               data_files = list(set(data_files))  # deduplicate
@@ -515,16 +523,25 @@ jobs:
               """Return set of task IDs whose output file is present in result_dir."""
               import glob as _g
               done = set()
-              # Scan top-level files
-              files = [f.name for f in result_dir.glob("*")
-                       if f.is_file() and not f.name.startswith("_")]
-              # Also scan one level of subdirectories (catches noise_sweep_saved/ for
-              # suppB, where the runner commits sig-named checkpoint files into a saved/
-              # subdir rather than the canonical top-level dir).
-              for subdir in result_dir.iterdir() if result_dir.exists() else []:
-                  if subdir.is_dir() and not subdir.name.startswith("."):
-                      files += [f.name for f in subdir.glob("*")
-                                if f.is_file() and not f.name.startswith("_")]
+              # FIX-RECURSE: scan result_dir recursively rather than top-level +
+              # one subdir level. The previous one-level-deep scan (top-level
+              # files, plus one iterdir() pass into immediate subdirectories)
+              # was tuned for known cases like suppB's noise_sweep_saved/, but
+              # would silently miss anything nested two or more levels down —
+              # exactly the class of bug that made exp1b report "0 done" before
+              # ci_runner.yml's FIX-PVA patch (portfolio_variance_audit/ output
+              # that never even reached this subdir). This is a defensive
+              # generalisation so a similarly-nested output from any future
+              # experiment doesn't reproduce that failure mode here too.
+              # Hidden dirs/files (leading ".") and meta-files (leading "_")
+              # are still excluded at every depth.
+              files = [
+                  f.name for f in result_dir.rglob("*")
+                  if f.is_file()
+                  and not f.name.startswith("_")
+                  and not any(part.startswith(".")
+                              for part in f.relative_to(result_dir).parts)
+              ] if result_dir.exists() else []
               for tid in all_ids:
                   safe = tid.replace("/", "_").replace(".", "_")
                   if any(safe in fname for fname in files):
@@ -793,12 +810,16 @@ jobs:
               # 2. Result files — use per-experiment RESULT_GLOBS for accuracy.
               # Generic *.json + *.csv would miss CSV-only experiments (suppB_sc, instability)
               # if the glob pattern doesn't match any *.json but there ARE *.csv files.
+              # FIX-RECURSE: same "**/" prefix as job 1's check — searches
+              # result_dir recursively so nested output (e.g. a subdir like
+              # portfolio_variance_audit/) isn't invisible to qualification
+              # either. Additive only; top-level matches still match.
               data_files = []
               if result_dir.exists():
                   exp_globs = RESULT_GLOBS.get(exp_id, ["*.json", "*.csv"])
                   for pattern in exp_globs:
                       data_files.extend(
-                          f for f in result_dir.glob(pattern)
+                          f for f in result_dir.glob(f"**/{pattern}")
                           if not f.name.startswith("_")
                       )
               data_files = list(set(data_files))
@@ -838,7 +859,10 @@ jobs:
               csv_detail = str(merged_csv) if csv_ok else ""
               if not csv_ok:
                   # Accept any *.csv in the result dir (noise_sweep_*.csv, sample_complexity_*.csv, etc.)
-                  csv_files = list(result_dir.glob("*.csv")) if result_dir.exists() else []
+                  # FIX-RECURSE: "**/*.csv" so a CSV nested one level down
+                  # (e.g. inside a subdir like portfolio_variance_audit/) is
+                  # still picked up instead of silently failing this gate.
+                  csv_files = list(result_dir.glob("**/*.csv")) if result_dir.exists() else []
                   csv_ok     = len(csv_files) > 0
                   csv_detail = (f"{len(csv_files)} CSV(s) in {subdir_rel}"
                                 if csv_ok else f"no CSV files in {subdir_rel} (tables not yet generated)")
