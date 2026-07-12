@@ -189,7 +189,7 @@ nbconvert==7.17.1
 nbformat==5.10.4
 nest-asyncio==1.6.0
 networkx==3.5
-nltk==3.10.0rc1  # NOTE: only pre-release fix currently available for GHSA-p4gq-832x-fm9v (path traversal); no stable 3.10.0 release yet as of Jul 2026
+nltk==3.10.0  # fixes GHSA-p4gq-832x-fm9v (path traversal); stable release shipped Jul 8, 2026, superseding the earlier 3.10.0rc1 pre-release pin
 nodeenv==1.9.1
 notebook==7.5.6
 notebook_shim==0.2.4
