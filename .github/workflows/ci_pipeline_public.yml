@@ -308,9 +308,8 @@ jobs:
               "exp1":               "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":              "comparison_results/noise-noiseless/15",
               "exp1_ablation":      "ablation/exp1_ablation",
-              # TODO: exp1_pca / exp1b_pca result subdirs not yet known — falls
-              # back to SUBDIR.get(exp_id, exp_id) i.e. "exp1_pca" / "exp1b_pca"
-              # literally, until the real paths are confirmed.
+              "exp1_pca":           "comparison_results/noise-noiseless/noiseless/defi_pca",
+              "exp1b_pca":          "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":       "comparison_results/feynman-tests/exp2",
               "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
               "exp2_feynman_extrap":"comparison_results/feynman-tests/exp2_extrap",
@@ -448,6 +447,24 @@ jobs:
               "skip_runner": skip_runner, "rerun_analysis": rerun_analysis,
           }
 
+          # Only forward a result_subdir when we have a confirmed mapping.
+          # Guessing SUBDIR.get(EXP, EXP) here used to forward the literal
+          # experiment name (e.g. "exp1_pca") whenever a new slot's real
+          # subdir hadn't been added to this dict yet — and because
+          # ci_analysis.yml / ci_postprocess.yml both treat an explicit,
+          # non-empty result_subdir as an override of their OWN (correct)
+          # internal MAPPING, that guess would silently win and point the
+          # run at the wrong / nonexistent directory instead of failing
+          # loudly or falling back to the correct mapping. Emitting an
+          # empty string here lets those internal MAPPINGs (single source
+          # of truth, kept in sync across files) take over instead.
+          resolved_subdir = SUBDIR.get(EXP, "")
+          if not resolved_subdir:
+              print(f"::warning::No confirmed result_subdir mapping for '{EXP}' in "
+                    f"ci_pipeline_public.yml's SUBDIR dict — forwarding an empty "
+                    f"result_subdir so downstream workflows use their own MAPPING "
+                    f"instead of a guessed value.")
+
           out = os.environ["GITHUB_OUTPUT"]
           with open(out, "a") as fh:
               fh.write(f"runner_state={runner_state}\n")
@@ -456,7 +473,7 @@ jobs:
               fh.write(f"skip_runner={'true' if skip_runner else 'false'}\n")
               fh.write(f"rerun_analysis={'true' if rerun_analysis else 'false'}\n")
               fh.write(f"diagnosis_report={json.dumps(report)}\n")
-              fh.write(f"result_subdir={SUBDIR.get(EXP, EXP)}\n")
+              fh.write(f"result_subdir={resolved_subdir}\n")
           PYEOF
 
   # ============================================================================
