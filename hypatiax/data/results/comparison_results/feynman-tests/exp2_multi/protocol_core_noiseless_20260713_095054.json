@@ -1,0 +1,169 @@
+{
+  "timestamp": "2026-07-13T09:50:54.204791",
+  "script": "run_protocol_benchmark_core.py v2.2 (sign-fix + log-widen + domain-guard + formula-hash + complexity-score + json-export + extrap_r2_far-fix)",
+  "protocol": {
+    "mode": "noiseless",
+    "noise_level": 0.0,
+    "threshold": 0.999999,
+    "note": "Noiseless run \u2014 directly comparable to published SR literature: NeSymReS (59.4%), AI Feynman (79.3%), TPSR (56.0%), DSR (32.0%)"
+  },
+  "purelm_truncation_audit": {
+    "truncated_count": 0,
+    "total_purelm_tests": 1,
+    "note": "No truncated PureLLM formulas detected \u2014 all results are valid.",
+    "details": {
+      "California housing price model": {
+        "truncated": false,
+        "r2": -3.4095462659801736,
+        "success": true,
+        "formula": "def formula(median_income, housing_median_age, total_rooms, total_bedrooms, popu"
+      }
+    }
+  },
+  "total_tests": 1,
+  "methods": [
+    "PureLLM Baseline (core)",
+    "ImprovedNN (core)",
+    "EnhancedHybridSystemDeFi (core)",
+    "HybridSystemLLMNN all-domains (core)",
+    "SymbolicEngineWithLLM (tools)",
+    "HybridDiscoverySystem v50_2 (tools)"
+  ],
+  "tests": [
+    {
+      "description": "California housing price model",
+      "domain": "economics",
+      "results": {
+        "PureLLM Baseline (core)": {
+          "method": "PureLLM Baseline (core)",
+          "success": true,
+          "r2": -3.4095462659801736,
+          "rmse": 232171.41189222492,
+          "formula": "def formula(median_income, housing_median_age, total_rooms, total_bedrooms, population, households, latitude, longitude):\n    import numpy as np\n\n    # Constants (intercept and regression coefficients)\n    alpha  =  11.0\n    beta1  =   0.60    # ln(median_income)\n    beta2  =   0.004   # housing_median_age\n    beta3  =   0.25    # ln(rooms per household)\n    beta4  =  -0.15    # ln(bedroom ratio)\n    beta5  =  -0.18    # ln(population per household)\n    beta6  =  -0.08    # latitude\n    beta7  =",
+          "formula_hash": "a9a65e250d151399c9365bd24f3bd7e720a0e67c5a773a18951390145f0346ce",
+          "error": null,
+          "time": 26.392175674438477,
+          "metadata": {
+            "truncated_formula": false,
+            "is_hardcoded": false
+          }
+        },
+        "ImprovedNN (core)": {
+          "method": "ImprovedNN (core)",
+          "success": true,
+          "r2": 0.9309472811948302,
+          "rmse": 29053.74911168298,
+          "formula": "ImprovedNN(8\u2192512\u2192256\u2192128\u219264\u21921,log)",
+          "formula_hash": "",
+          "error": null,
+          "time": 5.556388854980469,
+          "metadata": {}
+        },
+        "EnhancedHybridSystemDeFi (core)": {
+          "method": "EnhancedHybridSystemDeFi (core)",
+          "success": true,
+          "r2": 0.9999999403108056,
+          "rmse": 27.012180888184812,
+          "formula": "def formula(median_income, housing_median_age, total_rooms, total_bedrooms, population, households, latitude, longitude):\n    import numpy as np\n\n    # Coefficients\n    alpha_0  =  13.0\n    alpha_1  =   0.62\n    alpha_2  =   0.004\n    alpha_3  =   0.22\n    alpha_4  =  -0.18\n    alpha_5  =  -0.30\n    alpha_6  =  -0.10\n    alpha_7  =  -0.052\n    alpha_8  =  -0.0012\n    alpha_9  =  -0.0008\n    alpha_10 =   0.0015\n\n    # Guard against division by zero or non-positive values\n    households_safe   = n",
+          "formula_hash": "9c6eb1853fcec5e50fad1ef8db5575ecc68ae0d6e9ff505afe541e5babd05302",
+          "error": null,
+          "time": 28.623433351516724,
+          "metadata": {
+            "decision": "nn",
+            "nn_applied": true
+          }
+        },
+        "HybridSystemLLMNN all-domains (core)": {
+          "method": "HybridSystemLLMNN all-domains (core)",
+          "success": true,
+          "r2": 0.9959051388642179,
+          "rmse": 7075.080407185223,
+          "formula": "N/A",
+          "formula_hash": "e2f79e5b60330bba4c289962231b6ba2957d0b14e7deb3110417003c79dea635",
+          "error": null,
+          "time": 26.65444254875183,
+          "metadata": {
+            "decision": "nn",
+            "nn_applied": true
+          }
+        },
+        "SymbolicEngineWithLLM (tools)": {
+          "method": "SymbolicEngineWithLLM (tools)",
+          "success": true,
+          "r2": 0.670659161468904,
+          "rmse": 63450.43210812221,
+          "formula": "1.105635e+05 * ((median_income + (tan(population / 0.82776856) - households)) * ((((((latitude - housing_median_age) + asin_of_sin(total_rooms * 1.5270442)) * 0.049982883) - median_income) / (population / 1.2775137)) - 0.0005653586))",
+          "formula_hash": "cca7af302375d9d4c11c05689a164f9f1fed82d5f5f5455ea55af5593095564b",
+          "error": null,
+          "time": 53.4563193321228,
+          "metadata": {
+            "iterations": 153
+          }
+        },
+        "HybridDiscoverySystem v50_2 (tools)": {
+          "method": "HybridDiscoverySystem v50_2 (tools)",
+          "success": true,
+          "r2": 0.6872686779129242,
+          "rmse": 61829.748691389585,
+          "formula": "1.105635e+05 * (sqrt((median_income * (cos((longitude - longitude) + 1.4523509) + ((households + -1.0792141) / population))) / sqrt(cos(latitude + longitude) + 1.0473135)))",
+          "formula_hash": "e954ebf780ca946cc9188ff35ef5dce2979a9775d929e83cf971e8cfa05ec3cb",
+          "error": null,
+          "time": 151.29151010513306,
+          "metadata": {
+            "strategy": "symbolic",
+            "validations": 1
+          }
+        }
+      },
+      "comparison": {
+        "winner": "EnhancedHybridSystemDeFi (core)",
+        "scores": {
+          "ImprovedNN (core)": 0.9309472811948302,
+          "EnhancedHybridSystemDeFi (core)": 0.9999999403108056,
+          "HybridSystemLLMNN all-domains (core)": 0.9959051388642179,
+          "SymbolicEngineWithLLM (tools)": 0.670659161468904,
+          "HybridDiscoverySystem v50_2 (tools)": 0.6872686779129242
+        },
+        "rankings": {
+          "EnhancedHybridSystemDeFi (core)": 1,
+          "HybridSystemLLMNN all-domains (core)": 2,
+          "ImprovedNN (core)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4,
+          "SymbolicEngineWithLLM (tools)": 5
+        },
+        "advantages": [
+          {
+            "method": "HybridSystemLLMNN all-domains (core)",
+            "diff": 0.0040948014465876925,
+            "pct": 0.41116380333749636
+          },
+          {
+            "method": "ImprovedNN (core)",
+            "diff": 0.06905265911597547,
+            "pct": 7.417461816672303
+          },
+          {
+            "method": "HybridDiscoverySystem v50_2 (tools)",
+            "diff": 0.3127312623978814,
+            "pct": 45.503494113477394
+          },
+          {
+            "method": "SymbolicEngineWithLLM (tools)",
+            "diff": 0.3293407788419016,
+            "pct": 49.10702749822525
+          }
+        ],
+        "duplicates": {},
+        "y_scale": {
+          "std": 110563.50313611224,
+          "mean": 204155.03,
+          "range": 454201.0,
+          "max": 500001.0,
+          "denom": 110563.50313611224
+        }
+      },
+      "winner": "EnhancedHybridSystemDeFi (core)",
+      "timestamp": "2026-07-13T09:50:54.203255"
+    }
+  ]
+}

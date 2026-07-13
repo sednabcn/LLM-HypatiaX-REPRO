@@ -1,0 +1,603 @@
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'mechanics'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'thermodynamics'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'electromagnetism'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'fluid_dynamics'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.06 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'optics'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'quantum'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/exp2_checkpoint_chemistry.json
+
+
+================================================================================
+  Molecular viscosity from physicochemical props
+  Domain: chemistry  |  Samples: 200  |  Vars: 10
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … <string>:7: RuntimeWarning: divide by zero encountered in divide
+<string>:7: RuntimeWarning: invalid value encountered in divide
+R²=nan  RMSE=nan  (15.7s)
+
+  [2/6] ImprovedNN (core) … R²=0.9962  RMSE=0.672147  (7.2s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=2.7012e-06  (17.0s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=0.002218  (20.2s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 165 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=3.6dec, vars=10, score=0.47)
+   [SE-TRACE] domain='chemistry' | eq='Molecular viscosity from physicochemical props' | vars=['x1', 'x2', 'x3', 'x4', 'x5', 'x6', 'x7', 'x8', 'x9', 'x10'] | n=200 | niter=165 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=True | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(4, 'cos(tan(x8)) * (x1 + x6)', 0.9493), (3, 'x6 * (1.0160799 - x8)', 0.9396), (2, 'x6 * cos(x8)', 0.7917), (1, 'x6 / 1.2990141', 0.5379), (0, 'x6', 0.4249)] | best_r2=0.9493 | best_expr=cos(tan(x8)) * (x1 + x6)
+R²=0.9493  RMSE=2.445374  (60.6s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 101 iters (spread=3.6dec, vars=10, depth=2, diff=medium, score=0.47) — eq='344_mv'
+R²=0.9983  RMSE=1.7019e+34  (154.9s)
+
+  📐 Target scale:  std=10.9  mean|y|=9.84  range=38.5  (~10^1)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    nan      nan              nan      15.7     -
+  ImprovedNN (core)                          0.9962   0.672            0.0619   7.2      4
+  EnhancedHybridSystemDeFi (core)            1.0000   2.7012e-06       0.0000   17.0     1 🏆
+  HybridSystemLLMNN all-domains (core)       1.0000   0.002            0.0002   20.2     2
+  SymbolicEngineWithLLM (tools)              0.9493   2.445            0.2253   60.6     5
+  HybridDiscoverySystem v50_2 (tools)        0.9983   1.7019e+34       1567830994579458874075524374724608.0000 154.9    3
+
+  🎯 Winner: EnhancedHybridSystemDeFi (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  1/1 done  |  this test: 4m 35s  |  avg: 4m 35s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0002   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9983  1567830994579458874075524374724608.0000   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9962     0.0619   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                0.9493     0.2253   0.0000         —       —  100%
+   PureLLM Baseline (core)                         N/A        N/A      N/A       N/A       —  100%  ⚠ 1 non-finite
+
+🏆 Wins  (tiebreaker: faster method wins):
+   EnhancedHybridSystemDeFi (core)             1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260713_093845.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/exp2_checkpoint_biology.json
+
+
+================================================================================
+  Near-infrared spectra to fat content
+  Domain: biology  |  Samples: 200  |  Vars: 124
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=-1.6713  RMSE=24.063104  (41.6s)
+
+  [2/6] ImprovedNN (core) … R²=0.9987  RMSE=0.535683  (69.5s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=6.7095e-04  (44.3s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=1.0000  RMSE=0.082716  (43.4s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 177 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.8dec, vars=124, score=0.52)
+   [SE-TRACE] domain='biology' | eq='Near-infrared spectra to fat content' | vars=['absorbance_1', 'absorbance_2', 'absorbance_3', 'absorbance_4', 'absorbance_5', 'absorbance_6', 'absorbance_7', 'absorbance_8', 'absorbance_9', 'absorbance_10', 'absorbance_11', 'absorbance_12', 'absorbance_13', 'absorbance_14', 'absorbance_15', 'absorbance_16', 'absorbance_17', 'absorbance_18', 'absorbance_19', 'absorbance_20', 'absorbance_21', 'absorbance_22', 'absorbance_23', 'absorbance_24', 'absorbance_25', 'absorbance_26', 'absorbance_27', 'absorbance_28', 'absorbance_29', 'absorbance_30', 'absorbance_31', 'absorbance_32', 'absorbance_33', 'absorbance_34', 'absorbance_35', 'absorbance_36', 'absorbance_37', 'absorbance_38', 'absorbance_39', 'absorbance_40', 'absorbance_41', 'absorbance_42', 'absorbance_43', 'absorbance_44', 'absorbance_45', 'absorbance_46', 'absorbance_47', 'absorbance_48', 'absorbance_49', 'absorbance_50', 'absorbance_51', 'absorbance_52', 'absorbance_53', 'absorbance_54', 'absorbance_55', 'absorbance_56', 'absorbance_57', 'absorbance_58', 'absorbance_59', 'absorbance_60', 'absorbance_61', 'absorbance_62', 'absorbance_63', 'absorbance_64', 'absorbance_65', 'absorbance_66', 'absorbance_67', 'absorbance_68', 'absorbance_69', 'absorbance_70', 'absorbance_71', 'absorbance_72', 'absorbance_73', 'absorbance_74', 'absorbance_75', 'absorbance_76', 'absorbance_77', 'absorbance_78', 'absorbance_79', 'absorbance_80', 'absorbance_81', 'absorbance_82', 'absorbance_83', 'absorbance_84', 'absorbance_85', 'absorbance_86', 'absorbance_87', 'absorbance_88', 'absorbance_89', 'absorbance_90', 'absorbance_91', 'absorbance_92', 'absorbance_93', 'absorbance_94', 'absorbance_95', 'absorbance_96', 'absorbance_97', 'absorbance_98', 'absorbance_99', 'absorbance_100', 'principal_component_1', 'principal_component_2', 'principal_component_3', 'principal_component_4', 'principal_component_5', 'principal_component_6', 'principal_component_7', 'principal_component_8', 'principal_component_9', 'principal_component_10', 'principal_component_11', 'principal_component_12', 'principal_component_13', 'principal_component_14', 'principal_component_15', 'principal_component_16', 'principal_component_17', 'principal_component_18', 'principal_component_19', 'principal_component_20', 'principal_component_21', 'principal_component_22', 'moisture', 'protein'] | n=200 | niter=177 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=True | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(21, 'asin_of_sin((principal_component_3 + principal_component_8) - 7.053434) + (((((moisture * -1.6789292) + (principal_component_12 - principal_component_9)) + 129.65779) * 0.7764164) - asin_of_sin(((absorbance_23 + asin_of_sin(principal_component_13 * 0.8985094)) * 1.1305538) + absorbance_14))', 0.9958), (20, '((((((moisture * -1.6790137) + principal_component_12) - principal_component_9) + 129.65898) * 0.77640706) - asin_of_sin(((absorbance_23 + asin_of_sin(principal_component_13)) * 1.1289649) + absorbance_14)) + asin_of_sin(principal_component_8 + (principal_component_3 - 7.0537667))', 0.9957), (19, 'asin_of_sin((principal_component_8 + principal_component_3) - 7.050178) + ((((moisture * -1.6774018) + ((principal_component_12 - principal_component_9) + 129.67818)) * 0.7710585) - asin_of_sin(principal_component_13 + (absorbance_13 + (absorbance_23 * 1.1127255))))', 0.9954), (18, '(asin_of_sin(principal_component_3 + (principal_component_8 - 0.76660544)) + ((moisture * -1.2945533) + (((principal_component_12 + 118.92638) - principal_component_9) * 0.84135365))) - asin_of_sin(absorbance_17 + (principal_component_13 + absorbance_48))', 0.9952), (15, 'sin(principal_component_8 + principal_component_3) + ((((moisture * -1.690089) + (principal_component_12 + (129.79529 - principal_component_9))) * 0.7824531) - asin_of_sin(principal_component_22 + principal_component_13))', 0.994)] | best_r2=0.9958 | best_expr=asin_of_sin((principal_component_3 + principal_component_8) - 7.053434) + (((((m
+R²=0.9958  RMSE=0.957054  (64.0s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 106 iters (spread=1.8dec, vars=124, depth=2, diff=hard, score=0.52) — eq='505_tecator'
+R²=0.9922  RMSE=6.4418e+57  (143.6s)
+
+  📐 Target scale:  std=14.7  mean|y|=19  range=57.6  (~10^1)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    -1.6713  24.063           1.6344   41.6     -
+  ImprovedNN (core)                          0.9987   0.536            0.0364   69.5     3
+  EnhancedHybridSystemDeFi (core)            1.0000   6.7095e-04       0.0000   44.3     1 🏆
+  HybridSystemLLMNN all-domains (core)       1.0000   0.083            0.0056   43.4     2
+  SymbolicEngineWithLLM (tools)              0.9958   0.957            0.0650   64.0     4
+  HybridDiscoverySystem v50_2 (tools)        0.9922   6.4418e+57       437539030272347050888244734992295193900906068738809266176.0000 143.6    5
+
+  🎯 Winner: EnhancedHybridSystemDeFi (core)  R²=1.0000  NRMSE=0.0000
+
+  [██████████████████████████████]  1/1 done  |  this test: 6m 46s  |  avg: 6m 46s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0000   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         1.0000     0.0056   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9987     0.0364   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                0.9958     0.0650   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.9922  437539030272347050888244734992295193900906068738809266176.0000   0.0000         —       —  100%
+   PureLLM Baseline (core)                     -1.6713     1.6344   0.0000  1 (R²≤0)       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   EnhancedHybridSystemDeFi (core)             1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260713_094541.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+❌  Unknown domain 'mathematics'.  Available: biology, chemistry, economics
+/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/pysr/julia_import.py:13: UserWarning: juliacall module already imported. Make sure that you have set the environment variable `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` to avoid segfaults. Also note that PySR will not be able to configure `PYTHON_JULIACALL_THREADS` or `PYTHON_JULIACALL_OPTLEVEL` for you.
+  warnings.warn(
+⚠️  No .env file found. Trying load_dotenv() without path...
+✅ Loaded ExperimentProtocolAll from: hypatiax/protocols/
+ℹ️  hybrid_all_domains module found — class: HybridSystemAllDomains
+   [MEM] start: RSS=1.07 GB
+
+================================================================================
+                                     TEST 1/1                                   
+  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]  0/1 done  |  elapsed: 0s  |  ETA: calculating…  |  1 left
+================================================================================
+✅  SymbolicEngineWithLLM available
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --method-timeout (CLI default was 900s)
+ℹ️  FEYNMAN_TIMEOUT=1100s applied to --pysr-timeout (CLI default was 1100s)
+ℹ️  JOB_DEADLINE=19800s detected (informational — not currently used as a hard cutoff)
+✅ BenchmarkProtocol loaded  (benchmark=both)
+
+======================================================================
+  NOISELESS MODE  —  noise_level = 0.0
+  R² threshold    :  0.999999
+  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)
+                     TPSR (56.0%)       DSR (32.0%)
+  Output file     :  protocol_core_noiseless_TIMESTAMP.json
+======================================================================
+
+
+================================================================================
+                    PROTOCOL BENCHMARK — CORE SCRIPT METHODS                    
+================================================================================
+Active methods : 6
+  [1] PureLLMBaselineMethod                  ← core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+  [2] ImprovedNNMethod                       ← core/training/baseline_neural_network_defi_improved.py
+  [3] HybridDeFiMethod                       ← core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+  [4] HybridAllDomainsMethod                 ← core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+  [5] SymbolicEngineMethod                   ← tools/symbolic/symbolic_engine.py
+  [6] HybridSystemV50_2Method                ← tools/symbolic/hybrid_system_v50_2.py
+================================================================================
+
+ℹ️  --parsimony 0.01 (paper default 0.01 from repro.yaml)
+ℹ️  --populations 30 (paper default 30 from repro.yaml)
+ℹ️  --use-transcendental-compositions: asin_of_sin / acos_of_cos / atan_of_tan enabled
+
+ℹ️  --resume: no checkpoint found, starting from scratch.
+
+🚀  Running 1 test case(s)…
+
+📋  Checkpoint initialised → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/exp2_checkpoint_economics.json
+
+
+================================================================================
+  California housing price model
+  Domain: economics  |  Samples: 200  |  Vars: 8
+================================================================================
+
+  [1/6] PureLLM Baseline (core) … R²=-3.4095  RMSE=232171.411892  (26.4s)
+
+  [2/6] ImprovedNN (core) … R²=0.9309  RMSE=29053.749112  (5.6s)
+
+  [3/6] EnhancedHybridSystemDeFi (core) … R²=1.0000  RMSE=27.012181  (28.6s)
+
+  [4/6] HybridSystemLLMNN all-domains (core) … R²=0.9959  RMSE=7075.080407  (26.7s)
+
+  [5/6] SymbolicEngineWithLLM (tools) … [ADAPTIVE-SE] 153 iters  pysr_timeout=950s  proc_timeout=1070s  (spread=1.0dec, vars=8, score=0.43)
+   [SE-TRACE] domain='economics' | eq='California housing price model' | vars=['median_income', 'housing_median_age', 'total_rooms', 'total_bedrooms', 'population', 'households', 'latitude', 'longitude'] | n=200 | niter=153 | pysr_to=950 | parsimony_cfg=0.01 | use_tc=True | explog=skipped | eq_file_kwarg='temp_equation_file' | x_scaled=none | ratio_features=skipped | pop_scale=skipped(multithreading,pops=30) | pareto_top5=[(19, '(median_income + (tan(population / 0.82776856) - households)) * ((((((latitude - housing_median_age) + asin_of_sin(total_rooms * 1.5270442)) * 0.049982883) - median_income) / (population / 1.2775137)) - 0.0005653586)', 0.6707), (18, '((median_income + tan(population / 0.82776856)) - households) * (((((latitude - (housing_median_age + asin_of_sin(median_income))) * 0.049982883) - median_income) / (population / 1.2775137)) - 0.0005653586)', 0.6684), (17, '(median_income + (tan(population / 0.82776856) - households)) * ((((0.049982883 * (latitude - housing_median_age)) - median_income) / (population / 1.2534851)) - 0.00056538737)', 0.6667), (16, '((median_income - households) * ((((((latitude - housing_median_age) * 0.049436357) - median_income) + 0.39855167) / (population / 1.207684)) - 0.00050484115)) + 0.29841724', 0.6528), (15, '((median_income - households) * (((1.1800065 / population) * (sin((latitude - housing_median_age) * 0.060842987) - median_income)) + -0.0004655199)) - -0.171217', 0.6526)] | best_r2=0.6707 | best_expr=(median_income + (tan(population / 0.82776856) - households)) * ((((((latitude -
+R²=0.6707  RMSE=63450.432108  (53.5s)
+
+  [6/6] HybridDiscoverySystem v50_2 (tools) … [ADAPTIVE-V50_2] 95 iters (spread=1.0dec, vars=8, depth=2, diff=medium, score=0.43) — eq='537_houses'
+R²=0.6873  RMSE=61829.748691  (151.3s)
+
+  📐 Target scale:  std=1.11e+05  mean|y|=2.04e+05  range=4.54e+05  (~10^5)
+     NRMSE = RMSE / std(y).  <0.10 → excellent  |  >0.30 → poor fit
+
+  Method                                     R²        RMSE             NRMSE    Time     Rank
+  -------------------------------------------------------------------------------------------
+  PureLLM Baseline (core)                    -3.4095  232171.412       2.0999   26.4     -
+  ImprovedNN (core)                          0.9309   29053.749        0.2628   5.6      3
+  EnhancedHybridSystemDeFi (core)            1.0000   27.012           0.0002   28.6     1 🏆
+  HybridSystemLLMNN all-domains (core)       0.9959   7075.080         0.0640   26.7     2
+  SymbolicEngineWithLLM (tools)              0.6707   63450.432        0.5739   53.5     5
+  HybridDiscoverySystem v50_2 (tools)        0.6873   61829.749        0.5592   151.3    4
+
+  🎯 Winner: EnhancedHybridSystemDeFi (core)  R²=1.0000  NRMSE=0.0002
+
+  [██████████████████████████████]  1/1 done  |  this test: 4m 51s  |  avg: 4m 51s/test  |  ETA: 0s  |  0 left
+
+================================================================================
+                                OVERALL SUMMARY                                 
+================================================================================
+
+Total tests: 1
+
+📊 R² / NRMSE summary  (all finite results, n=1):
+   NRMSE = RMSE / std(y) per test.  <0.10 = excellent  |  >0.30 = poor
+   Method                                       Med R²  Med NRMSE   Std R²  Failures  Cache⚠  Success
+   --------------------------------------------------------------------------------------------
+   EnhancedHybridSystemDeFi (core)              1.0000     0.0002   0.0000         —       —  100%
+   HybridSystemLLMNN all-domains (core)         0.9959     0.0640   0.0000         —       —  100%
+   ImprovedNN (core)                            0.9309     0.2628   0.0000         —       —  100%
+   HybridDiscoverySystem v50_2 (tools)          0.6873     0.5592   0.0000         —       —  100%
+   SymbolicEngineWithLLM (tools)                0.6707     0.5739   0.0000         —       —  100%
+   PureLLM Baseline (core)                     -3.4095     2.0999   0.0000  1 (R²≤0)       —  100%
+
+🏆 Wins  (tiebreaker: faster method wins):
+   EnhancedHybridSystemDeFi (core)             1/1  ████████████████████████████████████████
+================================================================================
+
+💾 Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260713_095054.json
+
+📄 Flat results exported → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/benchmark_results.json  (6 records)
+
+📋  Checkpoint retained — all 1 tests complete. Pass --clear-checkpoint to remove.
+
+✅  Done.
+
