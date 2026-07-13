@@ -81,6 +81,15 @@
 #    C3 → ci_pipeline_check.yml   — qualification + completeness gate
 #    C6 → self-dispatch            — next experiment slot
 #
+#  Slot queue (17 entries, index 0-16):
+#    0 exp1 · 1 exp1b · 2 exp1_ablation · 3 exp1_pca · 4 exp1b_pca ·
+#    5 exp2_feynman_pca · 6 exp2_feynman · 7 exp2_feynman_extrap · 8 exp2 ·
+#    9 exp3 · 10 exp3b · 11 suppA · 12 suppB · 13 suppB_sc ·
+#    14 hybrid_all_domains · 15 instability · 16 extrap
+#    NOTE: exp1_pca and exp1b_pca have placeholder SUBDIR/MIN_TASKS entries
+#    — confirm real values before relying on the diagnose/checkpoint gates
+#    for these two slots.
+#
 #  Manual modes (experiment_index suffix):
 #    N    — full pipeline for slot N  (C0 → C1 → C2 → C3)
 #    Na   — analysis only for slot N  (C1 only)
@@ -185,8 +194,11 @@ jobs:
           QUEUE = [
               "exp1",
               "exp1b",
-              "exp2_feynman",
+              "exp1_ablation",
+              "exp1_pca",
+              "exp1b_pca",
               "exp2_feynman_pca",
+              "exp2_feynman",
               "exp2_feynman_extrap",
               "exp2",
               "exp3",
@@ -296,6 +308,9 @@ jobs:
               "exp1":               "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":              "comparison_results/noise-noiseless/15",
               "exp1_ablation":      "ablation/exp1_ablation",
+              # TODO: exp1_pca / exp1b_pca result subdirs not yet known — falls
+              # back to SUBDIR.get(exp_id, exp_id) i.e. "exp1_pca" / "exp1b_pca"
+              # literally, until the real paths are confirmed.
               "exp2_feynman":       "comparison_results/feynman-tests/exp2",
               "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
               "exp2_feynman_extrap":"comparison_results/feynman-tests/exp2_extrap",
@@ -348,6 +363,9 @@ jobs:
               tabs = list(subdir.rglob("*.tex")) + list(subdir.rglob("*_table*")) if subdir.exists() else []
               return figs, tabs
 
+          # NOTE: exp1_ablation, exp1_pca, exp1b_pca have no confirmed minimum
+          # task count yet — they fall back to MIN_TASKS.get(exp_id, 1) until
+          # real values are supplied. Update this dict once known.
           MIN_TASKS = {
               "exp1": 1, "exp1b": 5, "exp2_feynman": 10, "exp2_feynman_pca": 5,
               "exp2_feynman_extrap": 5, "exp2": 5, "exp3": 5, "exp3b": 5,
@@ -949,7 +967,7 @@ jobs:
         run: |
           set -euo pipefail
           NEXT_SLOT=$(( CURRENT_SLOT + 1 ))
-          QUEUE_SIZE=14
+          QUEUE_SIZE=17
           if [[ "${NEXT_SLOT}" -ge "${QUEUE_SIZE}" ]]; then
             echo "All ${QUEUE_SIZE} experiment slots completed — pipeline finished."
             exit 0
