@@ -4224,7 +4224,30 @@ Examples
         "--benchmark",
         choices=["feynman", "srbench", "both"],
         default="feynman",
-        help="Which published SR benchmark to use (default: feynman)",
+        help=(
+            "Which published SR benchmark to use (default: feynman). "
+            "Only meaningful with --protocol benchmark (the default) — it "
+            "selects the sub-benchmark *inside* BenchmarkProtocol and does "
+            "NOT switch protocol classes. It cannot produce the exp2 "
+            "10-domain set (mechanics/quantum/electro/fluid_dynamics/etc.); "
+            "use --protocol all_domains for that."
+        ),
+    )
+    parser.add_argument(
+        "--protocol",
+        choices=["benchmark", "all_domains"],
+        default="benchmark",
+        help=(
+            "Which protocol class to load. 'benchmark' (default) loads "
+            "BenchmarkProtocol (Feynman/SRBench, controlled by --benchmark). "
+            "'all_domains' loads ExperimentProtocolAll from "
+            "hypatiax.core.generation.hybrid_all_domains_llm_nn."
+            "hybrid_system_llm_nn_all_domains — the 30-equation, "
+            "multi-domain protocol exp2 actually needs. There is no "
+            "'all30' choice; the run_all.sh comment referencing "
+            "'--protocol all30' referred to a flag/value that was never "
+            "implemented. Use --protocol all_domains instead."
+        ),
     )
     parser.add_argument(
         "--domain", type=str, default="all_domains",
@@ -4481,50 +4504,101 @@ Examples
     global _METHOD_TIMEOUT_SECS
     _METHOD_TIMEOUT_SECS = args.method_timeout
 
-    # ── Load BenchmarkProtocol ──────────────────────────────────────────────
-    try:
-        from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
-        _noiseless = getattr(args, "noiseless", False)
-        _threshold = getattr(args, "threshold", None)
-        if _threshold is None:
-            _threshold = 0.9999 if _noiseless else 0.995
+    # ── Load protocol ────────────────────────────────────────────────────────
+    # NOTE ON ROOT CAUSE (exp2 "Unknown domain" failures, 7/10 shards):
+    # This script previously *always* instantiated BenchmarkProtocol
+    # regardless of --benchmark/--protocol, because no branch existed to load
+    # anything else. BenchmarkProtocol's domain space (Feynman series +
+    # SRBench PMLB categories) does not contain — and structurally cannot
+    # contain — the exp2 10-domain set (mechanics/quantum/electro/
+    # fluid_dynamics/math/stats/econ/bio/chem/phys), which is defined by
+    # EXP2_DOMAINS / HYBRID_ALL_DOMAINS_IDS and served by ExperimentProtocolAll
+    # instead. A prior fix swapped a nonexistent "--protocol all30" for
+    # "--benchmark both", on the assumption that "both" would route into
+    # ExperimentProtocolAll — it does not; "both" only tells BenchmarkProtocol
+    # to combine its own Feynman+SRBench domains, which is why
+    # get_all_domains() kept surfacing just {biology, chemistry, economics}
+    # and every _DOMAIN_ALIASES lookup for the exp2 names failed downstream.
+    # --protocol all_domains below is the actual fix: it loads
+    # ExperimentProtocolAll, which is why it exists.
+    _noiseless = getattr(args, "noiseless", False)
+    _threshold = getattr(args, "threshold", None)
+    if _threshold is None:
+        _threshold = 0.9999 if _noiseless else 0.995
 
-        protocol = BenchmarkProtocol(
-            benchmark=args.benchmark,
-            num_samples=args.samples,
-            seed=42,
-            feynman_series=args.series,
-            noiseless=_noiseless,
-        )
-        print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
+    if args.protocol == "all_domains":
+        try:
+            from hypatiax.core.generation.hybrid_all_domains_llm_nn.hybrid_system_llm_nn_all_domains import (
+                ExperimentProtocolAll,
+            )
+        except ImportError:
+            print("❌  ExperimentProtocolAll not found.")
+            print("    Expected at: hypatiax/core/generation/hybrid_all_domains_llm_nn/"
+                  "hybrid_system_llm_nn_all_domains.py")
+            sys.exit(1)
+
+        # ExperimentProtocolAll is expected to satisfy the same
+        # get_all_domains()/load_test_data() interface as BenchmarkProtocol
+        # (see module docstring). Its constructor signature has not been
+        # verified against source in this environment — hypatiax.core.* is
+        # not available here — so this call is a best-effort mirror of the
+        # BenchmarkProtocol call below. If ExperimentProtocolAll's __init__
+        # doesn't accept these exact kwargs, adjust here; this is the one
+        # place that needs it.
+        try:
+            protocol = ExperimentProtocolAll(
+                num_samples=args.samples,
+                seed=42,
+                noiseless=_noiseless,
+            )
+        except TypeError as e:
+            print(f"❌  ExperimentProtocolAll(...) constructor mismatch: {e}")
+            print("    Update the kwargs passed to ExperimentProtocolAll in "
+                  "run_protocol_benchmark_core.py to match its actual signature.")
+            sys.exit(1)
+        print("✅ ExperimentProtocolAll loaded  (protocol=all_domains)")
         print()
-        if getattr(args, "extrap", False):
-            print("=" * 70)
-            print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
-            print("=" * 70)
-        elif _noiseless:
-            print("=" * 70)
-            print("  NOISELESS MODE  —  noise_level = 0.0")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
-            print("                     TPSR (56.0%)       DSR (32.0%)")
-            print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
-            print("=" * 70)
-        else:
-            print("=" * 70)
-            print(f"  NOISY MODE  —  noise_level = {_HYPATIAX_NOISE_LEVEL:.4f}  (HYPATIAX_NOISE_LEVEL)")
-            print(f"  R² threshold    :  {_threshold}  (practical)")
-            print("  R² ceiling      :  ~0.9982  (noise floor)")
-            print("  NOT comparable to published noiseless figures.")
-            print("  Use --noiseless --threshold 0.9999 for literature comparison.")
-            print("=" * 70)
-        print()
-    except ImportError:
-        print("❌  experiment_protocol_benchmark_v2.py not found.")
-        print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
-        sys.exit(1)
+    else:
+        # ── Load BenchmarkProtocol ──────────────────────────────────────────
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
+
+            protocol = BenchmarkProtocol(
+                benchmark=args.benchmark,
+                num_samples=args.samples,
+                seed=42,
+                feynman_series=args.series,
+                noiseless=_noiseless,
+            )
+            print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
+            print()
+            if getattr(args, "extrap", False):
+                print("=" * 70)
+                print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
+                print(f"  R² threshold    :  {_threshold}")
+                print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
+                print("=" * 70)
+            elif _noiseless:
+                print("=" * 70)
+                print("  NOISELESS MODE  —  noise_level = 0.0")
+                print(f"  R² threshold    :  {_threshold}")
+                print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
+                print("                     TPSR (56.0%)       DSR (32.0%)")
+                print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
+                print("=" * 70)
+            else:
+                print("=" * 70)
+                print(f"  NOISY MODE  —  noise_level = {_HYPATIAX_NOISE_LEVEL:.4f}  (HYPATIAX_NOISE_LEVEL)")
+                print(f"  R² threshold    :  {_threshold}  (practical)")
+                print("  R² ceiling      :  ~0.9982  (noise floor)")
+                print("  NOT comparable to published noiseless figures.")
+                print("  Use --noiseless --threshold 0.9999 for literature comparison.")
+                print("=" * 70)
+            print()
+        except ImportError:
+            print("❌  experiment_protocol_benchmark_v2.py not found.")
+            print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
+            sys.exit(1)
 
     # ── Build suite ─────────────────────────────────────────────────────────
     # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).
