@@ -1796,11 +1796,21 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _BENCHMARK_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2"
   _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
 
+  # FIX: ensure exp2_extrap exists before this merge subshell touches it —
+  # this block runs standalone (outside the `run exp2_feynman_extrap` step's
+  # own mkdir -p), so on a workflow-dispatch that targets only this step,
+  # or any job where exp2_feynman_extrap hasn't run yet, _EXTRAP_DIR may not
+  # exist yet and `find` fails with "No such file or directory".
+  mkdir -p "${_EXTRAP_DIR}"
+
   if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
     echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
     echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
   else
-    _BENCH_EXT="$(find "${_EXTRAP_DIR}" -name 'benchmark_results_extrap*.json' | head -1)"
+    # FIX: -maxdepth 1 scopes the search; 2>/dev/null + `|| true` keep this
+    # safe under `set -o pipefail` (find|head can SIGPIPE if >1 match exists,
+    # which would otherwise trip -e and kill this subshell).
+    _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
     if [[ -z "${_BENCH_EXT}" ]]; then
       echo "[SKIP] benchmark_results_extrap*.json not found — run exp2_feynman_extrap first."
     else
