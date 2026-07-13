@@ -1097,64 +1097,107 @@ jobs:
               fh.write(f"has_work={'true' if pending else 'false'}\n")
           PYEOF
 
-      # -- FIX TASK 7: domain-list validation for hybrid_all_domains ----------
-      # Reads HYBRID_ALL_DOMAINS_IDS from the Python plan registry (above) and
-      # cross-checks against ExperimentProtocolAll.get_all_domains() at runtime.
-      # The worker exits 1 if the lists diverge, surfacing the mismatch before
-      # the 5.5-hour experiment run starts.
+      # -- FIX TASK 7: domain-list validation for hybrid_all_domains / exp2 ---
+      # Reads the plan-step domain registry (HYBRID_ALL_DOMAINS_IDS / EXP2_DOMAINS,
+      # both defined from the same 10-domain list in the Plan job) and cross-checks
+      # it against what the *runtime* protocol for each exp_id actually resolves.
+      # The worker exits 1 if the lists diverge, surfacing the mismatch before the
+      # multi-hour experiment run starts instead of ~15 min into a doomed shard.
+      #
+      # GENERALIZED (was hybrid_all_domains only): exp2 shards off EXP2_DOMAINS,
+      # the same 10-domain list as HYBRID_ALL_DOMAINS_IDS (see plan step above),
+      # but is driven by a different script/protocol path, so it needs its own
+      # resolution branch below rather than reusing hybrid's module import.
+      #
+      # NOTE: as of this writing, exp2's branch is EXPECTED to fail. run_all.sh
+      # documents that run_comparative_suite_benchmark_v2.py has no --protocol
+      # flag and was switched to `--benchmark both` on the assumption that routes
+      # to ExperimentProtocolAll (10 domains) — but worker logs from exp2 shard 0
+      # show it still resolves to only {biology, chemistry, economics}
+      # (BenchmarkProtocol's domain set), i.e. `--benchmark both` never wires up
+      # ExperimentProtocolAll. That is the real bug and belongs in
+      # run_comparative_suite_benchmark_v2.py, not in this CI check — this check
+      # exists so that bug fails fast in the Plan job (~seconds) instead of
+      # silently during the run (~15 min/shard x 7 broken shards, partly masked
+      # by stale committed outputs from gate 1's "outputs committed" check).
       # FIX TASK 7
-      - name: Validate hybrid_all_domains domain list
-        if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' }}
+      - name: Validate domain-list (hybrid_all_domains / exp2)
+        if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' || needs.plan.outputs.exp_id == 'exp2' }}
         run: |
           python3 - <<'PYEOF'
-          import importlib.util, sys, pathlib, json, os
+          import importlib.util, sys, pathlib, subprocess, os
+
+          EXP_ID = "${{ needs.plan.outputs.exp_id }}"
 
           EXPECTED = {
-              # Exact keys from ExperimentProtocolAll.get_all_domains()
-              # in experiment_protocol_all_30.py (v4.1).
-              # FIX: removed "statistics", "finance", "other" (never existed);
-              #      added "fluid_dynamics" and "mathematics" (present in protocol).
+              # Exact keys ExperimentProtocolAll.get_all_domains() SHOULD return
+              # (experiment_protocol_all_30.py, v4.1). Shared by HYBRID_ALL_DOMAINS_IDS
+              # and EXP2_DOMAINS in the plan step — keep both in sync with this set.
               "mechanics", "thermodynamics", "electromagnetism", "fluid_dynamics",
               "optics", "quantum", "chemistry", "biology", "mathematics", "economics",
           }
 
-          script = pathlib.Path(
-              "hypatiax/core/generation/hybrid_all_domains_llm_nn/"
-              "hybrid_system_llm_nn_all_domains.py"
-          )
-          spec = importlib.util.spec_from_file_location("hybrid_mod", script)
-          mod  = importlib.util.module_from_spec(spec)
-          try:
-              spec.loader.exec_module(mod)
-          except SystemExit:
-              pass  # script may call sys.exit() at module level - tolerate
-
-          actual = getattr(mod, "DOMAINS",
-                   getattr(mod, "ALL_DOMAINS",
-                   getattr(mod, "DOMAIN_KEYS", None)))
-          if actual is None:
-              # Fallback: try importing ExperimentProtocolAll directly
+          def resolve_hybrid():
+              script = pathlib.Path(
+                  "hypatiax/core/generation/hybrid_all_domains_llm_nn/"
+                  "hybrid_system_llm_nn_all_domains.py"
+              )
+              spec = importlib.util.spec_from_file_location("hybrid_mod", script)
+              mod  = importlib.util.module_from_spec(spec)
               try:
+                  spec.loader.exec_module(mod)
+              except SystemExit:
+                  pass  # script may call sys.exit() at module level - tolerate
+
+              actual = getattr(mod, "DOMAINS",
+                       getattr(mod, "ALL_DOMAINS",
+                       getattr(mod, "DOMAIN_KEYS", None)))
+              if actual is None:
                   from hypatiax.core.generation.hybrid_all_domains_llm_nn \
                       .hybrid_system_llm_nn_all_domains import ExperimentProtocolAll
                   _domains = ExperimentProtocolAll().get_all_domains()
-                  # get_all_domains() returns a list, not a dict — iterate directly.
-                  actual = set(_domains.keys() if hasattr(_domains, "keys") else _domains)
-              except Exception as e:
-                  print(f"ERROR: could not resolve domain list from script: {e}")
-                  sys.exit(1)
+                  actual = _domains.keys() if hasattr(_domains, "keys") else _domains
+              return set(str(d) for d in actual)
 
-          actual_set = set(str(d) for d in actual)
+          def resolve_exp2():
+              # exp2 is invoked per-domain via CLI (run_comparative_suite_benchmark_v2.py
+              # --benchmark both --domain <id> --resume ...), so probe the actual
+              # runtime protocol resolution the same way: pass a domain we know is
+              # NOT in the broken 3-domain set and read back the "Available:" list
+              # from the script's own error message, rather than reimplementing its
+              # protocol-selection logic here (which is precisely what's suspected broken).
+              script = "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+              probe = subprocess.run(
+                  ["python3", script, "--benchmark", "both", "--domain", "__ci_probe__"],
+                  capture_output=True, text=True, timeout=120,
+              )
+              out = probe.stdout + probe.stderr
+              marker = "Available:"
+              if marker not in out:
+                  print("ERROR: could not resolve exp2's runtime domain list "
+                        "(script did not emit the expected 'Available:' line).")
+                  print(out[-2000:])
+                  sys.exit(1)
+              tail = out.split(marker, 1)[1].splitlines()[0]
+              return set(d.strip() for d in tail.split(",") if d.strip())
+
+          actual_set = resolve_hybrid() if EXP_ID == "hybrid_all_domains" else resolve_exp2()
           missing  = EXPECTED - actual_set
           extra    = actual_set - EXPECTED
 
           if missing or extra:
-              print("DOMAIN LIST MISMATCH - update HYBRID_ALL_DOMAINS_IDS in the plan step!")
-              if missing: print(f"  In CI registry but NOT in script : {sorted(missing)}")
-              if extra:   print(f"  In script but NOT in CI registry : {sorted(extra)}")
+              registry_name = "HYBRID_ALL_DOMAINS_IDS" if EXP_ID == "hybrid_all_domains" else "EXP2_DOMAINS"
+              print(f"DOMAIN LIST MISMATCH for exp_id='{EXP_ID}' - "
+                    f"runtime protocol does not match {registry_name}!")
+              if missing: print(f"  In CI registry but NOT resolved at runtime : {sorted(missing)}")
+              if extra:   print(f"  Resolved at runtime but NOT in CI registry : {sorted(extra)}")
+              print("  If this is exp2: the script is very likely not routing "
+                    "'--benchmark both' to ExperimentProtocolAll (see run_all.sh "
+                    "comment above the exp2 step) — fix the protocol selection in "
+                    "run_comparative_suite_benchmark_v2.py, don't just edit this list.")
               sys.exit(1)
 
-          print(f"Domain-list validation OK: {sorted(actual_set)}")
+          print(f"Domain-list validation OK for exp_id='{EXP_ID}': {sorted(actual_set)}")
           PYEOF
 
       # -- suppB_sc: smoke-test that run_sample_complexity_benchmark.py accepts
