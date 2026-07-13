@@ -1,0 +1,23 @@
+{
+  "fixc3_step": "exp2_feynman_pca_4060",
+  "description": "Corrected Feynman result \u2014 PCA-directed 40/60 extrapolation split",
+  "split_protocol": "pca_40_60",
+  "extrap_train_frac": 0.6,
+  "extrap_multiplier": 2.0,
+  "n_pass": 71,
+  "n_total": 90,
+  "solve_rate": 0.7888888888888889,
+  "paper_legacy_claim": "9/30 = 0.300 (random_80_20)",
+  "source_files": [
+    "protocol_core_noiseless_pca_20260713_070211.json",
+    "protocol_core_noiseless_pca_20260713_070907.json",
+    "protocol_core_noiseless_pca_20260713_071229.json",
+    "protocol_core_noiseless_pca_20260713_072303.json",
+    "protocol_core_noiseless_pca_20260713_073004.json",
+    "protocol_core_noiseless_pca_20260713_073201.json",
+    "protocol_core_noiseless_pca_20260713_074225.json",
+    "protocol_core_noiseless_pca_20260713_074746.json",
+    "protocol_core_noiseless_pca_20260713_075039.json",
+    "protocol_core_noiseless_pca_20260713_080445.json"
+  ]
+}

@@ -9,7 +9,7 @@
 | Split | Threshold | Solved | Solve Rate |
 |-------|-----------|--------|------------|
 | Random 80/20 (`random_state=42`) | R²≥0.999999 | 0/0 | N/A |
-| PCA 40/60 (FIX-C3 corrected)     | R²≥0.999999 | 0/0 | N/A |
+| PCA 40/60 (FIX-C3 corrected)     | R²≥0.999999 | 71/90 | 0.789 |
 
 *Per-equation breakdown not available — run with full result JSON files to populate this section.*
 
