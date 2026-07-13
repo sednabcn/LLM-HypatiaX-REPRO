@@ -655,9 +655,16 @@ jobs:
           fi
 
           PAIRED="${RESULT_DIR}/ablation_paired.json"
-          # benchmark_results.json (noiseless train r2) lives in exp2, not exp2_extrap.
+          # benchmark_results.json (noiseless train r2) lives in the comparison_results
+          # ROOT, not feynman-tests/exp2 — run_comparative_suite_benchmark_v2.py writes
+          # protocol_core_*.json to --output-dir (_OUTPUT_DIR) but ALWAYS writes
+          # benchmark_results.json to _FLAT_OUTPUT_DIR, which is fixed at module-load
+          # time to comparison_results/ and is intentionally never overridden by
+          # --output-dir (so noise-sweep/sample-complexity multi-run sweeps don't bury
+          # or clobber it). Pointing BENCHMARK_DIR at feynman-tests/exp2 looks one
+          # directory too deep and finds nothing, even though exp2_feynman ran fine.
           # benchmark_results_extrap.json (extrap_r2_far) lives in RESULT_DIR (exp2_extrap).
-          BENCHMARK_DIR="hypatiax/data/results/comparison_results/feynman-tests/exp2"
+          BENCHMARK_DIR="hypatiax/data/results/comparison_results"
 
           python3 .github/scripts/merge_extrap_into_benchmark.py \
             --benchmark-dir        "${BENCHMARK_DIR}" \
