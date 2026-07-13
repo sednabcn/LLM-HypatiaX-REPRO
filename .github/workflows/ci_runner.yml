@@ -552,8 +552,13 @@ jobs:
               "exp1":               1,
               "exp1b":              5,
               "exp1_ablation":      4,
+              # exp1_pca / exp1b_pca intentionally NOT listed here yet — see the
+              # matching gap (and hard-fail) in the `registry` dict below for why.
+              # Once that's resolved, add their confirmed shard counts here too
+              # instead of relying on the table.get(EXP, 1) fallback.
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
+              "exp2_feynman_pca":    1,  # mirrors exp2_feynman (same FEYNMAN_DOMAINS registry, single shard)
               "exp2":               1,
               "exp3":               1,
               "exp3b":              4,
@@ -702,6 +707,24 @@ jobs:
               "exp2_feynman":       FEYNMAN_DOMAINS,
               # exp2_feynman_extrap: same 11-domain split, generates extrap_r2_far for Mann-Whitney
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
+              # exp2_feynman_pca: PCA variant of exp2_feynman — same 11-domain split
+              # (confirmed consistent with ci_pipeline_check.yml's own REGISTRY,
+              # which already assumed FEYNMAN_DOMAINS for this experiment).
+              "exp2_feynman_pca":   FEYNMAN_DOMAINS,
+              # exp1_pca / exp1b_pca: DELIBERATELY NOT REGISTERED YET.
+              # Both appear in this workflow's own workflow_dispatch experiment
+              # choice list, and both already have committed result files in the
+              # repo (hypatiax/data/results/comparison_results/noise-noiseless/
+              # noiseless/defi_pca and .../15_pca) — but neither has a confirmed
+              # task-ID scheme here, so a real dispatch with experiment=exp1_pca
+              # or exp1b_pca will hit the "no task IDs" exit(1) below instead of
+              # silently running with a guessed (possibly wrong) task list.
+              # This means whatever produced the currently-committed exp1_pca /
+              # exp1b_pca results did NOT go through a normal ci_runner.yml
+              # dispatch — confirm the actual task-ID scheme (likely DEFI_TASKS
+              # for exp1_pca, mirroring exp1; and [f"portfolio_seed{s}" for s in
+              # SEEDS] for exp1b_pca, mirroring exp1b — but NOT verified) before
+              # adding real entries here.
               # exp2: shard by ExperimentProtocolAll domain keys (--protocol all30)
               "exp2":              EXP2_DOMAINS,
               "exp3":              [f"{eq}_seed{s}" for eq in NGUYEN12 for s in SEEDS],
@@ -718,7 +741,14 @@ jobs:
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
           if not all_ids:
-              print(f"ERROR: no task IDs for experiment '{EXP}'", file=sys.stderr)
+              if EXP in ("exp1_pca", "exp1b_pca"):
+                  print(f"ERROR: no task IDs for experiment '{EXP}' — this experiment's "
+                        f"task-ID scheme is not yet confirmed in the `registry` dict above "
+                        f"(see the comment there). Either confirm and add a real registry "
+                        f"entry, or dispatch with task_ids_override set explicitly.",
+                        file=sys.stderr)
+              else:
+                  print(f"ERROR: no task IDs for experiment '{EXP}'", file=sys.stderr)
               sys.exit(1)
 
           done = set()

@@ -212,6 +212,7 @@ jobs:
           SUBDIR = {
               "exp1":              "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":             "comparison_results/noise-noiseless/15",
+              "exp1_ablation":     "ablation/exp1_ablation",
               "exp1_pca":          "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":         "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":      "comparison_results/feynman-tests/exp2",
@@ -428,7 +429,8 @@ jobs:
           # When EXPERIMENT is a known single experiment, iterate only that.
           # When EXPERIMENT is "all" or blank, iterate everything in CHECK_REPORT.
           _KNOWN_EXPS = [
-              "exp1", "exp1b", "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
+              "exp1", "exp1b", "exp1_ablation", "exp1_pca", "exp1b_pca",
+              "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
               "exp2", "exp3", "exp3b",
               "suppA", "suppB", "suppB_sc", "hybrid_all_domains", "instability", "extrap",
           ]
@@ -572,6 +574,18 @@ jobs:
               all_ids = REGISTRY.get(exp_id, [])
               total   = len(all_ids)
 
+              if exp_id not in REGISTRY:
+                  # A missing REGISTRY entry makes total=0, which would
+                  # otherwise silently report "0/0 done" as trivially
+                  # complete — masking the fact that we simply don't know
+                  # this experiment's task list yet (this is what let
+                  # exp1_pca crash before it and exp1_ablation is in the
+                  # same state now: real committed data exists but this
+                  # script has no sentinel list to check it against).
+                  print(f"  ::warning:: '{exp_id}' has no REGISTRY task-sentinel entry — "
+                        f"completion cannot be verified for this experiment (reporting "
+                        f"0/0 is NOT a confirmation that it is actually complete).")
+
               if not info["present"]:
                   missing = all_ids
                   done    = 0
@@ -699,6 +713,7 @@ jobs:
           SUBDIR = {
               "exp1":              "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":             "comparison_results/noise-noiseless/15",
+              "exp1_ablation":     "ablation/exp1_ablation",
               "exp1_pca":          "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":         "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":      "comparison_results/feynman-tests/exp2",
@@ -1006,6 +1021,7 @@ jobs:
           SUBDIR = {
               "exp1":               "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":              "comparison_results/noise-noiseless/15",
+              "exp1_ablation":      "ablation/exp1_ablation",
               "exp1_pca":           "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":          "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":       "comparison_results/feynman-tests/exp2",
