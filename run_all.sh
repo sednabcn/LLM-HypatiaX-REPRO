@@ -715,7 +715,7 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
   _ABL_DIR='${RESULTS_DIR}/ablation/exp1_ablation'
   mkdir -p \"\${_ABL_DIR}\"
 
-  PYTHONPATH='${REPO_ROOT}'"${PYTHONPATH:+:${PYTHONPATH}}" \
+  PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \
   RESULTS_DIR=\"\${_ABL_DIR}\" \
   PYSR_POPULATIONS='${PYSR_POPULATIONS}' \
   PYSR_SEED='${PYSR_SEED}' \
@@ -1051,7 +1051,7 @@ run hybrid_all_domains "Hybrid LLM+NN all-domains run -- 10 domains (SS10.9 hybr
   ACTUAL_DOMAINS=\$(python3 - << 'PYEOF'
 import importlib.util, sys, pathlib
 # PATH-1 FIX: GENERATION_DIR = hypatiax/core/generation (matches CI script_path).
-# Previously this comment said "hypatiax/experiments/generation/" — that was wrong.
+# Previously this comment said \"hypatiax/experiments/generation/\" — that was wrong.
 spec = importlib.util.spec_from_file_location(
     'hybrid_mod',
     pathlib.Path('${GENERATION_DIR}/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py')
@@ -1084,7 +1084,7 @@ PYEOF
   echo '[hybrid_all_domains] Domain-list OK: '\"\${ACTUAL_SORTED}\"
   # ── Main experiment — cd to GENERATION_DIR (hypatiax/core/generation) ───────
   # PATH-1 FIX: GENERATION_DIR now correctly points to hypatiax/core/generation/
-  # matching CI script_path. Previous stale comment said "not CORE_DIR" — reversed.
+  # matching CI script_path. Previous stale comment said \"not CORE_DIR\" — reversed.
   cd '${GENERATION_DIR}/hybrid_all_domains_llm_nn'
   # FIX-OUTDIR-1: --output-dir so outputs land in hybrid_llm_nn/all_domains/
   # matching CI RESULT_SUBDIR and validate glob. Previously no --output-dir
@@ -1463,8 +1463,8 @@ def _rows(data):
     if isinstance(data, dict):
         # FIX-C3-SCHEMA: protocol_core_noiseless_pca_*.json (the raw _save()
         # output of run_comparative_suite_benchmark_pca.py) nests real
-        # per-method results under top-level "tests" -> [i] -> "results" ->
-        # {method_name: {..., "r2": ...}}. None of ('results','equation_results',
+        # per-method results under top-level \"tests\" -> [i] -> \"results\" ->
+        # {method_name: {..., \"r2\": ...}}. None of ('results','equation_results',
         # 'data','rows') exist at the TOP level of this shape, so without this
         # branch the generic case below falls through to `yield data`, handing
         # back one useless pseudo-row per file with no r2 field — silently
@@ -1957,7 +1957,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   # CI Move step moves all four patterns; run_all.sh was only moving *nguyen*.json.
   #
   # FEATURE-NSHARDS-SUFFIX (exp3b) — mirrors STEP 10/10b's suppB/suppB_sc
-  # isolation pattern. exp3b runs as EXP_SHARD_TABLE["exp3b"]=4 parallel CI
+  # isolation pattern. exp3b runs as EXP_SHARD_TABLE[\"exp3b\"]=4 parallel CI
   # matrix shards. Previously this move step moved matched files into
   # extrapolation/multi_seed/ with their ORIGINAL names, with no per-shard
   # tag — if two shards ever produced same-named outputs (e.g. a re-run, or
@@ -2108,13 +2108,13 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
   # CI task ID format: noise{NL}__{domain}  e.g. noise0.5__feynman_biology
   # SHARD_IDS / TASK_IDS contain the task IDs for this shard (space-separated).
   # All tasks in one shard share the same noise level (plan groups by NL × domain,
-  # and EXP_SHARD_TABLE["suppB"]=5 guarantees one noise level per shard — see
+  # and EXP_SHARD_TABLE[\"suppB\"]=5 guarantees one noise level per shard — see
   # FIX-suppB-ALL-METHODS comment above and ci_runner.yml's EXP_SHARD_TABLE comment).
   # Extract sigma from the first task ID in this shard.
   # Task format: noise{PCT}__{domain}  e.g. noise0.5__feynman_biology
   # PCT values are percentages of signal std (0.0, 0.5, 1.0, 5.0, 10.0).
   # The script (run_noise_sweep_benchmark.py) always does _ci_sigma = _raw / 100.0
-  # (line ~781). So NOISE_LEVEL must be passed in PERCENT (e.g. "0.5" = 0.5%),
+  # (line ~781). So NOISE_LEVEL must be passed in PERCENT (e.g. \"0.5\" = 0.5%),
   # NOT as a pre-divided fraction. Pass _NL_PCT directly — do NOT divide by 100 here.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)
@@ -2148,7 +2148,7 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
   # different shards would collide/overwrite on the SAME suffix.
   #
   # Fixed to use SHARD_INDEX instead (the per-shard 0-based index from
-  # ci_runner.yml's matrix: "shard": j for j in range(N_SHARDS) — see that
+  # ci_runner.yml's matrix: \"shard\": j for j in range(N_SHARDS) — see that
   # file's plan job). +1 converts to the 1-based numbering requested
   # (shard 0 -> _nshards01, shard 1 -> _nshards02, ... shard 4 -> _nshards05
   # for suppB's 5-shard run), so every shard's output is independently
