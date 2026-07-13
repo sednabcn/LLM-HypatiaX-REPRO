@@ -1791,7 +1791,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
 # Output: exp2_extrap/ablation_paired.json  (same path ci_analysis.yml writes).
 (
   set -euo pipefail
-  _SCRIPT_MERGE="${REPO_ROOT}/scripts/merge_extrap_into_benchmark.py"
+  _SCRIPT_MERGE="${REPO_ROOT}/.github/scripts/merge_extrap_into_benchmark.py"
   _EXTRAP_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
   _BENCHMARK_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2"
   _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
