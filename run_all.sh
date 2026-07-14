@@ -1891,28 +1891,28 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
 # FIX: mkdir -p ensures results/extrapolation exists when running standalone.
 run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   # FIX-exp3-1: cd REPO_ROOT and invoke by full path (doubled-path fix).
-  cd '"'"'${REPO_ROOT}'"'"'
-  mkdir -p '"'"'${RESULTS_DIR}/extrapolation'"'"'
+  cd '"${REPO_ROOT}"'
+  mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "=== exp3 seed 1/1: seed=42 | equations: N1-N12 (12 total) ==="
   RESULTS_DIR='${RESULTS_DIR}' \
-    python3 '"'"'${EXPERIMENTS_DIR}/exp3_nguyen12_hybrid50v_02.py'"'"' \
+    python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_hybrid50v_02.py \
     --seed 42 \
-    2>&1 | tee '"'"'${RESULTS_DIR}'"'"'/exp3_run.log \
+    2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || echo "WARNING: seed=42 exited non-zero — continuing"
   # FIX-4: CI RESULT_SUBDIR=extrapolation — move outputs to extrapolation/,
   # not to ${RESULTS_DIR}/ root.
   # FIX-OUTDIR-4: add CI-matching globs (full_run_*, report_hybrid_*, hybrid_defi_*)
   # CI Move step exp3 moves all four patterns; run_all.sh only moved *nguyen*.json.
-  find '"'"'${RESULTS_DIR}'"'"' -maxdepth 1 \
+  find '"${RESULTS_DIR}"' -maxdepth 1 \
     \( -name '"'"'*nguyen*seed42*.json'"'"' -o -name '"'"'*nguyen12*42*.json'"'"' \
        -o -name '"'"'full_run_*seed42*.json'"'"' -o -name '"'"'report_hybrid_*seed42*.json'"'"' \
        -o -name '"'"'hybrid_defi_*seed42*.json'"'"' \) \
-    -exec mv -v {} '"'"'${RESULTS_DIR}/extrapolation/'"'"' \; 2>/dev/null || true
-  find '"'"'${RESULTS_DIR}'"'"' -maxdepth 1 -name '"'"'experiment_registry.json'"'"' \
-    -exec cp -v {} '"'"'${RESULTS_DIR}/extrapolation/'"'"' \; 2>/dev/null || true
+    -exec mv -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
+  find '"${RESULTS_DIR}"' -maxdepth 1 -name '"'"'experiment_registry.json'"'"' \
+    -exec cp -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
   # -- Partial results summary after seed=42 ----------------------------------
   echo "--- exp3 partial results after seed=42 (1/1) ---"
-  RESULT_DIR='"'"'${RESULTS_DIR}/extrapolation'"'"' python3 - <<'"'"'PYEOF'"'"'
+  RESULT_DIR='"${RESULTS_DIR}"'/extrapolation python3 - <<'"'"'PYEOF'"'"'
 import glob, json, os
 result_dir = os.environ.get("RESULT_DIR", "")
 run_files = (sorted(glob.glob(f"{result_dir}/**/full_run_*seed42*.json", recursive=True)) +
