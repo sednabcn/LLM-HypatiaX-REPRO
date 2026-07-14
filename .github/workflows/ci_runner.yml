@@ -725,7 +725,7 @@ jobs:
               # for exp1_pca, mirroring exp1; and [f"portfolio_seed{s}" for s in
               # SEEDS] for exp1b_pca, mirroring exp1b — but NOT verified) before
               # adding real entries here.
-              # exp2: shard by ExperimentProtocolAll domain keys (--protocol all30)
+              # exp2: shard by ExperimentProtocolAll domain keys (--protocol all_domains)
               "exp2":              EXP2_DOMAINS,
               "exp3":              [f"{eq}_seed{s}" for eq in NGUYEN12 for s in SEEDS],
               "exp3b":             [f"{eq}_seed{s}" for s in SEEDS for eq in NGUYEN12],
@@ -1139,17 +1139,23 @@ jobs:
       # but is driven by a different script/protocol path, so it needs its own
       # resolution branch below rather than reusing hybrid's module import.
       #
-      # NOTE: as of this writing, exp2's branch is EXPECTED to fail. run_all.sh
-      # documents that run_comparative_suite_benchmark_v2.py has no --protocol
-      # flag and was switched to `--benchmark both` on the assumption that routes
-      # to ExperimentProtocolAll (10 domains) — but worker logs from exp2 shard 0
-      # show it still resolves to only {biology, chemistry, economics}
-      # (BenchmarkProtocol's domain set), i.e. `--benchmark both` never wires up
-      # ExperimentProtocolAll. That is the real bug and belongs in
-      # run_comparative_suite_benchmark_v2.py, not in this CI check — this check
-      # exists so that bug fails fast in the Plan job (~seconds) instead of
-      # silently during the run (~15 min/shard x 7 broken shards, partly masked
-      # by stale committed outputs from gate 1's "outputs committed" check).
+      # NOTE: this used to be EXPECTED to fail. The root cause was NOT in
+      # run_comparative_suite_benchmark_v2.py — that script already had a
+      # correct, working --protocol all_domains branch that properly loads
+      # ExperimentProtocolAll (see its own "NOTE ON ROOT CAUSE" comment above
+      # that branch). The bug was in the CALLERS: both run_all.sh's exp2 step
+      # and this check's own resolve_exp2() probe were invoking the script
+      # with `--benchmark both`, on the mistaken assumption that "both" routes
+      # to ExperimentProtocolAll. It doesn't — --benchmark only selects
+      # BenchmarkProtocol's Feynman/SRBench sub-benchmark and is ignored
+      # unless --protocol benchmark (the default) is active, so the runtime
+      # domain set was BenchmarkProtocol's own (Feynman + SRBench raw domain
+      # keys), never ExperimentProtocolAll's canonical 10. FIX-EXP2-PROTOCOL
+      # switched both call sites to --protocol all_domains. This check exists
+      # so any future regression of that routing fails fast in the Plan job
+      # (~seconds) instead of silently during the run (~15 min/shard x 7
+      # broken shards, partly masked by stale committed outputs from gate 1's
+      # "outputs committed" check).
       # FIX TASK 7
       - name: Validate domain-list (hybrid_all_domains / exp2)
         if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' || needs.plan.outputs.exp_id == 'exp2' }}
@@ -1191,14 +1197,24 @@ jobs:
 
           def resolve_exp2():
               # exp2 is invoked per-domain via CLI (run_comparative_suite_benchmark_v2.py
-              # --benchmark both --domain <id> --resume ...), so probe the actual
+              # --protocol all_domains --domain <id> --resume ...), so probe the actual
               # runtime protocol resolution the same way: pass a domain we know is
               # NOT in the broken 3-domain set and read back the "Available:" list
               # from the script's own error message, rather than reimplementing its
               # protocol-selection logic here (which is precisely what's suspected broken).
+              #
+              # FIX-EXP2-PROTOCOL: previously probed with --benchmark both, which
+              # (per run_comparative_suite_benchmark_v2.py's own argparse help text
+              # and protocol-selection code) never routes to ExperimentProtocolAll —
+              # --benchmark only selects BenchmarkProtocol's Feynman/SRBench
+              # sub-benchmark and is ignored unless --protocol benchmark (the
+              # default) is active. That's exactly the mismatch this check was
+              # catching. run_all.sh's exp2 step now passes --protocol all_domains;
+              # the probe must match it or this check will keep failing (or worse,
+              # silently validate the wrong call) independently of that fix.
               script = "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
               probe = subprocess.run(
-                  ["python3", script, "--benchmark", "both", "--domain", "__ci_probe__"],
+                  ["python3", script, "--protocol", "all_domains", "--domain", "__ci_probe__"],
                   capture_output=True, text=True, timeout=120,
               )
               out = probe.stdout + probe.stderr
@@ -1221,10 +1237,15 @@ jobs:
                     f"runtime protocol does not match {registry_name}!")
               if missing: print(f"  In CI registry but NOT resolved at runtime : {sorted(missing)}")
               if extra:   print(f"  Resolved at runtime but NOT in CI registry : {sorted(extra)}")
-              print("  If this is exp2: the script is very likely not routing "
-                    "'--benchmark both' to ExperimentProtocolAll (see run_all.sh "
-                    "comment above the exp2 step) — fix the protocol selection in "
-                    "run_comparative_suite_benchmark_v2.py, don't just edit this list.")
+              if EXP_ID == "exp2":
+                  print("  This probe now calls --protocol all_domains (the real switch to "
+                        "ExperimentProtocolAll — see run_comparative_suite_benchmark_v2.py's "
+                        "own 'NOTE ON ROOT CAUSE' comment above its protocol-loading branch, "
+                        "and the matching fix in run_all.sh's exp2 step). If you're seeing "
+                        "this failure now, --benchmark both is not the cause anymore — check "
+                        "whether ExperimentProtocolAll.get_all_domains() itself changed, or "
+                        "whether --protocol all_domains regressed back to loading "
+                        "BenchmarkProtocol, before editing EXPECTED above.")
               sys.exit(1)
 
           print(f"Domain-list validation OK for exp_id='{EXP_ID}': {sorted(actual_set)}")

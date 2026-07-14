@@ -1830,10 +1830,25 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
 )
 
 
-# FIX: --protocol all30 does not exist in run_comparative_suite_benchmark_v2.py
-#      argparse — it caused SystemExit(2) on every worker (confirmed in CI BUG 2 fix).
-#      Replaced with --benchmark both which runs both Feynman + SRBench protocols
-#      (ExperimentProtocolAll, 30 multi-domain equations, Tab 19).
+# FIX-EXP2-PROTOCOL: --benchmark both never routed to ExperimentProtocolAll —
+#      confirmed by reading run_comparative_suite_benchmark_v2.py's own argparse
+#      help text and protocol-selection code directly. --benchmark only ever
+#      selects BenchmarkProtocol's Feynman/SRBench sub-benchmark and is ignored
+#      unless --protocol benchmark (the default) is active; it never switches
+#      protocol classes. The prior "FIX: --protocol all30 does not exist ...
+#      replaced with --benchmark both" fix (below, kept for history) was itself
+#      based on a false assumption — it silently ran BenchmarkProtocol's
+#      Feynman+SRBench domains (21 raw, unmapped domain keys: feynman_biology,
+#      feynman_chemistry, ..., agriculture, energy, ..., synthetic) instead of
+#      ExperimentProtocolAll's canonical 10-domain set, which is what
+#      EXP2_DOMAINS below actually names. --protocol all_domains is the real,
+#      already-implemented switch (see that script's own "NOTE ON ROOT CAUSE"
+#      comment above its protocol-loading branch) — use it instead.
+# ORIGINAL (now-incorrect) note, kept for history:
+#   --protocol all30 does not exist in run_comparative_suite_benchmark_v2.py
+#   argparse — it caused SystemExit(2) on every worker (confirmed in CI BUG 2 fix).
+#   Replaced with --benchmark both which runs both Feynman + SRBench protocols
+#   (ExperimentProtocolAll, 30 multi-domain equations, Tab 19).
 # FIX: mkdir -p ensures tee target directory exists when this step runs
 #      standalone (--step exp2) without a prior env_check.
 # All 6 methods active; METHOD_TIMEOUT (900s) gives methods 5+6 (SymbolicEngine, HybridV50_2)
@@ -1854,7 +1869,7 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
     PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
     JOB_DEADLINE=${JOB_DEADLINE} \
       python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \
-        --benchmark both \
+        --protocol all_domains \
         --domain \"\${DOMAIN_ID}\" \
         --samples ${FEYNMAN_SAMPLES} \
         --pysr-timeout ${FEYNMAN_TIMEOUT} \
