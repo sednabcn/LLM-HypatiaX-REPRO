@@ -1745,6 +1745,41 @@ jobs:
             fi
           fi
 
+          # FIX-EXP2-FLATFILE: run_comparative_suite_benchmark_v2.py always writes
+          # benchmark_results.json to _FLAT_OUTPUT_DIR, a fixed path one level below
+          # OUT_BASE root (${RESULTS_DIR}/comparison_results/benchmark_results.json),
+          # deliberately never nested under --output-dir so concurrent noise-sweep /
+          # sample-complexity runs can't bury or clobber it (see run_comparative_suite_
+          # benchmark_v2.py's _FLAT_OUTPUT_DIR / _checkpoint_path()). The root scan
+          # above is "maxdepth 1" against OUT_BASE itself and never descends into
+          # comparison_results/, so this file was previously left stranded one level
+          # too deep for that scan to find it — never copied into DEST, never staged
+          # by "git add -f ${TARGET}" below, and therefore never committed. It only
+          # ever existed on the runner that produced it and was lost when that runner
+          # was torn down, leaving downstream consumers (merge_extrap_into_benchmark.py
+          # via exp2_feynman_extrap, which requires benchmark_results.json under
+          # --benchmark-dir) with nothing to find on a later, separate job's fresh
+          # checkout. "Verify exp2_feynman output files exist" didn't catch this
+          # because its check is an OR against protocol_core_*.json, which IS present.
+          #
+          # Fix: explicitly copy (not move — other experiments read the same flat
+          # file) benchmark_results.json into DEST if present, so the existing
+          # commit step picks it up like any other exp2_feynman output.
+          if [[ "${EXP:-}" == "exp2_feynman" ]]; then
+            FLAT_BENCH="${RESULTS_DIR}/comparison_results/benchmark_results.json"
+            if [[ -f "${FLAT_BENCH}" ]]; then
+              dest_f="${DEST}/benchmark_results.json"
+              if [[ -e "${dest_f}" ]] && git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
+                echo "  SKIP: benchmark_results.json is git-tracked in dest — committed prior result, skipping."
+              else
+                cp -v "${FLAT_BENCH}" "${dest_f}"
+                echo "Store results: benchmark_results.json rescued from flat ${RESULTS_DIR}/comparison_results/ → ${DEST}"
+              fi
+            else
+              echo "::warning::Store results: benchmark_results.json not found at ${FLAT_BENCH} for exp2_feynman — merge_extrap_into_benchmark.py will fail to find it later."
+            fi
+          fi
+
           find "${DEST}" -type f | sort || true
 
       # -- Verify exp1 output files exist before upload -------------------------
