@@ -315,6 +315,51 @@ def run(seed: int = 42):
         with open(_out_path) as _f:
             return json.load(_f)
 
+    # [FIX-CHECKPOINT] The old version of this script only ever wrote
+    # exp3_nguyen12_seed{seed}.json ONCE, after the full 12-equation loop
+    # finished (2 PySR fits/equation x up to METHOD_TIMEOUT=1100s each =
+    # worst case ~440 min). That exceeds the CI worker's 330-min job
+    # timeout, so if the runner is SIGKILLed mid-loop, NOTHING is ever
+    # written -- not even the equations that had already finished --
+    # because the write only happens after the loop. This is what produced
+    # the "No exp3_nguyen12_seed*.json files found" failure with zero
+    # output files on disk despite the job apparently running for hours.
+    #
+    # Fix: (1) write a checkpoint after every equation so completed work is
+    # never lost, and (2) honour JOB_DEADLINE (already exported by
+    # run_all.sh/CI but previously never read by this script) to stop
+    # gracefully with a partial-but-valid JSON instead of being killed
+    # mid-write.
+    _start_time    = time.time()
+    _job_deadline  = int(os.environ.get("JOB_DEADLINE", 0)) or None  # seconds; 0/unset = no cap
+    _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_partial.json"
+
+    def _save(results_hypatia, results_pysr, n_total, complete):
+        h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= 0.9999)
+        p_recovered = sum(1 for r in results_pysr    if r["evaluation"]["r2"] >= 0.9999)
+        payload = {
+            "config": {
+                "name": "nguyen12_exp3", "seed": seed, "n_tasks": n_total,
+                "niterations": _niter, "populations": _pops,
+                "timeout": _timeout, "use_llm": USE_LLM,
+            },
+            "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
+            "summary": {
+                "h_recovered": h_recovered, "p_recovered": p_recovered,
+                "n_total": n_total,
+                "h_rate": h_recovered / n_total if n_total else 0.0,
+                "p_rate": p_recovered / n_total if n_total else 0.0,
+                "n_completed": len(results_hypatia),
+                "complete": complete,
+            },
+        }
+        _target = _out_path if complete else _CKPT_PATH
+        _tmp = _target.with_suffix(".json.tmp")
+        with open(_tmp, "w") as _f:
+            json.dump(payload, _f, indent=2, default=str)
+        os.replace(_tmp, _target)  # atomic — never leaves a truncated file if killed mid-write
+        return payload
+
     # ── Config from env vars (smoke-test / paper-quality modes) ──────────
     _n_tasks        = int(os.environ.get("N_NGUYEN_TASKS", 12))
     _niter          = int(os.environ.get("N_ITERATIONS",   1000))
