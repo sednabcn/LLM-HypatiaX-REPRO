@@ -1978,7 +1978,24 @@ jobs:
             echo "::error::${EXP} produced NO output files in '${TARGET}'."
             exit 1
           fi
-          echo "  OK ${EXP} output files present."
+
+          # FIX-SEED-CHECK: the generic *.json count above is also satisfied
+          # by files that exist regardless of whether exp3/exp3b actually
+          # ran (e.g. _checkpoint_shard*.json, fixc3_baseline.json), so a
+          # completely failed experiment script (e.g. a missing dependency
+          # causing an ImportError before any result is written) still
+          # passed this check. exp3/exp3b's real output is
+          # exp3_nguyen12_seed*.json — require it explicitly so a failed
+          # run is caught here instead of three jobs downstream in
+          # ci_analysis.yml's symbolic equivalence check.
+          SEED_COUNT=$(find "${TARGET}" -maxdepth 1 -name "exp3_nguyen12_seed*.json" 2>/dev/null | wc -l)
+          echo "  Seed-file count (exp3_nguyen12_seed*.json): ${SEED_COUNT}"
+          if [[ "${SEED_COUNT}" -eq 0 ]]; then
+            echo "::error::${EXP} produced no exp3_nguyen12_seed*.json files in '${TARGET}' — the experiment script likely failed (check the 'Run experiment tasks' log for a traceback) even though other JSON files (checkpoint/baseline) are present."
+            exit 1
+          fi
+
+          echo "  OK ${EXP} output files present (${SEED_COUNT} seed file(s))."
 
       - name: Verify suppA output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
@@ -2579,6 +2596,22 @@ jobs:
             exit 1
           else
             echo "  OK ${TRACKED} file(s) committed and visible in repo under ${TARGET}."
+          fi
+
+          # FIX-SEED-CHECK: mirrors the same fix in "Verify exp3/exp3b output
+          # files exist" — TRACKED above counts any *.json under RESULT_SUBDIR,
+          # which is satisfied by unrelated files (_checkpoint_shard*.json,
+          # fixc3_baseline.json) even when exp3/exp3b's own output was never
+          # generated. Without this, a fully failed exp3/exp3b run reports
+          # "OK" here too, and the failure only surfaces three jobs downstream
+          # in ci_analysis.yml's symbolic equivalence check.
+          if [[ "${EXP}" == "exp3" || "${EXP}" == "exp3b" ]]; then
+            SEED_TRACKED=$(git ls-files --full-name "${REL_TARGET}" 2>/dev/null | grep -c 'exp3_nguyen12_seed.*\.json$' || true)
+            echo "  exp3/exp3b seed files committed: ${SEED_TRACKED}"
+            if [[ "${SEED_TRACKED}" -eq 0 ]]; then
+              echo "::error::shard ${SHARD} (${EXP}): no exp3_nguyen12_seed*.json files are git-tracked under '${TARGET}' — the experiment likely failed to produce results. Check the 'Run experiment tasks' and 'Verify exp3/exp3b output files exist' logs for the underlying error."
+              exit 1
+            fi
           fi
 
 
