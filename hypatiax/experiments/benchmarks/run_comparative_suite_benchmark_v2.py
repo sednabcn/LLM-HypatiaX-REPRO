@@ -4537,24 +4537,20 @@ Examples
                   "hybrid_system_llm_nn_all_domains.py")
             sys.exit(1)
 
-        # ExperimentProtocolAll is expected to satisfy the same
-        # get_all_domains()/load_test_data() interface as BenchmarkProtocol
-        # (see module docstring). Its constructor signature has not been
-        # verified against source in this environment — hypatiax.core.* is
-        # not available here — so this call is a best-effort mirror of the
-        # BenchmarkProtocol call below. If ExperimentProtocolAll's __init__
-        # doesn't accept these exact kwargs, adjust here; this is the one
-        # place that needs it.
+        # ExperimentProtocolAll is pure @staticmethods with no __init__
+        # override (confirmed against source), so it only accepts the
+        # default no-arg constructor. num_samples is passed per-call to
+        # load_test_data() below (see protocol.load_test_data(domain,
+        # num_samples=...) at the call sites), and seed/noiseless are not
+        # consumed by this protocol's interface at all — get_all_domains()
+        # takes nothing and load_test_data() only takes num_samples — so
+        # nothing is lost by dropping them here.
         try:
-            protocol = ExperimentProtocolAll(
-                num_samples=args.samples,
-                seed=42,
-                noiseless=_noiseless,
-            )
+            protocol = ExperimentProtocolAll()
         except TypeError as e:
             print(f"❌  ExperimentProtocolAll(...) constructor mismatch: {e}")
-            print("    Update the kwargs passed to ExperimentProtocolAll in "
-                  "run_protocol_benchmark_core.py to match its actual signature.")
+            print("    ExperimentProtocolAll takes no arguments; check for "
+                  "local modifications to its __init__.")
             sys.exit(1)
         print("✅ ExperimentProtocolAll loaded  (protocol=all_domains)")
         print()
