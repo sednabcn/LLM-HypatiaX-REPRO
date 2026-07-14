@@ -1,0 +1,5 @@
+::error::benchmark_results.json not found in /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2
+merge_extrap_into_benchmark.py
+  benchmark-dir        : /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2
+  extrap-benchmark-dir : /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap
+  output               : /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/ablation_paired.json
