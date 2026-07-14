@@ -1,0 +1,20 @@
+{
+  "completed": [
+    "biology",
+    "chemistry",
+    "electromagnetism",
+    "mechanics",
+    "optics",
+    "quantum",
+    "thermodynamics"
+  ],
+  "run_id_map": {
+    "biology": "exp2-7",
+    "chemistry": "exp2-6",
+    "electromagnetism": "exp2-2",
+    "mechanics": "exp2-0",
+    "optics": "exp2-4",
+    "quantum": "exp2-5",
+    "thermodynamics": "exp2-1"
+  }
+}
