@@ -1314,7 +1314,20 @@ jobs:
           echo "=== Shard ${SHARD_INDEX} | Experiment: ${EXP} ==="
           cat /tmp/pending_ids.txt
 
-          TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+          if [[ "${EXP}" == "exp3" || "${EXP}" == "exp3b" ]]; then
+            # FIX-EXP3-SEED-SUFFIX: registry IDs carry a "_seed<N>" suffix for
+            # checkpoint/shard bookkeeping (e.g. "N1_seed42"), but
+            # exp3_nguyen12_hybrid50v_02.py matches task IDs against bare
+            # meta['nguyen_id'] values ("N1".."N12") — seed is supplied
+            # separately via EXPERIMENT_SEED/SEED. Without stripping the
+            # suffix here, TASK_IDS/DOMAIN_FILTER never match any nguyen_id,
+            # the script silently processes 0/12 tasks and exits 0, and the
+            # failure only surfaces several steps later when no
+            # exp3_nguyen12_seed*.json files are found to commit.
+            TASK_IDS="$(cat /tmp/pending_ids.txt | sed -E 's/_seed[0-9]+$//' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+          else
+            TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+          fi
           echo "TASK_IDS=${TASK_IDS}"
 
           # FIX-INSTABILITY-PREFLIGHT: run_instability_suite.py reads its K-run
