@@ -2004,9 +2004,23 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
 # Its logic runs unconditionally after exp3b completes.
 # Mirrors the "Check symbolic equivalence (exp3/exp3b)" step in ci_analysis.yml.
 (
-  set -euo pipefail
+  # FIX-EXP3SYM-DIR-MISMATCH: previously _SEED_DIR was hardcoded to
+  # extrapolation/multi_seed (exp3b's own RESULT_SUBDIR). The _SEED_FILES
+  # discovery below has always searched the broader extrapolation/ tree
+  # (maxdepth 2), correctly matching exp3's seed42 file (which lives directly
+  # in extrapolation/) as well as exp3b's files (in extrapolation/multi_seed/).
+  # So a `--step exp3` run (exp3b's `run` call is a no-op under ONLY_STEP,
+  # meaning extrapolation/multi_seed/ is never even created) would find
+  # exp3's file in the broader search, skip the "no files" SKIP branch, then
+  # hand the checker a --results-dir that doesn't contain it — 0 files found,
+  # hard failure. check_symbolic_equivalence.py's own glob checks
+  # results_dir/*.json AND results_dir/*/*.json, so pointing it at
+  # extrapolation/ (one level up) covers exp3's flat file and exp3b's
+  # multi_seed/ subfolder in a single pass, matching the discovery search
+  # exactly regardless of which of exp3/exp3b (or both) has actually run.
+  set -uo pipefail
   _SCRIPT="${REPO_ROOT}/.github/scripts/check_symbolic_equivalence.py"
-  _SEED_DIR="${RESULTS_DIR}/extrapolation/multi_seed"
+  _SEED_DIR="${RESULTS_DIR}/extrapolation"
   _REPORT="${_SEED_DIR}/symbolic_equivalence_report.csv"
   _SUMMARY="${_SEED_DIR}/symbolic_equivalence_summary.txt"
   _SEED_FILES=$(find "${RESULTS_DIR}/extrapolation" -maxdepth 2 \
@@ -2019,10 +2033,15 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   else
     echo "[exp3_sym] Running check_symbolic_equivalence.py ..."
     mkdir -p "${_SEED_DIR}"
+    # FIX-EXP3SYM-NONFATAL: this is a best-effort report (mirrors a separate,
+    # analysis-only step in ci_analysis.yml) — it must never fail an
+    # otherwise-successful exp3/exp3b run. Explicitly continue past a
+    # non-zero exit instead of relying on `set -e` to abort the block.
     python3 "${_SCRIPT}" \
       --results-dir "${_SEED_DIR}" \
       --output-dir  "${_SEED_DIR}" \
-      2>&1 | tee "${_SEED_DIR}/symbolic_equivalence_run.log"
+      2>&1 | tee "${_SEED_DIR}/symbolic_equivalence_run.log" \
+    || echo "WARNING: check_symbolic_equivalence.py exited non-zero — continuing (non-fatal reporting step)"
     if [[ -f "${_REPORT}" ]]; then
       _NR=$(wc -l < "${_REPORT}" || echo "?")
       echo "[exp3_sym] symbolic_equivalence_report.csv: ${_NR} line(s) → ${_REPORT}"
@@ -2030,7 +2049,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       echo "[WARN] symbolic_equivalence_report.csv was not produced — check script output above."
     fi
   fi
-)
+) || echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing (non-fatal reporting step)"
 
 # ── STEP 9: suppA ─────────────────────────────────────────────────────────────
 # FIX-suppA-1: cd to REPO_ROOT (not EXPERIMENTS_DIR) so all repo-relative paths
