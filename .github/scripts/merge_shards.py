@@ -390,6 +390,101 @@ def _normalise_protocol_record(test: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ============================================================
+# HYBRID-NGUYEN HELPERS (Shape H) — exp3 / exp3b
+# ============================================================
+#
+# Shape H is produced by exp3_nguyen12_hybrid50v_02.py (exp3's single-seed
+# run and exp3b's 4-seed runs both use this same writer):
+#
+#   {"config": {...}, "summary": {...},
+#    "results": {
+#        "hypatiax": [{"system": "hypatiax",
+#                       "metadata": {"nguyen_id": "N1", "ground_truth": ...,
+#                                    "formula_hint": ...},
+#                       "expression": "...", "evaluation": {"r2": ...},
+#                       "elapsed": ...}, ...],
+#        "pysr":     [{"system": "pysr", "metadata": {...}, "expression": ...,
+#                       "evaluation": {"r2": ...}, "elapsed": ...}, ...]
+#    }}
+#
+# This shape defeats the generic extract_rows()/normalise_row() path for two
+# independent reasons, both confirmed against the writer script:
+#   1. The only per-record task identity is meta["nguyen_id"], nested inside
+#      an item's "metadata" key — but "metadata" is itself a META_KEYS entry,
+#      so walk() never recurses into it in the first place.
+#   2. Even where it did recurse, canonical_task_id() doesn't check
+#      "nguyen_id" as a candidate field, and there is no "hypatia"/"nn"
+#      sub-dict on each record for normalise_row() to pick up (records use
+#      "expression"/"evaluation"/"elapsed" instead) — so every candidate
+#      record normalises to None and is dropped, which is exactly the
+#      "ROWS EXTRACTED: 0" seen even for files containing real results.
+#
+# "pysr" here is a PySR-only baseline, not the neural-network baseline other
+# experiments compare against — it is deliberately kept in its own "pysr"
+# field rather than written into "nn", which would mislabel it. Rows are
+# matched by nguyen_id (not list position), so a partial failure on one
+# system never misaligns against the other.
+
+def _is_hybrid_nguyen_file(raw: Any) -> bool:
+    """Return True if `raw` is a Shape H (exp3/exp3b) results file."""
+    if not isinstance(raw, dict):
+        return False
+    results = raw.get("results")
+    if not isinstance(results, dict):
+        return False
+    for key in ("hypatiax", "pysr"):
+        items = results.get(key)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if (isinstance(item, dict)
+                    and isinstance(item.get("metadata"), dict)
+                    and "nguyen_id" in item["metadata"]):
+                return True
+    return False
+
+
+def _normalise_hybrid_nguyen_rows(raw: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Normalise a Shape H file into one canonical row per nguyen_id."""
+    results = raw.get("results") or {}
+    by_id: Dict[str, Dict[str, Any]] = {}
+
+    def ingest(system_key: str, out_field: str) -> None:
+        for item in results.get(system_key) or []:
+            if not isinstance(item, dict):
+                continue
+            meta = item.get("metadata") or {}
+            nid = meta.get("nguyen_id")
+            if not nid:
+                continue
+            row = by_id.setdefault(nid, {
+                "task_id": nid,
+                "name":    nid,
+                "domain":  "nguyen12",
+            })
+            evaluation = item.get("evaluation") or {}
+            row[out_field] = {
+                "extrap_r2":      evaluation.get("r2"),
+                "best_expression": item.get("expression"),
+                "elapsed":         item.get("elapsed"),
+                "metadata":        meta,
+            }
+
+    ingest("hypatiax", "hypatia")
+    ingest("pysr", "pysr")
+
+    # score_row()/build_stats()/write_csv() all read row["hypatia"]/row["nn"]
+    # unconditionally — default both so Shape H rows never need special
+    # branches downstream. "nn" is intentionally left empty: this experiment
+    # has no neural-network baseline, only Hypatia-LLM vs PySR-only.
+    for row in by_id.values():
+        row.setdefault("hypatia", {})
+        row.setdefault("nn", {})
+
+    return list(by_id.values())
+
+
+# ============================================================
 # SWEEP-SHAPE HELPERS (Shape S) — suppB / suppB_sc
 # ============================================================
 #
@@ -863,7 +958,10 @@ def main() -> None:
         logger.info(f"READ: {path}")
         try:
             data = load_json(Path(path))
-            rows = list(extract_rows(data))
+            if _is_hybrid_nguyen_file(data):
+                rows = _normalise_hybrid_nguyen_rows(data)
+            else:
+                rows = list(extract_rows(data))
             logger.info(f"ROWS EXTRACTED: {len(rows)}")
             all_rows.extend(rows)
         except Exception as e:
