@@ -39,6 +39,10 @@ CI / sharding fixes (v03 → current):
           before. The old order [:n_tasks] → filter could silently exclude
           shard-assigned IDs that fell beyond the ceiling. New order: load all,
           filter by TASK_IDS, then apply the N_NGUYEN_TASKS smoke-test cap.
+  [FIX-CHECKPOINT-CALL] Invoke _save() after each equation (not just at end).
+          The _save() function was defined but never called in the main loop.
+          If the job was killed mid-run, zero checkpoint data was written.
+          Now checkpoints are saved after every equation and on deadline approach.
 
 Expected result : 11/12 H (91.7 %) · 10/12 P (83.3 %) · 0/12 NN
                   MW P>NN U=113, p=0.0097
@@ -51,7 +55,7 @@ Usage
     python3 exp3_nguyen12_hybrid50v_02.py --seed 123  # stability check
     python3 exp3_nguyen12_hybrid50v_02.py --seed 777  # stability check
 
-CI shard usage (set by ci_experiment_instability.yml worker dispatch):
+CI shard usage (set by ci_runner.yml worker dispatch):
     TASK_IDS="N1 N3 N7" PYSR_SEED=42 EXPERIMENT_SEED=42 \\
         python3 exp3_nguyen12_hybrid50v_02.py --seed 42
 """
@@ -530,6 +534,17 @@ def run(seed: int = 42):
             "elapsed":    elapsed_p,
         })
 
+        # [FIX-CHECKPOINT-CALL] Save checkpoint after each equation ────────
+        _save(results_hypatia, results_pysr, len(all_cases), complete=False)
+
+        # ── Check JOB_DEADLINE and exit gracefully if running out of time ──
+        if _job_deadline:
+            elapsed = time.time() - _start_time
+            if elapsed > _job_deadline * 0.9:  # exit at 90% of deadline
+                print(f"\n⏰ Approaching job deadline ({elapsed:.0f}s/{_job_deadline}s)")
+                print(f"   Saving partial results ({len(results_hypatia)}/{len(all_cases)} completed) and exiting gracefully...")
+                break  # exit loop, save final checkpoint below
+
     # ── Aggregate summary ─────────────────────────────────────────────────
     THRESH      = 0.9999
     h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= THRESH)
@@ -543,35 +558,12 @@ def run(seed: int = 42):
     print("  Expected : 11/12 H (91.7%) · 10/12 P")
     print(f"{'='*68}\n")
 
-    # ── Save JSON output ──────────────────────────────────────────────────
+    # ── Save JSON output (final) ──────────────────────────────────────────
     # [FIX-4] _results_dir already resolved above via _resolve_results_dir().
-    result = {
-        "config": {
-            "name":        "nguyen12_exp3",
-            "seed":        seed,
-            "n_tasks":     n,
-            "niterations": _niter,
-            "populations": _pops,
-            "timeout":     _timeout,
-            "use_llm":     USE_LLM,
-        },
-        "results": {
-            "hypatiax": results_hypatia,
-            "pysr":     results_pysr,
-        },
-        "summary": {
-            "h_recovered": h_recovered,
-            "p_recovered": p_recovered,
-            "n_total":     n,
-            "h_rate":      h_recovered / n if n else 0.0,
-            "p_rate":      p_recovered / n if n else 0.0,
-        },
-    }
+    # [FIX-CHECKPOINT-CALL] Use _save() for final output too (complete=True).
+    result = _save(results_hypatia, results_pysr, len(all_cases), complete=True)
 
-    OUTPUT_JSON = str(_results_dir / f"exp3_nguyen12_seed{seed}.json")
-    with open(OUTPUT_JSON, "w") as _f:
-        json.dump(result, _f, indent=2, default=str)
-
+    OUTPUT_JSON = str(_out_path)
     print("\n  Protocol returned: success")
     print(f"  JSON: {OUTPUT_JSON}")
 
