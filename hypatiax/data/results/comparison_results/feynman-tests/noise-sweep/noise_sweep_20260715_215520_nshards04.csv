@@ -1,0 +1,187 @@
+section,method,noise_level_fraction,noise_level_pct,equation,median_r2,mean_r2,std_r2,recovery_rate,n_success,n_total,threshold_used,n_catastrophic,r2,rmse,success,catastrophic
+aggregate,EnhancedHybridSystemDeFi (core),0.005,0.5%,,0.9999998380014778,0.9994357481618226,0.0010426923132612737,1.0,30,30,0.995,0,,,,
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9974409971000491,0.46186864369038494,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.9975977491791735,0.9928962303330737,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.9977406893719527,8.181501116896584,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.9976064033028955,3.6360625583307726,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9999998708428463,0.00019446130086923566,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.9999998439374577,8.107448581594503e-06,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9999998097942979,0.07995523446712842,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.9999998711916882,0.049246184953527075,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.999999896777207,5.07358260125708e-14,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9999998002597521,0.9665901655519286,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.999999805394596,0.010778639298626207,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9999995621942146,1.6467679245474716e-05,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.9999998467305825,206.88486135853285,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.9999998137653019,1.8511421611545145e-05,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.9999998659888019,3.4795140459127995e-14,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9999998791811847,0.9115682056559198,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9999998157555356,0.0005278373382892608,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9999998425926719,0.020394737600351643,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9999998661004205,5.914205286624269e-05,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.99999989984437,0.0014980330999413444,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.999999841457862,5.0390707194589615e-05,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9977225817240388,9.28664531144925e-21,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9999998462119002,1.1978299881421148e-26,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.9972853633947023,1.1303944582714427,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9999998477551213,0.0001865944821474614,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.9999998105568577,11776404.092737036,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.9976823646676336,0.024412726036038928,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.9999999427230545,496.45722771509344,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9999998345450936,48419.56351573938,True,False
+per_equation,EnhancedHybridSystemDeFi (core),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.9999998825134183,255.7463259922306,True,False
+aggregate,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,,0.9975387508065201,0.906504145274053,0.21928584972499146,0.7666666666666667,30,30,0.995,5,,,,
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9977618950660156,0.4319398889111385,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.9977388172841668,0.963302118016199,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.9969818901000124,8.250510500636043,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.7578561953478895,4.324551159871064,True,True
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9983658159512875,0.021873810092310344,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.997557317912916,0.0010143044668263488,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9976808211928555,8.828811649837348,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.997223891866073,nan,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.9975630915946373,nan,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9980253560307963,96.10676998326866,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.9973995320617419,1.24598336029741,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9970411891327071,nan,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.28738690755947705,531079.9618380038,True,True
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.9970848760800947,0.002094933341216218,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.997634563868093,4.622781395945815e-12,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9983086546203337,107.85444129461307,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9980156345508839,0.05477895111927691,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9296690276364759,13.664155296389241,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9975201837001243,0.008048529564039597,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.9976526019024577,0.2293385698858365,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.9976677849695911,0.006111705134126341,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9976626237210738,3.7592036783296836e-19,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9982235955217572,1.2873740361136508e-24,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.683988786293815,1.6805966266299859,True,True
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9922528456383034,5.302778551087079,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.9973748215556805,nan,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.9969166024188088,0.024448887631815894,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.3402195083009687,1829405.6476709922,True,True
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9979573059382709,5380006.3195927525,True,False
+per_equation,HybridDiscoverySystem v50_2 (tools),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.2583922204042828,16073449.737288231,True,True
+aggregate,HybridSystemLLMNN all-domains (core),0.005,0.5%,,0.9999998156088922,0.9999287273165187,0.0003893616720153167,1.0,30,30,0.995,0,,,,
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9978671930106733,0.42165656605355756,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.9999997624204149,0.009874139223594829,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.9999997904374323,0.07879558368380282,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.9999997231203197,0.03910672078705562,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9999998574303226,0.00020430901838499883,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.9999998001122138,9.175463106517596e-06,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9999997795586095,0.08607592646903083,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.9999998283252797,0.056853057022893776,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.9999998533726536,6.046922740876744e-14,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9999997654097343,1.0475254265984548,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.9999997588085855,0.011999617782275136,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9999998484025264,9.690309159988748e-06,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.9999998320057635,216.5948621017362,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.999999783788826,1.9945665896990312e-05,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.9999998676854498,3.4574177037601096e-14,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9999998541244394,1.0016434418164042,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9999998140522699,0.0005302715470174257,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9999998207228127,0.02176547570654427,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9999998480987298,6.299230370089894e-05,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.9999998183432335,0.0020174812892558296,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.9999998171655144,5.411369071604373e-05,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9999997684462847,9.364041608912157e-23,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9999998060424607,1.3452008990512174e-26,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.9999998397224239,0.008685814541387147,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9999997828273693,0.00022285890726449494,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.999999788213221,12451528.811133387,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.9999997918606723,0.00023135069026926464,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.9999999176281428,595.362315749475,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9999998278153432,49394.46313828887,True,False
+per_equation,HybridSystemLLMNN all-domains (core),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.9999998805438381,257.8811201071363,True,False
+aggregate,ImprovedNN (core),0.005,0.5%,,0.9977520454344146,0.9881424835819188,0.04804941690115988,0.9,30,30,0.995,1,,,,
+per_equation,ImprovedNN (core),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9977517908681519,0.4329138135948386,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.9975227438599842,1.008277656657143,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.9977523000006774,8.16045161465538,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.9975363439567363,3.688891618428042,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9981887360326712,0.023028456366391333,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.9978487917809462,0.0009518666007725379,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9977562687181757,8.684014829581727,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.9965559079575326,8.052635147026542,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.9979690728798526,7.1166253280407425e-12,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9978990958850275,99.13173236764706,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.9972866830068824,1.2727313976267571,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9822202166108752,0.00331859981020851,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.9974431575821188,26721.014367742995,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.9977610392384245,0.002029704029418591,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.9894887131299925,9.744868734303936e-12,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9981279943269492,113.46853900427043,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9979757730398936,0.05532640944085489,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9978036146455936,2.4091282382638006,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9981067920507908,0.007032438585738224,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.9979299497101323,0.2153645282155039,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.9970264336567016,0.006901077654684327,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9975336785596332,9.664119625195204e-21,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9982215831208611,1.2881030304734624e-24,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.9978932756330108,0.9958135432307652,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9976879486541222,0.022994617406280338,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.9975706498907275,1333577652.8888652,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.997699645656922,0.024321541412286905,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.7342923393913303,1069286.1728343007,True,True
+per_equation,ImprovedNN (core),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9979366347661585,5407158.487535448,True,False
+per_equation,ImprovedNN (core),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.9974873328466886,37400.96008834498,True,False
+aggregate,PureLLM Baseline (core),0.005,0.5%,,0.9975142542227841,0.997542163258617,0.00031090822863593,1.0,30,30,0.995,0,,,,
+per_equation,PureLLM Baseline (core),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9965656582515788,0.5350629067634742,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.9976607196023448,0.9797963729092461,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.997662980579352,8.321012646473887,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.9975472945806264,3.6806841713747493,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9981662143143633,0.023171184907366933,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.9974472682320277,0.0010369013878949575,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9975240411081753,9.122352499144728,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.9973310974362845,7.088706692755243,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.9974579420742645,7.961953809216485e-12,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9977656245607859,102.23218764989855,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.9972157625447452,1.2892573811355355,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9973682356806373,0.0012767772876229385,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.9974352361610469,26762.374897901696,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.9975253616892191,0.002133857131620608,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.9973730662907131,4.871611037451019e-12,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9981682634774374,112.24148014374536,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9978578536473173,0.05691509346450282,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9975156080156449,2.5622158196225056,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9973312658659095,0.008349480287810018,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.9973365187410853,0.2442916081884771,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.9975040565122043,0.006322596580335305,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9976326878575487,9.468151986760338e-21,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9980792496529004,1.3386568859953948e-24,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.9977657062160181,1.0255204093008374,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9974903374586099,0.023957147952369605,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.9971873423284289,1434933232.6997697,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.9975956742459529,0.024865109728892686,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.9974310122211847,105141.20066777647,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9978099179821778,5570718.773463711,True,False
+per_equation,PureLLM Baseline (core),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.9975129004299232,37210.18726859785,True,False
+aggregate,SymbolicEngineWithLLM (tools),0.005,0.5%,,0.9977077173448262,0.9976540556370324,0.0007357612957562097,0.9666666666666667,30,30,0.995,0,,,,
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,,,,,,,,,0.9978616564188816,0.4222035042408413,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Logistic growth rate — cross-benchmark consistency check,,,,,,,,,0.99779343114019,0.9515977994488952,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Allometric scaling law (metabolic rate vs mass),,,,,,,,,0.9977911867103818,8.089552999529406,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,,,,,,,,,0.9976400559304498,3.6104115791106577,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Henderson-Hasselbalch equation for buffer pH,,,,,,,,,0.9983375974065052,0.022061856612031625,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Nernst equation for electrode potential — cross-benchmark consistency check,,,,,,,,,0.9976473529132107,0.0009954358022464572,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Clausius-Mossotti: effective field in dielectric,,,,,,,,,0.9976715109902896,8.846515264377363,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Dielectric polarisation: P = n * alpha * E (dilute limit),,,,,,,,,0.9975488876940336,6.793322819601521,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Lorentz force on moving charge in magnetic field: F = qvB,,,,,,,,,0.9977375110907466,7.511387410567573e-12,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Ohm's law: voltage as product of current and resistance,,,,,,,,,0.9980122989819753,96.42399253688356,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Energy stored in a capacitor: E = 0.5 * C * V^2,,,,,,,,,0.9974534668171138,1.2329945601070413,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,"Coulomb force between two point charges (1D, simplified)",,,,,,,,,0.9975753202642083,0.0012255155963765262,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Coulomb's law: electric force between charges,,,,,,,,,0.9976885923991612,25406.17163989359,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Curie's law for magnetic susceptibility: chi = C/T,,,,,,,,,0.9977111667800639,0.00205218517867021,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Newton's gravitational force between two masses,,,,,,,,,0.9976147896578798,4.642066855270375e-12,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Kinetic energy (classical): KE = 0.5 * m * v²,,,,,,,,,0.9983079965411795,107.87542159162287,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Reduced mass of a two-body system,,,,,,,,,0.9980289287891435,0.05459514721164249,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Total mechanical energy: spring potential + kinetic,,,,,,,,,0.9977042679095885,2.4630104308450416,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Snell's law: refracted angle from incident angle and refractive indices,,,,,,,,,0.9975506816591578,0.007998884130792885,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Double-slit wave interference intensity,,,,,,,,,0.9976828676409247,0.22785530634434217,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Gaussian/normal distribution probability density,,,,,,,,,0.9976661175427116,0.006113889538318333,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Photon energy: E = h * f (Planck relation),,,,,,,,,0.9979367827533996,8.839138475094306e-21,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Zeeman energy: electron spin in magnetic field,,,,,,,,,0.9982832949795029,1.2655568381372362e-24,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Bose-Einstein occupation number for bosons,,,,,,,,,0.9979298038147429,0.9871426613364639,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Fermi-Dirac occupation number for fermions,,,,,,,,,0.9939508535165845,0.03719413827897701,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Rabi frequency of two-level atom in magnetic field,,,,,,,,,0.9974548996594892,1364978182.2215457,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Planck blackbody spectral radiance (dimensionless: x=hf/kT),,,,,,,,,0.9977298624961576,0.024161272730218196,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Fourier's law of heat conduction: heat flux across material,,,,,,,,,0.9976844998670447,99819.25361854973,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,Stefan-Boltzmann law: blackbody radiated power,,,,,,,,,0.9978689712253448,5495101.286592953,True,False
+per_equation,SymbolicEngineWithLLM (tools),0.005,0.5%,"Ideal gas law: pressure from moles, temperature, volume",,,,,,,,,0.99775701552091,35336.89643563232,True,False
