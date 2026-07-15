@@ -1957,8 +1957,39 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   # Mirrors the exp3 fix (cd REPO_ROOT + full path invocation).
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/extrapolation/multi_seed'
-  for seed in 99 123 777 2024; do
+
+  # FIX-exp3b-SEED-SHARD: previously this loop was hardcoded to all 4 seeds
+  # on every shard (unlike exp1b/suppB/suppB_sc, which are all shard-aware),
+  # AND never overrode PYSR_SEED/EXPERIMENT_SEED per-iteration to match
+  # --seed \$seed. Since exp3_nguyen12_hybrid50v_02.py's _resolve_seed()
+  # checks PYSR_SEED/EXPERIMENT_SEED/NN_SEED BEFORE the --seed CLI flag, the
+  # ambient PYSR_SEED=42 (exported globally at the top of this script, and
+  # inherited by every subprocess for the rest of the run) always won,
+  # silently pinning every exp3b invocation to seed=42 regardless of which
+  # seed was requested — which already has output from the exp3 step, so
+  # the script's skip-if-exists guard made every iteration a no-op.
+  # Mirrors the exp1b SHARD_IDS/TASK_IDS extraction pattern: pull this
+  # shard's seed(s) out of SHARD_IDS/TASK_IDS (ci_runner.yml also now passes
+  # them directly via SHARD_SEEDS — prefer that when set), falling back to
+  # the full 4-seed list for local/standalone runs.
+  _SHARD_SEEDS=\"\${SHARD_SEEDS:-}\"
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+    _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '_seed[0-9]+$' | sed -E 's/_seed//' | sort -u | paste -sd, -)
+  fi
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp3b] No per-shard seed found in SHARD_SEEDS/SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='99,123,777,2024'
+  else
+    echo \"  [exp3b] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
+  IFS=',' read -ra _SEED_ARR <<< \"\${_SHARD_SEEDS}\"
+  for seed in \"\${_SEED_ARR[@]}\"; do
     echo '--- exp3b seed='\$seed' ---'
+    PYSR_SEED=\"\$seed\" \
+    EXPERIMENT_SEED=\"\$seed\" \
+    NN_SEED=\"\$seed\" \
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_hybrid50v_02.py' \
       --seed \$seed \

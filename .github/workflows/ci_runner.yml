@@ -1325,8 +1325,26 @@ jobs:
             # failure only surfaces several steps later when no
             # exp3_nguyen12_seed*.json files are found to commit.
             TASK_IDS="$(cat /tmp/pending_ids.txt | sed -E 's/_seed[0-9]+$//' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+
+            # FIX-EXP3-SHARD-SEED: derive this shard's actual seed(s) from the
+            # UN-stripped pending_ids (e.g. "N1_seed99" -> "99") BEFORE the
+            # suffix is thrown away above. exp3b fans out across 4 shards, one
+            # per seed (99/123/777/2024); exp3 is a single shard at seed=42.
+            # Previously this value was discarded entirely and every shard's
+            # "Run experiment tasks" step fell back to the workflow-level
+            # PYSR_SEED="42" a few lines below — silently pinning every
+            # exp3b shard to seed 42 regardless of which seed it was actually
+            # assigned, which collides with exp3's pre-existing seed42 output
+            # and causes the step to no-op via the script's skip-if-exists guard.
+            SHARD_SEEDS="$(cat /tmp/pending_ids.txt | grep -oE '_seed[0-9]+$' | sed -E 's/_seed//' | sort -u | paste -sd, -)"
+            if [[ -z "${SHARD_SEEDS}" ]]; then
+              echo "  [exp3/exp3b] No _seedNN suffix found on pending_ids — falling back to PYSR_SEED (${PYSR_SEED})."
+              SHARD_SEEDS="${PYSR_SEED}"
+            fi
+            echo "  [exp3/exp3b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
           else
             TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+            SHARD_SEEDS="${PYSR_SEED}"
           fi
           echo "TASK_IDS=${TASK_IDS}"
 
@@ -1357,6 +1375,15 @@ jobs:
           # Environment variables are already set in the step env block above;
           # we additionally export TASK_IDS, SHARD_IDS, and SHARD as aliases
           # that run_all.sh and its sub-scripts expect.
+          # FIX-EXP3-SHARD-SEED (cont.): EXPERIMENT_SEED (and PYSR_SEED, which
+          # _resolve_seed() in exp3_nguyen12_hybrid50v_02.py checks FIRST,
+          # ahead of EXPERIMENT_SEED/NN_SEED and ahead of --seed) must both be
+          # overridden to SHARD_SEEDS here for exp3/exp3b. Previously
+          # EXPERIMENT_SEED="${PYSR_SEED}" always resolved to the workflow's
+          # global "42", and PYSR_SEED itself was never overridden at all here
+          # (it stayed inherited from the workflow-level env: block) — so both
+          # seed-resolution env vars silently outranked whatever --seed
+          # run_all.sh's exp3b loop passed on the command line.
           TASK_IDS="${TASK_IDS}" \
           SHARD_IDS="${TASK_IDS}" \
           SHARD="${SHARD_INDEX}" \
@@ -1364,7 +1391,9 @@ jobs:
           OUT_BASE="${RESULTS_DIR}" \
           REPO_ROOT="${{ github.workspace }}" \
           DEFI_SEEDS="${EFFECTIVE_SEEDS}" \
-          EXPERIMENT_SEED="${PYSR_SEED}" \
+          SHARD_SEEDS="${SHARD_SEEDS}" \
+          PYSR_SEED="${SHARD_SEEDS}" \
+          EXPERIMENT_SEED="${SHARD_SEEDS}" \
           DOMAIN_FILTER="${TASK_IDS}" \
             bash run_all.sh --step "${EXP}"
 
