@@ -1050,7 +1050,14 @@ run hybrid_all_domains "Hybrid LLM+NN all-domains run -- 10 domains (SS10.9 hybr
   set -euo pipefail
   # ── FIX TASK 7: runtime domain-list validation ────────────────────────────
   ACTUAL_DOMAINS=\$(python3 - << 'PYEOF'
-import importlib.util, sys, pathlib
+import importlib.util, sys, pathlib, io, contextlib
+# FIX TASK 7b: import/exec_module and ExperimentProtocolAll() can print banner
+# side effects (dotenv warning, \"Loaded ExperimentProtocolAll from...\") to
+# stdout. Since ACTUAL_DOMAINS=\$(python3 ...) captures ALL stdout, those
+# banner lines were leaking into the comma-joined domain string and breaking
+# the comparison even when the underlying domain set was correct. Silence
+# stdout during import/instantiation and only emit the real result at the end.
+_muted = io.StringIO()
 # PATH-1 FIX: GENERATION_DIR = hypatiax/core/generation (matches CI script_path).
 # Previously this comment said \"hypatiax/experiments/generation/\" — that was wrong.
 spec = importlib.util.spec_from_file_location(
@@ -1059,16 +1066,18 @@ spec = importlib.util.spec_from_file_location(
     # PATH-1 FIX: GENERATION_DIR = hypatiax/core/generation (matches CI script_path)
 )
 mod = importlib.util.module_from_spec(spec)
-try:
-    spec.loader.exec_module(mod)
-except SystemExit:
-    pass
+with contextlib.redirect_stdout(_muted):
+    try:
+        spec.loader.exec_module(mod)
+    except SystemExit:
+        pass
 domains = getattr(mod, 'DOMAINS', getattr(mod, 'ALL_DOMAINS', getattr(mod, 'DOMAIN_KEYS', None)))
 if domains is None:
     try:
-        from hypatiax.core.generation.hybrid_all_domains_llm_nn \
-            .hybrid_system_llm_nn_all_domains import ExperimentProtocolAll
-        _d = ExperimentProtocolAll().get_all_domains()
+        with contextlib.redirect_stdout(_muted):
+            from hypatiax.core.generation.hybrid_all_domains_llm_nn \
+                .hybrid_system_llm_nn_all_domains import ExperimentProtocolAll
+            _d = ExperimentProtocolAll().get_all_domains()
         domains = set(_d.keys()) if hasattr(_d, 'keys') else set(_d)
     except Exception as e:
         print(f'UNKNOWN: {e!r}', file=sys.stderr); sys.exit(1)
