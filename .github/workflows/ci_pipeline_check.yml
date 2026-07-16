@@ -462,8 +462,6 @@ jobs:
               "amm", "risk_var", "liquidity", "expected_shortfall",
               "liquidation", "risk", "lending", "staking", "trading", "derivatives",
           ]
-          SUPPB_SC_COUNTS = ["50", "100", "200", "500", "750", "1000"]
-
           REGISTRY = {
               # exp1 committed a single hypatiax_defi_benchmark_v3_results.json
               # (not per-task files). Use filename-stem sentinel — same pattern as exp1b.
@@ -503,8 +501,13 @@ jobs:
               # substrings as sentinels so they actually match committed filenames.
               "suppB":             ["nshards01", "nshards02", "nshards03", "nshards04", "nshards05"],
               # suppB_sc done-set: result files are sample_complexity_n{N}.json / *.csv.
-              # Use the sample-count strings as sentinels.
-              "suppB_sc":          list(SUPPB_SC_COUNTS),
+              # FIX-suppB_sc-SENTINEL: same class of bug as suppB above — confirmed via
+              # `git ls-tree -r origin/master -- .../sample-complexity/` that no filename
+              # contains a sample-count substring like "50"/"100"/etc. Each of the 6
+              # EXP_SHARD_TABLE workers instead writes one sample_complexity_<timestamp>_
+              # nshardsNN.json/.csv pair (NN = 01..06), plus _checkpoint_shard{N}.json
+              # (N = 0..5). Use the shard-index substrings as sentinels.
+              "suppB_sc":          ["nshards01", "nshards02", "nshards03", "nshards04", "nshards05", "nshards06"],
               # hybrid_all_domains committed a single hybrid_llm_nn_all_domains_*.json.
               "hybrid_all_domains": ["all_domains"],
               # instability is a single post-processing job, not 10 per-domain shards.
