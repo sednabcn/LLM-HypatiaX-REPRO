@@ -1047,6 +1047,7 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
 # Spearman ρ). That is STEP 4a (instability) which runs run_instability_suite.py
 # against the K-run DeFi benchmark results from STEP 1 (exp1).
 run hybrid_all_domains "Hybrid LLM+NN all-domains run -- 10 domains (SS10.9 hybrid)" bash -c "
+  set -euo pipefail
   # ── FIX TASK 7: runtime domain-list validation ────────────────────────────
   ACTUAL_DOMAINS=\$(python3 - << 'PYEOF'
 import importlib.util, sys, pathlib
@@ -1067,9 +1068,10 @@ if domains is None:
     try:
         from hypatiax.core.generation.hybrid_all_domains_llm_nn \
             .hybrid_system_llm_nn_all_domains import ExperimentProtocolAll
-        domains = set(ExperimentProtocolAll().get_all_domains().keys())
+        _d = ExperimentProtocolAll().get_all_domains()
+        domains = set(_d.keys()) if hasattr(_d, 'keys') else set(_d)
     except Exception as e:
-        print('UNKNOWN', file=sys.stderr); sys.exit(1)
+        print(f'UNKNOWN: {e!r}', file=sys.stderr); sys.exit(1)
 print(','.join(sorted(str(d) for d in domains)))
 PYEOF
   )
