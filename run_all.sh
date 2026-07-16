@@ -1494,7 +1494,7 @@ def _rows(data):
         # per-method results under top-level \"tests\" -> [i] -> \"results\" ->
         # {method_name: {..., \"r2\": ...}}. None of ('results','equation_results',
         # 'data','rows') exist at the TOP level of this shape, so without this
-        # branch the generic case below falls through to `yield data`, handing
+        # branch the generic case below falls through to \`yield data\`, handing
         # back one useless pseudo-row per file with no r2 field — silently
         # contributing 0/0 for every raw result file. Handle it explicitly.
         if isinstance(data.get('tests'), list):
@@ -2448,6 +2448,7 @@ print('[suppB_sc-METHOD-ASSERT] OK -- all 6 methods present')
 # Previously written to \${REPO_ROOT}/scripts/paper/tables which diverged from
 # the path used by inventory_results() and tables-generator glob checks.
 run tables "Generate all LaTeX tables from result JSONs -> \${RESULTS_DIR}/tables/" bash -c "
+  set -euo pipefail
   mkdir -p '${RESULTS_DIR}/tables'
   cd '${REPO_ROOT}'
   TABLE_OUTDIR='${RESULTS_DIR}/tables' \
@@ -2743,7 +2744,7 @@ run figures "Generate + deploy all paper figures (Groups A/B/C) -> \${RESULTS_DI
 
   _copy_fig() {
     local stem=\"\$1\" src=\"\$2\"
-    local dest='${RESULTS_DIR}/figures/'\"\\$(basename \"\${src}\")\"
+    local dest='${RESULTS_DIR}/figures/'\"\$(basename \"\${src}\")\"
     if [ -f \"\${src}\" ]; then
       cp -v \"\${src}\" \"\${dest}\" 2>&1 | tee -a '${RESULTS_DIR}'/figures_run.log
       echo \"  [OK-C] \${stem}: copied from \${src}\"
@@ -2792,7 +2793,7 @@ run figures "Generate + deploy all paper figures (Groups A/B/C) -> \${RESULTS_DI
   # repo-root figures/\") additionally deploys a flat copy to \${REPO_ROOT}/figures/,
   # which is what \\includegraphics resolves via \\graphicspath{{figures/}{../figures/}}
   # when pdflatex is invoked from \${REPO_ROOT}. Without this step, a local
-  # `run_all.sh` reproduction would leave \${REPO_ROOT}/figures/ empty/stale even
+  # \`run_all.sh\` reproduction would leave \${REPO_ROOT}/figures/ empty/stale even
   # though \${RESULTS_DIR}/figures/ is fully populated, and a local pdflatex build
   # would silently diverge from what CI produces.
   #

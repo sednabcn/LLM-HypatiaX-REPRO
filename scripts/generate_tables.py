@@ -1833,7 +1833,8 @@ def gen_suppb_noiseless() -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main() -> None:
+def main() -> int:
+    """Returns the number of generators that failed (0 = full success)."""
     print("═" * 65)
     print("  Table Generator — HypatiaX JMLR + Supplement B")
     print("═" * 65)
@@ -2013,13 +2014,36 @@ def main() -> None:
     if _EXP not in _DISPATCH:
         print(f"  \u26a0  Unknown --experiment '{_EXP}' — running all table generators.")
 
+    _failed: list[str] = []
     for section_label, generators in sections:
         print(f"\n  {section_label}")
         for fn in generators:
-            fn()
+            # FIX-DISPATCH-ISOLATION: previously an unhandled exception in any
+            # single generator (e.g. malformed/stale JSON left over from an
+            # earlier partial run) killed the whole script immediately —
+            # since write_table() writes each .tex file as it's generated,
+            # this meant ANY one failure produced ZERO output tables instead
+            # of the N-1 that had already succeeded, with no clear error
+            # surfaced (run_all.sh's tables step previously lacked
+            # set -euo pipefail too, so this failure mode was silent end
+            # to end). Catch, report, and continue so a single bad source
+            # file degrades one table instead of erasing the whole run.
+            # Generators are wrapped as `lambda: gen_x(...)`; pull the real
+            # function name out of the lambda's bytecode so failures are
+            # reported as "gen_five_system FAILED", not "<lambda> FAILED".
+            name = next(iter(fn.__code__.co_names), getattr(fn, "__name__", repr(fn)))
+            try:
+                fn()
+            except Exception as e:
+                import traceback
+                print(f"  \u274c {name} FAILED: {type(e).__name__}: {e}")
+                traceback.print_exc()
+                _failed.append(name)
 
     print(f"\n{'═'*65}")
     print(f"  Generated: {GENERATED} table files")
+    if _failed:
+        print(f"  Failed:    {len(_failed)} generator(s) — {', '.join(_failed)}")
     print(f"  Output:    {TABLES_DIR}/")
     print(f"{'═'*65}")
     print("""
@@ -2047,7 +2071,12 @@ def main() -> None:
     \\input{tables/timing_detail.tex}    % Tab 11 Appendix C
     \\input{tables/repro_macros.tex}
 """)
+    return len(_failed)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    n_failed = main()
+    if n_failed:
+        print(f"\n::error::{n_failed} table generator(s) failed — see tracebacks above.")
+        sys.exit(1)
