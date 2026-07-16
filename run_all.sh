@@ -1097,13 +1097,30 @@ PYEOF
   # PATH-1 FIX: GENERATION_DIR now correctly points to hypatiax/core/generation/
   # matching CI script_path. Previous stale comment said \"not CORE_DIR\" — reversed.
   cd '${GENERATION_DIR}/hybrid_all_domains_llm_nn'
-  # FIX-OUTDIR-1: --output-dir so outputs land in hybrid_llm_nn/all_domains/
-  # matching CI RESULT_SUBDIR and validate glob. Previously no --output-dir
-  # was passed; files landed in CWD and were never found by the validate check.
+  # FIX-OUTDIR-2: hybrid_system_llm_nn_all_domains.py's argparse only defines
+  # --domains / --samples / --verbose / --no-llm-cache -- it has NO --output-dir
+  # flag (confirmed by reading the script). The FIX-OUTDIR-1 comment below was a
+  # stale assumption; passing --output-dir made argparse fail with
+  # 'unrecognized arguments' (exit code 2). The script instead writes to a
+  # hardcoded CWD-relative path: hypatiax/data/results/hybrid_llm_nn_all_domains_<TS>.json
+  # so we let it write there, then move the result into RESULTS_DIR ourselves —
+  # same pattern as FIX-exp1b-2/3 above.
+  mkdir -p '${RESULTS_DIR}/hybrid_llm_nn/all_domains'
   python3 hybrid_system_llm_nn_all_domains.py \
     --samples '${FEYNMAN_SAMPLES}' \
-    --output-dir '${RESULTS_DIR}/hybrid_llm_nn/all_domains' \
     2>&1 | tee '${RESULTS_DIR}'/hybrid_all_domains_run.log
+  # ── Move script's hardcoded-path output → RESULTS_DIR ──────────────────────
+  _HYBRID_OUT_SRC='hypatiax/data/results'
+  if [[ -d \"\${_HYBRID_OUT_SRC}\" ]]; then
+    find \"\${_HYBRID_OUT_SRC}\" -maxdepth 1 -name 'hybrid_llm_nn_all_domains_*.json' \
+      -exec mv -f {} '${RESULTS_DIR}/hybrid_llm_nn/all_domains/' \;
+  fi
+  _HYBRID_MOVED=\$(ls -t '${RESULTS_DIR}/hybrid_llm_nn/all_domains'/hybrid_llm_nn_all_domains_*.json 2>/dev/null | head -1 || true)
+  if [[ -z \"\${_HYBRID_MOVED}\" ]]; then
+    echo \"WARNING: no hybrid_llm_nn_all_domains_*.json found to move into RESULTS_DIR -- check script output location.\"
+  else
+    echo \"[hybrid_all_domains] Output moved: \${_HYBRID_MOVED}\"
+  fi
 "
 
 # ── STEP 4a: instability ──────────────────────────────────────────────────────
