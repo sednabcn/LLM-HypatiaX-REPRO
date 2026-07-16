@@ -271,13 +271,13 @@ jobs:
                                     "exp3_nguyen12_*.json", "*nguyen*seed*.json"],
               "suppA":             ["consolidated_hybrid_*.json", "hybrid_system*.json",
                                     "extrapolation_73cases*.json", "*73cases*.json"],
-              # suppB: the canonical dir has one top-level file plus a noise_sweep_saved/
-              # subdir holding all per-sigma shards (noise_sweep_sig0000_checkpoint.json etc.).
-              # Include sig-format checkpoint filenames so presence detection works even
-              # when only the saved/ subdir has committed data.
-              "suppB":             ["noise_sweep_*.json", "noise_sweep_*.csv",
-                                    "noise_sweep_saved/noise_sweep_*.json",
-                                    "noise_sweep_saved/noise_sweep_sig*.json"],
+              # suppB: all 5 shards commit flat to the canonical dir as
+              # noise_sweep_<timestamp>_nshardsNN.json/.csv (NN = 01..05) — there is
+              # no noise_sweep_saved/ subdir and no sig-format filename in practice
+              # (see FIX-suppB-SENTINEL below). The broad noise_sweep_*.json/.csv
+              # patterns below already match these via the "**/" recursive glob
+              # applied at use-site, so no per-shard pattern is needed here.
+              "suppB":             ["noise_sweep_*.json", "noise_sweep_*.csv"],
               "suppB_sc":          ["sample_complexity_*.json", "sample_complexity_*.csv"],
               "hybrid_all_domains": ["hybrid_llm_nn_all_domains_*.json"],
               "instability":       ["instability_analysis.csv", "instability_extrapolation.csv",
@@ -493,13 +493,15 @@ jobs:
               # suppA committed extrapolation_73cases_enhanced.json (all domains combined).
               "suppA":             ["73cases_enhanced"],
               # suppB: result files are noise_sweep_*.json / noise_sweep_*.csv.
-              # The filenames encode noise level as a 4-digit integer sigma string
-              # (e.g. noise_sweep_sig0000_checkpoint.json for σ=0.0,
-              #        noise_sweep_sig0050 for σ=0.5, sig0100 for σ=1.0,
-              #        sig0500 for σ=5.0, sig1000 for σ=10.0).
-              # Use these sig-format substrings as sentinels — they match the actual
-              # committed checkpoint filenames regardless of which subdir they are in.
-              "suppB":             ["sig0000", "sig0050", "sig0100", "sig0500", "sig1000"],
+              # FIX-suppB-SENTINEL: the filenames do NOT encode noise level as a
+              # sigma string (there is no "sig0000"/"sig0050"/... substring anywhere
+              # in what the runner actually commits — confirmed via
+              # `git ls-tree -r origin/master -- .../noise-sweep/`). Each of the 5
+              # EXP_SHARD_TABLE workers instead writes one noise_sweep_<timestamp>_
+              # nshardsNN.json/.csv pair (NN = 01..05, one per shard/noise level),
+              # plus a _checkpoint_shard{N}.json (N = 0..4). Use the shard-index
+              # substrings as sentinels so they actually match committed filenames.
+              "suppB":             ["nshards01", "nshards02", "nshards03", "nshards04", "nshards05"],
               # suppB_sc done-set: result files are sample_complexity_n{N}.json / *.csv.
               # Use the sample-count strings as sentinels.
               "suppB_sc":          list(SUPPB_SC_COUNTS),
