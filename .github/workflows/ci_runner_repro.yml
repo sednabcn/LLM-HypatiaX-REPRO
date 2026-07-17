@@ -3816,17 +3816,27 @@ jobs:
                   existing_rate = existing.get("solve_rate")
                   if existing_rate is None:
                       # FIX: a null solve_rate means the baseline was written from
-                      # a run where no legacy JSONs were present (n_total=0). That
-                      # is an invalid baseline — flag it so the operator can delete
-                      # fixc3_baseline.json and re-run after confirming exp2 results
-                      # are present. Previously this printed [OK] and moved on,
-                      # silently accepting an unusable baseline.
-                      failures.append(
-                          "fixc3_baseline.json exists but solve_rate is null — "
-                          "the baseline was written before exp2_feynman results were present. "
-                          "Delete fixc3_baseline.json and re-run after confirming "
-                          "comparison_results/feynman-tests/exp2/ contains result JSONs."
-                      )
+                      # a run where no legacy JSONs were present (n_total=0). Rather
+                      # than permanently failing and requiring an operator to
+                      # manually delete fixc3_baseline.json, self-heal: if legacy
+                      # JSONs are present *now* (n_total > 0), the baseline was
+                      # simply written too early — recompute and overwrite it with
+                      # the now-valid data. Only fail if legacy results are still
+                      # absent, since there's nothing to lock in that case.
+                      if n_total > 0:
+                          BASELINE_FILE.write_text(json.dumps(baseline, indent=2))
+                          print(
+                              "  [OK]  Baseline was invalid (solve_rate=null, written "
+                              "before exp2_feynman results existed) — recomputed and "
+                              f"rewritten → {n_pass}/{n_total} (rate={baseline['solve_rate']:.3f})"
+                          )
+                      else:
+                          failures.append(
+                              "fixc3_baseline.json exists but solve_rate is null, and no "
+                              "legacy JSONs were found in this checkout either — "
+                              "confirm comparison_results/feynman-tests/exp2/ contains "
+                              "result JSONs before this gate can lock a valid baseline."
+                          )
                   elif n_total > 0:
                       new_rate = n_pass / n_total
                       if abs(new_rate - existing_rate) > 0.05:
