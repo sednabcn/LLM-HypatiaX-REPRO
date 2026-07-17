@@ -905,11 +905,31 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
 
+  # FIX-exp1b_pca-SEED-SHARD: mirrors FIX-exp1b-SEED-SHARD from the exp1b step.
+  # DEFI_SEEDS was hardcoded to the full 5-seed list on every shard here,
+  # ignoring the per-shard portfolio_seedNN task IDs that ci_runner.yml's plan
+  # step computes (SHARD_IDS/TASK_IDS). This was harmless as long as
+  # hypatiax_defi_benchmark_pca.py's run_benchmark() silently ignored
+  # DEFI_SEEDS (see audit finding F6/F7) — but now that the seed loop in that
+  # script actually sweeps every seed it's given, passing all 5 seeds to all
+  # 4 shards makes every shard redundantly rerun the full sweep instead of
+  # just its own slice. Extract just THIS shard's seed(s), same as exp1b.
+  # Falls back to the full default list when SHARD_IDS/TASK_IDS are unset
+  # (local / standalone runs).
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
   # --force-fresh is passed to the script itself — guarantees fresh results
   # even when the script is invoked directly, bypassing this shell wrapper.
   echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
   DEFI_TASK_FILTER=portfolio \\
-  DEFI_SEEDS='42,99,123,777,2024' \\
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
       --output-dir \"\${_PCA15_DIR}\" \\
       --force-fresh \\
@@ -917,7 +937,11 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
 
   # Move any loose outputs (same pattern as exp1b move block)
   _SHARD=\${SHARD_INDEX:-0}
-  _SEED_TAG=\$(echo \"\${DEFI_SEEDS:-42}\" | tr ',' '_')
+  # FIX-exp1b_pca-SEEDTAG: mirrors FIX-exp1b-SEEDTAG. DEFI_SEEDS above is only
+  # a command-prefix env var scoped to the python3 invocation — not visible to
+  # this later shell command, so \${DEFI_SEEDS:-42} always silently fell back
+  # to '42'. Use \${_SHARD_SEEDS}, the real value resolved above.
+  _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \\
     \\( \\
