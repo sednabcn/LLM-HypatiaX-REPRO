@@ -867,6 +867,46 @@ if n_total == 0:
     print('  [WARN]  No results in defi_pca/ yet — rerun after benchmark completes.')
 PYEOF_SUMMARY
 
+  # FIX-NN-FINGERPRINT: scan for the feature-count mismatch fingerprint
+  # ("X has N features, but StandardScaler is expecting M features") that
+  # check_nn_nan_fingerprint.py was written to catch — see the
+  # _compute_augment_plan/_apply_augment_plan fix in hypatiax_defi_benchmark_pca.py.
+  # This previously required a manual terminal run after the fact; now it runs
+  # automatically so a regression surfaces here instead of silently.
+  echo '[exp1_pca] Scanning for NN feature-count-mismatch fingerprint...'
+  python3 - <<'PYEOF_FINGERPRINT_1'
+import json, math, pathlib
+
+PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
+hits, n_scanned = [], 0
+for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for c in cases:
+        if not isinstance(c, dict):
+            continue
+        n_scanned += 1
+        nn  = c.get('results', {}).get('neural_network', {})
+        err = nn.get('error', '') or ''
+        tr2 = nn.get('test_r2')
+        is_nan = tr2 is None or (isinstance(tr2, float) and math.isnan(tr2))
+        if 'StandardScaler is expecting' in err or 'features, but' in err or is_nan:
+            hits.append((c.get('equation_id'), c.get('seed'), err or '(nan, no error string)'))
+
+print(f'  [exp1_pca] Scanned {n_scanned} record(s) for NN feature-count-mismatch fingerprint')
+print(f'  [exp1_pca] Records matching fingerprint: {len(hits)}')
+for h in hits[:20]:
+    print('   ', h)
+if hits:
+    print('  WARNING: exp1_pca NN feature-count-mismatch fingerprint detected — '
+          'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
+PYEOF_FINGERPRINT_1
+
   # Verification
   echo '=== exp1_pca verification ==='
   find \"\${_PCA_DEFI_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
@@ -1085,6 +1125,45 @@ if len(seeds_observed) < 2:
     print(f'  [WARN]  Only {len(seeds_observed)} distinct seed(s) observed in 15_pca/ — '
           f'this may be a single shard, an incomplete sweep, or a regression of the F6 seed-loop fix.')
 PYEOF_SUMMARY_1B
+
+  # FIX-NN-FINGERPRINT: same fingerprint scan as exp1_pca, run here too since
+  # exp1b_pca exercises the seed-sweep path (a distinct code path through
+  # _compute_augment_plan/_apply_augment_plan) with its own dedicated
+  # dir/schema — a regression could show up here without showing up in
+  # exp1_pca, or vice versa.
+  echo '[exp1b_pca] Scanning for NN feature-count-mismatch fingerprint...'
+  python3 - <<'PYEOF_FINGERPRINT_1B'
+import json, math, pathlib
+
+PCA15_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca')
+hits, n_scanned = [], 0
+for fp in sorted(PCA15_DIR.glob('*.json')) if PCA15_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for c in cases:
+        if not isinstance(c, dict):
+            continue
+        n_scanned += 1
+        nn  = c.get('results', {}).get('neural_network', {})
+        err = nn.get('error', '') or ''
+        tr2 = nn.get('test_r2')
+        is_nan = tr2 is None or (isinstance(tr2, float) and math.isnan(tr2))
+        if 'StandardScaler is expecting' in err or 'features, but' in err or is_nan:
+            hits.append((c.get('equation_id'), c.get('seed'), err or '(nan, no error string)'))
+
+print(f'  [exp1b_pca] Scanned {n_scanned} record(s) for NN feature-count-mismatch fingerprint')
+print(f'  [exp1b_pca] Records matching fingerprint: {len(hits)}')
+for h in hits[:20]:
+    print('   ', h)
+if hits:
+    print('  WARNING: exp1b_pca NN feature-count-mismatch fingerprint detected — '
+          'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
+PYEOF_FINGERPRINT_1B
 
   # Verification
   echo '=== exp1b_pca verification ==='
@@ -1743,6 +1822,48 @@ disclosure = {
 DISC_FILE.write_text(json.dumps(disclosure, indent=2))
 print(f'  [FIX-C3] split_protocol_disclosure.json written → {DISC_FILE}')
 PYEOF
+
+  # FIX-NN-FINGERPRINT: extend the exp1_pca/exp1b_pca NN feature-count-mismatch
+  # scan to exp2_feynman_pca_4060. Schema differs from the DeFi script's flat
+  # per-case list: raw output here is {'tests': [...]}, each test's per-method
+  # results are keyed by 'ImprovedNN (core)' (not 'neural_network'), and the
+  # R² field is named 'r2' (not 'test_r2') — see MethodResult.to_dict() in
+  # run_comparative_suite_benchmark_pca.py. A verbatim copy of the DeFi check
+  # would silently match zero records against this schema, so this block uses
+  # the correct key/field names for this script instead.
+  echo '[exp2_feynman_pca_4060] Scanning for NN feature-count-mismatch fingerprint...'
+  python3 - <<'PYEOF_FINGERPRINT_2'
+import json, math, pathlib
+
+PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060')
+NN_KEY  = 'ImprovedNN (core)'
+hits, n_scanned = [], 0
+for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline', 'benchmark_results')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    tests = data.get('tests', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+    for t in tests:
+        if not isinstance(t, dict):
+            continue
+        n_scanned += 1
+        nn  = t.get('results', {}).get(NN_KEY, {})
+        err = nn.get('error', '') or ''
+        r2  = nn.get('r2')
+        is_nan = r2 is None or (isinstance(r2, float) and math.isnan(r2))
+        if 'StandardScaler is expecting' in err or 'features, but' in err or is_nan:
+            hits.append((t.get('description', '')[:60], t.get('domain'), err or '(nan, no error string)'))
+
+print(f'  [exp2_feynman_pca_4060] Scanned {n_scanned} record(s) for NN feature-count-mismatch fingerprint')
+print(f'  [exp2_feynman_pca_4060] Records matching fingerprint: {len(hits)}')
+for h in hits[:20]:
+    print('   ', h)
+if hits:
+    print(\"  WARNING: exp2_feynman_pca_4060 NN feature-count-mismatch fingerprint detected in 'ImprovedNN (core)' results.\")
+PYEOF_FINGERPRINT_2
 
   # ── 5. Verification summary ───────────────────────────────────────────────────
   echo ''
