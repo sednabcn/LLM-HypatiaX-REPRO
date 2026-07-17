@@ -5,13 +5,15 @@
 # FIX CRITICAL 1 : 'instability' → 'hybrid_all_domains' (CI naming alignment)
 # FIX CRITICAL 2 : suppB_sc step added (sample-complexity sweep)
 # FIX CRITICAL 3 : hybrid_llm_nn/all_domains (not /defi) used throughout
-# FIX STEP-11-12 : tables (Step 11) + figures (Step 12) both write to
-#                  ${RESULTS_DIR}/tables  and  ${RESULTS_DIR}/figures
-#                  — previously tables wrote to ${REPO_ROOT}/scripts/paper/tables
-# FIX STEP-11-12b: tables and figures steps now cd to REPO_ROOT and invoke
-#                  scripts/generate_tables.py and scripts/generate_figures.py
-#                  — previously used cd REPO_ROOT/tables and cd REPO_ROOT/figures
-#                    which caused tracer errors: script NOT FOUND at those dirs.
+# FIX NO-TABLES-FIGURES: all table (.tex) and figure (.png/.pdf) generation has
+#                  been removed from this pipeline. The former 'tables' (Step 11)
+#                  and 'figures' (Step 12) steps are deleted; exp1_ablation and
+#                  instability now purge their .tex/.png/.pdf byproducts
+#                  immediately after running; downstream steps (validate,
+#                  qualify, audit_figures_tables, audit_final_gate) no longer
+#                  check for table/figure presence. Only numerical (.json/.csv)
+#                  outputs are produced and checked throughout.
+# FIX STEP-11-12 (historical, superseded by FIX NO-TABLES-FIGURES above)
 # FIX WARN-2     : HYBRID_ALL_DOMAINS_EXPECTED corrected to 10-domain list that
 #                  matches CI HYBRID_ALL_DOMAINS_IDS and ExperimentProtocolAll
 # FIX STEP-ORDER : removed exp2_sym / exp2_hyb (no run-blocks exist for them)
@@ -81,11 +83,11 @@
 #   suppA              → DeFi routing improvement experiments (Tab 11-13 routing)
 #   suppB              → Noise sweep (Tab 28, 29 · suppB)
 #   suppB_sc           → Sample-complexity sweep (Tab 29 · suppB)   ← FIX CRITICAL 2
-#   tables             → Generate all LaTeX tables  → ${RESULTS_DIR}/tables/
-#   figures            → Generate all paper figures → ${RESULTS_DIR}/figures/
+#   (FIX NO-TABLES-FIGURES: 'tables' and 'figures' steps removed — no table/figure
+#    generation occurs anywhere in this pipeline any more)
 #   validate           → Cross-check all result files against expected checksums
-#   qualify            → numerical spot-check + 7-dimension per-experiment gate
-#                        (figures ✓  tables ✓  _merged.json ✓  git ✓  checkpoint ✓)
+#   qualify            → numerical spot-check + per-experiment gate
+#                        (_merged.json ✓  git ✓  checkpoint ✓)
 #   audit_paper        → Cross-check every paper claim vs result JSONs (paper_targets.json)
 #                        PASS/WARN/FAIL/MISSING per claim; Nguyen-12 dual-threshold;
 #                        writes logs/paper_audit_findings.json
@@ -338,7 +340,11 @@ DRY_RUN=false
 # FIX CRITICAL 1: instability → hybrid_all_domains
 # FIX CRITICAL 2: suppB_sc added after suppB
 # SPLIT STEP 4: hybrid_all_domains (one-shot run) + instability (K-run II analysis)
-_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp3 exp3b suppA suppB suppB_sc tables figures validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+# FIX NO-TABLES-FIGURES: removed 'tables' and 'figures' steps entirely (table/figure
+# generation is fully disabled across this pipeline); audit_figures_tables retained
+# in name only as a no-op passthrough (see its definition) so downstream step
+# numbering/scripts that reference it by name don't break.
+_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -694,15 +700,17 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
 # ── STEP 2a: exp1_ablation ────────────────────────────────────────────────────
 # Runs exp1_ablation.py (§10.6 Core-15 ablation: PySR-only vs HypatiaX).
-# Produces:
-#   exp1_ablation_results.json          ← primary; required by ci_postprocess figures/tables
-#   exp1_ablation_table.tex
+# Produces (numerical only — see FIX NO-TABLES-FIGURES below):
+#   exp1_ablation_results.json
 #   exp1_rf01_mannwhitney.json
-#   exp1_rf01_significant.tex
-#   exp1_rf01_subdomain.tex
 #   exp1_instability_stats.json
 #   instability_extrapolation_v2.csv
 #   provenance_map_exp1.json
+#
+# FIX NO-TABLES-FIGURES: exp1_ablation.py (external script, not edited here) also
+# writes exp1_ablation_table.tex, exp1_rf01_significant.tex, and
+# exp1_rf01_subdomain.tex as a side effect. This step now deletes those .tex
+# files immediately after the run so no table artifacts are produced or persisted.
 #
 # Output directory: ${RESULTS_DIR}/ablation/exp1_ablation/
 # (matches ci_experiment.yml RESULT_SUBDIR = ablation/exp1_ablation)
@@ -726,12 +734,17 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
     2>&1 | tee \"\${_ABL_DIR}/exp1_ablation_run.log\" \
   || echo 'WARNING: exp1_ablation.py exited non-zero — check exp1_ablation_run.log'
 
+  # FIX NO-TABLES-FIGURES: purge any .tex table byproducts at the source.
+  _NTEX=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' 2>/dev/null | wc -l)
+  find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' -delete 2>/dev/null
+  echo \"[exp1_ablation] removed \${_NTEX} .tex table byproduct(s) — table generation disabled\"
+
   echo '=== exp1_ablation verification ==='
-  find \"\${_ABL_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.tex' -o -name '*.csv' \) 2>/dev/null | sort
+  find \"\${_ABL_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
   _NRESULT=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_ablation_results*.json' 2>/dev/null | wc -l)
   _NRF01=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_rf01_mannwhitney*.json' 2>/dev/null | wc -l)
   if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_ablation_results.json not produced — ci_postprocess figures/tables will fail'
+    echo 'WARNING: exp1_ablation_results.json not produced'
     echo '         Ensure ANTHROPIC_API_KEY is set and HybridDiscoverySystem v5.1 is importable'
   else
     echo \"OK: \${_NRESULT} exp1_ablation_results*.json produced\"
@@ -986,7 +999,8 @@ PYEOF_DISC_1B
 #
 # Output: comparison_results/extrapolation/all_domains_extrap_v4_<TS>.json
 #         Schema includes extrap_r2 / extrap_rmse / extrap_error_pct per method
-#         per equation — these are the Tab 9 OOD columns read by generate_tables.py.
+#         per equation — these were formerly the Tab 9 OOD columns consumed by
+#         table generation (now removed; see FIX NO-TABLES-FIGURES).
 #
 # Env-override knobs (CI / ablation use):
 #   EXTRAP_MULTIPLIER   (default: 2.0)   — paper "medium" OOD regime
@@ -1137,15 +1151,11 @@ PYEOF
 # K ≥ 2 repeat runs or --variance mode.  A single exp1 run produces a valid
 # instability_analysis.csv but all II values will be 0 (Regime A/B only).
 #
-# Outputs (all under ${RESULTS_DIR}/figures/):
+# Outputs (all under ${RESULTS_DIR}/figures/, numerical only — see
+# FIX NO-TABLES-FIGURES below; all .png/.pdf figures are purged post-run):
 #   instability_analysis.csv
 #   instability_extrapolation.csv          (Stage 2, if benchmark JSON present)
-#   fig_paper_complexity_vs_instability.{png,pdf}   ← KEY figure (§10.9 theorem)
-#   fig_paper_instability_hist.{png,pdf}
-#   fig_paper_regime_counts.{png,pdf}
-#   hypatiax_instability_per_case.{png,pdf}
-#   … (all 12 figure stems: Groups A + B + C + EX)
-run instability "Instability Index analysis + all figures -- SS10.9 (Regime A/B/C - Groups A-C + EX)" bash -c "
+run instability "Instability Index analysis (numerical only, no figures) -- SS10.9 (Regime A/B/C)" bash -c "
   mkdir -p '${RESULTS_DIR}/figures'
   # Purge only instability-specific files; preserve exp1 benchmark JSONs.
   rm -f \
@@ -1180,6 +1190,13 @@ run instability "Instability Index analysis + all figures -- SS10.9 (Regime A/B/
     \${BENCH_ARG} \
     --format png pdf \
     2>&1 | tee '${RESULTS_DIR}'/instability_run.log
+
+  # FIX NO-TABLES-FIGURES: run_instability_suite.py (external script, not edited
+  # here) still requires a --format flag to run, but we purge every .png/.pdf
+  # figure it writes immediately afterward so no figure artifacts persist.
+  _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) 2>/dev/null | wc -l)
+  find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
+  echo \"[instability] removed \${_NFIG} figure byproduct(s) — figure generation disabled\"
 
   # FIX-INSTABILITY-CSV-RESCUE: run_instability_suite.py has been observed
   # (CI run 2026-06-26) writing instability_analysis.csv to a CWD-relative
@@ -1622,33 +1639,10 @@ PYEOF
 "
 
 
-# ── STEP 5c (inlined into exp2_feynman_pca_4060): PCA comparison table ────────
-# exp2_feynman_pca_comparison_table is NOT a separate registered step.
-# Its logic runs unconditionally after exp2_feynman_pca_4060 completes.
-# Mirrors the "Generate PCA comparison table" step in ci_analysis.yml.
-(
-  set -euo pipefail
-  _PCA_SUMMARY="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060/exp2_pca_4060_summary.json"
-  _SCRIPT="${REPO_ROOT}/scripts/patches/generate_exp2_pca_comparison_table.py"
-  if [[ ! -f "${_PCA_SUMMARY}" ]]; then
-    echo "[SKIP] exp2_pca_4060_summary.json not found — PCA comparison table skipped."
-  elif [[ ! -f "${_SCRIPT}" ]]; then
-    echo "[ERROR] generate_exp2_pca_comparison_table.py not found at: ${_SCRIPT}"
-    echo "        Commit scripts/patches/generate_exp2_pca_comparison_table.py to the repo."
-    exit 1
-  else
-    echo "[FIX-C3] Generating PCA comparison table (tex, csv, md) ..."
-    mkdir -p "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060"
-    python3 "${_SCRIPT}" \
-      --results-dir "${RESULTS_DIR}" \
-      --output-dir  "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060" \
-      --formats     "tex,csv,md" \
-      2>&1 | tee -a "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060/exp2_pca_4060_run.log"
-    echo "[FIX-C3] PCA comparison table written to exp2_pca_4060/:"
-    ls "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060/exp2_pca_comparison"* 2>/dev/null || \
-      echo "  WARNING: exp2_pca_comparison.{tex,csv,md} not found — check generator output above"
-  fi
-)
+# FIX NO-TABLES-FIGURES: STEP 5c (PCA comparison table generation, inlined
+# after exp2_feynman_pca_4060) has been removed entirely — this block used to
+# call generate_exp2_pca_comparison_table.py to write .tex/.csv/.md tables.
+# Table generation is fully disabled; no replacement logic runs here.
 
 
 # Generates extrap_r2_far for every Feynman equation by re-running
@@ -2443,423 +2437,6 @@ print('[suppB_sc-METHOD-ASSERT] OK -- all 6 methods present')
 \"
 "
 
-# ── STEP 11: tables ──────────────────────────────────────────────────────────
-# FIX STEP-11-12: output now goes to \${RESULTS_DIR}/tables/ (same tree as figures)
-# Previously written to \${REPO_ROOT}/scripts/paper/tables which diverged from
-# the path used by inventory_results() and tables-generator glob checks.
-run tables "Generate all LaTeX tables from result JSONs -> \${RESULTS_DIR}/tables/" bash -c "
-  set -euo pipefail
-  mkdir -p '${RESULTS_DIR}/tables'
-  cd '${REPO_ROOT}'
-  TABLE_OUTDIR='${RESULTS_DIR}/tables' \
-  VERIFY_RESULTS_DIR='${RESULTS_DIR}' \
-    python3 scripts/generate_tables.py \
-      --results-dir '${RESULTS_DIR}' \
-      --output-dir  '${RESULTS_DIR}/tables' \
-      2>&1 | tee '${RESULTS_DIR}'/tables_run.log
-  echo 'Tables written to: ${RESULTS_DIR}/tables/'
-  ls '${RESULTS_DIR}/tables/'
-
-  # ── PCA comparison table (FIX-C3) ─────────────────────────────────────────
-  # Mirrors ci_postprocess.yml 'Generate PCA comparison table (exp2_feynman_pca)'
-  # step and ci_analysis.yml 'Generate PCA comparison table (exp2_feynman_pca)'.
-  # Produces exp2_pca_comparison.{tex,csv,md} in the exp2_pca_4060/ subdir.
-  _PCA_SCRIPT='${REPO_ROOT}/scripts/patches/generate_exp2_pca_comparison_table.py'
-  _PCA_SUMMARY='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060/exp2_pca_4060_summary.json'
-  _PCA_OUTDIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060'
-  if [[ -f \"\${_PCA_SCRIPT}\" && -f \"\${_PCA_SUMMARY}\" ]]; then
-    echo '[tables] Generating FIX-C3 PCA comparison table ...'
-    mkdir -p \"\${_PCA_OUTDIR}\"
-    python3 \"\${_PCA_SCRIPT}\" \
-      --results-dir '${RESULTS_DIR}' \
-      --output-dir  \"\${_PCA_OUTDIR}\" \
-      --formats     'tex,csv,md' \
-      2>&1 | tee -a '${RESULTS_DIR}/tables_run.log'
-  elif [[ ! -f \"\${_PCA_SUMMARY}\" ]]; then
-    echo '[tables] SKIP: exp2_pca_4060_summary.json not found — run exp2_feynman_pca_4060 first.'
-  else
-    echo '[tables] WARN: generate_exp2_pca_comparison_table.py not found — skipping PCA table.'
-  fi
-
-  # ── Nguyen-12 symbolic equivalence table (exp3/exp3b) ─────────────────────
-  # Mirrors ci_postprocess.yml 'Generate symbolic equivalence table (exp3/exp3b)'.
-  _SYM_SCRIPT='${REPO_ROOT}/scripts/patches/generate_nguyen12_symequiv_table.py'
-  _SYM_CSV='${RESULTS_DIR}/extrapolation/multi_seed/symbolic_equivalence_report.csv'
-  if [[ -f \"\${_SYM_SCRIPT}\" && -f \"\${_SYM_CSV}\" ]]; then
-    echo '[tables] Generating Nguyen-12 symbolic equivalence table ...'
-    python3 \"\${_SYM_SCRIPT}\" \
-      --results-dir '${RESULTS_DIR}/extrapolation/multi_seed' \
-      --output-dir  '${RESULTS_DIR}/tables' \
-      2>&1 | tee -a '${RESULTS_DIR}/tables_run.log'
-  elif [[ ! -f \"\${_SYM_CSV}\" ]]; then
-    echo '[tables] SKIP: symbolic_equivalence_report.csv not found — run exp3_symbolic_equivalence first.'
-  else
-    echo '[tables] SKIP: generate_nguyen12_symequiv_table.py not found.'
-  fi
-"
-
-# ── STEP 12: figures ─────────────────────────────────────────────────────────
-# FIX STEP-11-12 : confirmed output dir is ${RESULTS_DIR}/figures/ — consistent
-#                  with Step 11 (tables) now also writing under ${RESULTS_DIR}/.
-#
-# FIX FIGURES-A  : generate_figures.py MUST be called with --experiment <id>
-#                  (mirrors ci_postprocess.yml A1–A14).  Calling it without
-#                  --experiment caused it to either do nothing or write to a
-#                  tools-level path (hypatiax/tools/figures/results.pdf) that
-#                  is never read by LaTeX — root cause of all suppB/instability
-#                  figure files being absent from ${RESULTS_DIR}/figures/.
-#
-# FIX FIGURES-B  : suppB figures must be read from AND written to the CANONICAL
-#                  suppB subdirectory (comparison_results/feynman-tests/
-#                  noise-sweep/figures/) — mirrors ci_postprocess.yml
-#                  A10 "CRITICAL" comment.  suppB_sc likewise uses its own subdir.
-#                  Previous code pointed --results-dir at ${RESULTS_DIR} root,
-#                  causing generate_figures.py to find no noise_sweep_*.json
-#                  and write empty placeholder PDFs.
-#
-# FIX FIGURES-C  : Group C (5 hand-crafted main-paper figures) are NEVER produced
-#                  by any runner or generate_figures.py call.  They must be copied
-#                  from their source locations under ${REPO_ROOT}/Figures/ into
-#                  ${RESULTS_DIR}/figures/ (the path LaTeX reads via
-#                  \graphicspath{{figures/}{../figures/}}).
-#                  Previously there was no copy step at all — all 5 were always
-#                  missing from the final figures/ directory.
-#
-# THREE GROUPS handled in this step:
-#
-#   GROUP A — per-experiment figures (runner output → generate_figures.py)
-#             exp1, exp1b, exp1_pca, exp1b_pca, extrap, hybrid_all_domains,
-#             instability, exp2_feynman, exp2_feynman_pca, exp2_feynman_extrap,
-#             exp2, exp3, exp3b, suppA
-#             → written to ${RESULTS_DIR}/figures/
-#
-#   GROUP B — suppB / suppB_sc sweep figures (noise_sweep_*.json → plots)
-#             → written to their canonical subdirs' figures/ then copied to
-#               ${RESULTS_DIR}/figures/ so LaTeX can find them
-#             Stems: fig1_r2_vs_noise … fig11_recovery_heatmap (PDFs, 11 stems)
-#                    fig_runtime_comparison.png, fig_comparative_table.png (2 stems)
-#
-#   GROUP C — hand-crafted / cosmetic figures (no runner, no generator)
-#             Must already exist under ${REPO_ROOT}/Figures/ subdirs.
-#             This step copies them into ${RESULTS_DIR}/figures/.
-#             Stems and source locations:
-#               hypatiaX_three_systems.pdf
-#                 ← Figures/architecture_figures/
-#               hypatiaX_algorithm1_routing_cascade_v2.pdf
-#                 ← Figures/architecture_figures/
-#               fig18_r2_heatmap_improved.pdf
-#                 ← Figures/figures-cosmetic-last/
-#               fig09_r2_heatmap_regimes.pdf
-#                 ← Figures/figures-cosmetic-last/
-#               fig1_seed_sweep.pdf  (also .png accepted)
-#                 ← Figures/figures-portfolio-variance/
-#             If a source file is absent → [MISSING] warning printed; build
-#             will fail at LaTeX compile time but this step remains non-fatal
-#             so other figures are still deployed.
-# ─────────────────────────────────────────────────────────────────────────────
-run figures "Generate + deploy all paper figures (Groups A/B/C) -> \${RESULTS_DIR}/figures/" bash -c "
-  set -euo pipefail
-  mkdir -p '${RESULTS_DIR}/figures'
-  cd '${REPO_ROOT}'
-
-  # ── Helper: call generate_figures.py with required --experiment flag ────────
-  # Mirrors ci_postprocess.yml A1–A16 exactly.
-  # Skips gracefully when --results-dir does not contain expected source files.
-  _gen_figs() {
-    local exp=\"\$1\" rdir=\"\$2\" fdir=\"\$3\"
-    mkdir -p \"\${fdir}\"
-    if python3 scripts/generate_figures.py \
-        --experiment  \"\${exp}\" \
-        --results-dir \"\${rdir}\" \
-        --figures-dir \"\${fdir}\" \
-        --source      auto \
-        2>&1 | tee -a '${RESULTS_DIR}'/figures_run.log; then
-      echo \"  [OK] \${exp}: figures written to \${fdir}\"
-    else
-      echo \"  [WARN] \${exp}: generate_figures.py returned non-zero — continuing\"
-    fi
-  }
-
-  echo '=== STEP 12 figures — GROUP A: per-experiment figures ===' | tee '${RESULTS_DIR}'/figures_run.log
-
-  # A1: exp1
-  _gen_figs exp1 \
-    '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi' \
-    '${RESULTS_DIR}/figures'
-
-  # A2: exp1b
-  _gen_figs exp1b \
-    '${RESULTS_DIR}/comparison_results/noise-noiseless/15' \
-    '${RESULTS_DIR}/figures'
-
-  # A3: exp2_feynman
-  _gen_figs exp2_feynman \
-    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
-    '${RESULTS_DIR}/figures'
-
-  # A4: exp2_feynman_extrap
-  _gen_figs exp2_feynman_extrap \
-    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap' \
-    '${RESULTS_DIR}/figures'
-
-  # A5: exp2_feynman_pca (FIX-C3 corrected run)
-  _gen_figs exp2_feynman_pca \
-    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060' \
-    '${RESULTS_DIR}/figures'
-
-  # A6: exp2
-  _gen_figs exp2 \
-    '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
-    '${RESULTS_DIR}/figures'
-
-  # A7: exp3
-  _gen_figs exp3 \
-    '${RESULTS_DIR}/extrapolation' \
-    '${RESULTS_DIR}/figures'
-
-  # A8: exp3b
-  _gen_figs exp3b \
-    '${RESULTS_DIR}/extrapolation/multi_seed' \
-    '${RESULTS_DIR}/figures'
-
-  # A9: suppA
-  _gen_figs suppA \
-    '${RESULTS_DIR}/hybrid_pysr/defi' \
-    '${RESULTS_DIR}/figures'
-
-  # A10: hybrid_all_domains
-  _gen_figs hybrid_all_domains \
-    '${RESULTS_DIR}/hybrid_llm_nn/all_domains' \
-    '${RESULTS_DIR}/figures'
-
-  # A11: instability (§10.9 — 12 fig_paper_* / hypatiax_instability_* stems)
-  # NOTE: run_all.sh --step instability already calls run_instability_suite.py
-  # which writes directly to ${RESULTS_DIR}/figures/.  _gen_figs here covers
-  # the generate_figures.py pass that post-processes those outputs.
-  _gen_figs instability \
-    '${RESULTS_DIR}/figures' \
-    '${RESULTS_DIR}/figures'
-
-  # A12: extrap
-  _gen_figs extrap \
-    '${RESULTS_DIR}/comparison_results/extrapolation' \
-    '${RESULTS_DIR}/figures'
-
-  # A13: exp1_pca (FIX-C3)
-  _gen_figs exp1_pca \
-    '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca' \
-    '${RESULTS_DIR}/figures'
-
-  # A14: exp1b_pca (FIX-C3)
-  _gen_figs exp1b_pca \
-    '${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca' \
-    '${RESULTS_DIR}/figures'
-
-  echo ''
-  echo '=== STEP 12 figures — GROUP B: suppB / suppB_sc sweep figures ===' | tee -a '${RESULTS_DIR}'/figures_run.log
-
-  # FIX FIGURES-B: suppB reads noise_sweep_*.json from its OWN canonical subdir.
-  # After generate_figures.py writes to the subdir's figures/, we sync the stems
-  # LaTeX needs into ${RESULTS_DIR}/figures/ where \graphicspath looks.
-
-  _SUPPB_RDIR='${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep'
-  _SUPPB_FDIR=\"\${_SUPPB_RDIR}/figures\"
-  _SUPPB_SC_RDIR='${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
-  _SUPPB_SC_FDIR=\"\${_SUPPB_SC_RDIR}/figures\"
-
-  # FIX FIGURES-B2 (suppB_sc cross-contamination): _SUPPB_FDIR / _SUPPB_SC_FDIR
-  # have been observed accumulating unrelated figures from OTHER experiment
-  # steps (instability fig_instability_*, fig_paper_*, hypatiax_instability_*,
-  # cosmetic fig07-fig22, stray REPO_AUDIT.md_shard*.pdf artifacts, and
-  # double-prefixed 'figures__*' duplicates) when --figures-dir was pointed
-  # here incorrectly on a prior run. Because the old sync loop below only
-  # checked '[ ! -f dest ]' before copying, such contamination would
-  # (a) permanently mask whether THIS run's suppB_sc figure generation
-  # actually produced anything (a silent [OK] from _gen_figs means exit-0,
-  # not non-empty output), and (b) leak unrelated files into
-  # \${RESULTS_DIR}/figures/ whenever their stem didn't collide with a
-  # Group A/C stem.
-  #
-  # Fix: wipe both dirs immediately before generating, so every run starts
-  # from a known-empty state and the only files present afterward are ones
-  # THIS run's _gen_figs call actually wrote.
-  rm -rf \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"
-  mkdir -p \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"
-
-  # B1: suppB noise-sweep figures (Supp B §noise: fig1_r2_vs_noise … fig11_recovery_heatmap)
-  _gen_figs suppB \"\${_SUPPB_RDIR}\" \"\${_SUPPB_FDIR}\"
-
-  # B2: suppB_sc sample-complexity figures (Supp B §sc)
-  _gen_figs suppB_sc \"\${_SUPPB_SC_RDIR}\" \"\${_SUPPB_SC_FDIR}\"
-
-  # FIX FIGURES-B3: report what each dir actually contains right after
-  # generation, BEFORE syncing, so an empty/wrong output is visible at the
-  # exact step that produced it rather than discovered later from the
-  # aggregate required-figure count at the end of this step.
-  for _label_dir in \"suppB:\${_SUPPB_FDIR}\" \"suppB_sc:\${_SUPPB_SC_FDIR}\"; do
-    _label=\"\${_label_dir%%:*}\"; _dir=\"\${_label_dir#*:}\"
-    _n=\$(find \"\${_dir}\" -maxdepth 1 \\( -name 'fig*.png' -o -name 'fig*.pdf' \\) 2>/dev/null | wc -l)
-    echo \"  [B-inventory] \${_label}: \${_n} fig*.png/pdf file(s) in \${_dir}\" | tee -a '${RESULTS_DIR}'/figures_run.log
-    if [ \"\${_n}\" -eq 0 ]; then
-      echo \"    [WARN] \${_label} produced ZERO figures. Check the [SKIP]/[INFO] noise_sweep/sample_complexity\" | tee -a '${RESULTS_DIR}'/figures_run.log
-      echo \"           source lines above, and confirm the JSON schema matches what _sweep_rows expects\" | tee -a '${RESULTS_DIR}'/figures_run.log
-      echo \"           (a list of row-dicts with sigma/n_samples keys, not a dict keyed by equation name).\" | tee -a '${RESULTS_DIR}'/figures_run.log
-    fi
-  done
-
-  # Sync suppB/suppB_sc figure stems to ${RESULTS_DIR}/figures/ (LaTeX target)
-  # Stems needed per supp_benchmark_report.tex Table A.1:
-  #   fig1_r2_vs_noise … fig11_recovery_heatmap (PDFs)
-  #   fig_runtime_comparison.png  fig_comparative_table.png
-  #
-  # FIX FIGURES-B4: restrict the sync to the KNOWN suppB/suppB_sc stem list
-  # (same list used in the final required-figure check below) instead of a
-  # bare 'fig*' glob, so even if either source dir is contaminated again in
-  # the future, only legitimate suppB/suppB_sc stems can be copied into
-  # \${RESULTS_DIR}/figures/ — contamination stays contained to the source
-  # subdir and visible there via [B-inventory] above, instead of silently
-  # leaking into the LaTeX-facing directory.
-  _SUPPB_STEMS=\"fig1_r2_vs_noise fig2_rmse_vs_noise fig3_time_vs_noise fig4_r2_vs_n fig5_rmse_vs_n fig6_time_vs_n fig7_recovery_vs_noise fig8_recovery_vs_n fig9_minr2_vs_noise fig10_r2_boxplot_noise fig11_recovery_heatmap fig_runtime_comparison fig_comparative_table\"
-  echo '  [B] Syncing known suppB/suppB_sc figure stems → ${RESULTS_DIR}/figures/'
-  for _src_fdir in \"\${_SUPPB_FDIR}\" \"\${_SUPPB_SC_FDIR}\"; do
-    if [ -d \"\${_src_fdir}\" ]; then
-      for _stem in \${_SUPPB_STEMS}; do
-        for _ext in png pdf; do
-          _f=\"\${_src_fdir}/\${_stem}.\${_ext}\"
-          if [ -f \"\${_f}\" ]; then
-            cp \"\${_f}\" '${RESULTS_DIR}/figures/'\"\${_stem}.\${_ext}\" && echo \"    copied: \${_stem}.\${_ext}\"
-          fi
-        done
-      done
-    fi
-  done
-
-  echo ''
-  echo '=== STEP 12 figures — GROUP C: hand-crafted figures (copy from Figures/) ===' | tee -a '${RESULTS_DIR}'/figures_run.log
-  echo '    (FIX FIGURES-C: these are never produced by runners or generate_figures.py)'
-
-  # FIX FIGURES-C: copy each hand-crafted figure from its source tree into figures/.
-  # Source locations mirror NB-05 FIGURES_INVENTORY and ci_report.yml FIX-F1–F4.
-  # Non-fatal: a MISSING warning is printed but the step continues.
-
-  _copy_fig() {
-    local stem=\"\$1\" src=\"\$2\"
-    local dest='${RESULTS_DIR}/figures/'\"\$(basename \"\${src}\")\"
-    if [ -f \"\${src}\" ]; then
-      cp -v \"\${src}\" \"\${dest}\" 2>&1 | tee -a '${RESULTS_DIR}'/figures_run.log
-      echo \"  [OK-C] \${stem}: copied from \${src}\"
-    else
-      echo \"  [MISSING-C] \${stem}: source not found: \${src}\" | tee -a '${RESULTS_DIR}'/figures_run.log
-      echo \"              Place the file at the source path and re-run --step figures.\"
-    fi
-  }
-
-  # FIX-F1 (ci_report.yml): architecture diagram — §7.1 fig:architecture
-  # Source: Figures/architecture_figures/hypatiaX_three_systems.pdf
-  _copy_fig hypatiaX_three_systems \
-    '${REPO_ROOT}/Figures/architecture_figures/hypatiaX_three_systems.pdf'
-
-  # FIX-F2 (ci_report.yml): routing cascade — §7.4 fig:routing_cascade
-  # Source: Figures/architecture_figures/hypatiaX_algorithm1_routing_cascade_v2.pdf
-  _copy_fig hypatiaX_algorithm1_routing_cascade_v2 \
-    '${REPO_ROOT}/Figures/architecture_figures/hypatiaX_algorithm1_routing_cascade_v2.pdf'
-
-  # FIX-F3 (ci_report.yml): R² heatmap clipped — §10.2 fig:r2_heatmap_clipped
-  # Source: Figures/figures-cosmetic-last/fig18_r2_heatmap_improved.pdf
-  _copy_fig fig18_r2_heatmap_improved \
-    '${REPO_ROOT}/Figures/figures-cosmetic-last/fig18_r2_heatmap_improved.pdf'
-
-  # FIX-F4 (ci_report.yml): R² heatmap raw — §10.2 fig:r2_heatmap_raw
-  # Source: Figures/figures-cosmetic-last/fig09_r2_heatmap_regimes.pdf
-  _copy_fig fig09_r2_heatmap_regimes \
-    '${REPO_ROOT}/Figures/figures-cosmetic-last/fig09_r2_heatmap_regimes.pdf'
-
-  # FIX-F5: portfolio seed sweep — §10.5 fig:portfolio_seed_sweep
-  # Source: Figures/figures-portfolio-variance/fig1_seed_sweep.pdf (or .png)
-  if [ -f '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.pdf' ]; then
-    _copy_fig fig1_seed_sweep \
-      '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.pdf'
-  elif [ -f '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.png' ]; then
-    _copy_fig fig1_seed_sweep \
-      '${REPO_ROOT}/Figures/figures-portfolio-variance/fig1_seed_sweep.png'
-  else
-    echo '  [MISSING-C] fig1_seed_sweep: not found at Figures/figures-portfolio-variance/fig1_seed_sweep.{pdf,png}' | tee -a '${RESULTS_DIR}'/figures_run.log
-  fi
-
-  # ── Sync ${RESULTS_DIR}/figures/*.* into \${REPO_ROOT}/figures/ (LaTeX target) ─
-  # FIX FIGURES-ROOT-SYNC: run_all.sh previously only ever wrote figures under
-  # \${RESULTS_DIR}/figures/ (hypatiax/data/results/figures by default). The CI
-  # pipeline (ci_paper_audit.yml \"Copy hypatiax/data/results/figures/*.* into
-  # repo-root figures/\") additionally deploys a flat copy to \${REPO_ROOT}/figures/,
-  # which is what \\includegraphics resolves via \\graphicspath{{figures/}{../figures/}}
-  # when pdflatex is invoked from \${REPO_ROOT}. Without this step, a local
-  # \`run_all.sh\` reproduction would leave \${REPO_ROOT}/figures/ empty/stale even
-  # though \${RESULTS_DIR}/figures/ is fully populated, and a local pdflatex build
-  # would silently diverge from what CI produces.
-  #
-  # Mirrors the CI step's semantics exactly:
-  #   - non-recursive: only files directly inside \${RESULTS_DIR}/figures/ are
-  #     copied (cp, not cp -r), so no nested figures/figures/ can be created
-  #     even if a stray subdirectory (e.g. a leftover tables/) exists there.
-  #   - destination basenames only: cp -f \"\${FILES[@]}\" \"\${REPO_ROOT}/figures/\"
-  #     always lands files flat inside figures/, never inside a path that
-  #     reproduces source subdirectory structure.
-  #   - additive, not mirrored: cp -f (not rsync --delete), so hand-crafted or
-  #     previously-deployed files at \${REPO_ROOT}/figures/ are never removed.
-  echo ''
-  echo '=== STEP 12 figures — sync \${RESULTS_DIR}/figures/*.* -> \${REPO_ROOT}/figures/ ===' | tee -a '${RESULTS_DIR}'/figures_run.log
-  mkdir -p '${REPO_ROOT}/figures'
-  _ROOT_SRC='${RESULTS_DIR}/figures'
-  if [ -d \"\${_ROOT_SRC}\" ]; then
-    shopt -s nullglob
-    _ROOT_FILES=( \"\${_ROOT_SRC}\"/*.* )
-    shopt -u nullglob
-    if [ \"\${#_ROOT_FILES[@]}\" -gt 0 ]; then
-      cp -f \"\${_ROOT_FILES[@]}\" '${REPO_ROOT}/figures/'
-      echo \"  Copied \${#_ROOT_FILES[@]} file(s) from \${_ROOT_SRC}/ into ${REPO_ROOT}/figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
-    else
-      echo \"  [WARN] \${_ROOT_SRC} exists but has no files matching *.* — nothing synced to repo-root figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
-    fi
-  else
-    echo \"  [WARN] \${_ROOT_SRC} not found — skipping sync to repo-root figures/\" | tee -a '${RESULTS_DIR}'/figures_run.log
-  fi
-
-  # ── Final inventory ──────────────────────────────────────────────────────────
-  echo ''
-  echo '=== STEP 12 figures — final inventory ===' | tee -a '${RESULTS_DIR}'/figures_run.log
-  echo 'Figures written to: ${RESULTS_DIR}/figures/'
-  ls '${RESULTS_DIR}/figures/' 2>/dev/null || echo '  (directory empty)'
-  echo 'Figures synced to:  ${REPO_ROOT}/figures/'
-  ls '${REPO_ROOT}/figures/' 2>/dev/null || echo '  (directory empty)'
-
-  # Report against the 18-stem required list (5 embedded + 13 inventory)
-  echo ''
-  echo 'Required-figure status check:' | tee -a '${RESULTS_DIR}'/figures_run.log
-  _REQUIRED=\"hypatiaX_three_systems hypatiaX_algorithm1_routing_cascade_v2 fig18_r2_heatmap_improved fig09_r2_heatmap_regimes fig1_seed_sweep fig1_r2_vs_noise fig2_rmse_vs_noise fig3_time_vs_noise fig4_r2_vs_n fig5_rmse_vs_n fig6_time_vs_n fig7_recovery_vs_noise fig8_recovery_vs_n fig9_minr2_vs_noise fig10_r2_boxplot_noise fig11_recovery_heatmap fig_runtime_comparison fig_comparative_table\"
-  _n_ok=0; _n_miss=0
-  for _stem in \${_REQUIRED}; do
-    _found=false
-    for _ext in pdf png jpg eps svg; do
-      if [ -f '${RESULTS_DIR}/figures/'\"\${_stem}.\${_ext}\" ]; then
-        _found=true; break
-      fi
-    done
-    if \"\${_found}\"; then
-      echo \"  [OK]      \${_stem}\" | tee -a '${RESULTS_DIR}'/figures_run.log
-      _n_ok=\$(( _n_ok + 1 ))
-    else
-      echo \"  [MISSING] \${_stem}\" | tee -a '${RESULTS_DIR}'/figures_run.log
-      _n_miss=\$(( _n_miss + 1 ))
-    fi
-  done
-  echo ''
-  echo \"Required figures: \${_n_ok} present, \${_n_miss} still missing.\" | tee -a '${RESULTS_DIR}'/figures_run.log
-  if [ \"\${_n_miss}\" -gt 0 ]; then
-    echo \"  Group C figures must be placed manually under \${REPO_ROOT}/Figures/ before re-running.\"
-    echo \"  Group B figures require suppB/suppB_sc experiment steps to complete first.\"
-  fi
-"
-
 # ── STEP 13: validate ────────────────────────────────────────────────────────
 # FIX-validate: run() dispatches via "$@" which cannot forward a here-doc on stdin.
 # Wrapping the inline Python in bash -c '...' with a single-quoted heredoc ensures
@@ -2936,11 +2513,9 @@ inst_csv = os.path.isfile(f"{RESULTS}/figures/instability_analysis.csv")
 checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
 _tag = "OK" if inst_csv else "FAIL"
 print(f"  [{_tag}] instability_analysis.csv")
-inst_fig = glob.glob(f"{RESULTS}/figures/fig_paper_complexity_vs_instability.pdf")
-ok_ifig = bool(inst_fig)
-checks.append(("fig_paper_complexity_vs_instability.pdf present", 1.0 if ok_ifig else 0.0, 1.0, ok_ifig))
-_tag = "OK" if ok_ifig else "FAIL"
-print(f"  [{_tag}] fig_paper_complexity_vs_instability.pdf (KEY SS10.9 figure)")
+# FIX NO-TABLES-FIGURES: figure-presence check removed — figures are no
+# longer generated anywhere in this pipeline (purged immediately after
+# run_instability_suite.py runs).
 
 # --- FIX CRITICAL 2: suppB_sc output present ---
 # Output path: comparison_results/feynman-tests/sample-complexity/
@@ -2980,16 +2555,8 @@ print(
     f"{len(exp3b_files)} nguyen JSON(s){suffix_exp3b}"
 )
 
-# --- FIX STEP-11-12: tables and figures co-located under RESULTS_DIR ---
-tbl = glob.glob(f"{RESULTS}/tables/*.tex")
-fig = glob.glob(f"{RESULTS}/figures/*.pdf")
-ok_tbl = bool(tbl); ok_fig = bool(fig)
-checks.append(("tables in RESULTS_DIR/tables/", 1.0 if ok_tbl else 0.0, 1.0, ok_tbl))
-checks.append(("figures in RESULTS_DIR/figures/", 1.0 if ok_fig else 0.0, 1.0, ok_fig))
-_tag_tbl = "OK" if ok_tbl else "FAIL"
-_tag_fig = "OK" if ok_fig else "FAIL"
-print(f"  [{_tag_tbl}] {RESULTS}/tables/: {len(tbl)} .tex file(s)")
-print(f"  [{_tag_fig}] {RESULTS}/figures/: {len(fig)} .pdf file(s)")
+# FIX NO-TABLES-FIGURES: tables/.tex and figures/.pdf existence checks removed
+# — no table or figure generation occurs anywhere in this pipeline any more.
 
 # --- exp1_pca: PCA-directed DeFi noiseless outputs (FIX-C3-ESCAPE) ---
 # Tracer [validate] warning: exp1_pca outputs not covered by validate step.
@@ -3056,11 +2623,11 @@ PYEOF
 
 # ── STEP 14: qualify ─────────────────────────────────────────────────────────
 # Per-experiment qualification gate — fully self-contained (no run_all_checkpoint.py).
-# Checks 7 dimensions for each of the 12 qualifiable experiments:
+# Checks 5 dimensions for each of the 12 qualifiable experiments (FIX
+# NO-TABLES-FIGURES: figures/tables dimensions (6)/(7) removed — no table or
+# figure generation occurs anywhere in this pipeline any more):
 #   (1) checkpoint file present  (2) result files present  (3) _merged.json present
 #   (4) _merged.csv present      (5) committed to git
-#   (6) figures present in ${RESULTS_DIR}/figures/
-#   (7) tables present in ${RESULTS_DIR}/tables/
 # Also performs numerical spot-check inline:
 #   DeFi 89.2 %, 74 cases, Feynman 9/30, Core-15 MW, Instability 70 tasks.
 # Writes logs/verify_report.json  +  ${RESULTS_DIR}/qualify_run.log.
@@ -3203,13 +2770,13 @@ if inst_csv.exists():
 else:
     record("instability_analysis.csv", True, "not yet produced — skipped", status="SKIP")
 
-# ── 2. Per-experiment 7-dimension gate ───────────────────────────────────────
-print("\n=== Phase 5b: 7-dimension per-experiment gate ===\n")
+# ── 2. Per-experiment 5-dimension gate ───────────────────────────────────────
+print("\n=== Phase 5b: 5-dimension per-experiment gate ===\n")
 
 EXPERIMENTS = {
     "exp1":                   RESULTS / "comparison_results/noise-noiseless/noiseless/defi",
     "exp1b":                  RESULTS / "comparison_results/noise-noiseless/15",
-    # FIX-C3-QUALIFY: PCA-corrected DeFi runs added so the 7-dimension gate checks
+    # FIX-C3-QUALIFY: PCA-corrected DeFi runs added so the 5-dimension gate checks
     # the corrected split results, not just the legacy dirs.
     "exp1_pca":               RESULTS / "comparison_results/noise-noiseless/noiseless/defi_pca",
     "exp1b_pca":              RESULTS / "comparison_results/noise-noiseless/15_pca",
@@ -3226,9 +2793,6 @@ EXPERIMENTS = {
     "suppB":                  RESULTS / "comparison_results/feynman-tests/noise-sweep",
     "suppB_sc":               RESULTS / "comparison_results/feynman-tests/sample-complexity",
 }
-
-FIGURES_DIR = RESULTS / "figures"
-TABLES_DIR  = RESULTS / "tables"
 
 def dim_check(exp, rdir):
     ok_all = True
@@ -3254,7 +2818,7 @@ def dim_check(exp, rdir):
     ok3 = bool(merged)
     record(f"{exp} · (3) _merged.json", ok3,
            f"{len(merged)} file(s)" if ok3 else "MISSING",
-           status="WARN" if not ok3 else "PASS")  # merged may be written by tables step
+           status="WARN" if not ok3 else "PASS")
 
     # (4) _merged.csv
     mcsv = list(rdir.glob("*_merged.csv")) if rdir.exists() else []
@@ -3278,18 +2842,10 @@ def dim_check(exp, rdir):
            "tracked" if ok5 else "not tracked / no files",
            status="WARN" if not ok5 else "PASS")
 
-    # (6) figures present
-    ok6 = bool(list(FIGURES_DIR.glob("*.pdf")) + list(FIGURES_DIR.glob("*.png"))) \
-          if FIGURES_DIR.exists() else False
-    record(f"{exp} · (6) figures in RESULTS_DIR/figures/", ok6,
-           f"{FIGURES_DIR}")
+    # FIX NO-TABLES-FIGURES: (6) figures and (7) tables checks removed — no
+    # table or figure generation occurs anywhere in this pipeline any more.
 
-    # (7) tables present
-    ok7 = bool(list(TABLES_DIR.glob("*.tex"))) if TABLES_DIR.exists() else False
-    record(f"{exp} · (7) tables in RESULTS_DIR/tables/", ok7,
-           f"{TABLES_DIR}")
-
-    return ok_all and ok6 and ok7
+    return ok_all
 
 _hdr = "Experiment"
 print(f"{_hdr:<25}  Gate")
@@ -4897,40 +4453,26 @@ PYEOF
 '
 
 # ── STEP 25: audit_figures_tables ─────────────────────────────────────────────
-run audit_figures_tables "Validate figures and tables presence under RESULTS_DIR" bash -c '
+# FIX NO-TABLES-FIGURES: this step is now a no-op passthrough. Table/figure
+# generation has been removed from the pipeline entirely, so there is nothing
+# to validate presence of; it always reports all_ok=true so downstream steps
+# (audit_final_gate) that read figures_tables_report.json keep working.
+run audit_figures_tables "No-op: table/figure generation disabled pipeline-wide" bash -c '
   set -euo pipefail
   mkdir -p logs
   python3 - <<'"'"'PYEOF'"'"'
-import json, os, sys
+import json
 from pathlib import Path
-
-OUT_BASE    = Path(os.environ.get("OUT_BASE", os.environ.get("RESULTS_DIR", "hypatiax/data/results")))
-FIGURES_DIR = OUT_BASE / "figures"
-TABLES_DIR  = OUT_BASE / "tables"
-
-findings = []
-all_ok   = True
-
-def record(category, name, ok, detail=""):
-    findings.append({"category": category, "name": name, "ok": ok, "detail": detail})
-    tag = "OK" if ok else "FAIL"
-    print("  [" + tag + "]  [" + category + "]  " + name + "  " + detail)
-    return ok
-
-pdfs = list(FIGURES_DIR.glob("*.pdf")) if FIGURES_DIR.exists() else []
-pngs = list(FIGURES_DIR.glob("*.png")) if FIGURES_DIR.exists() else []
-if not record("figures", ">=1 PDF in figures/", bool(pdfs), str(len(pdfs)) + " PDF(s)"): all_ok = False
-if not record("figures", ">=1 PNG in figures/", bool(pngs), str(len(pngs)) + " PNG(s)"): all_ok = False
-
-texs = list(TABLES_DIR.glob("*.tex")) if TABLES_DIR.exists() else []
-if not record("tables", ">=1 TeX in tables/", bool(texs), str(len(texs)) + " TeX file(s)"): all_ok = False
 
 out = Path("logs/figures_tables_report.json")
 out.parent.mkdir(parents=True, exist_ok=True)
-out.write_text(json.dumps({"all_ok": all_ok, "findings": findings}, indent=2))
+out.write_text(json.dumps({
+    "all_ok": True,
+    "findings": [{"category": "figures_tables", "name": "generation disabled",
+                   "ok": True, "detail": "table/figure generation removed from pipeline"}]
+}, indent=2))
+print("  [OK]  [figures_tables]  generation disabled — nothing to validate")
 print("  Report -> " + str(out))
-if not all_ok:
-    sys.exit(1)
 PYEOF
 '
 
@@ -4952,7 +4494,7 @@ print(sep)
 rows = [
     ("1. numerical-verify",        verify, ok_verify),
     ("2. paper-audit",             audit,  ok_audit),
-    ("3. figures-tables-validate", figs,   ok_figs),
+    ("3. figures-tables-validate (no-op, disabled)", figs, ok_figs),
 ]
 for label, result, ok in rows:
     tag = "PASS" if ok else "FAIL"
@@ -4973,8 +4515,7 @@ log "============================================================"
 echo ""
 echo "  Key output locations:"
 echo "    Results JSON:  ${RESULTS_DIR}/"
-echo "    LaTeX tables:  ${RESULTS_DIR}/tables/*.tex"             # FIX STEP-11-12
-echo "    Figures PDF:   ${RESULTS_DIR}/figures/*.pdf"            # consistent with tables
+echo "    (table/figure generation disabled — no .tex/.png/.pdf outputs)"
 echo "    Verify report: logs/verify_report.json"                 # STEP 14
 echo "    Paper audit:   logs/paper_audit_findings.json"          # STEP 15
 echo ""
@@ -4990,18 +4531,13 @@ echo "    tab:nguyen12     <- exp3              (extrapolation/)      seed=42"
 echo "                    <- exp3b             (extrapolation/multi_seed/)  seeds 99/123/777/2024"
 echo "    tab:instability  <- instability        (SS10.9 Regime A/B/C, Spearman rho, 12 figs)"
 echo ""
-echo "  Instability outputs (STEP 4a):"
+echo "  Instability outputs (STEP 4a, numerical only — figure generation disabled):"
 echo "    ${RESULTS_DIR}/figures/instability_analysis.csv"
 echo "    ${RESULTS_DIR}/figures/instability_extrapolation.csv  (Stage 2, if benchmark JSON found)"
-echo "    ${RESULTS_DIR}/figures/fig_paper_complexity_vs_instability.{png,pdf}  <- KEY (SS10.9)"
-echo "    ${RESULTS_DIR}/figures/fig_paper_instability_hist.{png,pdf}"
-echo "    ${RESULTS_DIR}/figures/fig_paper_regime_counts.{png,pdf}"
-echo "    ${RESULTS_DIR}/figures/hypatiax_instability_per_case.{png,pdf}"
-echo "    (+ 8 more figure stems: Groups A, B, C full set + EX)"
 echo ""
 echo "  Paper audit outputs (STEPs 14-21):"
-echo "    ${RESULTS_DIR}/qualify_run.log          (numerical spot-check + 7-dim gate)"
-echo "    ${RESULTS_DIR}/qualify_run.log          (7-dimension per-experiment gate)"
+echo "    ${RESULTS_DIR}/qualify_run.log          (numerical spot-check + 5-dim gate)"
+echo "    ${RESULTS_DIR}/qualify_run.log          (5-dimension per-experiment gate)"
 echo "    ${RESULTS_DIR}/audit_paper_run.log      (paper claims vs results)"
 echo "    ${RESULTS_DIR}/audit_nb01_run.log       (NB-01 citation audit)"
 echo "    ${RESULTS_DIR}/audit_nb02_run.log       (NB-02 cross-reference audit)"

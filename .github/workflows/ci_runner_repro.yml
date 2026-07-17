@@ -1,5 +1,5 @@
 # ==============================================================================
-#  ci_runner.yml - HypatiaX unified experiment runner (simplified)
+#  ci_runner_repro.yml - HypatiaX unified experiment runner (repro variant)
 #                               (was: ci_experiment.yml / ci_experiment_instability.yml)
 #
 #  Covers: exp1 . exp1b . exp2_feynman . exp2 . exp3 . exp3b
@@ -60,10 +60,29 @@
 #                  invocation (matching ci_experiment.yml), passing RESULTS_DIR as
 #                  an absolute path so the script resolves outputs from workspace
 #                  root regardless of any cd inside run_all.sh.
+#
+#  ── REPRO VARIANT (ci_runner_repro.yml) ──────────────────────────────────────
+#  This file is a copy of ci_runner.yml for use with ci_pipeline_repro.yml
+#  (numerical-results-only pipeline; no ci_analysis.yml / ci_postprocess.yml
+#  downstream). NOTE ON SCOPE: ci_runner.yml itself has no dedicated
+#  "generate figures" / "generate tables" STEPS — those live entirely in
+#  ci_postprocess.yml (generate_figures.py / generate_tables.py), which this
+#  repro pipeline never dispatches.
+#  FIX NO-TABLES-FIGURES: two experiment scripts still write .tex/.png/.pdf as
+#  raw side effects that this workflow doesn't control directly:
+#    1. exp1_ablation.py writes exp1_ablation_table.tex, exp1_rf01_significant.tex,
+#       and exp1_rf01_subdomain.tex alongside its JSON results.
+#    2. run_instability_suite.py writes 46 .png/.pdf figure files as part of its
+#       raw output.
+#  These are now purged at the source in run_all.sh itself (see FIX
+#  NO-TABLES-FIGURES there) immediately after each script runs, and this
+#  workflow's "Commit and push shard results" step additionally deletes any
+#  stray .tex/.png/.pdf under the shard's result dir as a backstop before
+#  staging — so no table or figure artifact can reach the committed repo.
 # ==============================================================================
 
-name: "HypatiaX - runner"
-run-name: "HypatiaX - runner · ${{ inputs.experiment }}"
+name: "HypatiaX - runner (repro)"
+run-name: "HypatiaX - runner (repro) · ${{ inputs.experiment }}"
 
 # -- Triggers ------------------------------------------------------------------
 on:
@@ -290,11 +309,13 @@ jobs:
 
             # -- STEP 2a: Core-15 ablation (§10.6) ------------------------------------
             # exp1_ablation.py benchmarks PySR-only vs HypatiaX on the Core-15 suite.
-            # Primary output: exp1_ablation_results.json (required by ci_postprocess).
-            # Also writes: exp1_ablation_table.tex, exp1_rf01_mannwhitney.json,
-            #              exp1_rf01_significant.tex, exp1_rf01_subdomain.tex,
-            #              exp1_instability_stats.json, instability_extrapolation_v2.csv,
-            #              provenance_map_exp1.json
+            # Primary output: exp1_ablation_results.json (the numerical result this
+            # repro pipeline cares about).
+            # Also writes (byproducts of the script itself, not this workflow —
+            # unused/uncommitted in this repro variant): exp1_ablation_table.tex,
+            #              exp1_rf01_mannwhitney.json, exp1_rf01_significant.tex,
+            #              exp1_rf01_subdomain.tex, exp1_instability_stats.json,
+            #              instability_extrapolation_v2.csv, provenance_map_exp1.json
             # RESULT_SUBDIR mirrors the path RESULTS_DIR is set to inside run_all.sh.
             exp1_ablation)
               SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
@@ -1362,7 +1383,7 @@ jobs:
             echo "  JSON count : ${_DEFI_COUNT}"
             if [[ "${_DEFI_COUNT}" -eq 0 ]]; then
               echo "::error::instability requires exp1 DeFi benchmark JSONs in ${_DEFI_DIR} — none found."
-              echo "  Run ci_runner.yml with experiment=exp1 first, then re-run instability."
+              echo "  Run ci_runner_repro.yml with experiment=exp1 first, then re-run instability."
               exit 1
             fi
             echo "  OK: ${_DEFI_COUNT} exp1 benchmark JSON(s) found."
@@ -1395,6 +1416,7 @@ jobs:
           PYSR_SEED="${SHARD_SEEDS}" \
           EXPERIMENT_SEED="${SHARD_SEEDS}" \
           DOMAIN_FILTER="${TASK_IDS}" \
+          NUMERICAL_ONLY="true" \
             bash run_all.sh --step "${EXP}"
 
       # -- FIX-EXP1ABL-SHARD-CLOBBER --------------------------------------------
@@ -2078,11 +2100,9 @@ jobs:
         run: |
           TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_CSV=$(find "${TARGET}" -name "instability_analysis.csv" 2>/dev/null | wc -l)
-          COUNT_FIG=$(find "${TARGET}" \( -name "*.png" -o -name "*.pdf" \) 2>/dev/null | wc -l)
           echo "=== instability output verification ==="
           echo "  Target dir               : ${TARGET}"
           echo "  instability_analysis.csv : ${COUNT_CSV}"
-          echo "  Figure files (.png/.pdf) : ${COUNT_FIG}"
           find "${TARGET}" -type f 2>/dev/null | sort || true
           # FIX-INSTABILITY-CSV-RESCUE (CI-side mirror): run_all.sh's instability
           # step already attempts to rescue a misplaced instability_analysis.csv
@@ -2515,6 +2535,14 @@ jobs:
 
           echo "--- Files to stage ---"
           find "${TARGET}" -type f | sort
+
+          # FIX NO-TABLES-FIGURES: hard-delete backstop. run_all.sh now purges
+          # .tex/.png/.pdf byproducts itself (exp1_ablation, instability), but
+          # this deletes any that might still land under TARGET before staging,
+          # so no table/figure artifact can ever be committed by this workflow.
+          _PURGED=$(find "${TARGET}" -type f \( -name '*.tex' -o -name '*.png' -o -name '*.pdf' \) 2>/dev/null | wc -l)
+          find "${TARGET}" -type f \( -name '*.tex' -o -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
+          echo "Purged ${_PURGED} .tex/.png/.pdf file(s) from ${TARGET} before staging (table/figure generation disabled)."
 
           commit_and_push() {
             # Rebase on any concurrent shard commits before staging.

@@ -18,10 +18,12 @@
 #                  table of missing task IDs so the operator knows exactly
 #                  what to re-dispatch.
 #
-#    3. QUALIFY  — Does each experiment pass all 7 qualification dimensions?
+#    3. QUALIFY  — Does each experiment pass all 5 qualification dimensions?
 #                  (checkpoint=pass | result files | _merged.json | _merged.csv
-#                   | committed to git | figures | tables)
+#                   | committed to git)
 #                  Mirrors qualify_experiment() from run_all_checkpoint.py.
+#                  FIX NO-TABLES-FIGURES: figures/tables dimensions removed —
+#                  no table or figure generation occurs anywhere in this pipeline.
 #
 #  NOTE: the paper-audit step (cross-checking paper_targets.json against
 #  result values) has been removed from this workflow.
@@ -280,9 +282,7 @@ jobs:
               "suppB":             ["noise_sweep_*.json", "noise_sweep_*.csv"],
               "suppB_sc":          ["sample_complexity_*.json", "sample_complexity_*.csv"],
               "hybrid_all_domains": ["hybrid_llm_nn_all_domains_*.json"],
-              "instability":       ["instability_analysis.csv", "instability_extrapolation.csv",
-                                    "fig_paper_*.pdf", "fig_paper_*.png",
-                                    "hypatiax_instability_*.pdf", "hypatiax_instability_*.png"],
+              "instability":       ["instability_analysis.csv", "instability_extrapolation.csv"],
               "extrap":            ["all_domains_extrap_v4_*.json",
                                     "protocol_core_*.json"],
           }
@@ -661,14 +661,13 @@ jobs:
 #  JOB 3 — qualify: 7-dimension gate per experiment
 #
 #  Mirrors qualify_experiment() from run_all_checkpoint.py v8.0.
-#  Dimensions:
+#  Dimensions (FIX NO-TABLES-FIGURES: figures_present/tables_present dims
+#  removed — no table or figure generation occurs anywhere in this pipeline):
 #    1. checkpoint=pass    — _checkpoint.json records success
 #    2. result_files       — ≥1 non-meta JSON/CSV in result subdir
 #    3. _merged.json       — consolidation ran
 #    4. _merged.csv        — CSV present
 #    5. committed_to_git   — _merged.json tracked + clean in HEAD
-#    6. figures_present    — ≥1 PDF/PNG in results/figures/
-#    7. tables_present     — ≥1 .tex in results/tables/ or paper/tables/
 # ==============================================================================
   qualify:
     name: "Qualify all experiments"
@@ -697,7 +696,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Qualify experiments (7-dimension gate)
+      - name: Qualify experiments (5-dimension gate)
         id: qualify
         env:
           OUT_BASE:          ${{ env.OUT_BASE }}
@@ -779,8 +778,7 @@ jobs:
                                     "noise_sweep_saved/noise_sweep_sig*.json"],
               "suppB_sc":          ["sample_complexity_*.json", "sample_complexity_*.csv"],
               "hybrid_all_domains": ["hybrid_llm_nn_all_domains_*.json"],
-              "instability":       ["instability_analysis.csv", "instability_extrapolation.csv",
-                                    "*.pdf", "*.png"],
+              "instability":       ["instability_analysis.csv", "instability_extrapolation.csv"],
               "extrap":            ["all_domains_extrap_v4_*.json", "protocol_core_*.json"],
           }
 
@@ -918,33 +916,13 @@ jobs:
                   git_detail = "no result file to probe"
               checks.append(["committed_to_git", git_ok, git_detail])
 
-              # 6. Figures present
-              # Check per-experiment result_dir/figures/ first (written by ci_postprocess.yml),
-              # then fall back to shared OUT_BASE/figures/.
-              per_exp_figs_dir = result_dir / "figures"
-              shared_figs_dir  = OUT_BASE / "figures"
-              figs_dir  = per_exp_figs_dir if per_exp_figs_dir.exists() else shared_figs_dir
-              fig_files = (list(figs_dir.glob("*.pdf")) + list(figs_dir.glob("*.png"))
-                           if figs_dir.exists() else [])
-              checks.append(["figures_present", len(fig_files) > 0,
-                             f"{len(fig_files)} figure(s) in {figs_dir}"])
-
-              # 7. Tables present
-              # Check per-experiment result_dir/tables/ first, then shared paths.
-              per_exp_tables_dir = result_dir / "tables"
-              if per_exp_tables_dir.exists() and any(per_exp_tables_dir.glob("*.tex")):
-                  tables_dir = per_exp_tables_dir
-              elif (OUT_BASE / "tables").exists() and any((OUT_BASE / "tables").glob("*.tex")):
-                  tables_dir = OUT_BASE / "tables"
-              else:
-                  tables_dir = REPO_ROOT / "paper" / "tables"
-              tex_files = list(tables_dir.glob("*.tex")) if tables_dir.exists() else []
-              checks.append(["tables_present", len(tex_files) > 0,
-                             f"{len(tex_files)} table(s) in {tables_dir}"])
+              # FIX NO-TABLES-FIGURES: dims 6 (figures_present) and 7
+              # (tables_present) removed — no table or figure generation
+              # occurs anywhere in this pipeline any more.
 
               # Core gates: result files exist, are valid JSON, and are committed to git.
-              # checkpoint=pass, csv_or_tables, figures_present, tables_present are
-              # informational only — they depend on downstream steps not yet run.
+              # checkpoint=pass, csv_or_tables are informational only — they depend
+              # on downstream steps not yet run.
               core_gates = {"result_files", "result_json_valid", "committed_to_git"}
               passed = all(ok for name, ok, _ in checks if name in core_gates)
               return {"passed": passed, "checks": checks}
@@ -988,149 +966,6 @@ jobs:
               fh.write(f"all_qualified={'true' if all_qualified else 'false'}\n")
               fh.write(f"qualified_exps={json.dumps(qualified_exps)}\n")
           PYEOF
-
-      # -----------------------------------------------------------------------
-      # Move REPO_ROOT/figures and REPO_ROOT/tables into per-experiment subdirs
-      #
-      # Rationale: ci_postprocess.yml writes figures/tables into
-      #   OUT_BASE/{result_subdir}/figures/  and  OUT_BASE/{result_subdir}/tables/
-      # but some older scripts (e.g. instability) write directly to
-      #   REPO_ROOT/figures/  or  REPO_ROOT/tables/
-      # leaving orphaned files at the repo root that never reach the per-experiment
-      # subtree and are therefore invisible to qualify dim 6 + 7.
-      #
-      # This step runs only for experiments that have just passed qualify (i.e. core
-      # gates passed) so we never move files for experiments with no result outputs.
-      # It is safe to re-run: if files are already in the right place the mv is a no-op.
-      #
-      # GATING: only fires when REPO_ROOT/figures or REPO_ROOT/tables contain
-      # at least one file, to avoid a spurious commit on clean runs.
-      # -----------------------------------------------------------------------
-      - name: Move root figures/tables into per-experiment subdirs
-        if: always()
-        env:
-          OUT_BASE:       ${{ env.OUT_BASE }}
-          QUALIFY_REPORT: ${{ steps.qualify.outputs.qualify_report }}
-          QUALIFIED_EXPS: ${{ steps.qualify.outputs.qualified_exps }}
-        run: |
-          python3 - <<'PYEOF'
-          import json, os, shutil, subprocess, sys
-          from pathlib import Path
-
-          REPO_ROOT      = Path(".")
-          OUT_BASE       = Path(os.environ["OUT_BASE"])
-          QUALIFY_REPORT = json.loads(os.environ.get("QUALIFY_REPORT") or "{}")
-          QUALIFIED_EXPS = set(json.loads(os.environ.get("QUALIFIED_EXPS") or "[]"))
-
-          # BUG 1 FIX paths (same canonical map as Jobs 1 and 3)
-          SUBDIR = {
-              "exp1":               "comparison_results/noise-noiseless/noiseless/defi",
-              "exp1b":              "comparison_results/noise-noiseless/15",
-              "exp1_ablation":      "ablation/exp1_ablation",
-              "exp1_pca":           "comparison_results/noise-noiseless/noiseless/defi_pca",
-              "exp1b_pca":          "comparison_results/noise-noiseless/15_pca",
-              "exp2_feynman":       "comparison_results/feynman-tests/exp2",
-              "exp2_feynman_extrap": "comparison_results/feynman-tests/exp2_extrap",
-              "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
-              "exp2":               "comparison_results/feynman-tests/exp2_multi",
-              "exp3":               "extrapolation",
-              "exp3b":              "extrapolation/multi_seed",
-              "suppA":              "hybrid_pysr/defi",
-              "suppB":              "comparison_results/feynman-tests/noise-sweep",
-              "suppB_sc":           "comparison_results/feynman-tests/sample-complexity",
-              "hybrid_all_domains": "hybrid_llm_nn/all_domains",
-              "instability":        "figures",
-              "extrap":             "comparison_results/extrapolation",
-          }
-
-          root_figs  = REPO_ROOT / "figures"
-          root_tabs  = REPO_ROOT / "tables"
-
-          root_fig_files = list(root_figs.glob("*.pdf")) + list(root_figs.glob("*.png")) if root_figs.exists() else []
-          root_tab_files = list(root_tabs.glob("*.tex")) if root_tabs.exists() else []
-
-          if not root_fig_files and not root_tab_files:
-              print("No files found in REPO_ROOT/figures or REPO_ROOT/tables — nothing to move.")
-              sys.exit(0)
-
-          print(f"Root figures : {len(root_fig_files)} file(s) in {root_figs}")
-          print(f"Root tables  : {len(root_tab_files)} file(s) in {root_tabs}")
-
-          if not QUALIFIED_EXPS:
-              print("::warning::No qualified experiments — skipping move to avoid misrouting files.")
-              sys.exit(0)
-
-          moved_any = False
-          for exp_id in sorted(QUALIFIED_EXPS):
-              subdir    = SUBDIR.get(exp_id, exp_id)
-              result_dir = OUT_BASE / subdir
-              dest_figs  = result_dir / "figures"
-              dest_tabs  = result_dir / "tables"
-
-              if root_fig_files:
-                  dest_figs.mkdir(parents=True, exist_ok=True)
-                  for src in root_fig_files:
-                      dst = dest_figs / src.name
-                      action = "overwrite" if dst.exists() else "move"
-                      shutil.copy2(src, dst)
-                      print(f"  [{action}] {src}  →  {dst}")
-                  moved_any = True
-
-              if root_tab_files:
-                  dest_tabs.mkdir(parents=True, exist_ok=True)
-                  for src in root_tab_files:
-                      dst = dest_tabs / src.name
-                      action = "overwrite" if dst.exists() else "move"
-                      shutil.copy2(src, dst)
-                      print(f"  [{action}] {src}  →  {dst}")
-                  moved_any = True
-
-          if not moved_any:
-              print("No files moved.")
-              sys.exit(0)
-
-          # Remove originals from root dirs after all copies are done
-          for src in root_fig_files:
-              src.unlink()
-              print(f"  [removed] {src}")
-          for src in root_tab_files:
-              src.unlink()
-              print(f"  [removed] {src}")
-
-          print("Move complete.")
-          PYEOF
-
-      - name: Commit moved figures and tables
-        if: always()
-        run: |
-          set -euo pipefail
-
-          # Collect destination dirs that actually have new content
-          # (git status --short shows M/A/? for any changed paths).
-          CHANGED=$(git status --short -- "$OUT_BASE" "figures" "tables" 2>/dev/null | grep -v "^$" | wc -l || echo 0)
-          if [[ "$CHANGED" -eq 0 ]]; then
-            echo "No moved files to commit — working tree clean."
-            exit 0
-          fi
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git reset HEAD 2>/dev/null || true
-          git pull --rebase --autostash origin "${{ github.ref_name }}"
-
-          # Stage all changes under OUT_BASE (new destinations) and root dirs (removals)
-          git add "$OUT_BASE/" 2>/dev/null || true
-          git add "figures/" "tables/" 2>/dev/null || true   # stage deletions from root
-
-          if git diff --cached --quiet; then
-            echo "Nothing staged — skipping commit."
-            exit 0
-          fi
-
-          git commit -m "ci: move root figures+tables into per-exp subdirs - run ${{ github.run_id }}"
-          git push origin HEAD:${{ github.ref_name }}
-          echo "Pushed moved figures/tables."
 
 
 # ==============================================================================
