@@ -231,28 +231,63 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # PySR timeout_in_seconds used in Experiments 1–3.
 
 
-def _augment_features(X: np.ndarray) -> np.ndarray:
+def _compute_augment_plan(X_train: np.ndarray) -> dict:
     """
-    Physics-informed feature augmentation for NN extrapolation (v3c2-fix4).
-    Adds log, sqrt, and ratio features — common in DeFi formula families
-    (exponential compounding, AMM sqrt, rational collateral ratios).
-    This gives the MLP structural hooks beyond raw linear inputs.
+    FIX (feature-count mismatch): decide which augmented columns to add
+    from the TRAINING split ONLY, and return a fixed plan. The old
+    _augment_features() evaluated np.all(xi > 0) / np.all(xi >= 0)
+    independently on whatever array it was given, so train and test —
+    which can have systematically different value ranges under the
+    PCA-directed 40/60 split — could qualify a different number of
+    columns for log/sqrt augmentation. That produced train/test feature
+    matrices of different width, which StandardScaler then rejected
+    ("X has 9 features, but StandardScaler is expecting 7 features").
+    Deciding the plan from X_train alone and applying it identically to
+    every other split guarantees a fixed, split-independent column count.
+    """
+    plan = {"log_cols": [], "sqrt_cols": [], "ratio": X_train.shape[1] == 2}
+    for i in range(X_train.shape[1]):
+        xi = X_train[:, i]
+        if np.all(xi > 0):
+            plan["log_cols"].append(i)
+        if np.all(xi >= 0):
+            plan["sqrt_cols"].append(i)
+    return plan
+
+
+def _apply_augment_plan(X: np.ndarray, plan: dict) -> np.ndarray:
+    """
+    Apply a previously computed augmentation plan (see _compute_augment_plan)
+    to X — train or test — so every split produces the same number of
+    columns regardless of that split's own values. Values are clipped
+    before log/sqrt: a split (typically test, under PCA split) may contain
+    values outside the range that qualified the column on train (e.g. a
+    column that was all-positive on train but dips <= 0 on test); clipping
+    keeps the column finite instead of reintroducing NaN and silently
+    failing training/evaluation downstream.
     """
     cols = [X]
     eps = 1e-8
-    for i in range(X.shape[1]):
-        xi = X[:, i]
-        # log-transform for positive columns (rates, prices, liquidity)
-        if np.all(xi > 0):
-            cols.append(np.log(xi + eps).reshape(-1, 1))
-        # sqrt for non-negative columns
-        if np.all(xi >= 0):
-            cols.append(np.sqrt(xi + eps).reshape(-1, 1))
-    # Pairwise ratios for 2-column inputs (common: collateral/borrowed, S/K)
-    if X.shape[1] == 2:
+    for i in plan["log_cols"]:
+        cols.append(np.log(np.clip(X[:, i], eps, None)).reshape(-1, 1))
+    for i in plan["sqrt_cols"]:
+        cols.append(np.sqrt(np.clip(X[:, i], 0.0, None) + eps).reshape(-1, 1))
+    if plan["ratio"]:
         cols.append((X[:, 0] / (X[:, 1] + eps)).reshape(-1, 1))
         cols.append((X[:, 1] / (X[:, 0] + eps)).reshape(-1, 1))
     return np.hstack(cols)
+
+
+def _augment_features(X: np.ndarray) -> np.ndarray:
+    """
+    DEPRECATED — kept only for any external caller that still imports this
+    name directly on a single array. Internal training/eval now uses
+    _compute_augment_plan(X_train) + _apply_augment_plan(X, plan) so train
+    and test always get the same column layout. Calling this function
+    directly on train and test separately reintroduces the original bug —
+    do not use it that way.
+    """
+    return _apply_augment_plan(X, _compute_augment_plan(X))
 
 
 def _train_and_eval_nn(
@@ -277,9 +312,13 @@ def _train_and_eval_nn(
     hidden = hidden or [128, 64, 32]
 
     # v3c2-fix4: augment features BEFORE scaling
+    # FIX (feature-count mismatch): plan is derived from X_train only and
+    # applied identically to X_test, so the two splits always produce the
+    # same number of columns (see _compute_augment_plan/_apply_augment_plan).
     if augment:
-        X_train = _augment_features(X_train)
-        X_test  = _augment_features(X_test)
+        _plan   = _compute_augment_plan(X_train)
+        X_train = _apply_augment_plan(X_train, _plan)
+        X_test  = _apply_augment_plan(X_test, _plan)
 
     sx, sy = StandardScaler(), StandardScaler()
     Xtr = sx.fit_transform(X_train)
@@ -1157,53 +1196,71 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         print(f"\n🔍 Case filter active: running {total} case(s) — "
               f"{[tc['name'] for tc in test_cases]}")
 
-    # NSHARDS=1 FIX: on a fresh (non-resume) run, remove any stale checkpoint
-    # and final-output JSON left over from a prior run.  Without this, a second
-    # run in the same workspace smuggles the prior run's cases through
-    # _load_checkpoint, producing duplicate records and a bloated output file
-    # that ci_analysis misreads as multiple seeds.
-    if not resume:
-        if CHECKPOINT_FILE.exists():
-            CHECKPOINT_FILE.unlink()
-            print(f"  [fresh run] Removed stale checkpoint: {CHECKPOINT_FILE}")
-        if FINAL_OUTPUT.exists():
-            FINAL_OUTPUT.unlink()
-            print(f"  [fresh run] Removed stale output: {FINAL_OUTPUT}")
+    global CHECKPOINT_FILE, FINAL_OUTPUT
 
-    # seed-loop fix: DEFI_SEEDS / SEED-env / explicit seeds= now actually drive
-    # a real multi-seed sweep instead of only tagging one run's output with a
-    # concatenated seed label. `seeds = [None]` preserves the old single-run
-    # behavior (uses the hardcoded _NN_SEED) when no sweep was requested.
-    if not seeds:
-        seeds = [None]
+    # ── Multi-seed sweep support (mirrors hypatiax_defi_benchmark_v3c.py) ──
+    # `seeds` (from DEFI_SEEDS env, a bare SEED override, or an explicit
+    # seeds= kwarg) drives a real sweep: we loop over every seed in
+    # `seeds`, reseeding all RNGs and writing a DISTINCT, seed-tagged
+    # checkpoint/output file per seed whenever a sweep was explicitly
+    # requested — not just when more than one seed is present, since a
+    # single-seed CI shard run is still logically part of a sweep and must
+    # get a file that survives alongside every other shard's (see
+    # FIX-SINGLE-SEED-SHARD in v3c.py). Single-seed / no-seed runs keep the
+    # plain, unsuffixed filenames.
+    _base_results_dir = RESULTS_DIR
+    _orig_checkpoint, _orig_final = CHECKPOINT_FILE, FINAL_OUTPUT
+    seed_list  = seeds if seeds else [None]
+    multi_seed = len(seed_list) > 1 or bool(_seeds_env)
+    all_seed_results = []
 
-    existing, n_done = _load_checkpoint() if resume else ([], 0)
-    all_results       = list(existing)
-
-    print("=" * 80)
-    print("HypatiaX DeFi Extrapolation Benchmark v3.0")
-    print("=" * 80)
-    print(f"Cases: {total} | Seeds: {seeds} | Resuming from: {n_done + 1}" if resume else
-          f"Cases: {total} | Seeds: {seeds} | Fresh run")
-    print(f"Checkpoint: {CHECKPOINT_FILE}")
-    print(f"Output    : {FINAL_OUTPUT}")
-    print("=" * 80)
-
-    for _seed in seeds:
+    for _seed_idx, _seed in enumerate(seed_list, 1):
         if _seed is not None:
             random.seed(_seed); np.random.seed(_seed); torch.manual_seed(_seed)
-            print(f"\n  === Running with seed={_seed} ===")
+            if multi_seed:
+                print(f"\n🌱 Seed sweep {_seed_idx}/{len(seed_list)}: seed={_seed}")
+            else:
+                print(f"\n🌱 Seed = {_seed}")
             _nn_seed = _seed
         else:
             _nn_seed = _NN_SEED
 
+        if multi_seed:
+            CHECKPOINT_FILE = _base_results_dir / f"hypatiax_defi_benchmark_pca_checkpoint_seed{_seed}.json"
+            FINAL_OUTPUT    = _base_results_dir / f"hypatiax_defi_benchmark_pca_results_seed{_seed}.json"
+        else:
+            CHECKPOINT_FILE, FINAL_OUTPUT = _orig_checkpoint, _orig_final
+
+        # NSHARDS=1 FIX: on a fresh (non-resume) run, remove any stale checkpoint
+        # and final-output JSON left over from a prior run.  Without this, a second
+        # run in the same workspace smuggles the prior run's cases through
+        # _load_checkpoint, producing duplicate records and a bloated output file
+        # that ci_analysis misreads as multiple seeds.
+        if not resume:
+            if CHECKPOINT_FILE.exists():
+                CHECKPOINT_FILE.unlink()
+                print(f"  [fresh run] Removed stale checkpoint: {CHECKPOINT_FILE}")
+            if FINAL_OUTPUT.exists():
+                FINAL_OUTPUT.unlink()
+                print(f"  [fresh run] Removed stale output: {FINAL_OUTPUT}")
+
+        existing, n_done = _load_checkpoint() if resume else ([], 0)
+        all_results       = list(existing)
+
+        print("=" * 80)
+        print("HypatiaX DeFi Extrapolation Benchmark v3.0 (PCA split)")
+        print("=" * 80)
+        print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
+              f"Cases: {total} | Fresh run")
+        print(f"Checkpoint: {CHECKPOINT_FILE}")
+        print(f"Output    : {FINAL_OUTPUT}")
+        print("=" * 80)
+
         for i, tc in enumerate(test_cases, 1):
-            # Skip already-done (case, seed) pairs when resuming
-            if resume and any(
-                r.get("equation_id") == tc["name"] and r.get("seed") == _seed
-                for r in all_results
-            ):
-                print(f"[{i:02d}/{total}] ⏭  {tc['name']} (seed={_seed}) — already done")
+            # Skip already-done cases when resuming (separate file per seed,
+            # so no need to also match on seed here).
+            if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
+                print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
                 continue
 
             is_intractable = tc.get("extrapolation_intractable", False)
@@ -1353,19 +1410,28 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 }
                 all_results.append(record)
                 _save_checkpoint(all_results)
-                print(f"  💾 Checkpoint saved ({len(all_results)}/{total * len(seeds)})")
+                print(f"  💾 Checkpoint saved ({len(all_results)}/{total})")
 
             except Exception as outer_e:
                 print(f"  ❌ Outer error: {outer_e}")
                 continue
 
-    # Final report + save
-    _generate_report(all_results)
-    _save_final(all_results)
+        # Final report + save (per seed — each seed gets its own report/output)
+        _generate_report(all_results)
+        _save_final(all_results)
+
+        # Remove checkpoint on clean completion (not on verify-fix5 partial run)
+        if not verify_fix5 and CHECKPOINT_FILE.exists():
+            CHECKPOINT_FILE.unlink()
+            print("🗑️  Checkpoint removed (run complete)")
+
+        all_seed_results.append(all_results)
 
     # FIX-C3: write split_protocol_disclosure.json so Gate B of
     # ci_runner_disclosure.yml can verify protocol parity with the
-    # Feynman benchmark (run_comparative_suite_benchmark_pca.py).
+    # Feynman benchmark (run_comparative_suite_benchmark_pca.py). One
+    # disclosure file for the whole sweep — the split protocol doesn't
+    # vary by seed.
     import datetime as _dt
     _disclosure = {
         "split_protocol":   "pca_40_60",
@@ -1376,19 +1442,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         "split_function":   "pca_directed_split",
         "split_level":      "outer_loop",
         "force_fresh":      True,
+        "seeds":            seed_list,
         "description":      "PC1-directed sort; train on lowest 40%, test on highest 60%",
         "timestamp_utc":    _dt.datetime.now(_dt.timezone.utc).isoformat(),
     }
-    _disc_path = RESULTS_DIR / "split_protocol_disclosure.json"
+    _disc_path = _base_results_dir / "split_protocol_disclosure.json"
     _disc_path.write_text(json.dumps(_disclosure, indent=2))
     print(f"📋 split_protocol_disclosure.json written → {_disc_path}")
 
-    # Remove checkpoint on clean completion (not on verify-fix5 partial run)
-    if not verify_fix5 and CHECKPOINT_FILE.exists():
-        CHECKPOINT_FILE.unlink()
-        print("🗑️  Checkpoint removed (run complete)")
-
-    return all_results
+    return all_seed_results[0] if len(all_seed_results) == 1 else all_seed_results
 
 
 def report_only():

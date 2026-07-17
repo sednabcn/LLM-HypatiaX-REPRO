@@ -324,28 +324,63 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # PySR timeout_in_seconds used in Experiments 1–3.
 
 
-def _augment_features(X: np.ndarray) -> np.ndarray:
+def _compute_augment_plan(X_train: np.ndarray) -> dict:
     """
-    Physics-informed feature augmentation for NN extrapolation (v3c2-fix4).
-    Adds log, sqrt, and ratio features — common in DeFi formula families
-    (exponential compounding, AMM sqrt, rational collateral ratios).
-    This gives the MLP structural hooks beyond raw linear inputs.
+    FIX (feature-count mismatch): decide which augmented columns to add
+    from the TRAINING split ONLY, and return a fixed plan. The old
+    _augment_features() evaluated np.all(xi > 0) / np.all(xi >= 0)
+    independently on whatever array it was given, so train and test —
+    which can have systematically different value ranges, especially
+    under an extrapolation-style split — could qualify a different
+    number of columns for log/sqrt augmentation. That produced train/test
+    feature matrices of different width, which StandardScaler then
+    rejected ("X has N features, but StandardScaler is expecting M
+    features"). Deciding the plan from X_train alone and applying it
+    identically to every other split guarantees a fixed, split-independent
+    column count.
+    """
+    plan = {"log_cols": [], "sqrt_cols": [], "ratio": X_train.shape[1] == 2}
+    for i in range(X_train.shape[1]):
+        xi = X_train[:, i]
+        if np.all(xi > 0):
+            plan["log_cols"].append(i)
+        if np.all(xi >= 0):
+            plan["sqrt_cols"].append(i)
+    return plan
+
+
+def _apply_augment_plan(X: np.ndarray, plan: dict) -> np.ndarray:
+    """
+    Apply a previously computed augmentation plan (see _compute_augment_plan)
+    to X — train or test — so every split produces the same number of
+    columns regardless of that split's own values. Values are clipped
+    before log/sqrt: a split may contain values outside the range that
+    qualified the column on train (e.g. a column that was all-positive on
+    train but dips <= 0 on test); clipping keeps the column finite instead
+    of reintroducing NaN and silently failing training/evaluation downstream.
     """
     cols = [X]
     eps = 1e-8
-    for i in range(X.shape[1]):
-        xi = X[:, i]
-        # log-transform for positive columns (rates, prices, liquidity)
-        if np.all(xi > 0):
-            cols.append(np.log(xi + eps).reshape(-1, 1))
-        # sqrt for non-negative columns
-        if np.all(xi >= 0):
-            cols.append(np.sqrt(xi + eps).reshape(-1, 1))
-    # Pairwise ratios for 2-column inputs (common: collateral/borrowed, S/K)
-    if X.shape[1] == 2:
+    for i in plan["log_cols"]:
+        cols.append(np.log(np.clip(X[:, i], eps, None)).reshape(-1, 1))
+    for i in plan["sqrt_cols"]:
+        cols.append(np.sqrt(np.clip(X[:, i], 0.0, None) + eps).reshape(-1, 1))
+    if plan["ratio"]:
         cols.append((X[:, 0] / (X[:, 1] + eps)).reshape(-1, 1))
         cols.append((X[:, 1] / (X[:, 0] + eps)).reshape(-1, 1))
     return np.hstack(cols)
+
+
+def _augment_features(X: np.ndarray) -> np.ndarray:
+    """
+    DEPRECATED — kept only for any external caller that still imports this
+    name directly on a single array. Internal training/eval now uses
+    _compute_augment_plan(X_train) + _apply_augment_plan(X, plan) so train
+    and test always get the same column layout. Calling this function
+    directly on train and test separately reintroduces the original bug —
+    do not use it that way.
+    """
+    return _apply_augment_plan(X, _compute_augment_plan(X))
 
 
 def _train_and_eval_nn(
@@ -370,9 +405,13 @@ def _train_and_eval_nn(
     hidden = hidden or [128, 64, 32]
 
     # v3c2-fix4: augment features BEFORE scaling
+    # FIX (feature-count mismatch): plan is derived from X_train only and
+    # applied identically to X_test, so the two splits always produce the
+    # same number of columns (see _compute_augment_plan/_apply_augment_plan).
     if augment:
-        X_train = _augment_features(X_train)
-        X_test  = _augment_features(X_test)
+        _plan   = _compute_augment_plan(X_train)
+        X_train = _apply_augment_plan(X_train, _plan)
+        X_test  = _apply_augment_plan(X_test, _plan)
 
     sx, sy = StandardScaler(), StandardScaler()
     Xtr = sx.fit_transform(X_train)

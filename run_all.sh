@@ -985,18 +985,124 @@ DISC_FILE.write_text(json.dumps(disclosure, indent=2))
 print(f'  [exp1b_pca] split_protocol_disclosure.json written → {DISC_FILE}')
 PYEOF_DISC_1B
 
+  # FIX-C5c-3-mirror: exp1b_pca_summary.json, mirroring exp1_pca_summary.json
+  # (see exp1_pca step above) so qualify/audit_paper can read the portfolio
+  # seed-sweep solve rate without globbing raw JSONs per shard. Unlike
+  # exp1_pca (single seed), this also breaks the solve rate down PER SEED and
+  # records which seeds were actually observed in the data — this is the
+  # concrete verification the audit's Recommendation 5 asked for ('confirm
+  # the resulting 15_pca/ result file(s) actually contain five distinct seed
+  # values per case, not one value repeated') rather than just re-asserting
+  # it. Uses results.hybrid.test_r2, same threshold/structure as exp1_pca.
+  echo '[exp1b_pca] Computing exp1b_pca_summary.json...'
+  python3 - <<'PYEOF_SUMMARY_1B'
+import json, pathlib, datetime
+from collections import defaultdict
+
+PCA15_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca')
+SUMMARY   = PCA15_DIR / 'exp1b_pca_summary.json'
+THRESHOLD = 0.999999
+
+n_pass = n_total = 0
+source_files = []
+per_seed = defaultdict(lambda: {'n_pass': 0, 'n_total': 0})
+seen_case_seed = set()  # dedup: keep one record per (equation_id, seed) across shard files
+
+for fp in sorted(PCA15_DIR.glob('*.json')) if PCA15_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    source_files.append(fp.name)
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for case in cases:
+        if not isinstance(case, dict):
+            continue
+        seed = case.get('seed')
+        key = (case.get('equation_id'), seed)
+        if key in seen_case_seed:
+            continue  # same (case, seed) may appear in more than one shard file
+        seen_case_seed.add(key)
+
+        hybrid = case.get('results', {}).get('hybrid', {})
+        r2 = hybrid.get('test_r2')
+        if r2 is None:
+            for k in ('r2', 'r2_test', 'best_r2', 'R2'):
+                v = case.get(k)
+                if v is not None:
+                    r2 = v
+                    break
+        if r2 is None:
+            continue
+        try:
+            r2 = float(r2)
+        except (TypeError, ValueError):
+            continue
+        if r2 > 1.01:
+            continue
+
+        n_total += 1
+        per_seed[seed]['n_total'] += 1
+        if r2 >= THRESHOLD:
+            n_pass += 1
+            per_seed[seed]['n_pass'] += 1
+
+seeds_observed = sorted([s for s in per_seed if s is not None])
+per_seed_out = {
+    str(s): {
+        'n_pass':     v['n_pass'],
+        'n_total':    v['n_total'],
+        'solve_rate': (v['n_pass'] / v['n_total']) if v['n_total'] > 0 else None,
+    }
+    for s, v in sorted(per_seed.items(), key=lambda kv: (kv[0] is None, kv[0]))
+}
+
+summary = {
+    'fixc3_step':      'exp1b_pca',
+    'description':     'DeFi PCA portfolio seed-sweep result — PCA-directed 40/60 split',
+    'split_protocol':  'pca_40_60',
+    'test_size':       0.6,
+    'train_size':      0.4,
+    'task_filter':     'portfolio',
+    'n_pass':          n_pass,
+    'n_total':         n_total,
+    'solve_rate':      (n_pass / n_total) if n_total > 0 else None,
+    'seeds_observed':  seeds_observed,
+    'n_seeds_observed': len(seeds_observed),
+    'per_seed':        per_seed_out,
+    'source_files':    source_files[:20],
+    'timestamp':       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+}
+SUMMARY.write_text(json.dumps(summary, indent=2))
+rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
+print(f'  [exp1b_pca] DeFi PCA portfolio-sweep solve rate: {rate_str} → exp1b_pca_summary.json')
+print(f'  [exp1b_pca] Seeds observed: {seeds_observed}')
+if n_total == 0:
+    print('  [WARN]  No results in 15_pca/ yet — rerun after benchmark completes.')
+if len(seeds_observed) < 2:
+    print(f'  [WARN]  Only {len(seeds_observed)} distinct seed(s) observed in 15_pca/ — '
+          f'this may be a single shard, an incomplete sweep, or a regression of the F6 seed-loop fix.')
+PYEOF_SUMMARY_1B
+
   # Verification
   echo '=== exp1b_pca verification ==='
   find \"\${_PCA15_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _COUNT=\$(find \"\${_PCA15_DIR}\" -type f 2>/dev/null | wc -l)
   _NDISC=\$(find \"\${_PCA15_DIR}\" -name 'split_protocol_disclosure.json' 2>/dev/null | wc -l)
+  _NSUMMARY=\$(find \"\${_PCA15_DIR}\" -name 'exp1b_pca_summary.json' 2>/dev/null | wc -l)
   echo \"Files produced: \${_COUNT}\"
   echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
+  echo \"  Summary file    : \${_NSUMMARY} (exp1b_pca_summary.json)\"
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
     echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
     echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
+  fi
+  if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
+    echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
   fi
   echo '=== end exp1b_pca ==='
 "
