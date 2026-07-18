@@ -21,7 +21,7 @@ babel==2.17.0
 beautifulsoup4==4.14.2
 bitarray==3.8.0
 black==26.3.1
-nh3==0.3.5
+bleach==4.1.0
 blinker==1.9.0
 blis==1.3.0
 boolean.py==5.0
@@ -44,6 +44,7 @@ coverage==7.12.0
 cryptography==48.0.1
 cuda-bindings==13.0.3
 cuda-pathfinder==1.3.3
+cuda-toolkit==13.0.3.0
 cycler==0.12.1
 cyclonedx-python-lib==11.6.0
 cymem==2.0.11
@@ -75,7 +76,7 @@ executing==2.2.1
 faiss-cpu==1.12.0
 fastapi==0.136.1
 fastjsonschema==2.21.2
-filelock==3.20.3
+filelock==3.31.0
 flake8==7.3.0
 Flask==3.1.3
 flask-cors==6.0.1
@@ -85,7 +86,7 @@ flexparser==0.4
 fonttools==4.61.0
 fqdn==1.5.1
 frozenlist==1.8.0
-fsspec==2025.10.0
+fsspec==2026.6.0
 git-filter-repo==2.47.0
 gitdb==4.0.12
 GitPython==3.1.50
@@ -176,7 +177,7 @@ mccabe==0.7.0
 mdit-py-plugins==0.5.0
 mdurl==0.1.2
 mistune==3.3.0
-ml_dtypes==0.5.4  # bumped from 0.5.3: onnx==1.22.0 requires ml_dtypes>=0.5.4
+ml_dtypes==0.5.4
 moviepy==1.0.3
 mpmath==1.3.0
 msgpack==1.2.1
@@ -188,26 +189,42 @@ nbclient==0.10.2
 nbconvert==7.17.1
 nbformat==5.10.4
 nest-asyncio==1.6.0
-networkx==3.5
-nltk==3.10.0  # fixes GHSA-p4gq-832x-fm9v (path traversal); stable release shipped Jul 8, 2026, superseding the earlier 3.10.0rc1 pre-release pin
+networkx==3.6.1
+nh3==0.3.5
+nltk==3.10.0
 nodeenv==1.9.1
 notebook==7.5.6
 notebook_shim==0.2.4
 numpy==2.3.5
+nvidia-cublas==13.1.1.3
 nvidia-cublas-cu12==12.8.4.1
+nvidia-cuda-cupti==13.0.85
 nvidia-cuda-cupti-cu12==12.8.90
+nvidia-cuda-nvrtc==13.0.88
 nvidia-cuda-nvrtc-cu12==12.8.93
+nvidia-cuda-runtime==13.0.96
 nvidia-cuda-runtime-cu12==12.8.90
 nvidia-cudnn-cu12==9.10.2.21
+nvidia-cudnn-cu13==9.20.0.48
+nvidia-cufft==12.0.0.61
 nvidia-cufft-cu12==11.3.3.83
+nvidia-cufile==1.15.1.6
 nvidia-cufile-cu12==1.13.1.3
+nvidia-curand==10.4.0.35
 nvidia-curand-cu12==10.3.9.90
+nvidia-cusolver==12.0.4.66
 nvidia-cusolver-cu12==11.7.3.90
+nvidia-cusparse==12.6.3.3
 nvidia-cusparse-cu12==12.5.8.93
 nvidia-cusparselt-cu12==0.7.1
+nvidia-cusparselt-cu13==0.8.1
 nvidia-nccl-cu12==2.27.5
+nvidia-nccl-cu13==2.29.7
+nvidia-nvjitlink==13.3.33
 nvidia-nvjitlink-cu12==12.8.93
 nvidia-nvshmem-cu12==3.3.20
+nvidia-nvshmem-cu13==3.4.5
+nvidia-nvtx==13.0.85
 nvidia-nvtx-cu12==12.8.90
 oauthlib==3.3.1
 onnx==1.22.0
@@ -215,6 +232,7 @@ onnxruntime==1.23.2
 openai==2.7.2
 openpyxl==3.1.5
 optimum==2.0.0
+optimum-onnx==0.0.3
 overrides==7.7.0
 packageurl-python==0.17.6
 packaging==25.0
@@ -225,7 +243,7 @@ parso==0.8.5
 pathspec==1.0.4
 pexpect==4.9.0
 pillow==12.2.0
-pint==0.25.3
+Pint==0.25.3
 pip-api==0.0.34
 pip-requirements-parser==32.0.1
 pip-review==1.3.0
@@ -279,6 +297,7 @@ pyzmq==27.1.0
 redis==7.0.1
 referencing==0.37.0
 regex==2025.10.23
+reportlab==5.0.0
 requests==2.33.0
 requests-oauthlib==2.0.0
 rfc3339-validator==0.1.4
@@ -301,7 +320,7 @@ seaborn==0.13.2
 semver==3.0.4
 Send2Trash==1.8.3
 sentence-transformers==5.2.2
-setuptools==80.10.2
+setuptools==83.0.0
 setuptools-scm==9.2.2
 shapely==2.1.2
 shellingham==1.5.4
@@ -353,7 +372,7 @@ typer-slim==0.20.0
 types-PyYAML==6.0.12.20250915
 types-requests==2.32.4.20250913
 typing-inspection==0.4.2
-typing_extensions==4.15.0
+typing_extensions==4.16.0
 tzdata==2025.2
 uri-template==1.3.0
 uritemplate==4.2.0
