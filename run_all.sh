@@ -1748,6 +1748,15 @@ def _rows(data):
 
 n_pass = n_total = 0
 source_files = []
+# FIX-PER-METHOD (Recommendation 1 of the exp2_feynman_pca_4060 verification
+# report, July 18 2026): n_pass/n_total above pools three structurally
+# different methods (EnhancedHybridSystemDeFi, HybridSystemLLMNN all-domains,
+# HybridDiscoverySystem v50_2) into one number. That pooled figure is kept
+# unchanged for backward compatibility, but per-method counts are now tracked
+# alongside it so a reader isn't left assuming the pooled rate reflects one
+# evaluated system.
+per_method = {}  # raw method name -> {'n_pass': int, 'n_total': int}
+
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
     # FIX-C3-DEDUPE: benchmark_results_pca_4060.json and benchmark_results_
     # extrap.json are flattened re-exports of the exact same per-test,
@@ -1773,8 +1782,79 @@ for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
         if r2 is None:
             continue
         n_total += 1
+        pm = per_method.setdefault(raw, {'n_pass': 0, 'n_total': 0})
+        pm['n_total'] += 1
         if r2 >= THRESHOLD:
             n_pass += 1
+            pm['n_pass'] += 1
+
+per_method_out = {
+    m: {
+        'n_pass':     v['n_pass'],
+        'n_total':    v['n_total'],
+        'solve_rate': (v['n_pass'] / v['n_total']) if v['n_total'] > 0 else None,
+    }
+    for m, v in sorted(per_method.items())
+}
+
+# FIX-DECISION-ROUTING (Recommendation 2 of the exp2_feynman_pca_4060
+# verification report): 'HybridSystemLLMNN all-domains (core)' routed to
+# decision=\"llm\" on every test in the run this report examined, which reads
+# as suspicious until traced to source. run_comparative_suite_benchmark_pca.py
+# (HybridAllDomainsMethod.run, \"FIX — domain routing guard\") explicitly forces
+# force_llm=True for five Feynman domains (mechanics, electromagnetism,
+# quantum, thermodynamics, optics) as a deliberate, documented fix for a prior
+# regression (Newton's gravity scoring R²=0.66 without the guard). That
+# accounts for the domains below marked forced=true; llm routing outside
+# those domains reflects the method's own decision logic, not the guard.
+FORCED_LLM_DOMAINS = {
+    'feynman_mechanics', 'feynman_electromagnetism', 'feynman_quantum',
+    'feynman_thermodynamics', 'feynman_optics',
+}
+NN_HYBRID_KEY = 'HybridSystemLLMNN all-domains (core)'
+decision_by_domain = {}  # domain -> {'llm': n, 'other': n, 'forced': bool}
+for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint','disclosure','summary','baseline','benchmark_results')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    tests = data.get('tests', []) if isinstance(data, dict) else []
+    for t in tests:
+        if not isinstance(t, dict):
+            continue
+        dom = t.get('domain')
+        if dom is None:
+            continue
+        dec = t.get('results', {}).get(NN_HYBRID_KEY, {}).get('metadata', {}).get('decision')
+        if dec is None:
+            continue
+        d = decision_by_domain.setdefault(dom, {'llm': 0, 'other': 0, 'forced': dom in FORCED_LLM_DOMAINS})
+        if dec == 'llm':
+            d['llm'] += 1
+        else:
+            d['other'] += 1
+
+_forced_llm  = sum(v['llm'] for v in decision_by_domain.values() if v['forced'])
+_forced_tot  = sum(v['llm'] + v['other'] for v in decision_by_domain.values() if v['forced'])
+_natural_llm = sum(v['llm'] for v in decision_by_domain.values() if not v['forced'])
+_natural_tot = sum(v['llm'] + v['other'] for v in decision_by_domain.values() if not v['forced'])
+
+hybrid_llm_routing = {
+    'note': (
+        f\"'{NN_HYBRID_KEY}' decision routing, broken out by whether the domain is \"
+        \"covered by the explicit force_llm guard in HybridAllDomainsMethod.run() \"
+        \"(run_comparative_suite_benchmark_pca.py) — see comment above this block.\"
+    ),
+    'forced_domains':   sorted(FORCED_LLM_DOMAINS),
+    'forced_llm_count':   f'{_forced_llm}/{_forced_tot}' if _forced_tot else '0/0',
+    'natural_llm_count':  f'{_natural_llm}/{_natural_tot}' if _natural_tot else '0/0',
+    'by_domain': {
+        dom: {'llm': v['llm'], 'other': v['other'], 'forced': v['forced']}
+        for dom, v in sorted(decision_by_domain.items())
+    },
+}
 
 summary = {
     'fixc3_step':      'exp2_feynman_pca_4060',
@@ -1785,12 +1865,17 @@ summary = {
     'n_pass':          n_pass,
     'n_total':         n_total,
     'solve_rate':      (n_pass / n_total) if n_total > 0 else None,
+    'per_method':      per_method_out,
+    'hybrid_llm_routing': hybrid_llm_routing,
     'paper_legacy_claim': '9/30 = 0.300 (random_80_20)',
     'source_files':    source_files[:10],
 }
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [FIX-C3] Corrected solve rate: {rate_str} (pca_40_60) → exp2_pca_4060_summary.json')
+for m, v in per_method_out.items():
+    print(f\"  [FIX-C3]   per-method: {m}: {v['n_pass']}/{v['n_total']}\")
+print(f\"  [FIX-C3] {NN_HYBRID_KEY} llm-routing: forced={hybrid_llm_routing['forced_llm_count']}, natural={hybrid_llm_routing['natural_llm_count']}\")
 if n_total == 0:
     print('  [WARN]  No results found in exp2_pca_4060/ — rerun after domains complete.')
 PYEOF
