@@ -743,13 +743,18 @@ def _probe(module_path: str, class_name: str) -> bool:
     """Return True if a dotted module path exports the given class name.
 
     NOTE: Any module imported here that transitively loads torch will be safe
-    because torch has already been imported (eagerly, after juliacall) above.
+    because torch has already been imported (eagerly, after juliacall) above —
+    UNLESS the eager `import torch` itself failed, in which case every module
+    that transitively imports torch will fail here too. Previously that real
+    exception was swallowed silently, making the resulting AVAILABLE=False
+    flags undiagnosable. Print it, same as _probe_hybrid_all() already does.
     """
     import importlib
     try:
         mod = importlib.import_module(module_path)
         return hasattr(mod, class_name)
-    except Exception:
+    except Exception as exc:
+        print(f"⚠️  _probe({module_path!r}, {class_name!r}): {exc}")
         return False
 
 
@@ -2747,6 +2752,11 @@ try:
         _parsimony = kwargs.get("parsimony", 0.01)       # repro.yaml pysr.parsimony=0.01
         _populations = kwargs.get("populations", 30)     # repro.yaml pysr.populations=30
         _use_tc    = kwargs.get("use_transcendental_compositions", False)
+        # ── FIX: forward domain — same pattern as the symbolic_engine branch
+        # above. Without this, HybridDiscoverySystem always sees domain=
+        # "general" (its internal default) and never fires the trig-operator
+        # auto-injection that SymbolicEngineWithLLM already benefits from.
+        _domain    = kwargs.get("domain", metadata.get("domain", "general"))
         _disc_cfg_kwargs = dict(
             niterations=_n_iter,
             pysr_timeout=_pysr_to,
@@ -2760,6 +2770,7 @@ try:
         system = HybridDiscoverySystem(
             discovery_config=_disc_cfg,
             max_retries=_n_retry,
+            domain=_domain,
         )
         result = system.discover(
             X=X, y=y,
