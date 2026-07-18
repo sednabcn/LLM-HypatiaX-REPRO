@@ -43,7 +43,7 @@ load_dotenv(dotenv_path=env_path)
 class PureLLMBaseline:
     """Fixed Pure LLM baseline with liquidation domain corrections."""
 
-    def __init__(self, model: str = "claude-sonnet-4-6"):
+    def __init__(self, model: str = "claude-sonnet-5"):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")

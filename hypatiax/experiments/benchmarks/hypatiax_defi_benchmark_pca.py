@@ -221,6 +221,14 @@ class _MLP(nn.Module):
         return self.net(x)
 
 
+# ── Model-identity constants ─────────────────────────────────────────────────
+# Single source of truth for which model produced which result. Every result
+# record below tags itself with one of these strings (or a composite of them
+# for ensemble/fallback paths) so that runs mixing models are auditable after
+# the fact, rather than silently assuming a single model throughout.
+_HYBRID_LLM_MODEL_NAME = "claude-sonnet-4-6"          # model used inside _generate_llm_formula
+_NN_MODEL_NAME          = "mlp_128_64_32"             # fixed MLP architecture used by _train_and_eval_nn
+
 _NN_SEED = 2024   # fixed seed → deterministic NN scores across resume sessions
 
 
@@ -604,7 +612,7 @@ def _generate_llm_formula(
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
-                "error": f"API client error: {e}"}
+                "error": f"API client error: {e}", "model": _HYBRID_LLM_MODEL_NAME}
 
     var_list = ", ".join(var_names)
     constants = metadata.get("constants", {})
@@ -633,7 +641,7 @@ def formula({var_list}):
 """
     try:
         resp = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=_HYBRID_LLM_MODEL_NAME,
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -644,10 +652,11 @@ def formula({var_list}):
                      if not ln.strip().startswith("```")]
             code  = "\n".join(lines).strip()
         return {"python_code": code, "formula": code,
-                "success": "def formula" in code, "error": None}
+                "success": "def formula" in code, "error": None,
+                "model": _HYBRID_LLM_MODEL_NAME}
     except Exception as e:
         return {"python_code": None, "formula": None,
-                "success": False, "error": str(e)}
+                "success": False, "error": str(e), "model": _HYBRID_LLM_MODEL_NAME}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -697,6 +706,9 @@ def _hybrid_predict_and_eval(
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
     llm_code   = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
+    # Model that generated llm_code — recorded regardless of whether the LLM
+    # path is ultimately used, so the audit trail shows what was *tried*.
+    llm_model_name = llm_result.get("model", _HYBRID_LLM_MODEL_NAME)
 
     # Extract constants from metadata — injected into exec globals so formulas
     # that reference protocol constants (e.g. K=100) don't NameError at eval time.
@@ -794,6 +806,7 @@ def _hybrid_predict_and_eval(
     else:
         # decision == "nn"
         # Fix 3: if formula trustworthy, augment X with LLM predictions
+        nn_used_llm_features = False  # tracks whether X was augmented with LLM output
         if llm_trustworthy:
             try:
                 llm_tr_preds = _execute_formula(llm_code, X_train, constants=constants)
@@ -804,6 +817,7 @@ def _hybrid_predict_and_eval(
                     _t_nn0 = time.time()
                     nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test, seed=seed)
                     nn_rerun_time_s = time.time() - _t_nn0
+                    nn_used_llm_features = True
                 else:
                     _t_nn0 = time.time()
                     nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
@@ -818,12 +832,30 @@ def _hybrid_predict_and_eval(
             nn_rerun_time_s = time.time() - _t_nn0
         test_r2 = nn_m["test_r2"]
 
+    # ── Model-identity audit trail ──────────────────────────────────────────
+    # `decision` reflects which path actually produced test_r2 (it may have
+    # been overwritten to "nn_fallback" above). Map it to the concrete model
+    # name(s) responsible, rather than leaving that implicit in `decision`.
+    if decision == "llm":
+        model_used = llm_model_name
+    elif decision == "ensemble":
+        model_used = f"ensemble({llm_model_name}+{_NN_MODEL_NAME})"
+    elif decision == "nn_fallback":
+        model_used = _NN_MODEL_NAME
+    else:  # decision == "nn"
+        model_used = (
+            f"{_NN_MODEL_NAME}(llm_augmented_features={llm_model_name})"
+            if nn_used_llm_features else _NN_MODEL_NAME
+        )
+
     return {
         "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
         "test_r2":        float(test_r2),
         "decision":       decision,
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
+        "llm_model":      llm_model_name,     # model that generated llm_code, whether or not it was ultimately used
+        "model_used":     model_used,         # model(s) that actually produced test_r2 — the auditable ground truth
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         "success":        True,
     }
@@ -1318,11 +1350,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
                         "success":  llm_te_m.get("success", False),
                         "time_s":   round(time.time() - _t0_llm, 3),
+                        # Model tracking: PureLLMBaseline.generate_formula() reports
+                        # which model it used (self.model) at every return path —
+                        # surface it here so a run mixing model versions is auditable.
+                        "model":    llm_res.get("model"),
                     }
                 except Exception as e:
+                    # llm_res may not exist if generate_formula() itself raised —
+                    # fall back to None rather than assuming a model was used.
+                    _attempted_model = llm_res.get("model") if "llm_res" in dir() else None
                     case_results["pure_llm"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
+                        "model": _attempted_model,
                     }
 
                 # ── Neural Network ───────────────────────────────────────────────
@@ -1337,11 +1377,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "time_s":      round(time.time() - _t0_nn, 3),
                         "y_pred_train": nn_m["y_pred_train"].tolist(),
                         "y_pred_test":  nn_m["y_pred_test"].tolist(),
+                        "model":       _NN_MODEL_NAME,
                     }
                 except Exception as e:
                     case_results["neural_network"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
+                        "model": _NN_MODEL_NAME,
                     }
 
                 # ── Hybrid (all Fixes applied) ────────────────────────────────────
@@ -1371,11 +1413,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
                         "time_s":          round(hyb_time, 3),
                         "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
+                        # Model tracking: llm_model is what generated the candidate
+                        # formula; model_used is what actually produced test_r2
+                        # (they can differ — e.g. decision="nn_fallback" still
+                        # tried an LLM formula first). Both are needed to audit
+                        # whether/how models were mixed within this one case.
+                        "llm_model":       hy_m.get("llm_model"),
+                        "model_used":      hy_m.get("model_used"),
                     }
                 except Exception as e:
                     case_results["hybrid"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
+                        "llm_model": None, "model_used": None,
                     }
 
                 # ── Augment with extrapolation gap and stability score ────────────
