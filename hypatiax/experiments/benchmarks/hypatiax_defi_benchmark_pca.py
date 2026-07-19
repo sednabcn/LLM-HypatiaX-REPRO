@@ -1348,7 +1348,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     case_results["pure_llm"] = {
                         "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
                         "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                        "success":  llm_te_m.get("success", False),
+                        "executed": llm_te_m.get("success", False),
+                        # FIX 11: PureLLMBaseline.test_formula_accuracy()'s own "success"
+                        # only means the generated code executed without raising — it does
+                        # NOT gate on fit quality (observed: 11/74 exp1_pca cases report
+                        # success=True with test_r2 as low as -126,483). Recompute success
+                        # here as a fit-quality gate, reusing the >0.5 "trustworthy"
+                        # threshold already established for the hybrid arm's LLM trust
+                        # gate (FIX 10, above) so both arms share one pass definition.
+                        "success": bool(
+                            llm_te_m.get("success", False)
+                            and not _math.isnan(llm_te_m.get("r2", float("nan")))
+                            and llm_te_m["r2"] > 0.5
+                        ),
                         "time_s":   round(time.time() - _t0_llm, 3),
                         # Model tracking: PureLLMBaseline.generate_formula() reports
                         # which model it used (self.model) at every return path —
@@ -1361,7 +1373,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     _attempted_model = llm_res.get("model") if "llm_res" in dir() else None
                     case_results["pure_llm"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
-                        "success": False, "time_s": 0.0, "error": str(e),
+                        "executed": False, "success": False, "time_s": 0.0, "error": str(e),
                         "model": _attempted_model,
                     }
 
