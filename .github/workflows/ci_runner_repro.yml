@@ -116,7 +116,7 @@ on:
 
       # -- Sharding ----------------------------------------------------------
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b: IGNORED — always forced to len(seeds) (one shard per seed; see the seeds input). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -501,8 +501,10 @@ jobs:
           # Per-experiment shard table — authoritative source.
           # Most experiments run with exactly 1 worker shard to avoid
           # checkpoint collisions, concurrent-push races, and wasted runner
-          # quota. exp1b, exp1_ablation, exp3b use 4 shards (multi-task runs
-          # over DEFI_TASKS / multi-seed runs respectively).
+          # quota. exp1_ablation, exp3b use 4 shards (multi-task runs
+          # over DEFI_TASKS / multi-seed runs respectively). exp1b is NOT in
+          # this fixed group — see FIX-exp1b-DYNAMIC-SHARDS further down,
+          # where its shard count is derived from len(SEEDS) instead.
           #
           # suppB uses 5 shards — NOT 4 — because its task list is built as
           # [f"noise{nl}__{eq}" for nl in NOISE_LEVELS for eq in
@@ -569,9 +571,21 @@ jobs:
           # filename) is fixed separately above in the exp1b combined_globs
           # block. Cost: exp1b dispatch now spins up 5 concurrent workers
           # instead of 4.
+          # -- Seeds / overrides parsed early ------------------------------------
+          # Moved ahead of EXP_SHARD_TABLE resolution because exp1b's shard
+          # count is now derived from len(SEEDS) (see FIX-exp1b-DYNAMIC-SHARDS
+          # below) rather than a static table entry, so SEEDS must exist before
+          # N_SHARDS is resolved.
+          OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
+          SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
+          NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
+
           EXP_SHARD_TABLE = {
               "exp1":               1,
-              "exp1b":              5,
+              # exp1b: deliberately NOT a fixed table entry — see
+              # FIX-exp1b-DYNAMIC-SHARDS below. Shard count = len(SEEDS),
+              # so a custom `seeds` dispatch input always gets exact
+              # one-seed-per-shard isolation, not just the 5-seed default.
               "exp1_ablation":      4,
               # exp1_pca / exp1b_pca intentionally NOT listed here yet — see the
               # matching gap (and hard-fail) in the `registry` dict below for why.
@@ -592,15 +606,38 @@ jobs:
           }
           N_SHARDS_DEFAULT = EXP_SHARD_TABLE.get(EXP, 1)
           # Most experiments use exactly 1 shard to avoid concurrent-push races
-          # and checkpoint collisions.  exp1b, exp1_ablation, and exp3b use 4 shards
+          # and checkpoint collisions.  exp1_ablation and exp3b use 4 shards
           # (multi-task runs over DEFI_TASKS / multi-seed runs respectively).
+          # exp1b is handled separately below — its shard count is derived
+          # dynamically from len(SEEDS), not this table.
           # suppB uses 5 shards (one per noise level — see EXP_SHARD_TABLE comment
           # above for why 4 would silently mis-pin NOISE_LEVEL on some tasks).
           # suppB_sc uses 6 shards (one per sample size n — see EXP_SHARD_TABLE
           # comment above for the one-n-per-shard alignment requirement, and
           # the FIX-suppB_sc-SHARD-6 block below for the cost rationale).
           # Any dispatch input is ignored for single-shard experiments.
-          if N_SHARDS_DEFAULT == 1:
+          #
+          # FIX-exp1b-DYNAMIC-SHARDS: exp1b must always get exactly
+          # len(SEEDS) shards (one-seed-per-shard — see the UPDATE
+          # 2026-07-11 comment elsewhere in this file for why). A static
+          # table value (formerly 5) silently mismatched _block_shards()
+          # into uneven per-shard seed counts whenever a custom `seeds`
+          # dispatch input changed the seed count away from 5 (e.g. 3
+          # seeds -> some shards get 0 tasks and are dropped; 7 seeds ->
+          # some shards get 2 seeds, re-introducing the exact
+          # multi-seed-per-shard blast radius the 2026-07-11 fix removed
+          # for the default case). This branch takes over from the
+          # EXP_SHARD_TABLE lookup entirely for exp1b, before the
+          # generic ==1 / >4 / else dispatch below, so exp1b can never
+          # fall into the wrong one of those branches regardless of how
+          # many seeds are passed.
+          if EXP == "exp1b":
+              N_SHARDS = len(SEEDS)
+              if N_SHARDS_RAW != N_SHARDS:
+                  print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for 'exp1b' "
+                        f"— shard count is derived from len(seeds)={N_SHARDS} for exact "
+                        f"one-seed-per-shard alignment. Using N_SHARDS={N_SHARDS}.")
+          elif N_SHARDS_DEFAULT == 1:
               N_SHARDS = 1
               if N_SHARDS_RAW not in (1,):
                   print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for '{EXP}' "
@@ -626,7 +663,7 @@ jobs:
                         f"sample-size alignment. Using N_SHARDS={N_SHARDS_DEFAULT}.")
           else:
               # Table default is the minimum — user input cannot go below it.
-              # exp1b/exp1_ablation/exp3b (table=4) always get at least 4
+              # exp1_ablation/exp3b (table=4) always get at least 4
               # shards; the dispatch input can raise that up to a cap of 4
               # (i.e. it has no effect for this group in practice, since the
               # table value already equals the cap — left in place in case a
@@ -636,10 +673,6 @@ jobs:
                   print(f"::notice::n_shards: input={N_SHARDS_RAW} "
                         f"table={N_SHARDS_DEFAULT} using={N_SHARDS} "
                         f"(table default enforced as minimum)")
-          OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
-          SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
-          NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
-
           # -- exp2_feynman shard IDs --------------------------------------------
           # BenchmarkProtocol._apply_shard_ids() filters at DOMAIN level, not
           # individual equation level.  Domain keys are "feynman_<sub-domain>"
