@@ -771,6 +771,7 @@ def _hybrid_predict_and_eval(
     X_train: np.ndarray, y_train: np.ndarray,
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
+    seed: int = _NN_SEED,
 ) -> dict:
     """
     Full hybrid pipeline for one test case.
@@ -847,7 +848,7 @@ def _hybrid_predict_and_eval(
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
         if not ok or np.isnan(test_r2):
             _t_nn0 = time.time()
-            nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+            nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
             nn_rerun_time_s = time.time() - _t_nn0
             test_r2 = nn_m["test_r2"]
             decision = "nn_fallback"
@@ -856,7 +857,7 @@ def _hybrid_predict_and_eval(
         # Fix 5: LLM test predictions via unified evaluator
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
         _t_nn0         = time.time()
-        nn_m           = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_m           = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
         nn_rerun_time_s = time.time() - _t_nn0
 
         if llm_test_preds is not None:
@@ -894,19 +895,19 @@ def _hybrid_predict_and_eval(
                     X_tr_aug = np.column_stack([X_train, llm_tr_preds])
                     X_te_aug = np.column_stack([X_test,  llm_te_preds])
                     _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test)
+                    nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test, seed=seed)
                     nn_rerun_time_s = time.time() - _t_nn0
                 else:
                     _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                    nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
                     nn_rerun_time_s = time.time() - _t_nn0
             except Exception:
                 _t_nn0 = time.time()
-                nn_m         = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+                nn_m         = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
                 nn_rerun_time_s = time.time() - _t_nn0
         else:
             _t_nn0 = time.time()
-            nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+            nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
             nn_rerun_time_s = time.time() - _t_nn0
         test_r2 = nn_m["test_r2"]
 
@@ -1369,6 +1370,9 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 print(f"\n🌱 Seed sweep {_seed_idx}/{len(seed_list)}: seed={_seed}")
             else:
                 print(f"\n🌱 Seed = {_seed}")
+            _nn_seed = _seed
+        else:
+            _nn_seed = _NN_SEED
 
         if multi_seed:
             CHECKPOINT_FILE = _base_results_dir / f"hypatiax_defi_benchmark_v3_checkpoint_seed{_seed}.json"
@@ -1455,19 +1459,33 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     case_results["pure_llm"] = {
                         "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
                         "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                        "success":  llm_te_m.get("success", False),
+                        "executed": llm_te_m.get("success", False),
+                        # FIX 11 (ported from hypatiax_defi_benchmark_pca.py): the
+                        # baseline's own "success" only means the generated code
+                        # executed without raising — it does NOT gate on fit
+                        # quality (observed: 11/74 exp1_pca cases report
+                        # success=True with test_r2 as low as -126,483). Recompute
+                        # success here as a fit-quality gate, reusing the >0.5
+                        # "trustworthy" threshold already established for the
+                        # hybrid arm's LLM trust gate elsewhere in this file, so
+                        # both arms share one pass definition.
+                        "success": bool(
+                            llm_te_m.get("success", False)
+                            and not _math.isnan(llm_te_m.get("r2", float("nan")))
+                            and llm_te_m["r2"] > 0.5
+                        ),
                         "time_s":   round(time.time() - _t0_llm, 3),
                     }
                 except Exception as e:
                     case_results["pure_llm"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
-                        "success": False, "time_s": 0.0, "error": str(e),
+                        "executed": False, "success": False, "time_s": 0.0, "error": str(e),
                     }
 
                 # ── Neural Network ───────────────────────────────────────────────
                 try:
                     _t0_nn = time.time()
-                    nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te)
+                    nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te, seed=_nn_seed)
                     case_results["neural_network"] = {
                         "train_r2":    nn_m["train_r2"],
                         "test_r2":     nn_m["test_r2"],
@@ -1487,7 +1505,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 try:
                     _t0_hyb = time.time()
                     hy_m = _hybrid_predict_and_eval(
-                        desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata
+                        desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
+                        seed=_nn_seed,
                     )
                     _hyb_wall = round(time.time() - _t0_hyb, 3)
 
@@ -1498,11 +1517,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     # fallback cases so the reported hybrid time is self-contained.
                     hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
 
+                    _train_r2 = hy_m["train_r2"]
+                    _test_r2  = hy_m["test_r2"]
+                    _nan = lambda v: v is None or (isinstance(v, float) and _math.isnan(v))
+
                     case_results["hybrid"] = {
-                        "train_r2":        hy_m["train_r2"],
-                        "test_r2":         hy_m["test_r2"],
+                        "train_r2":        _train_r2,
+                        "test_r2":         _test_r2,
                         "decision":        hy_m["decision"],
-                        "success":         True,
+                        "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
                         "time_s":          round(hyb_time, 3),
                         "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                     }
@@ -1536,6 +1559,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
                 record = {
                     "equation_id":            tc["name"],
+                    "seed":                 _seed,
                     "difficulty":           tc["difficulty"],
                     "formula_type":         tc["formula_type"],
                     "extrapolation_intractable": is_intractable,
