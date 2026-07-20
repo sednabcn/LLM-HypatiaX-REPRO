@@ -2589,7 +2589,37 @@ jobs:
               echo "::warning::git pull --rebase failed (possibly untracked file conflict) — stashing untracked files and retrying"
               git stash --include-untracked --quiet || true
               git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
-              git stash pop --quiet 2>/dev/null || true
+              # FIX-STASH-POP-SILENT-LOSS: `git stash pop --quiet 2>/dev/null
+              # || true` previously swallowed a failed pop with no trace. A
+              # pop fails here when the file this shard just produced
+              # collides, path-for-path, with a file the remote already
+              # committed (e.g. another concurrent/overlapping run of the
+              # same experiment landed a push for the same deterministic
+              # seed->path mapping in between this shard's checkout and this
+              # push). When that happens, THIS shard's own real results stay
+              # stashed and unstaged, `git add -f "${TARGET}"` finds nothing
+              # of theirs to add, and the shard silently pushes only its
+              # checkpoint file — while "Repo commit verification" a few
+              # steps later reports a false "OK" because it only checks file
+              # *presence* under TARGET, not which run actually produced the
+              # file that's there. Confirmed via run 29697091994 shard 0
+              # (exp1b, portfolio_seed42): exactly this sequence caused
+              # seed42 to be reported as a missing task downstream even
+              # though shard 0 had genuinely completed it. Hard-fail here
+              # instead, so the loss is visible at the point it happens.
+              if ! git stash pop --quiet 2>&1; then
+                echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry."
+                echo "  This shard's own computed result(s) collided path-for-path with something"
+                echo "  the remote already had and are now stuck unstaged in 'git stash list' on"
+                echo "  this runner (they will be lost when the runner is torn down) instead of"
+                echo "  being committed. Likely cause: another concurrent/overlapping run of"
+                echo "  ${EXP} pushed a commit touching the same output path between this shard's"
+                echo "  checkout and this push — exp1b/exp1_ablation/exp3b/suppB/suppB_sc write to"
+                echo "  a fixed canonical path with no run-id scoping, so two overlapping runs can"
+                echo "  race on the exact same file. Re-run this shard once the other run finishes,"
+                echo "  or scope ${TARGET} by run id if concurrent runs of ${EXP} are expected."
+                exit 1
+              fi
             fi
 
             # Stage every result file produced by this shard.

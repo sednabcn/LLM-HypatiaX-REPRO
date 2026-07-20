@@ -470,15 +470,30 @@ jobs:
               # (PCA split variant — filename uses "_pca_results" not "_v3_results").
               "exp1_pca":          ["hypatiax_defi_benchmark_pca_results"],
               "exp1b_pca":         ["hypatiax_defi_benchmark_pca_results"],
-              # exp1b task IDs in the runner are [f"portfolio_seed{s}" for s in SEEDS].
-              # The committed filenames are comparison_FIXED_*_shard{N}_run{ID}.json —
-              # they contain a timestamp+shard suffix, not the seed ID.  The file-scan
-              # heuristic (substring match) therefore cannot mark seeds done from filenames
-              # alone.  The _checkpoint_shard{N}.json files copied into RESULT_SUBDIR by
-              # the runner's "Copy shard checkpoint into result subdir" step are the
-              # authoritative done-set source; the sentinel here just needs to match what
-              # the runner puts in checkpoint.completed ("portfolio_seed{s}").
-              "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
+              # FIX-exp1b-SENTINEL: task IDs in the runner are
+              # [f"portfolio_seed{s}" for s in SEEDS], but that string never
+              # appears in what's actually committed. The committed filename
+              # is hypatiax_defi_benchmark_v3_results_seed{s}.json — confirmed
+              # against a real committed run (comparison_results/noise-noiseless/15/)
+              # — not the comparison_FIXED_*_shard{N}_
+              # run{ID}.json pattern this sentinel list previously assumed.
+              # "portfolio_seed{s}" therefore never substring-matched any
+              # committed file, and done-set detection relied *entirely* on
+              # the _checkpoint_shard{N}.json union below. When a checkpoint
+              # file is absent for any reason (e.g. a shard's result file was
+              # manually recovered from a GitHub Actions artifact and
+              # recommitted without also recreating its _checkpoint_shard{N}
+              # .json — exactly what happened for exp1b shard 0 / seed42 on
+              # run 29697091994), that seed is reported "missing" even though
+              # its result file is genuinely present and committed. Matching
+              # "results_seed{s}" directly against the real filename removes
+              # that fragile single point of failure; the checkpoint union
+              # remains below as a redundant secondary source, not the only
+              # one. NOTE: this substring match assumes no seed value is a
+              # numeric prefix of another (true for the current default set
+              # 42,99,123,777,2024) — revisit if a future seed list violates
+              # that (e.g. adding both 42 and 420).
+              "exp1b":             [f"results_seed{s}" for s in SEEDS],
               "exp2_feynman":      FEYNMAN_DOMAINS,
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
               "exp2_feynman_pca":  FEYNMAN_DOMAINS,
@@ -554,12 +569,15 @@ jobs:
                   safe = tid.replace("/", "_").replace(".", "_")
                   if any(safe in fname for fname in files):
                       done.add(tid)
-              # FIX exp1b done-set: for experiments where committed filenames do not
-              # contain the task ID as a substring (exp1b writes comparison_FIXED_*_shard{N}_
-              # run{ID}.json — no seed ID in the name), the file-scan above produces an
-              # empty done set even on a successful run.  The runner's "Copy shard checkpoint
-              # into result subdir" step writes _checkpoint_shard{N}.json files whose
-              # completed list is the authoritative record.  Union those in here.
+              # Checkpoint union: previously the *only* done-set source for
+              # exp1b (see FIX-exp1b-SENTINEL above — that's now fixed via a
+              # filename-matching sentinel, so the primary loop above already
+              # catches exp1b in the common case). Kept here as a redundant
+              # secondary source for exp1b and as the primary source for any
+              # other experiment whose committed filenames don't embed a
+              # matchable task-ID substring — cheap insurance, and it also
+              # still catches tasks whose result file failed to commit but
+              # whose checkpoint did (the inverse of the seed42 scenario).
               for ckpt_file in result_dir.glob("_checkpoint_shard*.json"):
                   try:
                       cd = json.loads(ckpt_file.read_text())
