@@ -957,21 +957,34 @@ def _aggressive_split(
 # FIX-C3/DISCLOSURE: Gate B requires every DeFi benchmark to expose either
 # pca_directed_split or build_extrap_split as the protocol split function.
 # _aggressive_split IS the 40/60 extrapolation split for v3c (percentile on the
-# primary variable axis, same intent as build_extrap_split).  Alias it here so
-# Gate B's static scan finds the required name without changing any call sites.
+# primary variable axis, same intent as build_extrap_split).
+#
+# v10 fix (report §R6): this used to be a wrapper that was never actually
+# called anywhere (the real split call site invoked _aggressive_split
+# directly), so Gate B's static-scan check was satisfied by dead code. It
+# also had a signature mismatch -- it declared `extrap_train_frac: float`
+# as its third parameter instead of the `config: dict` that
+# _aggressive_split (and every real call site) actually uses, so if it HAD
+# been called positionally as `build_extrap_split(X, y, tc["config"])`, the
+# config dict would have silently bound to `extrap_train_frac` and been
+# discarded, always falling back to the default split_var_idx=0 regardless
+# of what the catalogue declared. Both issues are fixed together: the
+# signature now matches _aggressive_split exactly, and the real split call
+# site below now calls this function instead of _aggressive_split directly,
+# so it is a genuine (if trivial) delegate rather than dead code. Behavior
+# is unchanged -- this is a pure pass-through to _aggressive_split with the
+# identical config dict.
 def build_extrap_split(
-    X: np.ndarray, y: np.ndarray,
-    extrap_train_frac: float = 0.4,
-    **kwargs,
+    X: np.ndarray, y: np.ndarray, config: dict
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """FIX-C3/DISCLOSURE wrapper: delegates to _aggressive_split.
+    """Gate B split entry point. Delegates to _aggressive_split unchanged.
 
     Exposes the build_extrap_split name required by Gate B of
-    ci_runner_disclosure.yml so the CI scan confirms this script uses
-    the standard 40/60 extrapolation-split protocol.
+    ci_runner_repro.yml so the CI scan confirms this script uses the
+    standard 40/60 extrapolation-split protocol -- and, as of this fix, is
+    actually the function invoked at the real split call site (see the
+    module's main run loop), not merely a name-only alias.
     """
-    config = {"split_var_idx": 0, "split_type": "high"}
-    config.update(kwargs)
     return _aggressive_split(X, y, config)
 
 
@@ -1438,7 +1451,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 })
                 tc.setdefault("description", desc)
 
-                X_tr, y_tr, X_te, y_te = _aggressive_split(X_full, y_full, tc["config"])
+                X_tr, y_tr, X_te, y_te = build_extrap_split(X_full, y_full, tc["config"])
                 print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
                 case_results = {}

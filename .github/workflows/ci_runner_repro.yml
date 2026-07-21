@@ -3598,7 +3598,7 @@ jobs:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
         run: |
           python3 - <<'PYEOF'
-          import re, sys, pathlib
+          import ast, re, sys, pathlib
 
           # FIX-C3-SCRIPT: PCA script is now the Feynman PCA runner (not v2 + --extrap)
           FEYNMAN_SCRIPT = pathlib.Path(
@@ -3612,12 +3612,63 @@ jobs:
 
           # ── Check 1: PCA script uses pca_directed_split ───────────────────
           # DeFi script uses build_extrap_split — both are PCA-directed families.
+          #
+          # HARDENED (v10 fix, report §R6): the previous version of this check was
+          # a bare substring search (`"build_extrap_split" in src`), which passes
+          # even if the name only appears as an unreachable wrapper's own
+          # definition and is never actually called anywhere. This AST-based
+          # version instead confirms the target name appears as the *callee* of
+          # a real Call node located outside that name's own function
+          # definition — i.e. it is genuinely invoked at a split call site, not
+          # merely present in the source text.
+          _TARGET_SPLIT_NAMES = {"pca_directed_split", "build_extrap_split"}
+
+          def _own_def_line_ranges(tree, names):
+              """For each target name defined as a function in this module,
+              return the (start, end) line range of its own body, so calls
+              inside that body (e.g. self-reference) don't count as a genuine
+              external call site."""
+              ranges = {}
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.FunctionDef) and node.name in names:
+                      body_lines = [node.lineno] + [
+                          n.lineno for n in ast.walk(node) if hasattr(n, "lineno")
+                      ]
+                      ranges[node.name] = (min(body_lines), max(body_lines))
+              return ranges
+
           def script_uses_pca_split(path):
               if not path.exists():
                   return None, f"{path.name} not found"
               src = path.read_text(errors="replace")
-              # pca.py uses pca_directed_split; defi uses build_extrap_split
-              uses_pca = "pca_directed_split" in src or "build_extrap_split" in src
+              try:
+                  tree = ast.parse(src)
+              except SyntaxError as e:
+                  return None, f"{path.name}: could not parse for AST check ({e})"
+
+              own_ranges = _own_def_line_ranges(tree, _TARGET_SPLIT_NAMES)
+
+              call_sites = []
+              for node in ast.walk(tree):
+                  if not isinstance(node, ast.Call):
+                      continue
+                  fn = node.func
+                  if isinstance(fn, ast.Name):
+                      name = fn.id
+                  elif isinstance(fn, ast.Attribute):
+                      name = fn.attr
+                  else:
+                      continue
+                  if name not in _TARGET_SPLIT_NAMES:
+                      continue
+                  own_range = own_ranges.get(name)
+                  if own_range and own_range[0] <= node.lineno <= own_range[1]:
+                      # Call occurs inside the target function's own definition
+                      # body — not a genuine external call site.
+                      continue
+                  call_sites.append((name, node.lineno))
+
+              uses_pca = len(call_sites) > 0
               return uses_pca, None
 
           feynman_uses, feynman_err = script_uses_pca_split(FEYNMAN_SCRIPT)
@@ -3804,17 +3855,31 @@ jobs:
           print(f"  [OK]  Corrected path: {CORRECTED_DIR.relative_to(OUT_BASE)}")
 
           # ── Check 2: if legacy results exist, capture baseline ────────────
+          def _is_feynman_protocol(fp):
+              # Guard against a different benchmark suite (e.g. all_domains) writing
+              # into this same directory and getting silently pooled into the
+              # Feynman baseline count. Files without a protocol.benchmark field
+              # (older runs) are treated as Feynman for backward compatibility.
+              try:
+                  data = json.loads(fp.read_text())
+              except Exception:
+                  return True
+              proto = data.get("protocol", {}) if isinstance(data, dict) else {}
+              benchmark = str(proto.get("benchmark", "")).lower()
+              return benchmark == "" or "feynman" in benchmark
+
           legacy_jsons = [
               f for f in (sorted(LEGACY_DIR.glob("*.json")) if LEGACY_DIR.exists() else [])
               if "checkpoint" not in f.name
               and "disclosure" not in f.name
               and not f.name.startswith("_")   # exclude meta files (_analysis, _merged, _stats …)
+              and _is_feynman_protocol(f)
           ]
 
           if legacy_jsons:
               # Extract 9/30 solve rate from legacy results
               n_total = n_pass = 0
-              THRESHOLD = 0.9999
+              THRESHOLD = float(os.environ.get("FEYNMAN_NOISELESS_THRESHOLD", 0.999999))
               PREFERRED = {"hypatiax","hybridv50","hybrid50","hybridsymbolic",
                            "hybriddefi","hypatia","hybrid","ours","proposed"}
 

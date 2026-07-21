@@ -225,17 +225,43 @@ class DeFiExperimentProtocol:
         # Test 7: Spot price from AMM reserves
         # FIXED: independent log-uniform sampling so the ratio reserve_b/reserve_a
         # has real variance (was near-constant 1.0 with identical linspace ranges).
+        # NOTE (v10 fix): renamed to drop the word "reserve" from the description.
+        # The catalogue's medium/rational entry "Spot price from AMM reserve" used to
+        # alias onto this generator because "reserve" was a substring of its old name
+        # ("...reserve ratio (token A / token B)"), which collided with the catalogue's
+        # substring-containment lookup (v3c.py line ~1426). See Test 7b below for the
+        # dedicated generator that entry should have been matching all along.
         rng7 = np.random.default_rng(13)
         reserve_a = np.exp(rng7.uniform(np.log(100), np.log(50000), n))
         reserve_b = np.exp(rng7.uniform(np.log(100), np.log(50000), n))
         spot_price = reserve_b / reserve_a
 
         tests.append((
-            "Spot price from AMM reserve ratio (token A / token B)",
+            "Spot price from AMM ratio (token A / token B)",
             np.column_stack([reserve_a, reserve_b]),
             spot_price,
             ["reserve_a", "reserve_b"],
             {"domain": "amm", "ground_truth": "reserve_b / reserve_a",
+             "extrapolation_test": False},
+        ))
+
+        # Test 7b (NEW, v10 fix): Spot price from AMM reserves, adjusted for a pending
+        # trade's price impact -- the distinct medium/rational-difficulty variant the
+        # catalogue's "Spot price from AMM reserve" entry (v3c.py line ~1043) declares
+        # but, prior to this fix, never received its own data for.
+        # ground truth: reserve_b / (reserve_a + trade_size)
+        rng7b = np.random.default_rng(29)
+        reserve_a2 = np.exp(rng7b.uniform(np.log(100), np.log(50000), n))
+        reserve_b2 = np.exp(rng7b.uniform(np.log(100), np.log(50000), n))
+        trade_size2 = np.exp(rng7b.uniform(np.log(1), np.log(20000), n))
+        spot_price_adjusted = reserve_b2 / (reserve_a2 + trade_size2)
+
+        tests.append((
+            "Spot price from AMM reserve adjusted for pending trade size (price impact)",
+            np.column_stack([reserve_a2, reserve_b2, trade_size2]),
+            spot_price_adjusted,
+            ["reserve_a", "reserve_b", "trade_size"],
+            {"domain": "amm", "ground_truth": "reserve_b / (reserve_a + trade_size)",
              "extrapolation_test": False},
         ))
 
