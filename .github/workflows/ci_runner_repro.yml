@@ -2609,37 +2609,79 @@ jobs:
               # of every colliding file under a disambiguated name so it
               # still gets committed, then drop the now-redundant stash.
               if ! git stash pop --quiet 2>stash_pop_err.log; then
-                echo "::warning::git stash pop reported conflict(s) for shard ${SHARD} (${EXP}) — attempting to rescue this shard's colliding file(s) instead of discarding them."
+                echo "::warning::git stash pop reported conflict(s) for shard ${SHARD} (${EXP}) — restoring every stashed path individually instead of discarding non-colliding ones."
                 cat stash_pop_err.log
 
-                RESCUED=0
-                while IFS= read -r COLLIDING; do
-                  [[ -z "$COLLIDING" ]] && continue
-                  RESCUE_PATH="${COLLIDING%.json}__shard${SHARD}_rescued_$(date -u +%s).json"
-                  mkdir -p "$(dirname "$RESCUE_PATH")"
-                  # `git stash --include-untracked` stores untracked files in a
-                  # THIRD parent commit of the stash (stash@{0}^3), separate from
-                  # the tracked-change tree that "stash@{0}:<path>" addresses.
-                  # Try the untracked-files parent first (the common case for our
-                  # freshly-computed result files), then fall back to the main
-                  # stash tree in case the file was tracked-and-modified instead.
-                  if git show "stash@{0}^3:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
-                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH} (from stash@{0}^3, untracked)"
-                    RESCUED=$((RESCUED + 1))
-                  elif git show "stash@{0}:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
-                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH} (from stash@{0}, tracked)"
-                    RESCUED=$((RESCUED + 1))
-                  else
-                    rm -f "${RESCUE_PATH}"
-                    echo "  ::warning::Could not extract ${COLLIDING} from stash@{0} or stash@{0}^3; it may be lost."
-                  fi
-                done < <(grep -E 'already exists, no checkout$' stash_pop_err.log | sed -E 's/ already exists, no checkout$//')
+                # FIX-STASH-POP-FULL-RESTORE: `git stash pop` is all-or-nothing.
+                # If even ONE path in the stash collides with something already
+                # checked out by the retried pull above, the pop aborts WITHOUT
+                # applying anything — not just the colliding path, but every other
+                # untracked/modified file that was stashed alongside it. The
+                # previous version of this rescue only recovered the specific
+                # file(s) named in the "already exists, no checkout" error, then
+                # unconditionally ran `git stash drop`, which silently discarded
+                # any other stashed change that happened not to collide (e.g. a
+                # second result file this same shard produced, or an unrelated
+                # untracked file). Fix: enumerate every path the stash actually
+                # touches (tracked changes via stash@{0}, untracked files via the
+                # third stash parent stash@{0}^3) and restore each one explicitly
+                # — colliding paths rescued under a disambiguated name, everything
+                # else checked out back to its original path — before dropping.
+                mapfile -t COLLIDING_PATHS < <(grep -E 'already exists, no checkout$' stash_pop_err.log | sed -E 's/ already exists, no checkout$//')
+                mapfile -t ALL_STASHED_PATHS < <(git stash show -u --name-only stash@{0} 2>/dev/null | sort -u)
 
-                if [[ "${RESCUED}" -gt 0 ]]; then
-                  echo "::warning::Rescued ${RESCUED} colliding file(s) under disambiguated name(s); dropping the now-redundant stash entry."
+                RESCUED=0
+                RESTORED=0
+                MISSING=0
+                for STASHED_PATH in "${ALL_STASHED_PATHS[@]}"; do
+                  [[ -z "${STASHED_PATH}" ]] && continue
+
+                  IS_COLLIDING=false
+                  for COLLIDING in "${COLLIDING_PATHS[@]}"; do
+                    if [[ "${COLLIDING}" == "${STASHED_PATH}" ]]; then
+                      IS_COLLIDING=true
+                      break
+                    fi
+                  done
+
+                  if [[ "${IS_COLLIDING}" == "true" ]]; then
+                    RESCUE_PATH="${STASHED_PATH%.json}__shard${SHARD}_rescued_$(date -u +%s).json"
+                    mkdir -p "$(dirname "${RESCUE_PATH}")"
+                    # Try the untracked-files parent first (the common case for
+                    # our freshly-computed result files), then fall back to the
+                    # main stash tree in case the file was tracked-and-modified.
+                    if git show "stash@{0}^3:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                      echo "  Rescued (colliding) ${STASHED_PATH} -> ${RESCUE_PATH} (from stash@{0}^3, untracked)"
+                      RESCUED=$((RESCUED + 1))
+                    elif git show "stash@{0}:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                      echo "  Rescued (colliding) ${STASHED_PATH} -> ${RESCUE_PATH} (from stash@{0}, tracked)"
+                      RESCUED=$((RESCUED + 1))
+                    else
+                      rm -f "${RESCUE_PATH}"
+                      echo "  ::warning::Could not extract colliding ${STASHED_PATH} from stash@{0} or stash@{0}^3; it may be lost."
+                    fi
+                  else
+                    mkdir -p "$(dirname "${STASHED_PATH}")"
+                    if git show "stash@{0}^3:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null && [[ -s "${STASHED_PATH}" ]]; then
+                      echo "  Restored (non-colliding) ${STASHED_PATH} (from stash@{0}^3, untracked)"
+                      RESTORED=$((RESTORED + 1))
+                    elif git show "stash@{0}:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null && [[ -s "${STASHED_PATH}" ]]; then
+                      echo "  Restored (non-colliding) ${STASHED_PATH} (from stash@{0}, tracked)"
+                      RESTORED=$((RESTORED + 1))
+                    else
+                      echo "  ::warning::Could not restore non-colliding ${STASHED_PATH}; it may be lost."
+                      MISSING=$((MISSING + 1))
+                    fi
+                  fi
+                done
+
+                echo "Stash recovery for shard ${SHARD} (${EXP}): ${RESCUED} rescued (renamed), ${RESTORED} restored (original path), ${MISSING} missing, out of ${#ALL_STASHED_PATHS[@]} stashed path(s)."
+
+                if [[ "${RESCUED}" -gt 0 || "${RESTORED}" -gt 0 ]]; then
+                  echo "::warning::Recovered ${RESCUED} colliding + ${RESTORED} non-colliding file(s) from the stash; dropping the now-redundant stash entry."
                   git stash drop --quiet || true
                 else
-                  echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry, and no colliding file(s) could be rescued."
+                  echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry, and nothing could be recovered."
                   echo "  This shard's own computed result(s) collided path-for-path with something"
                   echo "  the remote already had and are now stuck unstaged in 'git stash list' on"
                   echo "  this runner (they will be lost when the runner is torn down) instead of"
@@ -2660,67 +2702,117 @@ jobs:
             echo "--- git status after add ---"
             git status --short || true
 
-            if git diff --cached --quiet; then
-              echo "Shard ${SHARD}: no new files staged — nothing to commit."
+            # FIX-PUSH-RETRY-SKIP: `git diff --cached` is empty both when there is
+            # genuinely nothing new AND right after a commit that hasn't been
+            # pushed yet (index == HEAD in both cases). A retry of this function
+            # after a failed push therefore used to land here, see "nothing
+            # staged", and return early WITHOUT ever attempting the push again —
+            # stranding an already-computed, already-committed-locally result on
+            # the runner. Distinguish the two cases by checking whether HEAD is
+            # actually ahead of the upstream tracking branch.
+            AHEAD=0
+            if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+              AHEAD=$(git rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+            fi
+
+            if git diff --cached --quiet && [[ "${AHEAD}" -eq 0 ]]; then
+              echo "Shard ${SHARD}: no new files staged and nothing ahead of upstream — nothing to commit or push."
               echo "  Possible causes:"
-              echo "    1. Files are already committed from a previous run (idempotent — OK)"
+              echo "    1. Files are already committed and pushed from a previous run (idempotent — OK)"
               echo "    2. .gitignore excludes ${TARGET} and -f did not override (check .gitignore)"
               return 0
             fi
 
-            # Detect any MODIFIED (M) tracked files — means this shard would overwrite
-            # a result from a previous shard or run (silent data loss).
-            # EXCEPTION: _checkpoint_shard*.json files are intentionally re-written
-            # every run (they accumulate completed task IDs across resumptions) — a
-            # modified M status for these is expected and must NOT trigger the
-            # isolation guard.
-            OVERWRITTEN=$(git diff --cached --name-status \
-              | grep '^M' \
-              | awk '{print $2}' \
-              | grep -v '_checkpoint_shard[0-9].*\.json$' \
-              || true)
-            if [[ -n "$OVERWRITTEN" ]]; then
-              # ISOLATION-GUARD: exp1b/exp1_ablation/exp3b/suppB/suppB_sc each carry
-              # a documented per-shard isolation suffix (HYPATIAX_NSHARDS_SUFFIX /
-              # _shard${SHARD_INDEX} tag — see run_all.sh STEP 2/8b/10/10b, and for
-              # exp1_ablation the "Preserve shard-specific exp1_ablation output" mv
-              # above) whose entire purpose is to make this overwrite impossible.
-              # For those five, a modified tracked file here means the suffix
-              # mechanism itself failed (e.g. SHARD_INDEX missing/blank, or a code
-              # path that bypassed the rename) — that is a real bug, not an
-              # expected re-run overwrite, so it hard-fails instead of warning.
-              case "${EXP}" in
-                exp1b|exp1_ablation|exp3b|suppB|suppB_sc)
-                  echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
-                  echo "  committed result file(s); the per-shard isolation suffix should have "
-                  echo "  prevented this:"
-                  echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
-                  echo "  Check that SHARD_INDEX/HYPATIAX_NSHARDS_SUFFIX is actually set and"
-                  echo "  non-empty for this shard, and that the move/rename step in run_all.sh"
-                  echo "  ran before this commit step."
-                  exit 1
-                  ;;
-                *)
-                  echo "::warning::OVERWRITE DETECTED — shard ${SHARD} is overwriting committed result file(s):"
-                  echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
-                  echo "  The move_matching collision-guard should have disambiguated filenames."
-                  echo "  Proceeding with push so results are not lost — investigate filename uniqueness."
-                  ;;
-              esac
+            if ! git diff --cached --quiet; then
+              # Detect any MODIFIED (M) tracked files — means this shard would overwrite
+              # a result from a previous shard or run (silent data loss).
+              # EXCEPTION: _checkpoint_shard*.json files are intentionally re-written
+              # every run (they accumulate completed task IDs across resumptions) — a
+              # modified M status for these is expected and must NOT trigger the
+              # isolation guard.
+              OVERWRITTEN=$(git diff --cached --name-status \
+                | grep '^M' \
+                | awk '{print $2}' \
+                | grep -v '_checkpoint_shard[0-9].*\.json$' \
+                || true)
+              if [[ -n "$OVERWRITTEN" ]]; then
+                # ISOLATION-GUARD: exp1b/exp1_ablation/exp3b/suppB/suppB_sc each carry
+                # a documented per-shard isolation suffix (HYPATIAX_NSHARDS_SUFFIX /
+                # _shard${SHARD_INDEX} tag — see run_all.sh STEP 2/8b/10/10b, and for
+                # exp1_ablation the "Preserve shard-specific exp1_ablation output" mv
+                # above) whose entire purpose is to make this overwrite impossible.
+                # For those five, a modified tracked file here means the suffix
+                # mechanism itself failed (e.g. SHARD_INDEX missing/blank, or a code
+                # path that bypassed the rename) — that is a real bug, not an
+                # expected re-run overwrite, so it hard-fails instead of warning.
+                case "${EXP}" in
+                  exp1b|exp1_ablation|exp3b|suppB|suppB_sc)
+                    echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
+                    echo "  committed result file(s); the per-shard isolation suffix should have "
+                    echo "  prevented this:"
+                    echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+                    echo "  Check that SHARD_INDEX/HYPATIAX_NSHARDS_SUFFIX is actually set and"
+                    echo "  non-empty for this shard, and that the move/rename step in run_all.sh"
+                    echo "  ran before this commit step."
+                    exit 1
+                    ;;
+                  *)
+                    echo "::warning::OVERWRITE DETECTED — shard ${SHARD} is overwriting committed result file(s):"
+                    echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+                    echo "  The move_matching collision-guard should have disambiguated filenames."
+                    echo "  Proceeding with push so results are not lost — investigate filename uniqueness."
+                    ;;
+                esac
+              fi
+
+              STAGED=$(git diff --cached --name-only | wc -l)
+              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            else
+              echo "Shard ${SHARD}: nothing newly staged, but HEAD is ${AHEAD} commit(s) ahead of upstream (a prior push in this job likely failed) — skipping commit, retrying push only."
+              STAGED=0
             fi
 
-            STAGED=$(git diff --cached --name-only | wc -l)
-            git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            git push --force-with-lease origin "${{ github.ref_name }}"
-            echo "Pushed shard ${SHARD}: ${STAGED} file(s) → ${{ github.ref_name }}"
+            # FIX-PUSH-EXIT-CHECK: this function is invoked below as the
+            # condition of `if ! commit_and_push; then ...`, and bash disables
+            # `set -e` while evaluating an `if` condition — including inside a
+            # function called there. Previously `git push`'s exit status was
+            # never checked, so a failed push fell straight through to the
+            # unconditional "Pushed shard ..." echo below, which reported
+            # success and skipped the retry entirely. Confirmed against a live
+            # run (29854207571): shards 1 and 4 both got "! [remote rejected]
+            # master -> master (cannot lock ref ...)" / "error: failed to push
+            # some refs" from git push, immediately followed by "Pushed shard
+            # N: 5 file(s) → master" in the same log — their seed99 / seed2024
+            # results were committed locally but never reached the remote, and
+            # the runner was torn down with that commit still unpushed. Check
+            # the exit status explicitly and return failure so the retry (and,
+            # if that also exhausts, the step itself under set -e) fires.
+            if ! git push --force-with-lease origin "${{ github.ref_name }}"; then
+              echo "::warning::git push failed for shard ${SHARD} (${EXP}) — commit is local-only so far."
+              return 1
+            fi
+            echo "Pushed shard ${SHARD}: ${STAGED} file(s) newly committed (HEAD $(git rev-parse --short HEAD)) → ${{ github.ref_name }}"
           }
 
-          # First attempt; retry once after a pause on concurrent-shard conflict.
-          if ! commit_and_push; then
-            echo "Push conflict — waiting 20 s then retrying ..."
-            sleep 20
-            commit_and_push
-          fi
+          # FIX-PUSH-RETRY-LOOP: a single retry (2 total attempts) was
+          # observed to be insufficient — with 5 shards racing to push
+          # concurrently, 2 of 5 attempts failed on a real run. Retry with a
+          # randomized backoff (so shards don't all wake up and collide again
+          # at the same instant) until it succeeds or a bounded number of
+          # attempts is exhausted, at which point fail loudly rather than
+          # silently stranding this shard's results on the runner.
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          until commit_and_push; do
+            if [[ "${ATTEMPT}" -ge "${MAX_ATTEMPTS}" ]]; then
+              echo "::error::commit_and_push failed for shard ${SHARD} (${EXP}) after ${MAX_ATTEMPTS} attempts — giving up. This shard's results were committed locally but could not be pushed; they will be lost when the runner is torn down."
+              exit 1
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            SLEEP_SECS=$(( (RANDOM % 15) + 5 * ATTEMPT ))
+            echo "Push conflict (attempt ${ATTEMPT}/${MAX_ATTEMPTS}) — waiting ${SLEEP_SECS}s then retrying ..."
+            sleep "${SLEEP_SECS}"
+          done
 
       # -- Verify results are visible in the repo after push (ITEM 4) ----------
       # Checks that the files committed by this shard are actually present in the
