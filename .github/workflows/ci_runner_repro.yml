@@ -1396,6 +1396,27 @@ jobs:
               SHARD_SEEDS="${PYSR_SEED}"
             fi
             echo "  [exp3/exp3b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
+          elif [[ "${EXP}" == "exp1b" ]]; then
+            # FIX-EXP1B-SHARD-SEED: mirrors FIX-EXP3-SHARD-SEED above. exp1b's
+            # pending_ids are "portfolio_seed<N>" (e.g. "portfolio_seed123"),
+            # but this used to fall through to the else-branch default of
+            # "${PYSR_SEED}" — the GLOBAL workflow-level env var, hardcoded to
+            # "42" — regardless of which seed this shard was actually
+            # assigned. Every exp1b shard therefore computed seed 42's
+            # portfolio, not its own assigned seed. Shard 0 (whose real
+            # assignment happens to BE portfolio_seed42) masked the bug,
+            # while e.g. shard 2 (assigned portfolio_seed123) silently ALSO
+            # produced seed42's results alongside its own, causing shard 0
+            # and shard 2 to collide when both tried to commit
+            # hypatiax_defi_benchmark_v3_results_seed42.json (run 29824228663
+            # and 29826566459).
+            TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+            SHARD_SEEDS="$(cat /tmp/pending_ids.txt | grep -oE 'seed[0-9]+$' | sed -E 's/seed//' | sort -u | paste -sd, -)"
+            if [[ -z "${SHARD_SEEDS}" ]]; then
+              echo "  [exp1b] No portfolio_seedNN pattern found in pending_ids — falling back to PYSR_SEED (${PYSR_SEED})."
+              SHARD_SEEDS="${PYSR_SEED}"
+            fi
+            echo "  [exp1b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
           else
             TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="${PYSR_SEED}"
