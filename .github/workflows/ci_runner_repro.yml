@@ -116,7 +116,7 @@ on:
 
       # -- Sharding ----------------------------------------------------------
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b: IGNORED — always forced to len(seeds) (one shard per seed; see the seeds input). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -179,23 +179,6 @@ on:
         description: "exp2_feynman_pca only: clear stale exp2_pca_4060/*.json before running, bypassing the already-done skip-guard (true/false). Use after pipeline/aggregation fixes to force a clean regeneration."
         required: false
         default: "false"
-
-# FIX-RACE-CONCURRENT-RUNS: exp1b/exp1_ablation/exp3b/suppB/suppB_sc write to a
-# fixed canonical path with no run-id scoping. Without a concurrency guard,
-# two overlapping workflow_dispatch runs of the same experiment on the same
-# branch can both check out, compute, and try to push to that same path —
-# the second push's "git stash pop" then fails because its own result
-# collides path-for-path with what the first run already committed
-# (see "Commit and push shard results to repo" step below).
-# Scoping the group by workflow+experiment+branch means a second dispatch of
-# the same experiment queues behind the first instead of running in parallel.
-# cancel-in-progress is false on purpose: these jobs can run up to 5h30m and
-# cancelling an in-flight run to start a new one would waste that compute —
-# queueing (wait) is strictly better than racing (silent data loss) or
-# cancelling (wasted compute) here.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
-  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -518,10 +501,8 @@ jobs:
           # Per-experiment shard table — authoritative source.
           # Most experiments run with exactly 1 worker shard to avoid
           # checkpoint collisions, concurrent-push races, and wasted runner
-          # quota. exp1_ablation, exp3b use 4 shards (multi-task runs
-          # over DEFI_TASKS / multi-seed runs respectively). exp1b is NOT in
-          # this fixed group — see FIX-exp1b-DYNAMIC-SHARDS further down,
-          # where its shard count is derived from len(SEEDS) instead.
+          # quota. exp1b, exp1_ablation, exp3b use 4 shards (multi-task runs
+          # over DEFI_TASKS / multi-seed runs respectively).
           #
           # suppB uses 5 shards — NOT 4 — because its task list is built as
           # [f"noise{nl}__{eq}" for nl in NOISE_LEVELS for eq in
@@ -588,21 +569,9 @@ jobs:
           # filename) is fixed separately above in the exp1b combined_globs
           # block. Cost: exp1b dispatch now spins up 5 concurrent workers
           # instead of 4.
-          # -- Seeds / overrides parsed early ------------------------------------
-          # Moved ahead of EXP_SHARD_TABLE resolution because exp1b's shard
-          # count is now derived from len(SEEDS) (see FIX-exp1b-DYNAMIC-SHARDS
-          # below) rather than a static table entry, so SEEDS must exist before
-          # N_SHARDS is resolved.
-          OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
-          SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
-          NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
-
           EXP_SHARD_TABLE = {
               "exp1":               1,
-              # exp1b: deliberately NOT a fixed table entry — see
-              # FIX-exp1b-DYNAMIC-SHARDS below. Shard count = len(SEEDS),
-              # so a custom `seeds` dispatch input always gets exact
-              # one-seed-per-shard isolation, not just the 5-seed default.
+              "exp1b":              5,
               "exp1_ablation":      4,
               # exp1_pca / exp1b_pca intentionally NOT listed here yet — see the
               # matching gap (and hard-fail) in the `registry` dict below for why.
@@ -623,38 +592,15 @@ jobs:
           }
           N_SHARDS_DEFAULT = EXP_SHARD_TABLE.get(EXP, 1)
           # Most experiments use exactly 1 shard to avoid concurrent-push races
-          # and checkpoint collisions.  exp1_ablation and exp3b use 4 shards
+          # and checkpoint collisions.  exp1b, exp1_ablation, and exp3b use 4 shards
           # (multi-task runs over DEFI_TASKS / multi-seed runs respectively).
-          # exp1b is handled separately below — its shard count is derived
-          # dynamically from len(SEEDS), not this table.
           # suppB uses 5 shards (one per noise level — see EXP_SHARD_TABLE comment
           # above for why 4 would silently mis-pin NOISE_LEVEL on some tasks).
           # suppB_sc uses 6 shards (one per sample size n — see EXP_SHARD_TABLE
           # comment above for the one-n-per-shard alignment requirement, and
           # the FIX-suppB_sc-SHARD-6 block below for the cost rationale).
           # Any dispatch input is ignored for single-shard experiments.
-          #
-          # FIX-exp1b-DYNAMIC-SHARDS: exp1b must always get exactly
-          # len(SEEDS) shards (one-seed-per-shard — see the UPDATE
-          # 2026-07-11 comment elsewhere in this file for why). A static
-          # table value (formerly 5) silently mismatched _block_shards()
-          # into uneven per-shard seed counts whenever a custom `seeds`
-          # dispatch input changed the seed count away from 5 (e.g. 3
-          # seeds -> some shards get 0 tasks and are dropped; 7 seeds ->
-          # some shards get 2 seeds, re-introducing the exact
-          # multi-seed-per-shard blast radius the 2026-07-11 fix removed
-          # for the default case). This branch takes over from the
-          # EXP_SHARD_TABLE lookup entirely for exp1b, before the
-          # generic ==1 / >4 / else dispatch below, so exp1b can never
-          # fall into the wrong one of those branches regardless of how
-          # many seeds are passed.
-          if EXP == "exp1b":
-              N_SHARDS = len(SEEDS)
-              if N_SHARDS_RAW != N_SHARDS:
-                  print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for 'exp1b' "
-                        f"— shard count is derived from len(seeds)={N_SHARDS} for exact "
-                        f"one-seed-per-shard alignment. Using N_SHARDS={N_SHARDS}.")
-          elif N_SHARDS_DEFAULT == 1:
+          if N_SHARDS_DEFAULT == 1:
               N_SHARDS = 1
               if N_SHARDS_RAW not in (1,):
                   print(f"::warning::n_shards={N_SHARDS_RAW} dispatch input IGNORED for '{EXP}' "
@@ -680,7 +626,7 @@ jobs:
                         f"sample-size alignment. Using N_SHARDS={N_SHARDS_DEFAULT}.")
           else:
               # Table default is the minimum — user input cannot go below it.
-              # exp1_ablation/exp3b (table=4) always get at least 4
+              # exp1b/exp1_ablation/exp3b (table=4) always get at least 4
               # shards; the dispatch input can raise that up to a cap of 4
               # (i.e. it has no effect for this group in practice, since the
               # table value already equals the cap — left in place in case a
@@ -690,6 +636,10 @@ jobs:
                   print(f"::notice::n_shards: input={N_SHARDS_RAW} "
                         f"table={N_SHARDS_DEFAULT} using={N_SHARDS} "
                         f"(table default enforced as minimum)")
+          OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
+          SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
+          NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
+
           # -- exp2_feynman shard IDs --------------------------------------------
           # BenchmarkProtocol._apply_shard_ids() filters at DOMAIN level, not
           # individual equation level.  Domain keys are "feynman_<sub-domain>"
@@ -1413,27 +1363,6 @@ jobs:
               SHARD_SEEDS="${PYSR_SEED}"
             fi
             echo "  [exp3/exp3b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
-          elif [[ "${EXP}" == "exp1b" ]]; then
-            # FIX-EXP1B-SHARD-SEED: mirrors FIX-EXP3-SHARD-SEED above. exp1b's
-            # pending_ids are "portfolio_seed<N>" (e.g. "portfolio_seed123"),
-            # but this used to fall through to the else-branch default of
-            # "${PYSR_SEED}" — the GLOBAL workflow-level env var, hardcoded to
-            # "42" — regardless of which seed this shard was actually
-            # assigned. Every exp1b shard therefore computed seed 42's
-            # portfolio, not its own assigned seed. Shard 0 (whose real
-            # assignment happens to BE portfolio_seed42) masked the bug,
-            # while e.g. shard 2 (assigned portfolio_seed123) silently ALSO
-            # produced seed42's results alongside its own, causing shard 0
-            # and shard 2 to collide when both tried to commit
-            # hypatiax_defi_benchmark_v3_results_seed42.json (run 29824228663
-            # and 29826566459).
-            TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
-            SHARD_SEEDS="$(cat /tmp/pending_ids.txt | grep -oE 'seed[0-9]+$' | sed -E 's/seed//' | sort -u | paste -sd, -)"
-            if [[ -z "${SHARD_SEEDS}" ]]; then
-              echo "  [exp1b] No portfolio_seedNN pattern found in pending_ids — falling back to PYSR_SEED (${PYSR_SEED})."
-              SHARD_SEEDS="${PYSR_SEED}"
-            fi
-            echo "  [exp1b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
           else
             TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="${PYSR_SEED}"
@@ -1828,24 +1757,6 @@ jobs:
             # Skip if src is already inside DEST (already in subdir)
             [[ "$(realpath "$f")" == "$(realpath "${DEST}")"/* ]] && continue
             dest_f="${DEST}/${fname}"
-            # FIX-EXP1B-RACE: hypatiax_defi_benchmark_v3c.py writes
-            # contradiction_audit_report.json and fixc3_baseline.json under a
-            # fixed, non-seed-scoped name on every run. exp1b's shards are
-            # fully parallel, independent runners all writing into the SAME
-            # RESULT_SUBDIR — the collision check below only sees THIS
-            # runner's own local disk, which never has the file yet on a
-            # shard's first write, so no shard gets suffixed and two shards
-            # race to push the identical remote filename. The loser's
-            # `git pull --rebase` hits an untracked-file conflict and the
-            # follow-up `git stash pop` fails, silently losing that shard's
-            # real results (confirmed run 29824228663, shards 0/1/3/4 lost
-            # to shard 2). Suffix these known-racy filenames unconditionally
-            # instead of relying on a same-runner collision check that can't
-            # see other shards.
-            if [[ "${EXP:-}" == "exp1b" && ( "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ) ]]; then
-              stem="${fname%.*}"; ext="${fname##*.}"
-              dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
-            fi
             if [[ -e "$dest_f" ]]; then
               # If the colliding file is already git-tracked it is a committed
               # result from a prior run, not a stray output from this run.
@@ -1895,14 +1806,6 @@ jobs:
                 fname=$(basename "$f")
                 [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
                 dest_f="${DEST}/${fname}"
-                # FIX-EXP1B-RACE: see matching comment in the root-scan loop
-                # above — suffix these known non-seed-scoped filenames
-                # unconditionally so parallel shards can never race to push
-                # the identical remote filename.
-                if [[ "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ]]; then
-                  stem="${fname%.*}"; ext="${fname##*.}"
-                  dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
-                fi
                 if [[ -e "$dest_f" ]]; then
                   if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                     echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
@@ -2653,37 +2556,7 @@ jobs:
               echo "::warning::git pull --rebase failed (possibly untracked file conflict) — stashing untracked files and retrying"
               git stash --include-untracked --quiet || true
               git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
-              # FIX-STASH-POP-SILENT-LOSS: `git stash pop --quiet 2>/dev/null
-              # || true` previously swallowed a failed pop with no trace. A
-              # pop fails here when the file this shard just produced
-              # collides, path-for-path, with a file the remote already
-              # committed (e.g. another concurrent/overlapping run of the
-              # same experiment landed a push for the same deterministic
-              # seed->path mapping in between this shard's checkout and this
-              # push). When that happens, THIS shard's own real results stay
-              # stashed and unstaged, `git add -f "${TARGET}"` finds nothing
-              # of theirs to add, and the shard silently pushes only its
-              # checkpoint file — while "Repo commit verification" a few
-              # steps later reports a false "OK" because it only checks file
-              # *presence* under TARGET, not which run actually produced the
-              # file that's there. Confirmed via run 29697091994 shard 0
-              # (exp1b, portfolio_seed42): exactly this sequence caused
-              # seed42 to be reported as a missing task downstream even
-              # though shard 0 had genuinely completed it. Hard-fail here
-              # instead, so the loss is visible at the point it happens.
-              if ! git stash pop --quiet 2>&1; then
-                echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry."
-                echo "  This shard's own computed result(s) collided path-for-path with something"
-                echo "  the remote already had and are now stuck unstaged in 'git stash list' on"
-                echo "  this runner (they will be lost when the runner is torn down) instead of"
-                echo "  being committed. Likely cause: another concurrent/overlapping run of"
-                echo "  ${EXP} pushed a commit touching the same output path between this shard's"
-                echo "  checkout and this push — exp1b/exp1_ablation/exp3b/suppB/suppB_sc write to"
-                echo "  a fixed canonical path with no run-id scoping, so two overlapping runs can"
-                echo "  race on the exact same file. Re-run this shard once the other run finishes,"
-                echo "  or scope ${TARGET} by run id if concurrent runs of ${EXP} are expected."
-                exit 1
-              fi
+              git stash pop --quiet 2>/dev/null || true
             fi
 
             # Stage every result file produced by this shard.
@@ -3662,7 +3535,7 @@ jobs:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
         run: |
           python3 - <<'PYEOF'
-          import ast, re, sys, pathlib
+          import re, sys, pathlib
 
           # FIX-C3-SCRIPT: PCA script is now the Feynman PCA runner (not v2 + --extrap)
           FEYNMAN_SCRIPT = pathlib.Path(
@@ -3676,63 +3549,12 @@ jobs:
 
           # ── Check 1: PCA script uses pca_directed_split ───────────────────
           # DeFi script uses build_extrap_split — both are PCA-directed families.
-          #
-          # HARDENED (v10 fix, report §R6): the previous version of this check was
-          # a bare substring search (`"build_extrap_split" in src`), which passes
-          # even if the name only appears as an unreachable wrapper's own
-          # definition and is never actually called anywhere. This AST-based
-          # version instead confirms the target name appears as the *callee* of
-          # a real Call node located outside that name's own function
-          # definition — i.e. it is genuinely invoked at a split call site, not
-          # merely present in the source text.
-          _TARGET_SPLIT_NAMES = {"pca_directed_split", "build_extrap_split"}
-
-          def _own_def_line_ranges(tree, names):
-              """For each target name defined as a function in this module,
-              return the (start, end) line range of its own body, so calls
-              inside that body (e.g. self-reference) don't count as a genuine
-              external call site."""
-              ranges = {}
-              for node in ast.walk(tree):
-                  if isinstance(node, ast.FunctionDef) and node.name in names:
-                      body_lines = [node.lineno] + [
-                          n.lineno for n in ast.walk(node) if hasattr(n, "lineno")
-                      ]
-                      ranges[node.name] = (min(body_lines), max(body_lines))
-              return ranges
-
           def script_uses_pca_split(path):
               if not path.exists():
                   return None, f"{path.name} not found"
               src = path.read_text(errors="replace")
-              try:
-                  tree = ast.parse(src)
-              except SyntaxError as e:
-                  return None, f"{path.name}: could not parse for AST check ({e})"
-
-              own_ranges = _own_def_line_ranges(tree, _TARGET_SPLIT_NAMES)
-
-              call_sites = []
-              for node in ast.walk(tree):
-                  if not isinstance(node, ast.Call):
-                      continue
-                  fn = node.func
-                  if isinstance(fn, ast.Name):
-                      name = fn.id
-                  elif isinstance(fn, ast.Attribute):
-                      name = fn.attr
-                  else:
-                      continue
-                  if name not in _TARGET_SPLIT_NAMES:
-                      continue
-                  own_range = own_ranges.get(name)
-                  if own_range and own_range[0] <= node.lineno <= own_range[1]:
-                      # Call occurs inside the target function's own definition
-                      # body — not a genuine external call site.
-                      continue
-                  call_sites.append((name, node.lineno))
-
-              uses_pca = len(call_sites) > 0
+              # pca.py uses pca_directed_split; defi uses build_extrap_split
+              uses_pca = "pca_directed_split" in src or "build_extrap_split" in src
               return uses_pca, None
 
           feynman_uses, feynman_err = script_uses_pca_split(FEYNMAN_SCRIPT)
@@ -3919,31 +3741,17 @@ jobs:
           print(f"  [OK]  Corrected path: {CORRECTED_DIR.relative_to(OUT_BASE)}")
 
           # ── Check 2: if legacy results exist, capture baseline ────────────
-          def _is_feynman_protocol(fp):
-              # Guard against a different benchmark suite (e.g. all_domains) writing
-              # into this same directory and getting silently pooled into the
-              # Feynman baseline count. Files without a protocol.benchmark field
-              # (older runs) are treated as Feynman for backward compatibility.
-              try:
-                  data = json.loads(fp.read_text())
-              except Exception:
-                  return True
-              proto = data.get("protocol", {}) if isinstance(data, dict) else {}
-              benchmark = str(proto.get("benchmark", "")).lower()
-              return benchmark == "" or "feynman" in benchmark
-
           legacy_jsons = [
               f for f in (sorted(LEGACY_DIR.glob("*.json")) if LEGACY_DIR.exists() else [])
               if "checkpoint" not in f.name
               and "disclosure" not in f.name
               and not f.name.startswith("_")   # exclude meta files (_analysis, _merged, _stats …)
-              and _is_feynman_protocol(f)
           ]
 
           if legacy_jsons:
               # Extract 9/30 solve rate from legacy results
               n_total = n_pass = 0
-              THRESHOLD = float(os.environ.get("FEYNMAN_NOISELESS_THRESHOLD", 0.999999))
+              THRESHOLD = 0.9999
               PREFERRED = {"hypatiax","hybridv50","hybrid50","hybridsymbolic",
                            "hybriddefi","hypatia","hybrid","ours","proposed"}
 
