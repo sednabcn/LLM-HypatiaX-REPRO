@@ -2594,24 +2594,52 @@ jobs:
               echo "::warning::git pull --rebase failed (possibly untracked file conflict) — stashing untracked files and retrying"
               git stash --include-untracked --quiet || true
               git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
-              # FIX-STASH-POP-SILENT-LOSS: a pop fails here only when the file
-              # this shard just produced collides, path-for-path, with a file
-              # the remote already committed (e.g. an overlapping run of the
-              # same experiment landed a push for the same output path
-              # between this shard's checkout and this push). If swallowed,
-              # this shard's real results stay stashed/unstaged, only its
-              # checkpoint gets pushed, and downstream commit verification
-              # reports a false OK. Hard-fail here so the loss is visible at
-              # the point it happens, instead of silently downstream.
-              if ! git stash pop --quiet 2>&1; then
-                echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry."
-                echo "  This shard's own computed result(s) collided path-for-path with something"
-                echo "  the remote already had and are now stuck unstaged in 'git stash list' on"
-                echo "  this runner (they will be lost when the runner is torn down) instead of"
-                echo "  being committed. Likely cause: another concurrent/overlapping run of"
-                echo "  ${EXP} pushed a commit touching the same output path between this shard's"
-                echo "  checkout and this push. Re-run this shard once the other run finishes."
-                exit 1
+
+              # FIX-STASH-POP-RESCUE: a pop fails here when the file this
+              # shard just produced collides, path-for-path, with a file the
+              # remote already had (already checked out untracked by the
+              # pull above). This can mean either (a) a genuinely concurrent
+              # run pushed the same output path, or (b) — as seen across
+              # shards 0/1/2/4 colliding on the SAME filename while shard 3
+              # succeeded — this experiment's own output naming isn't
+              # shard-disambiguated, so multiple shards of the SAME run
+              # compute the same filename. Either way this shard's result is
+              # real data and must not be silently discarded. Rather than
+              # hard-failing immediately, rescue this shard's stashed copy
+              # of every colliding file under a disambiguated name so it
+              # still gets committed, then drop the now-redundant stash.
+              if ! git stash pop --quiet 2>stash_pop_err.log; then
+                echo "::warning::git stash pop reported conflict(s) for shard ${SHARD} (${EXP}) — attempting to rescue this shard's colliding file(s) instead of discarding them."
+                cat stash_pop_err.log
+
+                RESCUED=0
+                while IFS= read -r COLLIDING; do
+                  [[ -z "$COLLIDING" ]] && continue
+                  RESCUE_PATH="${COLLIDING%.json}__shard${SHARD}_rescued_$(date -u +%s).json"
+                  mkdir -p "$(dirname "$RESCUE_PATH")"
+                  if git show "stash@{0}:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH}"
+                    RESCUED=$((RESCUED + 1))
+                  else
+                    rm -f "${RESCUE_PATH}"
+                    echo "  ::warning::Could not extract ${COLLIDING} from stash@{0}; it may be lost."
+                  fi
+                done < <(grep -E 'already exists, no checkout$' stash_pop_err.log | sed -E 's/ already exists, no checkout$//')
+
+                if [[ "${RESCUED}" -gt 0 ]]; then
+                  echo "::warning::Rescued ${RESCUED} colliding file(s) under disambiguated name(s); dropping the now-redundant stash entry."
+                  git stash drop --quiet || true
+                else
+                  echo "::error::git stash pop FAILED for shard ${SHARD} (${EXP}) after the pull-rebase retry, and no colliding file(s) could be rescued."
+                  echo "  This shard's own computed result(s) collided path-for-path with something"
+                  echo "  the remote already had and are now stuck unstaged in 'git stash list' on"
+                  echo "  this runner (they will be lost when the runner is torn down) instead of"
+                  echo "  being committed. Likely cause: this experiment's output filename is not"
+                  echo "  shard-disambiguated (check run_all.sh for ${EXP}), or a genuinely"
+                  echo "  concurrent/overlapping run of ${EXP} pushed the same output path between"
+                  echo "  this shard's checkout and this push. Re-run this shard once resolved."
+                  exit 1
+                fi
               fi
             fi
 
