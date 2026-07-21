@@ -1790,6 +1790,24 @@ jobs:
             # Skip if src is already inside DEST (already in subdir)
             [[ "$(realpath "$f")" == "$(realpath "${DEST}")"/* ]] && continue
             dest_f="${DEST}/${fname}"
+            # FIX-EXP1B-RACE: hypatiax_defi_benchmark_v3c.py writes
+            # contradiction_audit_report.json and fixc3_baseline.json under a
+            # fixed, non-seed-scoped name on every run. exp1b's shards are
+            # fully parallel, independent runners all writing into the SAME
+            # RESULT_SUBDIR — the collision check below only sees THIS
+            # runner's own local disk, which never has the file yet on a
+            # shard's first write, so no shard gets suffixed and two shards
+            # race to push the identical remote filename. The loser's
+            # `git pull --rebase` hits an untracked-file conflict and the
+            # follow-up `git stash pop` fails, silently losing that shard's
+            # real results (confirmed run 29824228663, shards 0/1/3/4 lost
+            # to shard 2). Suffix these known-racy filenames unconditionally
+            # instead of relying on a same-runner collision check that can't
+            # see other shards.
+            if [[ "${EXP:-}" == "exp1b" && ( "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ) ]]; then
+              stem="${fname%.*}"; ext="${fname##*.}"
+              dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
+            fi
             if [[ -e "$dest_f" ]]; then
               # If the colliding file is already git-tracked it is a committed
               # result from a prior run, not a stray output from this run.
@@ -1839,6 +1857,14 @@ jobs:
                 fname=$(basename "$f")
                 [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
                 dest_f="${DEST}/${fname}"
+                # FIX-EXP1B-RACE: see matching comment in the root-scan loop
+                # above — suffix these known non-seed-scoped filenames
+                # unconditionally so parallel shards can never race to push
+                # the identical remote filename.
+                if [[ "$fname" == "contradiction_audit_report.json" || "$fname" == "fixc3_baseline.json" ]]; then
+                  stem="${fname%.*}"; ext="${fname##*.}"
+                  dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
+                fi
                 if [[ -e "$dest_f" ]]; then
                   if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                     echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
