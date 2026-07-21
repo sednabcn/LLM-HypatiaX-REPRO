@@ -2617,12 +2617,21 @@ jobs:
                   [[ -z "$COLLIDING" ]] && continue
                   RESCUE_PATH="${COLLIDING%.json}__shard${SHARD}_rescued_$(date -u +%s).json"
                   mkdir -p "$(dirname "$RESCUE_PATH")"
-                  if git show "stash@{0}:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
-                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH}"
+                  # `git stash --include-untracked` stores untracked files in a
+                  # THIRD parent commit of the stash (stash@{0}^3), separate from
+                  # the tracked-change tree that "stash@{0}:<path>" addresses.
+                  # Try the untracked-files parent first (the common case for our
+                  # freshly-computed result files), then fall back to the main
+                  # stash tree in case the file was tracked-and-modified instead.
+                  if git show "stash@{0}^3:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH} (from stash@{0}^3, untracked)"
+                    RESCUED=$((RESCUED + 1))
+                  elif git show "stash@{0}:${COLLIDING}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                    echo "  Rescued ${COLLIDING} -> ${RESCUE_PATH} (from stash@{0}, tracked)"
                     RESCUED=$((RESCUED + 1))
                   else
                     rm -f "${RESCUE_PATH}"
-                    echo "  ::warning::Could not extract ${COLLIDING} from stash@{0}; it may be lost."
+                    echo "  ::warning::Could not extract ${COLLIDING} from stash@{0} or stash@{0}^3; it may be lost."
                   fi
                 done < <(grep -E 'already exists, no checkout$' stash_pop_err.log | sed -E 's/ already exists, no checkout$//')
 
