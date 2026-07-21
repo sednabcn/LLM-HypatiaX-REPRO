@@ -180,6 +180,23 @@ on:
         required: false
         default: "false"
 
+# FIX-RACE-CONCURRENT-RUNS: exp1b/exp1_ablation/exp3b/suppB/suppB_sc write to a
+# fixed canonical path with no run-id scoping. Without a concurrency guard,
+# two overlapping workflow_dispatch runs of the same experiment on the same
+# branch can both check out, compute, and try to push to that same path —
+# the second push's "git stash pop" then fails because its own result
+# collides path-for-path with what the first run already committed
+# (see "Commit and push shard results to repo" step below).
+# Scoping the group by workflow+experiment+branch means a second dispatch of
+# the same experiment queues behind the first instead of running in parallel.
+# cancel-in-progress is false on purpose: these jobs can run up to 5h30m and
+# cancelling an in-flight run to start a new one would waste that compute —
+# queueing (wait) is strictly better than racing (silent data loss) or
+# cancelling (wasted compute) here.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   actions:  write
