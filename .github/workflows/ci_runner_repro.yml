@@ -4019,14 +4019,28 @@ jobs:
 
               baseline = {
                   "fixc3_gate":  "C",
-                  "description": "Pre-fix baseline — Feynman 9/30 result (random 80/20 split)",
+                  "description": "Pre-fix baseline — Feynman result (random 80/20 split)",
                   "split_protocol": "random_80_20",
                   "n_pass":  n_pass,
                   "n_total": n_total,
                   "solve_rate": (n_pass / n_total) if n_total > 0 else None,
                   "paper_claim": "9/30 = 0.300",
-                  "source_files": [fp.name for fp in legacy_jsons[:5]],
+                  # FIX-MANIFEST-TRUNCATION (mirrors run_all.sh:1612-1621): was
+                  # legacy_jsons[:5]. Files are named protocol_core_{mode}_{ts}
+                  # {shard}.json and sorted() puts them in ascending timestamp
+                  # order, i.e. domain-completion order. With 11 Feynman domains,
+                  # [:5] kept only the earliest 5 and silently dropped every later
+                  # one from the manifest -- deterministically omitting whichever
+                  # domain ran last, even though that domain's rows were still
+                  # counted correctly in n_pass/n_total above. List every source
+                  # file so the manifest matches what was actually counted.
+                  "source_files": [fp.name for fp in legacy_jsons],
               }
+              assert len(baseline["source_files"]) == len(legacy_jsons), (
+                  "Gate C internal error: source_files manifest does not match "
+                  "legacy_jsons — baseline-lock logic has re-drifted from "
+                  "run_all.sh; see FIX-MANIFEST-TRUNCATION"
+              )
 
               # Write baseline file (create once, refuse to overwrite)
               if BASELINE_FILE.exists():
