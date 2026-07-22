@@ -1609,7 +1609,16 @@ baseline = {
     'n_total':         n_total,
     'solve_rate':      (n_pass / n_total) if n_total > 0 else None,
     'paper_claim':     '9/30 = 0.300',
-    'source_files':    source_files[:5],
+    # FIX-MANIFEST-TRUNCATION: was source_files[:5]. Files are named
+    # protocol_core_{mode}_{ts}{shard}.json and sorted() puts them in
+    # ascending timestamp order, i.e. domain-completion order. With 11
+    # Feynman domains, [:5] kept only the earliest 5 and silently dropped
+    # every later one from the manifest -- deterministically omitting
+    # whichever domain ran last (feynman_thermodynamics, since it's the
+    # last entry in FEYNMAN_DOMAINS), even though that domain's rows were
+    # still counted correctly in n_pass/n_total above. List every source
+    # file so the manifest matches what was actually counted.
+    'source_files':    source_files,
 }
 BASELINE.parent.mkdir(parents=True, exist_ok=True)
 BASELINE.write_text(json.dumps(baseline, indent=2))
@@ -2185,6 +2194,53 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
       fi
     fi
   fi
+
+  # exp2_extrap_summary.json — small machine-readable rollup of this step's
+  # outputs, written into exp2_extrap/ alongside the raw benchmark/protocol
+  # files. Intended for qualify/audit steps (and humans) to get step status
+  # at a glance without re-scanning the whole directory.
+  _SUMMARY="${_EXTRAP_DIR}/exp2_extrap_summary.json"
+  python3 - "${_EXTRAP_DIR}" "${_PAIRED}" "${_SUMMARY}" <<'PYEOF'
+import json, sys
+from pathlib import Path
+from datetime import datetime, timezone
+
+extrap_dir, paired_path, summary_path = (Path(p) for p in sys.argv[1:4])
+
+protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json"))
+bench_files    = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json"))
+saved_dir      = extrap_dir / "_saved"
+saved_count    = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
+
+paired_exists = paired_path.is_file()
+paired_count  = None
+if paired_exists:
+    try:
+        paired_count = len(json.loads(paired_path.read_text()))
+    except Exception:
+        paired_count = None
+
+summary = {
+    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    "step": "exp2_feynman_extrap",
+    "extrap_dir": str(extrap_dir),
+    "protocol_core_extrap_files": protocol_files,
+    "protocol_core_extrap_count": len(protocol_files),
+    "protocol_core_extrap_saved_count": saved_count,
+    "benchmark_results_extrap_files": bench_files,
+    "ablation_paired_json": {
+        "path": str(paired_path),
+        "present": paired_exists,
+        "record_count": paired_count,
+    },
+    "status": "ok" if (protocol_files and bench_files) else "incomplete",
+}
+
+summary_path.write_text(json.dumps(summary, indent=2))
+print(f"[summary] wrote {summary_path}  (status={summary['status']}, "
+      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)}, "
+      f"paired_records={paired_count})")
+PYEOF
 )
 
 

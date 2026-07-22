@@ -3965,7 +3965,11 @@ jobs:
           if legacy_jsons:
               # Extract 9/30 solve rate from legacy results
               n_total = n_pass = 0
-              THRESHOLD = 0.9999
+              # FIX-GATE-C-THRESHOLD: was 0.9999 — drifted from the pipeline's own
+              # r²≥0.999999 noiseless threshold (FEYNMAN_NOISELESS_THRESHOLD in
+              # run_all.sh / ci_runner_repro.yml). At 0.9999 this locked an inflated
+              # legacy baseline of 81/90 (90.0%) instead of the correct 74/90 (82.2%).
+              THRESHOLD = 0.999999
               PREFERRED = {"hypatiax","hybridv50","hybrid50","hybridsymbolic",
                            "hybriddefi","hypatia","hybrid","ours","proposed"}
 
