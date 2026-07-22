@@ -2574,6 +2574,35 @@ jobs:
           echo "--- Files to stage ---"
           find "${TARGET}" -type f | sort
 
+          # FIX-EXP1B-SEED42-DEDUP: hypatiax_defi_benchmark_v3c.py's portfolio
+          # mode unconditionally recomputes and writes a seed42 baseline
+          # result (hypatiax_defi_benchmark_v3_results_seed42.json) on EVERY
+          # shard's run, regardless of which seed(s) that shard was actually
+          # assigned — confirmed byte-identical across shards on a live run
+          # (every copy was 17836 lines). Every shard except the one that
+          # genuinely owns seed42 therefore stages a spurious duplicate of
+          # that exact filename, which is what raced/collided at commit time
+          # and produced the *_shardN_rescued_*.json files seen in prior runs.
+          # Rather than only handling the collision after the fact, remove
+          # the cause: a shard that was NOT assigned seed 42 deletes its own
+          # redundant local copy before staging, so only the owning shard
+          # ever commits it and no collision (and no rescue file) is
+          # possible. This does not touch hypatiax_defi_benchmark_v3c.py —
+          # the redundant computation still happens locally on every shard,
+          # it just never reaches git except from the one shard that needs it.
+          if [[ "${EXP:-}" == "exp1b" ]]; then
+            OWNS_SEED42=false
+            while IFS= read -r _sid; do
+              [[ "${_sid}" == "portfolio_seed42" ]] && OWNS_SEED42=true
+            done < <(python3 -c "import json,os; print('\n'.join(json.loads(os.environ.get('SHARD_IDS') or '[]')))")
+
+            SEED42_FILE="${TARGET}/hypatiax_defi_benchmark_v3_results_seed42.json"
+            if [[ "${OWNS_SEED42}" == "false" && -f "${SEED42_FILE}" ]]; then
+              echo "Shard ${SHARD} was not assigned seed42 — removing its redundant local copy of ${SEED42_FILE} before staging (the shard actually assigned seed42 will commit the real one)."
+              rm -f "${SEED42_FILE}"
+            fi
+          fi
+
           # FIX NO-TABLES-FIGURES: hard-delete backstop. run_all.sh now purges
           # .tex/.png/.pdf byproducts itself (exp1_ablation, instability), but
           # this deletes any that might still land under TARGET before staging,
