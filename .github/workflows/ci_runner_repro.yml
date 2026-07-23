@@ -4190,13 +4190,26 @@ jobs:
             git commit -m "ci: Gate C baseline_lock_test -- persist corrected fixc3_baseline.json -- run ${{ github.run_id }} -- $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
             PUSHED=false
             for i in 1 2 3; do
+              # Always start this attempt from a clean state -- a prior
+              # failed rebase must not bleed into the next attempt, or
+              # every subsequent pull --rebase fails immediately with
+              # "unresolved conflict" before it even starts rebasing.
+              git rebase --abort 2>/dev/null || true
               git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
+
+              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
                  git push origin HEAD:"${{ github.ref_name }}"; then
                 git stash pop --quiet 2>/dev/null || true
                 PUSHED=true
                 break
               fi
+
+              # Rebase failed (typically add/add on fixc3_baseline.json
+              # from a concurrent run). -X ours means this only bites on
+              # conflicts outside that single file; clean up fully before
+              # the next attempt and before popping the stash, so we don't
+              # pop into a dirty, conflicted tree.
+              git rebase --abort 2>/dev/null || true
               git stash pop --quiet 2>/dev/null || true
               sleep 5
             done
