@@ -4161,3 +4161,49 @@ jobs:
           else:
               print("\n  ✅  Gate C PASSED — baseline_lock_test")
           PYEOF
+
+      # FIX-GATE-C-PERSIST: the self-heal branch above (FIX-GATE-C-THRESHOLD /
+      # "solve_rate is null") can rewrite fixc3_baseline.json in place when it
+      # finds an invalid placeholder, but until now nothing in this job ever
+      # committed that rewrite back to the repo -- the corrected baseline
+      # lived only on this ephemeral runner and was silently re-derived from
+      # the same stale placeholder on every subsequent run, never persisted.
+      # `if: always()` so this still runs (and can still persist a partial
+      # self-heal) even if the checks above marked the job FAILED; it is a
+      # no-op via `git diff --cached --quiet` if the script above made no
+      # changes (e.g. the baseline was already valid and unchanged).
+      - name: Commit and push corrected baseline
+        if: |
+          always() &&
+          github.event.inputs.dry_run != 'true'
+        env:
+          OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BASELINE="${OUT_BASE}/fixc3_baseline.json"
+          git add -f "${BASELINE}" 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "fixc3_baseline.json unchanged -- nothing to commit."
+          else
+            git commit -m "ci: Gate C baseline_lock_test -- persist corrected fixc3_baseline.json -- run ${{ github.run_id }} -- $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            PUSHED=false
+            for i in 1 2 3; do
+              git stash --include-untracked --quiet || true
+              if git pull --rebase origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
+            done
+            if [[ "${PUSHED}" == "true" ]]; then
+              echo "Corrected baseline committed and pushed."
+            else
+              echo "::error::Failed to push corrected fixc3_baseline.json after 3 attempts."
+              exit 1
+            fi
+          fi
