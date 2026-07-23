@@ -1,0 +1,367 @@
+.
+├── activate_hypatiax.sh
+├── config
+│   ├── repro.yaml
+│   └── test_key_status.py
+├── docs
+│   └── diagrams
+│       └── ci_pipeline_public_flow.svg
+├── hypatiax
+│   ├── core
+│   │   ├── base_pure_llm
+│   │   │   ├── baseline_pure_llm_defi_discovery.py
+│   │   │   └── __init__.py
+│   │   ├── generation
+│   │   │   ├── hybrid_all_domains_llm_nn
+│   │   │   │   ├── hybrid_system_llm_nn_all_domains.py
+│   │   │   │   └── __init__.py
+│   │   │   ├── hybrid_defi_llm_nn
+│   │   │   │   ├── hybrid_ensemble_system_defi_domain.py
+│   │   │   │   └── __init__.py
+│   │   │   └── hybrid_defi_system
+│   │   │       ├── hybrid_system_nn_defi_domain.py
+│   │   │       └── __init__.py
+│   │   ├── __init__.py
+│   │   ├── metrics.py
+│   │   └── training
+│   │       ├── adaptive_config.py
+│   │       ├── baseline_neural_network_defi_improved.py
+│   │       └── __init__.py
+│   ├── data
+│   │   └── results
+│   │       ├── ablation
+│   │       │   └── exp1_ablation
+│   │       │       ├── _analysis.json
+│   │       │       ├── _checkpoint_shard0.json
+│   │       │       ├── _checkpoint_shard1.json
+│   │       │       ├── _checkpoint_shard2.json
+│   │       │       ├── _checkpoint_shard3.json
+│   │       │       ├── exp1_ablation_checkpoint_shard0.json
+│   │       │       ├── exp1_ablation_checkpoint_shard1.json
+│   │       │       ├── exp1_ablation_checkpoint_shard2.json
+│   │       │       ├── exp1_ablation_checkpoint_shard3.json
+│   │       │       ├── exp1_ablation_results_shard0.json
+│   │       │       ├── exp1_ablation_results_shard1.json
+│   │       │       ├── exp1_ablation_results_shard2.json
+│   │       │       ├── exp1_ablation_results_shard3.json
+│   │       │       ├── exp1_ablation_run.log
+│   │       │       ├── exp1_rf01_mannwhitney.json
+│   │       │       ├── fixc3_baseline.json
+│   │       │       ├── _merged.json
+│   │       │       └── _report.md
+│   │       ├── comparison_results
+│   │       │   ├── extrapolation
+│   │       │   │   ├── _analysis.json
+│   │       │   │   ├── benchmark_results_extrap.json
+│   │       │   │   ├── _checkpoint_shard0.json
+│   │       │   │   ├── fixc3_baseline.json
+│   │       │   │   ├── protocol_core_extrap_20260716_194906.json
+│   │       │   │   ├── protocol_core_extrap_20260716_195718.json
+│   │       │   │   ├── protocol_core_extrap_20260716_200220.json
+│   │       │   │   ├── protocol_core_extrap_20260716_202023.json
+│   │       │   │   ├── protocol_core_extrap_20260716_202821.json
+│   │       │   │   ├── protocol_core_extrap_20260716_203114.json
+│   │       │   │   ├── protocol_core_extrap_20260716_204601.json
+│   │       │   │   ├── protocol_core_extrap_20260716_205515.json
+│   │       │   │   ├── protocol_core_extrap_20260716_205811.json
+│   │       │   │   ├── protocol_core_extrap_20260716_211503.json
+│   │       │   │   ├── protocol_core_extrap_20260716_212909.json
+│   │       │   │   └── _report.md
+│   │       │   ├── feynman-tests
+│   │       │   │   ├── exp2
+│   │       │   │   │   ├── benchmark_results.json
+│   │       │   │   │   ├── _checkpoint_shard0.json
+│   │       │   │   │   ├── exp2_run.log
+│   │       │   │   │   ├── fixc3_baseline.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_102740.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_103234.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_103614.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_104633.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_105337.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_105532.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_110438.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_111005.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_111145.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_112445.json
+│   │       │   │   │   └── protocol_core_noiseless_20260714_113248.json
+│   │       │   │   ├── exp2_extrap
+│   │       │   │   │   ├── ablation_paired.json
+│   │       │   │   │   ├── ablation_paired.json.manifest.json
+│   │       │   │   │   ├── _analysis.json
+│   │       │   │   │   ├── benchmark_results_extrap.json
+│   │       │   │   │   ├── benchmark_results_extrap_shard0.json
+│   │       │   │   │   ├── _checkpoint_shard0.json
+│   │       │   │   │   ├── exp2_extrap_run.log
+│   │       │   │   │   ├── exp2_extrap_summary.json
+│   │       │   │   │   ├── fixc3_baseline.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_145617.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_150054.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_150330.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_151359.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_151959.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_152156.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_153047.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_153554.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_153729.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_154950.json
+│   │       │   │   │   ├── protocol_core_extrap_20260722_155745.json
+│   │       │   │   │   ├── _report.md
+│   │       │   │   │   └── _saved
+│   │       │   │   │       ├── protocol_core_extrap_20260722_145617.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_150054.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_150330.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_151359.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_151959.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_152156.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_153047.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_153554.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_153729.json
+│   │       │   │   │       ├── protocol_core_extrap_20260722_154950.json
+│   │       │   │   │       └── protocol_core_extrap_20260722_155745.json
+│   │       │   │   ├── exp2_multi
+│   │       │   │   │   ├── _analysis.json
+│   │       │   │   │   ├── _checkpoint_shard0.json
+│   │       │   │   │   ├── exp2_run.log
+│   │       │   │   │   ├── fixc3_baseline.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_125228.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_125848.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_130633.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_132049.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_132732.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_133327.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_134513.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_135046.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_135848.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260714_140816.json
+│   │       │   │   │   └── _report.md
+│   │       │   │   ├── exp2_pca_4060
+│   │       │   │   │   ├── benchmark_results_extrap.json
+│   │       │   │   │   ├── benchmark_results_pca_4060.json
+│   │       │   │   │   ├── exp2_pca_4060_run.log
+│   │       │   │   │   ├── exp2_pca_4060_summary.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_biology.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_chemistry.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_electrochemistry.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_electromagnetism.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_electrostatics.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_magnetism.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_mechanics.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_optics.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_probability.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_quantum.json
+│   │       │   │   │   ├── pca4060_checkpoint_feynman_thermodynamics.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_110859.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_111519.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_111829.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_112832.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_113516.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_113710.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_114637.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_115131.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_115417.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_120728.json
+│   │       │   │   │   ├── protocol_core_noiseless_pca_20260723_121740.json
+│   │       │   │   │   ├── _saved
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_110859.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_111519.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_111829.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_112832.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_113516.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_113710.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_114637.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_115131.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_115417.json
+│   │       │   │   │   │   ├── protocol_core_noiseless_pca_20260723_120728.json
+│   │       │   │   │   │   └── protocol_core_noiseless_pca_20260723_121740.json
+│   │       │   │   │   └── split_protocol_disclosure.json
+│   │       │   │   ├── noise-sweep
+│   │       │   │   │   ├── _analysis.json
+│   │       │   │   │   ├── _checkpoint_shard0.json
+│   │       │   │   │   ├── _checkpoint_shard1.json
+│   │       │   │   │   ├── _checkpoint_shard2.json
+│   │       │   │   │   ├── _checkpoint_shard3.json
+│   │       │   │   │   ├── _checkpoint_shard4.json
+│   │       │   │   │   ├── fixc3_baseline.json
+│   │       │   │   │   ├── _merged.json
+│   │       │   │   │   ├── noise_sweep_20260715_215520_nshards04.json
+│   │       │   │   │   ├── noise_sweep_20260715_215527_nshards05.json
+│   │       │   │   │   ├── noise_sweep_20260715_215529_nshards02.json
+│   │       │   │   │   ├── noise_sweep_20260715_215537_nshards01.json
+│   │       │   │   │   ├── noise_sweep_20260715_215619_nshards03.json
+│   │       │   │   │   ├── protocol_core_noiseless_20260715_230428.json
+│   │       │   │   │   ├── protocol_core_noisy_20260715_233319.json
+│   │       │   │   │   ├── protocol_core_noisy_20260715_233524.json
+│   │       │   │   │   ├── protocol_core_noisy_20260715_233543.json
+│   │       │   │   │   └── protocol_core_noisy_20260715_233739.json
+│   │       │   │   └── sample-complexity
+│   │       │   │       ├── _analysis.json
+│   │       │   │       ├── _checkpoint_shard0.json
+│   │       │   │       ├── _checkpoint_shard1.json
+│   │       │   │       ├── _checkpoint_shard2.json
+│   │       │   │       ├── _checkpoint_shard3.json
+│   │       │   │       ├── _checkpoint_shard4.json
+│   │       │   │       ├── _checkpoint_shard5.json
+│   │       │   │       ├── fixc3_baseline.json
+│   │       │   │       ├── _merged.json
+│   │       │   │       ├── protocol_core_noisy_20260716_125658.json
+│   │       │   │       ├── protocol_core_noisy_20260716_130425.json
+│   │       │   │       ├── protocol_core_noisy_20260716_132644.json
+│   │       │   │       ├── protocol_core_noisy_20260716_142837.json
+│   │       │   │       ├── protocol_core_noisy_20260716_152532.json
+│   │       │   │       ├── protocol_core_noisy_20260716_162812.json
+│   │       │   │       ├── _report.md
+│   │       │   │       ├── sample_complexity_20260716_114624_nshards02.csv
+│   │       │   │       ├── sample_complexity_20260716_114624_nshards02.json
+│   │       │   │       ├── sample_complexity_20260716_114627_nshards03.csv
+│   │       │   │       ├── sample_complexity_20260716_114627_nshards03.json
+│   │       │   │       ├── sample_complexity_20260716_114629_nshards01.csv
+│   │       │   │       ├── sample_complexity_20260716_114629_nshards01.json
+│   │       │   │       ├── sample_complexity_20260716_114630_nshards04.csv
+│   │       │   │       ├── sample_complexity_20260716_114630_nshards04.json
+│   │       │   │       ├── sample_complexity_20260716_114638_nshards05.csv
+│   │       │   │       ├── sample_complexity_20260716_114638_nshards05.json
+│   │       │   │       ├── sample_complexity_20260716_114830_nshards06.csv
+│   │       │   │       └── sample_complexity_20260716_114830_nshards06.json
+│   │       │   └── noise-noiseless
+│   │       │       ├── 15
+│   │       │       │   ├── _analysis.json
+│   │       │       │   ├── _checkpoint_shard0.json
+│   │       │       │   ├── _checkpoint_shard1.json
+│   │       │       │   ├── _checkpoint_shard2.json
+│   │       │       │   ├── _checkpoint_shard3.json
+│   │       │       │   ├── _checkpoint_shard4.json
+│   │       │       │   ├── contradiction_audit_report_shard0.json
+│   │       │       │   ├── contradiction_audit_report_shard1.json
+│   │       │       │   ├── contradiction_audit_report_shard2.json
+│   │       │       │   ├── contradiction_audit_report_shard3.json
+│   │       │       │   ├── contradiction_audit_report_shard4.json
+│   │       │       │   ├── fixc3_baseline_shard0.json
+│   │       │       │   ├── fixc3_baseline_shard1.json
+│   │       │       │   ├── fixc3_baseline_shard2.json
+│   │       │       │   ├── fixc3_baseline_shard3.json
+│   │       │       │   ├── fixc3_baseline_shard4.json
+│   │       │       │   ├── hypatiax_defi_benchmark_v3_results_seed123.json
+│   │       │       │   ├── hypatiax_defi_benchmark_v3_results_seed2024.json
+│   │       │       │   ├── hypatiax_defi_benchmark_v3_results_seed42.json
+│   │       │       │   ├── hypatiax_defi_benchmark_v3_results_seed777.json
+│   │       │       │   ├── hypatiax_defi_benchmark_v3_results_seed99.json
+│   │       │       │   ├── _merged.json
+│   │       │       │   └── _report.md
+│   │       │       ├── 15_pca
+│   │       │       │   ├── exp1b_pca_summary.json
+│   │       │       │   ├── hypatiax_defi_benchmark_pca_results_seed123.json
+│   │       │       │   ├── hypatiax_defi_benchmark_pca_results_seed2024.json
+│   │       │       │   ├── hypatiax_defi_benchmark_pca_results_seed42.json
+│   │       │       │   ├── hypatiax_defi_benchmark_pca_results_seed777.json
+│   │       │       │   ├── hypatiax_defi_benchmark_pca_results_seed99.json
+│   │       │       │   └── split_protocol_disclosure.json
+│   │       │       └── noiseless
+│   │       │           ├── defi
+│   │       │           │   ├── _checkpoint_shard0.json
+│   │       │           │   ├── fixc3_baseline.json
+│   │       │           │   └── hypatiax_defi_benchmark_v3_results_seed42.json
+│   │       │           └── defi_pca
+│   │       │               ├── exp1_pca_summary.json
+│   │       │               ├── hypatiax_defi_benchmark_pca_results.json
+│   │       │               └── split_protocol_disclosure.json
+│   │       ├── extrapolation
+│   │       │   ├── _analysis.json
+│   │       │   ├── _checkpoint_shard0.json
+│   │       │   ├── exp3_nguyen12_seed42.json
+│   │       │   ├── fixc3_baseline.json
+│   │       │   ├── multi_seed
+│   │       │   │   ├── _analysis.json
+│   │       │   │   ├── _checkpoint_shard0.json
+│   │       │   │   ├── _checkpoint_shard1.json
+│   │       │   │   ├── _checkpoint_shard2.json
+│   │       │   │   ├── _checkpoint_shard3.json
+│   │       │   │   ├── exp3_nguyen12_seed123_nshards02.json
+│   │       │   │   ├── exp3_nguyen12_seed2024_nshards04.json
+│   │       │   │   ├── exp3_nguyen12_seed777_nshards03.json
+│   │       │   │   ├── exp3_nguyen12_seed99_nshards01.json
+│   │       │   │   ├── _exp3_seed123_partial.json
+│   │       │   │   ├── _exp3_seed2024_partial.json
+│   │       │   │   ├── _exp3_seed777_partial.json
+│   │       │   │   ├── _exp3_seed99_partial.json
+│   │       │   │   ├── fixc3_baseline.json
+│   │       │   │   ├── _merged.json
+│   │       │   │   ├── _report.md
+│   │       │   │   ├── symbolic_equivalence_report.csv
+│   │       │   │   └── symbolic_equivalence_summary.txt
+│   │       │   ├── _report.md
+│   │       │   ├── symbolic_equivalence_report.csv
+│   │       │   ├── symbolic_equivalence_run.log
+│   │       │   └── symbolic_equivalence_summary.txt
+│   │       ├── hybrid_llm_nn
+│   │       │   └── all_domains
+│   │       │       ├── _analysis.json
+│   │       │       ├── _checkpoint_shard0.json
+│   │       │       ├── fixc3_baseline.json
+│   │       │       ├── hybrid_llm_nn_all_domains_20260716_184102.json
+│   │       │       └── _report.md
+│   │       └── hybrid_pysr
+│   │           └── defi
+│   │               ├── _analysis.json
+│   │               ├── _checkpoint_shard0.json
+│   │               ├── extrapolation_73cases_enhanced.json
+│   │               ├── fixc3_baseline.json
+│   │               ├── hybrid_defi_20260715_210128.json
+│   │               └── _report.md
+│   ├── experiments
+│   │   ├── benchmarks
+│   │   │   ├── exp1_ablation.py
+│   │   │   ├── exp3_nguyen12_hybrid50v_02.py
+│   │   │   ├── extrap_r2_far.py
+│   │   │   ├── hypatia.py
+│   │   │   ├── hypatiax_defi_benchmark_pca.py
+│   │   │   ├── hypatiax_defi_benchmark_v3c.py
+│   │   │   ├── __init__.py
+│   │   │   ├── portfolio_variance_v3c2.py
+│   │   │   ├── __pycache__
+│   │   │   │   └── run_comparative_suite_benchmark_pca.cpython-312.pyc
+│   │   │   ├── run_comparative_suite_benchmark_pca.py
+│   │   │   ├── run_comparative_suite_benchmark_v2.py
+│   │   │   ├── run_hybrid_system_benchmark.py
+│   │   │   ├── run_instability_suite.py
+│   │   │   ├── run_noise_sweep_benchmark.py
+│   │   │   └── run_sample_complexity_benchmark.py
+│   │   ├── __init__.py
+│   │   └── tests
+│   │       ├── test_enhanced_defi_extrapolation.py
+│   │       └── test_extrapolation_helpers.py
+│   ├── path.py
+│   ├── protocols
+│   │   ├── experiment_protocol_all_30.py
+│   │   ├── experiment_protocol_benchmark_v2.py
+│   │   ├── experiment_protocol_defi.py
+│   │   ├── experiment_protocol_nguyen12.py
+│   │   └── __init__.py
+│   ├── tools
+│   │   ├── __init__.py
+│   │   ├── symbolic
+│   │   │   ├── hybrid_system_v50_2.py
+│   │   │   ├── __init__.py
+│   │   │   ├── physics_aware_regressor.py
+│   │   │   ├── smart_structure_detector.py
+│   │   │   └── symbolic_engine.py
+│   │   ├── utils
+│   │   │   ├── __init__.py
+│   │   │   └── pca_split_utils.py
+│   │   └── validation
+│   │       ├── dimensional_validator.py
+│   │       ├── domain_validator.py
+│   │       ├── ensemble_validator.py
+│   │       ├── __init__.py
+│   │       └── symbolic_validator.py
+│   └── version.py
+├── LICENSE
+├── MANIFEST.md
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── run_all.sh
+├── setup_environment.sh
+├── setup.py
+└── tree_r.txt
+
+48 directories, 317 files

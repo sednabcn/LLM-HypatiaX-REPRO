@@ -4162,6 +4162,57 @@ jobs:
               print("\n  ✅  Gate C PASSED — baseline_lock_test")
           PYEOF
 
+      # DIAGNOSTIC — compute_solve_rate.py: independent, non-blocking cross-check
+      # of the real per-method solve rate. This exists because Gate C's own
+      # inline parser above only understands a generic dict-with-key-in-
+      # ('results','equation_results','data','rows') row shape, which does NOT
+      # match the {"tests": [{"results": {method: {...}}}]} shape written by
+      # run_comparative_suite_benchmark_v2.py's per-domain exp2_feynman output —
+      # for that shape, Gate C's parser silently extracts 0 rows and locks
+      # n_total=0, indistinguishable in the log from "no data landed here at
+      # all." This step uses a parser that handles both known shapes, reports
+      # per-method breakdowns before pooling, and never trusts the `success`
+      # field (confirmed elsewhere to be set True unconditionally by several
+      # methods regardless of whether r2 actually clears the threshold).
+      # Deliberately non-blocking (continue-on-error): this is a visibility
+      # tool, not a second gate — a bug in this script must never fail a build
+      # that Gate C itself passed.
+      - name: "Diagnostic — real solve-rate report (compute_solve_rate.py)"
+        if: always()
+        continue-on-error: true
+        env:
+          OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+        run: |
+          set +e
+          LEGACY_DIR="${OUT_BASE}/comparison_results/feynman-tests/exp2"
+          CORRECTED_DIR="${OUT_BASE}/comparison_results/feynman-tests/exp2_pca_4060"
+          METHOD_FILTER="hypatiax,hybridv50,hybrid50,hybridsymbolic,hybriddefi,hypatia,hybrid,ours,proposed"
+
+          if [[ -d "${LEGACY_DIR}" ]]; then
+            echo "════════════════════════════════════════════════════════════"
+            echo "  Real solve-rate — LEGACY (exp2/, random 80/20)"
+            echo "════════════════════════════════════════════════════════════"
+            python3 .github/scripts/compute_solve_rate.py "${LEGACY_DIR}" \
+              --threshold 0.999999 \
+              --method-filter "${METHOD_FILTER}" \
+              --show-gatec-comparison
+          else
+            echo "[diagnostic] ${LEGACY_DIR} not present — skipping legacy report."
+          fi
+
+          if [[ -d "${CORRECTED_DIR}" ]]; then
+            echo "════════════════════════════════════════════════════════════"
+            echo "  Real solve-rate — CORRECTED (exp2_pca_4060/, PCA 40/60)"
+            echo "════════════════════════════════════════════════════════════"
+            python3 .github/scripts/compute_solve_rate.py "${CORRECTED_DIR}" \
+              --threshold 0.999999 \
+              --method-filter "${METHOD_FILTER}" \
+              --show-gatec-comparison
+          else
+            echo "[diagnostic] ${CORRECTED_DIR} not present — skipping corrected report."
+          fi
+          exit 0
+
       # FIX-GATE-C-PERSIST: the self-heal branch above (FIX-GATE-C-THRESHOLD /
       # "solve_rate is null") can rewrite fixc3_baseline.json in place when it
       # finds an invalid placeholder, but until now nothing in this job ever
