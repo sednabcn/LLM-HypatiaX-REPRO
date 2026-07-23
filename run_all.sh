@@ -1623,6 +1623,10 @@ baseline = {
 BASELINE.parent.mkdir(parents=True, exist_ok=True)
 BASELINE.write_text(json.dumps(baseline, indent=2))
 print(f'  [FIX-C3] Baseline locked: {n_pass}/{n_total} (random_80_20) → fixc3_baseline.json')
+# FIX-LOG-SOURCE-FILES (verification report Revision 21, item 5): make the
+# manifest visible in the console log directly, rather than relying on a
+# future live run to happen to print a field no existing message shows.
+print(f\"  [FIX-C3] source_files ({len(baseline['source_files'])}): {baseline['source_files']}\")
 if stray_pca_files:
     print(f'  [WARN]  {len(stray_pca_files)} stray _pca file(s) found in legacy exp2/ dir')
     print('          (excluded from baseline — they belong in exp2_pca_4060/):')
@@ -1877,11 +1881,32 @@ summary = {
     'per_method':      per_method_out,
     'hybrid_llm_routing': hybrid_llm_routing,
     'paper_legacy_claim': '9/30 = 0.300 (random_80_20)',
-    'source_files':    source_files[:10],
+    # FIX-MANIFEST-TRUNCATION-2 (verification report Revision 21): was
+    # source_files[:10], the same bug already fixed for the legacy exp2/
+    # baseline (see FIX-MANIFEST-TRUNCATION above) but never actually
+    # applied here despite the report describing this occurrence as fixed.
+    # Files are named protocol_core_noiseless_pca_{ts}.json and sorted()
+    # puts them in ascending timestamp order (domain-completion order).
+    # With 11 Feynman domains, [:10] silently dropped whichever domain
+    # ran last (feynman_thermodynamics) from the manifest, even though
+    # that domain's rows were still counted correctly in n_pass/n_total
+    # above. List every source file so the manifest matches what was
+    # actually counted.
+    'source_files':    source_files,
 }
+assert len(summary['source_files']) == len(source_files), (
+    'exp2_pca_4060_summary.json internal error: source_files manifest does '
+    'not match the files actually scanned — see FIX-MANIFEST-TRUNCATION-2'
+)
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [FIX-C3] Corrected solve rate: {rate_str} (pca_40_60) → exp2_pca_4060_summary.json')
+# FIX-LOG-SOURCE-FILES (verification report Revision 21, item 5): neither
+# this step's nor Gate C's console output previously echoed source_files,
+# so no live CI log could ever confirm the manifest-truncation fix by
+# direct inspection — only by the absence of an assertion failure. Print
+# it explicitly so the next live run settles this directly.
+print(f\"  [FIX-C3] source_files ({len(summary['source_files'])}): {summary['source_files']}\")
 for m, v in per_method_out.items():
     print(f\"  [FIX-C3]   per-method: {m}: {v['n_pass']}/{v['n_total']}\")
 print(f\"  [FIX-C3] {NN_HYBRID_KEY} llm-routing: forced={hybrid_llm_routing['forced_llm_count']}, natural={hybrid_llm_routing['natural_llm_count']}\")
