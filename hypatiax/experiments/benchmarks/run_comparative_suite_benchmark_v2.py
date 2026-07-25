@@ -333,6 +333,13 @@ def _runner_eval_formula(
         "cosh":   np.cosh,
         "erf":    (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
         "erfc":   (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+        "min":  lambda a, b: np.minimum(a, b),
+        "max":  lambda a, b: np.maximum(a, b),
+        "clip": lambda x, lo, hi: np.clip(x, lo, hi),
+        "norm_cdf": (lambda x: 0.5 * (1.0 + _spsp.erf(np.asarray(x) / np.sqrt(2.0)))
+                     if _spsp is not None
+                     else np.vectorize(lambda v: 0.5 * (1.0 + math.erf(v / math.sqrt(2.0))))(x)),
+        "norm_pdf": (lambda x: np.exp(-0.5 * np.asarray(x) ** 2) / np.sqrt(2.0 * np.pi)),
     }
     if _spsp is not None:
         safe_globals["scipy"]   = type("m", (), {"special": _spsp})()
@@ -1043,6 +1050,13 @@ class BaseMethod:
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            "min":  lambda a, b: np.minimum(a, b),
+            "max":  lambda a, b: np.maximum(a, b),
+            "clip": lambda x, lo, hi: np.clip(x, lo, hi),
+            "norm_cdf": (lambda x: 0.5 * (1.0 + _spsp.erf(np.asarray(x) / np.sqrt(2.0)))
+                         if _spsp is not None
+                         else np.vectorize(lambda v: 0.5 * (1.0 + math.erf(v / math.sqrt(2.0))))(x)),
+            "norm_pdf": (lambda x: np.exp(-0.5 * np.asarray(x) ** 2) / np.sqrt(2.0 * np.pi)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()
@@ -1369,6 +1383,13 @@ class PureLLMBaselineMethod(BaseMethod):
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            "min":  lambda a, b: np.minimum(a, b),
+            "max":  lambda a, b: np.maximum(a, b),
+            "clip": lambda x, lo, hi: np.clip(x, lo, hi),
+            "norm_cdf": (lambda x: 0.5 * (1.0 + _spsp.erf(np.asarray(x) / np.sqrt(2.0)))
+                         if _spsp is not None
+                         else np.vectorize(lambda v: 0.5 * (1.0 + math.erf(v / math.sqrt(2.0))))(x)),
+            "norm_pdf": (lambda x: np.exp(-0.5 * np.asarray(x) ** 2) / np.sqrt(2.0 * np.pi)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()

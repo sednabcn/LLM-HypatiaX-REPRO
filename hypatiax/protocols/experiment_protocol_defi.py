@@ -483,7 +483,7 @@ class DeFiExperimentProtocol:
                 ["var_asset1", "var_asset2", "correlation"],
                 {
                     "domain": "risk_var",
-                    "ground_truth": "sqrt(var1^2 + var2^2 + 2*rho*var1*var2)",
+                    "ground_truth": "sqrt(var1**2 + var2**2 + 2*rho*var1*var2)",
                     "extrapolation_test": False,
                 },
             )
@@ -544,7 +544,7 @@ class DeFiExperimentProtocol:
             incremental_var,
             ["portfolio_var", "position_var", "correlation"],
             {"domain": "risk_var",
-             "ground_truth": "sqrt(v1^2+v2^2+2*rho*v1*v2) - v1",
+             "ground_truth": "sqrt(v1**2+v2**2+2*rho*v1*v2) - v1",
              "extrapolation_test": False},
         ))
 
@@ -585,7 +585,7 @@ class DeFiExperimentProtocol:
                 {
                     "domain": "liquidity",
                     "extrapolation_test": True,
-                    "ground_truth": "min(μ / (2 * σ²), 1.0)",
+                    "ground_truth": "min(mu / (2 * sigma**2), 1.0)",
                     "constants": {"risk_aversion": 2.0},
                     "train_range": "apy 0.05-0.18",
                     "test_range": "apy 0.22-0.30",
@@ -650,7 +650,7 @@ class DeFiExperimentProtocol:
                 ["apr"],
                 {
                     "domain": "liquidity",
-                    "ground_truth": "(1 + apr/365)^365 - 1",
+                    "ground_truth": "(1 + apr/365)**365 - 1",
                     "extrapolation_test": False,
                 },
             )
@@ -830,7 +830,7 @@ class DeFiExperimentProtocol:
                 ["position1_es", "position2_es", "correlation"],
                 {
                     "domain": "expected_shortfall",
-                    "ground_truth": "ES1 + ES2 + ρ*sqrt(ES1*ES2)",
+                    "ground_truth": "ES1 + ES2 + rho*sqrt(ES1*ES2)",
                     "extrapolation_test": False,
                     "note": "Simplified correlation adjustment",
                 },
@@ -1098,7 +1098,7 @@ class DeFiExperimentProtocol:
                 ["portfolio_return", "volatility"],
                 {
                     "domain": "risk",
-                    "ground_truth": "(return - 0.04) / volatility",
+                    "ground_truth": "(portfolio_return - 0.04) / volatility",
                     "constants": {"risk_free_rate": 0.04},
                     "extrapolation_test": False,
                 },
@@ -1122,7 +1122,7 @@ class DeFiExperimentProtocol:
                 ["var_asset1", "var_asset2", "correlation"],
                 {
                     "domain": "risk",
-                    "ground_truth": "sqrt(var1^2 + var2^2 + 2*rho*var1*var2)",
+                    "ground_truth": "sqrt(var1**2 + var2**2 + 2*rho*var1*var2)",
                     "extrapolation_test": False,
                 },
             )
@@ -1378,7 +1378,7 @@ class DeFiExperimentProtocol:
                 ["principal", "apr", "compounds_per_year"],
                 {
                     "domain": "staking",
-                    "ground_truth": "principal * (1 + apr/n)^n",
+                    "ground_truth": "principal * (1 + apr/n)**n",
                     "extrapolation_test": False,
                 },
             )
@@ -1461,7 +1461,7 @@ class DeFiExperimentProtocol:
             final_value,
             ["initial_stake", "apy", "years"],
             {"domain": "staking",
-             "ground_truth": "initial * (1 + apy)^years",
+             "ground_truth": "initial * (1 + apy)**years",
              "extrapolation_test": False},
         ))
 
@@ -1731,7 +1731,7 @@ class DeFiExperimentProtocol:
                 ["spot_price", "implied_volatility"],
                 {
                     "domain": "derivatives",
-                    "ground_truth": "S*N(d1) - K*exp(-rT)*N(d2)",
+                    "ground_truth": "S*norm_cdf(d1) - K*exp(-rT)*norm_cdf(d2)",
                     "extrapolation_test": True,
                     "train_range": "sigma 0.10-0.25",
                     "test_range": "sigma 0.30-0.50",
@@ -1755,7 +1755,7 @@ class DeFiExperimentProtocol:
                 ["moneyness"],
                 {
                     "domain": "derivatives",
-                    "ground_truth": "ATM_vol + skew*m + curvature*m^2",
+                    "ground_truth": "ATM_vol + skew*m + curvature*m**2",
                     "constants": {"atm_vol": 0.20, "skew": -0.10, "curvature": 0.05},
                     "extrapolation_test": False,
                 },
@@ -1880,7 +1880,7 @@ class DeFiExperimentProtocol:
             put_price,
             ["spot_price", "implied_volatility"],
             {"domain": "derivatives",
-             "ground_truth": "K*exp(-rT)*N(-d2) - S*N(-d1)",
+             "ground_truth": "K*exp(-rT)*norm_cdf(-d2) - S*norm_cdf(-d1)",
              "extrapolation_test": True,
              "train_range": "sigma 0.10-0.25",
              "test_range": "sigma 0.30-0.50"},
@@ -1905,7 +1905,7 @@ class DeFiExperimentProtocol:
             gamma,
             ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
-             "ground_truth": "N\'(d1) / (S * sigma * sqrt(T))",
+             "ground_truth": "norm_pdf(d1) / (S * sigma * sqrt(T))",
              "extrapolation_test": False},
         ))
 
@@ -1928,7 +1928,7 @@ class DeFiExperimentProtocol:
             vega,
             ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
-             "ground_truth": "S * N\'(d1) * sqrt(T)",
+             "ground_truth": "S * norm_pdf(d1) * sqrt(T)",
              "extrapolation_test": False},
         ))
 
@@ -1954,7 +1954,7 @@ class DeFiExperimentProtocol:
             theta,
             ["spot_price", "implied_volatility", "time_to_expiry"],
             {"domain": "derivatives",
-             "ground_truth": "-(S*N\'(d1)*sigma)/(2*sqrt(T)) - r*K*exp(-rT)*N(d2)",
+             "ground_truth": "-(S*norm_pdf(d1)*sigma)/(2*sqrt(T)) - r*K*exp(-rT)*norm_cdf(d2)",
              "extrapolation_test": False},
         ))
 
