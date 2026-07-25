@@ -98,7 +98,7 @@
 #    Nc   — checkpoint/audit only     (C3 only, skip C0)
 # ==============================================================================
 
-name: "HypatiaX - pipeline (repro)"
+name: "HypatiaX - pipeline (validate)"
 run-name: >-
   HypatiaX pipeline (repro) —
   ${{ github.event.inputs.experiment_index || '0' }}
