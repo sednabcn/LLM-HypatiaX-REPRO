@@ -1256,9 +1256,21 @@ class BaseMethod:
 # harness fell back to a cached value instead of reporting a failure.
 
 def _is_truncated_formula(code: str) -> bool:
-    """Return True if code has no valid `return <something>` statement."""
+    """Return True if code is incomplete / cannot have been executed.
+
+    A `def`-form formula must end with a valid `return <something>` line —
+    if it doesn't, the function body was cut off mid-generation and any
+    metric recorded against it is invalid (see FIX note above).
+
+    A bare-expression or assignment-form formula (no `def` at all) has no
+    `return` statement by construction — that's a normal, complete surface
+    form (see `_runner_eval_formula` Strategy 1/2 above) and must NOT be
+    flagged as truncated just because it lacks a `return` line.
+    """
     if not code or not code.strip():
         return True
+    if "def " not in code:
+        return False          # bare-expression / assignment form — no return required
     for line in code.splitlines():
         stripped = line.strip()
         if stripped.startswith("#"):
@@ -1267,7 +1279,7 @@ def _is_truncated_formula(code: str) -> bool:
             rest = stripped[len("return"):].strip()
             if rest:          # return <something> — complete
                 return False
-    return True               # no valid return found
+    return True               # def-form with no valid return found
 
 
 # METHOD 1 — PureLLMBaseline

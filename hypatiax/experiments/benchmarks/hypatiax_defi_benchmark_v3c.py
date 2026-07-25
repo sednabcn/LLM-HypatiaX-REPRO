@@ -550,6 +550,34 @@ def _execute_formula(llm_code: str, X: np.ndarray,
         return None
 
 
+# FIX 12 (ported from run_comparative_suite_benchmark_v2.py): guard against
+# truncated PureLLM formulas — code that ends mid-line with no valid
+# `return <something>` cannot have executed correctly, and any R² recorded
+# against it is invalid (root cause of the 100% recovery artefact in the
+# March 2026 run, where 11/30 truncated formulas all scored R² ≈ 0.9976
+# because the harness fell back to a cached value instead of failing).
+#
+# IMPORTANT: only `def`-form code requires a `return` statement. Bare
+# expression / assignment-form code (no `def` at all) is a normal, complete
+# surface form for PureLLMBaseline's output and must not be flagged as
+# truncated just because it has no `return` line.
+def _is_truncated_formula(code: str) -> bool:
+    """Return True if code is incomplete / cannot have been executed."""
+    if not code or not code.strip():
+        return True
+    if "def " not in code:
+        return False          # bare-expression / assignment form — no return required
+    for line in code.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        if stripped.startswith("return"):
+            rest = stripped[len("return"):].strip()
+            if rest:          # return <something> — complete
+                return False
+    return True               # def-form with no valid return found
+
+
 def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     """
     FIX 9: Robust metric suite beyond R² alone.
@@ -1465,30 +1493,42 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     llm_base  = PureLLMBaseline()
                     llm_res   = llm_base.generate_formula(desc, tc["domain"],
                                                           var_names, metadata)
-                    llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
-                                                               var_names, verbose=False)
-                    llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
-                                                               var_names, verbose=False)
-                    case_results["pure_llm"] = {
-                        "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
-                        "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
-                        "executed": llm_te_m.get("success", False),
-                        # FIX 11 (ported from hypatiax_defi_benchmark_pca.py): the
-                        # baseline's own "success" only means the generated code
-                        # executed without raising — it does NOT gate on fit
-                        # quality (observed: 11/74 exp1_pca cases report
-                        # success=True with test_r2 as low as -126,483). Recompute
-                        # success here as a fit-quality gate, reusing the >0.5
-                        # "trustworthy" threshold already established for the
-                        # hybrid arm's LLM trust gate elsewhere in this file, so
-                        # both arms share one pass definition.
-                        "success": bool(
-                            llm_te_m.get("success", False)
-                            and not _math.isnan(llm_te_m.get("r2", float("nan")))
-                            and llm_te_m["r2"] > 0.5
-                        ),
-                        "time_s":   round(time.time() - _t0_llm, 3),
-                    }
+
+                    # FIX 12: reject truncated formulas before scoring — see
+                    # _is_truncated_formula() above for why.
+                    _llm_code = llm_res.get("python_code", "") or llm_res.get("formula_code", "") or ""
+                    if _is_truncated_formula(_llm_code):
+                        case_results["pure_llm"] = {
+                            "train_r2": float("nan"), "test_r2": float("nan"),
+                            "executed": False, "success": False,
+                            "time_s": round(time.time() - _t0_llm, 3),
+                            "error": "truncated_formula: no valid return statement",
+                        }
+                    else:
+                        llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,
+                                                                   var_names, verbose=False)
+                        llm_te_m  = llm_base.test_formula_accuracy(llm_res, X_te, y_te,
+                                                                   var_names, verbose=False)
+                        case_results["pure_llm"] = {
+                            "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
+                            "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
+                            "executed": llm_te_m.get("success", False),
+                            # FIX 11 (ported from hypatiax_defi_benchmark_pca.py): the
+                            # baseline's own "success" only means the generated code
+                            # executed without raising — it does NOT gate on fit
+                            # quality (observed: 11/74 exp1_pca cases report
+                            # success=True with test_r2 as low as -126,483). Recompute
+                            # success here as a fit-quality gate, reusing the >0.5
+                            # "trustworthy" threshold already established for the
+                            # hybrid arm's LLM trust gate elsewhere in this file, so
+                            # both arms share one pass definition.
+                            "success": bool(
+                                llm_te_m.get("success", False)
+                                and not _math.isnan(llm_te_m.get("r2", float("nan")))
+                                and llm_te_m["r2"] > 0.5
+                            ),
+                            "time_s":   round(time.time() - _t0_llm, 3),
+                        }
                 except Exception as e:
                     case_results["pure_llm"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
