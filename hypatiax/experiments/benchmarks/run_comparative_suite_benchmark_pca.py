@@ -344,6 +344,20 @@ def _runner_eval_formula(
         "cosh":   np.cosh,
         "erf":    (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
         "erfc":   (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+        # FIX (2026-07-25): safe_asin/safe_acos are injected into the
+        # DISCOVERY-time namespace by SymbolicEngineWithLLM.auto_inject_trig
+        # for optics/waves domains (symbolic_engine.py), but were never
+        # added to this SCORING-time namespace. Reuse the same clipped
+        # implementation as arcsin/arccos so the two cannot drift apart
+        # again. Same fix as applied to run_comparative_suite_benchmark_v2.py.
+        "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+        "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+        "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+        # FIX (2026-07-27): acos_of_cos/atan_of_tan were named alongside
+        # asin_of_sin in the paper's fix description but never actually
+        # added here. Same composition-bypass pattern as asin_of_sin.
+        "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+        "atan_of_tan": lambda x: np.arctan(np.tan(x)),
     }
     if _spsp is not None:
         safe_globals["scipy"]   = type("m", (), {"special": _spsp})()
@@ -355,6 +369,23 @@ def _runner_eval_formula(
         local_ns[vn] = X[:, i] if X.ndim == 2 else X
 
     code   = python_code.strip()
+
+    # FIX (2026-07-25), applied to ALL THREE strategies below since they
+    # all operate on `code`. Same fix as applied to
+    # run_comparative_suite_benchmark_v2.py.
+    #
+    # FIX-2: strip a leading bracketed human-readable annotation, e.g.
+    # "[X-normalised: q÷3.958e-18] 1.194902e-10 * (...)" -- upstream
+    # normalisation metadata that was never stripped before being handed
+    # to eval()/exec(), causing an immediate SyntaxError.
+    code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
+
+    # FIX-1: '^' is used as a conventional power operator by the formula
+    # generator (a PySR/Julia-style convention) but is bitwise XOR in
+    # Python, undefined for float operands (TypeError). No formula in
+    # this pipeline intends genuine bitwise XOR.
+    code = code.replace("^", "**")
+
     y_pred = None
 
     # Strategy 1: bare expression
@@ -1056,6 +1087,18 @@ class BaseMethod:
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            # FIX (2026-07-27): this safe_globals construction (BaseMethod,
+            # used by Hybrid/SymbolicEngine/HybridSystemV50_2 methods) was
+            # missing safe_asin/safe_acos/asin_of_sin/acos_of_cos/atan_of_tan
+            # entirely -- same defect already fixed in
+            # run_comparative_suite_benchmark_v2.py, ported over here.
+            # Formulas using these names (e.g. Snell's law) raised NameError
+            # here, silently returning None via the broad except below.
+            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()
@@ -1382,6 +1425,19 @@ class PureLLMBaselineMethod(BaseMethod):
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            # FIX (2026-07-27): this safe_globals construction
+            # (PureLLMBaselineMethod, the pure-LLM baseline's main scoring
+            # path) was missing safe_asin/safe_acos/asin_of_sin/acos_of_cos/
+            # atan_of_tan entirely. Any LLM-generated formula using these
+            # names raised NameError here, silently returning None via the
+            # broad except below -- this is the primary in-range Rsq scoring
+            # path for the LLM baseline, not just the far-extrapolation
+            # recheck.
+            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()

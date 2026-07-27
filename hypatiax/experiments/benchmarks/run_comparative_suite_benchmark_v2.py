@@ -343,6 +343,11 @@ def _runner_eval_formula(
         "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
         "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
         "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+        # FIX (2026-07-27): acos_of_cos/atan_of_tan were named alongside
+        # asin_of_sin in the paper's fix description but never actually
+        # added here. Same composition-bypass pattern as asin_of_sin.
+        "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+        "atan_of_tan": lambda x: np.arctan(np.tan(x)),
     }
     if _spsp is not None:
         safe_globals["scipy"]   = type("m", (), {"special": _spsp})()
@@ -1071,6 +1076,18 @@ class BaseMethod:
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            # FIX (2026-07-27): this safe_globals construction (BaseMethod,
+            # used by Hybrid/SymbolicEngine/HybridSystemV50_2 methods) was
+            # missing safe_asin/safe_acos/asin_of_sin/acos_of_cos/atan_of_tan
+            # entirely -- the same defect identified and "fixed" elsewhere in
+            # this script, but the earlier fix never reached this block.
+            # Formulas using these names (e.g. Snell's law) raised NameError
+            # here, silently returning None via the broad except below.
+            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()
@@ -1397,6 +1414,19 @@ class PureLLMBaselineMethod(BaseMethod):
             "cosh":  np.cosh,
             "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
             "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
+            # FIX (2026-07-27): this safe_globals construction
+            # (PureLLMBaselineMethod, the pure-LLM baseline's main scoring
+            # path -- see line ~1516) was missing
+            # safe_asin/safe_acos/asin_of_sin/acos_of_cos/atan_of_tan
+            # entirely. Any LLM-generated formula using these names raised
+            # NameError here, silently returning None via the broad except
+            # below -- this is the primary in-range Rsq scoring path for
+            # the LLM baseline, not just the far-extrapolation recheck.
+            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
         }
         if _spsp is not None:
             safe_globals["scipy"] = type("m", (), {"special": _spsp})()
