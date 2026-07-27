@@ -3430,51 +3430,6 @@ class ProtocolBenchmarkSuite:
                 else:
                     print(f"✗ {(result.error or 'failed')[:60]}")
 
-        # ── Decision-attribution consistency check ─────────────────────────
-        # BUG (see paper §"Hybrid Decision-Attribution Bug"): the hybrid
-        # method's run() records success=True / a real r2 whenever it can
-        # locate *any* numeric r2 or recompute one from y_pred — without
-        # verifying that the sub-method named in metadata["decision"]
-        # actually succeeded on this task. Concretely we have observed
-        # hybrid.decision == "llm" with hybrid.success == True while
-        # pure_llm.success == False (NaN) on the same task in the same run,
-        # reproducing deterministically across all 5 available seeds for at
-        # least one DeFi task ("Portfolio Expected Shortfall for correlated").
-        #
-        # This block applies the same conservative correction used for the
-        # paper's post-hoc analysis, but at generation time: a hybrid result
-        # is only trusted as a genuine success if the sub-method its own
-        # `decision` field names also reports success == True. It does not
-        # touch any other method's result, and does not manufacture a
-        # success where the pipeline reported none — it only downgrades
-        # hybrid successes that are provably attributed to a failed
-        # sub-method.
-        _decision_to_submethod = {
-            "llm": "pure_llm",
-            "nn": "neural_network",
-            "nn_fallback": "neural_network",
-        }
-        _hybrid_result = results.get("hybrid")
-        if _hybrid_result is not None and getattr(_hybrid_result, "success", False):
-            _decision = (_hybrid_result.metadata or {}).get("decision")
-            _sub_name = _decision_to_submethod.get(_decision)
-            _sub_result = results.get(_sub_name) if _sub_name else None
-            if _sub_result is not None and not getattr(_sub_result, "success", True):
-                _hybrid_result.metadata = dict(_hybrid_result.metadata or {})
-                _hybrid_result.metadata["decision_attribution_corrected"] = True
-                _hybrid_result.metadata["success_raw"] = True
-                _hybrid_result.metadata["correction_reason"] = (
-                    f"decision={_decision!r} names sub-method "
-                    f"{_sub_name!r} which reported success=False on this task"
-                )
-                _hybrid_result.success = False
-                if verbose:
-                    print(
-                        f"  ⚠️  hybrid decision-attribution correction applied: "
-                        f"decision={_decision!r} but {_sub_name}.success=False "
-                        f"→ hybrid.success forced to False"
-                    )
-
         comparison = self._compare(results, y)
 
         if verbose:

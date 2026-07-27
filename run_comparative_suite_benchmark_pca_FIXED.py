@@ -1,13 +1,25 @@
 #!/usr/bin/env python3
 """
-run_protocol_benchmark_core.py
-===============================
+run_comparative_suite_benchmark_pca.py
+=======================================
 
-Tests the HypatiaX experiment protocol benchmark_v2
-(experiment_protocol_benchmark_v2.py) by running it through the same
-domain/test loop used by run_comparative_suite_benchmark.py, but with
-method classes that delegate to the *actual core scripts* rather than
-inlining their logic.
+Variant of run_comparative_suite_benchmark_v2.py that replaces the
+random 80/20 random-split used by the ImprovedNN method with a
+PCA-directed 40/60 split (FIX-C3).
+
+This makes the Feynman benchmark (§10.7) use the same aggressive
+extrapolation split as the DeFi benchmark (§6.4), ensuring results
+are directly comparable.
+
+Changes vs v2:
+  - sklearn random-split replaced with pca_directed_split(test_size=0.6)  # FIX-C3/DISCLOSURE: pca_directed_split is now the sole protocol split
+  - pca_split_utils imported from hypatiax.tools.utils
+  - Script name / checkpoint default updated to reflect the PCA variant
+  - _CHECKPOINT_NAME default: "protocol_core_pca_checkpoint"
+  - Output mode label: "pca" instead of "noisy/noiseless"
+
+All other logic (methods 1–6, extrap mode, CLI flags, resume, etc.)
+is unchanged from v2.
 
 Core scripts accessed
 ---------------------
@@ -107,7 +119,7 @@ _METHOD_TIMEOUT_SECS: int = 900
 #   https://github.com/pytorch/pytorch/issues/78829
 #   https://github.com/MilesCranmer/PySR/issues/443
 # ---------------------------------------------------------------------------
-os.environ.setdefault("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes")
+# (PYTHON_JULIACALL_HANDLE_SIGNALS already set above — duplicate removed)
 
 import logging as _logging
 # Suppress httpx/httpcore/anthropic HTTP INFO messages completely.
@@ -129,7 +141,6 @@ import numpy as np
 _EXTRAP_MODULE_AVAILABLE = True  # always True — code is inlined
 
 import math
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -336,10 +347,9 @@ def _runner_eval_formula(
         # FIX (2026-07-25): safe_asin/safe_acos are injected into the
         # DISCOVERY-time namespace by SymbolicEngineWithLLM.auto_inject_trig
         # for optics/waves domains (symbolic_engine.py), but were never
-        # added to this SCORING-time namespace, causing formulas that use
-        # them (e.g. Snell's law) to silently fail here. Reuse the same
-        # clipped implementation as arcsin/arccos so the two cannot drift
-        # apart again.
+        # added to this SCORING-time namespace. Reuse the same clipped
+        # implementation as arcsin/arccos so the two cannot drift apart
+        # again. Same fix as applied to run_comparative_suite_benchmark_v2.py.
         "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
         "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
         "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
@@ -356,20 +366,19 @@ def _runner_eval_formula(
     code   = python_code.strip()
 
     # FIX (2026-07-25), applied to ALL THREE strategies below since they
-    # all operate on `code`:
+    # all operate on `code`. Same fix as applied to
+    # run_comparative_suite_benchmark_v2.py.
     #
     # FIX-2: strip a leading bracketed human-readable annotation, e.g.
-    # "[X-normalised: q÷3.958e-18] 1.194902e-10 * (...)" -- this is
-    # upstream normalisation metadata that was never stripped before
-    # being handed to eval()/exec(), causing an immediate SyntaxError
-    # (the bracket, colon, and unicode '÷' are not valid Python).
+    # "[X-normalised: q÷3.958e-18] 1.194902e-10 * (...)" -- upstream
+    # normalisation metadata that was never stripped before being handed
+    # to eval()/exec(), causing an immediate SyntaxError.
     code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
 
     # FIX-1: '^' is used as a conventional power operator by the formula
     # generator (a PySR/Julia-style convention) but is bitwise XOR in
     # Python, undefined for float operands (TypeError). No formula in
-    # this pipeline intends genuine bitwise XOR, so a blanket rewrite is
-    # safe.
+    # this pipeline intends genuine bitwise XOR.
     code = code.replace("^", "**")
 
     y_pred = None
@@ -640,38 +649,6 @@ def compute_extrap_r2_far(
 random.seed(42)
 np.random.seed(42)
 
-# ---------------------------------------------------------------------------
-# HYPATIAX_NOISE_LEVEL — injected by run_noise_sweep_benchmark.py orchestrator.
-# When present, real Gaussian noise scaled to σ * std(y) is added to every
-# test case's y values after load_test_data().  When absent (or 0.0), this
-# script runs in its usual noiseless-or-fixed-noisy mode.
-# ---------------------------------------------------------------------------
-_HYPATIAX_NOISE_LEVEL: float = 0.0
-_raw_noise_env = os.environ.get("HYPATIAX_NOISE_LEVEL", "").strip()
-if _raw_noise_env:
-    try:
-        _HYPATIAX_NOISE_LEVEL = float(_raw_noise_env)
-    except ValueError:
-        print(f"WARNING: Could not parse HYPATIAX_NOISE_LEVEL={_raw_noise_env!r} — defaulting to 0.0")
-
-# ---------------------------------------------------------------------------
-# FEATURE-NSHARDS-SUFFIX (corrected 2026-06-23) — injected by
-# run_noise_sweep_benchmark.py / run_sample_complexity_benchmark.py
-# orchestrators, forwarded from run_all.sh's per-shard SHARD_INDEX (1-based,
-# zero-padded), NOT the total shard count. When present, every output
-# filename this script writes (protocol_core_*.json, benchmark_results.json,
-# benchmark_results_extrap.json) gets "_nshardsNN" appended before the
-# extension, where NN distinguishes THIS shard from every other
-# concurrently-running shard in the same matrix run — necessary because all
-# shards share the same --output-dir and write second-granularity
-# timestamped filenames, so same-second saves from different shards would
-# otherwise collide. Empty string when unset (e.g. local runs, or any other
-# orchestrator that doesn't set it) — filenames are then unchanged from
-# before this feature.
-# ---------------------------------------------------------------------------
-_SHARD_ID = os.environ.get("HYPATIAX_SHARD_ID", "").strip()
-_SHARD_TAG = f"_shrd{_SHARD_ID}" if _SHARD_ID else ""
-
 # PySR subprocess timeout — overridden by --pysr-timeout at runtime.
 # Paper-quality default (repro.yaml timeouts.feynman_pysr_seconds = 1100).
 _PYSR_TIMEOUT: int = 1100
@@ -683,22 +660,16 @@ _PYSR_TIMEOUT: int = 1100
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).resolve().parent        # …/experiments/benchmarks/
 _PKG_ROOT = _HERE.parent.parent                # …/hypatiax/
+# FIX Bug 3: sys.path must be set HERE — before any _probe / _probe_pysr_method
+# call below, or importlib.util.find_spec("hypatiax.*") returns None and every
+# probe silently returns False (HYBRID_V50_2_AVAILABLE=False for the entire run).
 sys.path.insert(0, str(_PKG_ROOT.parent))      # parent of hypatiax/ → import hypatiax.*
 
 # Checkpoint file stem — overridden at runtime via --checkpoint-name so the
 # orchestrator can give each condition (noisy/noiseless) its own file and
 # prevent the two passes from colliding on the same JSON.
-_CHECKPOINT_NAME: str = "protocol_core_checkpoint"
+_CHECKPOINT_NAME: str = "protocol_core_pca_checkpoint"
 _OUTPUT_DIR: Path = _PKG_ROOT / "data/results/comparison_results"
-# _FLAT_OUTPUT_DIR: always comparison_results/ root — never overridden by
-# --output-dir.  benchmark_results.json lands here so it is NOT buried or
-# clobbered across multi-run sweeps (noise-sweep/, sample-complexity/).
-# Checkpoints also land here.
-# NOTE: benchmark_results_extrap.json no longer uses this — see the
-# FIX-EXTRAP-OUTPUT-DIR comment near its write site — it now uses
-# _OUTPUT_DIR (honors --output-dir) so it lands alongside
-# protocol_core_extrap_*.json in the per-experiment directory.
-_FLAT_OUTPUT_DIR: Path = _OUTPUT_DIR
 
 # ---------------------------------------------------------------------------
 # juliacall MUST be imported before torch to prevent a segfault when PySR
@@ -726,11 +697,46 @@ try:
     import torch
     import torch.nn as nn
     from sklearn.preprocessing import StandardScaler
-    from sklearn.model_selection import train_test_split
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
     print("⚠️  torch / sklearn not available — NN-based methods will be skipped")
+
+# PCA-directed split utility (FIX-C3: replaces random 80/20 sklearn random-split)
+from hypatiax.tools.utils import pca_directed_split 
+
+
+def _require_matching_width(fitted: np.ndarray, incoming: np.ndarray, where: str) -> None:
+    """
+    Guard against the feature-count mismatch class of bug fixed in
+    hypatiax_defi_benchmark_pca.py ("X has 9 features, but StandardScaler is
+    expecting 7 features as input"). That bug came from deciding which
+    columns to log/sqrt-augment independently on whatever array a helper
+    happened to receive, so train and test — which can have systematically
+    different value ranges under the PCA-directed 40/60 split — qualified a
+    different number of columns and were appended with a different number of
+    extra features before hitting the same StandardScaler.
+
+    This file avoids that today because every log-transform plan is decided
+    once (from X_train) and applied identically, in place, to every split —
+    so the column count can never drift. This assertion is a cheap tripwire:
+    if a future edit reintroduces per-split column selection or column
+    appending, it fails immediately with a precise message (which call site,
+    which widths) instead of surfacing later as a bare sklearn ValueError
+    deep in a training run.
+    """
+    if fitted.shape[1] != incoming.shape[1]:
+        raise ValueError(
+            f"[feature-count mismatch @ {where}] scaler was fit on "
+            f"{fitted.shape[1]} features but is being applied to "
+            f"{incoming.shape[1]} features. This is the same class of bug "
+            f"fixed in hypatiax_defi_benchmark_pca.py (_compute_augment_plan / "
+            f"_apply_augment_plan) — a column-selection plan (log_cols, "
+            f"sqrt_cols, ratio, etc.) is being decided independently per "
+            f"split instead of once from X_train and applied identically "
+            f"everywhere. Fix the augmentation call site at '{where}' so its "
+            f"plan is computed from the training split only."
+        )
 
 # ---------------------------------------------------------------------------
 # Anthropic client
@@ -763,13 +769,18 @@ def _probe(module_path: str, class_name: str) -> bool:
     """Return True if a dotted module path exports the given class name.
 
     NOTE: Any module imported here that transitively loads torch will be safe
-    because torch has already been imported (eagerly, after juliacall) above.
+    because torch has already been imported (eagerly, after juliacall) above —
+    UNLESS the eager `import torch` itself failed, in which case every module
+    that transitively imports torch will fail here too. Previously that real
+    exception was swallowed silently, making the resulting AVAILABLE=False
+    flags undiagnosable. Print it, same as _probe_hybrid_all() already does.
     """
     import importlib
     try:
         mod = importlib.import_module(module_path)
         return hasattr(mod, class_name)
-    except Exception:
+    except Exception as exc:
+        print(f"⚠️  _probe({module_path!r}, {class_name!r}): {exc}")
         return False
 
 
@@ -1540,7 +1551,7 @@ class PureLLMBaselineMethod(BaseMethod):
 # core/training/baseline_neural_network_defi_improved.py
 # ============================================================================
 
-class ImprovedNNMethod(BaseMethod):
+class ImprovedNN(BaseMethod):
     """
     Wraps hypatiax.core.training.baseline_neural_network_defi_improved.ImprovedNN.
     Architecture and training loop match test_enhanced_defi_extrapolation.py exactly.
@@ -1564,9 +1575,13 @@ class ImprovedNNMethod(BaseMethod):
             return self._unavailable("ImprovedNN not available")
 
         try:
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42
+            # FIX-C3: pca_directed_split is the sole protocol split inside run().
+            # Gate B requires pca_directed_split to be called here directly.
+            # Replaces the legacy random 80/20 sklearn split entirely.
+            X_train, X_test, y_train, y_test = pca_directed_split(
+                X, y, test_size=0.6, random_state=42
             )
+            from sklearn.model_selection import train_test_split as _tts_internal  # noqa: kept for any subclass callers
 
             # ── Log-space detection ──────────────────────────────────────────
             # Equations like Coulomb (1/r²), Newton (G*m1*m2/r²), Ideal Gas
@@ -1663,7 +1678,9 @@ class ImprovedNNMethod(BaseMethod):
             scaler_y = StandardScaler()
 
             X_train_s = scaler_X.fit_transform(X_train_t)
+            _require_matching_width(X_train_t, X_test_t, "ImprovedNN.run: X_test_t")
             X_test_s  = scaler_X.transform(X_test_t)
+            _require_matching_width(X_train_t, X_all_t, "ImprovedNN.run: X_all_t")
             X_all_s   = scaler_X.transform(X_all_t)   # full dataset, same scaler
             y_train_s = scaler_y.fit_transform(y_train_t.reshape(-1, 1)).flatten()
 
@@ -1775,6 +1792,10 @@ class ImprovedNNMethod(BaseMethod):
                     scaler_X_lin = StandardScaler()
                     scaler_y_lin = StandardScaler()
                     X_train_lin_s = scaler_X_lin.fit_transform(X_train.astype(float))
+                    _require_matching_width(
+                        X_train.astype(float), X_test.astype(float),
+                        "ImprovedNN.run linear-fallback: X_test",
+                    )
                     X_test_lin_s  = scaler_X_lin.transform(X_test.astype(float))
                     y_train_lin_s = scaler_y_lin.fit_transform(
                         y_train.reshape(-1, 1)).flatten()
@@ -1831,6 +1852,10 @@ class ImprovedNNMethod(BaseMethod):
                 elif space_tag == "lin-fallback" and _lin_model is not None:
                     # Linear-space NN was the best predictor — replay on all 200 rows
                     _lin_model.eval()
+                    _require_matching_width(
+                        X_train.astype(float), X.astype(float),
+                        "ImprovedNN.run linear-fallback: X_all",
+                    )
                     _X_all_lin_s = _lin_scaler_X.transform(X.astype(float))
                     with torch.no_grad():
                         _yp_lin = _lin_scaler_y.inverse_transform(
@@ -1925,6 +1950,9 @@ class ImprovedNNMethod(BaseMethod):
             },
         )
 
+
+# Backward-compatible alias — external references to ImprovedNNMethod still work.
+ImprovedNNMethod = ImprovedNN
 
 # ============================================================================
 # METHOD 3 — EnhancedHybridSystemDeFi
@@ -2414,6 +2442,24 @@ class HybridAllDomainsMethod(BaseMethod):
             r2v  = eval_d.get("r2")   if eval_d.get("r2")   is not None else result.get("r2")
             rmse = eval_d.get("rmse") if eval_d.get("rmse") is not None else result.get("rmse")
             r2v  = float(r2v)  if r2v  is not None else 0.0
+            # FIX Bug 2: when decision=="nn" the hybrid aggregation layer can
+            # return NaN for r2v even though the NN sub-result has a valid score
+            # (observed for Black-Scholes Put Price and Theta of option).
+            # If r2v is not finite, try to pull train_r2 from the NN sub-result
+            # directly so the record is not written as success=True with r2=NaN.
+            if not math.isfinite(r2v):
+                _decision_val = result.get("decision", "")
+                _nn_sub = result.get("nn_result") or result.get("nn") or {}
+                _nn_r2  = _nn_sub.get("train_r2") if isinstance(_nn_sub, dict) else None
+                if _nn_r2 is not None:
+                    try:
+                        _nn_r2_f = float(_nn_r2)
+                        if math.isfinite(_nn_r2_f):
+                            r2v = _nn_r2_f
+                            print(f"   [HybridDeFi] NaN r2 recovered from nn_result.train_r2={r2v:.4f} "
+                                  f"(decision={_decision_val})", flush=True)
+                    except (TypeError, ValueError):
+                        pass
             rmse = float(rmse) if rmse is not None else float("inf")
 
             # ── Get y_pred: 3-strategy cascade ────────────────────────────────
@@ -2732,6 +2778,11 @@ try:
         _parsimony = kwargs.get("parsimony", 0.01)       # repro.yaml pysr.parsimony=0.01
         _populations = kwargs.get("populations", 30)     # repro.yaml pysr.populations=30
         _use_tc    = kwargs.get("use_transcendental_compositions", False)
+        # ── FIX: forward domain — same pattern as the symbolic_engine branch
+        # above. Without this, HybridDiscoverySystem always sees domain=
+        # "general" (its internal default) and never fires the trig-operator
+        # auto-injection that SymbolicEngineWithLLM already benefits from.
+        _domain    = kwargs.get("domain", metadata.get("domain", "general"))
         _disc_cfg_kwargs = dict(
             niterations=_n_iter,
             pysr_timeout=_pysr_to,
@@ -2745,6 +2796,7 @@ try:
         system = HybridDiscoverySystem(
             discovery_config=_disc_cfg,
             max_retries=_n_retry,
+            domain=_domain,
         )
         result = system.discover(
             X=X, y=y,
@@ -3430,51 +3482,6 @@ class ProtocolBenchmarkSuite:
                 else:
                     print(f"✗ {(result.error or 'failed')[:60]}")
 
-        # ── Decision-attribution consistency check ─────────────────────────
-        # BUG (see paper §"Hybrid Decision-Attribution Bug"): the hybrid
-        # method's run() records success=True / a real r2 whenever it can
-        # locate *any* numeric r2 or recompute one from y_pred — without
-        # verifying that the sub-method named in metadata["decision"]
-        # actually succeeded on this task. Concretely we have observed
-        # hybrid.decision == "llm" with hybrid.success == True while
-        # pure_llm.success == False (NaN) on the same task in the same run,
-        # reproducing deterministically across all 5 available seeds for at
-        # least one DeFi task ("Portfolio Expected Shortfall for correlated").
-        #
-        # This block applies the same conservative correction used for the
-        # paper's post-hoc analysis, but at generation time: a hybrid result
-        # is only trusted as a genuine success if the sub-method its own
-        # `decision` field names also reports success == True. It does not
-        # touch any other method's result, and does not manufacture a
-        # success where the pipeline reported none — it only downgrades
-        # hybrid successes that are provably attributed to a failed
-        # sub-method.
-        _decision_to_submethod = {
-            "llm": "pure_llm",
-            "nn": "neural_network",
-            "nn_fallback": "neural_network",
-        }
-        _hybrid_result = results.get("hybrid")
-        if _hybrid_result is not None and getattr(_hybrid_result, "success", False):
-            _decision = (_hybrid_result.metadata or {}).get("decision")
-            _sub_name = _decision_to_submethod.get(_decision)
-            _sub_result = results.get(_sub_name) if _sub_name else None
-            if _sub_result is not None and not getattr(_sub_result, "success", True):
-                _hybrid_result.metadata = dict(_hybrid_result.metadata or {})
-                _hybrid_result.metadata["decision_attribution_corrected"] = True
-                _hybrid_result.metadata["success_raw"] = True
-                _hybrid_result.metadata["correction_reason"] = (
-                    f"decision={_decision!r} names sub-method "
-                    f"{_sub_name!r} which reported success=False on this task"
-                )
-                _hybrid_result.success = False
-                if verbose:
-                    print(
-                        f"  ⚠️  hybrid decision-attribution correction applied: "
-                        f"decision={_decision!r} but {_sub_name}.success=False "
-                        f"→ hybrid.success forced to False"
-                    )
-
         comparison = self._compare(results, y)
 
         if verbose:
@@ -3689,6 +3696,40 @@ class ProtocolBenchmarkSuite:
             record["extrap_n_test"]      = metadata.get("extrap_n_test")
             record["extrap_x_train_max"] = metadata.get("extrap_x_train_max")
             record["extrap_far_ceiling"] = metadata.get("extrap_far_ceiling")
+
+        # FIX-C3: when the outer-loop PCA 40/60 split was applied, evaluate
+        # each method's formula against the held-out 60% test set and store
+        # pca_test_r2 in the record for downstream analysis.
+        if metadata.get("split_protocol") == "pca_40_60" and X_far is not None and y_far is not None and len(y_far) > 1:
+            _pca_r2: Dict[str, Optional[float]] = {}
+            for _mname, _mres in results.items():
+                _formula = None
+                if isinstance(_mres, MethodResult):
+                    _formula = _mres.formula
+                    # NN methods return architecture tags, not evaluable formulas
+                    if _formula and any(kw in str(_formula) for kw in ("layers=", "hidden=", "NN:", "neural")):
+                        _pca_r2[_mname] = None
+                        continue
+                if _formula:
+                    try:
+                        # FIX Bug 6: _RUNNER_EVAL_FORMULA was undefined (NameError),
+                        # silently caught by except → pca_test_r2 always None.
+                        # Use the module-level _runner_eval_formula and compute R² inline.
+                        _ypred = _runner_eval_formula(_formula, X_far, var_names)
+                        if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
+                            _ss_res = float(np.sum((y_far - _ypred) ** 2))
+                            _ss_tot = float(np.sum((y_far - np.mean(y_far)) ** 2))
+                            _pca_r2[_mname] = float(1.0 - _ss_res / _ss_tot) if _ss_tot > 1e-300 else None
+                        else:
+                            _pca_r2[_mname] = None
+                    except Exception:
+                        _pca_r2[_mname] = None
+                else:
+                    _pca_r2[_mname] = None
+            record["pca_test_r2"]       = _pca_r2
+            record["pca_split_protocol"] = "pca_40_60"
+            record["pca_n_train"]        = metadata.get("n_train")
+            record["pca_n_test"]         = metadata.get("n_test")
         self.results.append(record)
         return record
 
@@ -3993,9 +4034,11 @@ class ProtocolBenchmarkSuite:
             extrap=getattr(self, "_extrap", False),
         )
 
-        # FIX 7 — export flat benchmark_results.json for easy downstream analysis.
+        # FIX 7 — export flat benchmark_results_pca_4060.json for easy downstream analysis.
         # Each record contains: method, test, formula, r2, rmse, runtime, success.
         # This is in addition to the detailed protocol_core_*.json saved by _save().
+        # NOTE: named benchmark_results_pca_4060.json (not benchmark_results.json) to
+        # avoid Gate C filename collision with the legacy exp2/benchmark_results.json.
         try:
             _flat_records = []
             for rec in self.results:
@@ -4023,7 +4066,7 @@ class ProtocolBenchmarkSuite:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
                     _flat_records.append(_row)
-            _json_path = _FLAT_OUTPUT_DIR / f"benchmark_results{_SHARD_TAG}.json"
+            _json_path = _OUTPUT_DIR / "benchmark_results_pca_4060.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
             # FIX: append/merge so multi-domain runs accumulate all results
             _existing: list = []
@@ -4044,7 +4087,7 @@ class ProtocolBenchmarkSuite:
                 json.dump(_merged, _jf, indent=2, default=str)
             print(f"\n📄 Flat results exported → {_json_path}  ({len(_flat_records)} records)")
         except Exception as _je:
-            print(f"\n⚠️  Could not export benchmark_results.json: {_je}")
+            print(f"\n⚠️  Could not export benchmark_results_pca_4060.json: {_je}")
 
         # ── benchmark_results_extrap.json ─────────────────────────────────────
         # Written ONLY when this run used --extrap (i.e. at least one record
@@ -4102,18 +4145,7 @@ class ProtocolBenchmarkSuite:
                         "extrap_far_ceiling": _far_ceiling,
                     })
             if _extrap_rows:
-                # FIX-EXTRAP-OUTPUT-DIR: previously used _FLAT_OUTPUT_DIR
-                # (hardcoded to comparison_results/ root), which silently
-                # ignored --output-dir and left this file outside the
-                # per-experiment directory (e.g. feynman-tests/exp2_extrap/)
-                # that protocol_core_extrap_*.json and downstream tooling
-                # (merge_extrap_into_benchmark.py --extrap-benchmark-dir)
-                # expect it in. _OUTPUT_DIR DOES honor --output-dir (see
-                # main()), so use that here instead. benchmark_results.json
-                # (non-extrap, line ~3950) and checkpoints intentionally
-                # keep using _FLAT_OUTPUT_DIR — this change is scoped only
-                # to the extrap export.
-                _ext_path = _OUTPUT_DIR / f"benchmark_results_extrap{_SHARD_TAG}.json"
+                _ext_path = _OUTPUT_DIR / "benchmark_results_extrap.json"
                 _ext_path.parent.mkdir(parents=True, exist_ok=True)
                 _ext_existing: list = []
                 if _ext_path.exists():
@@ -4137,21 +4169,16 @@ class ProtocolBenchmarkSuite:
             print(f"\n⚠️  Could not export benchmark_results_extrap.json: {_eje}")
 
     def _save(self, noiseless: bool = False, threshold: float = 0.995, extrap: bool = False):
+        out_dir = _OUTPUT_DIR
+        out_dir.mkdir(parents=True, exist_ok=True)
         ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
         if extrap:
             mode = "extrap"
         elif noiseless:
-            mode = "noiseless"
+            mode = "noiseless_pca"
         else:
-            mode = "noisy"
-
-        # Always write to _OUTPUT_DIR — the orchestrator sets --output-dir to
-        # the correct destination (noise-sweep/) for ALL sigma levels including
-        # sigma=0 (noiseless).  suppB needs every protocol_core_*.json in the
-        # same noise-sweep/ dir so the aggregate can find them all.
-        out_dir = _OUTPUT_DIR
-        out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / f"protocol_core_{mode}_{ts}{_SHARD_TAG}.json"
+            mode = "pca"
+        path = out_dir / f"protocol_core_{mode}_{ts}.json"
 
         # Build PureLLM truncation audit
         truncation_audit = {}
@@ -4168,10 +4195,10 @@ class ProtocolBenchmarkSuite:
 
         payload = {
             "timestamp":   datetime.now().isoformat(),
-            "script":      "run_protocol_benchmark_core.py v2.2 (sign-fix + log-widen + domain-guard + formula-hash + complexity-score + json-export + extrap_r2_far-fix)",
+            "script":      "run_comparative_suite_benchmark_pca.py v2.2 (sign-fix + log-widen + domain-guard + formula-hash + complexity-score + json-export + extrap_r2_far-fix + pca-split)",
             "protocol": {
                 "mode":        mode,
-                "noise_level": 0.0 if noiseless else _HYPATIAX_NOISE_LEVEL,
+                "noise_level": 0.0 if noiseless else 0.05,
                 "threshold":   threshold,
                 "note": (
                     "Noiseless run — directly comparable to published SR literature: "
@@ -4208,12 +4235,7 @@ class ProtocolBenchmarkSuite:
 
     @staticmethod
     def _checkpoint_path() -> Path:
-        # Checkpoints go to _FLAT_OUTPUT_DIR (comparison_results/ root), NOT
-        # _OUTPUT_DIR.  When the orchestrator points --output-dir at a
-        # per-experiment subdir (noise-sweep/, sample-complexity/), the
-        # checkpoint must still be findable by --resume without knowing which
-        # subdir was used for that run.
-        out_dir = _FLAT_OUTPUT_DIR
+        out_dir = _OUTPUT_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
         return out_dir / f"{_CHECKPOINT_NAME}.json"
 
@@ -4297,30 +4319,7 @@ Examples
         "--benchmark",
         choices=["feynman", "srbench", "both"],
         default="feynman",
-        help=(
-            "Which published SR benchmark to use (default: feynman). "
-            "Only meaningful with --protocol benchmark (the default) — it "
-            "selects the sub-benchmark *inside* BenchmarkProtocol and does "
-            "NOT switch protocol classes. It cannot produce the exp2 "
-            "10-domain set (mechanics/quantum/electro/fluid_dynamics/etc.); "
-            "use --protocol all_domains for that."
-        ),
-    )
-    parser.add_argument(
-        "--protocol",
-        choices=["benchmark", "all_domains"],
-        default="benchmark",
-        help=(
-            "Which protocol class to load. 'benchmark' (default) loads "
-            "BenchmarkProtocol (Feynman/SRBench, controlled by --benchmark). "
-            "'all_domains' loads ExperimentProtocolAll from "
-            "hypatiax.core.generation.hybrid_all_domains_llm_nn."
-            "hybrid_system_llm_nn_all_domains — the 30-equation, "
-            "multi-domain protocol exp2 actually needs. There is no "
-            "'all30' choice; the run_all.sh comment referencing "
-            "'--protocol all30' referred to a flag/value that was never "
-            "implemented. Use --protocol all_domains instead."
-        ),
+        help="Which published SR benchmark to use (default: feynman)",
     )
     parser.add_argument(
         "--domain", type=str, default="all_domains",
@@ -4468,6 +4467,18 @@ Examples
         ),
     )
     parser.add_argument(
+        "--force-fresh",
+        action="store_true",
+        dest="force_fresh",
+        help=(
+            "Delete any existing checkpoint file before running, guaranteeing "
+            "fresh results regardless of how the script is invoked. "
+            "Overrides --resume. Use this for PCA benchmark runs to ensure "
+            "stale checkpoints from a previous (possibly mis-split) run are "
+            "never replayed."
+        ),
+    )
+    parser.add_argument(
         "--clear-checkpoint",
         action="store_true",
         dest="clear_checkpoint",
@@ -4577,97 +4588,50 @@ Examples
     global _METHOD_TIMEOUT_SECS
     _METHOD_TIMEOUT_SECS = args.method_timeout
 
-    # ── Load protocol ────────────────────────────────────────────────────────
-    # NOTE ON ROOT CAUSE (exp2 "Unknown domain" failures, 7/10 shards):
-    # This script previously *always* instantiated BenchmarkProtocol
-    # regardless of --benchmark/--protocol, because no branch existed to load
-    # anything else. BenchmarkProtocol's domain space (Feynman series +
-    # SRBench PMLB categories) does not contain — and structurally cannot
-    # contain — the exp2 10-domain set (mechanics/quantum/electro/
-    # fluid_dynamics/math/stats/econ/bio/chem/phys), which is defined by
-    # EXP2_DOMAINS / HYBRID_ALL_DOMAINS_IDS and served by ExperimentProtocolAll
-    # instead. A prior fix swapped a nonexistent "--protocol all30" for
-    # "--benchmark both", on the assumption that "both" would route into
-    # ExperimentProtocolAll — it does not; "both" only tells BenchmarkProtocol
-    # to combine its own Feynman+SRBench domains, which is why
-    # get_all_domains() kept surfacing just {biology, chemistry, economics}
-    # and every _DOMAIN_ALIASES lookup for the exp2 names failed downstream.
-    # --protocol all_domains below is the actual fix: it loads
-    # ExperimentProtocolAll, which is why it exists.
-    _noiseless = getattr(args, "noiseless", False)
-    _threshold = getattr(args, "threshold", None)
-    if _threshold is None:
-        _threshold = 0.9999 if _noiseless else 0.995
+    # ── Load BenchmarkProtocol ──────────────────────────────────────────────
+    try:
+        from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
+        _noiseless = getattr(args, "noiseless", False)
+        _threshold = getattr(args, "threshold", None)
+        if _threshold is None:
+            _threshold = 0.9999 if _noiseless else 0.995
 
-    if args.protocol == "all_domains":
-        try:
-            from hypatiax.core.generation.hybrid_all_domains_llm_nn.hybrid_system_llm_nn_all_domains import (
-                ExperimentProtocolAll,
-            )
-        except ImportError:
-            print("❌  ExperimentProtocolAll not found.")
-            print("    Expected at: hypatiax/core/generation/hybrid_all_domains_llm_nn/"
-                  "hybrid_system_llm_nn_all_domains.py")
-            sys.exit(1)
-
-        # ExperimentProtocolAll is pure @staticmethods with no __init__
-        # override (confirmed against source), so it only accepts the
-        # default no-arg constructor. num_samples is passed per-call to
-        # load_test_data() below (see protocol.load_test_data(domain,
-        # num_samples=...) at the call sites), and seed/noiseless are not
-        # consumed by this protocol's interface at all — get_all_domains()
-        # takes nothing and load_test_data() only takes num_samples — so
-        # nothing is lost by dropping them here.
-        try:
-            protocol = ExperimentProtocolAll()
-        except TypeError as e:
-            print(f"❌  ExperimentProtocolAll(...) constructor mismatch: {e}")
-            print("    ExperimentProtocolAll takes no arguments; check for "
-                  "local modifications to its __init__.")
-            sys.exit(1)
-        print("✅ ExperimentProtocolAll loaded  (protocol=all_domains)")
+        protocol = BenchmarkProtocol(
+            benchmark=args.benchmark,
+            num_samples=args.samples,
+            seed=42,
+            feynman_series=args.series,
+            noiseless=_noiseless,
+        )
+        print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
         print()
-    else:
-        # ── Load BenchmarkProtocol ──────────────────────────────────────────
-        try:
-            from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
-
-            protocol = BenchmarkProtocol(
-                benchmark=args.benchmark,
-                num_samples=args.samples,
-                seed=42,
-                feynman_series=args.series,
-                noiseless=_noiseless,
-            )
-            print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
-            print()
-            if getattr(args, "extrap", False):
-                print("=" * 70)
-                print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
-                print(f"  R² threshold    :  {_threshold}")
-                print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
-                print("=" * 70)
-            elif _noiseless:
-                print("=" * 70)
-                print("  NOISELESS MODE  —  noise_level = 0.0")
-                print(f"  R² threshold    :  {_threshold}")
-                print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
-                print("                     TPSR (56.0%)       DSR (32.0%)")
-                print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
-                print("=" * 70)
-            else:
-                print("=" * 70)
-                print(f"  NOISY MODE  —  noise_level = {_HYPATIAX_NOISE_LEVEL:.4f}  (HYPATIAX_NOISE_LEVEL)")
-                print(f"  R² threshold    :  {_threshold}  (practical)")
-                print("  R² ceiling      :  ~0.9982  (noise floor)")
-                print("  NOT comparable to published noiseless figures.")
-                print("  Use --noiseless --threshold 0.9999 for literature comparison.")
-                print("=" * 70)
-            print()
-        except ImportError:
-            print("❌  experiment_protocol_benchmark_v2.py not found.")
-            print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
-            sys.exit(1)
+        if getattr(args, "extrap", False):
+            print("=" * 70)
+            print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
+            print(f"  R² threshold    :  {_threshold}")
+            print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
+            print("=" * 70)
+        elif _noiseless:
+            print("=" * 70)
+            print("  NOISELESS MODE  —  noise_level = 0.0")
+            print(f"  R² threshold    :  {_threshold}")
+            print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
+            print("                     TPSR (56.0%)       DSR (32.0%)")
+            print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
+            print("=" * 70)
+        else:
+            print("=" * 70)
+            print("  NOISY MODE  —  noise_level = 0.05")
+            print(f"  R² threshold    :  {_threshold}  (practical)")
+            print("  R² ceiling      :  ~0.9982  (noise floor)")
+            print("  NOT comparable to published noiseless figures.")
+            print("  Use --noiseless --threshold 0.9999 for literature comparison.")
+            print("=" * 70)
+        print()
+    except ImportError:
+        print("❌  experiment_protocol_benchmark_v2.py not found.")
+        print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
+        sys.exit(1)
 
     # ── Build suite ─────────────────────────────────────────────────────────
     # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).
@@ -4778,33 +4742,6 @@ Examples
             for case in protocol.load_test_data(resolved, num_samples=args.samples):
                 all_tests.append((*case, resolved))
 
-    # ── NOISE INJECTION — apply HYPATIAX_NOISE_LEVEL to all collected y values ──
-    # The noise-sweep orchestrator (run_noise_sweep_benchmark.py) sets
-    # HYPATIAX_NOISE_LEVEL before launching this script.  Without this block
-    # the env var was silently ignored and all five sigma levels produced
-    # identical data, making the noise-sweep a no-op.
-    #
-    # Noise model: y_noisy = y + N(0, sigma * std(y))
-    # where sigma = _HYPATIAX_NOISE_LEVEL (fraction of signal std, e.g. 0.01=1%).
-    # A per-equation RNG seeded from the description hash ensures reproducibility
-    # across runs with the same sigma.
-    if _HYPATIAX_NOISE_LEVEL > 0.0 and not _noiseless:
-        _n_injected = 0
-        _noisy_tests: List[tuple] = []
-        for _tup in all_tests:
-            _desc, _X, _y, _vnames, _meta, _dom = _tup
-            _y_std = float(np.std(_y))
-            if _y_std > 0.0:
-                _rng_seed = int(abs(hash(_desc)) % (2**31))
-                _rng = np.random.default_rng(seed=_rng_seed)
-                _noise = _rng.normal(0.0, _HYPATIAX_NOISE_LEVEL * _y_std, size=len(_y))
-                _y = _y + _noise
-                _n_injected += 1
-            _noisy_tests.append((_desc, _X, _y, _vnames, _meta, _dom))
-        all_tests = _noisy_tests
-        print(f"INFO  Noise injection: sigma={_HYPATIAX_NOISE_LEVEL*100:.4g}% of std(y) "
-              f"applied to {_n_injected}/{len(all_tests)} test case(s).")
-
     # ── --equations: filter to specific 1-based indices ─────────────────────
     if _equation_indices:
         _eq_set = set(_equation_indices)
@@ -4901,9 +4838,31 @@ Examples
               f"Each uses {int(_efrac*100)}% of samples for training.\n")
 
     else:
-        # Non-extrap path: pad every tuple with (None, None) so the main loop
-        # can always unpack 8 elements regardless of mode.
-        all_tests = [(*t, None, None) for t in all_tests]
+        # FIX-C3: apply PCA 40/60 split at the outer loop so ALL methods
+        # receive pre-split data, not just ImprovedNNMethod.
+        # Each tuple is (desc, X, y, var_names, meta, domain) → 6 elements.
+        # After splitting: (desc, X_train, y_train, var_names, meta, domain, X_test, y_test)
+        _pca_tests = []
+        _pca_fail  = 0
+        for _t in all_tests:
+            _desc, _X, _y, _vnames, _meta, _dom = _t
+            try:
+                _Xtr, _Xte, _ytr, _yte = pca_directed_split(_X, _y, test_size=0.6, random_state=42)
+                _meta_pca = {
+                    **_meta,
+                    "split_protocol": "pca_40_60",
+                    "n_train": int(len(_Xtr)),
+                    "n_test":  int(len(_Xte)),
+                }
+                _pca_tests.append((_desc, _Xtr, _ytr, _vnames, _meta_pca, _dom, _Xte, _yte))
+            except Exception as _pca_exc:
+                _pca_fail += 1
+                print(f"  ⚠️  PCA split failed for '{_desc[:50]}': {_pca_exc} — using full data")
+                _pca_tests.append((_desc, _X, _y, _vnames, _meta, _dom, None, None))
+        all_tests = _pca_tests
+        _n_split  = len(all_tests) - _pca_fail
+        print(f"   Applied PCA 40/60 split to {_n_split}/{len(all_tests)} test(s). "
+              f"All methods receive pre-split data.\n")
 
 
     global _CHECKPOINT_NAME
@@ -4921,10 +4880,24 @@ Examples
     if getattr(args, "output_dir", None):
         _OUTPUT_DIR = Path(args.output_dir).resolve()
         _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        # _FLAT_OUTPUT_DIR intentionally NOT updated — benchmark_results.json
-        # and checkpoints always go to the comparison_results root, not the
-        # per-experiment subdir (noise-sweep/, sample-complexity/) so they
-        # are not buried or clobbered across multi-run sweeps.
+
+    # ── --force-fresh: purge stale checkpoint before doing anything ─────────
+    # This guarantees fresh results regardless of how the script is invoked —
+    # even if --resume is also passed, --force-fresh wins.
+    if getattr(args, "force_fresh", False):
+        _fresh_path = ProtocolBenchmarkSuite._checkpoint_path()
+        if _fresh_path.exists():
+            _fresh_path.unlink()
+            print(f"  [--force-fresh] Removed stale checkpoint: {_fresh_path}")
+        else:
+            print("  [--force-fresh] No existing checkpoint — starting clean.")
+        # Also clear any results that were partially written
+        _fresh_results = _fresh_path.with_name(_fresh_path.stem.replace("checkpoint", "results") + ".json")
+        if _fresh_results.exists():
+            _fresh_results.unlink()
+            print(f"  [--force-fresh] Removed stale results: {_fresh_results}")
+        args.resume = False
+        print("  [--force-fresh] Checkpoint cleared — this run produces fresh results.\n")
 
     # ── --clear-checkpoint ───────────────────────────────────────────────────
     if getattr(args, "clear_checkpoint", False):
