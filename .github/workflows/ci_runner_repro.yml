@@ -3975,12 +3975,20 @@ jobs:
           }
 
           def _is_feynman_protocol(fp: pathlib.Path) -> bool:
+              # FIX-PROTOCOL-FILTER-LISTROOT: some legacy files (e.g.
+              # benchmark_results.json) are JSON arrays at the top level,
+              # not {"tests": [...]} objects. json.loads() succeeds on
+              # those, so the earlier bare except only caught malformed
+              # JSON, not this well-formed-but-wrong-shape case, and
+              # data.get(...) then raised AttributeError on the list.
               try:
                   data = json.loads(fp.read_text())
+                  if not isinstance(data, dict):
+                      return False
+                  domains = {t.get("domain") for t in data.get("tests", []) if isinstance(t, dict)}
+                  return bool(domains) and domains <= FEYNMAN_DOMAINS
               except Exception:
                   return False
-              domains = {t.get("domain") for t in data.get("tests", []) if isinstance(t, dict)}
-              return bool(domains) and domains <= FEYNMAN_DOMAINS
 
           legacy_jsons = [
               f for f in (sorted(LEGACY_DIR.glob("*.json")) if LEGACY_DIR.exists() else [])
