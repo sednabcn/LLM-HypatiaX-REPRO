@@ -1524,17 +1524,14 @@ run exp2_feynman_pca_4060 "FIX-C3: Feynman rerun with PCA 40/60 split — correc
   mkdir -p \"\${_PCA_DIR}\"
 
   # ── 1. Lock the legacy 9/30 baseline BEFORE any corrected run can overwrite ──
-  # Idempotent: if fixc3_baseline.json already exists, verify it is stable.
-  if [[ -f \"\${_BASELINE}\" ]]; then
-    echo '[FIX-C3] fixc3_baseline.json already present — skipping baseline capture.'
-    python3 -c \"
-import json, pathlib
-b = json.loads(pathlib.Path('\${_BASELINE}').read_text())
-print('  Locked baseline: ' + str(b.get('n_pass','?')) + '/' + str(b.get('n_total','?')) + ' (' + str(b.get('split_protocol','?')) + ')')
-\" 2>/dev/null || true
-  else
-    echo '[FIX-C3] Locking legacy 9/30 baseline from exp2/ results...'
-    python3 - <<'PYEOF'
+  # FIX-RUN-ALL-SELF-HEAL: previously this was a bare 'if file exists: skip,
+  # else: compute' with no null-check, so a baseline locked before exp2/ was
+  # populated (solve_rate=null) stayed null forever under run_all.sh even
+  # after real results existed on disk — while ci_runner_repro.yml's Gate C
+  # would self-heal the same file. Ported that logic here verbatim so both
+  # entry points agree regardless of which one locks/re-checks the baseline.
+  echo '[FIX-C3] Checking legacy 9/30 baseline (self-healing, mirrors ci_runner_repro.yml Gate C)...'
+  python3 - <<'PYEOF'
 import glob, json, pathlib, sys
 
 LEG_DIR    = pathlib.Path('${RESULTS_DIR}/comparison_results/feynman-tests/exp2')
@@ -1558,6 +1555,26 @@ def _r2(row):
 
 def _rows(data):
     if isinstance(data, dict):
+        # FIX-C3-SCHEMA: protocol_core_noiseless_*.json (the raw _save()
+        # output of run_comparative_suite_benchmark_v2.py) nests real
+        # per-method results under top-level 'tests' -> [i] -> 'results' ->
+        # {method_name: {..., 'r2': ...}}. None of ('results','equation_results',
+        # 'data','rows') exist at the TOP level of this shape, so without this
+        # branch the generic case below falls through to `yield data`, handing
+        # back one useless pseudo-row per file with no r2 field — silently
+        # contributing 0/0 for every raw result file. Handle it explicitly.
+        if isinstance(data.get('tests'), list):
+            for test in data['tests']:
+                if not isinstance(test, dict):
+                    continue
+                results = test.get('results')
+                if isinstance(results, dict):
+                    for rec in results.values():
+                        if isinstance(rec, dict):
+                            yield rec
+                else:
+                    yield from _rows(test)
+            return
         for key in ('results','equation_results','data','rows'):
             v = data.get(key)
             if v is not None:
@@ -1568,19 +1585,10 @@ def _rows(data):
         for item in data:
             if isinstance(item, dict):
                 yield item
-
-n_pass = n_total = 0
-source_files = []
-stray_pca_files = []
 for fp in sorted(LEG_DIR.glob('*.json')) if LEG_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint','disclosure','baseline')):
         continue
-    # FIX-GATEC-PCA: protocol_core_*_pca_<ts>.json can only be produced by
-    # run_comparative_suite_benchmark_pca.py (see its _save() mode logic).
-    # exp2_feynman (this legacy step) only ever calls run_comparative_suite
-    # _benchmark_v2.py, so any '_pca' file found in LEG_DIR is a stray
-    # leftover from a mis-routed PCA run and must NOT be counted toward the
-    # legacy 9/30 baseline, nor allowed to collide with exp2_pca_4060/ output.
+    # FIX-GATEC-PCA: exclude stray _pca files from the legacy baseline.
     if '_pca' in fp.name:
         stray_pca_files.append(fp.name)
         continue
@@ -1609,32 +1617,66 @@ baseline = {
     'n_total':         n_total,
     'solve_rate':      (n_pass / n_total) if n_total > 0 else None,
     'paper_claim':     '9/30 = 0.300',
-    # FIX-MANIFEST-TRUNCATION: was source_files[:5]. Files are named
-    # protocol_core_{mode}_{ts}{shard}.json and sorted() puts them in
-    # ascending timestamp order, i.e. domain-completion order. With 11
-    # Feynman domains, [:5] kept only the earliest 5 and silently dropped
-    # every later one from the manifest -- deterministically omitting
-    # whichever domain ran last (feynman_thermodynamics, since it's the
-    # last entry in FEYNMAN_DOMAINS), even though that domain's rows were
-    # still counted correctly in n_pass/n_total above. List every source
-    # file so the manifest matches what was actually counted.
+    # FIX-MANIFEST-TRUNCATION: list every source file, not source_files[:5].
     'source_files':    source_files,
 }
-BASELINE.parent.mkdir(parents=True, exist_ok=True)
-BASELINE.write_text(json.dumps(baseline, indent=2))
-print(f'  [FIX-C3] Baseline locked: {n_pass}/{n_total} (random_80_20) → fixc3_baseline.json')
-# FIX-LOG-SOURCE-FILES (verification report Revision 21, item 5): make the
-# manifest visible in the console log directly, rather than relying on a
-# future live run to happen to print a field no existing message shows.
-print(f\"  [FIX-C3] source_files ({len(baseline['source_files'])}): {baseline['source_files']}\")
+
+if not BASELINE.exists():
+    BASELINE.parent.mkdir(parents=True, exist_ok=True)
+    BASELINE.write_text(json.dumps(baseline, indent=2))
+    print(f'  [FIX-C3] Baseline locked: {n_pass}/{n_total} (random_80_20) → fixc3_baseline.json')
+    print(f'  [FIX-C3] source_files ({len(source_files)}): {source_files}')
+else:
+    existing = json.loads(BASELINE.read_text())
+    existing_rate = existing.get('solve_rate')
+    if existing_rate is None:
+        # Self-heal: baseline was written before exp2/ results existed.
+        if n_total > 0:
+            BASELINE.write_text(json.dumps(baseline, indent=2))
+            print(
+                '  [FIX-C3] Baseline was invalid (solve_rate=null, written before '
+                'exp2/ results existed) — recomputed and rewritten → '
+                f\"{n_pass}/{n_total} (rate={baseline['solve_rate']:.3f})\"
+            )
+            print(f'  [FIX-C3] source_files ({len(source_files)}): {source_files}')
+        else:
+            print(
+                '  [FIX-C3][ERROR] fixc3_baseline.json exists but solve_rate is '
+                'null, and no legacy JSONs were found in this checkout either — '
+                'confirm comparison_results/feynman-tests/exp2/ contains result '
+                'JSONs before this gate can lock a valid baseline.'
+            )
+            sys.exit(1)
+    elif n_total > 0:
+        new_rate = n_pass / n_total
+        if abs(new_rate - existing_rate) > 0.05:
+            print(
+                f'  [FIX-C3][ERROR] Baseline solve_rate changed from '
+                f'{existing_rate:.3f} to {new_rate:.3f} — possible overwrite of '
+                '9/30 baseline. Delete fixc3_baseline.json manually to reset.'
+            )
+            sys.exit(1)
+        else:
+            print(
+                f\"  [FIX-C3] Baseline already locked: {existing.get('n_pass')}/\"
+                f\"{existing.get('n_total')} (rate={existing_rate:.3f})\"
+            )
+            _existing_sf = existing.get('source_files', [])
+            print(f'  [FIX-C3] source_files ({len(_existing_sf)}): {_existing_sf}')
+    else:
+        print(
+            f\"  [FIX-C3][WARN] Baseline file exists (rate={existing_rate:.3f}) \"
+            \"but no legacy JSONs found in this checkout — rate could not be \"
+            \"re-verified; accepting existing baseline\"
+        )
+
 if stray_pca_files:
-    print(f'  [WARN]  {len(stray_pca_files)} stray _pca file(s) found in legacy exp2/ dir')
+    print(f'  [FIX-C3][WARN] {len(stray_pca_files)} stray _pca file(s) found in legacy exp2/ dir')
     print('          (excluded from baseline — they belong in exp2_pca_4060/):')
     for _f in stray_pca_files[:10]:
         print(f'            - {_f}')
     print(f'          Move them: mv {LEG_DIR}/*_pca_*.json {LEG_DIR.parent}/exp2_pca_4060/  (verify timestamps first)')
 PYEOF
-  fi
 
   # ── 2. Run corrected Feynman benchmark per domain (PCA 40/60 split) ──────────
   # FIX-C3-SCRIPT: use run_comparative_suite_benchmark_pca.py — the dedicated

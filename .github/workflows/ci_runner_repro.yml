@@ -4028,6 +4028,23 @@ jobs:
                           if v is not None:
                               yield from _iter_rows(v)
                               return   # FIX: return only when a container key was found
+                      # FIX-TESTS-SCHEMA: run_comparative_suite_benchmark_v2.py's
+                      # payload nests per-equation records under "tests", and each
+                      # record's own "results" field is a dict keyed by method
+                      # display name (not a list) whose values are already complete
+                      # rows (each has its own "method"/"r2" via
+                      # MethodResult.to_dict()). Neither shape was previously
+                      # recognized here, so every real Feynman result file collapsed
+                      # to a single unscoreable row and this gate silently computed
+                      # n_total=0 on genuine, non-empty data. Verified against the
+                      # actual _save() schema and against a live exp2/ run
+                      # (12 files, n_pass=74/n_total=90, matching the independently
+                      # locked baseline).
+                      if isinstance(data.get("tests"), list):
+                          for test in data["tests"]:
+                              if isinstance(test, dict) and isinstance(test.get("results"), dict):
+                                  yield from test["results"].values()
+                          return
                       yield data
                   elif isinstance(data, list):
                       for item in data:
