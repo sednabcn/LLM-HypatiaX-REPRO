@@ -1325,10 +1325,19 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
                 # FIX-C3: PCA-directed 40/60 split replaces _aggressive_split.
                 # Matches the Feynman benchmark protocol (run_comparative_suite_benchmark_pca.py).
+                # FIX-C3b (audit finding): random_state was hardcoded to the literal
+                # 42 here, so every seed in a multi-seed sweep (exp1b_pca /
+                # DEFI_SEEDS=42,99,123,777,2024) trained/tested on the IDENTICAL
+                # data partition — only NN init and LLM sampling varied. The sweep
+                # therefore never measured split-sensitivity, only two much
+                # narrower sources of stochasticity. Now uses the loop's actual
+                # _seed (falling back to 42 to preserve single-run behavior when
+                # no seed is supplied), so each swept seed gets its own split.
+                _split_seed = _seed if _seed is not None else 42
                 X_tr, X_te, y_tr, y_te = pca_directed_split(
-                    X_full, y_full, test_size=0.6, random_state=42
+                    X_full, y_full, test_size=0.6, random_state=_split_seed
                 )
-                print(f"  Split (PCA 40/60) → train={len(X_tr)}, test={len(X_te)}")
+                print(f"  Split (PCA 40/60, random_state={_split_seed}) → train={len(X_tr)}, test={len(X_te)}")
 
                 case_results = {}
 
