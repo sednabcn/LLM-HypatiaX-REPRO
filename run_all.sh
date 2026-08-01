@@ -589,7 +589,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   # FIX-exp1b-CASEFILTER: DEFI_TASK_FILTER=portfolio used to be set here.
   # run_benchmark() turns it into cases=["portfolio"], then keeps only
   # test cases whose NAME contains the substring "portfolio" (see the
-  # `if cases:` substring filter in hypatiax_defi_benchmark_v3c.py). Only
+  # 'if cases:' substring filter in hypatiax_defi_benchmark_v3c.py). Only
   # 5 of the 74 cases in the catalogue match that substring (Annualised
   # Portfolio tracking error, Portfolio Sharpe Ratio, Portfolio VaR for
   # two correlated, Correlated Portfolio VaR, Portfolio Expected
@@ -1576,7 +1576,7 @@ def _rows(data):
         # per-method results under top-level 'tests' -> [i] -> 'results' ->
         # {method_name: {..., 'r2': ...}}. None of ('results','equation_results',
         # 'data','rows') exist at the TOP level of this shape, so without this
-        # branch the generic case below falls through to `yield data`, handing
+        # branch the generic case below falls through to \`yield data\`, handing
         # back one useless pseudo-row per file with no r2 field — silently
         # contributing 0/0 for every raw result file. Handle it explicitly.
         if isinstance(data.get('tests'), list):
@@ -2247,18 +2247,18 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
 
   # FIX: ensure exp2_extrap exists before this merge subshell touches it —
-  # this block runs standalone (outside the `run exp2_feynman_extrap` step's
+  # this block runs standalone (outside the \`run exp2_feynman_extrap\` step's
   # own mkdir -p), so on a workflow-dispatch that targets only this step,
   # or any job where exp2_feynman_extrap hasn't run yet, _EXTRAP_DIR may not
-  # exist yet and `find` fails with "No such file or directory".
+  # exist yet and \`find\` fails with "No such file or directory".
   mkdir -p "${_EXTRAP_DIR}"
 
   if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
     echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
     echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
   else
-    # FIX: -maxdepth 1 scopes the search; 2>/dev/null + `|| true` keep this
-    # safe under `set -o pipefail` (find|head can SIGPIPE if >1 match exists,
+    # FIX: -maxdepth 1 scopes the search; 2>/dev/null + \`|| true\` keep this
+    # safe under \`set -o pipefail\` (find|head can SIGPIPE if >1 match exists,
     # which would otherwise trip -e and kill this subshell).
     _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
     if [[ -z "${_BENCH_EXT}" ]]; then
@@ -2537,7 +2537,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   # discovery below has always searched the broader extrapolation/ tree
   # (maxdepth 2), correctly matching exp3's seed42 file (which lives directly
   # in extrapolation/) as well as exp3b's files (in extrapolation/multi_seed/).
-  # So a `--step exp3` run (exp3b's `run` call is a no-op under ONLY_STEP,
+  # So a \`--step exp3\` run (exp3b's \`run\` call is a no-op under ONLY_STEP,
   # meaning extrapolation/multi_seed/ is never even created) would find
   # exp3's file in the broader search, skip the "no files" SKIP branch, then
   # hand the checker a --results-dir that doesn't contain it — 0 files found,
@@ -2564,7 +2564,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     # FIX-EXP3SYM-NONFATAL: this is a best-effort report (mirrors a separate,
     # analysis-only step in ci_analysis.yml) — it must never fail an
     # otherwise-successful exp3/exp3b run. Explicitly continue past a
-    # non-zero exit instead of relying on `set -e` to abort the block.
+    # non-zero exit instead of relying on \`set -e\` to abort the block.
     python3 "${_SCRIPT}" \
       --results-dir "${_SEED_DIR}" \
       --output-dir  "${_SEED_DIR}" \
