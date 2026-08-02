@@ -98,12 +98,14 @@ on:
           - exp1
           - exp1b
           - exp1_ablation
+          - exp1_five
           - exp1_pca
           - exp1b_pca
           - exp2_feynman_pca
           - exp2_feynman
           - exp2_feynman_extrap
           - exp2
+          - exp2_five
           - exp3
           - exp3b
           - suppA
@@ -338,6 +340,52 @@ jobs:
               DEFAULT_SEEDS="42"
               ;;
 
+            # -- STEP 2a2: Five-System Comparison (§10.1) -----------------------------
+            # exp1_five_system.py extends exp1_ablation's Core-15 protocol from 2
+            # conditions (pysr_only, hypatia) to 5 methods, using the method
+            # set/interfaces from run_comparative_suite_benchmark_v2.py.
+            #
+            # RUNNABLE (verified against the authored exp1_five_system.py source):
+            # the script now exists, sitting alongside exp1_ablation.py and
+            # run_comparative_suite_benchmark_v2.py in
+            # hypatiax/experiments/benchmarks/ as expected. It loads both of those
+            # files as modules via importlib (not CLI subprocesses) and pulls
+            # CORE_15 / data generators / checkpoint helpers from exp1_ablation.py,
+            # and PureLLMBaselineMethod, ImprovedNNMethod, HybridAllDomainsMethod,
+            # SymbolicEngineMethod, HybridSystemV50_2Method (METHOD_REGISTRY
+            # indices 1,2,4,5,6 — 3/HybridDeFiMethod excluded) from
+            # run_comparative_suite_benchmark_v2.py — matching _EXP2_METHOD_TO_ROW
+            # in generate_tables.py. No --methods CLI flag needed here (unlike
+            # exp2_five below): the method subset is hardcoded in the script itself.
+            #
+            # Primary output: exp1_five_results.json (one record per equation×method),
+            # plus exp1_five_performance.json / exp1_five_extrapolation.json feeding
+            # generate_tables.py's two five_system sub-tables (performance,
+            # extrapolation) — see that file's gen_five_system_performance() /
+            # gen_five_system_extrapolation() — and provenance_map_exp1_five.json.
+            # RESULT_SUBDIR mirrors RESULTS_DIR/five_systems/exp1_five inside run_all.sh.
+            exp1_five)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_five_system.py"
+              # NEEDS_JULIA: corrected to true (was false) — now verified against
+              # the authored source instead of inherited as a guess from
+              # exp1_ablation. The static juliacall/PySR grep suppB/suppB_sc use
+              # elsewhere in this file gives a false negative here (exp1_five_system.py
+              # itself contains no "import pysr"/"juliacall" line — PySR only
+              # appears in comments/var names like PYSR_TIMEOUT), because that
+              # heuristic only scans the file's own text and can't see through its
+              # importlib-based module loading. But two of the five methods it
+              # runs — SymbolicEngineMethod and HybridSystemV50_2Method — are
+              # imported directly from run_comparative_suite_benchmark_v2.py, the
+              # exact same script that exp2 / exp2_feynman / exp2_feynman_extrap /
+              # exp2_five below all set NEEDS_JULIA=true for. Since exp1_five
+              # instantiates those same method classes in-process, it transitively
+              # carries the same Julia dependency and needs the Julia install
+              # steps gated on needs_julia == 'true'.
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="five_systems/exp1_five"
+              DEFAULT_SEEDS="42"
+              ;;
+
             exp2_feynman)
               SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
               NEEDS_JULIA=true
@@ -360,6 +408,34 @@ jobs:
               NEEDS_JULIA=true
               RESULT_SUBDIR="comparison_results/feynman-tests/exp2_multi"
               DEFAULT_SEEDS="42"
+              ;;
+
+            # -- Five-System Comparison (§10.1), straightforward variant ------------
+            # Identical to exp2 (same script, same --protocol all_domains) except
+            # the worker step must additionally pass --methods 1 2 4 5 6 to exclude
+            # method 3 (HybridDeFiMethod, DeFi-domain-scoped — not one of the five
+            # paper row names; same exclusion documented in generate_tables.py's
+            # _EXP2_METHOD_TO_ROW comment). No new script — this reuses
+            # run_comparative_suite_benchmark_v2.py directly, per the "straightforward"
+            # requirement. RESULT_SUBDIR mirrors run_all.sh's exp2_five stage.
+            #
+            # RESOLVED (verified against run_all.sh): the "Run experiment tasks"
+            # step below does not actually invoke SCRIPT with a hand-built arg
+            # list — it delegates via `bash run_all.sh --step "${EXP}"`, and
+            # run_all.sh's own exp2_five stage already hardcodes
+            # `--methods 1 2 4 5 6` on its run_comparative_suite_benchmark_v2.py
+            # call (STEP 6b). So the 5-method filter is applied correctly without
+            # any change to this workflow's invocation step. The METHODS_FILTER
+            # variable set below is therefore metadata-only in this repro
+            # workflow (unused by the run step, which reads EXP directly) — kept
+            # for documentation/parity with the case-statement pattern, not
+            # because anything here still consumes it.
+            exp2_five)
+              SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="five_systems/exp2_five"
+              DEFAULT_SEEDS="42"
+              METHODS_FILTER="1 2 4 5 6"
               ;;
 
             exp3)

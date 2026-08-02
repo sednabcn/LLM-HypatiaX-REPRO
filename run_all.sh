@@ -344,7 +344,7 @@ DRY_RUN=false
 # generation is fully disabled across this pipeline); audit_figures_tables retained
 # in name only as a no-op passthrough (see its definition) so downstream step
 # numbering/scripts that reference it by name don't break.
-_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -768,6 +768,72 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
   fi
   echo '=== end exp1_ablation ==='
 "
+
+
+# ── STEP 2a2: exp1_five ────────────────────────────────────────────────────────
+# Runs exp1_five_system.py (§10.1 Five-System Comparison: extends the
+# exp1_ablation Core-15 protocol from 2 conditions — pysr_only vs hypatia —
+# to 5 methods, using the method set/interfaces from
+# run_comparative_suite_benchmark_v2.py).
+#
+# RUNNABLE: exp1_five_system.py now exists alongside exp1_ablation.py and
+# run_comparative_suite_benchmark_v2.py in ${EXPERIMENTS_DIR}, and loads both
+# as modules (importlib) to reuse their Core-15 suite / method classes rather
+# than reimplementing them — see generate_tables.py's removed
+# _FIVE_SYSTEM_CANDIDATES fallback for the prior state of this gap. It runs
+# METHOD_REGISTRY indices 1,2,4,5,6 (SymbolicEngineMethod and
+# HybridSystemV50_2Method among them), pulled from
+# run_comparative_suite_benchmark_v2.py — the same script exp2/exp2_five
+# below require Julia for — so this step needs a Julia-capable runner even
+# though the CLI here never mentions PySR/Julia directly (see the matching
+# NEEDS_JULIA fix in ci_runner_repro.yml's exp1_five case entry).
+#
+# Produces (numerical only, same no-tex-byproducts convention as exp1_ablation):
+#   exp1_five_results.json        — one record per (equation, method) pair
+#   exp1_five_performance.json    — performance sub-table source (train_r2/train_rmse)
+#   exp1_five_extrapolation.json  — extrapolation sub-table source (extrap_r2/rmse near/medium/far)
+#   provenance_map_exp1_five.json
+#
+# Output directory: ${RESULTS_DIR}/five_systems/exp1_five/
+# (distinct from ablation/exp1_ablation/ — five_system.tex must no longer read
+# from the ablation dir; see generate_tables.py fallback-removal.)
+#
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1_five
+# ─────────────────────────────────────────────────────────────────────────────
+run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
+  cd '${REPO_ROOT}'
+  _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
+  mkdir -p \"\${_FIVE_DIR}\"
+
+  PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \
+  RESULTS_DIR=\"\${_FIVE_DIR}\" \
+  LABEL='exp1_five' \
+  PYSR_POPULATIONS='${PYSR_POPULATIONS}' \
+  PYSR_SEED='${PYSR_SEED}' \
+  METHOD_TIMEOUT='${METHOD_TIMEOUT}' \
+  PYSR_TIMEOUT='${FEYNMAN_TIMEOUT}' \
+  JOB_DEADLINE='${JOB_DEADLINE}' \
+    python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
+    2>&1 | tee \"\${_FIVE_DIR}/exp1_five_run.log\" \
+  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+
+  echo '=== exp1_five verification ==='
+  find \"\${_FIVE_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
+  _NRESULT=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_results*.json' 2>/dev/null | wc -l)
+  _NPERF=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_performance*.json' 2>/dev/null | wc -l)
+  _NEXTRAP=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_extrapolation*.json' 2>/dev/null | wc -l)
+  if [[ \"\${_NRESULT}\" -eq 0 ]]; then
+    echo 'WARNING: exp1_five_results.json not produced'
+  else
+    echo \"OK: \${_NRESULT} exp1_five_results*.json produced\"
+  fi
+  if [[ \"\${_NPERF}\" -eq 0 || \"\${_NEXTRAP}\" -eq 0 ]]; then
+    echo 'WARNING: performance/extrapolation sub-table source JSON missing — five_system.tex sub-tables will be incomplete'
+  fi
+  echo '=== end exp1_five ==='
+"
+
 
 # ── STEP 2b: exp1_pca ─────────────────────────────────────────────────────────
 # FIX-C3 DeFi variant: reruns all 74 DeFi cases via hypatiax_defi_benchmark_pca.py
@@ -2380,6 +2446,55 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
+      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+  done
+"
+
+
+# ── STEP 6b: exp2_five ──────────────────────────────────────────────────────────
+# Five-System Comparison (§10.1), straightforward variant: identical to exp2
+# above (same domains, same --protocol all_domains, same script) except
+# --methods 1 2 4 5 6 restricts the run to the five methods matching the
+# paper's five system rows, excluding method 3 (HybridDeFiMethod — DeFi-
+# domain-scoped, not one of the five row names; same exclusion documented in
+# generate_tables.py's _EXP2_METHOD_TO_ROW comment).
+#
+# This is the "straightforward run_comparative_suite_benchmark_v2.py" path —
+# no new Python source, just the existing script with a narrower --methods
+# filter and its own output directory so it never collides with exp2's full
+# 6-method run.
+#
+# Output directory: ${RESULTS_DIR}/five_systems/exp2_five/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp2_five
+# ─────────────────────────────────────────────────────────────────────────────
+run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
+  cd '${REPO_ROOT}'
+  mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
+  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  for DOMAIN_ID in \${EXP2_DOMAINS}; do
+    echo '=== exp2_five: domain='\${DOMAIN_ID}' ==='
+    FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+    METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+    PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+    PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+    JOB_DEADLINE=${JOB_DEADLINE} \
+      python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \
+        --protocol all_domains \
+        --domain \"\${DOMAIN_ID}\" \
+        --samples ${FEYNMAN_SAMPLES} \
+        --pysr-timeout ${FEYNMAN_TIMEOUT} \
+        --method-timeout ${METHOD_TIMEOUT} \
+        --populations ${PYSR_POPULATIONS} \
+        --parsimony 0.01 \
+        --use-transcendental-compositions \
+        --noiseless \
+        --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
+        --methods 1 2 4 5 6 \
+        --checkpoint-name \"exp2_five_checkpoint_\${DOMAIN_ID}\" \
+        --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
+        --resume \
+        2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
       || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
   done
 "

@@ -122,12 +122,14 @@ on:
           - exp1
           - exp1b
           - exp1_ablation
+          - exp1_five
           - exp1_pca
           - exp1b_pca
           - exp2_feynman
           - exp2_feynman_extrap
           - exp2_feynman_pca
           - exp2
+          - exp2_five
           - exp3
           - exp3b
           - suppA
@@ -215,12 +217,14 @@ jobs:
               "exp1":              "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":             "comparison_results/noise-noiseless/15",
               "exp1_ablation":     "ablation/exp1_ablation",
+              "exp1_five":         "five_systems/exp1_five",
               "exp1_pca":          "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":         "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":      "comparison_results/feynman-tests/exp2",
               "exp2_feynman_extrap": "comparison_results/feynman-tests/exp2_extrap",
               "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
               "exp2":              "comparison_results/feynman-tests/exp2_multi",
+              "exp2_five":         "five_systems/exp2_five",
               "exp3":              "extrapolation",
               "exp3b":             "extrapolation/multi_seed",
               "suppA":             "hybrid_pysr/defi",
@@ -429,9 +433,9 @@ jobs:
           # When EXPERIMENT is a known single experiment, iterate only that.
           # When EXPERIMENT is "all" or blank, iterate everything in CHECK_REPORT.
           _KNOWN_EXPS = [
-              "exp1", "exp1b", "exp1_ablation", "exp1_pca", "exp1b_pca",
+              "exp1", "exp1b", "exp1_ablation", "exp1_five", "exp1_pca", "exp1b_pca",
               "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
-              "exp2", "exp3", "exp3b",
+              "exp2", "exp2_five", "exp3", "exp3b",
               "suppA", "suppB", "suppB_sc", "hybrid_all_domains", "instability", "extrap",
           ]
           _exp_input = os.environ.get("EXPERIMENT", "all").strip()
@@ -736,12 +740,14 @@ jobs:
               "exp1":              "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":             "comparison_results/noise-noiseless/15",
               "exp1_ablation":     "ablation/exp1_ablation",
+              "exp1_five":         "five_systems/exp1_five",
               "exp1_pca":          "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":         "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":      "comparison_results/feynman-tests/exp2",
               "exp2_feynman_extrap": "comparison_results/feynman-tests/exp2_extrap",
               "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
               "exp2":              "comparison_results/feynman-tests/exp2_multi",
+              "exp2_five":         "five_systems/exp2_five",
               "exp3":              "extrapolation",
               "exp3b":             "extrapolation/multi_seed",
               "suppA":             "hybrid_pysr/defi",
