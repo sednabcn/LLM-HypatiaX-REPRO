@@ -814,6 +814,24 @@ jobs:
               # Slug→equation mapping is defined in _SLUG_TO_EQ_KEYWORDS inside
               # exp1_ablation.py.
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+              # exp1_five: same Core-15 suite as exp1_ablation (it imports CORE_15 and
+              # the checkpoint helpers directly from exp1_ablation.py — "same shape"
+              # per its own docstring), so this list mirrors exp1_ablation's registry
+              # entry for semantic/bookkeeping consistency. IMPORTANT DIFFERENCE:
+              # exp1_five_system.py does NOT read DOMAIN_FILTER/TASK_IDS at all — its
+              # --task-ids CLI flag is explicitly "reserved; not yet wired to a shard
+              # filter". It self-shards internally via SHARD_INDEX/N_SHARDS env vars
+              # directly against CORE_15 (`if j % _n_shards == _shard_index`). So this
+              # registry list only needs to be non-empty to satisfy the "no task IDs"
+              # check below and to size the CI matrix — the actual per-shard equation
+              # split happens inside the script itself, driven by the SHARD_INDEX/
+              # N_SHARDS env vars every job already exports (see plan/job env above).
+              # With EXP_SHARD_TABLE falling back to N_SHARDS_DEFAULT=1 for exp1_five
+              # (no entry there either — matches exp2/exp2_five's own single-shard
+              # default), SHARD_INDEX=0, N_SHARDS=1 reaches the script, so
+              # `_n_shards > 1` is False and it correctly runs the full CORE_15 set
+              # in that one shard.
+              "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               # exp2_feynman: shard by feynman domain keys (BenchmarkProtocol, benchmark=feynman)
               "exp2_feynman":       FEYNMAN_DOMAINS,
               # exp2_feynman_extrap: same 11-domain split, generates extrap_r2_far for Mann-Whitney
@@ -838,6 +856,12 @@ jobs:
               # adding real entries here.
               # exp2: shard by ExperimentProtocolAll domain keys (--protocol all_domains)
               "exp2":              EXP2_DOMAINS,
+              # exp2_five: identical domain-shard scheme to exp2 (same script,
+              # run_comparative_suite_benchmark_v2.py --protocol all_domains, just a
+              # narrower --methods 1 2 4 5 6 filter and its own output dir — see
+              # run_all.sh STEP 6b). Reuses EXP2_DOMAINS rather than a separate list
+              # so the two stay in sync automatically if the domain set ever changes.
+              "exp2_five":         EXP2_DOMAINS,
               "exp3":              [f"{eq}_seed{s}" for eq in NGUYEN12 for s in SEEDS],
               "exp3b":             [f"{eq}_seed{s}" for s in SEEDS for eq in NGUYEN12],
               "suppA":             SUPP_A_IDS,
@@ -1268,8 +1292,8 @@ jobs:
       # broken shards, partly masked by stale committed outputs from gate 1's
       # "outputs committed" check).
       # FIX TASK 7
-      - name: Validate domain-list (hybrid_all_domains / exp2)
-        if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' || needs.plan.outputs.exp_id == 'exp2' }}
+      - name: Validate domain-list (hybrid_all_domains / exp2 / exp2_five)
+        if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' || needs.plan.outputs.exp_id == 'exp2' || needs.plan.outputs.exp_id == 'exp2_five' }}
         run: |
           python3 - <<'PYEOF'
           import importlib.util, sys, pathlib, subprocess, os
@@ -2068,6 +2092,29 @@ jobs:
       # in the canonical RESULT_SUBDIR before the artifact upload step.
       # Each experiment verifies at least one file exists matching its primary
       # output glob; fails loudly so path/naming mismatches surface immediately.
+      # -- Verify exp1_five output files exist ---------------------------------
+      # ITEM 4 gap-fill: exp1_five was missing from this "ALL EXPERIMENTS"
+      # verification block even after being made runnable (see registry fix
+      # above) — added here so a broken exp1_five run fails loudly here
+      # instead of silently uploading zero result files.
+      - name: Verify exp1_five output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_five' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" -name "exp1_five_results*.json" 2>/dev/null | wc -l)
+          echo "=== exp1_five output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp1_five produced NO output files in '${TARGET}'."
+            echo "  Expected: exp1_five_results*.json"
+            exit 1
+          fi
+          echo "  OK exp1_five output files present."
+
       - name: Verify exp2_feynman output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp2_feynman' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
@@ -2102,6 +2149,28 @@ jobs:
             exit 1
           fi
           echo "  OK exp2 output files present."
+
+      # -- Verify exp2_five output files exist ---------------------------------
+      # ITEM 4 gap-fill: exp2_five was missing from this "ALL EXPERIMENTS"
+      # verification block. Mirrors the exp2 check above exactly (same script,
+      # same output-file format — protocol_core_*.json / benchmark_results.json —
+      # just its own RESULT_SUBDIR/five_systems/exp2_five output dir).
+      - name: Verify exp2_five output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp2_five' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
+          echo "=== exp2_five output verification ==="
+          echo "  Target dir   : ${TARGET}"
+          echo "  File count   : ${COUNT}"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT}" -eq 0 ]]; then
+            echo "::error::exp2_five produced NO output files in '${TARGET}'."
+            exit 1
+          fi
+          echo "  OK exp2_five output files present."
 
       # -- Verify exp2_feynman_extrap output files ----------------------------------
       # Checks that both the detailed protocol JSONs AND benchmark_results_extrap.json
