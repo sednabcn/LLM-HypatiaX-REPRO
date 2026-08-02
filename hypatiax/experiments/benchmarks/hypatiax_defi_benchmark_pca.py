@@ -857,6 +857,10 @@ def _hybrid_predict_and_eval(
         "llm_model":      llm_model_name,     # model that generated llm_code, whether or not it was ultimately used
         "model_used":     model_used,         # model(s) that actually produced test_r2 — the auditable ground truth
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
+        # NOTE: this is a placeholder, not the operative success field — the
+        # caller (see FIX 13 in run_benchmark's per-case loop) recomputes
+        # success as a real fit-quality gate from train_r2/test_r2 above and
+        # discards this value entirely. Do not read hy_m["success"] directly.
         "success":        True,
     }
 
@@ -1427,11 +1431,25 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     _test_r2  = hy_m["test_r2"]
                     _nan = lambda v: v is None or (isinstance(v, float) and _math.isnan(v))
 
+                    # FIX 13 (Issue 9 — decision-attribution / masked-failure fix):
+                    # the previous "fixed" success computation only excluded NaN
+                    # test_r2 values, so a catastrophic-but-numeric test_r2 (e.g.
+                    # an LLM formula that executes cleanly but extrapolates to a
+                    # value like -126,483 — see FIX 11's comment above) still
+                    # reported success=True. Recompute success as a real
+                    # fit-quality gate, reusing the same >0.5 threshold as
+                    # pure_llm's FIX 11, so both arms share one pass definition.
+                    _hybrid_success = bool(
+                        not _nan(_train_r2)
+                        and not _nan(_test_r2)
+                        and _test_r2 > 0.5
+                    )
+
                     case_results["hybrid"] = {
                         "train_r2":        _train_r2,
                         "test_r2":         _test_r2,
                         "decision":        hy_m["decision"],
-                        "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
+                        "success":         _hybrid_success,  # FIX 13 — fit-quality gate
                         "time_s":          round(hyb_time, 3),
                         "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                         # Model tracking: llm_model is what generated the candidate
