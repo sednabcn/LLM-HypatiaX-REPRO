@@ -127,7 +127,7 @@ _ALL_METHOD_ROW_NAMES = {
     "ImprovedNNMethod":         "Neural Network",
     "HybridAllDomainsMethod":   "System 3 LLM+Fallback",
     "SymbolicEngineMethod":     "System 2 Symbolic",
-    "HybridSystemV50_2Method":  "Hybrid v50\\_2",
+    "HybridSystemV50_2Method":  "Hybrid v50_2",
 }
 
 _DESIGN_FOCUS = {
@@ -135,7 +135,7 @@ _DESIGN_FOCUS = {
     "Neural Network":        "Baseline",
     "System 2 Symbolic":     "Validation",
     "System 3 LLM+Fallback": "Robustness",
-    "Hybrid v50\\_2":        "Extrapolation",
+    "Hybrid v50_2":          "Extrapolation",
 }
 
 # =============================================================================
@@ -261,8 +261,21 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
     # extrapolation numbers are computed identically to exp2/exp2_five's,
     # not by a second, possibly-divergent implementation.
     extrap_r2, extrap_rmse = {}, {}
+    _predict_fn = getattr(result, "_predict_fn", None)
     for regime_name, (X_e, y_e) in extrap_sets.items():
-        y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])
+        if _predict_fn is not None:
+            # e.g. Neural Network: no evaluable formula string exists, so
+            # replay the method's actual trained predictor on the
+            # extrapolation inputs instead of trying to parse a formula.
+            try:
+                y_pred = np.asarray(_predict_fn(X_e), dtype=float)
+                if not np.all(np.isfinite(y_pred)):
+                    y_pred = None
+            except Exception as _pred_exc:
+                print(f"  [{method_name}] extrap predict_fn failed ({regime_name}): {_pred_exc}")
+                y_pred = None
+        else:
+            y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])
         if y_pred is None:
             extrap_r2[regime_name] = None
             extrap_rmse[regime_name] = None
