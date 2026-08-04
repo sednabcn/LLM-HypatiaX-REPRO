@@ -68,6 +68,14 @@
 #     --method-timeout, --populations, --parsimony) — mirrors suppB fix.
 #   — exp1, exp2_feynman: confirmed correct for NSHARDS=1; no changes needed.
 #
+# FIX-suppB_sc-NOISE0 (2026-08-04):
+#   — suppB_sc was setting NOISE_LEVEL='5.0' and never passing --noiseless,
+#     so the sample-complexity sweep silently ran at sigma=0.05 instead of
+#     the required noise=0%. Replaced with --noiseless (run_sample_complexity_
+#     benchmark.py's documented sigma=0 mode, directly comparable to published
+#     SR figures); NOISE_LEVEL is ignored by the script whenever --noiseless
+#     is set, so the stray env var was removed rather than just zeroed.
+#
 # STEP IDs (linear order):
 #   env_check          → verify Python, PySR, API key
 #   exp1               → core extrapolation benchmark (Tab 9, 10, 15 · Fig 9, 10)
@@ -2968,12 +2976,20 @@ run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6
   printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
   export HYPATIAX_NSHARDS_SUFFIX=\"\${_SHARD_TAG}\"
   echo \"  [suppB_sc] SHARD_INDEX=\${SHARD_INDEX:-0} -> HYPATIAX_NSHARDS_SUFFIX=_nshards\${HYPATIAX_NSHARDS_SUFFIX}\"
-  NOISE_LEVEL='5.0' \\
+  # FIX-suppB_sc-NOISE0: suppB_sc must be run at noise=0% (noiseless mode),
+  # not the noisy default. run_sample_complexity_benchmark.py's dedicated
+  # --noiseless flag is the documented way to get sigma=0 (\"directly
+  # comparable to published SR figures\") -- it also switches the R^2
+  # recovery threshold to the noiseless value. NOISE_LEVEL is only honoured
+  # when --noiseless is NOT passed (see script: \"if _ci_noise_env and not
+  # args.noiseless\"), so the previous NOISE_LEVEL='5.0' with no --noiseless
+  # flag silently ran the whole sweep at sigma=0.05 instead of sigma=0.
   OUT_BASE='${RESULTS_DIR}' \\
   RESULTS_DIR='${RESULTS_DIR}' \\
   RESUME='false' \\
   HYPATIAX_NSHARDS_SUFFIX=\"\${HYPATIAX_NSHARDS_SUFFIX}\" \\
     python3 '${EXPERIMENTS_DIR}/run_sample_complexity_benchmark.py' \\
+    --noiseless \\
     --methods 1 2 3 4 5 6 \\
     --samples ${FEYNMAN_SAMPLES} \\
     --pysr-timeout ${FEYNMAN_TIMEOUT} \\
