@@ -2824,10 +2824,15 @@ jobs:
                     # Try the untracked-files parent first (the common case for
                     # our freshly-computed result files), then fall back to the
                     # main stash tree in case the file was tracked-and-modified.
-                    if git show "stash@{0}^3:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                    # NOTE: success is gated on git show's exit status alone, not on
+                    # file size (-s). A 0-byte stashed file (e.g. the run-start
+                    # marker, which is created via a bare `touch`) is a legitimate,
+                    # correctly-restored result — an [[ -s ... ]] check would treat
+                    # that valid empty file as a failure and wrongly report it lost.
+                    if git show "stash@{0}^3:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null; then
                       echo "  Rescued (colliding) ${STASHED_PATH} -> ${RESCUE_PATH} (from stash@{0}^3, untracked)"
                       RESCUED=$((RESCUED + 1))
-                    elif git show "stash@{0}:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null && [[ -s "${RESCUE_PATH}" ]]; then
+                    elif git show "stash@{0}:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null; then
                       echo "  Rescued (colliding) ${STASHED_PATH} -> ${RESCUE_PATH} (from stash@{0}, tracked)"
                       RESCUED=$((RESCUED + 1))
                     else
@@ -2836,13 +2841,17 @@ jobs:
                     fi
                   else
                     mkdir -p "$(dirname "${STASHED_PATH}")"
-                    if git show "stash@{0}^3:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null && [[ -s "${STASHED_PATH}" ]]; then
+                    # See the RESCUED-branch note above: gate on git show's exit
+                    # status only. A 0-byte file (e.g. .run_start_marker_shardN)
+                    # is a valid restore, not a failure.
+                    if git show "stash@{0}^3:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null; then
                       echo "  Restored (non-colliding) ${STASHED_PATH} (from stash@{0}^3, untracked)"
                       RESTORED=$((RESTORED + 1))
-                    elif git show "stash@{0}:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null && [[ -s "${STASHED_PATH}" ]]; then
+                    elif git show "stash@{0}:${STASHED_PATH}" > "${STASHED_PATH}" 2>/dev/null; then
                       echo "  Restored (non-colliding) ${STASHED_PATH} (from stash@{0}, tracked)"
                       RESTORED=$((RESTORED + 1))
                     else
+                      rm -f "${STASHED_PATH}"
                       echo "  ::warning::Could not restore non-colliding ${STASHED_PATH}; it may be lost."
                       MISSING=$((MISSING + 1))
                     fi
