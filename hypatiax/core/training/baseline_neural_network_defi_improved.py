@@ -269,7 +269,7 @@ def _single_train_run(X_train_t, y_train_t, X_val_t, y_val_t, cfg, seed):
     magic numbers live in this function.
     """
     torch.manual_seed(seed)
-    model     = ImprovedNN(cfg.input_dim, list(cfg.hidden_dims))
+    model     = ImprovedNN(cfg.input_dim, list(cfg.hidden_dims)).double()
     optimizer = cfg.make_optimizer(model)
     scheduler = cfg.make_scheduler(optimizer)
     criterion = nn.MSELoss()
@@ -372,11 +372,11 @@ def train_neural_network(
     y_train_s = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
     y_val_s   = scaler_y.transform(y_val.reshape(-1, 1)).flatten()
 
-    X_train_t = torch.FloatTensor(X_train_s)
-    y_train_t = torch.FloatTensor(y_train_s).reshape(-1, 1)
-    X_val_t   = torch.FloatTensor(X_val_s)
-    y_val_t   = torch.FloatTensor(y_val_s).reshape(-1, 1)
-    X_all_t   = torch.FloatTensor(X_all_s)
+    X_train_t = torch.DoubleTensor(X_train_s)
+    y_train_t = torch.DoubleTensor(y_train_s).reshape(-1, 1)
+    X_val_t   = torch.DoubleTensor(X_val_s)
+    y_val_t   = torch.DoubleTensor(y_val_s).reshape(-1, 1)
+    X_all_t   = torch.DoubleTensor(X_all_s)
 
     # =========================================================================
     # STEP 3 — Multi-restart training  (cfg.n_seeds restarts → keep best)

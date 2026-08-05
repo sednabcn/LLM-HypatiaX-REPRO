@@ -2903,6 +2903,43 @@ print(json.dumps(_to_native(result) if result else {"success": False, "error": "
 """
 
 
+def _kill_process_group(proc: "subprocess.Popen") -> None:
+    """
+    Kill proc and every descendant it spawned (e.g. an orphaned Julia
+    process), not just the direct child. Companion fix to
+    FIX-ISSUE10B-ORPHANED-JULIA above.
+
+    Primary path: SIGKILL the whole process group (proc was started with
+    start_new_session=True, so its pgid == its pid).
+    Fallback path: if that's unavailable (platform without os.killpg, or
+    the group signal race-loses to a process that re-parented before the
+    signal landed), fall back to psutil to enumerate and kill descendants
+    individually. Best-effort throughout -- must never itself raise and
+    crash the suite.
+    """
+    import signal
+    try:
+        pgid = os.getpgid(proc.pid)
+        os.killpg(pgid, signal.SIGKILL)
+        return
+    except (ProcessLookupError, PermissionError, AttributeError, OSError):
+        pass
+    try:
+        import psutil
+        parent = psutil.Process(proc.pid)
+        for child in parent.children(recursive=True):
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                pass
+    except Exception:
+        pass
+    try:
+        proc.kill()
+    except Exception:
+        pass
+
+
 def _run_pysr_in_subprocess(
     method: str,
     X: "np.ndarray",
@@ -2953,18 +2990,33 @@ def _run_pysr_in_subprocess(
 
     proc = None
     try:
+        # FIX-ISSUE10B-ORPHANED-JULIA: start the worker in its own process
+        # group (start_new_session=True == setsid). Previously proc.kill()
+        # on TimeoutExpired only signalled this one direct child; if the
+        # worker spawns Julia as its own OS subprocess (rather than loading
+        # libjulia in-process), killing the wrapper left Julia orphaned and
+        # still running with no timeout of its own -- root cause of the
+        # Arrhenius test hanging 27574s past its configured 300s limit
+        # before someone had to kill the Julia process by hand. Killing the
+        # whole process group on timeout reaches Julia too.
         proc = subprocess.Popen(
             [sys.executable, "-c", _SUBPROCESS_WORKER],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
+            start_new_session=True,
         )
         try:
             stdout_bytes, stderr_bytes = proc.communicate(input=encoded, timeout=timeout)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            _, stderr_bytes = proc.communicate()
+            _kill_process_group(proc)
+            try:
+                _, stderr_bytes = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                # Group kill sent but pipe reader still wedged (rare) --
+                # don't let cleanup itself hang the harness.
+                stderr_bytes = b""
             stderr_tail = (
                 stderr_bytes.decode(errors="replace")[-300:] if stderr_bytes else ""
             )
