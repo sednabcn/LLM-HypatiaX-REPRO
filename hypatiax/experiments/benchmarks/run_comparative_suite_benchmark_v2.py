@@ -66,6 +66,7 @@ import inspect
 import json
 import os
 import random
+import hashlib
 import re
 import sys
 import time
@@ -1154,6 +1155,7 @@ class BaseMethod:
         X: np.ndarray,
         y: np.ndarray,
         y_pred_llm: np.ndarray,
+        description: str = "",
     ) -> Optional[np.ndarray]:
         """Train a shallow MLP on the LLM formula residuals and return
         corrected predictions.
@@ -1175,6 +1177,12 @@ class BaseMethod:
         if not TORCH_AVAILABLE:
             return None
         try:
+            # FIX-ISSUE2-UNSEEDED-NN (follow-up): this helper was training
+            # completely unseeded, same root cause as Strategies 3a/3b above
+            # -- seed deterministically from the equation description via
+            # sha256 (not hash(), which is per-process-randomized).
+            _seed = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+            torch.manual_seed(_seed)
             from sklearn.preprocessing import StandardScaler as _SS
 
             # ── Detect whether log-space training is appropriate ─────────────
@@ -1592,6 +1600,22 @@ class ImprovedNNMethod(BaseMethod):
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._ImprovedNN is None:
             return self._unavailable("ImprovedNN not available")
+
+        # FIX-ISSUE2-UNSEEDED-NN (follow-up): when called directly (the
+        # default nn_seeds=1 path -- see ProtocolBenchmarkSuite's dispatch,
+        # which only routes through run_multiseed()/_run_single_seed() when
+        # nn_seeds > 1), this method trained with no seed set at all. Guard
+        # on self._nn_seeds == 1 so we do NOT touch the RNG state when
+        # called via _run_single_seed (which already seeds per trial before
+        # calling this method) -- that seeding must stay independent per
+        # trial for run_multiseed()'s variance estimate to remain meaningful.
+        if self._nn_seeds == 1:
+            _seed = int(
+                hashlib.sha256(description.encode()).hexdigest(), 16
+            ) % (2**31)
+            if TORCH_AVAILABLE:
+                torch.manual_seed(_seed)
+            np.random.seed(_seed)
 
         try:
             X_train, X_test, y_train, y_test = train_test_split(
@@ -2176,14 +2200,21 @@ class HybridDeFiMethod(BaseMethod):
                     _yc = y - float(np.mean(y))
                     if float(np.sum(_yc**2)) > 0:
                         _y_pred_defi = float(np.mean(y)) + float(np.sqrt(max(r2_val, 0.0))) * _yc
-                        _rng = np.random.default_rng(seed=int(abs(hash(description)) % (2**31)))
+                        # FIX-ISSUE2-UNSEEDED-NN (follow-up): hash() is
+                        # per-process-randomized unless PYTHONHASHSEED is
+                        # pinned -- switched to sha256, same fix already
+                        # applied to Strategies 3a/3b in HybridAllDomainsMethod.
+                        _rng = np.random.default_rng(
+                            seed=int(
+                                hashlib.sha256(description.encode()).hexdigest(), 16
+                            ) % (2**31))
                         _y_pred_defi = _y_pred_defi + _rng.normal(0, rmse_val * 0.01, size=len(y))
                 except Exception:
                     _y_pred_defi = None
             if (TORCH_AVAILABLE and _y_pred_defi is not None
                     and np.all(np.isfinite(_y_pred_defi))
                     and np.isfinite(r2_val) and r2_val > -1.0):
-                _y_hybrid = self._nn_residual_fit(X, y, _y_pred_defi)
+                _y_hybrid = self._nn_residual_fit(X, y, _y_pred_defi, description)
                 if _y_hybrid is not None and np.all(np.isfinite(_y_hybrid)):
                     _r2h  = self._safe_r2(y, _y_hybrid)
                     _rmh  = self._safe_rmse(y, _y_hybrid)
@@ -2305,6 +2336,7 @@ class HybridAllDomainsMethod(BaseMethod):
         X: np.ndarray,
         y: np.ndarray,
         y_pred_llm: np.ndarray,
+        description: str = "",
     ) -> Optional[np.ndarray]:
         """Train a shallow MLP on the LLM formula's residuals and return
         corrected predictions: y_hybrid = y_pred_llm + NN(X).
@@ -2319,6 +2351,10 @@ class HybridAllDomainsMethod(BaseMethod):
         if not TORCH_AVAILABLE:
             return None
         try:
+            # FIX-ISSUE2-UNSEEDED-NN (follow-up): same fix as BaseMethod's
+            # copy of this helper -- was training fully unseeded.
+            _seed = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+            torch.manual_seed(_seed)
             from sklearn.preprocessing import StandardScaler as _SS
 
             # Detect wide-range positive targets (power-law equations like Newton's
@@ -2518,6 +2554,39 @@ class HybridAllDomainsMethod(BaseMethod):
 
                 if _use_direct:
                     try:
+                        # FIX-ISSUE2-UNSEEDED-NN (2026-08-04): this path exists
+                        # specifically to fix "Newton's gravity"-style failures
+                        # (see comment above) -- i.e. it fires ONLY for wide-
+                        # dynamic-range, all-positive equations: Coulomb's law,
+                        # Newton's gravitation, the ideal gas law. It trains a
+                        # fresh net3/opt3 with NO explicit seed, so weight init
+                        # draws from the global unseeded torch RNG, whose state
+                        # depends on how many prior torch calls happened earlier
+                        # in *this* process -- different every run/shard.
+                        #
+                        # Confirmed as the root cause of Issue 2: HyperSymLoop's
+                        # noiseless pass rate varied 26-30/30 across 12 otherwise-
+                        # identical runs, with every single failure landing on
+                        # exactly these three equation types and none of the
+                        # other 27 -- consistent with genuine optimizer
+                        # non-determinism on this one code path, not a timeout
+                        # or system-load effect (failures scored 0.9996-0.9998,
+                        # not the 0.0/"timed_out" signature of the hard
+                        # per-method timeout above).
+                        #
+                        # Fix: seed deterministically from the equation
+                        # description, the same way Strategy 3b already seeds
+                        # its reconstruction noise below -- but via sha256
+                        # rather than Python's built-in hash(), since hash()
+                        # is randomized per-process unless PYTHONHASHSEED is
+                        # pinned, which would silently reintroduce the same
+                        # cross-run non-determinism this fix is meant to remove
+                        # (Strategy 3b's existing hash()-based seed likely has
+                        # the same latent issue and should be switched too).
+                        _seed3 = int(
+                            hashlib.sha256(description.encode()).hexdigest(), 16
+                        ) % (2**31)
+                        torch.manual_seed(_seed3)
                         from sklearn.preprocessing import StandardScaler as _SS3
                         # Log-transform strictly-positive, wide-range X columns
                         _lc3 = [c for c in range(X.shape[1])
@@ -2578,8 +2647,15 @@ class HybridAllDomainsMethod(BaseMethod):
                 # Strategy 3b — algebraic reconstruction fallback for normal-scale eqs
                 if y_pred_llm is None:
                     try:
+                        # FIX-ISSUE2-UNSEEDED-NN (2026-08-04): hash() on a str
+                        # is randomized per-process unless PYTHONHASHSEED is
+                        # pinned, so this "reproducible" seed wasn't actually
+                        # stable across separate runs -- switched to sha256 for
+                        # the same reason as Strategy 3a above.
                         rng = np.random.default_rng(
-                            seed=int(abs(hash(description)) % (2**31)))
+                            seed=int(
+                                hashlib.sha256(description.encode()).hexdigest(), 16
+                            ) % (2**31))
                         y_mean   = float(np.mean(y))
                         y_center = y - y_mean
                         ss_tot   = float(np.sum(y_center ** 2))
@@ -2629,7 +2705,7 @@ class HybridAllDomainsMethod(BaseMethod):
                 and np.isfinite(r2v)
                 and r2v > -1.0
             ):
-                y_hybrid = self._nn_residual_fit(X, y, y_pred_llm)
+                y_hybrid = self._nn_residual_fit(X, y, y_pred_llm, description)
                 if y_hybrid is not None and np.all(np.isfinite(y_hybrid)):
                     r2_hybrid   = self._safe_r2(y, y_hybrid)
                     rmse_hybrid = self._safe_rmse(y, y_hybrid)
@@ -4848,7 +4924,14 @@ Examples
             _desc, _X, _y, _vnames, _meta, _dom = _tup
             _y_std = float(np.std(_y))
             if _y_std > 0.0:
-                _rng_seed = int(abs(hash(_desc)) % (2**31))
+                # FIX-ISSUE2-UNSEEDED-NN (follow-up): hash() is
+                # per-process-randomized unless PYTHONHASHSEED is pinned, so
+                # noise injection was not actually reproducible across runs
+                # with the same sigma despite the comment above claiming it
+                # was -- switched to sha256, same fix as elsewhere in this file.
+                _rng_seed = int(
+                    hashlib.sha256(_desc.encode()).hexdigest(), 16
+                ) % (2**31)
                 _rng = np.random.default_rng(seed=_rng_seed)
                 _noise = _rng.normal(0.0, _HYPATIAX_NOISE_LEVEL * _y_std, size=len(_y))
                 _y = _y + _noise
