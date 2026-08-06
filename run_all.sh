@@ -2714,6 +2714,54 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
 run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routing)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/hybrid_pysr/defi' '${RESULTS_DIR}/figures' '${RESULTS_DIR}/tables'
+
+  # ── FIX-ISSUE10B-REGRESSION-GATE ────────────────────────────────────────
+  # Dependency-free regression test for the outer-timeout -> _ProcBox ->
+  # _kill_process_group wiring fixed in run_comparative_suite_benchmark_v2_
+  # FIXED.py this session (item 10b). It doesn't touch torch/pysr/juliacall,
+  # so it's cheap to run every time and catches a regression in the wiring
+  # itself (e.g. someone drops proc_box.clear() or the outer handler's
+  # getattr call) before the far more expensive DeFi benchmark below runs.
+  #
+  # Result is written to regression_tests/, NOT hybrid_pysr/defi/ — the
+  # latter is suppA's canonical source_dir for figure/table generation
+  # (config/experiments.yml), and a test-result JSON in that schema would
+  # break generate_tables.py/generate_figures.py's suppA parser. Keeping it
+  # in its own subdir means ci_postprocess.yml's suppA push-trigger glob
+  # (hybrid_pysr/**/*.json) never sees it.
+  mkdir -p '${RESULTS_DIR}/regression_tests'
+  _WIRING_TEST='${EXPERIMENTS_DIR}/../tests/test_proc_box_wiring.py'
+  [ -f \"\${_WIRING_TEST}\" ] || _WIRING_TEST='hypatiax/experiments/tests/test_proc_box_wiring.py'
+  if [ -f \"\${_WIRING_TEST}\" ]; then
+    echo '[suppA] Running proc_box outer-timeout wiring regression test (item 10b)...'
+    _WIRING_LOG='${RESULTS_DIR}/regression_tests/proc_box_wiring_run.log'
+    if python3 \"\${_WIRING_TEST}\" 2>&1 | tee \"\${_WIRING_LOG}\"; then
+      _WIRING_STATUS='PASS'
+    else
+      _WIRING_STATUS='FAIL'
+    fi
+    python3 - \"\${_WIRING_STATUS}\" \"\${_WIRING_LOG}\" <<'PYEOF'
+import json, sys, datetime
+status, log_path = sys.argv[1], sys.argv[2]
+out = {
+    'test': 'proc_box_wiring',
+    'issue': '10b',
+    'status': status,
+    'log': log_path,
+    'timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+}
+with open('${RESULTS_DIR}/regression_tests/proc_box_wiring_result.json', 'w') as f:
+    json.dump(out, f, indent=2)
+print(f'[suppA] proc_box wiring test: {status} -> regression_tests/proc_box_wiring_result.json')
+PYEOF
+    if [ \"\${_WIRING_STATUS}\" != 'PASS' ]; then
+      echo '::error::[suppA] proc_box outer-timeout wiring regression test FAILED — the item 10b fix appears to have regressed. Refusing to run the DeFi benchmark against a possibly-broken timeout harness. See regression_tests/proc_box_wiring_run.log.'
+      exit 1
+    fi
+  else
+    echo '[suppA] WARNING: test_proc_box_wiring.py not found (expected at hypatiax/experiments/tests/) — skipping item 10b wiring regression check.'
+  fi
+
   python3 '${EXPERIMENTS_DIR}/run_hybrid_system_benchmark.py' \
     2>&1 | tee    '${RESULTS_DIR}'/suppA_run.log
   python3 hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py \

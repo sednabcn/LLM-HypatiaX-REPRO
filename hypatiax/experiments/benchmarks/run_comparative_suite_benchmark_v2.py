@@ -60,7 +60,15 @@ Usage
 """
 
 import concurrent.futures as _cf
-import ctypes          # for _kill_thread (hard timeout enforcement)
+# FIX-ISSUE10B-DEAD-KILLTHREAD: ctypes was imported only to support
+# _kill_thread(), which was called below but never defined anywhere in
+# this file -- every invocation raised NameError, silently swallowed by
+# a blanket `except Exception: pass`. Removed rather than implemented:
+# the real hang (orphaned Julia subprocess, see FIX-ISSUE10B-ORPHANED-JULIA
+# / _kill_process_group above) isn't a blocked Python thread, so injecting
+# SystemExit into the thread wouldn't have touched the runaway process
+# either. See patch_report_unseeded_nn_followup.md-style writeup for
+# Issue 10b.
 import threading as _threading
 import inspect
 import json
@@ -935,6 +943,13 @@ class BaseMethod:
     def __init__(self, name: str, verbose: bool = False):
         self.name    = name
         self.verbose = verbose
+        # FIX-ISSUE10B-OUTER-TIMEOUT: default to None for methods that don't
+        # run PySR in a subprocess (only SymbolicEngineMethod and
+        # HybridSystemV50_2Method set this to a real _ProcBox before
+        # submitting to the thread pool). Having the attribute always present
+        # lets the outer timeout handler check it uniformly via getattr
+        # without needing an isinstance check against specific method classes.
+        self._proc_box = None
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         raise NotImplementedError
@@ -2903,6 +2918,56 @@ print(json.dumps(_to_native(result) if result else {"success": False, "error": "
 """
 
 
+class _ProcBox:
+    """
+    FIX-ISSUE10B-OUTER-TIMEOUT: thread-safe handoff for the live PySR
+    subprocess handle.
+
+    Context: the outer per-method hard timeout (_METHOD_TIMEOUT_SECS, e.g.
+    300s for tests 1-18) wraps method.run(...) in a ThreadPoolExecutor and
+    waits via future.result(timeout=...). On expiry it used to try to
+    force-terminate the *background thread* via a ctypes trick
+    (_kill_thread) -- removed in FIX-ISSUE10B-DEAD-KILLTHREAD because that
+    function was never defined and the call always silently no-op'd via
+    `except Exception: pass`.
+
+    Even if it had worked, killing the thread would not have stopped
+    anything: the thread's real resource is a `subprocess.Popen` handle
+    three call-layers down inside _run_pysr_in_subprocess(), which the
+    outer scope has no reference to. So when the 300s outer timeout fired,
+    that subprocess (with its own separate, larger pysr_timeout of
+    900-1100s) kept running completely undetected, competing for CPU with
+    whatever test the harness moved on to next -- the actual mechanism
+    behind a 300s-limit test overrunning by orders of magnitude.
+
+    Fix: give the outer scope a way to reach the *actual* subprocess.
+    SymbolicEngineMethod/HybridSystemV50_2Method attach a fresh _ProcBox
+    to `self._proc_box` immediately before submitting to the thread pool;
+    _run_pysr_in_subprocess registers its Popen handle into that box the
+    moment it spawns, and clears it when the call returns (success,
+    failure, or its own inner timeout). If the *outer* timeout fires while
+    a proc is still registered, the handler calls _kill_process_group()
+    on it directly -- reaching the real resource instead of the thread
+    that happens to be blocked on it.
+    """
+
+    def __init__(self):
+        self._lock = _threading.Lock()
+        self._proc = None
+
+    def set(self, proc) -> None:
+        with self._lock:
+            self._proc = proc
+
+    def clear(self) -> None:
+        with self._lock:
+            self._proc = None
+
+    def get(self):
+        with self._lock:
+            return self._proc
+
+
 def _kill_process_group(proc: "subprocess.Popen") -> None:
     """
     Kill proc and every descendant it spawned (e.g. an orphaned Julia
@@ -2949,6 +3014,7 @@ def _run_pysr_in_subprocess(
     metadata: Dict,
     extra_kwargs: Optional[Dict] = None,
     timeout: Optional[int] = None,
+    proc_box: Optional["_ProcBox"] = None,
 ) -> Dict:
     """
     Run a PySR-backed method in an isolated subprocess.
@@ -2958,6 +3024,17 @@ def _run_pysr_in_subprocess(
     method : "symbolic_engine" | "hybrid_v50_2"
     timeout : seconds before giving up (default 600; Julia startup alone can
               take 60-90 s, so 300 s left almost no time for actual search)
+    proc_box : FIX-ISSUE10B-OUTER-TIMEOUT. Optional handoff box (see _ProcBox
+              docstring above). When provided, the live Popen handle is
+              registered into it immediately after spawn and cleared in a
+              `finally` before this function returns by any path (normal
+              return, inner-timeout return, or exception). This lets the
+              *outer* per-method timeout handler (which has no direct
+              reference to `proc` — it is a local variable in this function,
+              three call-layers below the outer scope) reach in and kill the
+              real subprocess/process-group if the outer timeout fires while
+              this call is still in flight, instead of abandoning it to run
+              for its own separate (larger) inner `timeout`.
 
     Returns
     -------
@@ -3007,6 +3084,11 @@ def _run_pysr_in_subprocess(
             env=env,
             start_new_session=True,
         )
+        # FIX-ISSUE10B-OUTER-TIMEOUT: publish the live handle immediately so
+        # the outer per-method timeout handler can reach it even if it fires
+        # while we're still blocked in communicate() below.
+        if proc_box is not None:
+            proc_box.set(proc)
         try:
             stdout_bytes, stderr_bytes = proc.communicate(input=encoded, timeout=timeout)
         except subprocess.TimeoutExpired:
@@ -3053,6 +3135,12 @@ def _run_pysr_in_subprocess(
         if proc is not None:
             proc.kill()
         return {"success": False, "error": f"subprocess launch failed: {exc}"}
+    finally:
+        # FIX-ISSUE10B-OUTER-TIMEOUT: unregister on every exit path (normal
+        # return, inner-timeout return, or exception) so the outer handler
+        # never acts on a stale/already-finished proc after this call returns.
+        if proc_box is not None:
+            proc_box.clear()
 
 
 # ============================================================================
@@ -3189,6 +3277,12 @@ class SymbolicEngineMethod(BaseMethod):
               f"  (spread={_spread:.1f}dec, vars={X.shape[1]}, score={_score:.2f})",
               flush=True)
 
+        # FIX-ISSUE10B-OUTER-TIMEOUT: attach a fresh proc box before entering
+        # the subprocess call so the outer per-method timeout handler (which
+        # wraps this whole .run() call in a ThreadPoolExecutor) has a way to
+        # reach the real Popen handle if it fires while we're still blocked
+        # here — see _ProcBox docstring above _run_pysr_in_subprocess.
+        self._proc_box = _ProcBox()
         result = _run_pysr_in_subprocess(
             method="symbolic_engine",
             X=X, y=y,
@@ -3197,6 +3291,7 @@ class SymbolicEngineMethod(BaseMethod):
             metadata=metadata,
             extra_kwargs=_se_kwargs,
             timeout=_subprocess_timeout,
+            proc_box=self._proc_box,
         )
 
         if result and result.get("success"):
@@ -3350,6 +3445,9 @@ class HybridSystemV50_2Method(BaseMethod):
         # Old value (_PYSR_TIMEOUT + 500 = 1100s) EXCEEDED the 900s method
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
         _subprocess_timeout = max(60, _METHOD_TIMEOUT_SECS - 100)
+        # FIX-ISSUE10B-OUTER-TIMEOUT: see matching comment in
+        # SymbolicEngineMethod.run — same handoff pattern.
+        self._proc_box = _ProcBox()
         result = _run_pysr_in_subprocess(
             method="hybrid_v50_2",
             X=X, y=y,
@@ -3358,6 +3456,7 @@ class HybridSystemV50_2Method(BaseMethod):
             metadata=_meta,
             extra_kwargs=_tc_kwargs,
             timeout=_subprocess_timeout,
+            proc_box=self._proc_box,
         )
 
         if result and result.get("success"):
@@ -3566,26 +3665,37 @@ class ProtocolBenchmarkSuite:
                 )
                 if verbose:
                     print(f"⏱ timeout ({_METHOD_TIMEOUT_SECS}s)", end="", flush=True)
-                # Inject SystemExit into the background thread so it stops
-                # consuming API quota.  _kill_thread returns False silently
-                # if the thread already exited (race condition is harmless).
-                for _t in _threading.enumerate():
-                    if _t.ident and not _t.daemon and _t is not _threading.main_thread():
-                        pass  # only kill daemon threads spawned by our pool
-                # ThreadPoolExecutor worker threads ARE daemon threads —
-                # find them by checking the running future's thread reference
-                # via the pool's internal _threads set.
-                try:
-                    for _worker_thread in list(_pool._threads):
-                        if _worker_thread.is_alive():
-                            _killed = _kill_thread(_worker_thread.ident)
-                            if verbose:
-                                print(
-                                    f" [thread {'killed' if _killed else 'already exited'}]",
-                                    end="", flush=True
-                                )
-                except Exception:
-                    pass  # ctypes injection is best-effort; never crash the suite
+                # FIX-ISSUE10B-DEAD-KILLTHREAD: this block previously called
+                # _kill_thread(_worker_thread.ident) to inject SystemExit into
+                # the background thread. _kill_thread was never defined
+                # anywhere in this file, so every timeout silently raised
+                # NameError here (caught by a blanket `except Exception: pass`)
+                # and no kill of any kind ever happened -- the "[thread
+                # killed]" verbose message was never reachable in practice.
+                # Removed rather than implemented: the background thread is
+                # merely blocked on the (already-fixed) PySR subprocess call;
+                # it is not itself the resource leak. The thread is a daemon
+                # thread (ThreadPoolExecutor default), so it will not block
+                # process exit even if it runs to completion.
+                #
+                # FIX-ISSUE10B-OUTER-TIMEOUT: the *actual* runaway resource is
+                # the real subprocess.Popen handle living three call-layers
+                # down inside _run_pysr_in_subprocess() -- this outer handler
+                # previously had no reference to it, so on a 300s outer
+                # timeout that subprocess (with its own separate, larger
+                # 900-1100s inner pysr_timeout) kept running completely
+                # undetected until ITS OWN inner timeout eventually fired.
+                # SymbolicEngineMethod/HybridSystemV50_2Method now attach a
+                # fresh _ProcBox to self._proc_box immediately before
+                # submitting to the pool; reach through it here and kill the
+                # real process group directly, closing that gap.
+                _proc_box = getattr(method, "_proc_box", None)
+                if _proc_box is not None:
+                    _live_proc = _proc_box.get()
+                    if _live_proc is not None:
+                        if verbose:
+                            print(" [killing orphaned subprocess]", end="", flush=True)
+                        _kill_process_group(_live_proc)
             finally:
                 # FIXED: drop cancel_futures=True — it caused blocking on Python < 3.12.
                 # wait=False alone is safe: the thread is a daemon and will not

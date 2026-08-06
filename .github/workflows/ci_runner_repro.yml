@@ -2258,6 +2258,44 @@ jobs:
           fi
           echo "  OK suppA output files present."
 
+      # FIX-ISSUE10B-REGRESSION-GATE: run_all.sh's suppA step already exits 1
+      # (and therefore fails "Run experiment tasks" above) if the proc_box
+      # outer-timeout wiring regression test fails or errors. This step is
+      # defense-in-depth surfacing, not the primary gate: it makes the PASS/
+      # FAIL/absent status visible directly in the CI UI (via ::error /
+      # ::warning annotations and the step summary) instead of requiring
+      # someone to scroll through the "Run experiment tasks" log to find it.
+      - name: Verify suppA wiring regression test result
+        if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
+        run: |
+          RESULT_JSON="${{ github.workspace }}/${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
+          echo "=== suppA proc_box wiring regression test (item 10b) ==="
+          if [[ ! -f "${RESULT_JSON}" ]]; then
+            echo "::warning::${RESULT_JSON} not found — test_proc_box_wiring.py was likely absent from hypatiax/experiments/tests/, so run_all.sh skipped the wiring check (see suppA's 'Run experiment tasks' log for the skip warning). Not fatal, but the item 10b regression gate did not run."
+            exit 0
+          fi
+          STATUS=$(python3 -c "import json; print(json.load(open('${RESULT_JSON}'))['status'])")
+          echo "  Result file : ${RESULT_JSON}"
+          echo "  Status      : ${STATUS}"
+          {
+            echo "### suppA — proc_box wiring regression test (item 10b)"
+            echo "Status: **${STATUS}**"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${STATUS}" != "PASS" ]]; then
+            echo "::error::suppA proc_box wiring regression test status is '${STATUS}', not PASS. run_all.sh should already have failed the run on this — if you're seeing this, check regression_tests/proc_box_wiring_run.log."
+            exit 1
+          fi
+          echo "  OK wiring regression test passed."
+
+      - name: Upload suppA wiring regression test log
+        if: ${{ always() && needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: suppA-proc-box-wiring-test-shard${{ matrix.shard }}
+          path: ${{ env.OUT_BASE }}/regression_tests/
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Verify hybrid_all_domains output files exist
         if: ${{ needs.plan.outputs.exp_id == 'hybrid_all_domains' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
