@@ -39,6 +39,16 @@
 #    .github/scripts/run_issue2b_experiment.sh
 #    .github/scripts/check_issue2b_reproducibility.py
 #
+#  NOTE ON DETERMINISM PINNING: run_issue2b_experiment.sh unconditionally
+#  exports CUBLAS_WORKSPACE_CONFIG, PYTHONHASHSEED, and OMP/MKL/OPENBLAS
+#  thread pinning before either phase runs, to remove CPU/GPU
+#  reduction-order noise as a source of R^2 spread that's unrelated to the
+#  hash()->hashlib.sha256() seeding fix this experiment is testing. The
+#  `tol` input below controls check_issue2b_reproducibility.py's
+#  comparator tolerance for whatever spread survives pinning — it defaults
+#  to 0.0 (exact bit-match) and should stay there unless you've confirmed
+#  pinning alone doesn't fully close the gap.
+#
 #  NOTE ON --protocol all_domains: the harness's default protocol
 #  ('benchmark'/Feynman) does NOT produce the 30-equation/11-domain exp2
 #  set Table 4 is built from — confirmed against the script's own argparse
@@ -78,6 +88,11 @@ run-name: "Item 2b determinism experiment · ${{ inputs.skip_phase_b == 'true' &
         type: choice
         options: ["false", "true"]
         default: "false"
+
+      tol:
+        description: "Comparator tolerance for check_issue2b_reproducibility.py — allowed |r2_a - r2_b| before an equation is flagged non-deterministic. Leave at 0.0 (exact bit-match) unless you've already tried the determinism pinning (CUBLAS_WORKSPACE_CONFIG / thread pinning, set unconditionally in run_issue2b_experiment.sh) and are still seeing sub-threshold spread you've decided is acceptable, e.g. from CPU reduction-order noise."
+        required: false
+        default: "0.0"
 
 # Scoped so a second dispatch queues behind the first rather than racing on
 # the same RUNS_DIR / commit target — same rationale as ci_runner_repro.yml's
@@ -238,6 +253,7 @@ jobs:
           N_RUNS:       ${{ github.event.inputs.n_runs }}
           SKIP_PHASE_B: ${{ github.event.inputs.skip_phase_b == 'true' && '1' || '0' }}
           CHECK_SCRIPT: ${{ github.workspace }}/.github/scripts/check_issue2b_reproducibility.py
+          TOL:          ${{ github.event.inputs.tol }}
         run: |
           set +e
           bash .github/scripts/run_issue2b_experiment.sh "${{ github.event.inputs.harness_path }}"
@@ -311,6 +327,7 @@ jobs:
           echo "- Result: **${{ steps.run_experiment.outputs.result || 'n/a' }}**" >> "$GITHUB_STEP_SUMMARY"
           echo "- Phase A runs: ${{ github.event.inputs.n_runs }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Phase B attempted: ${{ github.event.inputs.skip_phase_b != 'true' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Comparator tolerance: ${{ github.event.inputs.tol }} (0.0 = exact bit-match)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Full log + JSON output: see uploaded artifact \`issue2b-experiment-${{ github.run_id }}\`" >> "$GITHUB_STEP_SUMMARY"
           if [[ "${{ steps.run_experiment.outputs.result }}" == "closed" ]]; then
             echo "" >> "$GITHUB_STEP_SUMMARY"

@@ -36,6 +36,33 @@
 #   CHECK_SCRIPT  Path to check_issue2b_reproducibility.py (default: alongside this script)
 #   PYTHON        Python interpreter (default: python3)
 #   SKIP_PHASE_B  Set to 1 to stop after Phase A regardless of result
+#   TOL           Allowed |r2_a - r2_b| before check_issue2b_reproducibility.py flags
+#                 a mismatch (default: 0.0 = exact bit-match). Only use a non-zero
+#                 value deliberately, e.g. "1e-5" -- see the DETERMINISM PINNING
+#                 note below for why this should be a last resort, not a first one.
+#
+# --------------------------------------------------------------------------
+# DETERMINISM PINNING
+# --------------------------------------------------------------------------
+# The NN-seeding patch (hash() -> hashlib.sha256()) fixes seed derivation,
+# but PyTorch is not bit-deterministic by default even with a fixed seed:
+# reduction order in matmul/conv ops can vary run-to-run depending on BLAS
+# thread scheduling and algorithm selection, producing tiny (~1e-6) R^2
+# spread that has nothing to do with the seeding bug. This was observed on
+# a live CI run (Item 2b workflow_dispatch, run 31252014219): EHD/M3 was
+# bit-identical across 3 runs, HSL/M4 was bit-identical on 29/30 equations
+# but showed a 7.6e-07 R^2 spread on exactly one (Snell's Law: n1*sin(θ1)
+# = n2*sin(θ2)) -- a pass/fail-neutral spread consistent with reduction-order
+# noise, not a seeding failure.
+#
+# The env vars below pin every determinism knob that's controllable from
+# OUTSIDE the harness (i.e. without editing run_comparative_suite_benchmark_v2.py
+# itself). They are exported unconditionally, before either phase runs, so
+# both Phase A and Phase B benefit. If a harness code change is later made
+# to call torch.use_deterministic_algorithms(True) internally,
+# CUBLAS_WORKSPACE_CONFIG must already be set in the environment before the
+# Python process starts (PyTorch reads it at CUDA init) -- these exports
+# stay correct either way.
 #
 # Exit codes: 0 = both phases completed, Item 2b closed, Table 4 data ready.
 #             1 = Phase A found non-determinism; Phase B was not attempted.
@@ -63,6 +90,7 @@ N_RUNS="${N_RUNS:-3}"
 CHECK_SCRIPT="${CHECK_SCRIPT:-$SCRIPT_DIR/check_issue2b_reproducibility.py}"
 PYTHON="${PYTHON:-python3}"
 SKIP_PHASE_B="${SKIP_PHASE_B:-0}"
+TOL="${TOL:-0.0}"
 
 if [[ "$N_RUNS" -lt 2 ]]; then
     echo "ERROR: N_RUNS must be >= 2 (need at least 2 runs to compare)." >&2
@@ -80,6 +108,20 @@ echo "=== Item 2b experiment started $(date -u +%FT%TZ) ===" | tee -a "$LOG"
 echo "Harness:  $HARNESS_PATH" | tee -a "$LOG"
 echo "Runs dir: $RUNS_DIR" | tee -a "$LOG"
 echo "N_RUNS:   $N_RUNS (Phase A)" | tee -a "$LOG"
+
+# ── Determinism pinning ─────────────────────────────────────────────────
+# See "DETERMINISM PINNING" note above the args block. Exported before
+# either phase runs, so both Phase A and Phase B benefit.
+export CUBLAS_WORKSPACE_CONFIG=":4096:8"   # required by cuBLAS for deterministic GEMM
+export PYTHONHASHSEED=0                     # belt-and-suspenders alongside the sha256 patch
+export OMP_NUM_THREADS=1                    # fixes reduction order in NumPy/torch CPU ops
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export TORCH_DETERMINISTIC=1                # advisory; harness must still call
+                                             # torch.use_deterministic_algorithms(True)
+                                             # for CUDA algorithm selection to honor this
+echo "Determinism pinning: CUBLAS_WORKSPACE_CONFIG=$CUBLAS_WORKSPACE_CONFIG, OMP/MKL/OPENBLAS_NUM_THREADS=1, PYTHONHASHSEED=0" | tee -a "$LOG"
+echo "Comparator tolerance: TOL=$TOL (0.0 = exact bit-match)" | tee -a "$LOG"
 
 # Shared flags for the 30-equation / 11-domain exp2 protocol, matching the
 # published reproduction command in supp_benchmark_report.tex plus the two
@@ -140,7 +182,7 @@ done
 # ── Compare Phase A runs ────────────────────────────────────────────────
 echo "" | tee -a "$LOG"
 echo "=== PHASE A: comparing ${#PHASE_A_DIRS[@]} runs ===" | tee -a "$LOG"
-if "$PYTHON" "$CHECK_SCRIPT" "${PHASE_A_DIRS[@]}" | tee -a "$LOG"; then
+if "$PYTHON" "$CHECK_SCRIPT" "${PHASE_A_DIRS[@]}" --tol "$TOL" | tee -a "$LOG"; then
     phase_a_rc=0
 else
     phase_a_rc=$?
@@ -184,7 +226,7 @@ fi
 
 echo "" | tee -a "$LOG"
 echo "=== Table 4 candidate summary (from Phase B full run) ===" | tee -a "$LOG"
-"$PYTHON" "$CHECK_SCRIPT" "$full_dir" "$full_dir" --emit-table4 | tee -a "$LOG"
+"$PYTHON" "$CHECK_SCRIPT" "$full_dir" "$full_dir" --tol "$TOL" --emit-table4 | tee -a "$LOG"
 # (passing full_dir twice: the check script wants >=2 runs to compare; with
 #  a single run this trivially reports "deterministic vs itself" and still
 #  emits the --emit-table4 summary, which is what we actually want here.)
