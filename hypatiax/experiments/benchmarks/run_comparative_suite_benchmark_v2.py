@@ -1547,6 +1547,20 @@ class PureLLMBaselineMethod(BaseMethod):
                 description, metadata.get("domain", "unknown"), var_names, metadata,
                 X=X, y=y,
             )
+            # FIX-TRUNCATION-MASKS-API-ERROR: previously, if generate_formula()
+            # caught an exception (e.g. an API error) it returned only
+            # {"error": <real message>} with no "python_code" key. That fell
+            # through to the truncation guard below, which sees an empty
+            # string, decides it's a "truncated" formula, and reports the
+            # generic "truncated_formula: no valid return statement" —
+            # silently discarding the actual error (temperature-deprecation
+            # 400s, rate limits, auth failures, etc. all looked identical to
+            # a genuinely truncated LLM completion). Checked directly here so
+            # the real cause is surfaced instead of misdiagnosed.
+            if result.get("error"):
+                self._log(f"generate_formula() failed: {result['error'][:150]}")
+                return self._unavailable(f"generate_formula_error: {result['error'][:200]}")
+
             python_code = result.get("python_code", "") or result.get("formula_code", "") or ""
 
             # ── TRUNCATION GUARD (v2.0) ───────────────────────────────────
@@ -4692,8 +4706,17 @@ Examples
             "PySR/Julia). Useful when Julia startup overhead dominates test time."
         ),
     )
+    # FIX-ISSUE10A-SENTINEL-DEFAULT: default=None (not the literal 1100/900)
+    # so downstream code can tell "user explicitly passed this flag" apart
+    # from "flag omitted, still at default." A value-equality check
+    # (`if args.pysr_timeout == 1100`) can't make that distinction -- an
+    # explicit `--pysr-timeout 1100` looks identical to no flag at all, so
+    # a stale/legacy env var override would silently clobber an explicit
+    # CLI choice whenever it happened to match the default. See
+    # _DEFAULT_PYSR_TIMEOUT / _DEFAULT_METHOD_TIMEOUT below for where the
+    # real default value now lives.
     parser.add_argument(
-        "--pysr-timeout", type=int, default=1100, dest="pysr_timeout",
+        "--pysr-timeout", type=int, default=None, dest="pysr_timeout",
         metavar="SECS",
         help=(
             "Seconds before a PySR subprocess is killed "
@@ -4703,7 +4726,7 @@ Examples
         ),
     )
     parser.add_argument(
-        "--method-timeout", type=int, default=900, dest="method_timeout",
+        "--method-timeout", type=int, default=None, dest="method_timeout",
         metavar="SECS",
         help=(
             "Hard timeout in seconds for each individual method call "
@@ -4860,24 +4883,78 @@ Examples
     args = parser.parse_args()
 
     # ── BUG 6 FIX: Read CI environment overrides before applying CLI args ──
-    # CI sets FEYNMAN_TIMEOUT and JOB_DEADLINE in the environment but the script
-    # previously never read them, silently using 90s method timeout and 600s PySR
-    # timeout instead of the paper-quality 1100s values.
-    # CLI args take precedence when they differ from their defaults.
-    _env_feynman_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
-    _env_job_dl     = int(os.environ.get("JOB_DEADLINE",    "0")) or None
+    # CI sets timeout overrides in the environment but the script previously
+    # never read them, silently using 90s method timeout and 600s PySR
+    # timeout instead of the paper-quality 900s/1100s values.
+    # An explicit CLI flag always wins over any environment variable.
+    #
+    # FIX-ISSUE10A-CONFIG-BLEED: this used to read a single FEYNMAN_TIMEOUT
+    # env var and apply that ONE value to BOTH args.method_timeout (900) and
+    # args.pysr_timeout (1100). Those two knobs are intentionally different
+    # (repro.yaml timeouts.method_seconds=900 vs .feynman_pysr_seconds=1100 —
+    # PySR needs extra budget on top of the method budget for Julia startup),
+    # so whichever single number CI happened to export for FEYNMAN_TIMEOUT
+    # silently collapsed both to the same value. Split into two independent
+    # env vars so each config can be overridden on its own; the old
+    # FEYNMAN_TIMEOUT name is kept as a legacy fallback that only fires when
+    # neither of the new, more specific vars is set.
+    #
+    # FIX-ISSUE10A-SENTINEL-DEFAULT (this pass): the precedence check used
+    # to be `if args.pysr_timeout == 1100:` -- true both when the flag was
+    # never passed AND when someone explicitly passed `--pysr-timeout 1100`.
+    # A CI job that (a) explicitly passes --method-timeout 900 on the
+    # command line *and* (b) still has the legacy FEYNMAN_TIMEOUT env var
+    # set in its environment (e.g. for a different, unrelated purpose, or
+    # left over from before this job was updated) would have that explicit
+    # 900 silently overwritten back to whatever FEYNMAN_TIMEOUT held --
+    # exactly reproducing the original bleed via a different path, and
+    # invisibly, since nothing about passing an explicit flag looked any
+    # different from omitting it. Now that argparse's default is None
+    # (see above), "was this flag passed" is a real distinction: an
+    # explicit CLI value is honoured unconditionally and no environment
+    # variable is even consulted for that flag.
+    _DEFAULT_PYSR_TIMEOUT   = 1100
+    _DEFAULT_METHOD_TIMEOUT = 900
 
-    # Apply env overrides only when the CLI arg is still at its default value
-    # (i.e. the user did not explicitly pass --method-timeout or --pysr-timeout).
-    # Defaults updated to paper quality: method_timeout=900, pysr_timeout=1100.
-    if _env_feynman_to and args.method_timeout == 900:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --method-timeout "
-              f"(CLI default was 900s)")
-        args.method_timeout = _env_feynman_to
-    if _env_feynman_to and args.pysr_timeout == 1100:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --pysr-timeout "
-              f"(CLI default was 1100s)")
-        args.pysr_timeout = _env_feynman_to
+    _env_method_to  = int(os.environ.get("FEYNMAN_METHOD_TIMEOUT", "0")) or None
+    _env_pysr_to    = int(os.environ.get("FEYNMAN_PYSR_TIMEOUT",   "0")) or None
+    _env_legacy_to  = int(os.environ.get("FEYNMAN_TIMEOUT",        "0")) or None
+    _env_job_dl     = int(os.environ.get("JOB_DEADLINE",           "0")) or None
+
+    if _env_legacy_to and (_env_method_to or _env_pysr_to):
+        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s is set but ignored because "
+              f"FEYNMAN_METHOD_TIMEOUT/FEYNMAN_PYSR_TIMEOUT are also set — "
+              f"the specific vars win.")
+
+    if args.method_timeout is not None:
+        # Explicit CLI flag: honour it as-is, no env var can override it.
+        print(f"ℹ️  --method-timeout {args.method_timeout}s passed explicitly "
+              f"on the CLI — environment timeout variables ignored for this flag.")
+    elif _env_method_to:
+        print(f"ℹ️  FEYNMAN_METHOD_TIMEOUT={_env_method_to}s applied to "
+              f"--method-timeout (no CLI flag passed)")
+        args.method_timeout = _env_method_to
+    elif _env_legacy_to:
+        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s (legacy) applied to "
+              f"--method-timeout (no CLI flag passed)")
+        args.method_timeout = _env_legacy_to
+    else:
+        args.method_timeout = _DEFAULT_METHOD_TIMEOUT
+
+    if args.pysr_timeout is not None:
+        print(f"ℹ️  --pysr-timeout {args.pysr_timeout}s passed explicitly "
+              f"on the CLI — environment timeout variables ignored for this flag.")
+    elif _env_pysr_to:
+        print(f"ℹ️  FEYNMAN_PYSR_TIMEOUT={_env_pysr_to}s applied to "
+              f"--pysr-timeout (no CLI flag passed)")
+        args.pysr_timeout = _env_pysr_to
+    elif _env_legacy_to:
+        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s (legacy) applied to "
+              f"--pysr-timeout (no CLI flag passed)")
+        args.pysr_timeout = _env_legacy_to
+    else:
+        args.pysr_timeout = _DEFAULT_PYSR_TIMEOUT
+
     if _env_job_dl:
         print(f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
               f"not currently used as a hard cutoff)")

@@ -90,6 +90,31 @@ def _resolve_domains_from_env() -> list[str] | None:
     return None
 
 
+def _create_message_deterministic(client, **kwargs):
+    """Call client.messages.create(), preferring temperature=0.0 for
+    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE below), but tolerate
+    newer models that no longer accept the parameter at all.
+
+    FIX-TEMPERATURE-DEPRECATED: mirrors the identical helper in
+    baseline_pure_llm_defi_discovery.py. Anthropic deprecated the
+    temperature/top_p/top_k sampling parameters for models released after
+    Claude Opus 4.6 (Sonnet 4.6+, Opus 4.7+ — exactly this codebase's
+    default model), and these newer models reject the request outright
+    with a 400 "`temperature` is deprecated for this model." error rather
+    than ignoring the field, as observed failing the CI benchmark run.
+    Tries temperature=0.0 first and retries once without it only on that
+    specific deprecation error, so determinism is preserved wherever the
+    model still supports it.
+    """
+    try:
+        return client.messages.create(temperature=0.0, **kwargs)
+    except Exception as e:
+        msg = str(e)
+        if "temperature" in msg.lower() and "deprecated" in msg.lower():
+            return client.messages.create(**kwargs)
+        raise
+
+
 class HybridSystemAllDomains:
     """
     Hybrid system for scientific/engineering domains.
@@ -181,10 +206,10 @@ class HybridSystemAllDomains:
             # 30 equations), but would silently reintroduce run-to-run
             # sampling variance the moment that delegate fails for any
             # equation and control falls through to here.
-            response = self.client.messages.create(
+            response = _create_message_deterministic(
+                self.client,
                 model=self.model,
                 max_tokens=4000,
-                temperature=0.0,
                 messages=[{"role": "user", "content": prompt}],
             )
             content = response.content[0].text

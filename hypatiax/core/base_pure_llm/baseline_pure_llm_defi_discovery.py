@@ -40,6 +40,33 @@ env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
+def _create_message_deterministic(client, **kwargs):
+    """Call client.messages.create(), preferring temperature=0.0 for
+    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE above), but tolerate
+    newer models that no longer accept the parameter at all.
+
+    FIX-TEMPERATURE-DEPRECATED: Anthropic deprecated the temperature/top_p/
+    top_k sampling parameters for models released after Claude Opus 4.6
+    (this includes Sonnet 4.6+ and Opus 4.7+, i.e. exactly the models this
+    codebase targets by default). Unlike older models, which just accepted
+    temperature=0.0 as one valid value among many, these newer models
+    reject the request outright with a 400 "`temperature` is deprecated for
+    this model." error the moment the parameter is present — observed
+    failing the CI benchmark run after the reproducibility fix above was
+    applied. Rather than dropping temperature=0.0 entirely (and losing the
+    determinism benefit on any older/other model that still honours it),
+    this tries with temperature=0.0 first and retries once without it only
+    on that specific deprecation error.
+    """
+    try:
+        return client.messages.create(temperature=0.0, **kwargs)
+    except Exception as e:
+        msg = str(e)
+        if "temperature" in msg.lower() and "deprecated" in msg.lower():
+            return client.messages.create(**kwargs)
+        raise
+
+
 class PureLLMBaseline:
     """Fixed Pure LLM baseline with liquidation domain corrections."""
 
@@ -409,10 +436,10 @@ class PureLLMBaseline:
             # temperature=0.0 narrows (does not fully guarantee, since
             # provider-side serving batching can still vary) run-to-run
             # sampling variance.
-            response = self.client.messages.create(
+            response = _create_message_deterministic(
+                self.client,
                 model=self.model,
                 max_tokens=4000,
-                temperature=0.0,
                 messages=[{"role": "user", "content": prompt}],
             )
             # FIX (ThinkingBlock crash): response.content[0] is not guaranteed to be
