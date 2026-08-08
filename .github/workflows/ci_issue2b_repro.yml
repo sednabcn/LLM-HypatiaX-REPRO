@@ -1,0 +1,321 @@
+# ==============================================================================
+#  ci_issue2b_repro.yml - Item 2b determinism experiment (standalone runner)
+#
+#  Companion to ci_runner_repro.yml, reusing its established conventions
+#  (Python 3.12 / Julia 1.11 setup, Julia depot cache, ANTHROPIC_API_KEY
+#  live-validation, results-dir layout, commit-and-push pattern) but as its
+#  OWN, deliberately simple job — no plan/worker matrix sharding. This
+#  experiment is a single self-contained two-phase script
+#  (run_issue2b_experiment.sh), not a 30-equation x 6-method sweep that
+#  benefits from parallel shards.
+#
+#  Scope: closes (or re-opens) Item 2b — does the FIX-ISSUE2-UNSEEDED-NN
+#  patch (hash() -> hashlib.sha256(), 7 call sites in
+#  run_comparative_suite_benchmark_v2.py) actually make HSL/M4
+#  ("HybridSystemLLMNN all-domains (core)") and EHD/M3
+#  ("EnhancedHybridSystemDeFi (core)") deterministic across repeated,
+#  otherwise-identical noiseless runs?
+#
+#  Two phases (see run_issue2b_experiment.sh for the authoritative logic —
+#  this workflow only wires it up, it does not reimplement the comparison):
+#    Phase A: N independent runs, --skip-pysr (HSL/M4 and EHD/M3 don't touch
+#             PySR/Julia, so this is cheap: no ~60-90s Julia startup x 30
+#             equations x N runs). Isolates the NN-seeding determinism
+#             question. Gates Phase B.
+#    Phase B: 1 full run, all 6 methods — only attempted if Phase A closes
+#             clean — to regenerate Table 4 / tab:r2_noise / tab:rr_noise
+#             candidate data from real, patched-code output.
+#
+#  Both phases use --no-llm-cache (mandatory, not optional): without it,
+#  repeated runs replay a cached LLM formula at R^2=1.0 in 0.0s regardless
+#  of what the NN-seeding fix does, which would report "deterministic" for
+#  the wrong reason (documented in the harness's own --no-llm-cache help
+#  text as "the root cause of the 100% recovery artefact"). Because of
+#  this, every phase — including Phase A — still needs a live, working
+#  ANTHROPIC_API_KEY, even though Phase A skips PySR/Julia.
+#
+#  Prerequisite files this workflow expects in the repo (place alongside
+#  this workflow, under .github/scripts/):
+#    .github/scripts/run_issue2b_experiment.sh
+#    .github/scripts/check_issue2b_reproducibility.py
+#
+#  NOTE ON --protocol all_domains: the harness's default protocol
+#  ('benchmark'/Feynman) does NOT produce the 30-equation/11-domain exp2
+#  set Table 4 is built from — confirmed against the script's own argparse
+#  help text. run_issue2b_experiment.sh already passes
+#  --protocol all_domains; this is called out here because it was missing
+#  from earlier hand-written reproduction commands for this same item and
+#  is easy to silently drop again in a future edit.
+# ==============================================================================
+
+name: "HypatiaX - Item 2b determinism experiment"
+run-name: "Item 2b determinism experiment · ${{ inputs.skip_phase_b == 'true' && 'Phase A only' || 'Phase A + B' }}"
+
+"on":
+  workflow_dispatch:
+    inputs:
+
+      harness_path:
+        description: "Path (relative to repo root) to run_comparative_suite_benchmark_v2.py"
+        required: false
+        default: "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+
+      n_runs:
+        description: "Number of independent Phase A runs to compare (minimum 2)"
+        required: false
+        default: "3"
+
+      skip_phase_b:
+        description: "Stop after Phase A regardless of result (true/false) — use for a quick determinism-only check without spending PySR/Julia time"
+        required: false
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+      dry_run:
+        description: "Preflight only — run the --check-patch static check and stop, no benchmark runs (true/false)"
+        required: false
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+# Scoped so a second dispatch queues behind the first rather than racing on
+# the same RUNS_DIR / commit target — same rationale as ci_runner_repro.yml's
+# concurrency group, just scoped to this workflow's own name instead of a
+# shared experiment id.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions:  write
+
+env:
+  # Matches repro.yaml paper-quality values, same names as ci_runner_repro.yml
+  # for consistency even though this job sets its own flags directly rather
+  # than reading REPRO_CFG (run_issue2b_experiment.sh hardcodes the same
+  # numbers into its COMMON_FLAGS array).
+  FEYNMAN_SAMPLES:     "200"
+  FEYNMAN_TIMEOUT:     "1100"  # repro.yaml timeouts.feynman_pysr_seconds
+  METHOD_TIMEOUT:      "900"   # repro.yaml timeouts.method_seconds
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  JULIA_NUM_THREADS:   "4"
+  JULIA_EXCLUSIVE:     "0"
+  OUT_BASE:            "hypatiax/data/results"
+
+jobs:
+  issue2b_experiment:
+    name: "Item 2b determinism experiment"
+    runs-on: ubuntu-latest
+    # Phase A (skip-pysr) is cheap; Phase B is one full 30-equation x
+    # 6-method run. Generous but bounded — mirrors ci_runner_repro.yml's
+    # "hard deadline" philosophy without needing the full 5h30m worker
+    # budget this single, unsharded run doesn't need.
+    timeout-minutes: 240
+
+    outputs:
+      result: ${{ steps.run_experiment.outputs.result }}
+
+    env:
+      NEEDS_JULIA: ${{ github.event.inputs.skip_phase_b != 'true' && github.event.inputs.dry_run != 'true' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      # Only needed for Phase B (full run, all 6 methods). Phase A is
+      # --skip-pysr by design (see header). Skipped entirely on dry_run.
+      - name: Set up Julia 1.11
+        if: ${{ env.NEEDS_JULIA == 'true' }}
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        if: ${{ env.NEEDS_JULIA == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install \
+            numpy scipy sympy \
+            anthropic \
+            pysr \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            psutil
+
+      - name: Install Julia / SymbolicRegression (if needed)
+        if: ${{ env.NEEDS_JULIA == 'true' }}
+        run: |
+          python3 -c "import pysr; pysr.install()"
+
+      # Same rationale as ci_runner_repro.yml's identically-named step: without
+      # this warmup, _probe() can silently mark methods 5/6 unavailable for
+      # the whole run if the Julia depot isn't fully precompiled first.
+      - name: Precompile Julia / SymbolicRegression (if needed)
+        if: ${{ env.NEEDS_JULIA == 'true' }}
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+          warmup = """
+          import numpy as np
+          import pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          model = pysr.PySRRegressor(
+              niterations=5, populations=1, verbosity=0, progress=False,
+              tempdir="/tmp/pysr_warmup",
+          )
+          model.fit(X, y)
+          print("Julia/PySR precompile warmup OK")
+          """
+          result = subprocess.run([sys.executable, "-c", warmup],
+                                   timeout=300, capture_output=True, text=True)
+          print(result.stdout or "")
+          if result.returncode != 0:
+              print("WARNING: Julia precompile warmup failed (methods 5+6 may be N/A):")
+              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          PYEOF
+
+      - name: Verify Julia threads
+        if: ${{ env.NEEDS_JULIA == 'true' }}
+        run: |
+          julia -e 'println("Julia threads: ", Threads.nthreads())'
+
+      # Mandatory even for a dry_run/Phase-A-only dispatch: both phases run
+      # with --no-llm-cache (see header), so PureLLM and HSL/M4 both need a
+      # live key regardless of whether PySR is in play.
+      - name: Validate ANTHROPIC_API_KEY (live round-trip)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          KEY_LEN=${#ANTHROPIC_API_KEY}
+          echo "ANTHROPIC_API_KEY present: $([ $KEY_LEN -gt 0 ] && echo YES || echo NO)"
+          echo "ANTHROPIC_API_KEY length : ${KEY_LEN} chars"
+          if [[ $KEY_LEN -eq 0 ]]; then
+            echo "::error::ANTHROPIC_API_KEY secret is empty or unset."
+            exit 1
+          fi
+          python3 "${{ github.workspace }}/config/test_key_status.py"
+
+      - name: Make experiment scripts executable
+        run: |
+          chmod +x .github/scripts/run_issue2b_experiment.sh
+          test -f .github/scripts/check_issue2b_reproducibility.py
+
+      - name: Preflight — patch check only (dry_run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          python3 .github/scripts/check_issue2b_reproducibility.py \
+            --check-patch "${{ github.event.inputs.harness_path }}"
+          echo "dry_run=true — stopping after preflight, no benchmark runs performed."
+
+      - name: Run Item 2b experiment (Phase A [+ Phase B])
+        id: run_experiment
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RUNS_DIR:     ${{ github.workspace }}/${{ env.OUT_BASE }}/issue2b_experiment/${{ github.run_id }}
+          N_RUNS:       ${{ github.event.inputs.n_runs }}
+          SKIP_PHASE_B: ${{ github.event.inputs.skip_phase_b == 'true' && '1' || '0' }}
+          CHECK_SCRIPT: ${{ github.workspace }}/.github/scripts/check_issue2b_reproducibility.py
+        run: |
+          set +e
+          bash .github/scripts/run_issue2b_experiment.sh "${{ github.event.inputs.harness_path }}"
+          rc=$?
+          set -e
+
+          case "$rc" in
+            0) result="closed" ;;
+            1) result="open" ;;
+            2) result="bad_args" ;;
+            3) result="run_failed" ;;
+            *) result="unknown_exit_${rc}" ;;
+          esac
+          echo "result=${result}" >> "$GITHUB_OUTPUT"
+          echo "Experiment exit code: ${rc} (${result})"
+          exit "$rc"
+
+      # Always upload the log + whatever JSON output exists, success or
+      # failure — a "STILL OPEN" run is exactly the case where you most
+      # need the per-equation mismatch detail from the log.
+      - name: Upload experiment artifacts
+        if: ${{ always() && github.event.inputs.dry_run != 'true' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: issue2b-experiment-${{ github.run_id }}
+          path: ${{ env.OUT_BASE }}/issue2b_experiment/${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Only commit back when Phase A (and Phase B, if it ran) closed
+      # clean — an "open" or failed run has nothing worth persisting to
+      # the repo, the artifact upload above is sufficient for inspection.
+      - name: Commit and push Phase B results (only if Item 2b closed)
+        if: ${{ always() && steps.run_experiment.outputs.result == 'closed' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          TARGET="${OUT_BASE}/issue2b_experiment/${{ github.run_id }}"
+          git add -f "${TARGET}" 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "ci: Item 2b determinism experiment CLOSED -- run ${{ github.run_id }} -- $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+            PUSHED=false
+            for i in 1 2 3; do
+              git rebase --abort 2>/dev/null || true
+              git stash --include-untracked --quiet || true
+              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git rebase --abort 2>/dev/null || true
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
+            done
+            if [[ "${PUSHED}" != "true" ]]; then
+              echo "::error::Failed to push Item 2b experiment results after 3 attempts."
+              exit 1
+            fi
+          fi
+
+      - name: Summary
+        if: ${{ always() && github.event.inputs.dry_run != 'true' }}
+        run: |
+          echo "### Item 2b determinism experiment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Result: **${{ steps.run_experiment.outputs.result || 'n/a' }}**" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase A runs: ${{ github.event.inputs.n_runs }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Phase B attempted: ${{ github.event.inputs.skip_phase_b != 'true' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Full log + JSON output: see uploaded artifact \`issue2b-experiment-${{ github.run_id }}\`" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ steps.run_experiment.outputs.result }}" == "closed" ]]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Item 2b closed — Table 4 / tab:r2_noise / tab:rr_noise candidate data committed to \`${OUT_BASE}/issue2b_experiment/${{ github.run_id }}\`." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${{ steps.run_experiment.outputs.result }}" == "open" ]]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Item 2b still open — see the artifact log for which equation(s)/method(s) still vary across runs. Nothing committed." >> "$GITHUB_STEP_SUMMARY"
+          fi
