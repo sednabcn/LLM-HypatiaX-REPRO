@@ -1275,39 +1275,62 @@ CRITICAL REQUIREMENTS:
 - Ensure operations work element-wise on numpy arrays
 - If the task involves a probability density or distribution, include the FULL normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)"""
 
+    # Canonical section headers this parser understands, in the order the
+    # prompt asks the model to emit them. A single regex finds every header
+    # regardless of how much whitespace/blank-lines surround it, then each
+    # section's body is just "everything between this header and the next
+    # one" -- no reliance on the model emitting exactly one blank line
+    # before the next ALL-CAPS: header, which --no-llm-cache live sampling
+    # does not reliably produce (fixed 2026-08: previously used a
+    # `(?=\n\n[A-Z]+:|$)` lookahead per-section, which silently swallowed
+    # VARIABLES:/ASSUMPTIONS:/EXPLANATION: into python_code -- the only
+    # field test_formula_accuracy() actually executes -- whenever the model
+    # used a single newline instead of a blank line before the next
+    # header. That produced intermittent PureLLM eval failures that varied
+    # run-to-run with no code change, since nothing here is deterministic
+    # LLM output.)
+    _SECTION_HEADERS = ("FORMULA", "LATEX", "PYTHON", "VARIABLES", "ASSUMPTIONS", "EXPLANATION")
+
     def _parse_response(self, content: str) -> dict[str, str]:
-        """Parse LLM response."""
-        parsed = {}
+        """Parse LLM response by splitting on known section headers.
 
-        match = re.search(r"FORMULA:\s*\n([^\n]+)", content, re.IGNORECASE)
-        parsed["formula"] = match.group(1).strip() if match else "N/A"
-
-        match = re.search(
-            r"LATEX:\s*\n(.*?)(?=\n\n[A-Z]+:|$)", content, re.DOTALL | re.IGNORECASE
-        )
-        parsed["latex"] = match.group(1).strip() if match else "N/A"
-
-        match = re.search(
-            r"PYTHON:\s*\n(.*?)(?=\n\n[A-Z]+:|$)", content, re.DOTALL | re.IGNORECASE
-        )
-        parsed["python"] = (
-            self._clean_python_code(match.group(1).strip()) if match else "N/A"
+        Robust to whatever whitespace/blank-line pattern the model used
+        around each header -- does not require the next header to be
+        preceded by exactly one blank line.
+        """
+        header_pat = re.compile(
+            r"^\s*(" + "|".join(self._SECTION_HEADERS) + r")\s*:\s*$",
+            re.IGNORECASE | re.MULTILINE,
         )
 
-        for section in ["variables", "assumptions", "explanation"]:
-            match = re.search(
-                rf"{section.upper()}:\s*\n(.*?)(?=\n\n[A-Z]+:|$)",
-                content,
-                re.DOTALL | re.IGNORECASE,
-            )
-            parsed[section] = match.group(1).strip() if match else "N/A"
+        matches = list(header_pat.finditer(content))
+        parsed = {s.lower(): "N/A" for s in self._SECTION_HEADERS}
+
+        if not matches:
+            # Fall back to the original single-line FORMULA: <text> style,
+            # in case the model put content on the same line as the header
+            # instead of the line below it.
+            m = re.search(r"FORMULA:\s*(.+)", content, re.IGNORECASE)
+            if m:
+                parsed["formula"] = m.group(1).strip()
+            return parsed
+
+        for i, m in enumerate(matches):
+            name = m.group(1).lower()
+            start = m.end()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(content)
+            body = content[start:end].strip()
+            if name == "python":
+                body = self._clean_python_code(body)
+            parsed[name] = body if body else "N/A"
 
         return parsed
 
     def _clean_python_code(self, code: str) -> str:
-        """Clean Python code."""
-        code = re.sub(r"^```python\s*\n", "", code, flags=re.MULTILINE)
-        code = re.sub(r"\n```\s*$", "", code, flags=re.MULTILINE)
+        """Clean Python code: strip optional ```python / ``` fences."""
+        code = code.strip()
+        code = re.sub(r"^```(?:python)?\s*\n?", "", code, flags=re.IGNORECASE)
+        code = re.sub(r"\n?```\s*$", "", code)
         return code.strip()
 
     def test_formula_accuracy(

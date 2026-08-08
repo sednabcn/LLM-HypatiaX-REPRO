@@ -742,6 +742,28 @@ try:
     from sklearn.preprocessing import StandardScaler
     from sklearn.model_selection import train_test_split
     TORCH_AVAILABLE = True
+
+    # FIX-ISSUE2-DETERMINISM (follow-up to FIX-ISSUE2-UNSEEDED-NN): seeding
+    # via the sha256-derived-seed -> torch.manual_seed() pattern (see
+    # _nn_residual_fit, both copies) fixes *seed derivation*, but does not by itself make
+    # PyTorch's CPU kernels deterministic. Confirmed against a live CI run
+    # (workflow_dispatch 31256573694): after exporting OMP_NUM_THREADS=1 /
+    # MKL_NUM_THREADS=1 / OPENBLAS_NUM_THREADS=1 at the shell level (see
+    # run_issue2b_experiment.sh), HSL/M4 still showed a ~1e-6 R^2 spread on
+    # at least one equation. Two gaps: (1) env-var thread pinning at process
+    # start is not guaranteed to fully constrain ATen's own internal thread
+    # pool the way an explicit in-process call does; (2) without
+    # use_deterministic_algorithms, some CPU ops can still choose a
+    # non-deterministic reduction path independent of thread count. Setting
+    # both explicitly, in-process, right after import and before any model
+    # is constructed, closes both gaps. warn_only=True rather than the
+    # strict default: this codebase doesn't use any op lacking a
+    # deterministic CPU implementation (plain Linear/Tanh MLPs), so a hard
+    # RuntimeError isn't needed, but if that assumption ever breaks, warn
+    # mode still surfaces it in the log instead of the run silently
+    # continuing non-deterministic.
+    torch.set_num_threads(1)
+    torch.use_deterministic_algorithms(True, warn_only=True)
 except ImportError:
     TORCH_AVAILABLE = False
     print("⚠️  torch / sklearn not available — NN-based methods will be skipped")
