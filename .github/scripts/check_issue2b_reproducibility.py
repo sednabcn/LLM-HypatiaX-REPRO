@@ -123,6 +123,88 @@ def check_patch(path):
 
 
 # ──────────────────────────────────────────────────────────────────
+# Preflight for the Item 2b FOLLOW-UP fixes: LLM temperature pin,
+# NN seeding (HSL + EHD), and EHD's frozen LLM-formula cache.
+#
+# Marker-based, not exact-count-based on purpose: the original
+# check_patch()'s hardcoded "== 7" only works because that patch
+# touched one file once and never grew. These fixes span multiple
+# files (run_comparative_suite_benchmark_v2.py's baseline module,
+# hybrid_system_llm_nn_all_domains.py, hybrid_system_nn_defi_domain.py)
+# and are more likely to gain call sites over time (e.g. a new local
+# fallback path). A presence check (>=1 per required marker, per file)
+# won't silently break the way an exact count would if that happens.
+#
+# Each fix pairs a code comment marker (already used consistently in
+# the patched files: FIX-ISSUE2B-LLM-TEMPERATURE, FIX-ISSUE2B-UNSEEDED-NN)
+# with a functional pattern nearby, so a marker left behind after code
+# was reverted (or added without the code) gets caught either way.
+# ──────────────────────────────────────────────────────────────────
+FOLLOWUP_CHECKS = [
+    # (marker comment, functional regex that should co-occur in the file,
+    #  human label, required=True means every file passed in must have it;
+    #  required=False means "at least one of the files passed in" — for
+    #  fixes that only apply to one specific file, like the frozen cache)
+    ("FIX-ISSUE2B-LLM-TEMPERATURE", r"temperature\s*=\s*0\.0", "LLM temperature pin", True),
+    ("FIX-ISSUE2B-UNSEEDED-NN", r"torch\.manual_seed\(", "NN seeding (manual_seed call)", True),
+    ("FIX-ISSUE2B-UNSEEDED-NN", r"hashlib\.sha256\(\s*description", "NN seeding (sha256(description) derivation)", True),
+]
+
+FROZEN_CACHE_MARKER = "HYPATIAX_LLM_FREEZE_CACHE"
+
+
+def check_followup_patches(paths):
+    print(f"Follow-up patch check on {len(paths)} file(s): {', '.join(paths)}")
+    print()
+
+    sources = {}
+    for p in paths:
+        if not os.path.isfile(p):
+            print(f"  ERROR: file not found: {p}")
+            return 1
+        sources[p] = open(p, encoding="utf-8").read()
+
+    all_ok = True
+
+    for marker, pattern, label, required_in_every_file in FOLLOWUP_CHECKS:
+        files_with_marker = [p for p, src in sources.items() if marker in src]
+        files_with_pattern = [p for p, src in sources.items() if re.search(pattern, src)]
+        print(f"  [{label}]  marker '{marker}':")
+        if not files_with_marker:
+            print(f"    NOT FOUND in any file passed in  <-- missing")
+            all_ok = False
+            continue
+        for p in files_with_marker:
+            has_code = p in files_with_pattern
+            print(f"    {p}: marker present, functional pattern "
+                  f"{'present OK' if has_code else 'MISSING <-- marker without code, or code without marker'}")
+            if not has_code:
+                all_ok = False
+        # A file with the functional pattern but no marker comment is not
+        # itself a failure (comments are for humans, not required for
+        # correctness) but is worth a note since it breaks the pairing
+        # this check relies on for files added later.
+        unmarked = [p for p in files_with_pattern if p not in files_with_marker]
+        for p in unmarked:
+            print(f"    {p}: functional pattern present but marker comment absent "
+                  f"(not a failure, just unpaired — consider adding the marker for traceability)")
+        print()
+
+    files_with_cache = [p for p, src in sources.items() if FROZEN_CACHE_MARKER in src]
+    print(f"  [Frozen LLM cache]  marker '{FROZEN_CACHE_MARKER}':")
+    if not files_with_cache:
+        print(f"    NOT FOUND in any file passed in  <-- missing (expected in the EHD file)")
+        all_ok = False
+    else:
+        for p in files_with_cache:
+            print(f"    {p}: present OK")
+    print()
+
+    print(f"{'FOLLOW-UP PATCHES LOOK CORRECT — safe to run.' if all_ok else 'FOLLOW-UP PATCHES INCOMPLETE — fix before running the suite.'}")
+    return 0 if all_ok else 1
+
+
+# ──────────────────────────────────────────────────────────────────
 # Load one run (a directory of protocol_core_noiseless_*.json, or a
 # glob pattern) into {(domain, description): {method: result}}.
 # ──────────────────────────────────────────────────────────────────
@@ -152,6 +234,10 @@ def main():
     ap = argparse.ArgumentParser(add_help=False)
     ap.add_argument("--check-patch", metavar="PATH",
                      help="Static check of the harness .py file, no run comparison.")
+    ap.add_argument("--check-followup", metavar="PATH", nargs="+",
+                     help="Static check of the Item 2b follow-up fixes (LLM temperature "
+                          "pin, NN seeding, frozen LLM cache) across one or more files "
+                          "(e.g. the HSL and EHD domain modules). No run comparison.")
     ap.add_argument("--emit-table4", action="store_true",
                      help="If runs are deterministic, print a Table 4-style LaTeX snippet from run[0].")
     ap.add_argument("--tol", type=float, default=0.0,
@@ -161,6 +247,9 @@ def main():
 
     if args.check_patch:
         sys.exit(check_patch(args.check_patch))
+
+    if args.check_followup:
+        sys.exit(check_followup_patches(args.check_followup))
 
     if len(args.runs) < 2:
         print(__doc__)

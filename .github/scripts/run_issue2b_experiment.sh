@@ -120,7 +120,26 @@ export OPENBLAS_NUM_THREADS=1
 export TORCH_DETERMINISTIC=1                # advisory; harness must still call
                                              # torch.use_deterministic_algorithms(True)
                                              # for CUDA algorithm selection to honor this
+
+# EnhancedHybridSystemDeFi (M3) delegates to PureLLMBaseline first, then trains
+# a residual-correction MLP on top of the LLM's output. The Anthropic API is
+# not guaranteed bit-exact at temperature=0 (server-side batching/kernel
+# effects), so identical prompts across the three separate Phase A
+# subprocesses can return slightly different formula text -- which is what
+# produced the 2.38e-10 R^2 spread on "Logistic Growth" that keeps Item 2b
+# open. HYPATIAX_LLM_FREEZE_CACHE makes generate_llm_formula file-backed: the
+# first process to hit a given prompt writes the formula to this file, and
+# every subsequent process (same run or a different one) reads it back
+# instead of re-querying the API, so all three Phase A runs train their
+# residual MLP on byte-identical LLM input. Must be the SAME path across all
+# three Phase A invocations for this to close the gap -- a per-run path would
+# just recreate the original problem.
+export HYPATIAX_LLM_FREEZE_CACHE="$RUNS_DIR/llm_freeze_cache.json"
+rm -f "$HYPATIAX_LLM_FREEZE_CACHE"          # start each experiment from a clean cache so
+                                             # stale formulas from a prior code version
+                                             # can't mask a real regression
 echo "Determinism pinning: CUBLAS_WORKSPACE_CONFIG=$CUBLAS_WORKSPACE_CONFIG, OMP/MKL/OPENBLAS_NUM_THREADS=1, PYTHONHASHSEED=0" | tee -a "$LOG"
+echo "LLM freeze cache:    HYPATIAX_LLM_FREEZE_CACHE=$HYPATIAX_LLM_FREEZE_CACHE (fresh, cleared)" | tee -a "$LOG"
 echo "Comparator tolerance: TOL=$TOL (0.0 = exact bit-match)" | tee -a "$LOG"
 
 # Shared flags for the 30-equation / 11-domain exp2 protocol, matching the
