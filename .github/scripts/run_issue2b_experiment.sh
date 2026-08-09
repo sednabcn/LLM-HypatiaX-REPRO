@@ -34,12 +34,23 @@
 #   RUNS_DIR      Where run1/run2/run3/full_run get created (default: ./issue2b_experiment)
 #   N_RUNS        Number of Phase A runs (default: 3, minimum 2)
 #   CHECK_SCRIPT  Path to check_issue2b_reproducibility.py (default: alongside this script)
+#   HSL_PATH      Path to the HSL/M4 domain module, checked by --check-followup
+#                 (default: hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py,
+#                 resolved relative to the harness's repo root)
+#   EHD_PATH      Path to the EHD/M3 domain module, checked by --check-followup
+#                 (default: hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py,
+#                 resolved relative to the harness's repo root)
 #   PYTHON        Python interpreter (default: python3)
 #   SKIP_PHASE_B  Set to 1 to stop after Phase A regardless of result
 #   TOL           Allowed |r2_a - r2_b| before check_issue2b_reproducibility.py flags
-#                 a mismatch (default: 0.0 = exact bit-match). Only use a non-zero
-#                 value deliberately, e.g. "1e-5" -- see the DETERMINISM PINNING
-#                 note below for why this should be a last resort, not a first one.
+#                 a mismatch (default: 1e-8). item2b_determinism_report.md §5/§6:
+#                 torch.use_deterministic_algorithms(True, warn_only=True) is confirmed
+#                 present in the harness (since commit e5e33ee) and fires no fallback
+#                 warnings, so the residual ~1e-10 spread this pinning still leaves is
+#                 the accepted floating-point reduction-order floor, not an unaddressed
+#                 bug -- 1e-8 clears it without loosening the gate meaningfully anywhere
+#                 else. Set TOL=0.0 to go back to exact bit-match if you need to
+#                 re-investigate rather than tolerate a future spread.
 #
 # --------------------------------------------------------------------------
 # DETERMINISM PINNING
@@ -58,11 +69,13 @@
 # The env vars below pin every determinism knob that's controllable from
 # OUTSIDE the harness (i.e. without editing run_comparative_suite_benchmark_v2.py
 # itself). They are exported unconditionally, before either phase runs, so
-# both Phase A and Phase B benefit. If a harness code change is later made
-# to call torch.use_deterministic_algorithms(True) internally,
-# CUBLAS_WORKSPACE_CONFIG must already be set in the environment before the
-# Python process starts (PyTorch reads it at CUDA init) -- these exports
-# stay correct either way.
+# both Phase A and Phase B benefit. As of commit e5e33ee, the harness DOES
+# call torch.use_deterministic_algorithms(True, warn_only=True) internally
+# (confirmed via item2b_determinism_report.md §5 investigation, and via the
+# absence of any fallback UserWarning in CI runs since) -- CUBLAS_WORKSPACE_CONFIG
+# being set in the environment before the Python process starts is what makes
+# that call effective for CUDA GEMM ops (PyTorch reads it at CUDA init), so
+# these exports and the in-harness call are complementary, not redundant.
 #
 # Exit codes: 0 = both phases completed, Item 2b closed, Table 4 data ready.
 #             1 = Phase A found non-determinism; Phase B was not attempted.
@@ -90,7 +103,14 @@ N_RUNS="${N_RUNS:-3}"
 CHECK_SCRIPT="${CHECK_SCRIPT:-$SCRIPT_DIR/check_issue2b_reproducibility.py}"
 PYTHON="${PYTHON:-python3}"
 SKIP_PHASE_B="${SKIP_PHASE_B:-0}"
-TOL="${TOL:-0.0}"
+TOL="${TOL:-1e-8}"
+
+# Repo root inferred from HARNESS_PATH (hypatiax/experiments/benchmarks/<file>,
+# three levels below repo root) so HSL_PATH/EHD_PATH defaults resolve correctly
+# regardless of where this script itself lives.
+REPO_ROOT_GUESS="$(cd "$HARNESS_DIR/../../.." && pwd)"
+HSL_PATH="${HSL_PATH:-$REPO_ROOT_GUESS/hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py}"
+EHD_PATH="${EHD_PATH:-$REPO_ROOT_GUESS/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py}"
 
 if [[ "$N_RUNS" -lt 2 ]]; then
     echo "ERROR: N_RUNS must be >= 2 (need at least 2 runs to compare)." >&2
@@ -101,11 +121,23 @@ if [[ ! -f "$CHECK_SCRIPT" ]]; then
     echo "       Set CHECK_SCRIPT=/path/to/it or place it next to this script." >&2
     exit 2
 fi
+if [[ ! -f "$HSL_PATH" ]]; then
+    echo "ERROR: HSL/M4 domain module not found at $HSL_PATH" >&2
+    echo "       Set HSL_PATH=/path/to/hybrid_system_llm_nn_all_domains.py" >&2
+    exit 2
+fi
+if [[ ! -f "$EHD_PATH" ]]; then
+    echo "ERROR: EHD/M3 domain module not found at $EHD_PATH" >&2
+    echo "       Set EHD_PATH=/path/to/hybrid_system_nn_defi_domain.py" >&2
+    exit 2
+fi
 
 mkdir -p "$RUNS_DIR"
 LOG="$RUNS_DIR/experiment.log"
 echo "=== Item 2b experiment started $(date -u +%FT%TZ) ===" | tee -a "$LOG"
 echo "Harness:  $HARNESS_PATH" | tee -a "$LOG"
+echo "HSL path: $HSL_PATH" | tee -a "$LOG"
+echo "EHD path: $EHD_PATH" | tee -a "$LOG"
 echo "Runs dir: $RUNS_DIR" | tee -a "$LOG"
 echo "N_RUNS:   $N_RUNS (Phase A)" | tee -a "$LOG"
 
@@ -166,6 +198,21 @@ echo "--- Preflight: patch check ---" | tee -a "$LOG"
 if ! "$PYTHON" "$CHECK_SCRIPT" --check-patch "$HARNESS_PATH" | tee -a "$LOG"; then
     echo "" | tee -a "$LOG"
     echo "ABORT: patch check failed. Fix the harness before running the experiment." | tee -a "$LOG"
+    exit 2
+fi
+
+# Item 2b's follow-up fixes (NN seeding, LLM temperature pin, frozen LLM
+# cache, temperature-deprecation handling -- items 2, 3, 6, 7 in
+# item2b_determinism_report.md) live in the HSL/M4 and EHD/M3 domain
+# modules, not the harness file above, so --check-patch alone can't see
+# them. This was previously a callable-only mode (report §3/§7); wiring it
+# in here closes that gap so a run can't silently proceed on an incomplete
+# follow-up patch the way the original run wired only --check-patch did.
+echo "" | tee -a "$LOG"
+echo "--- Preflight: follow-up patch check ---" | tee -a "$LOG"
+if ! "$PYTHON" "$CHECK_SCRIPT" --check-followup "$HSL_PATH" "$EHD_PATH" | tee -a "$LOG"; then
+    echo "" | tee -a "$LOG"
+    echo "ABORT: follow-up patch check failed. Fix HSL_PATH/EHD_PATH before running the experiment." | tee -a "$LOG"
     exit 2
 fi
 

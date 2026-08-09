@@ -70,6 +70,16 @@ run-name: "Item 2b determinism experiment · ${{ inputs.skip_phase_b == 'true' &
         required: false
         default: "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
 
+      hsl_path:
+        description: "Path (relative to repo root) to the HSL/M4 domain module — checked by --check-followup"
+        required: false
+        default: "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py"
+
+      ehd_path:
+        description: "Path (relative to repo root) to the EHD/M3 domain module — checked by --check-followup"
+        required: false
+        default: "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py"
+
       n_runs:
         description: "Number of independent Phase A runs to compare (minimum 2)"
         required: false
@@ -83,16 +93,16 @@ run-name: "Item 2b determinism experiment · ${{ inputs.skip_phase_b == 'true' &
         default: "false"
 
       dry_run:
-        description: "Preflight only — run the --check-patch static check and stop, no benchmark runs (true/false)"
+        description: "Preflight only — run the --check-patch and --check-followup static checks and stop, no benchmark runs (true/false)"
         required: false
         type: choice
         options: ["false", "true"]
         default: "false"
 
       tol:
-        description: "Comparator tolerance for check_issue2b_reproducibility.py — allowed |r2_a - r2_b| before an equation is flagged non-deterministic. Leave at 0.0 (exact bit-match) unless you've already tried the determinism pinning (CUBLAS_WORKSPACE_CONFIG / thread pinning, set unconditionally in run_issue2b_experiment.sh) and are still seeing sub-threshold spread you've decided is acceptable, e.g. from CPU reduction-order noise."
+        description: "Comparator tolerance for check_issue2b_reproducibility.py — allowed |r2_a - r2_b| before an equation is flagged non-deterministic. Set to 1e-8 per item2b_determinism_report.md §5/§6: torch.use_deterministic_algorithms(True, warn_only=True) is confirmed present (run_comparative_suite_benchmark_v2.py, since commit e5e33ee, predating run 31312938979) and firing no fallback warnings, so the residual 3.37e-10 Snell's Law spread is the accepted floating-point reduction-order floor, not an unaddressed bug. Revert to 0.0 only if a future run shows a materially larger spread that needs re-investigating rather than tolerating."
         required: false
-        default: "0.0"
+        default: "1e-8"
 
 # Scoped so a second dispatch queues behind the first rather than racing on
 # the same RUNS_DIR / commit target — same rationale as ci_runner_repro.yml's
@@ -243,7 +253,23 @@ jobs:
         run: |
           python3 .github/scripts/check_issue2b_reproducibility.py \
             --check-patch "${{ github.event.inputs.harness_path }}"
+          python3 .github/scripts/check_issue2b_reproducibility.py \
+            --check-followup "${{ github.event.inputs.hsl_path }}" "${{ github.event.inputs.ehd_path }}"
           echo "dry_run=true — stopping after preflight, no benchmark runs performed."
+
+      # Gates every real run, not just dry_run — closes the report's open
+      # action item (item2b_determinism_report.md §3/§7): --check-followup
+      # existed as a callable mode only and wasn't wired into CI. This is
+      # separate from run_issue2b_experiment.sh's own --check-patch
+      # preflight (still runs internally, unchanged) — this step covers
+      # the follow-up fixes (items 2, 3, 6, 7 in the report: NN seeding,
+      # LLM temperature pin, frozen LLM cache, temperature-deprecation
+      # handling) that --check-patch alone doesn't verify.
+      - name: Preflight — follow-up patch check
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          python3 .github/scripts/check_issue2b_reproducibility.py \
+            --check-followup "${{ github.event.inputs.hsl_path }}" "${{ github.event.inputs.ehd_path }}"
 
       - name: Run Item 2b experiment (Phase A [+ Phase B])
         id: run_experiment
