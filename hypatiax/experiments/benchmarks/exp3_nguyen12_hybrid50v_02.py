@@ -65,6 +65,7 @@ import importlib
 import os
 import pathlib
 import random
+import re
 import sys
 
 import numpy as np
@@ -417,6 +418,62 @@ def run(seed: int = 42):
         sys.path.insert(0, str(_bench_dir))
     from hypatia import get_llm_prior
 
+    # ── [FIX-GUESSES-SYNTAX] LLM expr → PySR operator syntax converter ─────
+    # hypatia.py's get_llm_prior() returns plain Python/numpy expressions
+    # (e.g. "x**3 + x**2", "np.sin(x) + x") per its own docstring and
+    # _build_prompt() rules — see hypatia.py's OUTPUT FORMAT section, which
+    # explicitly instructs the LLM to emit "**" for power and "np."-prefixed
+    # calls (np.sin, np.cos, np.log, np.exp, np.sqrt, np.abs).
+    #
+    # exp3's PySR config (below, _pysr_kwargs) uses a DIFFERENT operator set:
+    #     binary_operators = ["+", "-", "*", "/", "^"]   # power is "^", not "**"
+    #     unary_operators  = ["sin", "cos", "log", "sqrt", "exp"]  # bare names,
+    #                                                                no "np." prefix,
+    #                                                                and no "abs" at all
+    # Passing hypatia.py's raw strings straight into PySRRegressor(guesses=...)
+    # hands PySR tokens it doesn't recognize (** is not a configured binary
+    # operator; np.sin/np.abs are not configured unary operators, and "abs"
+    # isn't in the allowed list under any spelling) — this was silently
+    # breaking the warm-start instead of fixing it.
+    #
+    # This converter rewrites each candidate into exp3's actual operator
+    # syntax, and DROPS any candidate that uses "abs" (no PySR equivalent
+    # configured here) rather than passing something PySR will reject.
+    _NP_FUNC_MAP = {
+        "np.sin":  "sin",
+        "np.cos":  "cos",
+        "np.log":  "log",
+        "np.exp":  "exp",
+        "np.sqrt": "sqrt",
+    }
+
+    def _llm_exprs_to_pysr_guesses(exprs):
+        """Convert hypatia.py's Python/numpy expression strings into PySR's
+        configured operator syntax (`^` for power, bare unary function names).
+
+        Candidates using `np.abs` / `abs` are dropped — PySR's
+        unary_operators here does not include an abs equivalent, so there is
+        no safe rewrite; passing it through would just fail inside PySR.
+        Any candidate that fails to convert cleanly is skipped rather than
+        risking a malformed guess.
+        """
+        converted = []
+        for e in exprs:
+            try:
+                if "abs" in e:
+                    continue  # no configured PySR operator for abs — drop
+                out = e
+                for np_name, pysr_name in _NP_FUNC_MAP.items():
+                    out = out.replace(np_name, pysr_name)
+                # "**" (Python power) -> "^" (PySR power). Do this after the
+                # np.* replacements so we don't touch anything inside names.
+                out = re.sub(r"\*\*", "^", out)
+                converted.append(out)
+            except Exception:
+                continue  # skip anything that doesn't convert cleanly
+        return converted
+    # ─────────────────────────────────────────────────────────────────────
+
     # ── Load all 12 Nguyen equations ──────────────────────────────────────
     all_cases = NguYenProtocol.load_all(num_samples=200, noise_level=0.0, seed=seed)
 
@@ -476,18 +533,49 @@ def run(seed: int = 42):
         )
 
         # ── HypatiaX run (PySR + LLM warm-start) ─────────────────────────
+        # [FIX-HYPATIAX-WARMSTART] Previously llm_exprs was fetched from
+        # get_llm_prior() but never actually passed to PySRRegressor — both
+        # the `if llm_exprs:` and `else:` branches below called the exact
+        # same model_h.fit(X, y, variable_names=var_names), and model_h used
+        # the identical **_pysr_kwargs (same random_state=seed,
+        # deterministic=True, parallelism="serial") as model_p. With no
+        # differentiating input, HypatiaX and PySR-only were running the
+        # same deterministic search and necessarily produced byte-identical
+        # expressions/R² — confirmed in exp3_nguyen12_seed42.json (all 12
+        # equations, R² match to 15 decimal places). This was a warm-start
+        # injection bug, not data corruption or a ground-truth leak.
+        #
+        # Fix: pass llm_exprs into PySR's `guesses` parameter so the LLM
+        # candidates actually seed the search.
+        #
+        # [FIX-GUESSES-SYNTAX] hypatia.py has now been reviewed directly
+        # (it IS in this checkout). Its get_llm_prior() returns plain
+        # Python/numpy syntax ("x**3 + x**2", "np.sin(x) + x") — that's a
+        # DIFFERENT operator set than this script's PySR config
+        # (binary_operators uses "^" not "**"; unary_operators are bare
+        # "sin"/"cos"/etc. with no "np." prefix, and no "abs" at all). The
+        # first pass of this fix passed llm_exprs into `guesses` unconverted,
+        # which would have hit PySR with tokens it doesn't recognize and
+        # either errored or silently failed to warm-start. Candidates are
+        # now translated to exp3's actual operator syntax via
+        # _llm_exprs_to_pysr_guesses() before being handed to PySR; any
+        # candidate using "abs" is dropped since there's no configured PySR
+        # equivalent here.
+        _pysr_guesses = _llm_exprs_to_pysr_guesses(llm_exprs) if llm_exprs else []
+        if llm_exprs and not _pysr_guesses:
+            print("    ⚠  All LLM candidates dropped by syntax converter (e.g. all used abs) — no warm-start this eq")
+
         t0 = time.time()
         try:
+            _model_h_kwargs = dict(_pysr_kwargs)
+            if _pysr_guesses:
+                _model_h_kwargs["guesses"] = _pysr_guesses
+
             model_h = PySRRegressor(
-                **_pysr_kwargs,
+                **_model_h_kwargs,
                 warm_start=False,
             )
-            if llm_exprs:
-                # Inject LLM expressions as the initial population hint
-                model_h.set_params(extra_sympy_mappings={})
-                model_h.fit(X, y, variable_names=var_names)
-            else:
-                model_h.fit(X, y, variable_names=var_names)
+            model_h.fit(X, y, variable_names=var_names)
 
             y_pred_h    = model_h.predict(X)
             r2_h        = float(r2_score(y, y_pred_h))
@@ -525,6 +613,13 @@ def run(seed: int = 42):
             "expression": best_expr_h,
             "evaluation": {"r2": r2_h},
             "elapsed":    elapsed_h,
+            # [FIX-HYPATIAX-WARMSTART] audit flag: True only if a converted,
+            # PySR-syntax candidate was actually passed via `guesses`. Uses
+            # _pysr_guesses (post syntax-conversion), not raw llm_exprs, so
+            # this can't read True for a batch that was entirely dropped by
+            # the abs-filter. Lets future runs confirm H and P diverged
+            # without re-diffing full JSON.
+            "llm_warm_start_used": bool(_pysr_guesses),
         })
         results_pysr.append({
             "system":     "pysr",

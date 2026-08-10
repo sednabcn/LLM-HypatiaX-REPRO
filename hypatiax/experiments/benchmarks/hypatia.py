@@ -3,7 +3,26 @@ hypatia.py — LLM warm-start prior for HypatiaX / exp3_nguyen12_hypatiax.py
 ===========================================================================
 Provides ``get_llm_prior(eq, X_train, y_train, ...)`` which queries Claude
 via the Anthropic API and returns a ranked list of candidate symbolic
-expressions in PySR-compatible Python syntax.
+expressions.
+
+[DOC-FIX] The expressions are returned in plain Python/numpy syntax
+(``**`` for power, ``np.sin`` / ``np.cos`` / ``np.log`` / ``np.exp`` /
+``np.sqrt`` / ``np.abs`` for functions) — see ``_build_prompt``'s "Rules for
+expr" section, which is what the LLM is actually instructed to emit. This is
+NOT necessarily the same operator syntax a given PySR configuration uses
+(e.g. PySR is commonly configured with ``^`` for power and bare unary
+names like ``sin``/``cos`` with no ``np.`` prefix, and callers may not
+configure an ``abs`` operator at all). Earlier revisions of this docstring
+called the output "PySR-compatible," which is what led a downstream caller
+to pass these strings directly into ``PySRRegressor(guesses=...)`` and get
+silently-broken warm-starts. Callers MUST convert to their own PySR
+operator config (translating ``**``→their power op, dropping/mapping
+``np.*`` calls to their configured unary op names, and dropping any
+candidate that uses a function their config doesn't support) before passing
+these expressions to PySR. This module intentionally does not perform that
+conversion itself, since the correct mapping depends on each caller's own
+``binary_operators`` / ``unary_operators`` config, which this module has no
+visibility into.
 
 The module is intentionally self-contained: no HypatiaX internal imports are
 required so that exp3 can drop this file next to the script and import it
@@ -14,7 +33,9 @@ Usage
     from hypatia import get_llm_prior
 
     exprs = get_llm_prior(eq_dict, X_train, y_train)
-    # exprs -> ["x**3 + x**2 + x", "x**3 + x**2", ...]
+    # exprs -> ["x**3 + x**2 + x", "x**3 + x**2", ...]  (plain Python/numpy
+    #           syntax — convert to your PySR operator config before using
+    #           as `guesses=`; see [DOC-FIX] note above)
 
 API key resolution order
 ------------------------
@@ -113,8 +134,12 @@ def get_llm_prior(
     Returns
     -------
     List[str]
-        Python expressions using the variable names in ``eq["vars"]``,
-        compatible with PySR's ``populations_init`` / expression seeding.
+        Python expressions using the variable names in ``eq["vars"]``, in
+        plain Python/numpy syntax (``**`` for power, ``np.sin`` etc. for
+        functions — NOT necessarily your PySR config's operator syntax; see
+        the [DOC-FIX] note in the module docstring). Convert to your own
+        PySR ``binary_operators`` / ``unary_operators`` config before
+        passing into ``guesses=`` or any other PySR seeding mechanism.
         Empty list on any error (caller falls back to cold PySR).
     """
     resolved_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
