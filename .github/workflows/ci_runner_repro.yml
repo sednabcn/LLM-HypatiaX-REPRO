@@ -257,6 +257,93 @@ env:
 jobs:
 
   # ============================================================================
+  #  JOB -1 - dispatch_multi
+  #
+  #  Implements [FEAT-MULTI-EXPERIMENT] (see comment on `experiments` input
+  #  above). This job was referenced by that comment but never actually
+  #  defined, which is why selecting `experiments` had no effect and every
+  #  run silently fell through to a single isolated `experiment` run instead.
+  #
+  #  Runs only when `experiments` is non-empty. Splits it on commas/spaces,
+  #  validates each ID against the same list as the `experiment` choice
+  #  input, and re-dispatches this workflow once per ID via `gh workflow
+  #  run` — each dispatched run is a completely ordinary, isolated
+  #  single-experiment run, identical to typing that ID into `experiment`
+  #  by hand. This job does NOT forward `experiments` itself (it's left
+  #  unset on each child dispatch), so child runs fall through pca_runner's
+  #  guard below and execute plan/worker/gates normally instead of trying
+  #  to fan out again.
+  # ============================================================================
+  dispatch_multi:
+    name: "Dispatch multi - fan out '${{ github.event.inputs.experiments }}'"
+    if: github.event.inputs.experiments != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Fan out one isolated dispatch per experiment ID
+        env:
+          GH_TOKEN:          ${{ github.token }}
+          REPO:               ${{ github.repository }}
+          REF:                ${{ github.ref_name }}
+          EXPERIMENTS:        ${{ github.event.inputs.experiments }}
+          N_SHARDS:           ${{ github.event.inputs.n_shards }}
+          SEEDS:              ${{ github.event.inputs.seeds }}
+          N_SAMPLES:          ${{ github.event.inputs.n_samples }}
+          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels }}
+          PYSR_GENERATIONS:   ${{ github.event.inputs.pysr_generations }}
+          PYSR_POPULATIONS:   ${{ github.event.inputs.pysr_populations }}
+          TASK_IDS_OVERRIDE:  ${{ github.event.inputs.task_ids_override }}
+          RESUME:             ${{ github.event.inputs.resume }}
+          DRY_RUN:            ${{ github.event.inputs.dry_run }}
+          FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
+        run: |
+          set -euo pipefail
+
+          VALID_IDS="exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca \
+            exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
+            exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
+
+          # Accept comma- and/or space-separated lists; collapse to single spaces.
+          IDS=$(echo "$EXPERIMENTS" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+
+          if [[ -z "$IDS" ]]; then
+            echo "::error::'experiments' was non-empty but contained no parseable IDs after splitting on ',' and ' '."
+            exit 1
+          fi
+
+          UNKNOWN=""
+          for ID in $IDS; do
+            case " $VALID_IDS " in
+              *" $ID "*) ;;
+              *) UNKNOWN="$UNKNOWN $ID" ;;
+            esac
+          done
+          if [[ -n "$UNKNOWN" ]]; then
+            echo "::error::Unknown experiment ID(s) in 'experiments':$UNKNOWN — must be one of: $VALID_IDS"
+            exit 1
+          fi
+
+          echo "::notice::Fanning out ${IDS} as isolated dispatches on ref ${REF}."
+          for ID in $IDS; do
+            echo "::notice::Dispatching isolated run for experiment=${ID}"
+            gh workflow run "ci_runner_repro.yml" \
+              --repo "$REPO" \
+              --ref "$REF" \
+              -f experiment="$ID" \
+              -f n_shards="$N_SHARDS" \
+              -f seeds="$SEEDS" \
+              -f n_samples="$N_SAMPLES" \
+              -f noise_levels="$NOISE_LEVELS" \
+              -f pysr_generations="$PYSR_GENERATIONS" \
+              -f pysr_populations="$PYSR_POPULATIONS" \
+              -f task_ids_override="$TASK_IDS_OVERRIDE" \
+              -f resume="$RESUME" \
+              -f dry_run="$DRY_RUN" \
+              -f force_rerun="$FORCE_RERUN"
+          done
+
+  # ============================================================================
   #  JOB 0 - pca_runner
   #
   #  Handles exp1_pca, exp1b_pca, exp2_feynman_pca — formerly in
@@ -272,6 +359,12 @@ jobs:
   # ============================================================================
   pca_runner:
     name: "PCA gate - ${{ github.event.inputs.experiment }}"
+    # This run becomes a pure fan-out dispatcher when `experiments` is set
+    # (see dispatch_multi above) — skip pca_runner (and therefore plan,
+    # worker, and the gates, which all key off this job's outputs or its
+    # downstream pca_run_* jobs) so THIS run doesn't also execute the
+    # stale default `experiment` value on top of the fan-out.
+    if: github.event.inputs.experiments == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
