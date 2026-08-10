@@ -100,6 +100,23 @@ Fix 12  Borrowing Interest feature-matrix bug fixed.
 
 Fix 13  LLM model updated: claude-sonnet-4-5 → claude-sonnet-4-6.
 
+What changed in v3.2
+─────────────────────
+Fix 14  CRITICAL — Ground-truth leak removed from hybrid arm's LLM prompt:
+          - Old: _generate_llm_formula()'s prompt included a literal
+            "Ground truth: {metadata['ground_truth']}" line, handing the
+            hybrid arm's LLM call the answer before asking it to derive
+            the formula. The pure_llm baseline's prompt never had this
+            line, so the two arms were not comparable.
+          - New: hybrid prompt carries only description, domain,
+            variables, and constants — the same information pure_llm
+            receives. No answer leak.
+          - IMPACT: invalidates all previously-reported hybrid vs.
+            pure_llm comparisons (runtime ratios, success-rate counts,
+            "68 of 74" / "66 of 74" citations). Full 74-case benchmark
+            must be re-run across all seeds (42, 99, 123, 777, 2024)
+            before any of those numbers are cited again.
+
 Denominator fix (updated)
 ──────────────────────────
 74 cases total; 0 intractable.  The 3 formerly skipped cases are now
@@ -735,14 +752,25 @@ def _generate_llm_formula(
         for k, v in constants.items():
             constants_block += f"  {k} = {v}\n"
 
+    # FIX 14 (2026-08-10): Removed ground-truth leak. This prompt used to
+    # include a "Ground truth: {metadata.get('ground_truth', ...)}" line,
+    # handing the hybrid arm's LLM call the answer before asking it to
+    # derive the formula — while the pure_llm baseline's prompt
+    # (_generate_standard_prompt / _generate_specialized_prompt in
+    # baseline_pure_llm_defi_discovery.py) never included it. This is the
+    # root cause of the hybrid arm's near-universal test_r2=1.0 on
+    # decision="llm" cases, including 20/21 cases where pure_llm's
+    # independently-derived formula failed outright (nan / large-negative
+    # R²) — those were two different LLM calls with two different prompts,
+    # not the same formula scored two different ways. See analysis in
+    # exp1b run notes, 2026-08-10.
     prompt   = f"""You are an expert in DeFi (decentralised finance) mathematics.
 
 Task: Derive the mathematical formula for the following quantity.
 
 Description : {description}
 Domain      : {domain}
-Variables   : {var_list}
-Ground truth: {metadata.get('ground_truth', 'not provided')}{constants_block}
+Variables   : {var_list}{constants_block}
 Return ONLY a Python function called `formula` that accepts the variables as
 positional numpy-array arguments (in the order listed) and returns a numpy array.
 Use numpy (imported as np) for any mathematical operations.

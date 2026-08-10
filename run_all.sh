@@ -2,6 +2,44 @@
 # =============================================================================
 # run_all.sh — HypatiaX JMLR v3.0 full numerical reproduction pipeline
 #
+# FIX CRITICAL-GT-LEAK (2026-08-10): ground-truth answer was leaking into
+#   LLM formula-generation prompts in THREE confirmed locations (same bug
+#   class, independently introduced):
+#     1. hypatiax_defi_benchmark_v3c.py :: _generate_llm_formula
+#        "Ground truth: {metadata['ground_truth']}" — always fired.
+#        Affects: exp1, exp1b — Tables 9, 10, 11, 12, 13, 15 · Figures 9-13.
+#        FIXED (script's own Fix 14 changelog entry).
+#     2. hybrid_system_llm_nn_all_domains.py :: _generate_prompt
+#        "Expected form: {metadata['ground_truth']}" — fires only on the
+#        LOCAL FALLBACK path (clean PureLLMBaseline delegate fails/N-A),
+#        skewed toward the hardest cases. Affects: hybrid_all_domains step
+#        — tab:hybrid_all. FIXED (script's own FIX GT-LEAK comment).
+#     3. hybrid_system_nn_defi_domain.py :: _specialized_prompt
+#        WORST instance — not a hint, the complete pre-solved answer
+#        (already formatted as FORMULA:/PYTHON:/EXPLANATION:) was sent
+#        as the "prompt" with no derivation task posed at all, for
+#        kelly/impermanent-loss/VaR/expected-shortfall. Fires only on
+#        fallback (same condition as #2). Affects: suppA step (via
+#        run_hybrid_system_benchmark.py --batch) — Tab 11-13 routing.
+#        FIXED (call site now always uses the genuine _standard_prompt;
+#        _specialized_prompt left in place but marked DEPRECATED/unused).
+#   pure_llm's own prompt (baseline_pure_llm_defi_discovery.py) was audited
+#   and is clean — confirms the leak is arm-specific, not shared.
+#   run_hybrid_system_benchmark.py itself is a pure orchestrator with no
+#   prompt code — clean. test_enhanced_defi_extrapolation.py delegates
+#   directly to the clean PureLLMBaseline with no local prompt path —
+#   clean. analyze_hybrid_performance.py makes no LLM calls — not
+#   applicable. suppA's audit is now COMPLETE across all 3 scripts it
+#   subprocess-calls.
+#   SEPARATE ISSUE (not a leak, flag for maintainers): hypatiax_defi_
+#   benchmark_v3c.py's own header lists hybrid_system_nn_defi_domain.py
+#   and test_enhanced_defi_extrapolation.py as scripts it "replaces" —
+#   yet suppA still runs both directly. Worth resolving whether suppA
+#   should be retired in favor of v3c, independent of this leak fix.
+#   ALL affected steps (exp1, exp1b, hybrid_all_domains, suppA) must be
+#   rerun from scratch before any hybrid-vs-pure_llm number in the paper
+#   is cited again.
+#
 # FIX CRITICAL 1 : 'instability' → 'hybrid_all_domains' (CI naming alignment)
 # FIX CRITICAL 2 : suppB_sc step added (sample-complexity sweep)
 # FIX CRITICAL 3 : hybrid_llm_nn/all_domains (not /defi) used throughout
@@ -512,6 +550,56 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
+
+# ── STEP 0b: gt_leak_guard ──────────────────────────────────────────────────
+# FIX CRITICAL-GT-LEAK regression gate: fails fast, before any LLM calls are
+# made, if the ground-truth leak pattern ever reappears in any hybrid-arm
+# prompt (e.g. from a bad merge/revert). Cheap grep, no API calls. Checks
+# BOTH confirmed leak sites — one per script, different literal wording.
+run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" bash -c "
+  cd '${REPO_ROOT}'
+  _FAIL=0
+
+  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py'
+  if [[ -f \"\${_T1}\" ]]; then
+    if grep -n \"Ground truth:.*metadata\.get(.ground_truth\" \"\${_T1}\" | grep -v '^[0-9]*:# ' ; then
+      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v3c.py _generate_llm_formula prompt.'
+      echo '         See Fix 14 changelog entry in that file.'
+      _FAIL=1
+    fi
+  else
+    echo \"WARNING: \${_T1} not found — skipping that half of gt_leak_guard.\"
+  fi
+
+  _T2='hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py'
+  if [[ -f \"\${_T2}\" ]]; then
+    if grep -n \"Expected form:.*metadata\[.ground_truth.\]\" \"\${_T2}\" | grep -v '^[0-9]*:# ' ; then
+      echo '::error::Ground-truth leak pattern detected in hybrid_system_llm_nn_all_domains.py _generate_prompt fallback.'
+      echo '         See FIX GT-LEAK comment in that file.'
+      _FAIL=1
+    fi
+  else
+    echo \"WARNING: \${_T2} not found — skipping that part of gt_leak_guard.\"
+  fi
+
+  _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
+  if [[ -n \"\${_T3}\" && -f \"\${_T3}\" ]]; then
+    if grep -n 'prompt = self\._specialized_prompt' \"\${_T3}\" | grep -v '^[0-9]*:# ' ; then
+      echo '::error::_specialized_prompt call site reintroduced in hybrid_system_nn_defi_domain.py.'
+      echo '         That path sends a pre-solved answer as the LLM prompt for several'
+      echo '         formula types — see FIX GT-LEAK-2 comment in that file. Must always'
+      echo '         use _standard_prompt at that call site.'
+      _FAIL=1
+    fi
+  else
+    echo 'WARNING: hybrid_system_nn_defi_domain.py not found — skipping that part of gt_leak_guard.'
+  fi
+
+  if [[ \"\${_FAIL}\" == '1' ]]; then
+    exit 1
+  fi
+  echo '  [OK]  gt_leak_guard — no ground-truth leak pattern found in any of the 3 hybrid prompt paths.'
+"
 
 # ── STEP 1: exp1 ──────────────────────────────────────────────────────────────
 run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "

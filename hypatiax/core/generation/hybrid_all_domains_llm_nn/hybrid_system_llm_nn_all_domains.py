@@ -250,9 +250,15 @@ class HybridSystemAllDomains:
             for k, v in metadata["constants"].items():
                 constants_info += f"\n  • {k} = {v}"
 
+        # FIX GT-LEAK (2026-08-10): removed "Expected form: {ground_truth}"
+        # hint. This handed the fallback path's LLM call the answer before
+        # asking it to derive the formula — same bug class as the leak fixed
+        # in hypatiax_defi_benchmark_v3c.py's _generate_llm_formula (Fix 14).
+        # This path only fires when the PureLLMBaseline delegate above fails
+        # or returns empty/N/A (see generate_llm_formula docstring), so the
+        # leak activated disproportionately on the HARDEST cases — exactly
+        # where a ground-truth hint would inflate scores the most.
         hint_info = ""
-        if metadata and "ground_truth" in metadata:
-            hint_info = f"\nExpected form: {metadata['ground_truth']}"
 
         return f"""[HYBRID-SYSTEM: LLM+NN symbolic discovery — independent from pure-LLM baseline]
 You are a mathematical formula expert specialising in {domain}.

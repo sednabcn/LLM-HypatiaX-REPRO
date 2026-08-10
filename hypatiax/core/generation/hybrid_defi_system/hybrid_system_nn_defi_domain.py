@@ -848,17 +848,25 @@ class EnhancedHybridSystemDeFi:
                 pass  # fall through to local DeFi implementation
 
         # ── Local DeFi implementation (fallback) ─────────────────────────────
-        desc_lower = description.lower()
-        use_specialized = any(
-            k in desc_lower
-            for k in ["kelly", "impermanent loss", "liquidation", "expected shortfall",
-                       "black-scholes", "sharpe", "value at risk"]
-        )
-
-        if use_specialized:
-            prompt = self._specialized_prompt(description, domain, variable_names, metadata)
-        else:
-            prompt = self._standard_prompt(description, domain, variable_names, metadata)
+        # FIX GT-LEAK-2 (2026-08-10): _specialized_prompt() used to be called
+        # here for ["kelly", "impermanent loss", "liquidation", "expected
+        # shortfall", "black-scholes", "sharpe", "value at risk"] cases.
+        # Unlike the ground-truth-hint leaks fixed elsewhere in this codebase
+        # (hypatiax_defi_benchmark_v3c.py Fix 14, hybrid_system_llm_nn_all_
+        # domains.py FIX GT-LEAK), _specialized_prompt() didn't add a hint to
+        # a genuine derivation request — for kelly/impermanent-loss/VaR/
+        # expected-shortfall it returned the COMPLETE pre-solved answer,
+        # already formatted in the FORMULA:/PYTHON:/EXPLANATION: schema the
+        # parser expects, with no task or question posed to the model at
+        # all. That's not a leak into a derivation — it's skipping the
+        # derivation entirely while still logging the result as "LLM
+        # formula: <description>". This only fired on the fallback path
+        # (when the audited PureLLMBaseline delegate above failed or
+        # returned N/A). Always using the genuine _standard_prompt() here
+        # means the LLM is actually asked to derive the formula in every
+        # case; _specialized_prompt() is left in place below for reference
+        # but is no longer called.
+        prompt = self._standard_prompt(description, domain, variable_names, metadata)
 
         try:
             resp = _create_message_deterministic(
@@ -952,6 +960,12 @@ EXPLANATION:
 """
 
     def _specialized_prompt(self, description, domain, variable_names, metadata):
+        """
+        DEPRECATED — no longer called (see FIX GT-LEAK-2 at the generate_llm_formula
+        call site above). Kept for reference only: several branches below return a
+        fully pre-solved answer instead of a derivation request, which defeats the
+        purpose of an "LLM formula generation" step. Do not reintroduce the call site.
+        """
         desc_lower = description.lower()
         var_list = ", ".join(variable_names)
         v = variable_names
