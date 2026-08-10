@@ -283,7 +283,14 @@ jobs:
     steps:
       - name: Fan out one isolated dispatch per experiment ID
         env:
-          GH_TOKEN:          ${{ github.token }}
+          # NOTE: the default GITHUB_TOKEN cannot be used here. GitHub
+          # silently drops any workflow_dispatch request authenticated with
+          # the built-in GITHUB_TOKEN (recursion-prevention) — `gh workflow
+          # run` returns success with no error, but no run is ever queued.
+          # DISPATCH_PAT must be a classic PAT with `repo` + `workflow`
+          # scopes (or swap this line for a GitHub App installation token
+          # minted via actions/create-github-app-token, which also works).
+          GH_TOKEN:          ${{ secrets.DISPATCH_PAT }}
           REPO:               ${{ github.repository }}
           REF:                ${{ github.ref_name }}
           EXPERIMENTS:        ${{ github.event.inputs.experiments }}
