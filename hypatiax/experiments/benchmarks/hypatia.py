@@ -99,7 +99,6 @@ def get_llm_prior(
     *,
     api_key: str | None = None,
     n_candidates: int = 5,
-    temperature: float = 0.25,
     model: str = "claude-sonnet-5",
     max_tokens: int = 1024,
     timeout: float = 60.0,
@@ -120,8 +119,6 @@ def get_llm_prior(
         Anthropic API key.  Falls back to ``ANTHROPIC_API_KEY`` env var.
     n_candidates:
         How many candidate expressions to request from the LLM.
-    temperature:
-        Sampling temperature (lower = more deterministic).
     model:
         Anthropic model string.
     max_tokens:
@@ -175,7 +172,6 @@ def get_llm_prior(
         message = client.messages.create(
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature,
             messages=[{"role": "user", "content": prompt}],
             timeout=timeout,
         )
