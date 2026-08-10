@@ -269,6 +269,11 @@ jobs:
               # RESULTS_PATH); exp2_five reuses run_comparative_suite_benchmark_v2.py
               # (same script/output format as exp2), so it shares exp2's globs.
               "exp1_five":         ["exp1_five_results*.json"],
+              # exp1_pca / exp1b_pca use _pca_results filename pattern — mirrors
+              # the qualify-job RESULT_GLOBS entry below (was previously absent
+              # from this dict, silently falling back to ["*.json"]).
+              "exp1_pca":          ["hypatiax_defi_benchmark_pca_results*.json"],
+              "exp1b_pca":         ["hypatiax_defi_benchmark_pca_results*.json"],
               "exp2_feynman":      ["protocol_core_*.json", "benchmark_results.json"],
               "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json",
                                       "ablation_paired.json"],
@@ -801,6 +806,13 @@ jobs:
               # exp1_pca / exp1b_pca use _pca_results filename pattern
               "exp1_pca":          ["hypatiax_defi_benchmark_pca_results*.json"],
               "exp1b_pca":         ["hypatiax_defi_benchmark_pca_results*.json"],
+              # exp1_five / exp2_five — mirrors job 1's RESULT_GLOBS entry above
+              # (was previously absent from this dict, silently falling back to
+              # ["*.json", "*.csv"]). exp1_five commits exp1_five_results*.json;
+              # exp2_five reuses run_comparative_suite_benchmark_v2.py's output
+              # format, same as exp2.
+              "exp1_five":         ["exp1_five_results*.json"],
+              "exp2_five":         ["protocol_core_*.json", "benchmark_results.json"],
               "exp2_feynman":      ["protocol_core_*.json", "benchmark_results.json"],
               "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json",
                                       "ablation_paired.json"],

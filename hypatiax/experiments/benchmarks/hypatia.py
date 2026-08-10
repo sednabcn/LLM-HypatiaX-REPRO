@@ -175,7 +175,24 @@ def get_llm_prior(
             messages=[{"role": "user", "content": prompt}],
             timeout=timeout,
         )
-        raw = message.content[0].text
+        # [FIX-THINKING-BLOCK] message.content[0] is not reliably the text
+        # block — some models (or requests with extended thinking enabled)
+        # return a ThinkingBlock first, followed by the TextBlock with the
+        # actual completion. Grabbing content[0].text unconditionally raised
+        # "'ThinkingBlock' object has no attribute 'text'" and silently
+        # dropped the LLM warm-start for every equation. Find the first
+        # block that actually has a `.text` attribute instead of assuming
+        # position 0.
+        text_blocks = [
+            block for block in message.content
+            if getattr(block, "type", None) == "text"
+        ]
+        if not text_blocks:
+            raise ValueError(
+                f"No text block in API response (got block types: "
+                f"{[getattr(b, 'type', type(b).__name__) for b in message.content]})"
+            )
+        raw = text_blocks[0].text
     except Exception as exc:
         warnings.warn(
             f"  [LLM] API call failed for {eq['id']}: {exc}",

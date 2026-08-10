@@ -341,9 +341,10 @@ jobs:
                                  capture_output=True)
               return r.returncode == 0
 
-          # NOTE: exp1_ablation, exp1_pca, exp1b_pca have no confirmed minimum
-          # task count yet — they fall back to MIN_TASKS.get(exp_id, 1) until
-          # real values are supplied. Update this dict once known.
+          # NOTE: exp1_ablation, exp1_five, exp1_pca, exp1b_pca, exp2_five have
+          # no confirmed minimum task count yet — they fall back to
+          # MIN_TASKS.get(exp_id, 1) until real values are supplied. Update
+          # this dict once known.
           MIN_TASKS = {
               "exp1": 1, "exp1b": 5, "exp2_feynman": 10, "exp2_feynman_pca": 5,
               "exp2_feynman_extrap": 5, "exp2": 5, "exp3": 5, "exp3b": 5,
