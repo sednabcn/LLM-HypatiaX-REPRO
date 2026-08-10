@@ -116,6 +116,33 @@ on:
           - extrap
         default: exp2_feynman
 
+      # -- Multi-select (fan-out) ---------------------------------------------
+      # [FEAT-MULTI-EXPERIMENT] Run N specific pipelines from one dispatch,
+      # e.g. "exp1 exp1b exp3 exp3b hybrid_all_domains suppA".
+      #
+      # GitHub Actions' workflow_dispatch `choice` type is single-select only
+      # (no native multi-select input), and this workflow's plan/worker/gate
+      # jobs are single-experiment end to end — `experiment` is threaded
+      # through cache keys, artifact names, run-name, and ~40 job/step `if:`
+      # conditions. Rather than rework that DAG to matrix multiple experiment
+      # IDs inside one run (touching all of the above), this list instead
+      # re-dispatches this same workflow once per requested ID via the
+      # `dispatch_multi` job below. Each dispatched run is a completely
+      # ordinary single-experiment run — identical to typing that ID into
+      # `experiment` by hand — so none of the existing plan/worker/gate logic
+      # needs to change or be re-audited.
+      #
+      # When this is non-empty, `experiment` (single-select above) is
+      # ignored for THIS run: this run becomes a pure fan-out dispatcher and
+      # does not itself execute plan/worker/gates (see `if:` guards on
+      # pca_runner / plan below). All OTHER inputs (n_shards, seeds,
+      # task_ids_override, resume, dry_run, etc.) are passed through
+      # unchanged to every dispatched run.
+      experiments:
+        description: "Optional: space/comma-separated experiment IDs to run as separate dispatches, e.g. 'exp1 exp1b exp3 exp3b hybrid_all_domains suppA'. Overrides 'experiment' above when set — this run becomes a fan-out dispatcher only, one independent run per ID, all other inputs passed through unchanged."
+        required: false
+        default: ""
+
       # -- Sharding ----------------------------------------------------------
       n_shards:
         description: "Number of parallel worker shards (user input). exp1b/exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
