@@ -506,7 +506,14 @@ def run(seed: int = 42):
         }
 
         # ── LLM warm-start candidates ─────────────────────────────────────
+        # [FIX-LLM-DIAGNOSTICS] Track *why* warm-start did or didn't fire,
+        # not just whether it did — a bare bool can't distinguish "LLM
+        # disabled" from "LLM call raised" from "LLM returned 0 candidates"
+        # from "candidates returned but all dropped by the syntax filter".
+        # Each of those needs a different fix if it turns out to dominate a
+        # rerun, so the status has to survive into the JSON, not just stdout.
         llm_exprs = []
+        _llm_call_raised = False
         if USE_LLM:
             try:
                 llm_exprs = get_llm_prior(
@@ -516,6 +523,7 @@ def run(seed: int = 42):
                 )
                 print(f"    LLM candidates: {llm_exprs[:3]} ...")
             except Exception as _e:
+                _llm_call_raised = True
                 print(f"    ⚠  LLM warm-start failed: {_e} — running PySR-only")
 
         # ── Shared PySR config ────────────────────────────────────────────
@@ -532,73 +540,103 @@ def run(seed: int = 42):
             unary_operators=["sin", "cos", "log", "sqrt", "exp"],
         )
 
-        # ── HypatiaX run (PySR + LLM warm-start) ─────────────────────────
-        # [FIX-HYPATIAX-WARMSTART] Previously llm_exprs was fetched from
-        # get_llm_prior() but never actually passed to PySRRegressor — both
-        # the `if llm_exprs:` and `else:` branches below called the exact
-        # same model_h.fit(X, y, variable_names=var_names), and model_h used
-        # the identical **_pysr_kwargs (same random_state=seed,
-        # deterministic=True, parallelism="serial") as model_p. With no
-        # differentiating input, HypatiaX and PySR-only were running the
-        # same deterministic search and necessarily produced byte-identical
-        # expressions/R² — confirmed in exp3_nguyen12_seed42.json (all 12
-        # equations, R² match to 15 decimal places). This was a warm-start
-        # injection bug, not data corruption or a ground-truth leak.
-        #
-        # Fix: pass llm_exprs into PySR's `guesses` parameter so the LLM
-        # candidates actually seed the search.
-        #
-        # [FIX-GUESSES-SYNTAX] hypatia.py has now been reviewed directly
-        # (it IS in this checkout). Its get_llm_prior() returns plain
-        # Python/numpy syntax ("x**3 + x**2", "np.sin(x) + x") — that's a
-        # DIFFERENT operator set than this script's PySR config
-        # (binary_operators uses "^" not "**"; unary_operators are bare
-        # "sin"/"cos"/etc. with no "np." prefix, and no "abs" at all). The
-        # first pass of this fix passed llm_exprs into `guesses` unconverted,
-        # which would have hit PySR with tokens it doesn't recognize and
-        # either errored or silently failed to warm-start. Candidates are
-        # now translated to exp3's actual operator syntax via
-        # _llm_exprs_to_pysr_guesses() before being handed to PySR; any
-        # candidate using "abs" is dropped since there's no configured PySR
-        # equivalent here.
+        # [FIX-HYPATIAX-WARMSTART] llm_exprs is converted to PySR's operator
+        # syntax and passed via PySRRegressor(guesses=...) — confirmed valid
+        # for the pinned pysr==2.0.0a1 (guesses is a constructor parameter
+        # in this version; type list[str] for single-output regression,
+        # which every Nguyen-12 equation is).
         _pysr_guesses = _llm_exprs_to_pysr_guesses(llm_exprs) if llm_exprs else []
         if llm_exprs and not _pysr_guesses:
             print("    ⚠  All LLM candidates dropped by syntax converter (e.g. all used abs) — no warm-start this eq")
 
-        t0 = time.time()
-        try:
-            _model_h_kwargs = dict(_pysr_kwargs)
-            if _pysr_guesses:
-                _model_h_kwargs["guesses"] = _pysr_guesses
+        # [FIX-DEGENERATE-WARMSTART] Residual risk this closes: whenever
+        # _pysr_guesses is empty (LLM disabled, LLM call failed, LLM
+        # returned nothing, or every candidate got dropped by the syntax
+        # filter), model_h's kwargs become byte-identical to model_p's —
+        # same random_state, deterministic=True, parallelism="serial", no
+        # guesses on either side. Running both anyway just re-derives the
+        # exact same deterministic search twice and silently reproduces the
+        # original H≡P bug this whole audit started from, except now it
+        # LOOKS like two independent runs that happened to agree instead of
+        # one run copied into two slots.
+        #
+        # Fix: when there's nothing to differentiate the two arms, run PySR
+        # ONCE and copy that single result into both the H and P records,
+        # with an explicit flag on the H record marking it as a copy. This
+        # is strictly more honest than re-running (the two runs are
+        # PROVABLY identical under this config, not coincidentally so) and
+        # cuts wall-clock time for every equation where warm-start didn't
+        # fire, instead of paying for a second guaranteed-identical search.
+        if _pysr_guesses:
+            _warm_start_status = "used"
+        elif not USE_LLM:
+            _warm_start_status = "llm_disabled"
+        elif _llm_call_raised:
+            _warm_start_status = "llm_call_failed"
+        elif not llm_exprs:
+            _warm_start_status = "no_candidates_returned"
+        else:
+            _warm_start_status = "all_candidates_filtered"
 
-            model_h = PySRRegressor(
-                **_model_h_kwargs,
-                warm_start=False,
-            )
-            model_h.fit(X, y, variable_names=var_names)
+        _llm_candidates_raw = len(llm_exprs)
+        _llm_candidates_used_after_syntax_filter = len(_pysr_guesses)
 
-            y_pred_h    = model_h.predict(X)
-            r2_h        = float(r2_score(y, y_pred_h))
-            best_expr_h = str(model_h.sympy())
-        except Exception as _e:
-            print(f"    ✗ HypatiaX run failed: {_e}")
-            r2_h        = float("-inf")
-            best_expr_h = "FAILED"
-        elapsed_h = time.time() - t0
+        if _pysr_guesses:
+            # ── HypatiaX run (PySR + LLM warm-start) — genuinely differs
+            # from PySR-only, so both arms are run independently. ──────────
+            t0 = time.time()
+            try:
+                model_h = PySRRegressor(
+                    **_pysr_kwargs,
+                    guesses=_pysr_guesses,
+                    warm_start=False,
+                )
+                model_h.fit(X, y, variable_names=var_names)
+                y_pred_h    = model_h.predict(X)
+                r2_h        = float(r2_score(y, y_pred_h))
+                best_expr_h = str(model_h.sympy())
+            except Exception as _e:
+                print(f"    ✗ HypatiaX run failed: {_e}")
+                r2_h        = float("-inf")
+                best_expr_h = "FAILED"
+            elapsed_h = time.time() - t0
 
-        # ── PySR-only run (no LLM) ────────────────────────────────────────
-        t0 = time.time()
-        try:
-            model_p     = PySRRegressor(**_pysr_kwargs)
-            model_p.fit(X, y, variable_names=var_names)
-            y_pred_p    = model_p.predict(X)
-            r2_p        = float(r2_score(y, y_pred_p))
-            best_expr_p = str(model_p.sympy())
-        except Exception as _e:
-            print(f"    ✗ PySR-only run failed: {_e}")
-            r2_p        = float("-inf")
-            best_expr_p = "FAILED"
-        elapsed_p = time.time() - t0
+            # ── PySR-only run (no LLM) ────────────────────────────────────
+            t0 = time.time()
+            try:
+                model_p     = PySRRegressor(**_pysr_kwargs)
+                model_p.fit(X, y, variable_names=var_names)
+                y_pred_p    = model_p.predict(X)
+                r2_p        = float(r2_score(y, y_pred_p))
+                best_expr_p = str(model_p.sympy())
+            except Exception as _e:
+                print(f"    ✗ PySR-only run failed: {_e}")
+                r2_p        = float("-inf")
+                best_expr_p = "FAILED"
+            elapsed_p = time.time() - t0
+            _h_is_copy_of_p = False
+        else:
+            # ── No warm-start available: run PySR ONCE, copy into both. ───
+            # (guesses is unset on both arms; _pysr_kwargs alone is
+            # deterministic and identical either way — see comment above.)
+            t0 = time.time()
+            try:
+                model_p     = PySRRegressor(**_pysr_kwargs)
+                model_p.fit(X, y, variable_names=var_names)
+                y_pred_p    = model_p.predict(X)
+                r2_p        = float(r2_score(y, y_pred_p))
+                best_expr_p = str(model_p.sympy())
+            except Exception as _e:
+                print(f"    ✗ PySR-only run failed: {_e}")
+                r2_p        = float("-inf")
+                best_expr_p = "FAILED"
+            elapsed_p = time.time() - t0
+
+            r2_h        = r2_p
+            best_expr_h = best_expr_p
+            elapsed_h   = elapsed_p
+            _h_is_copy_of_p = True
+            print(f"    ℹ  No warm-start ({_warm_start_status}) — H copied from P's single run, not re-derived")
 
         # ── Per-equation summary ──────────────────────────────────────────
         THRESH = 0.9999
@@ -613,13 +651,23 @@ def run(seed: int = 42):
             "expression": best_expr_h,
             "evaluation": {"r2": r2_h},
             "elapsed":    elapsed_h,
-            # [FIX-HYPATIAX-WARMSTART] audit flag: True only if a converted,
-            # PySR-syntax candidate was actually passed via `guesses`. Uses
-            # _pysr_guesses (post syntax-conversion), not raw llm_exprs, so
-            # this can't read True for a batch that was entirely dropped by
-            # the abs-filter. Lets future runs confirm H and P diverged
-            # without re-diffing full JSON.
+            # [FIX-HYPATIAX-WARMSTART] True only if a converted, PySR-syntax
+            # candidate was actually passed via `guesses`.
             "llm_warm_start_used": bool(_pysr_guesses),
+            # [FIX-DEGENERATE-WARMSTART] True whenever this record's
+            # expression/R²/elapsed were copied directly from the P run
+            # rather than derived from an independent PySR search. Any
+            # table-generation code consuming this JSON MUST check this
+            # flag before treating H and P as independent trials for that
+            # equation (e.g. for the Mann-Whitney H>P comparison).
+            "h_is_copy_of_p": _h_is_copy_of_p,
+            # [FIX-LLM-DIAGNOSTICS] one of: "used", "llm_disabled",
+            # "llm_call_failed", "no_candidates_returned",
+            # "all_candidates_filtered". Explains _which_ of the several
+            # possible reasons warm-start didn't fire, when it didn't.
+            "warm_start_status": _warm_start_status,
+            "llm_candidates_raw": _llm_candidates_raw,
+            "llm_candidates_used_after_syntax_filter": _llm_candidates_used_after_syntax_filter,
         })
         results_pysr.append({
             "system":     "pysr",
