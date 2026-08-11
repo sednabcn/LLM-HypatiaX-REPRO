@@ -67,6 +67,7 @@ import pathlib
 import random
 import re
 import sys
+import traceback
 
 import numpy as np
 
@@ -446,16 +447,46 @@ def run(seed: int = 42):
         "np.exp":  "exp",
         "np.sqrt": "sqrt",
     }
+    # The only unary function *names* PySR is configured to accept for this
+    # experiment (must match _pysr_kwargs["unary_operators"] below).
+    _ALLOWED_PYSR_FUNCS = {"sin", "cos", "log", "sqrt", "exp"}
 
-    def _llm_exprs_to_pysr_guesses(exprs):
+    # [FIX-GUESSES-CRASH] Root cause of "H FAILED / r2=-inf, elapsed~0.0004s
+    # on 100% of equations": the old converter only ever *blacklisted* the
+    # literal substring "abs". Every other function the LLM might emit that
+    # isn't one of the 5 mapped np.* names — e.g. "tan", "np.tan", "sinh",
+    # "cosh", "np.pi", "min", "max", "floor" — passed straight through
+    # unrecognized. PySR hands guess strings almost directly to Julia's
+    # parser inside SymbolicRegression.equation_search(); an unparsable /
+    # unregistered-operator token there raises immediately, before any
+    # evolutionary search work happens — which is exactly the near-instant,
+    # 100%-failure pattern seen in the JSON (a real search takes minutes).
+    # A blacklist can only ever catch names we thought to list; the LLM's
+    # output vocabulary is not fully controlled by us. So flip to a
+    # WHITELIST: after conversion, an expression is only used as a guess if
+    # every identifier in it is either a known variable name or one of the
+    # 5 configured PySR functions above. Anything else is dropped, the same
+    # way "abs" candidates already were, rather than risking another
+    # engine-side crash we can't see (see also the traceback capture added
+    # around model_h.fit() below, so if this *does* still happen we get an
+    # actual error message next time instead of a silent FAILED).
+    def _is_safe_pysr_guess(expr, var_names):
+        tokens = re.findall(r"[A-Za-z_][A-Za-z_0-9]*", expr)
+        for tok in tokens:
+            if tok in _ALLOWED_PYSR_FUNCS or tok in var_names:
+                continue
+            return False  # unknown function / constant / stray identifier
+        # Defense in depth: overall charset must be numbers/operators/parens/
+        # whitespace/identifier characters only — nothing else should ever
+        # reach PySR as a guess string.
+        return bool(re.fullmatch(r"[A-Za-z_0-9\.\+\-\*/\^\(\)\s,]*", expr))
+
+    def _llm_exprs_to_pysr_guesses(exprs, var_names):
         """Convert hypatia.py's Python/numpy expression strings into PySR's
-        configured operator syntax (`^` for power, bare unary function names).
-
-        Candidates using `np.abs` / `abs` are dropped — PySR's
-        unary_operators here does not include an abs equivalent, so there is
-        no safe rewrite; passing it through would just fail inside PySR.
-        Any candidate that fails to convert cleanly is skipped rather than
-        risking a malformed guess.
+        configured operator syntax (`^` for power, bare unary function names),
+        then drop anything that still doesn't match PySR's configured
+        vocabulary (see [FIX-GUESSES-CRASH] above) instead of passing a
+        candidate PySR/Julia can't parse.
         """
         converted = []
         for e in exprs:
@@ -468,6 +499,8 @@ def run(seed: int = 42):
                 # "**" (Python power) -> "^" (PySR power). Do this after the
                 # np.* replacements so we don't touch anything inside names.
                 out = re.sub(r"\*\*", "^", out)
+                if not _is_safe_pysr_guess(out, var_names):
+                    continue  # unrecognized function/constant/token — drop
                 converted.append(out)
             except Exception:
                 continue  # skip anything that doesn't convert cleanly
@@ -545,9 +578,9 @@ def run(seed: int = 42):
         # for the pinned pysr==2.0.0a1 (guesses is a constructor parameter
         # in this version; type list[str] for single-output regression,
         # which every Nguyen-12 equation is).
-        _pysr_guesses = _llm_exprs_to_pysr_guesses(llm_exprs) if llm_exprs else []
+        _pysr_guesses = _llm_exprs_to_pysr_guesses(llm_exprs, var_names) if llm_exprs else []
         if llm_exprs and not _pysr_guesses:
-            print("    ⚠  All LLM candidates dropped by syntax converter (e.g. all used abs) — no warm-start this eq")
+            print("    ⚠  All LLM candidates dropped by syntax/vocabulary filter — no warm-start this eq")
 
         # [FIX-DEGENERATE-WARMSTART] Residual risk this closes: whenever
         # _pysr_guesses is empty (LLM disabled, LLM call failed, LLM
@@ -581,6 +614,17 @@ def run(seed: int = 42):
         _llm_candidates_raw = len(llm_exprs)
         _llm_candidates_used_after_syntax_filter = len(_pysr_guesses)
 
+        # [FIX-ERROR-DIAGNOSTICS] Both arms now capture the *full* traceback
+        # (not just str(_e)) into _h_error/_h_traceback / _p_error, and store
+        # it on the JSON record. Previously the except blocks only printed
+        # str(_e), and that print went to stdout only — never into the JSON.
+        # That's why a 100%-instant-FAILED run left literally no trace of
+        # *why* in the output file (see audit note): the real exception was
+        # thrown away the moment it was caught.
+        _h_error = None
+        _h_traceback = None
+        _guesses_rejected_by_engine = False
+
         if _pysr_guesses:
             # ── HypatiaX run (PySR + LLM warm-start) — genuinely differs
             # from PySR-only, so both arms are run independently. ──────────
@@ -596,12 +640,34 @@ def run(seed: int = 42):
                 r2_h        = float(r2_score(y, y_pred_h))
                 best_expr_h = str(model_h.sympy())
             except Exception as _e:
-                print(f"    ✗ HypatiaX run failed: {_e}")
-                r2_h        = float("-inf")
-                best_expr_h = "FAILED"
+                _h_error     = str(_e)
+                _h_traceback = traceback.format_exc()
+                print(f"    ✗ HypatiaX run with guesses failed: {_e}")
+                print(_h_traceback)
+                # [FIX-GUESSES-CRASH] Don't let a bad warm-start string sink
+                # the whole equation's H result. Retry once, PySR-only
+                # (no guesses), so H still reflects a genuine, independent
+                # PySR search rather than recording "FAILED"/-inf whenever
+                # the guesses filter (or the LLM/converter) let something
+                # through that PySR/Julia couldn't parse.
+                _guesses_rejected_by_engine = True
+                print("    ↻ Retrying HypatiaX without guesses (engine rejected the warm-start candidates)")
+                try:
+                    model_h = PySRRegressor(**_pysr_kwargs)
+                    model_h.fit(X, y, variable_names=var_names)
+                    y_pred_h    = model_h.predict(X)
+                    r2_h        = float(r2_score(y, y_pred_h))
+                    best_expr_h = str(model_h.sympy())
+                except Exception as _e2:
+                    _h_traceback = _h_traceback + "\n--- retry without guesses also failed ---\n" + traceback.format_exc()
+                    _h_error     = f"{_h_error} | retry_without_guesses: {_e2}"
+                    print(f"    ✗ HypatiaX retry (no guesses) also failed: {_e2}")
+                    r2_h        = float("-inf")
+                    best_expr_h = "FAILED"
             elapsed_h = time.time() - t0
 
             # ── PySR-only run (no LLM) ────────────────────────────────────
+            _p_error = None
             t0 = time.time()
             try:
                 model_p     = PySRRegressor(**_pysr_kwargs)
@@ -610,7 +676,9 @@ def run(seed: int = 42):
                 r2_p        = float(r2_score(y, y_pred_p))
                 best_expr_p = str(model_p.sympy())
             except Exception as _e:
+                _p_error = str(_e)
                 print(f"    ✗ PySR-only run failed: {_e}")
+                print(traceback.format_exc())
                 r2_p        = float("-inf")
                 best_expr_p = "FAILED"
             elapsed_p = time.time() - t0
