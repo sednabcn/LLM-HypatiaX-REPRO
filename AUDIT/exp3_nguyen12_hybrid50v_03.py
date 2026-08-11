@@ -68,247 +68,8 @@ import random
 import re
 import sys
 import traceback
-import threading
-import time
 
 import numpy as np
-
-
-# ── PySR trajectory instrumentation ────────────────────────────────────────
-def _read_pysr_hof_snapshot(path):
-    """Read the current PySR hall-of-fame checkpoint without requiring pandas.
-
-    PySR/SymbolicRegression writes the hall-of-fame checkpoint as a pipe-delimited
-    file and updates it during the search.  We intentionally treat this as an
-    *outer-iteration* trajectory, not as an individual mutation/generation log.
-    """
-    import csv
-
-    path = pathlib.Path(path)
-    candidates = [pathlib.Path(str(path) + ".bkup"), path]
-    chosen = next((q for q in candidates if q.exists() and q.stat().st_size > 0), None)
-    if chosen is None:
-        return None
-
-    try:
-        stat = chosen.stat()
-        with chosen.open("r", encoding="utf-8", errors="replace", newline="") as f:
-            rows = list(csv.DictReader(f, delimiter="|"))
-        if not rows:
-            return None
-
-        # Normalize column names because backend versions have used slightly
-        # different capitalization/spelling for these fields.
-        norm = {}
-        for k in rows[0].keys():
-            if k is not None:
-                norm[str(k).strip().lower()] = k
-
-        def col(*names):
-            for name in names:
-                if name in norm:
-                    return norm[name]
-            return None
-
-        loss_col = col("loss", "mse", "error")
-        expr_col = col("equation", "expression", "expr")
-        complexity_col = col("complexity")
-        score_col = col("score")
-
-        def fnum(row, c):
-            if c is None:
-                return None
-            try:
-                x = float(str(row.get(c, "")).strip())
-                return x if np.isfinite(x) else None
-            except Exception:
-                return None
-
-        valid = []
-        for row in rows:
-            loss = fnum(row, loss_col)
-            if loss is not None:
-                valid.append((loss, row))
-        if not valid:
-            return None
-
-        best_loss, best_row = min(valid, key=lambda z: z[0])
-        best_expr = None if expr_col is None else str(best_row.get(expr_col, "")).strip()
-        best_complexity = fnum(best_row, complexity_col)
-        best_score = fnum(best_row, score_col)
-
-        return {
-            "source_file": str(chosen),
-            "source_mtime_ns": int(stat.st_mtime_ns),
-            "source_size_bytes": int(stat.st_size),
-            "hall_of_fame_rows": len(rows),
-            "best_loss": float(best_loss),
-            "best_expression": best_expr,
-            "best_complexity": best_complexity,
-            "best_score": best_score,
-        }
-    except (OSError, UnicodeError, csv.Error, ValueError):
-        # A writer can be in the middle of replacing/updating the checkpoint.
-        # The monitor simply retries on the next polling cycle.
-        return None
-
-
-def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1.0):
-    """Run model.fit while polling PySR's live hall-of-fame checkpoint.
-
-    Returns
-    -------
-    trajectory : list[dict]
-        One record per observed hall-of-fame update.  The `iteration` field is
-        an observation index unless the backend exposes an explicit iteration
-        number.  The underlying file is emitted by PySR at iteration boundaries,
-        so these records represent outer search iterations, not every mutation.
-    """
-    trajectory = []
-    stop_event = threading.Event()
-    fit_result = {"error": None, "traceback": None}
-    t0 = time.time()
-
-    def _find_hof_path():
-        try:
-            q = getattr(model, "equation_file_", None)
-            if q:
-                return pathlib.Path(q)
-        except Exception:
-            pass
-        try:
-            q = getattr(model, "equation_file", None)
-            if q:
-                return pathlib.Path(q)
-        except Exception:
-            pass
-        return None
-
-    def _monitor():
-        last_signature = None
-        while not stop_event.is_set():
-            path = _find_hof_path()
-            if path is not None:
-                snap = _read_pysr_hof_snapshot(path)
-                if snap is not None:
-                    signature = (
-                        snap["source_mtime_ns"],
-                        snap["source_size_bytes"],
-                        snap["best_loss"],
-                        snap["best_expression"],
-                    )
-                    if signature != last_signature:
-                        last_signature = signature
-                        snap["iteration"] = len(trajectory) + 1
-                        snap["elapsed_seconds"] = float(time.time() - t0)
-                        snap["label"] = label
-                        trajectory.append(snap)
-            stop_event.wait(poll_seconds)
-
-    monitor = threading.Thread(target=_monitor, name=f"pysr-monitor-{label}", daemon=True)
-    monitor.start()
-    try:
-        model.fit(X, y, variable_names=variable_names)
-    except Exception as exc:
-        fit_result["error"] = str(exc)
-        fit_result["traceback"] = traceback.format_exc()
-    finally:
-        stop_event.set()
-        monitor.join(timeout=max(2.0, poll_seconds * 3.0))
-
-    # Always capture a final snapshot after fit returns, because the final
-    # checkpoint can be written immediately before the backend exits and the
-    # polling thread may not have observed it.
-    path = _find_hof_path()
-    if path is not None:
-        snap = _read_pysr_hof_snapshot(path)
-        if snap is not None:
-            signature = (
-                snap["source_mtime_ns"],
-                snap["source_size_bytes"],
-                snap["best_loss"],
-                snap["best_expression"],
-            )
-            last_signature = None
-            if trajectory:
-                last = trajectory[-1]
-                last_signature = (
-                    last["source_mtime_ns"],
-                    last["source_size_bytes"],
-                    last["best_loss"],
-                    last["best_expression"],
-                )
-            if signature != last_signature:
-                snap["iteration"] = len(trajectory) + 1
-                snap["elapsed_seconds"] = float(time.time() - t0)
-                snap["label"] = label
-                trajectory.append(snap)
-
-    return trajectory, fit_result
-
-
-def _trajectory_summary(trajectory, y=None, r2_threshold=0.9999):
-    """Summarize the observed outer-iteration trajectory.
-
-    If *y* is supplied, convert the PySR MSE loss into an approximate R² using
-    ``R² = 1 - MSE / Var(y)``.  The exact final R² is still computed separately
-    with sklearn in the experiment; trajectory R² values are therefore marked
-    as estimates.
-    """
-    if not trajectory:
-        return {
-            "n_iterations_observed": 0,
-            "first_threshold_iteration": None,
-            "first_threshold_time_seconds": None,
-            "final_best_loss": None,
-            "final_best_expression": None,
-            "final_best_complexity": None,
-            "r2_from_loss_is_approximate": True,
-        }
-
-    y_var = None
-    if y is not None:
-        try:
-            yy = np.asarray(y, dtype=float).reshape(-1)
-            y_var = float(np.mean((yy - np.mean(yy)) ** 2))
-            if not np.isfinite(y_var) or y_var <= 0:
-                y_var = None
-        except Exception:
-            y_var = None
-
-    enriched = []
-    for row in trajectory:
-        item = dict(row)
-        loss = item.get("best_loss")
-        if y_var is not None and loss is not None:
-            try:
-                r2_est = float(1.0 - float(loss) / y_var)
-                item["best_r2_estimate"] = r2_est if np.isfinite(r2_est) else None
-            except Exception:
-                item["best_r2_estimate"] = None
-        else:
-            item["best_r2_estimate"] = None
-        enriched.append(item)
-
-    threshold_rows = [
-        x for x in enriched
-        if x.get("best_r2_estimate") is not None
-        and x["best_r2_estimate"] >= r2_threshold
-    ]
-    first = threshold_rows[0] if threshold_rows else None
-    last = enriched[-1]
-    return {
-        "n_iterations_observed": len(enriched),
-        "first_threshold_iteration": first.get("iteration") if first else None,
-        "first_threshold_time_seconds": first.get("elapsed_seconds") if first else None,
-        "final_best_loss": last.get("best_loss"),
-        "final_best_r2_estimate": last.get("best_r2_estimate"),
-        "final_best_expression": last.get("best_expression"),
-        "final_best_complexity": last.get("best_complexity"),
-        "final_best_score": last.get("best_score"),
-        "r2_from_loss_is_approximate": True,
-    }
-
 
 # ── CASE RANGE INJECTION (auto-generated by add_case_range_benchmark.py) ──
 def _apply_case_range(seq):
@@ -596,9 +357,7 @@ def run(seed: int = 42):
         except Exception:
             _pysr_version="unknown"
         payload = {
-            "config": {"name":"nguyen12_exp3","script_version":"v04-trajectory-instrumented","seed":seed,"n_tasks":n_total,"niterations":_niter,"populations":_pops,"timeout":_timeout,"method_timeout":_method_timeout,"use_llm":USE_LLM,"deterministic":True,"parallelism":"serial","random_state":seed,"r2_threshold":0.9999,"pysr_version":_pysr_version,
-                    "trajectory_monitor": True, "trajectory_unit": "outer_iteration",
-                    "trajectory_poll_seconds": _trajectory_poll_seconds},
+            "config": {"name":"nguyen12_exp3","script_version":"v03-audit-patched","seed":seed,"n_tasks":n_total,"niterations":_niter,"populations":_pops,"timeout":_timeout,"method_timeout":_method_timeout,"use_llm":USE_LLM,"deterministic":True,"parallelism":"serial","random_state":seed,"r2_threshold":0.9999,"pysr_version":_pysr_version},
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
             "paired_comparison": paired,
             "summary": {"h_recovered":h_recovered,"p_recovered":p_recovered,"h_recovered_independent":h_recovered_independent,"n_total":n_total,"h_rate":h_recovered/n_total if n_total else 0.0,"p_rate":p_recovered/n_total if n_total else 0.0,"n_completed":len(results_hypatia),"n_independent_h":len(h_independent),"n_h_copy_of_p":len(results_hypatia)-len(h_independent),"n_same_final_expression":sum(1 for x in paired if x["same_expression"]),"n_completed_with_guesses":sum(1 for r in results_hypatia if r.get("warm_start_status")=="used"),"n_engine_rejected_guesses":sum(1 for r in results_hypatia if r.get("warm_start_status")=="engine_rejected"),"complete":complete},
@@ -619,7 +378,6 @@ def run(seed: int = 42):
     _pysr_timeout   = int(os.environ.get("PYSR_TIMEOUT",   1100))
     _method_timeout = int(os.environ.get("METHOD_TIMEOUT", _pysr_timeout))
     _timeout        = _pysr_timeout   # passed to PySR's timeout_in_seconds
-    _trajectory_poll_seconds = float(os.environ.get("PYSR_TRAJECTORY_POLL_SECONDS", "0.25"))
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}")
@@ -822,9 +580,6 @@ def run(seed: int = 42):
             parallelism="serial",
             verbosity=0,
             progress=False,
-            # Keep a live hall-of-fame checkpoint in a temp directory. The
-            # trajectory monitor below polls this file while Julia searches.
-            temp_equation_file=True,
             binary_operators=["+", "-", "*", "/", "^"],
             unary_operators=["sin", "cos", "log", "sqrt", "exp"],
         )
@@ -880,8 +635,6 @@ def run(seed: int = 42):
         _h_error = None
         _h_traceback = None
         _guesses_rejected_by_engine = False
-        trajectory_h = []
-        trajectory_p = []
 
         if _pysr_guesses:
             # ── HypatiaX run (PySR + LLM warm-start) — genuinely differs
@@ -893,9 +646,7 @@ def run(seed: int = 42):
                     guesses=_pysr_guesses,
                     warm_start=False,
                 )
-                trajectory_h, _fit_diag_h = _fit_with_pysr_trajectory(model_h, X, y, var_names, "H", poll_seconds=_trajectory_poll_seconds)
-                if _fit_diag_h["error"] is not None:
-                    raise RuntimeError(_fit_diag_h["error"])
+                model_h.fit(X, y, variable_names=var_names)
                 y_pred_h    = model_h.predict(X)
                 r2_h        = float(r2_score(y, y_pred_h))
                 best_expr_h = str(model_h.sympy())
@@ -915,9 +666,7 @@ def run(seed: int = 42):
                 print("    ↻ Retrying HypatiaX without guesses (engine rejected the warm-start candidates)")
                 try:
                     model_h = PySRRegressor(**_pysr_kwargs)
-                    trajectory_h, _fit_diag_h = _fit_with_pysr_trajectory(model_h, X, y, var_names, "H-cold-fallback", poll_seconds=_trajectory_poll_seconds)
-                    if _fit_diag_h["error"] is not None:
-                        raise RuntimeError(_fit_diag_h["error"])
+                    model_h.fit(X, y, variable_names=var_names)
                     y_pred_h    = model_h.predict(X)
                     r2_h        = float(r2_score(y, y_pred_h))
                     best_expr_h = str(model_h.sympy())
@@ -934,9 +683,7 @@ def run(seed: int = 42):
             t0 = time.time()
             try:
                 model_p     = PySRRegressor(**_pysr_kwargs)
-                trajectory_p, _fit_diag_p = _fit_with_pysr_trajectory(model_p, X, y, var_names, "P", poll_seconds=_trajectory_poll_seconds)
-                if _fit_diag_p["error"] is not None:
-                    raise RuntimeError(_fit_diag_p["error"])
+                model_p.fit(X, y, variable_names=var_names)
                 y_pred_p    = model_p.predict(X)
                 r2_p        = float(r2_score(y, y_pred_p))
                 best_expr_p = str(model_p.sympy())
@@ -955,9 +702,7 @@ def run(seed: int = 42):
             t0 = time.time()
             try:
                 model_p     = PySRRegressor(**_pysr_kwargs)
-                trajectory_p, _fit_diag_p = _fit_with_pysr_trajectory(model_p, X, y, var_names, "P", poll_seconds=_trajectory_poll_seconds)
-                if _fit_diag_p["error"] is not None:
-                    raise RuntimeError(_fit_diag_p["error"])
+                model_p.fit(X, y, variable_names=var_names)
                 y_pred_p    = model_p.predict(X)
                 r2_p        = float(r2_score(y, y_pred_p))
                 best_expr_p = str(model_p.sympy())
@@ -970,7 +715,6 @@ def run(seed: int = 42):
             r2_h        = r2_p
             best_expr_h = best_expr_p
             elapsed_h   = elapsed_p
-            trajectory_h = list(trajectory_p)
             _h_is_copy_of_p = True
             print(f"    ℹ  No warm-start ({_warm_start_status}) — H copied from P's single run, not re-derived")
 
@@ -1015,8 +759,6 @@ def run(seed: int = 42):
             "same_final_r2_as_p": bool(np.isclose(r2_h, r2_p, rtol=1e-10, atol=1e-12)),
             "delta_r2_h_minus_p": float(r2_h - r2_p),
             "independent_fit": bool(not _h_is_copy_of_p),
-            "trajectory": trajectory_h,
-            "trajectory_summary": _trajectory_summary(trajectory_h, y=y),
         })
         results_pysr.append({
             "system":     "pysr",
@@ -1028,8 +770,6 @@ def run(seed: int = 42):
             "random_state": seed,
             "deterministic": True,
             "parallelism": "serial",
-            "trajectory": trajectory_p,
-            "trajectory_summary": _trajectory_summary(trajectory_p, y=y),
         })
 
         # [FIX-CHECKPOINT-CALL] Save checkpoint after each equation ────────
