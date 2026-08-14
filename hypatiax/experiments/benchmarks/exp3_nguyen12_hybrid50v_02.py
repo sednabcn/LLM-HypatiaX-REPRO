@@ -170,10 +170,37 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     t0 = time.time()
 
     def _find_hof_path():
+        # [FIX-TRAJECTORY-EMPTY] Prior to this fix, this function only tried
+        # `equation_file_` / `equation_file`, which resolved to None for the
+        # entire run under the installed PySR version (1.5.10) and produced
+        # zero trajectory observations regardless of whether the fit
+        # succeeded:
+        #   - `equation_file_` is a @property that unconditionally raises
+        #     NotImplementedError in this version ("...is now deprecated.
+        #     Please use PySRRegressor.output_directory_ and
+        #     PySRRegressor.run_id_ instead."), and the blanket
+        #     `except Exception: pass` below silently swallowed that.
+        #   - `equation_file` (no trailing underscore) is a deprecated
+        #     *constructor-only* kwarg, not a live attribute updated during
+        #     fit — since it's never passed, getattr always returned None.
+        #
+        # Fix: prefer the modern output_directory_/run_id_ path (matches
+        # PySRRegressor.get_equation_file() in the installed version), and
+        # fall back to the legacy equation_file_ property for older PySR
+        # releases where it still resolves to a real path instead of
+        # raising. Both branches are kept so this survives future PySR
+        # version changes in either direction.
+        try:
+            if hasattr(model, "output_directory_") and hasattr(model, "run_id_"):
+                return pathlib.Path(model.output_directory_) / model.run_id_ / "hall_of_fame.csv"
+        except Exception:
+            pass
         try:
             q = getattr(model, "equation_file_", None)
             if q:
                 return pathlib.Path(q)
+        except NotImplementedError:
+            pass
         except Exception:
             pass
         try:
