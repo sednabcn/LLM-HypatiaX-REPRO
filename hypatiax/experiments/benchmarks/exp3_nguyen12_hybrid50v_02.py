@@ -85,7 +85,12 @@ def _read_pysr_hof_snapshot(path):
     import csv
 
     path = pathlib.Path(path)
-    candidates = [pathlib.Path(str(path) + ".bkup"), path]
+    candidates = [
+        pathlib.Path(str(path) + ".bkup"),
+        pathlib.Path(str(path) + ".bak"),
+        pathlib.Path(str(path) + ".backup"),
+        path,
+    ]
     chosen = next((q for q in candidates if q.exists() and q.stat().st_size > 0), None)
     if chosen is None:
         return None
@@ -93,7 +98,17 @@ def _read_pysr_hof_snapshot(path):
     try:
         stat = chosen.stat()
         with chosen.open("r", encoding="utf-8", errors="replace", newline="") as f:
-            rows = list(csv.DictReader(f, delimiter="|"))
+            # [FIX-TRAJECTORY-DELIMITER] hall_of_fame.csv is a plain
+            # comma-delimited CSV — PySR itself reads it with
+            # `pd.read_csv(StringIO(buf))` (default separator) in both
+            # sr.py 1.5.10 and 2.0.0a1. The previous `delimiter="|"` here
+            # caused every row to collapse into a single field, so no
+            # "loss"/"mse"/"error" column was ever found, every row was
+            # dropped as invalid, and this function always returned None —
+            # meaning the trajectory poller silently recorded zero points on
+            # every run, independent of the earlier output_directory_/run_id_
+            # path fix above.
+            rows = list(csv.DictReader(f, delimiter=","))
         if not rows:
             return None
 
@@ -190,9 +205,20 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
         # releases where it still resolves to a real path instead of
         # raising. Both branches are kept so this survives future PySR
         # version changes in either direction.
+        # Preferred API in PySR >= 1.5.x.  Use get_equation_file() first:
+        # it is the backend's own canonical path construction and avoids
+        # hard-coding the filename layout here.
+        try:
+            get_eq = getattr(model, "get_equation_file", None)
+            if callable(get_eq):
+                q = get_eq()
+                if q:
+                    return pathlib.Path(q)
+        except Exception:
+            pass
         try:
             if hasattr(model, "output_directory_") and hasattr(model, "run_id_"):
-                return pathlib.Path(model.output_directory_) / model.run_id_ / "hall_of_fame.csv"
+                return pathlib.Path(model.output_directory_) / str(model.run_id_) / "hall_of_fame.csv"
         except Exception:
             pass
         try:
@@ -270,6 +296,34 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
                 snap["elapsed_seconds"] = float(time.time() - t0)
                 snap["label"] = label
                 trajectory.append(snap)
+
+    # Last-resort fallback: if the backend removed/renamed its live HOF file,
+    # a successful fit still has model.equations_.  Record its final best row
+    # so callers never get a misleading empty trajectory for a successful fit.
+    if not trajectory and fit_result["error"] is None:
+        try:
+            equations = getattr(model, "equations_", None)
+            if equations is not None:
+                if isinstance(equations, list):
+                    equations = equations[0] if equations else None
+                if equations is not None and len(equations) > 0:
+                    row = equations.iloc[int(equations["loss"].astype(float).idxmin())]
+                    trajectory.append({
+                        "source_file": "model.equations_",
+                        "source_mtime_ns": None,
+                        "source_size_bytes": None,
+                        "hall_of_fame_rows": int(len(equations)),
+                        "best_loss": float(row["loss"]),
+                        "best_expression": str(row.get("equation", row.get("expression", ""))),
+                        "best_complexity": float(row["complexity"]) if "complexity" in row else None,
+                        "best_score": float(row["score"]) if "score" in row else None,
+                        "iteration": 1,
+                        "elapsed_seconds": float(time.time() - t0),
+                        "label": label,
+                        "fallback_final_snapshot": True,
+                    })
+        except Exception:
+            pass
 
     return trajectory, fit_result
 
@@ -623,7 +677,7 @@ def run(seed: int = 42):
         except Exception:
             _pysr_version="unknown"
         payload = {
-            "config": {"name":"nguyen12_exp3","script_version":"v04-trajectory-instrumented","seed":seed,"n_tasks":n_total,"niterations":_niter,"populations":_pops,"timeout":_timeout,"method_timeout":_method_timeout,"use_llm":USE_LLM,"deterministic":True,"parallelism":"serial","random_state":seed,"r2_threshold":0.9999,"pysr_version":_pysr_version,
+            "config": {"name":"nguyen12_exp3","script_version":"v05-trajectory-fixed-persistent-hof","seed":seed,"n_tasks":n_total,"niterations":_niter,"populations":_pops,"timeout":_timeout,"method_timeout":_method_timeout,"use_llm":USE_LLM,"deterministic":True,"parallelism":"serial","random_state":seed,"r2_threshold":0.9999,"pysr_version":_pysr_version,
                     "trajectory_monitor": True, "trajectory_unit": "outer_iteration",
                     "trajectory_poll_seconds": _trajectory_poll_seconds},
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
@@ -840,6 +894,14 @@ def run(seed: int = 42):
                 print(f"    ⚠  LLM warm-start failed: {_e} — running PySR-only")
 
         # ── Shared PySR config ────────────────────────────────────────────
+        # [FIX-TRAJECTORY-PERSISTENT-HOF] Do not use PySR's temporary equation file
+        # for trajectory capture. With temp_equation_file=True, the backend owns
+        # the temporary directory and may remove the HOF as fit() returns; that can
+        # race the monitor/final snapshot and leave trajectory=[] even after a
+        # successful search. Give every fit a persistent output root instead.
+        _trajectory_output_dir = _results_dir / "_pysr_trajectory_runs"
+        _trajectory_output_dir.mkdir(parents=True, exist_ok=True)
+
         _pysr_kwargs = dict(
             niterations=_niter,
             populations=_pops,
@@ -849,9 +911,11 @@ def run(seed: int = 42):
             parallelism="serial",
             verbosity=0,
             progress=False,
-            # Keep a live hall-of-fame checkpoint in a temp directory. The
-            # trajectory monitor below polls this file while Julia searches.
-            temp_equation_file=True,
+            # Persistent HOF: the monitor can read hall_of_fame.csv while Julia
+            # is running, and the file remains available for the final poll.
+            temp_equation_file=False,
+            output_directory=str(_trajectory_output_dir),
+            delete_tempfiles=False,
             binary_operators=["+", "-", "*", "/", "^"],
             unary_operators=["sin", "cos", "log", "sqrt", "exp"],
         )

@@ -1194,10 +1194,20 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install "pandas==2.2.3"
-          pip install \
+          # [FIX-PYSR-GUESSES-VERSION] exp3/exp3b's LLM warm-start comparison
+          # calls PySRRegressor(guesses=...) (see exp3_nguyen12_hybrid50v_02.py).
+          # That constructor kwarg only exists starting at the pysr==2.0.0a1
+          # pre-release; it is NOT present in 1.5.10 or any earlier stable
+          # release. An unpinned `pip install pysr` always resolves to the
+          # latest STABLE release (pip does not select pre-releases unless
+          # pinned exactly or run with --pre), so every prior run silently
+          # got 1.5.10, guesses=... raised TypeError on every equation, and
+          # the warm-start arm fell back to engine_rejected/pysr_cold_fallback
+          # for all 12 Nguyen equations. Pinning here is required for the
+          # warm-start comparison to actually run as designed.
+          pip install "pysr==2.0.0a1" \
             numpy scipy sympy \
             anthropic \
-            pysr \
             scikit-learn \
             pyyaml \
             python-dotenv \
@@ -2370,6 +2380,62 @@ jobs:
           fi
 
           echo "  OK ${EXP} output files present (${SEED_COUNT} seed file(s))."
+
+      # [FIX-TRAJECTORY-CI-GATE] A successful PySR fit must not silently produce
+      # an empty trajectory.  The experiment script now stores HOF path/existence
+      # diagnostics and a final equations_ fallback; this gate turns any remaining
+      # empty-trajectory regression into an immediate, actionable CI failure.
+      - name: Verify exp3 trajectories are populated
+        if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import glob, json, math, os, sys
+          target = os.environ["TARGET"]
+          files = sorted(glob.glob(os.path.join(target, "exp3_nguyen12_seed*.json")))
+          if not files:
+              print("No exp3 seed JSON files found; output gate above should already have failed.")
+              sys.exit(1)
+          bad = []
+          checked = 0
+          for path in files:
+              try:
+                  data = json.load(open(path, encoding="utf-8"))
+              except Exception as e:
+                  bad.append((os.path.basename(path), "invalid JSON", str(e)))
+                  continue
+              # The result writer uses results_hypatia/results_pysr arrays.
+              records = []
+              if isinstance(data, dict):
+                  # Current writer stores the arrays under results.{hypatiax,pysr}.
+                  container = data.get("results") if isinstance(data.get("results"), dict) else data
+                  for key in ("hypatiax", "pysr", "results_hypatia", "results_pysr"):
+                      value = container.get(key) if isinstance(container, dict) else None
+                      if isinstance(value, list):
+                          records.extend(value)
+              for rec in records:
+                  if not isinstance(rec, dict):
+                      continue
+                  checked += 1
+                  r2 = ((rec.get("evaluation") or {}).get("r2"))
+                  traj = rec.get("trajectory")
+                  try:
+                      finite_r2 = math.isfinite(float(r2))
+                  except Exception:
+                      finite_r2 = False
+                  if finite_r2 and not traj:
+                      bad.append((os.path.basename(path), rec.get("system"), rec.get("expression"), rec.get("h_error") or rec.get("p_error"), rec.get("trajectory_summary")))
+          print(f"Checked {checked} fitted result records across {len(files)} seed files.")
+          if bad:
+              print("::error::Successful exp3 PySR result(s) have empty trajectories:")
+              for row in bad:
+                  print("  ", row)
+              print("This indicates the trajectory instrumentation is still broken; inspect hof_path/hof_exists_at_end in the fit diagnostics and the _pysr_trajectory_runs directory.")
+              sys.exit(1)
+          print("OK: every finite-R2 PySR/HypatiaX record has a non-empty trajectory.")
+          PYEOF
 
       - name: Verify suppA output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
