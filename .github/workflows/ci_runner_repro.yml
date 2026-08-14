@@ -2437,6 +2437,25 @@ jobs:
           print("OK: every finite-R2 PySR/HypatiaX record has a non-empty trajectory.")
           PYEOF
 
+      # [FIX-TRAJECTORY-ARTIFACT] The trajectory gate above tells a human to
+      # "inspect ... the _pysr_trajectory_runs directory" on failure, but
+      # nothing previously archived that directory — it lives on this
+      # ephemeral runner and is gone the moment the job ends, so a prior
+      # empty-trajectory run (seed 99) left nothing to debug after the fact.
+      # Upload it whenever exp3/exp3b actually ran, regardless of whether the
+      # gate above passed or failed (always()), so the raw per-iteration
+      # hall_of_fame.csv/.bak checkpoints survive for post-hoc inspection —
+      # both for debugging a future regression and as a redundant source for
+      # trajectory data if the JSON-level capture ever breaks again.
+      - name: Upload PySR trajectory checkpoint files
+        if: ${{ always() && (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: pysr-trajectory-runs-${{ needs.plan.outputs.exp_id }}-shard${{ matrix.shard }}
+          path: ${{ env.OUT_BASE }}/_pysr_trajectory_runs/
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Verify suppA output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
