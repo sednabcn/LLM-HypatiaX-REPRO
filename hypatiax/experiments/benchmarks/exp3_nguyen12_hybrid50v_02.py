@@ -748,7 +748,26 @@ def run(seed: int = 42):
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}")
     print("  Reference expectations are NOT used as observed results.")
     print(f"  Config  : n_tasks={_n_tasks}  niterations={_niter}  populations={_pops}"
-          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s")
+          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s"
+          f"  USE_LLM={USE_LLM}")
+    # [ADD-PRODUCTION-SCALE-GUARD] N_ITERATIONS/POPULATIONS are read from env
+    # vars with the SAME NAMES the smoke test sets (N_ITERATIONS, POPULATIONS)
+    # to force a fast, cheap run. If a production invocation shares a shell/CI
+    # runner with a prior smoke-test step and those env vars aren't cleared
+    # between jobs, this script would silently pick them up here, "complete
+    # successfully" in a couple of minutes, and produce a plausible-looking
+    # but tiny/incomplete result JSON -- with nothing in the log calling that
+    # out. Warn loudly, immediately, rather than let a wrong-scale run pass
+    # unnoticed the way the pre-fix stale-script smoke-test bug did.
+    _PROD_NITER_DEFAULT = 1000
+    _PROD_POPS_DEFAULT  = 30
+    if _niter < _PROD_NITER_DEFAULT or _pops < _PROD_POPS_DEFAULT:
+        print(f"  ⚠️  WARNING: niterations={_niter} / populations={_pops} are BELOW the "
+              f"production defaults ({_PROD_NITER_DEFAULT}×{_PROD_POPS_DEFAULT}). "
+              "This looks like smoke-test-scale config (N_ITERATIONS/POPULATIONS env "
+              "vars are set — possibly leaked from a prior smoke-test step on this "
+              "runner/shell). If this is meant to be a production run, unset "
+              "N_ITERATIONS/POPULATIONS/CASE_RANGE_START/CASE_RANGE_END and re-run.")
     print(f"{'='*68}\n")
 
     # ── Import protocol data layer ────────────────────────────────────────
