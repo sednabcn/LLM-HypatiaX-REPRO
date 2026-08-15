@@ -182,10 +182,97 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     """
     trajectory = []
     stop_event = threading.Event()
-    fit_result = {"error": None, "traceback": None}
+    # [FIX-TRAJECTORY-ROBUST-PATH] Keep diagnostics even when PySR changes
+    # its run-directory / hall-of-fame filename conventions.
+    fit_result = {
+        "error": None,
+        "traceback": None,
+        "hof_path": None,
+        "hof_exists_during_fit": False,
+        "hof_exists_at_end": False,
+        "hof_candidates_checked": [],
+    }
     t0 = time.time()
 
+    def _candidate_hof_paths():
+        """Return all plausible live PySR hall-of-fame paths.
+
+        PySR versions differ in whether the run directory is exposed before
+        fit(), whether the filename is exactly hall_of_fame.csv, or whether
+        it contains a timestamp.  Do not hard-code one filename.
+        """
+        candidates = []
+
+        def add_run_dir(base, run_id):
+            if not base or not run_id:
+                return
+            try:
+                run_dir = pathlib.Path(base) / str(run_id)
+                candidates.append(run_dir / "hall_of_fame.csv")
+                candidates.extend(sorted(run_dir.glob("hall_of_fame*.csv")))
+                candidates.extend(sorted(run_dir.glob(".hall_of_fame*.csv")))
+                candidates.extend(sorted(run_dir.glob("*hall_of_fame*.csv")))
+            except Exception:
+                pass
+
+        # Constructor-time attributes are available before fit in supported
+        # PySR versions; underscore variants are populated by newer releases.
+        for base_name in ("output_directory_", "output_directory"):
+            try:
+                base = getattr(model, base_name, None)
+                for run_name in ("run_id_", "run_id"):
+                    try:
+                        add_run_dir(base, getattr(model, run_name, None))
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # Legacy equation-file accessors, including get_equation_file().
+        try:
+            getter = getattr(model, "get_equation_file", None)
+            if callable(getter):
+                q = getter()
+                if q:
+                    candidates.append(pathlib.Path(q))
+        except Exception:
+            pass
+        for attr in ("equation_file_", "equation_file"):
+            try:
+                q = getattr(model, attr, None)
+                if q:
+                    candidates.append(pathlib.Path(q))
+            except Exception:
+                pass
+
+        # De-duplicate while preserving discovery order.
+        unique = []
+        seen = set()
+        for q in candidates:
+            try:
+                q = pathlib.Path(q)
+                key = str(q)
+                if key not in seen:
+                    seen.add(key)
+                    unique.append(q)
+            except Exception:
+                continue
+        return unique
+
     def _find_hof_path():
+        # Prefer an existing, non-empty hall-of-fame file.  If no file exists
+        # yet, return the first plausible path so the monitor can discover it
+        # as soon as PySR creates it.
+        candidates = _candidate_hof_paths()
+        fit_result["hof_candidates_checked"] = [str(q) for q in candidates[:50]]
+        existing = [
+            q for q in candidates
+            if q.exists() and q.is_file() and q.stat().st_size > 0
+        ]
+        if existing:
+            # Prefer the most recently modified checkpoint.
+            return max(existing, key=lambda q: q.stat().st_mtime_ns)
+        return candidates[0] if candidates else None
         # [FIX-TRAJECTORY-EMPTY] Prior to this fix, this function only tried
         # `equation_file_` / `equation_file`, which resolved to None for the
         # entire run under the installed PySR version (1.5.10) and produced
@@ -232,6 +319,9 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
         while not stop_event.is_set():
             path = _find_hof_path()
             if path is not None:
+                if path.exists():
+                    fit_result["hof_exists_during_fit"] = True
+                    fit_result["hof_path"] = str(path)
                 snap = _read_pysr_hof_snapshot(path)
                 if snap is not None:
                     signature = (
@@ -264,6 +354,8 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     # polling thread may not have observed it.
     path = _find_hof_path()
     if path is not None:
+        fit_result["hof_path"] = str(path)
+        fit_result["hof_exists_at_end"] = bool(path.exists() and path.is_file() and path.stat().st_size > 0)
         snap = _read_pysr_hof_snapshot(path)
         if snap is not None:
             signature = (
@@ -302,6 +394,13 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
                 # Archiving is best-effort — never let it fail the fit.
                 fit_result["hof_archive_error"] = str(_archive_exc)
 
+    # Make the failure mode explicit in the JSON rather than silently
+    # returning an empty trajectory after a successful fit.
+    if not fit_result["hof_exists_at_end"]:
+        print(
+            f"    ⚠  PySR fit completed but no non-empty hall-of-fame CSV was found "
+            f"for {label}. Checked: {fit_result['hof_candidates_checked'][:5]}"
+        )
     return trajectory, fit_result
 
 
@@ -880,9 +979,12 @@ def run(seed: int = 42):
             parallelism="serial",
             verbosity=0,
             progress=False,
-            # Keep a live hall-of-fame checkpoint in a temp directory. The
-            # trajectory monitor below polls this file while Julia searches.
-            temp_equation_file=True,
+            # Keep the hall-of-fame checkpoint in a persistent, known output
+            # tree.  The trajectory monitor polls this file while Julia searches.
+            # Using the persistent run directory also leaves the CSV available
+            # for CI artifact inspection after the fit.
+            temp_equation_file=False,
+            output_directory=str(_results_dir / "_pysr_trajectory_runs"),
             binary_operators=["+", "-", "*", "/", "^"],
             unary_operators=["sin", "cos", "log", "sqrt", "exp"],
         )
@@ -928,6 +1030,21 @@ def run(seed: int = 42):
         _llm_candidates_raw = len(llm_exprs)
         _llm_candidates_used_after_syntax_filter = len(_pysr_guesses)
 
+        # [FIX-TRAJECTORY-RUN-ID] Give every PySR fit its own persistent run
+        # directory so H/P (and H cold-fallback) cannot overwrite one another.
+        _trajectory_run_counter = 0
+
+        def _new_pysr_kwargs(arm):
+            nonlocal _trajectory_run_counter
+            _trajectory_run_counter += 1
+            kw = dict(_pysr_kwargs)
+            safe_nid = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(nid))
+            kw["run_id"] = (
+                f"exp3_seed{seed}_{safe_nid}_{arm}_"
+                f"{_trajectory_run_counter}_{int(time.time() * 1000)}"
+            )
+            return kw
+
         # [FIX-ERROR-DIAGNOSTICS] Both arms now capture the *full* traceback
         # (not just str(_e)) into _h_error/_h_traceback / _p_error, and store
         # it on the JSON record. Previously the except blocks only printed
@@ -947,7 +1064,7 @@ def run(seed: int = 42):
             t0 = time.time()
             try:
                 model_h = PySRRegressor(
-                    **_pysr_kwargs,
+                    **_new_pysr_kwargs("H"),
                     guesses=_pysr_guesses,
                     warm_start=False,
                 )
@@ -972,7 +1089,7 @@ def run(seed: int = 42):
                 _warm_start_status = "engine_rejected"
                 print("    ↻ Retrying HypatiaX without guesses (engine rejected the warm-start candidates)")
                 try:
-                    model_h = PySRRegressor(**_pysr_kwargs)
+                    model_h = PySRRegressor(**_new_pysr_kwargs("Hcold"))
                     trajectory_h, _fit_diag_h = _fit_with_pysr_trajectory(model_h, X, y, var_names, "H-cold-fallback", poll_seconds=_trajectory_poll_seconds, seed=seed, nguyen_id=nid, archive_dir=_results_dir / "hall_of_fame_archives")
                     if _fit_diag_h["error"] is not None:
                         raise RuntimeError(_fit_diag_h["error"])
@@ -991,7 +1108,7 @@ def run(seed: int = 42):
             _p_error = None
             t0 = time.time()
             try:
-                model_p     = PySRRegressor(**_pysr_kwargs)
+                model_p     = PySRRegressor(**_new_pysr_kwargs("P"))
                 trajectory_p, _fit_diag_p = _fit_with_pysr_trajectory(model_p, X, y, var_names, "P", poll_seconds=_trajectory_poll_seconds, seed=seed, nguyen_id=nid, archive_dir=_results_dir / "hall_of_fame_archives")
                 if _fit_diag_p["error"] is not None:
                     raise RuntimeError(_fit_diag_p["error"])
@@ -1012,7 +1129,7 @@ def run(seed: int = 42):
             # deterministic and identical either way — see comment above.)
             t0 = time.time()
             try:
-                model_p     = PySRRegressor(**_pysr_kwargs)
+                model_p     = PySRRegressor(**_new_pysr_kwargs("P"))
                 trajectory_p, _fit_diag_p = _fit_with_pysr_trajectory(model_p, X, y, var_names, "P", poll_seconds=_trajectory_poll_seconds, seed=seed, nguyen_id=nid, archive_dir=_results_dir / "hall_of_fame_archives")
                 if _fit_diag_p["error"] is not None:
                     raise RuntimeError(_fit_diag_p["error"])
@@ -1068,6 +1185,12 @@ def run(seed: int = 42):
             "llm_guesses_passed_to_pysr": list(_pysr_guesses),
             "h_error": _h_error,
             "h_traceback": _h_traceback,
+            "hof_path": _fit_diag_h.get("hof_path"),
+            "hof_exists_at_end": bool(_fit_diag_h.get("hof_exists_at_end", False)),
+            "hof_exists_during_fit": bool(_fit_diag_h.get("hof_exists_during_fit", False)),
+            "hof_candidates_checked": _fit_diag_h.get("hof_candidates_checked", []),
+            "hof_archive_path": _fit_diag_h.get("hof_archive_path"),
+            "hof_archive_error": _fit_diag_h.get("hof_archive_error"),
             "guesses_rejected_by_engine": bool(_guesses_rejected_by_engine),
             "same_final_expression_as_p": bool(best_expr_h == best_expr_p),
             "same_final_r2_as_p": bool(np.isclose(r2_h, r2_p, rtol=1e-10, atol=1e-12)),
@@ -1083,6 +1206,12 @@ def run(seed: int = 42):
             "evaluation": {"r2": r2_p},
             "elapsed":    elapsed_p,
             "p_error": _p_error if "_p_error" in locals() else None,
+            "hof_path": _fit_diag_p.get("hof_path") if "_fit_diag_p" in locals() else None,
+            "hof_exists_at_end": bool(_fit_diag_p.get("hof_exists_at_end", False)) if "_fit_diag_p" in locals() else False,
+            "hof_exists_during_fit": bool(_fit_diag_p.get("hof_exists_during_fit", False)) if "_fit_diag_p" in locals() else False,
+            "hof_candidates_checked": _fit_diag_p.get("hof_candidates_checked", []) if "_fit_diag_p" in locals() else [],
+            "hof_archive_path": _fit_diag_p.get("hof_archive_path") if "_fit_diag_p" in locals() else None,
+            "hof_archive_error": _fit_diag_p.get("hof_archive_error") if "_fit_diag_p" in locals() else None,
             "random_state": seed,
             "deterministic": True,
             "parallelism": "serial",
