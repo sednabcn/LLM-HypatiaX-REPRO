@@ -1057,20 +1057,6 @@ def run(seed: int = 42):
         _guesses_rejected_by_engine = False
         trajectory_h = []
         trajectory_p = []
-        # [FIX-UNBOUND-FIT-DIAG] Both are read unconditionally below via
-        # `.get(...)` when building results_hypatia (hof_path,
-        # hof_exists_at_end, hof_archive_path, etc.). They were previously
-        # only ever assigned inside the try blocks below, so any path that
-        # never reaches _fit_with_pysr_trajectory() -- the no-warm-start
-        # branch (only ever sets _fit_diag_p, never _fit_diag_h), or a
-        # PySRRegressor(**kwargs) constructor itself raising before that
-        # call -- left _fit_diag_h/_fit_diag_p unbound, crashing with
-        # UnboundLocalError instead of recording a failed/empty diagnostic.
-        # Confirmed against a real run: USE_LLM=False takes the `elif not
-        # USE_LLM` branch, which only sets _fit_diag_p, so building
-        # results_hypatia's "hof_path": _fit_diag_h.get(...) crashed every
-        # time LLM warm-start was disabled -- exactly the smoke test's
-        # default configuration.
         _fit_diag_h = {}
         _fit_diag_p = {}
 
@@ -1162,7 +1148,6 @@ def run(seed: int = 42):
             best_expr_h = best_expr_p
             elapsed_h   = elapsed_p
             trajectory_h = list(trajectory_p)
-            _fit_diag_h  = dict(_fit_diag_p)
             _h_is_copy_of_p = True
             print(f"    ℹ  No warm-start ({_warm_start_status}) — H copied from P's single run, not re-derived")
 
