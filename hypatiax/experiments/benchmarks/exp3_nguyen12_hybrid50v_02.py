@@ -183,6 +183,16 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     stop_event = threading.Event()
     fit_result = {"error": None, "traceback": None}
     t0 = time.time()
+    monitor_stats = {
+        "polls": 0,
+        "hof_path_seen": False,
+        "hof_snapshots_read": 0,
+        "hof_updates_observed": 0,
+        "first_hof_seen_seconds": None,
+        "last_hof_seen_seconds": None,
+        "hof_path_first": None,
+        "hof_path_last": None,
+    }
 
     def _find_hof_path():
         # [FIX-TRAJECTORY-EMPTY] Prior to this fix, this function only tried
@@ -240,10 +250,18 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     def _monitor():
         last_signature = None
         while not stop_event.is_set():
+            monitor_stats["polls"] += 1
             path = _find_hof_path()
             if path is not None:
+                monitor_stats["hof_path_seen"] = True
+                monitor_stats["hof_path_first"] = monitor_stats["hof_path_first"] or str(path)
+                monitor_stats["hof_path_last"] = str(path)
+                if monitor_stats["first_hof_seen_seconds"] is None:
+                    monitor_stats["first_hof_seen_seconds"] = float(time.time() - t0)
+                monitor_stats["last_hof_seen_seconds"] = float(time.time() - t0)
                 snap = _read_pysr_hof_snapshot(path)
                 if snap is not None:
+                    monitor_stats["hof_snapshots_read"] += 1
                     signature = (
                         snap["source_mtime_ns"],
                         snap["source_size_bytes"],
@@ -252,6 +270,7 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
                     )
                     if signature != last_signature:
                         last_signature = signature
+                        monitor_stats["hof_updates_observed"] += 1
                         snap["iteration"] = len(trajectory) + 1
                         snap["elapsed_seconds"] = float(time.time() - t0)
                         snap["label"] = label
@@ -325,6 +344,14 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
         except Exception:
             pass
 
+    fit_result["trajectory_monitor"] = dict(monitor_stats)
+    fit_result["trajectory_observation_count"] = len(trajectory)
+    fit_result["trajectory_multiple_updates_observed"] = len(trajectory) > 1
+    fit_result["trajectory_single_observation_note"] = (
+        "Only one HOF observation was visible; this is a backend/HOF update-availability "
+        "signal, not evidence that the search had only one internal generation."
+        if len(trajectory) == 1 else None
+    )
     return trajectory, fit_result
 
 
@@ -679,7 +706,8 @@ def run(seed: int = 42):
         payload = {
             "config": {"name":"nguyen12_exp3","script_version":"v05-trajectory-fixed-persistent-hof","seed":seed,"n_tasks":n_total,"niterations":_niter,"populations":_pops,"timeout":_timeout,"method_timeout":_method_timeout,"use_llm":USE_LLM,"deterministic":True,"parallelism":"serial","random_state":seed,"r2_threshold":0.9999,"pysr_version":_pysr_version,
                     "trajectory_monitor": True, "trajectory_unit": "outer_iteration",
-                    "trajectory_poll_seconds": _trajectory_poll_seconds},
+                    "trajectory_poll_seconds": _trajectory_poll_seconds,
+                     "trajectory_observation_note": "One observation means only one HOF checkpoint update was visible to the monitor; it does not imply one internal PySR generation."},
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
             "paired_comparison": paired,
             "summary": {"h_recovered":h_recovered,"p_recovered":p_recovered,"h_recovered_independent":h_recovered_independent,"n_total":n_total,"h_rate":h_recovered/n_total if n_total else 0.0,"p_rate":p_recovered/n_total if n_total else 0.0,"n_completed":len(results_hypatia),"n_independent_h":len(h_independent),"n_h_copy_of_p":len(results_hypatia)-len(h_independent),"n_same_final_expression":sum(1 for x in paired if x["same_expression"]),"n_completed_with_guesses":sum(1 for r in results_hypatia if r.get("warm_start_status")=="used"),"n_engine_rejected_guesses":sum(1 for r in results_hypatia if r.get("warm_start_status")=="engine_rejected"),"complete":complete},
@@ -700,7 +728,7 @@ def run(seed: int = 42):
     _pysr_timeout   = int(os.environ.get("PYSR_TIMEOUT",   1100))
     _method_timeout = int(os.environ.get("METHOD_TIMEOUT", _pysr_timeout))
     _timeout        = _pysr_timeout   # passed to PySR's timeout_in_seconds
-    _trajectory_poll_seconds = float(os.environ.get("PYSR_TRAJECTORY_POLL_SECONDS", "0.25"))
+    _trajectory_poll_seconds = float(os.environ.get("PYSR_TRAJECTORY_POLL_SECONDS", "0.05"))
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}")
@@ -1107,6 +1135,10 @@ def run(seed: int = 42):
             "delta_r2_h_minus_p": float(r2_h - r2_p),
             "independent_fit": bool(not _h_is_copy_of_p),
             "trajectory": trajectory_h,
+            "trajectory_monitor": _fit_diag_h.get("trajectory_monitor", {}),
+            "trajectory_observation_count": _fit_diag_h.get("trajectory_observation_count", len(trajectory_h)),
+            "trajectory_multiple_updates_observed": _fit_diag_h.get("trajectory_multiple_updates_observed", len(trajectory_h) > 1),
+            "trajectory_single_observation_note": _fit_diag_h.get("trajectory_single_observation_note"),
             "trajectory_summary": _trajectory_summary(trajectory_h, y=y),
         })
         results_pysr.append({
@@ -1120,6 +1152,10 @@ def run(seed: int = 42):
             "deterministic": True,
             "parallelism": "serial",
             "trajectory": trajectory_p,
+            "trajectory_monitor": _fit_diag_p.get("trajectory_monitor", {}),
+            "trajectory_observation_count": _fit_diag_p.get("trajectory_observation_count", len(trajectory_p)),
+            "trajectory_multiple_updates_observed": _fit_diag_p.get("trajectory_multiple_updates_observed", len(trajectory_p) > 1),
+            "trajectory_single_observation_note": _fit_diag_p.get("trajectory_single_observation_note"),
             "trajectory_summary": _trajectory_summary(trajectory_p, y=y),
         })
 
