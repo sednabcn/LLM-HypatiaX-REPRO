@@ -43,6 +43,13 @@ on:
 env:
   OUT_BASE: "hypatiax/data/results"
   SCRIPT: "hypatiax/experiments/benchmarks/exp3_trajectory_smoke_test.py"
+  # exp3_nguyen12_hybrid50v_02.py does `from hypatiax.protocols... import ...`.
+  # The full pipeline goes through run_all.sh at the repo root, which makes
+  # this resolve; here we're invoking the script directly from a subdirectory,
+  # so sys.path[0] is that subdirectory, not the repo root, and the import
+  # fails with "ModuleNotFoundError: No module named 'hypatiax.protocols'"
+  # unless the repo root is explicitly put on PYTHONPATH.
+  PYTHONPATH: "${{ github.workspace }}"
   # Same Julia signal-handling fix as the main runner (FIX-G10): without this,
   # a Julia-side segfault inside SymbolicRegression.jl is invisible to Python.
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
@@ -164,6 +171,9 @@ jobs:
             echo "USE_LLM=0 — skipping ANTHROPIC_API_KEY requirement."
           fi
           echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
+          echo "PYTHONPATH:        ${PYTHONPATH}"
+          echo "=== hypatiax package import check ==="
+          python3 -c "import hypatiax.protocols.experiment_protocol_nguyen12; print('hypatiax.protocols: ok')"
 
       - name: Create results directory structure
         run: |
