@@ -182,10 +182,35 @@ jobs:
       - name: Run exp3 trajectory smoke test
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Mirror ci_runner_repro.yml's "Run experiment tasks" step: the
+          # exp3 script reads RESULTS_DIR/OUT_BASE to decide where to write
+          # output. In the full pipeline these are set before delegating to
+          # run_all.sh; exp3_trajectory_smoke_test.py itself never sets them,
+          # so without this the script falls back to its own internal
+          # default location, which is why the verification step below
+          # previously found nothing under .../extrapolation.
+          RESULTS_DIR: ${{ github.workspace }}/${{ env.OUT_BASE }}
         run: |
           set -euo pipefail
           echo "Running ${SCRIPT} ..."
+          echo "RESULTS_DIR=${RESULTS_DIR}"
           python3 "${SCRIPT}" 2>&1 | tee "${{ github.workspace }}/logs/exp3_smoke_test.log"
+
+      # Mirrors ci_runner_repro.yml's "Diagnostic - locate result files on
+      # disk" step. Always runs, so if the seed-JSON glob below still comes
+      # up empty, the log shows exactly where the script actually wrote its
+      # output instead of just "not found".
+      - name: Diagnostic - locate result files on disk
+        if: always()
+        run: |
+          echo "=== CWD ===" && pwd
+          echo "=== OUT_BASE ===" && echo "${OUT_BASE}"
+          echo "=== All *.json files anywhere under workspace (first 100) ==="
+          find "${{ github.workspace }}" -name "*.json" -newer "${{ github.workspace }}/${SCRIPT}" 2>/dev/null | head -100 || true
+          echo "=== All files under OUT_BASE (first 100) ==="
+          find "${{ github.workspace }}/${OUT_BASE}" -type f 2>/dev/null | head -100 || true
+          echo "=== Any exp3_nguyen12_seed*.json anywhere under workspace ==="
+          find "${{ github.workspace }}" -name "exp3_nguyen12_seed*.json" 2>/dev/null || true
 
       # [Same gate as ci_runner_repro.yml's "Verify exp3 trajectories are
       # populated" step] A successful PySR fit must not silently produce an
@@ -194,16 +219,21 @@ jobs:
       # generate_figures.py.
       - name: Verify trajectory diagnostics were written
         env:
-          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/extrapolation
+          WORKSPACE: ${{ github.workspace }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
           import glob, json, math, os, sys
-          target = os.environ["TARGET"]
-          files = sorted(glob.glob(os.path.join(target, "exp3_nguyen12_seed*.json")))
+          workspace = os.environ["WORKSPACE"]
+          # Search the whole workspace rather than assuming a fixed subdir —
+          # see the "Diagnostic - locate result files on disk" step above if
+          # this ever needs re-narrowing to a specific path.
+          files = sorted(glob.glob(os.path.join(workspace, "**", "exp3_nguyen12_seed*.json"), recursive=True))
           if not files:
-              print(f"::error::No exp3_nguyen12_seed*.json found under {target} — "
-                    "the smoke test did not produce output.")
+              print(f"::error::No exp3_nguyen12_seed*.json found anywhere under {workspace} — "
+                    "the smoke test did not produce output. Check the "
+                    "'Diagnostic - locate result files on disk' step above "
+                    "for where (if anywhere) the script wrote its files.")
               sys.exit(1)
           bad = []
           checked = 0
@@ -259,7 +289,7 @@ jobs:
         with:
           name: exp3-smoke-test-results
           path: |
-            ${{ env.OUT_BASE }}/extrapolation/
+            ${{ env.OUT_BASE }}/
             logs/exp3_smoke_test.log
           if-no-files-found: warn
           retention-days: 14
