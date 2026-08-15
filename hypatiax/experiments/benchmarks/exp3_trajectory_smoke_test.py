@@ -94,7 +94,18 @@ if _script_path is None:
 # so a stale/wrong-branch checkout is caught before spending the rest of
 # the job's wall-clock time on a run that can't possibly pass.
 _script_text = _script_path.read_text(encoding="utf-8", errors="replace")
-_required_markers = ("_find_hof_path", "_fit_with_pysr_trajectory")
+# [FIX-MARKER-NAME] "_find_hof_path" was never the real function name in
+# the trajectory-instrumented script -- it's "_read_pysr_hof_snapshot"
+# (the checkpoint reader) plus "_poll_hof_dir_proc" (the separate-process
+# poller) and "_fit_with_pysr_trajectory" (the wrapper that drives both).
+# The stale marker made this guard fire against the CORRECT, fully
+# instrumented file, which is worse than not checking at all: it fails
+# the smoke test for the exact opposite reason the check exists.
+_required_markers = (
+    "_read_pysr_hof_snapshot",
+    "_poll_hof_dir_proc",
+    "_fit_with_pysr_trajectory",
+)
 _missing_markers = [m for m in _required_markers if m not in _script_text]
 if _missing_markers:
     raise RuntimeError(
