@@ -77,24 +77,29 @@ import numpy as np
 
 # ── PySR trajectory instrumentation ────────────────────────────────────────
 def _read_pysr_hof_snapshot(path):
-    """Read the current PySR hall-of-fame checkpoint without requiring pandas.
-
-    PySR/SymbolicRegression writes the hall-of-fame checkpoint as a pipe-delimited
-    file and updates it during the search.  We intentionally treat this as an
-    *outer-iteration* trajectory, not as an individual mutation/generation log.
-    """
+    """Read a live PySR hall-of-fame checkpoint robustly across formats."""
     import csv
 
     path = pathlib.Path(path)
-    candidates = [pathlib.Path(str(path) + ".bkup"), path]
-    chosen = next((q for q in candidates if q.exists() and q.stat().st_size > 0), None)
-    if chosen is None:
+    candidates = []
+    for q in (path, pathlib.Path(str(path) + ".bkup")):
+        if q.exists() and q.is_file() and q.stat().st_size > 0:
+            candidates.append(q)
+    if not candidates:
         return None
 
     try:
+        chosen = max(candidates, key=lambda q: q.stat().st_mtime_ns)
         stat = chosen.stat()
         with chosen.open("r", encoding="utf-8", errors="replace", newline="") as f:
-            rows = list(csv.DictReader(f, delimiter="|"))
+            sample = f.read(8192)
+            f.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters="|,\t;")
+                delimiter = dialect.delimiter
+            except csv.Error:
+                delimiter = "|" if "|" in sample else ","
+            rows = list(csv.DictReader(f, delimiter=delimiter))
         if not rows:
             return None
 
@@ -272,47 +277,23 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
         if existing:
             # Prefer the most recently modified checkpoint.
             return max(existing, key=lambda q: q.stat().st_mtime_ns)
+        # If PySR has not exposed a run id yet, scan the persistent output tree
+        # for any non-empty hall-of-fame checkpoint. This is important because
+        # the run directory can be created by Julia after the monitor starts.
+        try:
+            output_root = getattr(model, "output_directory_", None) or getattr(model, "output_directory", None)
+            if output_root:
+                root = pathlib.Path(output_root)
+                discovered = [q for q in root.rglob("hall_of_fame*.csv")
+                              if q.is_file() and q.stat().st_size > 0]
+                discovered += [q for q in root.rglob(".hall_of_fame*.csv")
+                               if q.is_file() and q.stat().st_size > 0]
+                if discovered:
+                    return max(discovered, key=lambda q: q.stat().st_mtime_ns)
+        except Exception:
+            pass
+
         return candidates[0] if candidates else None
-        # [FIX-TRAJECTORY-EMPTY] Prior to this fix, this function only tried
-        # `equation_file_` / `equation_file`, which resolved to None for the
-        # entire run under the installed PySR version (1.5.10) and produced
-        # zero trajectory observations regardless of whether the fit
-        # succeeded:
-        #   - `equation_file_` is a @property that unconditionally raises
-        #     NotImplementedError in this version ("...is now deprecated.
-        #     Please use PySRRegressor.output_directory_ and
-        #     PySRRegressor.run_id_ instead."), and the blanket
-        #     `except Exception: pass` below silently swallowed that.
-        #   - `equation_file` (no trailing underscore) is a deprecated
-        #     *constructor-only* kwarg, not a live attribute updated during
-        #     fit — since it's never passed, getattr always returned None.
-        #
-        # Fix: prefer the modern output_directory_/run_id_ path (matches
-        # PySRRegressor.get_equation_file() in the installed version), and
-        # fall back to the legacy equation_file_ property for older PySR
-        # releases where it still resolves to a real path instead of
-        # raising. Both branches are kept so this survives future PySR
-        # version changes in either direction.
-        try:
-            if hasattr(model, "output_directory_") and hasattr(model, "run_id_"):
-                return pathlib.Path(model.output_directory_) / model.run_id_ / "hall_of_fame.csv"
-        except Exception:
-            pass
-        try:
-            q = getattr(model, "equation_file_", None)
-            if q:
-                return pathlib.Path(q)
-        except NotImplementedError:
-            pass
-        except Exception:
-            pass
-        try:
-            q = getattr(model, "equation_file", None)
-            if q:
-                return pathlib.Path(q)
-        except Exception:
-            pass
-        return None
 
     def _monitor():
         last_signature = None
@@ -354,9 +335,11 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
     # polling thread may not have observed it.
     path = _find_hof_path()
     if path is not None:
-        fit_result["hof_path"] = str(path)
-        fit_result["hof_exists_at_end"] = bool(path.exists() and path.is_file() and path.stat().st_size > 0)
-        snap = _read_pysr_hof_snapshot(path)
+        path = pathlib.Path(path)
+        hof_valid = path.exists() and path.is_file() and path.stat().st_size > 0
+        fit_result["hof_path"] = str(path) if hof_valid else None
+        fit_result["hof_exists_at_end"] = bool(hof_valid)
+        snap = _read_pysr_hof_snapshot(path) if hof_valid else None
         if snap is not None:
             signature = (
                 snap["source_mtime_ns"],
@@ -378,6 +361,14 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
                 snap["elapsed_seconds"] = float(time.time() - t0)
                 snap["label"] = label
                 trajectory.append(snap)
+            elif not trajectory:
+                # The monitor may have missed a short-lived/single-checkpoint
+                # run. A valid final HOF is still a real observed trajectory
+                # point, so never return an empty trajectory when one exists.
+                snap["iteration"] = 1
+                snap["elapsed_seconds"] = float(time.time() - t0)
+                snap["label"] = label
+                trajectory.append(snap)
 
         # [ARCHIVE-HOF-CSV] Copy the final checkpoint out of PySR's
         # (possibly temp) run directory to a permanent, self-describing
@@ -388,11 +379,23 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label, poll_seconds=1
                 archive_dir = pathlib.Path(archive_dir)
                 archive_dir.mkdir(parents=True, exist_ok=True)
                 dest = archive_dir / f"hall_of_fame_seed{seed}_{arm}_{nguyen_id}.csv"
-                shutil.copy2(path, dest)
-                fit_result["hof_archive_path"] = str(dest)
-            except Exception as _archive_exc:
+
+                # Only archive a real, non-empty HOF.  _find_hof_path() may
+                # return a plausible path before PySR creates the file, so
+                # calling copy2() unconditionally can raise FileNotFoundError
+                # or archive an empty/incomplete checkpoint.
+                if path is not None and path.is_file() and path.stat().st_size > 0:
+                    shutil.copy2(path, dest)
+                    fit_result["hof_archive_path"] = str(dest)
+                else:
+                    fit_result["hof_archive_error"] = (
+                        f"No non-empty HOF available at end of fit: {path}"
+                    )
+            except (OSError, ValueError) as _archive_exc:
                 # Archiving is best-effort — never let it fail the fit.
-                fit_result["hof_archive_error"] = str(_archive_exc)
+                fit_result["hof_archive_error"] = (
+                    f"Failed to archive HOF from {path}: {_archive_exc}"
+                )
 
     # Make the failure mode explicit in the JSON rather than silently
     # returning an empty trajectory after a successful fit.
