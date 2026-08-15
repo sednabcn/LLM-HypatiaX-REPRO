@@ -1071,6 +1071,10 @@ def run(seed: int = 42):
             best_expr_h = best_expr_p
             elapsed_h   = elapsed_p
             trajectory_h = list(trajectory_p)
+            _fit_diag_h = _fit_diag_p  # [FIX-FIT-DIAG-H-UNDEFINED] without this,
+            # _fit_diag_h is never assigned in this branch, and the JSON output
+            # construction below (h_is_copy_of_p / trajectory_monitor etc.) raises
+            # NameError the moment a run actually takes the no-warm-start path.
             _h_is_copy_of_p = True
             print(f"    ℹ  No warm-start ({_warm_start_status}) — H copied from P's single run, not re-derived")
 
