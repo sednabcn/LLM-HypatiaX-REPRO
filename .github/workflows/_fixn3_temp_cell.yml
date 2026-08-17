@@ -74,6 +74,11 @@ jobs:
       # a dead/invalid key would silently degrade every repeat to
       # PySR-only, which is exactly the confound this experiment exists
       # to avoid).
+      - name: Install experiment dependencies
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          pip install -r requirements.txt
+
       - name: Validate ANTHROPIC_API_KEY (live round-trip)
         if: ${{ inputs.dry_run != 'true' }}
         env:
@@ -87,11 +92,6 @@ jobs:
             exit 1
           fi
           python3 "${{ github.workspace }}/config/test_key_status.py"
-
-      - name: Install experiment dependencies
-        if: ${{ inputs.dry_run != 'true' }}
-        run: |
-          pip install -r requirements.txt
 
       - name: Confirm script exists and accepts expected flags
         run: |
