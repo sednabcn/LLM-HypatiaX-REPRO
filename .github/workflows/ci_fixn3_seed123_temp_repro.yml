@@ -1,0 +1,260 @@
+# ==============================================================================
+#  ci_fixn3_seed123_temp_repro.yml - FIX-N3 item (ii) determinism/temperature
+#                                     experiment (standalone runner)
+#
+#  Companion to ci_runner_repro.yml and ci_issue2b_repro.yml, reusing their
+#  established conventions (Python 3.12 / Julia 1.11 setup, ANTHROPIC_API_KEY
+#  live-validation, results-dir layout, commit-and-push pattern), but scoped
+#  to a single, narrow question left open in jmlr_paper_main_patched.tex's
+#  "Reproducibility note: LLM model identity and a seed-123 discrepancy
+#  (extends issue FIX-N3)" paragraph, action item (ii):
+#
+#    "a future re-benchmarked seed-123 run should record hypatia.py's
+#     sampling temperature and candidate count alongside the solve-rate
+#     fields, and report a distribution over repeated runs rather than a
+#     single value"
+#
+#  Items (i) and (iii) of that same list are already resolved (dead
+#  LLM_MODEL env var wired up; run_all.sh obtained and confirms exp3 /
+#  exp3b are the scripts CI actually invokes for Nguyen-12) — see the tex
+#  file's reproducibility note for the resolved-item citations. This
+#  workflow exists solely to close item (ii).
+#
+#  Design: exactly 4 explicit jobs, one per (experiment × temperature)
+#  cell, rather than a GitHub Actions `matrix:` block. This is deliberate:
+#  each cell's results land in its own clearly-named artifact and its own
+#  results subdirectory, so a reviewer can open e.g. "exp3-seed123-temp0"
+#  directly instead of decoding a matrix run's generated job name. The
+#  four jobs are fully independent and run in parallel.
+#
+#    Job 1: exp3_seed123_temp025  — protocol match (original solve-rate
+#            was measured at hypatia.py's default temperature=0.25).
+#            Gives the "distribution over repeated runs" item (ii) asks
+#            for, at the temperature the original 11/12-vs-12/12
+#            discrepancy was actually observed at.
+#    Job 2: exp3_seed123_temp0    — determinism control. If solve-count
+#            still varies run-to-run at temperature=0, that points away
+#            from LLM sampling noise as the explanation and toward the
+#            flagged-but-unconfirmed late-April/late-May 2026
+#            infrastructure migration instead.
+#    Job 3: exp3b_seed123_temp025 — same protocol-match run for exp3b.
+#    Job 4: exp3b_seed123_temp0   — same determinism control for exp3b.
+#
+#  exp3 vs. exp3b: NOT two different scripts. run_all.sh's exp3 step runs
+#  exp3_nguyen12_hybrid50v_03.py at seed 42 (the primary result); exp3b is
+#  the same script run across the other stability-check seeds (99, 123,
+#  777, 2024 — see the script's own docstring). Seed 123, used throughout
+#  this workflow, is in that non-42 set, so jobs 1-4 all invoke the exact
+#  same script_path; "exp3"/"exp3b" here are cell labels for
+#  artifact/results-dir organization, matching how the two are reported
+#  as separate rows/steps elsewhere in the pipeline, not a code branch.
+#
+#  Each script invocation uses hypatia.py's get_llm_prior() call path
+#  directly (not run_all.sh --step exp3), so there is no PySR-only /
+#  --skip-pysr fast path available here the way ci_issue2b_repro.yml has
+#  one: exp3/exp3b are the full 12-equation x (LLM-prior + PySR-only)
+#  suite, so every repeat pays the full ~30-90 min wall time noted in
+#  exp3_nguyen12_hybrid50v_03.py's docstring. Keep n_runs modest.
+# ==============================================================================
+
+name: "HypatiaX - FIX-N3 item (ii): seed-123 temperature experiment"
+run-name: "FIX-N3 item (ii) · seed ${{ inputs.seed }} · n_runs=${{ inputs.n_runs }}${{ inputs.skip_exp3b == 'true' && ' · exp3 only' || ' · exp3+exp3b' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      script_path:
+        description: "Path (relative to repo root) to the exp3/exp3b script (same script for both — see header note; run_all.sh's exp3 step uses seed 42, exp3b uses the other stability-check seeds)"
+        required: false
+        default: "hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_03.py"
+
+      seed:
+        description: "Seed to repeat-run (item (ii) is specifically about seed 123's discrepancy)"
+        required: false
+        default: "123"
+
+      n_runs:
+        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for"
+        required: false
+        default: "5"
+
+      skip_exp3b:
+        description: "Skip jobs 3/4 (exp3b-labeled cells) and only close item (ii) for exp3 (true/false) — both use the same script_path; this just limits which cells run"
+        required: false
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+      dry_run:
+        description: "Print the planned commands and stop, no benchmark runs (true/false)"
+        required: false
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions:  write
+
+env:
+  # Matches repro.yaml paper-quality values, same names as
+  # ci_runner_repro.yml / exp3_nguyen12_hybrid50v_03.py's own env reads.
+  N_ITERATIONS:       "1000"
+  POPULATIONS:        "30"
+  PYSR_TIMEOUT:        "1100"  # repro.yaml timeouts.feynman_pysr_seconds
+  METHOD_TIMEOUT:      "1100"  # repro.yaml timeouts.method_seconds
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  OUT_BASE:            "hypatiax/data/results/fixn3_item_ii"
+
+jobs:
+
+  # ── Job 1: exp3, temperature=0.25 (protocol match) ─────────────────────
+  exp3_seed123_temp025:
+    name: "exp3 · seed 123 · temp=0.25"
+    uses: ./.github/workflows/_fixn3_temp_cell.yml
+    if: always()
+    with:
+      script_path: ${{ inputs.script_path }}
+      experiment_label: "exp3"
+      temperature: "0.25"
+      seed: ${{ inputs.seed }}
+      n_runs: ${{ inputs.n_runs }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ── Job 2: exp3, temperature=0 (determinism control) ───────────────────
+  exp3_seed123_temp0:
+    name: "exp3 · seed 123 · temp=0"
+    uses: ./.github/workflows/_fixn3_temp_cell.yml
+    if: always()
+    with:
+      script_path: ${{ inputs.script_path }}
+      experiment_label: "exp3"
+      temperature: "0"
+      seed: ${{ inputs.seed }}
+      n_runs: ${{ inputs.n_runs }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ── Job 3: exp3b, temperature=0.25 (protocol match) ─────────────────────
+  exp3b_seed123_temp025:
+    name: "exp3b · seed 123 · temp=0.25"
+    uses: ./.github/workflows/_fixn3_temp_cell.yml
+    if: ${{ always() && inputs.skip_exp3b != 'true' }}
+    with:
+      script_path: ${{ inputs.script_path }}
+      experiment_label: "exp3b"
+      temperature: "0.25"
+      seed: ${{ inputs.seed }}
+      n_runs: ${{ inputs.n_runs }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ── Job 4: exp3b, temperature=0 (determinism control) ──────────────────
+  exp3b_seed123_temp0:
+    name: "exp3b · seed 123 · temp=0"
+    uses: ./.github/workflows/_fixn3_temp_cell.yml
+    if: ${{ always() && inputs.skip_exp3b != 'true' }}
+    with:
+      script_path: ${{ inputs.script_path }}
+      experiment_label: "exp3b"
+      temperature: "0"
+      seed: ${{ inputs.seed }}
+      n_runs: ${{ inputs.n_runs }}
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
+
+  # ── Aggregation: pull h_rate/n_h_copy_of_p across all four cells' repeat
+  # ── runs into one summary table, so item (ii)'s "distribution over
+  # ── repeated runs" is readable from the job summary without opening
+  # ── four separate artifact bundles by hand. Non-blocking (continue-on-
+  # ── error): a summary formatting bug must never fail a build whose
+  # ── underlying benchmark runs all succeeded.
+  summarize:
+    name: "Summarize solve-rate distribution across cells"
+    needs: [exp3_seed123_temp025, exp3_seed123_temp0, exp3b_seed123_temp025, exp3b_seed123_temp0]
+    if: ${{ always() && inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Download all cell artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: fixn3-item-ii-*-${{ github.run_id }}
+          path: ${{ env.OUT_BASE }}/downloaded
+          merge-multiple: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Build distribution summary
+        run: |
+          python3 - << 'PYEOF'
+          import glob, json, statistics, pathlib
+
+          rows = []
+          for path in sorted(glob.glob("${{ env.OUT_BASE }}/downloaded/**/*.json", recursive=True)):
+              p = pathlib.Path(path)
+              if p.name.startswith("_"):
+                  continue  # skip partial/checkpoint files
+              try:
+                  data = json.loads(p.read_text())
+              except Exception:
+                  continue
+              cfg, summ = data.get("config", {}), data.get("summary", {})
+              if "h_rate" not in summ:
+                  continue
+              rows.append({
+                  "file": p.name,
+                  "seed": cfg.get("seed"),
+                  "temperature": cfg.get("temperature"),
+                  "run_index": cfg.get("run_index"),
+                  "h_rate": summ.get("h_rate"),
+                  "h_recovered": summ.get("h_recovered"),
+                  "n_total": summ.get("n_total"),
+              })
+
+          print("### FIX-N3 item (ii) — solve-rate distribution\n")
+          print(f"Collected {len(rows)} completed run file(s).\n")
+
+          by_temp = {}
+          for r in rows:
+              by_temp.setdefault(r["temperature"], []).append(r["h_recovered"])
+
+          print("| temperature | n_runs | h_recovered values | mean | stdev |")
+          print("|---|---|---|---|---|")
+          for temp, vals in sorted(by_temp.items(), key=lambda kv: str(kv[0])):
+              mean = statistics.mean(vals) if vals else float("nan")
+              stdev = statistics.pstdev(vals) if len(vals) > 1 else 0.0
+              print(f"| {temp} | {len(vals)} | {vals} | {mean:.3f} | {stdev:.3f} |")
+
+          summary_path = pathlib.Path("${{ env.OUT_BASE }}/item_ii_distribution_summary.json")
+          summary_path.parent.mkdir(parents=True, exist_ok=True)
+          summary_path.write_text(json.dumps(rows, indent=2))
+          PYEOF
+
+      - name: Write to job summary
+        run: |
+          echo "See step log above for the per-temperature distribution table." >> "$GITHUB_STEP_SUMMARY"
+          echo "Raw per-run rows: ${OUT_BASE}/item_ii_distribution_summary.json (uploaded below)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload distribution summary
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: fixn3-item-ii-distribution-summary-${{ github.run_id }}
+          path: ${{ env.OUT_BASE }}/item_ii_distribution_summary.json
+          if-no-files-found: warn
+          retention-days: 30

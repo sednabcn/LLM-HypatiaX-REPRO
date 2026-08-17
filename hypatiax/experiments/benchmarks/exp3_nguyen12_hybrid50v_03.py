@@ -1,8 +1,28 @@
 #!/usr/bin/env python3
 """
-exp3_nguyen12_hybrid50v_02.py  —  Exp 3 · Nguyen-12 SR suite  (§10.8 primary)
+exp3_nguyen12_hybrid50v_03.py  —  Exp 3 · Nguyen-12 SR suite  (§10.8 primary)
 ==============================================================================
 Standalone Python script version — safe to run with `python3` directly.
+
+Renamed from exp3_nguyen12_hybrid50v_02.py (v02 file → v03 file, this
+revision). Reason: closes action item (ii) of the seed-123 / model-identity
+FIX-N3 extension (see jmlr_paper_main_patched.tex, §sec:nguyen12
+reproducibility note). Two changes vs. the _02 file:
+  [FIX-N3-ii-a] New --temperature CLI flag (default 0.25, matching
+                hypatia.py's own default), threaded through to
+                get_llm_prior() so a run's sampling temperature is an
+                explicit, controllable, and logged input rather than an
+                implicit default baked into hypatia.py.
+  [FIX-N3-ii-b] Output JSON's "config" block now records "temperature"
+                and "n_candidates" alongside seed/niterations/populations,
+                so a future reader can tell which sampling settings
+                produced a given solve-rate without cross-referencing
+                hypatia.py's source. Output filename now also encodes
+                temperature and a --run-index, so repeated runs at the
+                same seed (needed to build the distribution item (ii)
+                asks for) land in separate files instead of the first
+                run's "already exists, skipping" guard silently no-op'ing
+                every subsequent repeat.
 
 Origin: extracted from HypatiaX_Experiments_v6_PUBLIC.ipynb (Cell 27)
 Fixes applied (v02 → v03):
@@ -51,13 +71,15 @@ SEED            : 42 (fixed for reproducibility; override with --seed)
 
 Usage
 -----
-    python3 exp3_nguyen12_hybrid50v_02.py             # SEED=42 (default)
-    python3 exp3_nguyen12_hybrid50v_02.py --seed 123  # stability check
-    python3 exp3_nguyen12_hybrid50v_02.py --seed 777  # stability check
+    python3 exp3_nguyen12_hybrid50v_03.py                                   # SEED=42, temp=0.25 (defaults)
+    python3 exp3_nguyen12_hybrid50v_03.py --seed 123                        # stability check, temp=0.25
+    python3 exp3_nguyen12_hybrid50v_03.py --seed 777                        # stability check, temp=0.25
+    python3 exp3_nguyen12_hybrid50v_03.py --seed 123 --temperature 0        # determinism control
+    python3 exp3_nguyen12_hybrid50v_03.py --seed 123 --temperature 0 --run-index 3   # 3rd of N repeats
 
 CI shard usage (set by ci_runner.yml worker dispatch):
     TASK_IDS="N1 N3 N7" PYSR_SEED=42 EXPERIMENT_SEED=42 \\
-        python3 exp3_nguyen12_hybrid50v_02.py --seed 42
+        python3 exp3_nguyen12_hybrid50v_03.py --seed 42 --temperature 0.25
 """
 
 import argparse
@@ -169,7 +191,7 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── 1. Resolve repo root & set sys.path ───────────────────────────────────
-# Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02.py
+# Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_03.py
 # Repo root is 4 levels up (parents[3]):
 #   parents[0] = benchmarks/
 #   parents[1] = experiments/
@@ -198,6 +220,25 @@ def _parse_args():
     parser.add_argument(
         "--seed", type=int, default=42,
         help="Random seed for all RNG sources (default: 42)"
+    )
+    # [FIX-N3-ii-a] Explicit, loggable sampling temperature for the LLM
+    # warm-start call, in place of hypatia.py's implicit temperature=0.25
+    # default. 0.0 is the determinism-control value used to test whether
+    # the seed-123 solve-rate discrepancy survives when LLM sampling noise
+    # is minimized (see jmlr_paper_main_patched.tex reproducibility note).
+    parser.add_argument(
+        "--temperature", type=float, default=0.25,
+        help="LLM sampling temperature passed to get_llm_prior() "
+             "(default: 0.25, matching hypatia.py's prior default)"
+    )
+    # [FIX-N3-ii-b] Distinguishes repeated runs at the same (seed,
+    # temperature) pair so their output files don't collide with the
+    # existing "already exists, skip" guard in run().
+    parser.add_argument(
+        "--run-index", type=int, default=1,
+        help="1-based index of this run among repeated runs at the same "
+             "seed/temperature, used only to disambiguate output filenames "
+             "(default: 1)"
     )
     return parser.parse_args()
 
@@ -300,7 +341,7 @@ else:
     USE_LLM = False
 
 # ── 8. Main experiment logic ───────────────────────────────────────────────
-def run(seed: int = 42):
+def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1):
     """Run the Nguyen-12 benchmark directly (no subprocess recursion)."""
     import json
     import time
@@ -311,11 +352,20 @@ def run(seed: int = 42):
     _results_dir = _resolve_results_dir(_repo_results_dir)
     _results_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Skip if result already exists for this seed (avoids redundant ────
-    # ── subprocess re-run triggered by run_task after direct execution)  ──
-    _out_path = _results_dir / f"exp3_nguyen12_seed{seed}.json"
+    # [FIX-N3-ii-b] Filename now encodes temperature and run_index so that
+    # repeated runs at the same seed (needed to build the item (ii)
+    # solve-rate distribution) land in distinct files, and so temp=0 /
+    # temp=0.25 runs never collide. Temperature is formatted without a
+    # decimal point (e.g. "0" or "0p25") to keep filenames shell-safe.
+    _temp_tag = str(temperature).rstrip("0").rstrip(".").replace(".", "p") or "0"
+    _out_path = _results_dir / f"exp3_nguyen12_seed{seed}_temp{_temp_tag}_run{run_index}.json"
+
+    # ── Skip if result already exists for this exact (seed, temperature, ─
+    # ── run_index) triple (avoids redundant subprocess re-run triggered ──
+    # ── by run_task after direct execution) ───────────────────────────
     if _out_path.exists():
-        print(f"  ✓ Results already exist for seed={seed}, skipping re-run.")
+        print(f"  ✓ Results already exist for seed={seed} temp={temperature} "
+              f"run={run_index}, skipping re-run.")
         with open(_out_path) as _f:
             return json.load(_f)
 
@@ -336,7 +386,7 @@ def run(seed: int = 42):
     # mid-write.
     _start_time    = time.time()
     _job_deadline  = int(os.environ.get("JOB_DEADLINE", 0)) or None  # seconds; 0/unset = no cap
-    _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_partial.json"
+    _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_temp{_temp_tag}_run{run_index}_partial.json"
 
     def _save(results_hypatia, results_pysr, n_total, complete):
         h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= 0.9999)
@@ -346,6 +396,10 @@ def run(seed: int = 42):
                 "name": "nguyen12_exp3", "seed": seed, "n_tasks": n_total,
                 "niterations": _niter, "populations": _pops,
                 "timeout": _timeout, "use_llm": USE_LLM,
+                # [FIX-N3-ii-b] Previously unlogged — a reader had to
+                # cross-reference hypatia.py's source to know these values.
+                "temperature": temperature, "n_candidates": _n_candidates,
+                "run_index": run_index,
             },
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
             "summary": {
@@ -373,12 +427,16 @@ def run(seed: int = 42):
     _pysr_timeout   = int(os.environ.get("PYSR_TIMEOUT",   1100))
     _method_timeout = int(os.environ.get("METHOD_TIMEOUT", _pysr_timeout))
     _timeout        = _pysr_timeout   # passed to PySR's timeout_in_seconds
+    # [FIX-N3-ii-b] Named so it can be logged in the config payload above,
+    # not just embedded inline in the get_llm_prior() call below.
+    _n_candidates   = int(os.environ.get("LLM_N_CANDIDATES", 8))
 
     print(f"\n{'='*68}")
-    print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}")
+    print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
     print("  Expected: 11/12 H (91.7%) · 10/12 P · MW U=113, p=0.0097")
     print(f"  Config  : n_tasks={_n_tasks}  niterations={_niter}  populations={_pops}"
-          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s")
+          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s"
+          f"  temperature={temperature}  n_candidates={_n_candidates}")
     print(f"{'='*68}\n")
 
     # ── Import protocol data layer ────────────────────────────────────────
@@ -454,9 +512,10 @@ def run(seed: int = 42):
             try:
                 llm_exprs = get_llm_prior(
                     eq_dict, X, y,
-                    n_candidates=8,
+                    n_candidates=_n_candidates,
                     verbose=False,
                     model=os.environ["LLM_MODEL"],
+                    temperature=temperature,
                 )
                 print(f"    LLM candidates: {llm_exprs[:3]} ...")
             except Exception as _e:
@@ -553,7 +612,7 @@ def run(seed: int = 42):
     n           = len(all_cases)
 
     print(f"\n{'='*68}")
-    print(f"  RESULTS  (strict R²≥{THRESH}, seed={seed})")
+    print(f"  RESULTS  (strict R²≥{THRESH}, seed={seed}, temp={temperature}, run={run_index})")
     print(f"  HypatiaX : {h_recovered}/{n}  ({100*h_recovered/n:.1f}%)")
     print(f"  PySR-only: {p_recovered}/{n}  ({100*p_recovered/n:.1f}%)")
     print("  Expected : 11/12 H (91.7%) · 10/12 P")
@@ -592,4 +651,4 @@ def run(seed: int = 42):
 
 # ── 9. Entry point ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    run(seed=SEED)
+    run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index)

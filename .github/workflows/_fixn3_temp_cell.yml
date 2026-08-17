@@ -1,0 +1,139 @@
+# ==============================================================================
+#  _fixn3_temp_cell.yml - reusable per-cell runner for
+#                          ci_fixn3_seed123_temp_repro.yml
+#
+#  Not intended to be dispatched directly. Called four times (once per
+#  experiment x temperature cell) by ci_fixn3_seed123_temp_repro.yml via
+#  `uses: ./.github/workflows/_fixn3_temp_cell.yml`. Runs n_runs repeats
+#  of `python3 <script_path> --seed <seed> --temperature <temperature>
+#  --run-index <i>` for i in 1..n_runs, uploads every run's JSON as one
+#  artifact per cell, and reports pass/fail via the job's own status
+#  (no cross-cell aggregation here — that's the parent workflow's
+#  `summarize` job).
+# ==============================================================================
+
+name: "_fixn3_temp_cell (reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      script_path:
+        required: true
+        type: string
+      experiment_label:
+        required: true
+        type: string
+      temperature:
+        required: true
+        type: string
+      seed:
+        required: true
+        type: string
+      n_runs:
+        required: true
+        type: string
+      dry_run:
+        required: false
+        type: string
+        default: "false"
+
+jobs:
+  run_cell:
+    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }}"
+    runs-on: ubuntu-latest
+    # exp3/exp3b run the full 12-equation LLM-prior + PySR-only suite per
+    # repeat (~30-90 min each per exp3_nguyen12_hybrid50v_03.py's own
+    # docstring estimate) — bounded generously for n_runs up to ~8.
+    timeout-minutes: 480
+
+    env:
+      RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results/fixn3_item_ii/${{ inputs.experiment_label }}_seed${{ inputs.seed }}_temp${{ inputs.temperature }}
+      EXPERIMENT_SEED: ${{ inputs.seed }}
+      PYSR_SEED: ${{ inputs.seed }}
+      NN_SEED: ${{ inputs.seed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Julia 1.11
+        if: ${{ inputs.dry_run != 'true' }}
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.11"
+
+      # Mandatory: every repeat performs a live LLM warm-start call
+      # (--no-llm-cache is not part of this experiment's contract, but
+      # a dead/invalid key would silently degrade every repeat to
+      # PySR-only, which is exactly the confound this experiment exists
+      # to avoid).
+      - name: Validate ANTHROPIC_API_KEY (live round-trip)
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          KEY_LEN=${#ANTHROPIC_API_KEY}
+          echo "ANTHROPIC_API_KEY present: $([ $KEY_LEN -gt 0 ] && echo YES || echo NO)"
+          echo "ANTHROPIC_API_KEY length : ${KEY_LEN} chars"
+          if [[ $KEY_LEN -eq 0 ]]; then
+            echo "::error::ANTHROPIC_API_KEY secret is empty or unset."
+            exit 1
+          fi
+          python3 "${{ github.workspace }}/config/test_key_status.py"
+
+      - name: Install experiment dependencies
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          pip install -r requirements.txt
+
+      - name: Confirm script exists and accepts expected flags
+        run: |
+          if [[ ! -f "${{ inputs.script_path }}" ]]; then
+            echo "::error::${{ inputs.script_path }} not found in repo — check the script_path input."
+            exit 1
+          fi
+          if ! python3 "${{ inputs.script_path }}" --help 2>&1 | grep -q -- "--temperature"; then
+            echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can run."
+            exit 1
+          fi
+
+      - name: "Run ${{ inputs.n_runs }} repeats (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }})"
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RESULTS_DIR}"
+          for i in $(seq 1 "${{ inputs.n_runs }}"); do
+            echo "════════════════════════════════════════════════════════════"
+            echo "  ${{ inputs.experiment_label }} repeat ${i}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
+            echo "════════════════════════════════════════════════════════════"
+            python3 "${{ inputs.script_path }}" \
+              --seed "${{ inputs.seed }}" \
+              --temperature "${{ inputs.temperature }}" \
+              --run-index "${i}"
+          done
+
+      - name: Dry-run — print planned commands only
+        if: ${{ inputs.dry_run == 'true' }}
+        run: |
+          for i in $(seq 1 "${{ inputs.n_runs }}"); do
+            echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${i}\""
+          done
+          echo "dry_run=true — stopping, no benchmark runs performed."
+
+      - name: Upload cell results
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: fixn3-item-ii-${{ inputs.experiment_label }}-seed${{ inputs.seed }}-temp${{ inputs.temperature }}-${{ github.run_id }}
+          path: ${{ env.RESULTS_DIR }}
+          if-no-files-found: warn
+          retention-days: 30
