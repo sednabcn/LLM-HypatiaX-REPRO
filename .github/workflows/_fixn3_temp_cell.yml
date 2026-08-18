@@ -100,7 +100,7 @@ jobs:
             exit 1
           fi
           if ! python3 "${{ inputs.script_path }}" --help 2>&1 | grep -q -- "--temperature"; then
-            echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can run."
+            echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can proceed."
             exit 1
           fi
 
@@ -112,9 +112,9 @@ jobs:
           set -euo pipefail
           mkdir -p "${RESULTS_DIR}"
           for i in $(seq 1 "${{ inputs.n_runs }}"); do
-            echo "════════════════════════════════════════════════════════════"
+            echo "════════════════════════════════════════════════════��════════════════════════"
             echo "  ${{ inputs.experiment_label }} repeat ${i}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
-            echo "════════════════════════════════════════════════════════════"
+            echo "═════════════════════════════════════════════════════════════════════════════"
             python3 "${{ inputs.script_path }}" \
               --seed "${{ inputs.seed }}" \
               --temperature "${{ inputs.temperature }}" \
