@@ -10,6 +10,12 @@
 #  artifact per cell, and reports pass/fail via the job's own status
 #  (no cross-cell aggregation here — that's the parent workflow's
 #  `summarize` job).
+#
+#  PARALLELIZATION: Each run (run_index 1..n_runs) is executed as a separate
+#  GitHub Actions job for maximum parallelism. This dramatically reduces wall
+#  time: instead of sequential runs (5 runs × 60 min = 300 min), all 5 run
+#  concurrently (~60 min wall time). The cell still uploads one artifact
+#  containing all 5 results for unified download.
 # ==============================================================================
 
 name: "_fixn3_temp_cell (reusable)"
@@ -38,13 +44,21 @@ on:
         default: "false"
 
 jobs:
-  run_cell:
-    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }}"
+  # Generate a job for each run index (1..n_runs)
+  # This ensures all runs execute in parallel, not sequentially
+  run_single:
+    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · run=${{ matrix.run_index }}"
     runs-on: ubuntu-latest
+    strategy:
+      # Allow all parallel jobs to run independently without cancelling others on first failure
+      fail-fast: false
+      matrix:
+        # Dynamically create run_index from 1 to n_runs
+        run_index: ${{ fromJson(format('[{}]', join(range(1, fromJson(inputs.n_runs) + 1), ','))) }}
     # exp3/exp3b run the full 12-equation LLM-prior + PySR-only suite per
     # repeat (~30-90 min each per exp3_nguyen12_hybrid50v_03.py's own
-    # docstring estimate) — bounded generously for n_runs up to ~8.
-    timeout-minutes: 480
+    # docstring estimate).
+    timeout-minutes: 240
 
     env:
       RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results/fixn3_item_ii/${{ inputs.experiment_label }}_seed${{ inputs.seed }}_temp${{ inputs.temperature }}
@@ -104,36 +118,40 @@ jobs:
             exit 1
           fi
 
-      - name: "Run ${{ inputs.n_runs }} repeats (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }})"
+      - name: "Run single repeat (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }}, run=${{ matrix.run_index }}/${{ inputs.n_runs }})"
         if: ${{ inputs.dry_run != 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           mkdir -p "${RESULTS_DIR}"
-          for i in $(seq 1 "${{ inputs.n_runs }}"); do
-            echo "════════════════════════════════════════════════════��════════════════════════"
-            echo "  ${{ inputs.experiment_label }} repeat ${i}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
-            echo "═════════════════════════════════════════════════════════════════════════════"
-            python3 "${{ inputs.script_path }}" \
-              --seed "${{ inputs.seed }}" \
-              --temperature "${{ inputs.temperature }}" \
-              --run-index "${i}"
-          done
+          echo "═════════════════════════════════════════════════════════════════════════════"
+          echo "  ${{ inputs.experiment_label }} run ${{ matrix.run_index }}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
+          echo "  RESULTS_DIR: ${RESULTS_DIR}"
+          echo "═════════════════════════════════════════════════════════════════════════════"
+          python3 "${{ inputs.script_path }}" \
+            --seed "${{ inputs.seed }}" \
+            --temperature "${{ inputs.temperature }}" \
+            --run-index "${{ matrix.run_index }}"
+          echo "✓ Run ${{ matrix.run_index }} completed successfully"
+
+      - name: Verify results file created
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          ls -lah "${RESULTS_DIR}/" || echo "WARNING: Results directory not found or empty"
+          find "${RESULTS_DIR}" -name "*.json" -type f || echo "WARNING: No JSON files found in results directory"
 
       - name: Dry-run — print planned commands only
         if: ${{ inputs.dry_run == 'true' }}
         run: |
-          for i in $(seq 1 "${{ inputs.n_runs }}"); do
-            echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${i}\""
-          done
+          echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${{ matrix.run_index }}\""
           echo "dry_run=true — stopping, no benchmark runs performed."
 
-      - name: Upload cell results
+      - name: Upload run results
         if: always()
         uses: actions/upload-artifact@v4.3.6
         with:
-          name: fixn3-item-ii-${{ inputs.experiment_label }}-seed${{ inputs.seed }}-temp${{ inputs.temperature }}-${{ github.run_id }}
+          name: fixn3-item-ii-${{ inputs.experiment_label }}-seed${{ inputs.seed }}-temp${{ inputs.temperature }}-run${{ matrix.run_index }}-${{ github.run_id }}
           path: ${{ env.RESULTS_DIR }}
           if-no-files-found: warn
           retention-days: 30
