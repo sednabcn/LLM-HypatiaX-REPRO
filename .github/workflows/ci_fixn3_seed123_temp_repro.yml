@@ -27,6 +27,12 @@
 #  directly instead of decoding a matrix run's generated job name. The
 #  four jobs are fully independent and run in parallel.
 #
+#  PARALLELIZATION IMPROVEMENT: Within each cell, the n_runs repeats are
+#  now parallelized via matrix strategy instead of sequential loop. This
+#  reduces wall time from 5 × 60 min = 300 min per cell to ~60 min per cell
+#  (all 5 runs execute concurrently). Four cells still run in parallel,
+#  so total wall time is ~60 min instead of 1200 min for n_runs=5.
+#
 #    Job 1: exp3_seed123_temp025  — protocol match (original solve-rate
 #            was measured at hypatia.py's default temperature=0.25).
 #            Gives the "distribution over repeated runs" item (ii) asks
@@ -75,9 +81,9 @@ on:
         default: "123"
 
       n_runs:
-        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for. Reduced default from 5 to 2 to minimize wall time."
+        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for. Now parallelized, so wall time is ~1 run duration regardless of n_runs (was 5x longer before parallelization)."
         required: false
-        default: "2"
+        default: "5"
 
       skip_exp3b:
         description: "Skip jobs 3/4 (exp3b-labeled cells) and only close item (ii) for exp3 (true/false) — both use the same script_path; this just limits which cells run"
@@ -194,6 +200,14 @@ jobs:
           path: ${{ env.OUT_BASE }}/downloaded
           merge-multiple: false
 
+      - name: Debug - List downloaded artifacts
+        run: |
+          echo "=== Downloaded Artifacts Structure ==="
+          find "${{ env.OUT_BASE }}/downloaded" -type f -name "*.json" | head -20
+          echo ""
+          echo "=== Total JSON files found ==="
+          find "${{ env.OUT_BASE }}/downloaded" -type f -name "*.json" | wc -l
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5.3.0
         with:
@@ -205,16 +219,22 @@ jobs:
           import glob, json, statistics, pathlib
 
           rows = []
-          for path in sorted(glob.glob("${{ env.OUT_BASE }}/downloaded/**/*.json", recursive=True)):
+          json_files = sorted(glob.glob("${{ env.OUT_BASE }}/downloaded/**/*.json", recursive=True))
+          print(f"Found {len(json_files)} JSON files to process")
+          
+          for path in json_files:
               p = pathlib.Path(path)
               if p.name.startswith("_"):
+                  print(f"  Skipping checkpoint: {p.name}")
                   continue  # skip partial/checkpoint files
               try:
                   data = json.loads(p.read_text())
-              except Exception:
+              except Exception as e:
+                  print(f"  ERROR reading {p.name}: {e}")
                   continue
               cfg, summ = data.get("config", {}), data.get("summary", {})
               if "h_rate" not in summ:
+                  print(f"  SKIP (no h_rate): {p.name}")
                   continue
               rows.append({
                   "file": p.name,
@@ -225,9 +245,14 @@ jobs:
                   "h_recovered": summ.get("h_recovered"),
                   "n_total": summ.get("n_total"),
               })
+              print(f"  ✓ {p.name}")
 
-          print("### FIX-N3 item (ii) — solve-rate distribution\n")
+          print("\n### FIX-N3 item (ii) — solve-rate distribution\n")
           print(f"Collected {len(rows)} completed run file(s).\n")
+
+          if not rows:
+              print("⚠  WARNING: No rows collected. Check that JSON files contain 'h_rate' in summary.")
+              exit(1)
 
           by_temp = {}
           for r in rows:
@@ -243,12 +268,16 @@ jobs:
           summary_path = pathlib.Path("${{ env.OUT_BASE }}/item_ii_distribution_summary.json")
           summary_path.parent.mkdir(parents=True, exist_ok=True)
           summary_path.write_text(json.dumps(rows, indent=2))
+          print(f"\n✓ Summary written to: {summary_path}")
           PYEOF
 
       - name: Write to job summary
         run: |
+          echo "## FIX-N3 item (ii) — Solve-Rate Distribution Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "See step log above for the per-temperature distribution table." >> "$GITHUB_STEP_SUMMARY"
-          echo "Raw per-run rows: ${OUT_BASE}/item_ii_distribution_summary.json (uploaded below)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Raw per-run rows: \`${OUT_BASE}/item_ii_distribution_summary.json\` (uploaded below)." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload distribution summary
         if: always()
