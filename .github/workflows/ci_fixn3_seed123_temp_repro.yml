@@ -75,9 +75,9 @@ on:
         default: "123"
 
       n_runs:
-        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for"
+        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for. Reduced default from 5 to 2 to minimize wall time."
         required: false
-        default: "5"
+        default: "2"
 
       skip_exp3b:
         description: "Skip jobs 3/4 (exp3b-labeled cells) and only close item (ii) for exp3 (true/false) — both use the same script_path; this just limits which cells run"
@@ -95,7 +95,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: write
