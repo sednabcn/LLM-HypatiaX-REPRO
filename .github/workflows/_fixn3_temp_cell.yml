@@ -2,20 +2,15 @@
 #  _fixn3_temp_cell.yml - reusable per-cell runner for
 #                          ci_fixn3_seed123_temp_repro.yml
 #
-#  Not intended to be dispatched directly. Called four times (once per
-#  experiment x temperature cell) by ci_fixn3_seed123_temp_repro.yml via
-#  `uses: ./.github/workflows/_fixn3_temp_cell.yml`. Runs n_runs repeats
-#  of `python3 <script_path> --seed <seed> --temperature <temperature>
-#  --run-index <i>` for i in 1..n_runs, uploads every run's JSON as one
-#  artifact per cell, and reports pass/fail via the job's own status
-#  (no cross-cell aggregation here — that's the parent workflow's
-#  `summarize` job).
+#  Not intended to be dispatched directly. Called once per run by a parent
+#  workflow which is responsible for expanding the run-index matrix. This
+#  version removes the in-workflow arithmetic that GitHub's expression parser
+#  rejects and instead accepts `run_index` as an input so the caller can
+#  generate a matrix externally (e.g. via `strategy.matrix.run_index`).
 #
-#  PARALLELIZATION: Each run (run_index 1..n_runs) is executed as a separate
-#  GitHub Actions job for maximum parallelism. This dramatically reduces wall
-#  time: instead of sequential runs (5 runs × 60 min = 300 min), all 5 run
-#  concurrently (~60 min wall time). The cell still uploads one artifact
-#  containing all 5 results for unified download.
+#  Each job executes `python3 <script_path> --seed <seed> --temperature
+#  <temperature> --run-index <run_index>`, uploads the results, and reports
+#  pass/fail via the job status.
 # ==============================================================================
 
 name: "_fixn3_temp_cell (reusable)"
@@ -35,7 +30,15 @@ on:
       seed:
         required: true
         type: string
+      # Keep n_runs optional for informational / display purposes.
       n_runs:
+        required: false
+        type: string
+        default: "1"
+      # The caller must provide the specific run index (1..N) so the caller
+      # can expand a matrix externally and avoid doing arithmetic in this
+      # reusable workflow.
+      run_index:
         required: true
         type: string
       dry_run:
@@ -44,20 +47,11 @@ on:
         default: "false"
 
 jobs:
-  # Generate a job for each run index (1..n_runs)
-  # This ensures all runs execute in parallel, not sequentially
+  # Single-run job: the caller expands the matrix and supplies run_index.
   run_single:
-    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · run=${{ matrix.run_index }}"
+    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · run=${{ inputs.run_index }}"
     runs-on: ubuntu-latest
-    strategy:
-      # Allow all parallel jobs to run independently without cancelling others on first failure
-      fail-fast: false
-      matrix:
-        # Dynamically create run_index from 1 to n_runs
-        run_index: ${{ fromJson(format('[{}]', join(range(1, fromJson(inputs.n_runs) + 1), ','))) }}
-    # exp3/exp3b run the full 12-equation LLM-prior + PySR-only suite per
-    # repeat (~30-90 min each per exp3_nguyen12_hybrid50v_03.py's own
-    # docstring estimate).
+    # No in-workflow matrix here — the parent/caller should expand run_index.
     timeout-minutes: 240
 
     env:
@@ -83,11 +77,6 @@ jobs:
         with:
           version: "1.11"
 
-      # Mandatory: every repeat performs a live LLM warm-start call
-      # (--no-llm-cache is not part of this experiment's contract, but
-      # a dead/invalid key would silently degrade every repeat to
-      # PySR-only, which is exactly the confound this experiment exists
-      # to avoid).
       - name: Install experiment dependencies
         if: ${{ inputs.dry_run != 'true' }}
         run: |
@@ -114,26 +103,26 @@ jobs:
             exit 1
           fi
           if ! python3 "${{ inputs.script_path }}" --help 2>&1 | grep -q -- "--temperature"; then
-            echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can proceed."
+            echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can be used."
             exit 1
           fi
 
-      - name: "Run single repeat (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }}, run=${{ matrix.run_index }}/${{ inputs.n_runs }})"
+      - name: "Run single repeat (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }}, run=${{ inputs.run_index }}/${{ inputs.n_runs }})"
         if: ${{ inputs.dry_run != 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           mkdir -p "${RESULTS_DIR}"
-          echo "═════════════════════════════════════════════════════════════════════════════"
-          echo "  ${{ inputs.experiment_label }} run ${{ matrix.run_index }}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
+          echo "════════════════════════════════════════════════════════════════════════"
+          echo "  ${{ inputs.experiment_label }} run ${{ inputs.run_index }}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
           echo "  RESULTS_DIR: ${RESULTS_DIR}"
-          echo "═════════════════════════════════════════════════════════════════════════════"
+          echo "════════════════════════════════════════════════════════════════════════"
           python3 "${{ inputs.script_path }}" \
             --seed "${{ inputs.seed }}" \
             --temperature "${{ inputs.temperature }}" \
-            --run-index "${{ matrix.run_index }}"
-          echo "✓ Run ${{ matrix.run_index }} completed successfully"
+            --run-index "${{ inputs.run_index }}"
+          echo "✓ Run ${{ inputs.run_index }} completed successfully"
 
       - name: Verify results file created
         if: ${{ inputs.dry_run != 'true' }}
@@ -144,14 +133,14 @@ jobs:
       - name: Dry-run — print planned commands only
         if: ${{ inputs.dry_run == 'true' }}
         run: |
-          echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${{ matrix.run_index }}\""
+          echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${{ inputs.run_index }}\""
           echo "dry_run=true — stopping, no benchmark runs performed."
 
       - name: Upload run results
         if: always()
         uses: actions/upload-artifact@v4.3.6
         with:
-          name: fixn3-item-ii-${{ inputs.experiment_label }}-seed${{ inputs.seed }}-temp${{ inputs.temperature }}-run${{ matrix.run_index }}-${{ github.run_id }}
+          name: fixn3-item-ii-${{ inputs.experiment_label }}-seed${{ inputs.seed }}-temp${{ inputs.temperature }}-run${{ inputs.run_index }}-${{ github.run_id }}
           path: ${{ env.RESULTS_DIR }}
           if-no-files-found: warn
           retention-days: 30
