@@ -51,7 +51,14 @@ jobs:
   run_single:
     name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · run=${{ inputs.run_index }}"
     runs-on: ubuntu-latest
-    # No in-workflow matrix here — the parent/caller should expand run_index.
+    # Single-run-per-job design: the caller (ci_fixn3_seed123_temp_repro.yml)
+    # expands a strategy.matrix over run_index, so each invocation of this
+    # reusable workflow performs exactly one repeat, not n_runs of them.
+    # 240 min covers exp3/exp3b's worst-case ~90 min/repeat (per
+    # exp3_nguyen12_hybrid50v_03.py's docstring) with a generous buffer,
+    # and — since matrix cells run in parallel, not summed — keeps total
+    # wall-clock for the whole workflow well under the 5-hour ceiling
+    # (one job's timeout, not n_runs x timeout).
     timeout-minutes: 240
 
     env:

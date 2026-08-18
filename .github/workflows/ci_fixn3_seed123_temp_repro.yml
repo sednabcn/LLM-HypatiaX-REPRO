@@ -81,7 +81,7 @@ on:
         default: "123"
 
       n_runs:
-        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for. Now parallelized, so wall time is ~1 run duration regardless of n_runs (was 5x longer before parallelization)."
+        description: "Number of repeated runs per (experiment, temperature) cell — becomes the distribution item (ii) asks for. Parallelized via strategy.matrix, so wall time is ~1 run duration (~30-90 min) regardless of n_runs, not n_runs x that."
         required: false
         default: "5"
 
@@ -119,59 +119,98 @@ env:
 
 jobs:
 
+  # ── Compute the run-index matrix ([1..n_runs]) once, so every cell job
+  # ── below can expand strategy.matrix over it. GitHub Actions matrix
+  # ── values must come from a real JSON array (fromJson), and n_runs is a
+  # ── dynamic workflow_dispatch string input, so it can't be inlined as a
+  # ── matrix range directly — this tiny job is what makes the reusable
+  # ── workflow's single-run-per-job / caller-expands-the-matrix design
+  # ── (see _fixn3_temp_cell.yml's header) actually work end to end.
+  setup:
+    name: "Compute run-index matrix"
+    runs-on: ubuntu-latest
+    outputs:
+      run_indices: ${{ steps.gen.outputs.run_indices }}
+    steps:
+      - id: gen
+        run: |
+          python3 -c "import json; print('run_indices=' + json.dumps(list(range(1, int('${{ inputs.n_runs }}') + 1))))" >> "$GITHUB_OUTPUT"
+
   # ── Job 1: exp3, temperature=0.25 (protocol match) ─────────────────────
   exp3_seed123_temp025:
     name: "exp3 · seed 123 · temp=0.25"
+    needs: setup
     uses: ./.github/workflows/_fixn3_temp_cell.yml
-    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        run_index: ${{ fromJson(needs.setup.outputs.run_indices) }}
     with:
       script_path: ${{ inputs.script_path }}
       experiment_label: "exp3"
       temperature: "0.25"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
 
   # ── Job 2: exp3, temperature=0 (determinism control) ───────────────────
   exp3_seed123_temp0:
     name: "exp3 · seed 123 · temp=0"
+    needs: setup
     uses: ./.github/workflows/_fixn3_temp_cell.yml
-    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        run_index: ${{ fromJson(needs.setup.outputs.run_indices) }}
     with:
       script_path: ${{ inputs.script_path }}
       experiment_label: "exp3"
       temperature: "0"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
 
   # ── Job 3: exp3b, temperature=0.25 (protocol match) ─────────────────────
   exp3b_seed123_temp025:
     name: "exp3b · seed 123 · temp=0.25"
+    needs: setup
     uses: ./.github/workflows/_fixn3_temp_cell.yml
-    if: ${{ always() && inputs.skip_exp3b != 'true' }}
+    if: ${{ inputs.skip_exp3b != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        run_index: ${{ fromJson(needs.setup.outputs.run_indices) }}
     with:
       script_path: ${{ inputs.script_path }}
       experiment_label: "exp3b"
       temperature: "0.25"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
 
   # ── Job 4: exp3b, temperature=0 (determinism control) ──────────────────
   exp3b_seed123_temp0:
     name: "exp3b · seed 123 · temp=0"
+    needs: setup
     uses: ./.github/workflows/_fixn3_temp_cell.yml
-    if: ${{ always() && inputs.skip_exp3b != 'true' }}
+    if: ${{ inputs.skip_exp3b != 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        run_index: ${{ fromJson(needs.setup.outputs.run_indices) }}
     with:
       script_path: ${{ inputs.script_path }}
       experiment_label: "exp3b"
       temperature: "0"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
 
