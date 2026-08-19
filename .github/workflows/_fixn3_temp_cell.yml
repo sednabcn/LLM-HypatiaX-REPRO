@@ -30,6 +30,16 @@ on:
       seed:
         required: true
         type: string
+      # [FIX-N3-ii] item (ii) requires "candidate count" to be recorded
+      # alongside temperature/solve-rate. This is hypatia.py's get_llm_prior()
+      # candidate-sampling width — how many LLM-proposed candidate expressions
+      # are drawn per equation before trust-gating/selection, NOT n_runs (the
+      # repeat count) and NOT n_total (the 12-equation suite size). Passed to
+      # the script as --n-candidates.
+      candidate_count:
+        required: false
+        type: string
+        default: "5"
       # Keep n_runs optional for informational / display purposes.
       n_runs:
         required: false
@@ -46,10 +56,13 @@ on:
         type: string
         default: "false"
 
+permissions:
+  contents: write
+
 jobs:
   # Single-run job: the caller expands the matrix and supplies run_index.
   run_single:
-    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · run=${{ inputs.run_index }}"
+    name: "${{ inputs.experiment_label }} · seed ${{ inputs.seed }} · temp=${{ inputs.temperature }} · n_cand=${{ inputs.candidate_count }} · run=${{ inputs.run_index }}"
     runs-on: ubuntu-latest
     # Single-run-per-job design: the caller (ci_fixn3_seed123_temp_repro.yml)
     # expands a strategy.matrix over run_index, so each invocation of this
@@ -109,12 +122,17 @@ jobs:
             echo "::error::${{ inputs.script_path }} not found in repo — check the script_path input."
             exit 1
           fi
-          if ! python3 "${{ inputs.script_path }}" --help 2>&1 | grep -q -- "--temperature"; then
+          HELP_OUT=$(python3 "${{ inputs.script_path }}" --help 2>&1)
+          if ! echo "$HELP_OUT" | grep -q -- "--temperature"; then
             echo "::error::${{ inputs.script_path }} does not expose --temperature. It needs the same [FIX-N3-ii-a]/[FIX-N3-ii-b] CLI additions as exp3_nguyen12_hybrid50v_03.py before this cell can be used."
             exit 1
           fi
+          if ! echo "$HELP_OUT" | grep -q -- "--n-candidates"; then
+            echo "::error::${{ inputs.script_path }} does not expose --n-candidates. Item (ii) requires candidate count to be recorded alongside temperature/solve-rate — add this CLI flag ([FIX-N3-ii-c]) to hypatia.py's get_llm_prior() call path before this cell can be used."
+            exit 1
+          fi
 
-      - name: "Run single repeat (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }}, run=${{ inputs.run_index }}/${{ inputs.n_runs }})"
+      - name: "Run single repeat (seed=${{ inputs.seed }}, temp=${{ inputs.temperature }}, n_candidates=${{ inputs.candidate_count }}, run=${{ inputs.run_index }}/${{ inputs.n_runs }})"
         if: ${{ inputs.dry_run != 'true' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -122,12 +140,13 @@ jobs:
           set -euo pipefail
           mkdir -p "${RESULTS_DIR}"
           echo "════════════════════════════════════════════════════════════════════════"
-          echo "  ${{ inputs.experiment_label }} run ${{ inputs.run_index }}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }}"
+          echo "  ${{ inputs.experiment_label }} run ${{ inputs.run_index }}/${{ inputs.n_runs }} — seed=${{ inputs.seed }} temp=${{ inputs.temperature }} n_candidates=${{ inputs.candidate_count }}"
           echo "  RESULTS_DIR: ${RESULTS_DIR}"
           echo "════════════════════════════════════════════════════════════════════════"
           python3 "${{ inputs.script_path }}" \
             --seed "${{ inputs.seed }}" \
             --temperature "${{ inputs.temperature }}" \
+            --n-candidates "${{ inputs.candidate_count }}" \
             --run-index "${{ inputs.run_index }}"
           echo "✓ Run ${{ inputs.run_index }} completed successfully"
 
@@ -137,10 +156,71 @@ jobs:
           ls -lah "${RESULTS_DIR}/" || echo "WARNING: Results directory not found or empty"
           find "${RESULTS_DIR}" -name "*.json" -type f || echo "WARNING: No JSON files found in results directory"
 
+      # ── Commit and push this run's results directly to the repo ────────────
+      # Without this, results only exist as a 30-day CI artifact and are
+      # invisible in the repository tree. Up to 20 of these cell jobs
+      # (4 cells x 5 run_index each) can be pushing concurrently, so this
+      # uses the same pull-rebase / push-with-retry pattern as
+      # ci_runner_repro.yml's "Commit and push shard results to repo" step.
+      # if: always() so a partial/crashed run still persists whatever JSON
+      # it did manage to write before failing.
+      - name: Commit and push results to repo
+        if: ${{ always() && inputs.dry_run != 'true' }}
+        run: |
+          set -euo pipefail
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          FILE_COUNT=$(find "${RESULTS_DIR}" -type f 2>/dev/null | wc -l || echo 0)
+          echo "Files in ${RESULTS_DIR}: ${FILE_COUNT}"
+          if [[ "${FILE_COUNT}" -eq 0 ]]; then
+            echo "::warning::No files in ${RESULTS_DIR} — nothing to commit for this run."
+            exit 0
+          fi
+
+          echo "--- Files to stage ---"
+          find "${RESULTS_DIR}" -type f | sort
+
+          commit_and_push() {
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" 2>&1 || {
+              echo "::warning::git pull --rebase failed — stashing untracked files and retrying"
+              git stash --include-untracked --quiet || true
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" 2>&1 || true
+              git stash pop --quiet 2>/dev/null || true
+            }
+
+            git add -f "${RESULTS_DIR}"
+
+            if git diff --cached --quiet; then
+              echo "Nothing new to commit (results already committed by a prior run)."
+              return 0
+            fi
+
+            git commit -m "ci: fixn3 item (ii) — ${{ inputs.experiment_label }} seed${{ inputs.seed }} temp${{ inputs.temperature }} run${{ inputs.run_index }} — run ${{ github.run_id }}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          }
+
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          until commit_and_push; do
+            if [[ "${ATTEMPT}" -ge "${MAX_ATTEMPTS}" ]]; then
+              echo "::error::Failed to commit/push results for ${{ inputs.experiment_label }} seed${{ inputs.seed }} temp${{ inputs.temperature }} run${{ inputs.run_index }} after ${MAX_ATTEMPTS} attempts. Results were computed but NOT persisted to the repo (still available in the uploaded artifact)."
+              exit 1
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            SLEEP_SECS=$((RANDOM % 15 + 5))
+            echo "Push conflict (attempt ${ATTEMPT}/${MAX_ATTEMPTS}) — waiting ${SLEEP_SECS}s then retrying..."
+            sleep "${SLEEP_SECS}"
+          done
+
+          echo "✓ Committed and pushed results for ${{ inputs.experiment_label }} seed${{ inputs.seed }} temp${{ inputs.temperature }} run${{ inputs.run_index }}"
+
+
       - name: Dry-run — print planned commands only
         if: ${{ inputs.dry_run == 'true' }}
         run: |
-          echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --run-index \"${{ inputs.run_index }}\""
+          echo "python3 \"${{ inputs.script_path }}\" --seed \"${{ inputs.seed }}\" --temperature \"${{ inputs.temperature }}\" --n-candidates \"${{ inputs.candidate_count }}\" --run-index \"${{ inputs.run_index }}\""
           echo "dry_run=true — stopping, no benchmark runs performed."
 
       - name: Upload run results

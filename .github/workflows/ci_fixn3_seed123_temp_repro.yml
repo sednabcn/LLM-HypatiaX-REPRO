@@ -85,12 +85,17 @@ on:
         required: false
         default: "5"
 
+      candidate_count:
+        description: "[FIX-N3-ii] hypatia.py's get_llm_prior() candidate-sampling width — how many LLM-proposed candidate expressions are drawn per equation before trust-gating. Item (ii) requires this recorded alongside temperature/solve-rate. Passed to the script as --n-candidates; requires the script to expose that flag."
+        required: false
+        default: "5"
+
       skip_exp3b:
-        description: "Skip jobs 3/4 (exp3b-labeled cells) and only close item (ii) for exp3 (true/false) — both use the same script_path; this just limits which cells run"
+        description: "Skip jobs 3/4 (exp3b-labeled cells). DEFAULT TRUE: exp3 and exp3b invoke the exact same script with the exact same --seed/--temperature/--run-index args (see header note), so running both for a single seed is pure duplicate compute — same API cost twice, and the resulting JSON files are indistinguishable by content, which previously caused the summarize job to silently double-count rows. Set to 'false' only if you deliberately want two independent samples per (temp, run_index) cell for a robustness check, and note the summary table now separates them by experiment_label so they won't be conflated."
         required: false
         type: choice
-        options: ["false", "true"]
-        default: "false"
+        options: ["true", "false"]
+        default: "true"
 
       dry_run:
         description: "Print the planned commands and stop, no benchmark runs (true/false)"
@@ -151,6 +156,7 @@ jobs:
       temperature: "0.25"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      candidate_count: ${{ inputs.candidate_count }}
       run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
@@ -170,6 +176,7 @@ jobs:
       temperature: "0"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      candidate_count: ${{ inputs.candidate_count }}
       run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
@@ -190,6 +197,7 @@ jobs:
       temperature: "0.25"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      candidate_count: ${{ inputs.candidate_count }}
       run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
@@ -210,6 +218,7 @@ jobs:
       temperature: "0"
       seed: ${{ inputs.seed }}
       n_runs: ${{ inputs.n_runs }}
+      candidate_count: ${{ inputs.candidate_count }}
       run_index: ${{ matrix.run_index }}
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
@@ -255,19 +264,37 @@ jobs:
       - name: Build distribution summary
         run: |
           python3 - << 'PYEOF'
-          import glob, json, statistics, pathlib
+          import glob, json, re, statistics, pathlib, hashlib
+
+          # Artifact folders are named "fixn3-item-ii-<label>-seed<seed>-temp<temp>-run<run>-<run_id>"
+          # by _fixn3_temp_cell.yml's upload-artifact step. Since exp3/exp3b invoke the identical
+          # script with identical args (see workflow header), the JSON *content* alone cannot tell
+          # a cell apart from its twin — the label must be read from the artifact folder name, not
+          # from the JSON's own "config" block (which has no notion of exp3 vs exp3b).
+          ARTIFACT_RE = re.compile(r"^fixn3-item-ii-(?P<label>.+?)-seed")
 
           rows = []
+          seen_hashes = {}  # (temperature, run_index) -> {content_hash: [labels]}
           json_files = sorted(glob.glob("${{ env.OUT_BASE }}/downloaded/**/*.json", recursive=True))
           print(f"Found {len(json_files)} JSON files to process")
-          
+
           for path in json_files:
               p = pathlib.Path(path)
               if p.name.startswith("_"):
                   print(f"  Skipping checkpoint: {p.name}")
                   continue  # skip partial/checkpoint files
+
+              # Recover the experiment_label from the enclosing artifact folder name.
+              label = "unknown"
+              for part in p.parts:
+                  m = ARTIFACT_RE.match(part)
+                  if m:
+                      label = m.group("label")
+                      break
+
               try:
-                  data = json.loads(p.read_text())
+                  raw = p.read_text()
+                  data = json.loads(raw)
               except Exception as e:
                   print(f"  ERROR reading {p.name}: {e}")
                   continue
@@ -275,16 +302,24 @@ jobs:
               if "h_rate" not in summ:
                   print(f"  SKIP (no h_rate): {p.name}")
                   continue
+
+              temp, run_idx = cfg.get("temperature"), cfg.get("run_index")
+              content_hash = hashlib.sha256(raw.encode()).hexdigest()
+              key = (temp, run_idx)
+              seen_hashes.setdefault(key, {}).setdefault(content_hash, []).append(label)
+
               rows.append({
                   "file": p.name,
+                  "experiment_label": label,
                   "seed": cfg.get("seed"),
-                  "temperature": cfg.get("temperature"),
-                  "run_index": cfg.get("run_index"),
+                  "temperature": temp,
+                  "candidate_count": cfg.get("n_candidates", cfg.get("candidate_count")),
+                  "run_index": run_idx,
                   "h_rate": summ.get("h_rate"),
                   "h_recovered": summ.get("h_recovered"),
                   "n_total": summ.get("n_total"),
               })
-              print(f"  ✓ {p.name}")
+              print(f"  ✓ [{label}] {p.name}")
 
           print("\n### FIX-N3 item (ii) — solve-rate distribution\n")
           print(f"Collected {len(rows)} completed run file(s).\n")
@@ -293,20 +328,48 @@ jobs:
               print("⚠  WARNING: No rows collected. Check that JSON files contain 'h_rate' in summary.")
               exit(1)
 
-          by_temp = {}
-          for r in rows:
-              by_temp.setdefault(r["temperature"], []).append(r["h_recovered"])
+          missing_cc = [r["file"] for r in rows if r["candidate_count"] is None]
+          if missing_cc:
+              print(f"⚠  WARNING: {len(missing_cc)} row(s) have no candidate_count — the script's output JSON "
+                    f"config block doesn't record it (item (ii) requires this). Affected: {missing_cc[:5]}"
+                    f"{'...' if len(missing_cc) > 5 else ''}")
 
-          print("| temperature | n_runs | h_recovered values | mean | stdev |")
-          print("|---|---|---|---|---|")
-          for temp, vals in sorted(by_temp.items(), key=lambda kv: str(kv[0])):
+          # Flag cells that are byte-identical across labels at the same (temperature, run_index) —
+          # this is exactly the exp3/exp3b duplicate-compute pattern that previously doubled the
+          # apparent sample size. Never silently fold these into one distribution.
+          dup_warnings = []
+          for (temp, run_idx), hashes in seen_hashes.items():
+              for h, labels in hashes.items():
+                  if len(labels) > 1:
+                      dup_warnings.append((temp, run_idx, labels))
+          if dup_warnings:
+              print("⚠  DUPLICATE-CONTENT WARNING: identical JSON produced by multiple labels for the same (temperature, run_index):")
+              for temp, run_idx, labels in dup_warnings:
+                  print(f"   temp={temp} run_index={run_idx} labels={labels} — these are the same underlying run, not independent samples.")
+
+          # Group by (experiment_label, temperature) — NOT temperature alone — so duplicate-compute
+          # cells (e.g. exp3 vs exp3b re-running the identical args) can never be silently merged
+          # into a single, inflated distribution.
+          by_group = {}
+          for r in rows:
+              by_group.setdefault((r["experiment_label"], r["temperature"]), []).append(r["h_recovered"])
+
+          print("| experiment_label | temperature | candidate_count(s) | n_runs | h_recovered values | mean | stdev |")
+          print("|---|---|---|---|---|---|---|")
+          for (label, temp), vals in sorted(by_group.items(), key=lambda kv: (str(kv[0][0]), str(kv[0][1]))):
               mean = statistics.mean(vals) if vals else float("nan")
               stdev = statistics.pstdev(vals) if len(vals) > 1 else 0.0
-              print(f"| {temp} | {len(vals)} | {vals} | {mean:.3f} | {stdev:.3f} |")
+              cc_vals = sorted({r["candidate_count"] for r in rows if r["experiment_label"] == label and r["temperature"] == temp}, key=str)
+              print(f"| {label} | {temp} | {cc_vals} | {len(vals)} | {vals} | {mean:.3f} | {stdev:.3f} |")
 
           summary_path = pathlib.Path("${{ env.OUT_BASE }}/item_ii_distribution_summary.json")
           summary_path.parent.mkdir(parents=True, exist_ok=True)
-          summary_path.write_text(json.dumps(rows, indent=2))
+          summary_path.write_text(json.dumps({
+              "rows": rows,
+              "duplicate_content_warnings": [
+                  {"temperature": t, "run_index": ri, "labels": ls} for t, ri, ls in dup_warnings
+              ],
+          }, indent=2))
           print(f"\n✓ Summary written to: {summary_path}")
           PYEOF
 
@@ -314,7 +377,7 @@ jobs:
         run: |
           echo "## FIX-N3 item (ii) — Solve-Rate Distribution Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "See step log above for the per-temperature distribution table." >> "$GITHUB_STEP_SUMMARY"
+          echo "See step log above for the per-(label, temperature) distribution table." >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Raw per-run rows: \`${OUT_BASE}/item_ii_distribution_summary.json\` (uploaded below)." >> "$GITHUB_STEP_SUMMARY"
 
