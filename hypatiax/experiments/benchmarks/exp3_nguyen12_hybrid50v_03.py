@@ -200,7 +200,17 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
 # [BUG-ROOT-FIX] parents[2] pointed at hypatiax/ not the repo root, so
 # _REPRO_ROOT / "hypatiax" resolved to hypatiax/hypatiax/ (non-existent).
 _SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT  = _SCRIPT_DIR.parents[3]   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
+_REPO_ROOT  = _SCRIPT_DIR.parents[2]   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
+# [FIX-N3-ii-d] Off-by-one: _SCRIPT_DIR is already benchmarks/ (Path(__file__)
+# .parent already strips the filename), so only 2 more hops reach repo root
+# (benchmarks -> experiments -> hypatiax -> repo root == parents[2], not
+# parents[3]). The old parents[3] index was calibrated as if _SCRIPT_DIR were
+# still the file path itself, so it walked one directory too far up in every
+# layout -- IndexError on a flat/local checkout, and a silently-wrong
+# _REPRO_ROOT (missing hypatiax/) on CI's nested runner/work/<repo>/<repo>/
+# checkout, which broke argparse's own --help path before it could print
+# usage, surfacing as the misleading "does not expose --n-candidates"
+# preflight failure (the flag was already implemented correctly below).
 
 # Support override via environment variable (set by pipeline or notebook)
 _REPRO_ROOT = pathlib.Path(os.environ.get("REPRO_ROOT", str(_REPO_ROOT)))
@@ -239,6 +249,19 @@ def _parse_args():
         help="1-based index of this run among repeated runs at the same "
              "seed/temperature, used only to disambiguate output filenames "
              "(default: 1)"
+    )
+    # [FIX-N3-ii-c] hypatia.py's get_llm_prior() candidate-sampling width —
+    # how many LLM-proposed candidate expressions are drawn per equation
+    # before trust-gating/selection. Item (ii) requires this recorded
+    # alongside temperature/solve-rate. Left as None by default (rather
+    # than an argparse default) so existing callers that don't pass this
+    # flag keep falling back to the LLM_N_CANDIDATES env var / 8, unchanged.
+    parser.add_argument(
+        "--n-candidates", "--candidate-count",
+        dest="n_candidates", type=int, default=None,
+        help="Number of LLM-proposed candidate expressions to sample per "
+             "equation before trust-gating, passed to get_llm_prior() "
+             "(default: LLM_N_CANDIDATES env var, else 8)"
     )
     return parser.parse_args()
 
@@ -341,7 +364,7 @@ else:
     USE_LLM = False
 
 # ── 8. Main experiment logic ───────────────────────────────────────────────
-def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1):
+def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1, n_candidates: int | None = None):
     """Run the Nguyen-12 benchmark directly (no subprocess recursion)."""
     import json
     import time
@@ -429,7 +452,10 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1):
     _timeout        = _pysr_timeout   # passed to PySR's timeout_in_seconds
     # [FIX-N3-ii-b] Named so it can be logged in the config payload above,
     # not just embedded inline in the get_llm_prior() call below.
-    _n_candidates   = int(os.environ.get("LLM_N_CANDIDATES", 8))
+    # [FIX-N3-ii-c] --n-candidates (run() arg) takes priority when given;
+    # otherwise fall back to the pre-existing LLM_N_CANDIDATES env var / 8,
+    # so callers that don't pass the new flag see no behavior change.
+    _n_candidates   = n_candidates if n_candidates is not None else int(os.environ.get("LLM_N_CANDIDATES", 8))
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
@@ -651,4 +677,4 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1):
 
 # ── 9. Entry point ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index)
+    run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index, n_candidates=_args.n_candidates)

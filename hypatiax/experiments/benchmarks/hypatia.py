@@ -102,6 +102,7 @@ def get_llm_prior(
     model: str = "claude-sonnet-5",
     max_tokens: int = 1024,
     timeout: float = 60.0,
+    temperature: float = 0.25,
     verbose: bool = True,
 ) -> list[str]:
     """Return a list of candidate expressions for ``eq`` ordered by LLM confidence.
@@ -125,6 +126,10 @@ def get_llm_prior(
         Max completion tokens.
     timeout:
         Seconds to wait for the API call before raising.
+    temperature:
+        Anthropic API sampling temperature in [0, 1] (default: 0.25).
+        0.0 requests near-deterministic sampling; used as the FIX-N3-ii
+        determinism control.
     verbose:
         Print progress to stdout.
 
@@ -172,6 +177,7 @@ def get_llm_prior(
         message = client.messages.create(
             model=model,
             max_tokens=max_tokens,
+            temperature=temperature,
             messages=[{"role": "user", "content": prompt}],
             timeout=timeout,
         )

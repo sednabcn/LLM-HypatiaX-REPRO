@@ -117,6 +117,7 @@ jobs:
           python3 "${{ github.workspace }}/config/test_key_status.py"
 
       - name: Confirm script exists and accepts expected flags
+        if: ${{ inputs.dry_run != 'true' }}
         run: |
           if [[ ! -f "${{ inputs.script_path }}" ]]; then
             echo "::error::${{ inputs.script_path }} not found in repo — check the script_path input."
