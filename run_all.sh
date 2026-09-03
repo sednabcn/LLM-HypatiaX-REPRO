@@ -106,6 +106,17 @@
 #     --method-timeout, --populations, --parsimony) — mirrors suppB fix.
 #   — exp1, exp2_feynman: confirmed correct for NSHARDS=1; no changes needed.
 #
+# FIX-N3-ii (2026-09-03, Fix01 S1): exp3 (STEP 7) and exp3b (STEP 8) now
+#   invoke exp3_nguyen12_hybrid50v_03.py instead of the _02.py file. _03.py
+#   adds an explicit --temperature flag (0.25, matching hypatia.py's own
+#   default) and per-run output naming (temperature + --run-index) so
+#   repeated same-seed runs land in separate files instead of silently
+#   no-op'ing on the "already exists" guard. Both invocations below now pass
+#   --temperature 0.25 explicitly. ci_runner_repro.yml's exp3/exp3b SCRIPT=
+#   entries were updated to match. Item (ii) of the seed-123 reproducibility
+#   note fully closes once a seed-123 rerun is executed and its result JSON
+#   records "temperature" and "n_candidates" alongside the solve-rate.
+#
 # FIX-suppB_sc-NOISE0 (2026-08-04):
 #   — suppB_sc was setting NOISE_LEVEL='5.0' and never passing --noiseless,
 #     so the sample-complexity sweep silently ran at sigma=0.05 instead of
@@ -2603,8 +2614,9 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "=== exp3 seed 1/1: seed=42 | equations: N1-N12 (12 total) ==="
   RESULTS_DIR='${RESULTS_DIR}' \
-    python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_hybrid50v_02.py \
+    python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_hybrid50v_03.py \
     --seed 42 \
+    --temperature 0.25 \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || echo "WARNING: seed=42 exited non-zero — continuing"
   # FIX-4: CI RESULT_SUBDIR=extrapolation — move outputs to extrapolation/,
@@ -2660,7 +2672,7 @@ PYEOF
 # and ci_consolidate_experiment.yml (exp3b → extrapolation/multi_seed case).
 run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" bash -c "
   # FIX-exp3b-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug as exp1b/exp1/suppA.
-  # exp3_nguyen12_hybrid50v_02.py writes relative to os.getcwd(); cd EXPERIMENTS_DIR
+  # exp3_nguyen12_hybrid50v_03.py writes relative to os.getcwd(); cd EXPERIMENTS_DIR
   # produced .../benchmarks/hypatiax/data/results/... → outputs never found.
   # Mirrors the exp3 fix (cd REPO_ROOT + full path invocation).
   cd '${REPO_ROOT}'
@@ -2669,7 +2681,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   # FIX-exp3b-SEED-SHARD: previously this loop was hardcoded to all 4 seeds
   # on every shard (unlike exp1b/suppB/suppB_sc, which are all shard-aware),
   # AND never overrode PYSR_SEED/EXPERIMENT_SEED per-iteration to match
-  # --seed \$seed. Since exp3_nguyen12_hybrid50v_02.py's _resolve_seed()
+  # --seed \$seed. Since exp3_nguyen12_hybrid50v_03.py's _resolve_seed()
   # checks PYSR_SEED/EXPERIMENT_SEED/NN_SEED BEFORE the --seed CLI flag, the
   # ambient PYSR_SEED=42 (exported globally at the top of this script, and
   # inherited by every subprocess for the rest of the run) always won,
@@ -2699,8 +2711,9 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     EXPERIMENT_SEED=\"\$seed\" \
     NN_SEED=\"\$seed\" \
     RESULTS_DIR='${RESULTS_DIR}' \
-      python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_hybrid50v_02.py' \
+      python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_hybrid50v_03.py' \
       --seed \$seed \
+      --temperature 0.25 \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log
   done
   # BUG 2 FIX: target is extrapolation/multi_seed/ (not extrapolation/).
@@ -3625,7 +3638,8 @@ PYEOF
 # Loads scripts/patches/paper_targets.json and cross-checks every reported
 # number against the corresponding _merged.json / result file.
 # Emits PASS / WARN / FAIL / MISSING per claim.
-# Includes Nguyen-12 dual-threshold check (91.7% 4-decimal vs 33.3% strict).
+# Includes Nguyen-12 dual-threshold check (tab:nguyen12: 58.3% H / 66.7% P
+# under the R2>=0.9999, 4-decimal convention).
 # Writes logs/paper_audit_findings.json.
 # Exits non-zero on any FAIL or MISSING (not on WARN).
 run audit_paper "Audit all paper claims against results (paper_targets.json)" bash -c '
@@ -4563,8 +4577,9 @@ if bad:
 if any(f["exp"] in ("exp3", "exp3b") for f in findings):
     print()
     print("  ⚠  Nguyen-12 dual-threshold caveat:")
-    print("       Paper abstract  : 11/12 (91.7%) — 4-decimal rounding (Uy et al.)")
-    print("       Strict R²≥0.9999: 4/12  (33.3%) — both must appear in §10.8")
+    print("       Table (tab:nguyen12), R²≥0.9999 4-decimal: 7/12 H (58.3%) · 8/12 P (66.7%)")
+    print("       The earlier 4/12 (33.3%) strict-threshold figure was retracted in the")
+    print("       caption as having no basis in the current data — do not reintroduce it.")
 
 # ── Write findings JSON ───────────────────────────────────────────────────────
 FINDINGS_F.parent.mkdir(parents=True, exist_ok=True)

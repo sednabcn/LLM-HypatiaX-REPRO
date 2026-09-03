@@ -64,7 +64,8 @@ CI / sharding fixes (v03 → current):
           If the job was killed mid-run, zero checkpoint data was written.
           Now checkpoints are saved after every equation and on deadline approach.
 
-Expected result : 11/12 H (91.7 %) · 10/12 P (83.3 %) · 0/12 NN
+Expected result : 7/12 H (58.3 %) · 8/12 P (66.7 %) · 0/12 NN
+                  [Reconciled from table bold cells; see tab:nguyen12 tablenote ‡]
                   MW P>NN U=113, p=0.0097
 Wall time       : 30–90 min
 SEED            : 42 (fixed for reproducibility; override with --seed)
@@ -459,7 +460,8 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1, n_candida
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
-    print("  Expected: 11/12 H (91.7%) · 10/12 P · MW U=113, p=0.0097")
+    print("  Expected: 7/12 H (58.3%) · 8/12 P (66.7%) · MW U=113, p=0.0097")
+    print("  [Reconciled figures; see tab:nguyen12 tablenote ‡]")
     print(f"  Config  : n_tasks={_n_tasks}  niterations={_niter}  populations={_pops}"
           f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s"
           f"  temperature={temperature}  n_candidates={_n_candidates}")
@@ -641,7 +643,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1, n_candida
     print(f"  RESULTS  (strict R²≥{THRESH}, seed={seed}, temp={temperature}, run={run_index})")
     print(f"  HypatiaX : {h_recovered}/{n}  ({100*h_recovered/n:.1f}%)")
     print(f"  PySR-only: {p_recovered}/{n}  ({100*p_recovered/n:.1f}%)")
-    print("  Expected : 11/12 H (91.7%) · 10/12 P")
+    print("  Expected : 7/12 H (58.3%) · 8/12 P (66.7%) [reconciled; see tab:nguyen12 tablenote ‡]")
     print(f"{'='*68}\n")
 
     # ── Save JSON output (final) ──────────────────────────────────────────

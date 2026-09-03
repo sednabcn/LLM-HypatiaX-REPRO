@@ -566,7 +566,7 @@ jobs:
               ;;
 
             exp3)
-              SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02.py"
+              SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_03.py"
               NEEDS_JULIA=true
               RESULT_SUBDIR="extrapolation"
               DEFAULT_SEEDS="42"
@@ -578,7 +578,7 @@ jobs:
             # to be overwritten when exp3b committed.  Distinct subdirectory prevents the
             # collision.  Update ci_consolidate_experiment.yml's case statement to match.
             exp3b)
-              SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02.py"
+              SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_03.py"
               NEEDS_JULIA=true
               RESULT_SUBDIR="extrapolation/multi_seed"
               DEFAULT_SEEDS="${SEEDS_IN:-99,123,777,2024}"
@@ -1195,7 +1195,7 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install "pandas==2.2.3"
           # [FIX-PYSR-GUESSES-VERSION] exp3/exp3b's LLM warm-start comparison
-          # calls PySRRegressor(guesses=...) (see exp3_nguyen12_hybrid50v_02.py).
+          # calls PySRRegressor(guesses=...) (see exp3_nguyen12_hybrid50v_03.py).
           # That constructor kwarg only exists starting at the pysr==2.0.0a1
           # pre-release; it is NOT present in 1.5.10 or any earlier stable
           # release. An unpinned `pip install pysr` always resolves to the
@@ -1589,7 +1589,7 @@ jobs:
           if [[ "${EXP}" == "exp3" || "${EXP}" == "exp3b" ]]; then
             # FIX-EXP3-SEED-SUFFIX: registry IDs carry a "_seed<N>" suffix for
             # checkpoint/shard bookkeeping (e.g. "N1_seed42"), but
-            # exp3_nguyen12_hybrid50v_02.py matches task IDs against bare
+            # exp3_nguyen12_hybrid50v_03.py matches task IDs against bare
             # meta['nguyen_id'] values ("N1".."N12") — seed is supplied
             # separately via EXPERIMENT_SEED/SEED. Without stripping the
             # suffix here, TASK_IDS/DOMAIN_FILTER never match any nguyen_id,
@@ -1648,7 +1648,7 @@ jobs:
           # we additionally export TASK_IDS, SHARD_IDS, and SHARD as aliases
           # that run_all.sh and its sub-scripts expect.
           # FIX-EXP3-SHARD-SEED (cont.): EXPERIMENT_SEED (and PYSR_SEED, which
-          # _resolve_seed() in exp3_nguyen12_hybrid50v_02.py checks FIRST,
+          # _resolve_seed() in exp3_nguyen12_hybrid50v_03.py checks FIRST,
           # ahead of EXPERIMENT_SEED/NN_SEED and ahead of --seed) must both be
           # overridden to SHARD_SEEDS here for exp3/exp3b. Previously
           # EXPERIMENT_SEED="${PYSR_SEED}" always resolved to the workflow's
