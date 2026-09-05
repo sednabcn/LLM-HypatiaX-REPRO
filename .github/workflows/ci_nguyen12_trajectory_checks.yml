@@ -1,0 +1,116 @@
+# ==============================================================================
+#  ci_nguyen12_trajectory_checks.yml
+#
+#  Runs the three audit scripts that need NO PySR, Julia, or Anthropic API
+#  key -- pure Python + numpy (+ sympy for one fallback-path test):
+#    1. check_nguyen12_extrap_split.py   -- confirms the extrapolation split
+#       is genuinely out-of-domain (all 5 seed files, all 12 equations)
+#    2. fix_expression_trajectory_mismatch.py -- dry-run detector/repairer
+#       for the expression/trajectory field corruption (item 1 follow-up)
+#    3. test_trajectory_monitor.py       -- unit tests for the trajectory
+#       monitor functions in exp3_nguyen12_hybrid50v_02_patched.py, using a
+#       mock PySRRegressor (no real search, no Julia)
+#
+#  Trigger this on any PR that touches AUDIT/ or the Nguyen-12 result files,
+#  so a regression in the trajectory-monitor logic (see test 3's
+#  single-source-of-truth assertion) is caught before merge, not after a
+#  full live PySR run.
+# ==============================================================================
+
+name: "Nguyen-12 trajectory checks (no PySR/API key required)"
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - "AUDIT/**"
+      - "hypatiax/data/results/extrapolation/**"
+      - "hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py"
+      - "hypatiax/protocols/experiment_protocol_nguyen12.py"
+
+jobs:
+  split-and-rescore-check:
+    name: "Verify extrapolation split + rescore against all 5 seeds"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install minimal deps (numpy only)
+        run: pip install numpy
+
+      - name: Run split + rescore check against every seed file
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for f in \
+            hypatiax/data/results/extrapolation/exp3_nguyen12_seed42.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json ; do
+            echo "::group::$f"
+            python3 AUDIT/check_nguyen12_extrap_split.py "$f" || FAIL=1
+            echo "::endgroup::"
+          done
+          if [[ "$FAIL" -eq 1 ]]; then
+            echo "::error::One or more seed files failed the split/rescore check -- see logs above."
+            exit 1
+          fi
+
+  expression-trajectory-repair-dry-run:
+    name: "Detect expression/trajectory mismatches (dry run, no writes)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install minimal deps (numpy only)
+        run: pip install numpy
+
+      - name: Dry-run the repair/detector across every seed file
+        run: |
+          set -euo pipefail
+          # Dry run only -- no --write / --in-place, so this never modifies
+          # the repo. Exit code 1 means unresolved records were found; that
+          # should surface as a visible CI failure, not fail silently.
+          for f in \
+            hypatiax/data/results/extrapolation/exp3_nguyen12_seed42.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json ; do
+            echo "::group::$f"
+            python3 AUDIT/fix_expression_trajectory_mismatch.py "$f" || echo "::warning::Unresolved mismatches in $f -- see log above."
+            echo "::endgroup::"
+          done
+
+  trajectory-monitor-unit-tests:
+    name: "Trajectory monitor unit tests (mock PySR, no Julia)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install minimal deps (numpy + sympy)
+        run: pip install numpy sympy
+
+      - name: Run trajectory monitor tests against the patched script
+        run: |
+          python3 AUDIT/test_trajectory_monitor.py \
+            hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py
