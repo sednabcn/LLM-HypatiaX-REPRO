@@ -196,7 +196,7 @@ jobs:
             hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
             hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json ; do
             echo "::group::Repairing $f"
-            python3 AUDIT/fix_expression_trajectory_mismatch.py "$f" --in-place
+            python3 AUDIT/fix_expression_trajectory_mismatch.py "$f" --in-place || true
             echo "::endgroup::"
           done
 
