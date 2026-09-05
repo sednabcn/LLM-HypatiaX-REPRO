@@ -1,0 +1,244 @@
+# ==============================================================================
+#  nguyen12_targeted_rerun_and_merge.yml
+#
+#  Reruns ONLY the specific Nguyen-12 equations flagged as unresolved by
+#  fix_expression_trajectory_mismatch.py, for the four affected seeds, and
+#  merges the results into the real multi-seed result files via
+#  AUDIT/merge_targeted_rerun.py.
+#
+#  VERIFIED against github.com/sednabcn/LLM-HypatiaX-REPRO (this revision):
+#    - The "8 unresolved records" list below was re-derived by actually
+#      running AUDIT/fix_expression_trajectory_mismatch.py against the real
+#      files in hypatiax/data/results/extrapolation/{,multi_seed/}. It
+#      matches exactly: seed99=N12[pysr], seed123=N4[pysr],
+#      seed777=N7+N12[pysr], seed2024=N8,N9[hypatiax]+N7,N9[pysr]. seed42
+#      has 0 unresolved and is intentionally not in this workflow.
+#    - exp3_nguyen12_hybrid50v_02_patched.py's fixed output filename
+#      (exp3_nguyen12_seed{seed}.json) is written under a directory
+#      resolved by _resolve_results_dir(): RESULTS_DIR env var if set,
+#      otherwise a path derived from the SCRIPT's own file location via
+#      pathlib -- NOT the process's current working directory. An earlier
+#      draft of this workflow tried to isolate each seed's rerun with a
+#      `working-directory:` step option; that does NOT work, since it has
+#      no effect on _REPRO_ROOT/_results_dir resolution. Isolation must be
+#      done by setting RESULTS_DIR explicitly per seed (confirmed against
+#      the script source, and against the working pattern already used for
+#      this in .github/workflows/_fixn3_temp_cell.yml).
+#    - TASK_IDS format ("N1 N3 N7", space-separated) confirmed against the
+#      script's own docstring and _apply_task_ids_nguyen().
+#    - Dependency setup (Julia 1.11, requirements.txt, ANTHROPIC_API_KEY
+#      live check via config/test_key_status.py) is copied from the
+#      equivalent real step in _fixn3_temp_cell.yml, not guessed.
+#
+#  STILL UNVERIFIED / NEEDS ATTENTION BEFORE MERGING THIS WORKFLOW:
+#    - AUDIT/merge_targeted_rerun.py does NOT currently exist anywhere in
+#      github.com/sednabcn/LLM-HypatiaX-REPRO (checked directly -- not in
+#      AUDIT/, not referenced anywhere in the repo). It was given to me
+#      directly in this conversation but has apparently never been
+#      committed. This workflow will fail at the merge step until that
+#      file is actually added to the repo at AUDIT/merge_targeted_rerun.py.
+#    - The "race condition" explanation for why N4/N7/N9/N12 recur is a
+#      plausible narrative (these are the hardest equations: degree-6
+#      polynomial, nested logs, bivariate trig, bivariate quartic) but is
+#      not something this workflow or its scripts confirm mechanically --
+#      root cause remains "not found" per fix_expression_trajectory_mismatch.py's
+#      own docstring.
+# ==============================================================================
+
+name: "Nguyen-12 targeted rerun + merge"
+
+on:
+  workflow_dispatch:
+    inputs:
+      write:
+        description: "Actually overwrite the real result files (unchecked = dry run only)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  targeted-rerun-and-merge:
+    name: "Rerun broken equations per seed, then merge into real result files"
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Julia 1.11
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.11"
+
+      - name: Install experiment dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate ANTHROPIC_API_KEY (live round-trip)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          KEY_LEN=${#ANTHROPIC_API_KEY}
+          echo "ANTHROPIC_API_KEY present: $([ $KEY_LEN -gt 0 ] && echo YES || echo NO)"
+          if [[ $KEY_LEN -eq 0 ]]; then
+            echo "::error::ANTHROPIC_API_KEY secret is empty or unset."
+            exit 1
+          fi
+          python3 "${{ github.workspace }}/config/test_key_status.py"
+
+      - name: "Confirm merge_targeted_rerun.py has been added to the repo"
+        run: |
+          if [[ ! -f "AUDIT/merge_targeted_rerun.py" ]]; then
+            echo "::error::AUDIT/merge_targeted_rerun.py not found in this checkout."
+            echo "::error::This script exists only as something pasted into an assistant"
+            echo "::error::conversation -- it has never been committed to"
+            echo "::error::sednabcn/LLM-HypatiaX-REPRO. Add it at AUDIT/merge_targeted_rerun.py"
+            echo "::error::before this workflow can run the merge step."
+            exit 1
+          fi
+
+      # ── Each seed gets its own RESULTS_DIR so the patched script's fixed
+      # ── output filename (exp3_nguyen12_seed{seed}.json) can never collide
+      # ── with a pre-existing file and silently no-op (see header note).
+      - name: "Targeted rerun: seed 99 (unresolved: N12 [pysr])"
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/scratch/seed99
+          TASK_IDS: "N12"
+          PYSR_SEED: "99"
+          EXPERIMENT_SEED: "99"
+          NN_SEED: "99"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p "${RESULTS_DIR}"
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 99
+
+      - name: "Targeted rerun: seed 123 (unresolved: N4 [pysr])"
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/scratch/seed123
+          TASK_IDS: "N4"
+          PYSR_SEED: "123"
+          EXPERIMENT_SEED: "123"
+          NN_SEED: "123"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p "${RESULTS_DIR}"
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 123
+
+      - name: "Targeted rerun: seed 777 (unresolved: N7, N12 [pysr])"
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/scratch/seed777
+          TASK_IDS: "N7 N12"
+          PYSR_SEED: "777"
+          EXPERIMENT_SEED: "777"
+          NN_SEED: "777"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p "${RESULTS_DIR}"
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 777
+
+      - name: "Targeted rerun: seed 2024 (unresolved: N8,N9 [hypatiax]; N7,N9 [pysr])"
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/scratch/seed2024
+          # Union across both systems: merge_targeted_rerun.py applies a
+          # single --task-ids list to BOTH hypatiax and pysr in one call,
+          # so N7/N8/N9 are all rerun for both systems here even though
+          # only some of those are broken per system (hypatiax:N7 and
+          # pysr:N8 were already fine). Overwriting an already-correct
+          # record with a fresh rerun from the structurally-fixed script
+          # should be harmless -- just more compute than the strict
+          # minimum.
+          TASK_IDS: "N7 N8 N9"
+          PYSR_SEED: "2024"
+          EXPERIMENT_SEED: "2024"
+          NN_SEED: "2024"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p "${RESULTS_DIR}"
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 2024
+
+      - name: "Merge targeted reruns into the real result files"
+        run: |
+          set -euo pipefail
+          WRITE_FLAG=()
+          if [ "${{ inputs.write }}" = "true" ]; then
+            WRITE_FLAG=(--write)
+          fi
+
+          python3 AUDIT/merge_targeted_rerun.py \
+            --source scratch/seed99/exp3_nguyen12_seed99.json \
+            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+            --task-ids N12 "${WRITE_FLAG[@]}"
+
+          python3 AUDIT/merge_targeted_rerun.py \
+            --source scratch/seed123/exp3_nguyen12_seed123.json \
+            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+            --task-ids N4 "${WRITE_FLAG[@]}"
+
+          python3 AUDIT/merge_targeted_rerun.py \
+            --source scratch/seed777/exp3_nguyen12_seed777.json \
+            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+            --task-ids N7 N12 "${WRITE_FLAG[@]}"
+
+          python3 AUDIT/merge_targeted_rerun.py \
+            --source scratch/seed2024/exp3_nguyen12_seed2024.json \
+            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json \
+            --task-ids N7 N8 N9 "${WRITE_FLAG[@]}"
+
+      - name: "Re-run trajectory checks to confirm 0 unresolved remain (write mode only)"
+        if: ${{ inputs.write == true }}
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for f in \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json ; do
+            echo "::group::$f"
+            python3 AUDIT/fix_expression_trajectory_mismatch.py "$f" || FAIL=1
+            echo "::endgroup::"
+          done
+          if [[ "$FAIL" -eq 1 ]]; then
+            echo "::error::Unresolved mismatches remain after merge -- the rerun did not fully fix them."
+            exit 1
+          fi
+
+      # ── Persist results directly to the repo, mirroring the pattern
+      # ── already used in _fixn3_temp_cell.yml for this exact situation.
+      - name: "Commit and push merged results to repo"
+        if: ${{ always() && inputs.write == true }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f hypatiax/data/results/extrapolation/multi_seed/
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+            exit 0
+          fi
+          git commit -m "ci: nguyen12 targeted rerun -- merge 8 unresolved records (run ${{ github.run_id }})"
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          until git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; do
+            if [[ "${ATTEMPT}" -ge "${MAX_ATTEMPTS}" ]]; then
+              echo "::error::Failed to push after ${MAX_ATTEMPTS} attempts. Results are in the uploaded artifact but not committed."
+              exit 1
+            fi
+            ATTEMPT=$((ATTEMPT + 1))
+            sleep $((RANDOM % 15 + 5))
+          done
+
+      - name: "Upload rerun + merge outputs as artifacts"
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: nguyen12-targeted-rerun-${{ github.run_id }}
+          path: |
+            scratch/
+            hypatiax/data/results/extrapolation/multi_seed/
+          retention-days: 30
