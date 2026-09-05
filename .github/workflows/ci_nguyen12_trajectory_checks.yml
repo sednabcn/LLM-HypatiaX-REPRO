@@ -107,8 +107,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install minimal deps (numpy + sympy)
-        run: pip install numpy sympy
+      - name: Install minimal deps (numpy + sympy + scikit-learn)
+        run: pip install numpy sympy scikit-learn
 
       - name: Run trajectory monitor tests against the patched script
         run: |
