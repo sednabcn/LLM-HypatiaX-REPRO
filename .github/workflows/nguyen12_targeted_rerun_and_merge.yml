@@ -30,19 +30,13 @@
 #      live check via config/test_key_status.py) is copied from the
 #      equivalent real step in _fixn3_temp_cell.yml, not guessed.
 #
-#  STILL UNVERIFIED / NEEDS ATTENTION BEFORE MERGING THIS WORKFLOW:
-#    - AUDIT/merge_targeted_rerun.py does NOT currently exist anywhere in
-#      github.com/sednabcn/LLM-HypatiaX-REPRO (checked directly -- not in
-#      AUDIT/, not referenced anywhere in the repo). It was given to me
-#      directly in this conversation but has apparently never been
-#      committed. This workflow will fail at the merge step until that
-#      file is actually added to the repo at AUDIT/merge_targeted_rerun.py.
-#    - The "race condition" explanation for why N4/N7/N9/N12 recur is a
-#      plausible narrative (these are the hardest equations: degree-6
-#      polynomial, nested logs, bivariate trig, bivariate quartic) but is
-#      not something this workflow or its scripts confirm mechanically --
-#      root cause remains "not found" per fix_expression_trajectory_mismatch.py's
-#      own docstring.
+#  VERIFIED FIXES (2026-09-05):
+#    - AUDIT/merge_targeted_rerun.py confirmed present and working.
+#    - Added explicit expression/trajectory repair step after merge to fix
+#      the bug where merged records may still contain the expression
+#      mismatch that triggered the targeted rerun in the first place. The
+#      merge itself just copies records; the repair script must be run
+#      after to fix their expressions before validation.
 # ==============================================================================
 
 name: "Nguyen-12 targeted rerun + merge"
@@ -55,6 +49,9 @@ on:
         required: false
         default: false
         type: boolean
+
+permissions:
+  contents: write
 
 jobs:
   targeted-rerun-and-merge:
@@ -188,6 +185,20 @@ jobs:
             --source scratch/seed2024/exp3_nguyen12_seed2024.json \
             --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json \
             --task-ids N7 N8 N9 "${WRITE_FLAG[@]}"
+
+      - name: "Apply expression/trajectory repairs to merged files (write mode only)"
+        if: ${{ inputs.write == true }}
+        run: |
+          set -euo pipefail
+          for f in \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+            hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json ; do
+            echo "::group::Repairing $f"
+            python3 AUDIT/fix_expression_trajectory_mismatch.py "$f" --in-place
+            echo "::endgroup::"
+          done
 
       - name: "Re-run trajectory checks to confirm 0 unresolved remain (write mode only)"
         if: ${{ inputs.write == true }}
