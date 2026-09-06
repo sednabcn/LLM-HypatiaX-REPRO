@@ -53,9 +53,6 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write
-
 jobs:
   targeted-rerun-and-merge:
     name: "Rerun broken equations per seed, then merge into real result files"
