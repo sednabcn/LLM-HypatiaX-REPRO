@@ -37,6 +37,27 @@
 #      mismatch that triggered the targeted rerun in the first place. The
 #      merge itself just copies records; the repair script must be run
 #      after to fix their expressions before validation.
+#
+#  RESTRUCTURED TO MATRIX (2026-09-06):
+#    - Previously all four seeds ran sequentially as steps in ONE job, inside
+#      ONE shared 240-minute budget. That meant (a) one very slow seed (e.g.
+#      seed777/seed2024 at ~40min each even before the budget bump below)
+#      could starve the others of remaining wall-clock, and (b) if the job
+#      got cancelled/killed for ANY reason partway through (observed once,
+#      cause never fully confirmed -- possibly a manual cancel, possibly a
+#      concurrency/plan limit), ALL FOUR seeds' work was lost even if 3 of
+#      them had already finished successfully, since nothing downstream had
+#      run yet.
+#    - Now each seed is its own independent matrix job on its own runner, with
+#      its own timeout. A problem with one seed (cancelled, slow, crashed)
+#      no longer affects the other three. `fail-fast: false` ensures that
+#      explicitly -- one seed failing does not cancel the others.
+#    - The merge/repair/check/commit steps move to a second job
+#      (`merge-and-check`) that `needs:` all four matrix jobs and downloads
+#      each seed's individual artifact before proceeding. This job still runs
+#      once, sequentially, since the merge step's safety checks (seed
+#      mismatch guard, task-id presence guard) and the commit step are
+#      inherently single-writer operations.
 # ==============================================================================
 
 name: "Nguyen-12 targeted rerun + merge"
@@ -54,16 +75,52 @@ on:
         type: boolean
 
 jobs:
-  targeted-rerun-and-merge:
-    name: "Rerun broken equations per seed, then merge into real result files"
+  # ────────────────────────────────────────────────────────────────────────
+  # One independent worker per seed. A cancellation, crash, or slow run on
+  # any one seed does NOT affect the other three (fail-fast: false), and
+  # each gets its own timeout instead of sharing one 240-minute budget.
+  # ────────────────────────────────────────────────────────────────────────
+  targeted-rerun:
+    name: "Targeted rerun (seed ${{ matrix.seed }})"
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 99
+            task_ids: "N12"
+            label: "unresolved: N12 [pysr]"
+            n_iterations: "2000"
+            populations: "60"
+            pysr_timeout: "2200"
+            timeout_minutes: 90
+          - seed: 123
+            task_ids: "N4"
+            label: "unresolved: N4 [pysr]"
+            n_iterations: "1000"
+            populations: "30"
+            pysr_timeout: "1100"
+            timeout_minutes: 60
+          - seed: 777
+            task_ids: "N7 N12"
+            label: "unresolved: N7, N12 [pysr]"
+            n_iterations: "2000"
+            populations: "60"
+            pysr_timeout: "2200"
+            timeout_minutes: 90
+          - seed: 2024
+            task_ids: "N7 N8 N9"
+            label: "unresolved: N8,N9 [hypatiax]; N7,N9 [pysr]"
+            n_iterations: "2000"
+            populations: "60"
+            pysr_timeout: "2200"
+            timeout_minutes: 90
+    timeout-minutes: ${{ matrix.timeout_minutes }}
 
     steps:
       - uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
-          token: ${{ secrets.PAT_TOKEN }}
 
       - uses: actions/setup-python@v5.3.0
         with:
@@ -89,97 +146,106 @@ jobs:
           fi
           python3 "${{ github.workspace }}/config/test_key_status.py"
 
+      # ── Each seed gets its own RESULTS_DIR so the patched script's fixed
+      # ── output filename (exp3_nguyen12_seed{seed}.json) can never collide
+      # ── with a pre-existing file and silently no-op (see header note).
+      - name: "Targeted rerun: seed ${{ matrix.seed }} (${{ matrix.label }})"
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/scratch/seed${{ matrix.seed }}
+          TASK_IDS: ${{ matrix.task_ids }}
+          PYSR_SEED: "${{ matrix.seed }}"
+          EXPERIMENT_SEED: "${{ matrix.seed }}"
+          NN_SEED: "${{ matrix.seed }}"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          N_ITERATIONS: ${{ matrix.n_iterations }}
+          POPULATIONS: ${{ matrix.populations }}
+          PYSR_TIMEOUT: ${{ matrix.pysr_timeout }}
+        run: |
+          mkdir -p "${RESULTS_DIR}"
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed ${{ matrix.seed }}
+
+      - name: "Upload seed ${{ matrix.seed }} rerun output"
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: nguyen12-rerun-seed-${{ matrix.seed }}-${{ github.run_id }}
+          path: scratch/seed${{ matrix.seed }}/
+          retention-days: 7
+
+  # ────────────────────────────────────────────────────────────────────────
+  # Runs once, after all four seeds have finished (successfully or not --
+  # see `if:` below). Downloads each seed's artifact, merges into the real
+  # multi-seed result files, repairs/validates, and commits.
+  # ────────────────────────────────────────────────────────────────────────
+  merge-and-check:
+    name: "Merge all seeds into real result files"
+    needs: targeted-rerun
+    # Run even if one seed's matrix job failed/was cancelled, so the seeds
+    # that DID succeed still get merged instead of being silently dropped.
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install experiment dependencies (numpy only, needed by AUDIT scripts)
+        run: pip install numpy
+
       - name: "Confirm merge_targeted_rerun.py has been added to the repo"
         run: |
           if [[ ! -f "AUDIT/merge_targeted_rerun.py" ]]; then
             echo "::error::AUDIT/merge_targeted_rerun.py not found in this checkout."
-            echo "::error::This script exists only as something pasted into an assistant"
-            echo "::error::conversation -- it has never been committed to"
-            echo "::error::sednabcn/LLM-HypatiaX-REPRO. Add it at AUDIT/merge_targeted_rerun.py"
-            echo "::error::before this workflow can run the merge step."
             exit 1
           fi
 
-      # ── Each seed gets its own RESULTS_DIR so the patched script's fixed
-      # ── output filename (exp3_nguyen12_seed{seed}.json) can never collide
-      # ── with a pre-existing file and silently no-op (see header note).
-      - name: "Targeted rerun: seed 99 (unresolved: N12 [pysr])"
-        env:
-          RESULTS_DIR: ${{ github.workspace }}/scratch/seed99
-          TASK_IDS: "N12"
-          PYSR_SEED: "99"
-          EXPERIMENT_SEED: "99"
-          NN_SEED: "99"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # [BUDGET-BUMP] N12 still failed to reproduce its own reported R^2
-          # on extrapolation data at the default budget (fit well in-range,
-          # didn't converge to the exact symbolic form) -- roughly doubling
-          # search budget to improve odds of exact recovery.
-          N_ITERATIONS: "2000"
-          POPULATIONS: "60"
-          PYSR_TIMEOUT: "2200"
-        run: |
-          mkdir -p "${RESULTS_DIR}"
-          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 99
+      - name: "Download seed 99 rerun output"
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nguyen12-rerun-seed-99-${{ github.run_id }}
+          path: scratch/seed99/
 
-      - name: "Targeted rerun: seed 123 (unresolved: N4 [pysr])"
-        env:
-          RESULTS_DIR: ${{ github.workspace }}/scratch/seed123
-          TASK_IDS: "N4"
-          PYSR_SEED: "123"
-          EXPERIMENT_SEED: "123"
-          NN_SEED: "123"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          mkdir -p "${RESULTS_DIR}"
-          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 123
+      - name: "Download seed 123 rerun output"
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nguyen12-rerun-seed-123-${{ github.run_id }}
+          path: scratch/seed123/
 
-      - name: "Targeted rerun: seed 777 (unresolved: N7, N12 [pysr])"
-        env:
-          RESULTS_DIR: ${{ github.workspace }}/scratch/seed777
-          TASK_IDS: "N7 N12"
-          PYSR_SEED: "777"
-          EXPERIMENT_SEED: "777"
-          NN_SEED: "777"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # [BUDGET-BUMP] Both N7 and N12 still failed to reproduce their
-          # reported R^2 on extrapolation data at the default budget --
-          # roughly doubling search budget to improve odds of exact recovery.
-          N_ITERATIONS: "2000"
-          POPULATIONS: "60"
-          PYSR_TIMEOUT: "2200"
-        run: |
-          mkdir -p "${RESULTS_DIR}"
-          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 777
+      - name: "Download seed 777 rerun output"
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nguyen12-rerun-seed-777-${{ github.run_id }}
+          path: scratch/seed777/
 
-      - name: "Targeted rerun: seed 2024 (unresolved: N8,N9 [hypatiax]; N7,N9 [pysr])"
-        env:
-          RESULTS_DIR: ${{ github.workspace }}/scratch/seed2024
-          # Union across both systems: merge_targeted_rerun.py applies a
-          # single --task-ids list to BOTH hypatiax and pysr in one call,
-          # so N7/N8/N9 are all rerun for both systems here even though
-          # only some of those are broken per system (hypatiax:N7 and
-          # pysr:N8 were already fine). Overwriting an already-correct
-          # record with a fresh rerun from the structurally-fixed script
-          # should be harmless -- just more compute than the strict
-          # minimum.
-          TASK_IDS: "N7 N8 N9"
-          PYSR_SEED: "2024"
-          EXPERIMENT_SEED: "2024"
-          NN_SEED: "2024"
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # [BUDGET-BUMP] N7 still failed to reproduce its reported R^2 on
-          # extrapolation data at the default budget (now on both systems,
-          # not just pysr as originally flagged) -- roughly doubling search
-          # budget. N8/N9 are already resolved at the default budget, so this
-          # is extra compute for them but harmless, per the existing note
-          # above about overwriting already-correct records.
-          N_ITERATIONS: "2000"
-          POPULATIONS: "60"
-          PYSR_TIMEOUT: "2200"
+      - name: "Download seed 2024 rerun output"
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: nguyen12-rerun-seed-2024-${{ github.run_id }}
+          path: scratch/seed2024/
+
+      - name: "Confirm which seeds actually produced output"
         run: |
-          mkdir -p "${RESULTS_DIR}"
-          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed 2024
+          for f in scratch/seed99/exp3_nguyen12_seed99.json \
+                   scratch/seed123/exp3_nguyen12_seed123.json \
+                   scratch/seed777/exp3_nguyen12_seed777.json \
+                   scratch/seed2024/exp3_nguyen12_seed2024.json ; do
+            if [[ -f "$f" ]]; then
+              echo "OK   -- $f present"
+            else
+              echo "::warning::MISSING -- $f -- that seed's matrix job did not produce output (failed/cancelled). It will be skipped in the merge below."
+            fi
+          done
 
       - name: "Merge targeted reruns into the real result files"
         run: |
@@ -189,25 +255,33 @@ jobs:
             WRITE_FLAG=(--write)
           fi
 
-          python3 AUDIT/merge_targeted_rerun.py \
-            --source scratch/seed99/exp3_nguyen12_seed99.json \
-            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
-            --task-ids N12 "${WRITE_FLAG[@]}"
+          if [[ -f scratch/seed99/exp3_nguyen12_seed99.json ]]; then
+            python3 AUDIT/merge_targeted_rerun.py \
+              --source scratch/seed99/exp3_nguyen12_seed99.json \
+              --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
+              --task-ids N12 "${WRITE_FLAG[@]}"
+          fi
 
-          python3 AUDIT/merge_targeted_rerun.py \
-            --source scratch/seed123/exp3_nguyen12_seed123.json \
-            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
-            --task-ids N4 "${WRITE_FLAG[@]}"
+          if [[ -f scratch/seed123/exp3_nguyen12_seed123.json ]]; then
+            python3 AUDIT/merge_targeted_rerun.py \
+              --source scratch/seed123/exp3_nguyen12_seed123.json \
+              --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
+              --task-ids N4 "${WRITE_FLAG[@]}"
+          fi
 
-          python3 AUDIT/merge_targeted_rerun.py \
-            --source scratch/seed777/exp3_nguyen12_seed777.json \
-            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
-            --task-ids N7 N12 "${WRITE_FLAG[@]}"
+          if [[ -f scratch/seed777/exp3_nguyen12_seed777.json ]]; then
+            python3 AUDIT/merge_targeted_rerun.py \
+              --source scratch/seed777/exp3_nguyen12_seed777.json \
+              --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
+              --task-ids N7 N12 "${WRITE_FLAG[@]}"
+          fi
 
-          python3 AUDIT/merge_targeted_rerun.py \
-            --source scratch/seed2024/exp3_nguyen12_seed2024.json \
-            --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json \
-            --task-ids N7 N8 N9 "${WRITE_FLAG[@]}"
+          if [[ -f scratch/seed2024/exp3_nguyen12_seed2024.json ]]; then
+            python3 AUDIT/merge_targeted_rerun.py \
+              --source scratch/seed2024/exp3_nguyen12_seed2024.json \
+              --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json \
+              --task-ids N7 N8 N9 "${WRITE_FLAG[@]}"
+          fi
 
       - name: "Apply expression/trajectory repairs to merged files (write mode only)"
         if: ${{ inputs.write == true }}
@@ -255,7 +329,7 @@ jobs:
             echo "Nothing new to commit."
             exit 0
           fi
-          git commit -m "ci: nguyen12 targeted rerun -- merge 8 unresolved records (run ${{ github.run_id }})"
+          git commit -m "ci: nguyen12 targeted rerun -- merge unresolved records (run ${{ github.run_id }})"
           MAX_ATTEMPTS=5
           ATTEMPT=1
           until git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}"; do
@@ -267,11 +341,11 @@ jobs:
             sleep $((RANDOM % 15 + 5))
           done
 
-      - name: "Upload rerun + merge outputs as artifacts"
+      - name: "Upload merged outputs as artifacts"
         if: always()
         uses: actions/upload-artifact@v4.3.6
         with:
-          name: nguyen12-targeted-rerun-${{ github.run_id }}
+          name: nguyen12-merged-${{ github.run_id }}
           path: |
             scratch/
             hypatiax/data/results/extrapolation/multi_seed/
