@@ -789,9 +789,22 @@ def run(seed: int = 42):
         elapsed_h = time.time() - t0
 
         # ── PySR-only run (no LLM) ────────────────────────────────────────
+        # [FIX-WARMSTART] Explicitly force warm_start=False here too (model_h
+        # already had this below via the same kwarg). Previously model_p was
+        # the ONLY PySRRegressor instance in this loop without an explicit
+        # warm_start setting, relying on PySR's own default. Since every
+        # equation in this loop shares an identical PySR config (same seed,
+        # niterations, populations, timeout) and PySR's Julia backend persists
+        # across .fit() calls within one process, an implicit warm_start=True
+        # default could let hall-of-fame candidates from a PREVIOUS equation's
+        # fit leak into the current equation's search -- especially for
+        # equations that share variable names (x, y), since nothing else
+        # distinguishes them to the underlying search state. This is the
+        # suspected cause of N4/N7/N9/N12 (the bivariate x,y equations)
+        # recovering the same wrong expression across every seed.
         t0 = time.time()
         try:
-            model_p = PySRRegressor(**_pysr_kwargs)
+            model_p = PySRRegressor(**_pysr_kwargs, warm_start=False)
             r2_p, best_expr_p, trajectory_p = _fit_with_pysr_trajectory(
                 model_p, X, y, var_names, label="P",
             )
