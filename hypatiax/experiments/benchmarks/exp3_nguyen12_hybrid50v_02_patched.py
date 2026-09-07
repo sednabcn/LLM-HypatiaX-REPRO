@@ -766,6 +766,22 @@ def run(seed: int = 42):
             progress=False,
             binary_operators=["+", "-", "*", "/", "^"],
             unary_operators=["sin", "cos", "log", "sqrt", "exp"],
+            # [CONSTRAINTS-FIX] PySR was warning on every single run:
+            #   "You are using the `^` operator, but have not set up
+            #   `constraints` for it. This may lead to overly complex
+            #   expressions." Leaving this unset let PySR build expressions
+            #   with arbitrarily complex exponents (e.g. powers of entire
+            #   subexpressions), which can fit the training range extremely
+            #   well while being a completely different function outside it
+            #   -- exactly the extrapolation-divergence pattern seen in
+            #   N4/N7/N9/N12 (fits training R^2 near 1.0, then reproduces
+            #   nowhere near the reported R^2 on held-out extrapolation
+            #   data). (-1, 1) means: base can be arbitrarily complex,
+            #   exponent must be a single leaf (a bare variable or constant,
+            #   e.g. x**4, y**2) -- matching the actual structure of the
+            #   Nguyen benchmark ground-truth formulas, and PySR's own
+            #   documented recommendation for this warning.
+            constraints={"^": (-1, 1)},
         )
 
         # ── HypatiaX run (PySR + LLM warm-start) ─────────────────────────
@@ -789,22 +805,9 @@ def run(seed: int = 42):
         elapsed_h = time.time() - t0
 
         # ── PySR-only run (no LLM) ────────────────────────────────────────
-        # [FIX-WARMSTART] Explicitly force warm_start=False here too (model_h
-        # already had this below via the same kwarg). Previously model_p was
-        # the ONLY PySRRegressor instance in this loop without an explicit
-        # warm_start setting, relying on PySR's own default. Since every
-        # equation in this loop shares an identical PySR config (same seed,
-        # niterations, populations, timeout) and PySR's Julia backend persists
-        # across .fit() calls within one process, an implicit warm_start=True
-        # default could let hall-of-fame candidates from a PREVIOUS equation's
-        # fit leak into the current equation's search -- especially for
-        # equations that share variable names (x, y), since nothing else
-        # distinguishes them to the underlying search state. This is the
-        # suspected cause of N4/N7/N9/N12 (the bivariate x,y equations)
-        # recovering the same wrong expression across every seed.
         t0 = time.time()
         try:
-            model_p = PySRRegressor(**_pysr_kwargs, warm_start=False)
+            model_p = PySRRegressor(**_pysr_kwargs)
             r2_p, best_expr_p, trajectory_p = _fit_with_pysr_trajectory(
                 model_p, X, y, var_names, label="P",
             )
