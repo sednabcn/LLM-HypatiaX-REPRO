@@ -93,7 +93,10 @@ jobs:
             n_iterations: "2000"
             populations: "60"
             pysr_timeout: "2200"
-            timeout_minutes: 90
+            # 1 equation x 2 systems (H+P) x up to 2200s each = up to 73min
+            # worst case, plus ~15min setup overhead -- 90 was cutting this
+            # close, giving more margin.
+            timeout_minutes: 100
           - seed: 123
             task_ids: "N4"
             label: "unresolved: N4 [pysr]"
@@ -107,14 +110,24 @@ jobs:
             n_iterations: "2000"
             populations: "60"
             pysr_timeout: "2200"
-            timeout_minutes: 90
+            # 2 equations x 2 systems (H+P) x up to 2200s each = up to 147min
+            # worst case, plus ~15min setup overhead. Previous value of 90
+            # was computed for a SINGLE equation and was too low -- this is
+            # why this seed got cut off at 90min in the last run even though
+            # nothing was actually wrong.
+            timeout_minutes: 180
           - seed: 2024
             task_ids: "N7 N8 N9"
             label: "unresolved: N8,N9 [hypatiax]; N7,N9 [pysr]"
             n_iterations: "2000"
             populations: "60"
             pysr_timeout: "2200"
-            timeout_minutes: 90
+            # 3 equations x 2 systems (H+P) x up to 2200s each = up to 220min
+            # worst case, plus ~15min setup overhead. Previous value of 90
+            # was computed for a SINGLE equation and was too low -- this is
+            # why this seed got cut off at 90min in the last run even though
+            # nothing was actually wrong.
+            timeout_minutes: 240
     timeout-minutes: ${{ matrix.timeout_minutes }}
 
     steps:
