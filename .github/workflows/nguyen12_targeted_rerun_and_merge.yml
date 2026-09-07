@@ -38,6 +38,30 @@
 #      merge itself just copies records; the repair script must be run
 #      after to fix their expressions before validation.
 #
+#  SWITCHED TO EXTRAPOLATION-SAFE SCRIPT (2026-09-07):
+#    - The per-seed rerun step now calls
+#      exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py instead of
+#      exp3_nguyen12_hybrid50v_02_patched.py. That file is a separate,
+#      reviewed patch on top of _02_patched.py (not a replacement of it,
+#      not the same lineage as _03.py) adding: (1) square/cube unary
+#      operators in place of the generic "^" binary operator, so PySR can
+#      no longer build fractional powers of a sign-changing subexpression
+#      (root cause of the N7/seed777 extrap R^2 -> NaN failure), and (2) a
+#      boundary-buffer augmentation to the FIT data (reported r2_train is
+#      still scored against the original training domain only) so
+#      near-boundary singularities are penalized during search instead of
+#      only surfacing on the real held-out extrapolation split (root cause
+#      of the N12/seed99 R^2 -> -10^47 failure). See that file's own
+#      header and exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py /
+#      extrap_safety_vs_02_patched.patch for the full rationale. Every env
+#      var this workflow sets (RESULTS_DIR, TASK_IDS, N_ITERATIONS,
+#      POPULATIONS, PYSR_TIMEOUT, *_SEED) is read identically by both
+#      scripts -- this patch has NOT been verified end-to-end against a
+#      real CI run yet, only unit-tested in isolation against the two
+#      changed functions. Revert to _02_patched.py by changing the single
+#      `python3 hypatiax/experiments/benchmarks/...` line back if this
+#      causes unexpected timeout/behavior regressions.
+#
 #  RESTRUCTURED TO MATRIX (2026-09-06):
 #    - Previously all four seeds ran sequentially as steps in ONE job, inside
 #      ONE shared 240-minute budget. That meant (a) one very slow seed (e.g.
@@ -162,6 +186,16 @@ jobs:
       # ── Each seed gets its own RESULTS_DIR so the patched script's fixed
       # ── output filename (exp3_nguyen12_seed{seed}.json) can never collide
       # ── with a pre-existing file and silently no-op (see header note).
+      # [FIX-EXTRAP-SAFE-SCRIPT] Points at the extrapolation-safety patch
+      # (square/cube operators instead of "^", boundary-buffer fit) built
+      # on top of exp3_nguyen12_hybrid50v_02_patched.py -- see
+      # exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py's own header for
+      # what it changes and why. This is the ONLY line that differs from
+      # the previous version of this workflow: every env var below
+      # (RESULTS_DIR, TASK_IDS, N_ITERATIONS, POPULATIONS, PYSR_TIMEOUT,
+      # *_SEED) is read identically by both scripts, since the patch only
+      # touches _score_expr / _build_boundary_buffer / _pysr_kwargs /
+      # _fit_with_pysr_trajectory, not the CLI/env-var plumbing.
       - name: "Targeted rerun: seed ${{ matrix.seed }} (${{ matrix.label }})"
         env:
           RESULTS_DIR: ${{ github.workspace }}/scratch/seed${{ matrix.seed }}
@@ -175,7 +209,7 @@ jobs:
           PYSR_TIMEOUT: ${{ matrix.pysr_timeout }}
         run: |
           mkdir -p "${RESULTS_DIR}"
-          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py --seed ${{ matrix.seed }}
+          python3 hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py --seed ${{ matrix.seed }}
 
       - name: "Upload seed ${{ matrix.seed }} rerun output"
         if: always()
