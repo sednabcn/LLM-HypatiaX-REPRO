@@ -848,11 +848,38 @@ def run(seed: int = 42):
         # expressions against the extrap split (when the equation has
         # one) and report THAT as the headline `r2`, keeping the
         # training score alongside it rather than discarding it.
+        # [FIX-EXTRAP-R2-STRICT] Every one of the 12 Nguyen equations has
+        # extrapolation_test=True, so X_ext/y_ext should always be present
+        # here -- the only way they're missing is if NguyenEquation.generate
+        # hit an exception building the extrap split (e.g. a domain error
+        # like log/sqrt of a negative value for a specific seed, the kind
+        # of thing seen for N12/seed777). That's a real degraded-evaluation
+        # condition, not a "shrug and fall back to training R²" condition:
+        # silently substituting r2_h/r2_p here is exactly the bug this
+        # patch exists to remove, just moved one level down. But this loop
+        # also checkpoints after every equation and honours JOB_DEADLINE
+        # for graceful early exit (see _save() call below and the deadline
+        # check that follows it) -- hard-crashing the whole run on one
+        # equation's missing extrap split would throw away every
+        # checkpoint after it. So: don't raise, but never let a missing
+        # extrap score masquerade as a real one. Loudly warn, and mark the
+        # record with an explicit sentinel (-inf, extrap_missing=True) so
+        # any downstream detector/threshold check treats it as an
+        # unresolved failure, never as an accidental pass.
         X_ext, y_ext = meta.get("X_extrap"), meta.get("y_extrap")
-        r2_h_extrap = _score_expr(best_expr_h, X_ext, y_ext, var_names)
-        r2_p_extrap = _score_expr(best_expr_p, X_ext, y_ext, var_names)
-        r2_h_report = r2_h_extrap if r2_h_extrap is not None else r2_h
-        r2_p_report = r2_p_extrap if r2_p_extrap is not None else r2_p
+        extrap_missing = X_ext is None or y_ext is None
+        if extrap_missing:
+            warnings.warn(
+                f"[{nid}/seed{seed}] no extrapolation data available "
+                "(NguyenEquation.generate likely hit a domain error "
+                "building the extrap split) -- reporting r2=-inf rather "
+                "than silently falling back to training-domain R².",
+                RuntimeWarning, stacklevel=2,
+            )
+        r2_h_extrap = None if extrap_missing else _score_expr(best_expr_h, X_ext, y_ext, var_names)
+        r2_p_extrap = None if extrap_missing else _score_expr(best_expr_p, X_ext, y_ext, var_names)
+        r2_h_report = r2_h_extrap if r2_h_extrap is not None else float("-inf")
+        r2_p_report = r2_p_extrap if r2_p_extrap is not None else float("-inf")
 
         # ── Per-equation summary ──────────────────────────────────────────
         THRESH = 0.9999
@@ -866,9 +893,10 @@ def run(seed: int = 42):
             "metadata":   meta,
             "expression": best_expr_h,
             "evaluation": {
-                "r2":         r2_h_report,   # extrap score when available, else train
-                "r2_train":   r2_h,
-                "r2_extrap":  r2_h_extrap,   # None if this equation has no extrap split
+                "r2":              r2_h_report,   # extrap score, or -inf if extrap data is unavailable -- NEVER a silent training-R² fallback
+                "r2_train":        r2_h,
+                "r2_extrap":       r2_h_extrap,    # None if extrap scoring wasn't possible
+                "extrap_missing":  extrap_missing,
             },
             "elapsed":    elapsed_h,
             "trajectory": trajectory_h,
@@ -878,9 +906,10 @@ def run(seed: int = 42):
             "metadata":   meta,
             "expression": best_expr_p,
             "evaluation": {
-                "r2":         r2_p_report,
-                "r2_train":   r2_p,
-                "r2_extrap":  r2_p_extrap,
+                "r2":              r2_p_report,
+                "r2_train":        r2_p,
+                "r2_extrap":       r2_p_extrap,
+                "extrap_missing":  extrap_missing,
             },
             "elapsed":    elapsed_p,
             "trajectory": trajectory_p,
