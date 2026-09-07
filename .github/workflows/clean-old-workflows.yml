@@ -9,6 +9,11 @@ on:
         required: false
         default: '72'
         type: string
+      delete_last_n:
+        description: 'If set (>0), IGNORE the hours/keep-recent policy below and just delete this many of the most recent runs (repo-wide, newest first). Leave blank for normal cleanup.'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   cleanup:
@@ -22,6 +27,7 @@ jobs:
         uses: actions/github-script@v8
         env:
           HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '72' }}
+          DELETE_LAST_N: ${{ github.event.inputs.delete_last_n || '' }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN}}
           script: |
@@ -33,10 +39,15 @@ jobs:
             const KEEP_HOURS = parseInt(process.env.HOURS_THRESHOLD || '72', 10);
             const MAX_TOTAL_RUNS = 25;    // STRICT global limit
             const MAX_PAGES = 30;
+            const DELETE_LAST_N = parseInt(process.env.DELETE_LAST_N || '0', 10) || 0;
 
             console.log('🧹 Starting ULTRA aggressive workflow cleanup...');
-            console.log(`Policy: STRICT limit of ${MAX_TOTAL_RUNS} runs total (max ${KEEP_RECENT_RUNS} per workflow)`);
-            console.log(`Deleting runs older than ${KEEP_HOURS} hours`);
+            if (DELETE_LAST_N > 0) {
+              console.log(`Policy: LAST-N MODE -- deleting the ${DELETE_LAST_N} most recent runs (repo-wide, newest first), ignoring hours/keep-recent policy`);
+            } else {
+              console.log(`Policy: STRICT limit of ${MAX_TOTAL_RUNS} runs total (max ${KEEP_RECENT_RUNS} per workflow)`);
+              console.log(`Deleting runs older than ${KEEP_HOURS} hours`);
+            }
             console.log(`Repository: ${owner}/${repo}`);
             console.log('================================');
 
@@ -99,25 +110,42 @@ jobs:
               const runsToDelete = [];
               const workflowRunCounts = {};
 
-              for (const run of allRunsAcrossWorkflows) {
-                const runDate = new Date(run.created_at);
-                const workflowId = run.workflow_id;
-
-                if (!workflowRunCounts[workflowId]) {
-                  workflowRunCounts[workflowId] = 0;
+              if (DELETE_LAST_N > 0) {
+                // ── LAST-N MODE ──────────────────────────────────────────
+                // Ignore hours/keep-recent policy entirely: just take the N
+                // most recent runs (already sorted newest-first, repo-wide
+                // across all workflows) and delete exactly those. Everything
+                // else is kept, regardless of age.
+                for (let i = 0; i < allRunsAcrossWorkflows.length; i++) {
+                  if (i < DELETE_LAST_N) {
+                    runsToDelete.push(allRunsAcrossWorkflows[i]);
+                  } else {
+                    runsToKeep.push(allRunsAcrossWorkflows[i]);
+                  }
                 }
+                console.log(`\n📊 Last-N mode: deleting the ${Math.min(DELETE_LAST_N, allRunsAcrossWorkflows.length)} most recent run(s) out of ${allRunsAcrossWorkflows.length} total.`);
+              } else {
+                // ── NORMAL MODE ──────────────────────────────────────────
+                for (const run of allRunsAcrossWorkflows) {
+                  const runDate = new Date(run.created_at);
+                  const workflowId = run.workflow_id;
 
-                const isWithinHours = runDate > cutoffDate;
-                const isWithinWorkflowLimit = workflowRunCounts[workflowId] < KEEP_RECENT_RUNS;
-                const isWithinGlobalLimit = runsToKeep.length < MAX_TOTAL_RUNS;
+                  if (!workflowRunCounts[workflowId]) {
+                    workflowRunCounts[workflowId] = 0;
+                  }
 
-                // Hours threshold is the PRIMARY filter.
-                // Only keep a run if it is within the hours window AND within both caps.
-                if (isWithinHours && isWithinWorkflowLimit && isWithinGlobalLimit) {
-                  runsToKeep.push(run);
-                  workflowRunCounts[workflowId]++;
-                } else {
-                  runsToDelete.push(run);
+                  const isWithinHours = runDate > cutoffDate;
+                  const isWithinWorkflowLimit = workflowRunCounts[workflowId] < KEEP_RECENT_RUNS;
+                  const isWithinGlobalLimit = runsToKeep.length < MAX_TOTAL_RUNS;
+
+                  // Hours threshold is the PRIMARY filter.
+                  // Only keep a run if it is within the hours window AND within both caps.
+                  if (isWithinHours && isWithinWorkflowLimit && isWithinGlobalLimit) {
+                    runsToKeep.push(run);
+                    workflowRunCounts[workflowId]++;
+                  } else {
+                    runsToDelete.push(run);
+                  }
                 }
               }
 
