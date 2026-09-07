@@ -477,6 +477,32 @@ def _poll_hof_dir_proc(csv_path_str, poll_seconds, label, queue, stop_event, t_s
     _try_poll()  # final catch-up poll after fit() has returned
 
 
+def _score_expr(expr_py, X, y, variable_names):
+    """Evaluate a PySR expression string's R^2 against an arbitrary (X, y)
+    pair. Used both for the training-domain score (during fit) and,
+    [FIX-EXTRAP-R2], for re-scoring the final expression against the
+    held-out extrapolation split -- the same eval namespace and R^2
+    formula as `_fit_with_pysr_trajectory`'s internal scoring, factored
+    out so both call sites can't drift apart.
+
+    Returns None (not NaN, not an exception) if `expr_py`, X, or y is
+    unavailable, or if evaluation fails for any reason -- callers treat
+    None as "no score computable" and fall back accordingly.
+    """
+    if not expr_py or X is None or y is None:
+        return None
+    try:
+        ns = {v: X[:, i] for i, v in enumerate(variable_names)}
+        ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
+                   "sqrt": np.sqrt, "exp": np.exp})
+        y_pred = eval(expr_py, {"__builtins__": {}}, ns)
+        ss_res = np.sum((y - y_pred) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        return float(1.0 - ss_res / ss_tot) if ss_tot != 0 else float("nan")
+    except Exception:
+        return None
+
+
 def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
                                poll_seconds=None, output_dir=None):
     """Fit `model` (a PySRRegressor) on (X, y) while recording a hall-of-fame
@@ -554,19 +580,7 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
         # separate translation step (this is a display/audit-file
         # convenience -- normalize the same way, everywhere it's read).
         best_expr_py = best_expr.replace("^", "**") if best_expr else None
-        try:
-            y_pred = model.predict(X)
-            r2 = None
-            if best_expr_py:
-                ns = {v: X[:, i] for i, v in enumerate(variable_names)}
-                ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
-                           "sqrt": np.sqrt, "exp": np.exp})
-                y_pred_expr = eval(best_expr_py, {"__builtins__": {}}, ns)
-                ss_res = np.sum((y - y_pred_expr) ** 2)
-                ss_tot = np.sum((y - np.mean(y)) ** 2)
-                r2 = float(1.0 - ss_res / ss_tot) if ss_tot != 0 else float("nan")
-        except Exception:
-            r2 = None
+        r2 = _score_expr(best_expr_py, X, y, variable_names)
         if r2 is None:
             # Expression-based scoring failed (e.g. a function the eval
             # namespace above doesn't cover) -- fall back to PySR's own
@@ -818,18 +832,44 @@ def run(seed: int = 42):
             trajectory_p = []
         elapsed_p = time.time() - t0
 
+        # [FIX-EXTRAP-R2] r2_h/r2_p above are scored against (X, y) --
+        # the TRAINING split (see NguyenEquation.generate: it returns
+        # X_train/y_train as the 2nd/3rd tuple elements; X_extrap/y_extrap
+        # only ever land in `meta`, never in the (X, y) passed into
+        # _fit_with_pysr_trajectory). These results are written under
+        # hypatiax/data/results/extrapolation/ and compared against THRESH
+        # as if they were held-out extrapolation scores -- but until now
+        # nothing ever actually scored the final expression against
+        # meta["X_extrap"]/meta["y_extrap"]. That let a model that fits
+        # the training range near-perfectly but diverges outside it
+        # (e.g. N12/seed99, R²≈0.99996 train vs R²≈-1.07 extrap) get
+        # silently reported and thresholded as a training-domain number
+        # wearing an "extrapolation" label. Re-score both systems' final
+        # expressions against the extrap split (when the equation has
+        # one) and report THAT as the headline `r2`, keeping the
+        # training score alongside it rather than discarding it.
+        X_ext, y_ext = meta.get("X_extrap"), meta.get("y_extrap")
+        r2_h_extrap = _score_expr(best_expr_h, X_ext, y_ext, var_names)
+        r2_p_extrap = _score_expr(best_expr_p, X_ext, y_ext, var_names)
+        r2_h_report = r2_h_extrap if r2_h_extrap is not None else r2_h
+        r2_p_report = r2_p_extrap if r2_p_extrap is not None else r2_p
+
         # ── Per-equation summary ──────────────────────────────────────────
         THRESH = 0.9999
-        h_ok   = "✅" if r2_h >= THRESH else "✗"
-        p_ok   = "✅" if r2_p >= THRESH else "✗"
-        print(f"    H  {h_ok}  R²={r2_h:.7f}  expr={best_expr_h}  ({elapsed_h:.1f}s)")
-        print(f"    P  {p_ok}  R²={r2_p:.7f}  expr={best_expr_p}  ({elapsed_p:.1f}s)")
+        h_ok   = "✅" if r2_h_report >= THRESH else "✗"
+        p_ok   = "✅" if r2_p_report >= THRESH else "✗"
+        print(f"    H  {h_ok}  R²={r2_h_report:.7f} (train={r2_h:.7f})  expr={best_expr_h}  ({elapsed_h:.1f}s)")
+        print(f"    P  {p_ok}  R²={r2_p_report:.7f} (train={r2_p:.7f})  expr={best_expr_p}  ({elapsed_p:.1f}s)")
 
         results_hypatia.append({
             "system":     "hypatiax",
             "metadata":   meta,
             "expression": best_expr_h,
-            "evaluation": {"r2": r2_h},
+            "evaluation": {
+                "r2":         r2_h_report,   # extrap score when available, else train
+                "r2_train":   r2_h,
+                "r2_extrap":  r2_h_extrap,   # None if this equation has no extrap split
+            },
             "elapsed":    elapsed_h,
             "trajectory": trajectory_h,
         })
@@ -837,7 +877,11 @@ def run(seed: int = 42):
             "system":     "pysr",
             "metadata":   meta,
             "expression": best_expr_p,
-            "evaluation": {"r2": r2_p},
+            "evaluation": {
+                "r2":         r2_p_report,
+                "r2_train":   r2_p,
+                "r2_extrap":  r2_p_extrap,
+            },
             "elapsed":    elapsed_p,
             "trajectory": trajectory_p,
         })
