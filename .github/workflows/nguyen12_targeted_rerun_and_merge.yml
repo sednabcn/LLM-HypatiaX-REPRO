@@ -50,9 +50,11 @@
 #      rerun output (full PySR trajectories, ~150KB-3.4MB per seed as
 #      observed) now gets committed to the repo, not just uploaded as a
 #      7-day workflow artifact. That was NOT true when RESULTS_DIR pointed
-#      outside multi_seed/. If that's not wanted, narrow the `git add -f`
-#      line to the four `*_nshards*.json` files explicitly instead of the
-#      whole directory.
+#      outside multi_seed/. This has now been narrowed -- see the
+#      [FIX-COMMIT-SCOPE] note at the actual `git add -f` line below --
+#      so trajectories/ no longer gets committed, only the four
+#      *_nshards*.json summary files. Leaving this note in place since it
+#      explains WHY that narrowing was needed, not just that it exists.
 #
 #  MOVED RESULTS_DIR OUT OF scratch/ (2026-09-08):
 #    - RESULTS_DIR (and every matching upload/download-artifact `path:` and
@@ -407,7 +409,18 @@ jobs:
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f hypatiax/data/results/extrapolation/multi_seed/
+          # [FIX-COMMIT-SCOPE] `git add -f hypatiax/data/results/extrapolation/
+          # multi_seed/` (no filter) would also pick up the raw per-seed
+          # trajectories/ subdirectory now nested inside it (RESULTS_DIR --
+          # see the header note above). Those are large (150KB-3.4MB per
+          # seed, full PySR step-by-step search history) and not something
+          # worth keeping in git history alongside the four small summary
+          # files this workflow actually exists to maintain. Only add the
+          # four *_nshards*.json merge-target files explicitly; trajectories/
+          # stays out of git (still uploaded separately as the 30-day
+          # "nguyen12-merged" artifact a few steps up, so it isn't lost --
+          # just not committed).
+          git add -f hypatiax/data/results/extrapolation/multi_seed/*_nshards*.json
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
             exit 0
