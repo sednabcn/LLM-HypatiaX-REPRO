@@ -90,7 +90,24 @@ def _r2(y_true, y_pred):
 
 
 _SAFE_NS = {"sin": np.sin, "cos": np.cos, "log": np.log,
-            "sqrt": np.sqrt, "exp": np.exp}
+            "sqrt": np.sqrt, "exp": np.exp,
+            # [FIX-SQUARE-CUBE] The extrapolation-safety patch
+            # (exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py) replaced
+            # the generic "^" operator with dedicated square/cube unary
+            # ops in PySR's operator set -- see that file's own
+            # [FIX-SAFE-POW] note. Every record produced by that script
+            # now legitimately contains square(...)/cube(...) in its
+            # expression string. Without these two names, eval() below
+            # raises NameError, which _score_expression's broad
+            # `except Exception: return None` silently converts into
+            # "could not verify" -- indistinguishable from a genuine
+            # expression/trajectory mismatch, and the actual root cause of
+            # every "UNRESOLVED -- neither field reproduces stored R^2"
+            # seen after the extrap-safe rerun (N7/N8/N9/N12 across all
+            # four seeds, 2026-09-08 CI run). This was never a data
+            # corruption bug in those records; it's this audit script
+            # being one step behind the operator set it's evaluating.
+            "square": np.square, "cube": lambda z: z ** 3}
 
 
 def _score_expression(expr, varnames, X, y):

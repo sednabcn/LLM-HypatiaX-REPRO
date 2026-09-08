@@ -403,8 +403,25 @@ jobs:
 
       # ── Persist results directly to the repo, mirroring the pattern
       # ── already used in _fixn3_temp_cell.yml for this exact situation.
+      #
+      # [FIX-GATE-BYPASS] (2026-09-08) This step used to run under
+      # `if: always() && inputs.write == true`. `always()` makes a step
+      # run regardless of any earlier failure in the job -- including the
+      # "Re-run trajectory checks to confirm 0 unresolved remain" gate
+      # right above it. That meant a failed integrity gate did NOT stop
+      # this step: on run 34213276615, step 13 exited 1 (14 records still
+      # unresolved) and this step committed and pushed to master anyway.
+      # Dropping `always()` restores the default GitHub Actions behavior
+      # for this job: a step only runs if every previous step succeeded
+      # (steps 5-13 above have no `continue-on-error`, so any of their
+      # failures now correctly skips this step too), matching the
+      # `if: inputs.write == true` condition already used on steps 12/13.
+      # "Upload merged outputs as artifacts" below intentionally keeps
+      # `always()` -- that one SHOULD still run after a failure, so the
+      # partial/unrepaired output is visible for debugging even when the
+      # commit is (now correctly) skipped.
       - name: "Commit and push merged results to repo"
-        if: ${{ always() && inputs.write == true }}
+        if: ${{ inputs.write == true }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
