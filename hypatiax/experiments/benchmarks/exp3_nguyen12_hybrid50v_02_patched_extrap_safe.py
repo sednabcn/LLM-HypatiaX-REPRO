@@ -510,10 +510,10 @@ def _score_expr(expr_py, X, y, variable_names):
 
 
 def _build_boundary_buffer(X, y, meta, variable_names,
-                            buffer_frac=0.15, n_buffer=40):
+                            buffer_frac=0.15, gap_frac=0.4, n_buffer=40):
     """[FIX-SINGULARITY-BUFFER] Widen the FIT data (not the reported R^2,
     not the real held-out extrapolation set) with points sampled from a
-    thin band just outside the training range, using the same ground-truth
+    band just outside the training range, using the same ground-truth
     formula that generated the training data in the first place.
 
     This is what catches the N12/seed99 failure mode: PySR fit an
@@ -525,12 +525,32 @@ def _build_boundary_buffer(X, y, meta, variable_names,
     search instead of surviving to become "best" and only failing on the
     real extrapolation split we never let the search see.
 
+    [FIX-SINGULARITY-BUFFER-v2] The original version sized the buffer band
+    as `buffer_frac` of the TRAINING width on each side (e.g. 15% of a
+    width-2 box = 0.3 units). That was too narrow relative to how far some
+    equations' actual extrapolation set reaches: N7/seed777 has training
+    x in [0,2] but extrapolation x in [2,5] -- a gap of 3 units -- so a
+    0.3-unit buffer only ever "saw" as far as x=2.3, and a denominator
+    that's safely nonzero there could still approach zero somewhere in the
+    remaining [2.3, 5] the buffer never touched (this is exactly what
+    happened: N7/seed777 went from NaN to a real but still-overfit
+    r2_extrap=0.76 after the v1 fix). This version prefers sizing the
+    buffer as `gap_frac` of the actual distance to `extrap_ranges` (from
+    the metadata) when that's available, falling back to the old
+    training-width-based sizing when it isn't. `gap_frac` is deliberately
+    NOT 1.0 -- covering 100% of the gap would make "extrapolation R^2"
+    measure something close to interpolation again. 0.4 is a compromise:
+    wide enough to catch a singularity that would otherwise only surface
+    partway through the real extrapolation region, without training on
+    (and thus disguising failure on) most of that region.
+
     Returns (X_aug, y_aug). Falls back to (X, y) unchanged if the ground
     truth expression can't be parsed/evaluated for any reason -- augmenting
     training data should never be able to crash a run that would otherwise
     have worked.
     """
     ranges = meta.get("variable_ranges")
+    extrap_ranges = meta.get("extrap_ranges") or {}
     formula = meta.get("ground_truth")
     if not ranges or not formula:
         return X, y
@@ -540,11 +560,25 @@ def _build_boundary_buffer(X, y, meta, variable_names,
         for v in variable_names:
             lo, hi = ranges[v]
             width = hi - lo
-            pad = buffer_frac * width
-            # sample only in the two thin bands just outside [lo, hi],
-            # not the interior (the interior is already covered by X)
-            lo_band = rng.uniform(lo - pad, lo, size=n_buffer // 2)
-            hi_band = rng.uniform(hi, hi + pad, size=n_buffer - n_buffer // 2)
+            ext = extrap_ranges.get(v)
+            if ext is not None:
+                ext_lo, ext_hi = ext
+                # gap on each side between the training box and where the
+                # real extrapolation set actually goes (0 if the extrap
+                # range doesn't extend that direction, e.g. N7's ext_lo
+                # equals its train lo -- no lower-side extrapolation there)
+                gap_lo = max(lo - ext_lo, 0.0)
+                gap_hi = max(ext_hi - hi, 0.0)
+                pad_lo = gap_frac * gap_lo
+                pad_hi = gap_frac * gap_hi
+            else:
+                # no extrap_ranges in metadata -- fall back to the original
+                # training-width-based sizing rather than skip the buffer
+                pad_lo = pad_hi = buffer_frac * width
+            lo_band = rng.uniform(lo - pad_lo, lo, size=n_buffer // 2) \
+                if pad_lo > 0 else np.full(n_buffer // 2, lo)
+            hi_band = rng.uniform(hi, hi + pad_hi, size=n_buffer - n_buffer // 2) \
+                if pad_hi > 0 else np.full(n_buffer - n_buffer // 2, hi)
             buf_cols.append(np.concatenate([lo_band, hi_band]))
         X_buf = np.column_stack(buf_cols)
         ns = {v: X_buf[:, i] for i, v in enumerate(variable_names)}

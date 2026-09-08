@@ -38,6 +38,42 @@
 #      merge itself just copies records; the repair script must be run
 #      after to fix their expressions before validation.
 #
+#  NESTED RESULTS_DIR INSIDE THE COMMITTED multi_seed/ TREE (2026-09-08):
+#    - RESULTS_DIR (and every matching literal path -- see the note above,
+#      same "not a variable reference" caveat applies) moved one more time,
+#      from hypatiax/data/trajectories/seed{N}/ to
+#      hypatiax/data/results/extrapolation/multi_seed/trajectories/seed{N}/.
+#      IMPORTANT BEHAVIOR CHANGE vs the previous move: the commit step
+#      below does `git add -f hypatiax/data/results/extrapolation/
+#      multi_seed/` (the whole directory), and trajectories/ now lives
+#      INSIDE that directory -- so with write=true, the raw per-seed
+#      rerun output (full PySR trajectories, ~150KB-3.4MB per seed as
+#      observed) now gets committed to the repo, not just uploaded as a
+#      7-day workflow artifact. That was NOT true when RESULTS_DIR pointed
+#      outside multi_seed/. If that's not wanted, narrow the `git add -f`
+#      line to the four `*_nshards*.json` files explicitly instead of the
+#      whole directory.
+#
+#  MOVED RESULTS_DIR OUT OF scratch/ (2026-09-08):
+#    - RESULTS_DIR (and every matching upload/download-artifact `path:` and
+#      merge step `--source` literal -- these were NOT variable references
+#      to RESULTS_DIR, they were separately hard-coded to the same
+#      `scratch/seed{N}/` string, so all had to move together) now point at
+#      hypatiax/data/results/extrapolation/multi_seed/trajectories/seed{N}/ instead of
+#      ${{ github.workspace }}/scratch/seed{N}/. Confirmed against the repo
+#      that hypatiax/data/results/extrapolation/multi_seed/trajectories/ does not already exist (no
+#      collision with real data) and is a different path than
+#      hypatiax/data/results/extrapolation/multi_seed/, the directory this
+#      workflow actually merges/commits into -- so this change only moves
+#      where the RAW per-seed rerun output lands before merging, it does
+#      not change what gets committed or how the merge step works. Neither
+#      the old scratch/ path nor this one is added to a .gitignore in this
+#      repo (checked -- none exists), and neither is committed by the
+#      "Commit and push merged results" step (which only ever
+#      `git add -f`s hypatiax/data/results/extrapolation/multi_seed/), so
+#      this remains a transient per-job working directory either way --
+#      only its location changed, not its lifecycle.
+#
 #  SWITCHED TO EXTRAPOLATION-SAFE SCRIPT (2026-09-07):
 #    - The per-seed rerun step now calls
 #      exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py instead of
@@ -198,7 +234,7 @@ jobs:
       # _fit_with_pysr_trajectory, not the CLI/env-var plumbing.
       - name: "Targeted rerun: seed ${{ matrix.seed }} (${{ matrix.label }})"
         env:
-          RESULTS_DIR: ${{ github.workspace }}/scratch/seed${{ matrix.seed }}
+          RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results/extrapolation/multi_seed/trajectories/seed${{ matrix.seed }}
           TASK_IDS: ${{ matrix.task_ids }}
           PYSR_SEED: "${{ matrix.seed }}"
           EXPERIMENT_SEED: "${{ matrix.seed }}"
@@ -216,7 +252,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: nguyen12-rerun-seed-${{ matrix.seed }}-${{ github.run_id }}
-          path: scratch/seed${{ matrix.seed }}/
+          path: hypatiax/data/results/extrapolation/multi_seed/trajectories/seed${{ matrix.seed }}/
           retention-days: 7
 
   # ────────────────────────────────────────────────────────────────────────
@@ -258,35 +294,35 @@ jobs:
         continue-on-error: true
         with:
           name: nguyen12-rerun-seed-99-${{ github.run_id }}
-          path: scratch/seed99/
+          path: hypatiax/data/results/extrapolation/multi_seed/trajectories/seed99/
 
       - name: "Download seed 123 rerun output"
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: nguyen12-rerun-seed-123-${{ github.run_id }}
-          path: scratch/seed123/
+          path: hypatiax/data/results/extrapolation/multi_seed/trajectories/seed123/
 
       - name: "Download seed 777 rerun output"
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: nguyen12-rerun-seed-777-${{ github.run_id }}
-          path: scratch/seed777/
+          path: hypatiax/data/results/extrapolation/multi_seed/trajectories/seed777/
 
       - name: "Download seed 2024 rerun output"
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: nguyen12-rerun-seed-2024-${{ github.run_id }}
-          path: scratch/seed2024/
+          path: hypatiax/data/results/extrapolation/multi_seed/trajectories/seed2024/
 
       - name: "Confirm which seeds actually produced output"
         run: |
-          for f in scratch/seed99/exp3_nguyen12_seed99.json \
-                   scratch/seed123/exp3_nguyen12_seed123.json \
-                   scratch/seed777/exp3_nguyen12_seed777.json \
-                   scratch/seed2024/exp3_nguyen12_seed2024.json ; do
+          for f in hypatiax/data/results/extrapolation/multi_seed/trajectories/seed99/exp3_nguyen12_seed99.json \
+                   hypatiax/data/results/extrapolation/multi_seed/trajectories/seed123/exp3_nguyen12_seed123.json \
+                   hypatiax/data/results/extrapolation/multi_seed/trajectories/seed777/exp3_nguyen12_seed777.json \
+                   hypatiax/data/results/extrapolation/multi_seed/trajectories/seed2024/exp3_nguyen12_seed2024.json ; do
             if [[ -f "$f" ]]; then
               echo "OK   -- $f present"
             else
@@ -302,30 +338,30 @@ jobs:
             WRITE_FLAG=(--write)
           fi
 
-          if [[ -f scratch/seed99/exp3_nguyen12_seed99.json ]]; then
+          if [[ -f hypatiax/data/results/extrapolation/multi_seed/trajectories/seed99/exp3_nguyen12_seed99.json ]]; then
             python3 AUDIT/merge_targeted_rerun.py \
-              --source scratch/seed99/exp3_nguyen12_seed99.json \
+              --source hypatiax/data/results/extrapolation/multi_seed/trajectories/seed99/exp3_nguyen12_seed99.json \
               --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json \
               --task-ids N12 "${WRITE_FLAG[@]}"
           fi
 
-          if [[ -f scratch/seed123/exp3_nguyen12_seed123.json ]]; then
+          if [[ -f hypatiax/data/results/extrapolation/multi_seed/trajectories/seed123/exp3_nguyen12_seed123.json ]]; then
             python3 AUDIT/merge_targeted_rerun.py \
-              --source scratch/seed123/exp3_nguyen12_seed123.json \
+              --source hypatiax/data/results/extrapolation/multi_seed/trajectories/seed123/exp3_nguyen12_seed123.json \
               --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json \
               --task-ids N4 "${WRITE_FLAG[@]}"
           fi
 
-          if [[ -f scratch/seed777/exp3_nguyen12_seed777.json ]]; then
+          if [[ -f hypatiax/data/results/extrapolation/multi_seed/trajectories/seed777/exp3_nguyen12_seed777.json ]]; then
             python3 AUDIT/merge_targeted_rerun.py \
-              --source scratch/seed777/exp3_nguyen12_seed777.json \
+              --source hypatiax/data/results/extrapolation/multi_seed/trajectories/seed777/exp3_nguyen12_seed777.json \
               --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json \
               --task-ids N7 N12 "${WRITE_FLAG[@]}"
           fi
 
-          if [[ -f scratch/seed2024/exp3_nguyen12_seed2024.json ]]; then
+          if [[ -f hypatiax/data/results/extrapolation/multi_seed/trajectories/seed2024/exp3_nguyen12_seed2024.json ]]; then
             python3 AUDIT/merge_targeted_rerun.py \
-              --source scratch/seed2024/exp3_nguyen12_seed2024.json \
+              --source hypatiax/data/results/extrapolation/multi_seed/trajectories/seed2024/exp3_nguyen12_seed2024.json \
               --target hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json \
               --task-ids N7 N8 N9 "${WRITE_FLAG[@]}"
           fi
@@ -394,6 +430,5 @@ jobs:
         with:
           name: nguyen12-merged-${{ github.run_id }}
           path: |
-            scratch/
             hypatiax/data/results/extrapolation/multi_seed/
           retention-days: 30
