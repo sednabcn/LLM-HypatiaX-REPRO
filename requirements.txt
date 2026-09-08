@@ -303,7 +303,7 @@ spacy==3.8.8
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5
 spacy-lookups-data==1.0.5
-Sphinx==7.4.7
+Sphinx==8.2.3
 sphinx_rtd_theme==3.1.0
 sphinxcontrib-applehelp==2.0.0
 sphinxcontrib-devhelp==2.0.0
