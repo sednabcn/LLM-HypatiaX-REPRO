@@ -18,11 +18,11 @@ on:
           experiment_protocol_nguyen12.py per FIX_PLAN step 1 — change
           this if the current pipeline calls it something else.
         required: false
-        default: "experiment_protocol_nguyen12.py"
+        default: "hypatiax/protocols/experiment_protocol_nguyen12.py"
       source_json:
         description: "Raw result file to score against (not a hand tally)"
         required: false
-        default: "exp3_nguyen12_seed42.json"
+        default: "hypatiax/data/results/extrapolation/exp3_nguyen12_seed42.json"
       rsq_threshold:
         description: "Success threshold, must match tab:nguyen12's stated criterion"
         required: false
@@ -94,7 +94,7 @@ jobs:
             "N-12": {"P": true, "H": true}
           }
           EOF
-          python diff_rescore_vs_table.py \
+          python AUDIT/diff_rescore_vs_table.py \
             --rescored rescored_seed42_output.json \
             --reference tab_nguyen12_reference.json \
             --out diff_report.md
