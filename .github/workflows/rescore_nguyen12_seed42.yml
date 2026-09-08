@@ -14,11 +14,16 @@ on:
     inputs:
       script_path:
         description: >
-          Path to the real scoring script in the repo. Defaults to
-          experiment_protocol_nguyen12.py per FIX_PLAN step 1 — change
-          this if the current pipeline calls it something else.
+          Path to the real scoring script in the repo. NOTE:
+          experiment_protocol_nguyen12.py is an experiment *runner*
+          (--equation/--category/--num-samples/...), not a scorer of an
+          existing result file -- it has no --input/--rsq-threshold/--output
+          CLI. AUDIT/rescore_seed42.py is the actual scorer; it reads a raw
+          result file's results.hypatiax / results.pysr r2 values and
+          applies the threshold, emitting the schema
+          AUDIT/diff_rescore_vs_table.py expects.
         required: false
-        default: "hypatiax/protocols/experiment_protocol_nguyen12.py"
+        default: "AUDIT/rescore_seed42.py"
       source_json:
         description: "Raw result file to score against (not a hand tally)"
         required: false
@@ -70,7 +75,6 @@ jobs:
           python "${{ inputs.script_path }}" \
             --input "${{ inputs.source_json }}" \
             --rsq-threshold "${{ inputs.rsq_threshold }}" \
-            --seed 42 \
             --output rescored_seed42_output.json
 
       - name: Diff per-equation results against tab:nguyen12's bolded cells
