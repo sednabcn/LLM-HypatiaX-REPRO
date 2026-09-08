@@ -45,23 +45,35 @@ REQUIRED_FUNCS = (
 
 
 def load_functions(script_path, names):
-    """Extract just the named top-level function defs from `script_path`
-    via AST and exec them in a fresh namespace -- runs the real code
-    without triggering the rest of the script's module-level side effects
-    (API key checks, argparse, PySRRegressor/sklearn imports, etc.)."""
+    """Extract ALL top-level function defs from `script_path` via AST and
+    exec them in a fresh namespace -- runs the real code without triggering
+    the rest of the script's module-level side effects (API key checks,
+    argparse, PySRRegressor/sklearn imports, etc.).
+
+    Pulling every top-level function (not just `names`) is deliberate: a
+    patched variant of the target script may factor shared logic into
+    additional helpers that _fit_with_pysr_trajectory (or the other two)
+    now calls -- e.g. exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py
+    adds `_score_expr`, which `_fit_with_pysr_trajectory` depends on. Only
+    extracting the 3 originally-named functions would leave that
+    dependency undefined and fail with an unrelated NameError, not a
+    meaningful test result. `names` is still used afterward purely to
+    confirm the specific functions this test suite exists to validate are
+    actually present.
+    """
     src = Path(script_path).read_text(encoding="utf-8")
     tree = ast.parse(src, filename=str(script_path))
 
     ns = {}
     exec(
-        "import csv, pathlib, time, os, multiprocessing as mp\n"
+        "import csv, pathlib, time, os, warnings, multiprocessing as mp\n"
         "import numpy as np\n",
         ns,
     )
 
     found = set()
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name in names:
+        if isinstance(node, ast.FunctionDef):
             mod = ast.Module(body=[node], type_ignores=[])
             ast.fix_missing_locations(mod)
             code = compile(mod, filename=str(script_path), mode="exec")

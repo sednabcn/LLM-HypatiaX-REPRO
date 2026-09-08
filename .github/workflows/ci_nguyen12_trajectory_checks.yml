@@ -26,6 +26,7 @@ on:
       - "AUDIT/**"
       - "hypatiax/data/results/extrapolation/**"
       - "hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py"
+      - "hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py"
       - "hypatiax/protocols/experiment_protocol_nguyen12.py"
 
 jobs:
@@ -96,7 +97,7 @@ jobs:
           done
 
   trajectory-monitor-unit-tests:
-    name: "Trajectory monitor unit tests (mock PySR, no Julia)"
+    name: "Trajectory monitor unit tests -- _02_patched.py (mock PySR, no Julia)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4.2.2
@@ -114,3 +115,37 @@ jobs:
         run: |
           python3 AUDIT/test_trajectory_monitor.py \
             hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched.py
+
+  # Same test suite, run separately against the extrap-safe variant (adds
+  # extrapolation rescoring, safe integer-power operators, and boundary-
+  # buffer augmentation on top of _02_patched.py). Kept as its own job
+  # rather than a matrix over both scripts so either one failing is
+  # immediately attributable without reading log output -- a red
+  # "trajectory-monitor-unit-tests-extrap-safe" tells you which file
+  # regressed without opening it.
+  trajectory-monitor-unit-tests-extrap-safe:
+    name: "Trajectory monitor unit tests -- extrap_safe variant (mock PySR, no Julia)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install minimal deps (numpy + sympy + scikit-learn)
+        run: pip install numpy sympy scikit-learn
+
+      - name: Confirm extrap_safe script has been added to the repo
+        run: |
+          if [[ ! -f "hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py" ]]; then
+            echo "::error::hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py not found in this checkout."
+            exit 1
+          fi
+
+      - name: Run trajectory monitor tests against the extrap_safe script
+        run: |
+          python3 AUDIT/test_trajectory_monitor.py \
+            hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02_patched_extrap_safe.py
