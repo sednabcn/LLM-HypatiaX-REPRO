@@ -1,0 +1,109 @@
+name: Rescore Nguyen-12 seed42 (tab:nguyen12 headline verification)
+
+# Purpose: close the last open piece of Issue 1 — the original per-equation
+# "10/12, 11/12, 4/12 vs. bolded cells" question from the master index.
+# This does NOT touch the targeted-rerun seeds (99, 123, 777, 2024) that
+# were already resolved in run 34230694465 / commit 06a2ab2. It only
+# re-derives the seed-42 headline numbers currently hard-coded into
+# tab:nguyen12, using the project's real scoring script rather than a
+# hand-written reimplementation — the exact step every prior document
+# agrees is the one still missing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: >
+          Path to the real scoring script in the repo. Defaults to
+          experiment_protocol_nguyen12.py per FIX_PLAN step 1 — change
+          this if the current pipeline calls it something else.
+        required: false
+        default: "experiment_protocol_nguyen12.py"
+      source_json:
+        description: "Raw result file to score against (not a hand tally)"
+        required: false
+        default: "exp3_nguyen12_seed42.json"
+      rsq_threshold:
+        description: "Success threshold, must match tab:nguyen12's stated criterion"
+        required: false
+        default: "0.9999"
+
+jobs:
+  rescore:
+    runs-on: ubuntu-24.04
+    env:
+      # Same secret, same trust level as the targeted rerun (run 34230694465).
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      PySR_SEED: "42"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          repository: sednabcn/LLM-HypatiaX-REPRO
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Adjust to the repo's actual requirements file / extras if these differ
+          pip install -r requirements.txt
+
+      - name: Confirm scoring script and source file exist
+        run: |
+          test -f "${{ inputs.script_path }}" || {
+            echo "::error::${{ inputs.script_path }} not found in repo — FIX_PLAN item 1 needs the real current filename before this can run.";
+            exit 1;
+          }
+          test -f "${{ inputs.source_json }}" || {
+            echo "::error::${{ inputs.source_json }} not found in repo.";
+            exit 1;
+          }
+
+      - name: Run real scoring script against raw seed-42 JSON
+        run: |
+          python "${{ inputs.script_path }}" \
+            --input "${{ inputs.source_json }}" \
+            --rsq-threshold "${{ inputs.rsq_threshold }}" \
+            --seed 42 \
+            --output rescored_seed42_output.json
+
+      - name: Diff per-equation results against tab:nguyen12's bolded cells
+        run: |
+          # Placeholder equation-by-equation reference matching the current
+          # tex table (12/12 P, 12/12 H, all bold). Replace only if the
+          # table changes before this runs.
+          cat > tab_nguyen12_reference.json <<'EOF'
+          {
+            "N-1":  {"P": true, "H": true},
+            "N-2":  {"P": true, "H": true},
+            "N-3":  {"P": true, "H": true},
+            "N-4":  {"P": true, "H": true},
+            "N-5":  {"P": true, "H": true},
+            "N-6":  {"P": true, "H": true},
+            "N-7":  {"P": true, "H": true},
+            "N-8":  {"P": true, "H": true},
+            "N-9":  {"P": true, "H": true},
+            "N-10": {"P": true, "H": true},
+            "N-11": {"P": true, "H": true},
+            "N-12": {"P": true, "H": true}
+          }
+          EOF
+          python diff_rescore_vs_table.py \
+            --rescored rescored_seed42_output.json \
+            --reference tab_nguyen12_reference.json \
+            --out diff_report.md
+
+      - name: Upload rescore output and diff report
+        uses: actions/upload-artifact@v4
+        with:
+          name: nguyen12-seed42-rescore
+          path: |
+            rescored_seed42_output.json
+            diff_report.md
+          retention-days: 90
