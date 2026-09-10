@@ -1,0 +1,163 @@
+name: Rescore DeFi hybrid-attribution-bug + Mean R2 (FIX-D2, all 5 seeds)
+
+# Purpose: close the open Mean R2 gap flagged against this repo — the
+# +0.8721 Mean R2 figure in the results table / discussion (lines 1603,
+# 1676) was never recomputed after the hybrid-attribution-bug fix, unlike
+# every other metric in that section (success rates, breakdown table, task
+# list), which all got [Correction: ...] notes.
+#
+# This workflow:
+#   1. Confirms fix_defi_attribution_bug.py (FIX-D1) still does not exist in
+#      the repo (paper's own retraction of the "independent script confirmed
+#      it" claim) — matches the guard already used in
+#      rescore_nguyen12_seed42.yml's spirit, but as a non-fatal informational
+#      check rather than a hard prerequisite, since FIX-D2 does not depend on
+#      FIX-D1's absence/presence.
+#   2. Runs fix_defi_attribution_bug_v2.py (FIX-D2) against all 5 seeds
+#      (42, 99, 123, 777, 2024) in noise-noiseless/15/, using the paper's
+#      actual correction rule (hybrid.test_r2 > 0.99 AND named sub-method's
+#      own success flag True) — NOT the FIX-D1 script's 0.9-threshold rule,
+#      which does not reproduce the paper's own disclosed figures.
+#   3. Emits per-seed detail JSON + a 5-seed summary JSON with both
+#      corrected_success_rate and (raw / attribution-corrected) Mean R2 —
+#      the piece that was missing entirely from FIX-D1.
+#   4. Diffs the summary's Mean R2 figures against the paper's currently
+#      printed +0.8721 so the workflow visibly FAILS if that number is still
+#      undefended, instead of silently succeeding.
+
+on:
+  workflow_dispatch:
+    inputs:
+      script_path:
+        description: "Path to the FIX-D2 script (checked in under AUDIT/ or scripts/patches/)"
+        required: false
+        default: "AUDIT/fix_defi_attribution_bug_v2.py"
+      repo_results_root:
+        description: "Repo-relative root passed as --repo to the script"
+        required: false
+        default: "."
+      paper_mean_r2:
+        description: "Paper's currently printed Mean R2 figure (lines 1603 / 1676), for the regression check"
+        required: false
+        default: "0.8721"
+      tolerance:
+        description: "Absolute tolerance for the Mean R2 regression check"
+        required: false
+        default: "0.01"
+
+jobs:
+  rescore-defi-attribution:
+    runs-on: ubuntu-24.04
+    env:
+      PySR_SEED: "42"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          repository: sednabcn/LLM-HypatiaX-REPRO
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt || echo "::warning::requirements.txt install failed or absent — continuing, script has no third-party deps beyond stdlib"
+
+      - name: Confirm FIX-D1 (fix_defi_attribution_bug.py) still absent (informational)
+        run: |
+          if find . -iname "fix_defi_attribution_bug.py" | grep -q .; then
+            echo "::notice::fix_defi_attribution_bug.py (FIX-D1) is present in this checkout — FIX-D2 supersedes it regardless, but flagging for awareness."
+          else
+            echo "Confirmed: fix_defi_attribution_bug.py (FIX-D1) does not exist in this checkout — matches the paper's retraction of the 'independent script confirmed it' claim."
+          fi
+
+      - name: Confirm FIX-D2 script and source data exist
+        run: |
+          test -f "${{ inputs.script_path }}" || {
+            echo "::error::${{ inputs.script_path }} not found in repo — commit fix_defi_attribution_bug_v2.py under that path (or override script_path) before this can run.";
+            exit 1;
+          }
+          _MISSING=0
+          for seed in 42 99 123 777 2024; do
+            f="hypatiax/data/results/comparison_results/noise-noiseless/15/hypatiax_defi_benchmark_v3_results_seed${seed}.json"
+            if [[ ! -f "$f" ]]; then
+              echo "::warning::seed ${seed} source file not found at $f — that seed will be skipped."
+              _MISSING=1
+            fi
+          done
+          if [[ "$_MISSING" == "1" ]]; then
+            echo "::warning::One or more seed files are missing; the 5-seed average will be computed over fewer than 5 seeds."
+          fi
+
+      - name: Run FIX-D2 across all 5 seeds
+        run: |
+          mkdir -p defi_attribution_v2_output
+          python3 "${{ inputs.script_path }}" \
+            --repo "${{ inputs.repo_results_root }}" \
+            --output-dir defi_attribution_v2_output \
+            --show-tasks \
+            2>&1 | tee defi_attribution_v2_output/run.log
+
+      - name: Check Mean R2 against paper's currently printed figure
+        run: |
+          python3 - <<'PYEOF'
+          import json, sys, os
+
+          summary_path = "defi_attribution_v2_output/fix_defi_attribution_v2_summary.json"
+          if not os.path.exists(summary_path):
+              print(f"::error::{summary_path} not found — FIX-D2 run above must have failed silently.")
+              sys.exit(1)
+
+          with open(summary_path) as f:
+              summary = json.load(f)
+
+          paper_value = float("${{ inputs.paper_mean_r2 }}")
+          tol = float("${{ inputs.tolerance }}")
+
+          raw = summary["avg_mean_r2_raw"]
+          corrected = summary["avg_mean_r2_corrected"]
+
+          print(f"Paper's printed Mean R2 (lines 1603/1676): {paper_value:.4f}")
+          print(f"FIX-D2 5-seed average raw Mean R2:         {raw:.4f}")
+          print(f"FIX-D2 5-seed average corrected Mean R2:   {corrected:.4f}")
+          print()
+
+          raw_matches = abs(raw - paper_value) <= tol
+          corrected_matches = abs(corrected - paper_value) <= tol
+          sign_reversal_holds = corrected > 0
+
+          if raw_matches:
+              print("::notice::Raw Mean R2 matches the paper's printed figure within tolerance.")
+          else:
+              print(f"::error::Raw Mean R2 ({raw:.4f}) does NOT reproduce the paper's printed "
+                    f"+{paper_value:.4f}, even before attribution correction. The headline "
+                    f"number does not trace back to the underlying result files under the "
+                    f"paper's own stated methodology (clip [-10,1], denominator 74).")
+
+          if not sign_reversal_holds:
+              print(f"::error::Attribution-corrected Mean R2 ({corrected:.4f}) is negative on "
+                    f"the 5-seed average. This undercuts the paper's 'reversal of sign' claim "
+                    f"(that HypatiaX flips the mean from negative to +{paper_value:.4f}) — the "
+                    f"corrected mean does not survive correction.")
+          else:
+              print("::notice::Corrected Mean R2 is positive on the 5-seed average.")
+
+          if not (raw_matches and sign_reversal_holds):
+              sys.exit(1)
+          PYEOF
+
+      - name: Upload FIX-D2 output (per-seed + summary + run log)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: defi-attribution-v2-5seed
+          path: |
+            defi_attribution_v2_output/fix_defi_attribution_v2_seed*.json
+            defi_attribution_v2_output/fix_defi_attribution_v2_summary.json
+            defi_attribution_v2_output/run.log
+          retention-days: 90
