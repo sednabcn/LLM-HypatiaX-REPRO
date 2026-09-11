@@ -1,0 +1,124 @@
+seed 42: n=74  corrected_success=0.5946  llm_baseline=0.5946  raw_mean_R2=0.8781  corrected_mean_R2=-2.0717  fabricated=23
+    - Loan-to-Value (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-126483.34961553587 success_flag=False
+    - Validator commission adjusted (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Slashing penalty (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Leveraged position notional (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Long (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Short (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Capital efficiency (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Price slippage percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-2.783771380269757 success_flag=False
+    - Utilization rate of DeFi (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Impermanent loss percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Collateral ratio (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-29635.242464800056 success_flag=False
+    - Staking reward for fixed lock-up (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-0.924564507112539 success_flag=False
+    - Concentrated liquidity position width (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-16.93147010462477 success_flag=False
+    - Component ES (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-0.27487819224534094 success_flag=False
+    - Impermanent loss in constant product (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged long (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged short (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Maximum safe leverage (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Required collateral (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Portfolio Expected Shortfall for correlated (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Call option intrinsic (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-1.304238658908353 success_flag=False
+    - Simple options moneyness (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-50.56738315160776 success_flag=False
+    - Uniswap V3 virtual (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-13444298.719919054 success_flag=False
+seed 99: n=74  corrected_success=0.5541  llm_baseline=0.5541  raw_mean_R2=0.9100  corrected_mean_R2=-2.2541  fabricated=26
+    - Partial liquidation amount (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-678653.9818036911 success_flag=False
+    - Simple Staking APY (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Loan-to-Value (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-126483.34961553587 success_flag=False
+    - Spot price from AMM (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-32651.673207336327 success_flag=False
+    - Slashing penalty (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Reserve ratio (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Long (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Short (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Compounding Staking Returns (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-0.24060222664688258 success_flag=False
+    - Capital efficiency (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Price slippage percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-3.2163199848499815 success_flag=False
+    - Utilization rate of DeFi (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Impermanent loss percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-2.179789705070522 success_flag=False
+    - Collateral ratio (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-29635.242464800056 success_flag=False
+    - Staking reward for fixed lock-up (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-0.924564507112539 success_flag=False
+    - Concentrated liquidity position width (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-16.93147010462477 success_flag=False
+    - Component ES (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-0.27487819224534094 success_flag=False
+    - Impermanent loss in constant product (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged long (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged short (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Maximum safe leverage (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Required collateral (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Portfolio Expected Shortfall for correlated (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Call option intrinsic (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-1.304238658908353 success_flag=False
+    - Simple options moneyness (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-50.56738315160776 success_flag=False
+    - Uniswap V3 virtual (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-13444298.719919054 success_flag=False
+seed 123: n=74  corrected_success=0.5811  llm_baseline=0.5946  raw_mean_R2=0.9135  corrected_mean_R2=-2.3076  fabricated=24
+    - Loan-to-Value (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-126483.34961553587 success_flag=False
+    - Spot price from AMM (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Long position unrealized PnL (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Cross-margin available balance (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Reserve ratio (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Long (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Short (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Effective Leverage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Capital efficiency (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Price slippage percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-2.783771380269757 success_flag=False
+    - Utilization rate of DeFi (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Impermanent loss percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Collateral ratio (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Staking reward for fixed lock-up (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-117.62166618719337 success_flag=False
+    - Concentrated liquidity position width (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-1950.4425055097763 success_flag=False
+    - Component ES (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-0.27487819224534094 success_flag=False
+    - Liquidation price for leveraged long (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged short (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Maximum safe leverage (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Required collateral (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Portfolio Expected Shortfall for correlated (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Call option intrinsic (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-1.304238658908353 success_flag=False
+    - Simple options moneyness (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-50.56738315160776 success_flag=False
+    - Uniswap V3 virtual (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-13444298.71991906 success_flag=False
+seed 777: n=74  corrected_success=0.6216  llm_baseline=0.6216  raw_mean_R2=0.8975  corrected_mean_R2=-1.6709  fabricated=21
+    - Loan-to-Value (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-126483.34961553587 success_flag=False
+    - LP share percentage (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-4.453672799335975 success_flag=False
+    - Slashing penalty (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Long (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Short (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Compounding Staking Returns (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-0.24060222664688258 success_flag=False
+    - Capital efficiency (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Price slippage percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-2.783771380269757 success_flag=False
+    - Utilization rate of DeFi (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Impermanent loss percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Collateral ratio (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-29635.242464800056 success_flag=False
+    - Concentrated liquidity position width (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-16.93147010462477 success_flag=False
+    - Component ES (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-0.27487819224534094 success_flag=False
+    - Liquidation price for leveraged long (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged short (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Maximum safe leverage (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Required collateral (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Portfolio Expected Shortfall for correlated (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Call option intrinsic (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-1.304238658908353 success_flag=False
+    - Simple options moneyness (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-50.56738315160776 success_flag=False
+    - Uniswap V3 virtual (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-13444298.719919054 success_flag=False
+seed 2024: n=74  corrected_success=0.6081  llm_baseline=0.6216  raw_mean_R2=0.8957  corrected_mean_R2=-2.0282  fabricated=22
+    - Loan-to-Value (easy): hybrid=1.0000 via llm, pure_llm.test_r2=-126483.34961553587 success_flag=False
+    - Spot price from AMM (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Validator commission adjusted (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Slashing penalty (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Reserve ratio (easy): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Long (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation Price Short (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Capital efficiency (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Price slippage percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-2.783771380269757 success_flag=False
+    - Utilization rate of DeFi (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Impermanent loss percentage (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Collateral ratio (medium): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Concentrated liquidity position width (medium): hybrid=1.0000 via llm, pure_llm.test_r2=-16.93147010462477 success_flag=False
+    - Component ES (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-0.27487819224534094 success_flag=False
+    - Liquidation price for leveraged long (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Liquidation price for leveraged short (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Maximum safe leverage (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Required collateral (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Portfolio Expected Shortfall for correlated (hard): hybrid=1.0000 via llm, pure_llm.test_r2=nan success_flag=False
+    - Call option intrinsic (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-1.304238658908353 success_flag=False
+    - Simple options moneyness (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-50.56738315160776 success_flag=False
+    - Uniswap V3 virtual (hard): hybrid=1.0000 via llm, pure_llm.test_r2=-13444298.719919054 success_flag=False
+
+5-seed average: corrected_success=0.5919  llm_baseline=0.5973  raw_mean_R2=0.8989  corrected_mean_R2=-2.0665
+Summary written to defi_attribution_v2_output/fix_defi_attribution_v2_summary.json

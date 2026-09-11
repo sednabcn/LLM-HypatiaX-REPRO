@@ -1,0 +1,35 @@
+{
+  "paper_mean_r2": 0.8721,
+  "tolerance": 0.01,
+  "avg_mean_r2_raw": 0.8989430475811215,
+  "avg_mean_r2_corrected": -2.066491508455697,
+  "raw_matches_paper": false,
+  "corrected_matches_paper": false,
+  "sign_reversal_holds": false,
+  "seeds_scored": [
+    42,
+    99,
+    123,
+    777,
+    2024
+  ],
+  "task_counts_per_seed": {
+    "123": 74,
+    "2024": 74,
+    "42": 74,
+    "777": 74,
+    "99": 74
+  },
+  "aggregation_check": {
+    "mean_of_per_seed_means_raw": 0.8989430475811215,
+    "micro_average_raw": 0.8989430475811216,
+    "diverge": false,
+    "note": "A and B can only diverge if a seed file has other than 74 task records; identical values mean aggregation choice does not explain any gap to the paper's printed figure."
+  },
+  "verdict": "SIGN_REVERSAL_FAILS",
+  "verdict_text": "Attribution-corrected Mean R2 (-2.0665) is negative on the 5-seed average, undercutting the paper's claimed sign reversal (negative -> +0.8721). Raw Mean R2 was outside tolerance of the printed figure, but the sign-reversal claim itself does not survive attribution correction.",
+  "defi_seed_dir": "hypatiax/data/results/comparison_results/noise-noiseless/15_pca",
+  "filename_pattern": "hypatiax_defi_benchmark_pca_results_seed%s.json",
+  "workflow_run_url": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/34598749978",
+  "git_sha": "0b391627b47321a3d8d4f37cec2c67f659a6cacd"
+}
