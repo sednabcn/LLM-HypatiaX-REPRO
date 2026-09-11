@@ -628,8 +628,7 @@ Task: Derive the mathematical formula for the following quantity.
 
 Description : {description}
 Domain      : {domain}
-Variables   : {var_list}
-Ground truth: {metadata.get('ground_truth', 'not provided')}{constants_block}
+Variables   : {var_list}{constants_block}
 Return ONLY a Python function called `formula` that accepts the variables as
 positional numpy-array arguments (in the order listed) and returns a numpy array.
 Use numpy (imported as np) for any mathematical operations.
