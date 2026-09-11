@@ -8,9 +8,13 @@
 #          instability        (STEP 4a - Instability Index S10.9, run_instability_suite.py)
 #          exp1_pca           (C5c-1 - DeFi all-74 with PCA 40/60 split)
 #          exp1b_pca          (C5c-2 - DeFi portfolio seed sweep with PCA 40/60)
+#          exp1c_pca          (ADD-exp1c_pca - v4 validation-selected hybrid DeFi
+#                              seed sweep, PCA 40/60 split; PCA counterpart of
+#                              exp1c, mirrors exp1_pca's dedicated-output-dir /
+#                              disclosure / summary / fingerprint-scan structure)
 #          exp2_feynman_pca   (C5c-0 - Feynman PCA 40/60, was ci_runner_disclosure.yml)
 #
-#  PCA experiments (exp1_pca, exp1b_pca, exp2_feynman_pca):
+#  PCA experiments (exp1_pca, exp1b_pca, exp1c_pca, exp2_feynman_pca):
 #    Formerly in ci_runner_disclosure.yml (now removed from pipeline).
 #    These experiments run via run_all.sh (matching all other experiments)
 #    then validate via three integrity gates:
@@ -102,6 +106,7 @@ on:
           - exp1_five
           - exp1_pca
           - exp1b_pca
+          - exp1c_pca
           - exp2_feynman_pca
           - exp2_feynman
           - exp2_feynman_extrap
@@ -308,7 +313,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca \
+          VALID_IDS="exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -387,7 +392,7 @@ jobs:
           EXP: ${{ github.event.inputs.experiment }}
         run: |
           set -euo pipefail
-          if [[ "$EXP" == "exp1_pca" || "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
+          if [[ "$EXP" == "exp1_pca" || "$EXP" == "exp1b_pca" || "$EXP" == "exp1c_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
@@ -3425,9 +3430,12 @@ jobs:
 #    pca_run_exp2_feynman  ─┐  parallel
 #    pca_run_exp1          ─┤  parallel
 #    pca_run_exp1b           │  depends on pca_run_exp1
+#    pca_run_exp1c           │  depends on pca_run_exp1b (sequencing only —
+#                             │  exp1c_pca writes its own exp1c_pca/ dir and
+#                             │  does not read exp1b_pca's output)
 #                          ─┘
-#  All three: if: pca_runner.outputs.is_pca == 'true'
-#  Gates A/B/C depend on all three and fire with if: always()
+#  All four: if: pca_runner.outputs.is_pca == 'true'
+#  Gates A/B/C depend on all four and fire with if: always()
 # ==============================================================================
 
   # ── C5c-0: exp2_feynman_pca (Feynman PCA 40/60) ────────────────────────────
@@ -3973,6 +3981,180 @@ jobs:
             fi
           fi
 
+  # ── C5c-3: exp1c_pca (v4 validation-selected hybrid DeFi seed sweep, PCA 40/60) ──
+  # PCA counterpart of exp1c — mirrors exp1_pca's dedicated-output-dir /
+  # disclosure / summary / fingerprint-scan structure (see run_all.sh's
+  # exp1c_pca step for the full rationale). Runs after pca_run_exp1b in the
+  # job chain purely for sequencing / resource-contention reasons — it does
+  # not read exp1b_pca's output and writes to its own exp1c_pca/ directory,
+  # so it does not depend on exp1b_pca's results being correct.
+  pca_run_exp1c:
+    name: "C5c-3 · Run exp1c_pca (v4 validation-selected hybrid, PCA 40/60)"
+    needs: [pca_runner, pca_run_exp1b]
+    if: needs.pca_runner.outputs.is_pca == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    outputs:
+      already_done: ${{ steps.check_exp1c.outputs.already_done }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Check if exp1c_pca results already exist
+        id: check_exp1c
+        env:
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          EXP: ${{ github.event.inputs.experiment }}
+        run: |
+          if [[ "$EXP" != "exp1c_pca" ]]; then
+            echo "already_done=true" >> "$GITHUB_OUTPUT"
+            echo "[skip] Not exp1c_pca — skipping this job."
+            exit 0
+          fi
+          EXP1C_PCA_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca"
+          if [ -d "${EXP1C_PCA_DIR}" ] && [ -n "$(ls -A "${EXP1C_PCA_DIR}"/*.json 2>/dev/null)" ]; then
+            echo "already_done=true" >> "$GITHUB_OUTPUT"
+            echo "[skip] Results already present in ${EXP1C_PCA_DIR}."
+          else
+            echo "already_done=false" >> "$GITHUB_OUTPUT"
+            echo "[run] No results found in ${EXP1C_PCA_DIR} — will run."
+          fi
+
+      - name: Set up Python
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION || '3.12' }}
+
+      # FIX (Bug #1, §10.7 investigation): same missing pint + Julia setup
+      # as exp1_pca / exp1b_pca / exp2_feynman_pca above — same root cause.
+      - name: Set up Julia 1.11
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        run: |
+          pip install --upgrade pip
+          if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
+          # FIX: anthropic + torch required by hypatiax_defi_benchmark_v4_pca.py.
+          # python-dotenv for .env loading; psutil for subprocess worker.
+          pip install numpy scipy scikit-learn pysr juliacall pint \
+              anthropic torch --index-url https://download.pytorch.org/whl/cpu \
+              python-dotenv psutil
+
+      - name: Install Julia / SymbolicRegression
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        run: |
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Precompile Julia / SymbolicRegression
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+
+          warmup = """
+          import numpy as np
+          import pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          model = pysr.PySRRegressor(
+              niterations=5,
+              populations=1,
+              verbosity=0,
+              progress=False,
+              tempdir="/tmp/pysr_warmup",
+          )
+          model.fit(X, y)
+          print("Julia/PySR precompile warmup OK")
+          """
+          result = subprocess.run(
+              [sys.executable, "-c", warmup],
+              timeout=300,
+              capture_output=True,
+              text=True,
+          )
+          print(result.stdout or "")
+          if result.returncode != 0:
+              print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
+              print(result.stderr[-3000:] if result.stderr else "(no stderr)")
+          PYEOF
+
+      - name: Run exp1c_pca via run_all.sh
+        if: steps.check_exp1c.outputs.already_done != 'true'
+        env:
+          RESULTS_DIR:       ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+          FEYNMAN_SAMPLES:   ${{ github.event.inputs.n_samples || '200' }}
+          DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
+          JOB_DEADLINE:      "19800"
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ "${DRY_RUN}" == "true" ]]; then
+            echo "[dry-run] Would execute: bash run_all.sh --step exp1c_pca"
+            exit 0
+          fi
+          bash run_all.sh --step exp1c_pca
+
+      # FIX (CI-PCA-1): see identical fix on exp1_pca/exp1b_pca's commit steps
+      # above — same missing always(), same silent-loss-on-timeout risk.
+      - name: Commit and push results
+        if: |
+          always() &&
+          github.event.inputs.dry_run != 'true' &&
+          steps.check_exp1c.outputs.already_done != 'true'
+        env:
+          RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          EXP1C_PCA_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca"
+          git add "${EXP1C_PCA_DIR}"/ 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "ci: exp1c_pca results (v4 validation-selected hybrid, PCA 40/60) [skip ci]"
+            # FIX: see exp1_pca/exp1b_pca steps above — stash unstaged changes
+            # before each rebase retry, and only report success if a push
+            # actually went through.
+            PUSHED=false
+            for i in 1 2 3; do
+              git stash --include-untracked --quiet || true
+              if git pull --rebase origin "${{ github.ref_name }}" && \
+                 git push origin HEAD:"${{ github.ref_name }}"; then
+                git stash pop --quiet 2>/dev/null || true
+                PUSHED=true
+                break
+              fi
+              git stash pop --quiet 2>/dev/null || true
+              sleep 5
+            done
+            if [[ "${PUSHED}" == "true" ]]; then
+              echo "Results committed and pushed."
+            else
+              echo "::error::Failed to push exp1c_pca results after 3 attempts."
+              exit 1
+            fi
+          fi
+
 # ==============================================================================
 #  JOB 3 - consolidate  [DISABLED]
 #
@@ -4011,7 +4193,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   gate_a_split_protocol_test:
     name: "Gate A: split_protocol_test"
-    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b]
+    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b, pca_run_exp1c]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: always() && needs.pca_run_exp2_feynman.result != 'skipped'
@@ -4233,7 +4415,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   gate_b_protocol_parity_test:
     name: "Gate B: protocol_parity_test"
-    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b]
+    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b, pca_run_exp1c]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: always() && needs.pca_run_exp2_feynman.result != 'skipped'
@@ -4359,6 +4541,7 @@ jobs:
           for subdir, label in (
               ("comparison_results/feynman-tests/exp2_pca_4060",                   "exp2_feynman_pca_4060"),
               ("comparison_results/noise-noiseless/noiseless/defi_pca",            "exp1_pca DeFi"),
+              ("comparison_results/noise-noiseless/exp1c_pca",                     "exp1c_pca DeFi (v4 hybrid)"),
           ):
               disc = OUT_BASE / subdir / "split_protocol_disclosure.json"
               if disc.exists():
@@ -4424,7 +4607,7 @@ jobs:
   # ────────────────────────────────────────────────────────────────────────────
   gate_c_baseline_lock_test:
     name: "Gate C: baseline_lock_test"
-    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b]
+    needs: [pca_run_exp2_feynman, pca_run_exp1, pca_run_exp1b, pca_run_exp1c]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: always() && needs.pca_run_exp2_feynman.result != 'skipped'

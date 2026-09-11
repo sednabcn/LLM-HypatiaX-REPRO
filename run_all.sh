@@ -419,7 +419,7 @@ DRY_RUN=false
 # generation is fully disabled across this pipeline); audit_figures_tables retained
 # in name only as a no-op passthrough (see its definition) so downstream step
 # numbering/scripts that reference it by name don't break.
-_STEP_ORDER="env_check exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -1509,6 +1509,240 @@ PYEOF_FINGERPRINT_1B
     echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
   fi
   echo '=== end exp1b_pca ==='
+"
+
+# ── STEP 2d: exp1c_pca ──────────────────────────────────────────────────────────
+# PCA counterpart of exp1c (v4 validation-selected hybrid DeFi seed sweep),
+# exactly analogous to how exp1_pca is the PCA counterpart of exp1. Runs
+# hypatiax_defi_benchmark_v4_pca.py — a direct PCA-split derivative of
+# hypatiax_defi_benchmark_v4.py (see that script's own docstring) — across
+# the same 5-seed sweep and full 74-case catalogue as exp1c (no
+# DEFI_TASK_FILTER), so the paired v4-vs-v3c comparison introduced by exp1c
+# has a PCA-split counterpart, the same way exp1_pca/exp1b_pca are the
+# PCA-split counterparts of exp1/exp1b.
+#
+# Unlike exp1c (which wraps hypatiax_defi_benchmark_v4.py — a script with no
+# --output-dir flag, so exp1c has to mv loose outputs into place after the
+# fact): hypatiax_defi_benchmark_v4_pca.py DOES support --output-dir, so this
+# step follows exp1_pca's simpler pattern — point --output-dir straight at
+# the destination and skip the move dance entirely.
+#
+# Also unlike exp1_pca/exp1b_pca's underlying hypatiax_defi_benchmark_pca.py
+# (which does not write its own split_protocol_disclosure.json, so run_all.sh
+# writes one manually for those two steps): hypatiax_defi_benchmark_v4_pca.py
+# writes split_protocol_disclosure.json itself at the end of run_benchmark(),
+# already including random_split_used, so no manual disclosure write is
+# needed here — see the verification block below, which just confirms the
+# script's own file landed.
+#
+# NOTE ON OUTPUT NAMES: hypatiax_defi_benchmark_v4_pca.py's own module-level
+# output paths are literally named hypatiax_defi_benchmark_pca_*.json /
+# hypatiax_defi_benchmark_pca_pooled_seed_report.json — IDENTICAL basenames
+# to hypatiax_defi_benchmark_pca.py's output (the script exp1_pca/exp1b_pca
+# use). This is harmless ONLY because --output-dir below points at a
+# dedicated exp1c_pca/ directory that exp1_pca/exp1b_pca never write to.
+# Do NOT repoint this step's --output-dir at defi_pca/ or 15_pca/, and do not
+# point mean_r2_by_seed.py at more than one of defi_pca/, 15_pca/, exp1c_pca/
+# in the same invocation — see the updated header note in that script.
+#
+# Output directory: comparison_results/noise-noiseless/exp1c_pca/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1c_pca
+# ─────────────────────────────────────────────────────────────────────────────
+run exp1c_pca "PCA counterpart of exp1c: v4 validation-selected hybrid DeFi seed sweep, PCA 40/60 split" bash -c "
+  cd '${REPO_ROOT}'
+  _EXP1C_PCA_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca'
+  mkdir -p \"\${_EXP1C_PCA_DIR}\"
+
+  # FIX-exp1c_pca-SEED-SHARD: mirrors FIX-exp1b-SEED-SHARD / exp1c's own
+  # shard-seed extraction. Distinct task-ID prefix ('v4pca_seed<N>') so this
+  # step's checkpoint/shard state never collides with exp1c's 'v4_seed<N>' or
+  # exp1b_pca's 'portfolio_seed<N>' IDs. Falls back to the full default seed
+  # list for local/standalone runs — also what the current CI job does (it
+  # runs the full sweep in one invocation, no shard matrix, mirroring
+  # exp1b_pca's CI job).
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^v4pca_seed[0-9]+$' | sed 's/^v4pca_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1c_pca] No v4pca_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1c_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
+  # Full 74-case catalogue (no DEFI_TASK_FILTER), same as exp1c — must cover
+  # the identical case set as exp1c/exp1b_pca for the paired comparison to be
+  # valid. --force-fresh guarantees fresh results even when the script is
+  # invoked directly, bypassing this shell wrapper.
+  echo '[exp1c_pca] Running hypatiax_defi_benchmark_v4_pca.py (v4 validation-selected hybrid, PCA 40/60 split)'
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4_pca.py' \\
+      --output-dir \"\${_EXP1C_PCA_DIR}\" \\
+      --force-fresh \\
+      2>&1 | tee '${RESULTS_DIR}/exp1c_pca_run.log'
+
+  # split_protocol_disclosure.json is written by the script itself (see note
+  # in the header comment above) — no manual write needed here, unlike
+  # exp1_pca/exp1b_pca.
+
+  # FIX-C5c-3-mirror: exp1c_pca_summary.json, mirroring exp1b_pca_summary.json
+  # (per-seed breakdown, since this is a seed sweep like exp1b_pca, not a
+  # single run like exp1_pca). Uses results.hybrid.test_r2, same
+  # threshold/structure as exp1_pca/exp1b_pca.
+  echo '[exp1c_pca] Computing exp1c_pca_summary.json...'
+  python3 - <<'PYEOF_SUMMARY_1C_PCA'
+import json, pathlib, datetime
+from collections import defaultdict
+
+EXP1C_PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca')
+SUMMARY       = EXP1C_PCA_DIR / 'exp1c_pca_summary.json'
+THRESHOLD     = 0.999999
+
+n_pass = n_total = 0
+source_files = []
+per_seed = defaultdict(lambda: {'n_pass': 0, 'n_total': 0})
+seen_case_seed = set()  # dedup: keep one record per (equation_id, seed) across shard files
+
+for fp in sorted(EXP1C_PCA_DIR.glob('*.json')) if EXP1C_PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline', 'pooled_seed_report')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    source_files.append(fp.name)
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for case in cases:
+        if not isinstance(case, dict):
+            continue
+        seed = case.get('seed')
+        key = (case.get('equation_id'), seed)
+        if key in seen_case_seed:
+            continue  # same (case, seed) may appear in more than one shard file
+        seen_case_seed.add(key)
+
+        hybrid = case.get('results', {}).get('hybrid', {})
+        r2 = hybrid.get('test_r2')
+        if r2 is None:
+            for k in ('r2', 'r2_test', 'best_r2', 'R2'):
+                v = case.get(k)
+                if v is not None:
+                    r2 = v
+                    break
+        if r2 is None:
+            continue
+        try:
+            r2 = float(r2)
+        except (TypeError, ValueError):
+            continue
+        if r2 > 1.01:
+            continue
+
+        n_total += 1
+        per_seed[seed]['n_total'] += 1
+        if r2 >= THRESHOLD:
+            n_pass += 1
+            per_seed[seed]['n_pass'] += 1
+
+seeds_observed = sorted([s for s in per_seed if s is not None])
+per_seed_out = {
+    str(s): {
+        'n_pass':     v['n_pass'],
+        'n_total':    v['n_total'],
+        'solve_rate': (v['n_pass'] / v['n_total']) if v['n_total'] > 0 else None,
+    }
+    for s, v in sorted(per_seed.items(), key=lambda kv: (kv[0] is None, kv[0]))
+}
+
+summary = {
+    'fixc3_step':       'exp1c_pca',
+    'description':      'v4 validation-selected hybrid DeFi PCA seed-sweep result — PCA-directed 40/60 split (PCA counterpart of exp1c)',
+    'split_protocol':   'pca_40_60',
+    'test_size':        0.6,
+    'train_size':       0.4,
+    'script':           'hypatiax_defi_benchmark_v4_pca.py',
+    'n_pass':           n_pass,
+    'n_total':          n_total,
+    'solve_rate':       (n_pass / n_total) if n_total > 0 else None,
+    'seeds_observed':   seeds_observed,
+    'n_seeds_observed': len(seeds_observed),
+    'per_seed':         per_seed_out,
+    'source_files':     source_files[:20],
+    'timestamp':        datetime.datetime.now(datetime.timezone.utc).isoformat(),
+}
+SUMMARY.write_text(json.dumps(summary, indent=2))
+rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
+print(f'  [exp1c_pca] DeFi PCA v4 seed-sweep solve rate: {rate_str} → exp1c_pca_summary.json')
+print(f'  [exp1c_pca] Seeds observed: {seeds_observed}')
+if n_total == 0:
+    print('  [WARN]  No results in exp1c_pca/ yet — rerun after benchmark completes.')
+if len(seeds_observed) < 2:
+    print(f'  [WARN]  Only {len(seeds_observed)} distinct seed(s) observed in exp1c_pca/ — '
+          f'this may be a single shard, an incomplete sweep, or a local single-seed run.')
+PYEOF_SUMMARY_1C_PCA
+
+  # FIX-NN-FINGERPRINT: same fingerprint scan as exp1_pca/exp1b_pca — run
+  # here too since exp1c_pca exercises v4's validation-selected hybrid
+  # routing through its own dedicated dir/schema; a regression could show up
+  # here without showing up in exp1_pca/exp1b_pca, or vice versa.
+  echo '[exp1c_pca] Scanning for NN feature-count-mismatch fingerprint...'
+  python3 - <<'PYEOF_FINGERPRINT_1C_PCA'
+import json, math, pathlib
+
+EXP1C_PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca')
+hits, n_scanned = [], 0
+for fp in sorted(EXP1C_PCA_DIR.glob('*.json')) if EXP1C_PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline', 'pooled_seed_report')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for c in cases:
+        if not isinstance(c, dict):
+            continue
+        n_scanned += 1
+        nn  = c.get('results', {}).get('neural_network', {})
+        err = nn.get('error', '') or ''
+        tr2 = nn.get('test_r2')
+        is_nan = tr2 is None or (isinstance(tr2, float) and math.isnan(tr2))
+        if 'StandardScaler is expecting' in err or 'features, but' in err or is_nan:
+            hits.append((c.get('equation_id'), c.get('seed'), err or '(nan, no error string)'))
+
+print(f'  [exp1c_pca] Scanned {n_scanned} record(s) for NN feature-count-mismatch fingerprint')
+print(f'  [exp1c_pca] Records matching fingerprint: {len(hits)}')
+for h in hits[:20]:
+    print('   ', h)
+if hits:
+    print('  WARNING: exp1c_pca NN feature-count-mismatch fingerprint detected — '
+          'see hypatiax_defi_benchmark_v4_pca.py _compute_augment_plan/_apply_augment_plan.')
+PYEOF_FINGERPRINT_1C_PCA
+
+  # Verification
+  echo '=== exp1c_pca verification ==='
+  find \"\${_EXP1C_PCA_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
+  _COUNT=\$(find \"\${_EXP1C_PCA_DIR}\" -type f 2>/dev/null | wc -l)
+  _NDISC=\$(find \"\${_EXP1C_PCA_DIR}\" -name 'split_protocol_disclosure.json' 2>/dev/null | wc -l)
+  _NSUMMARY=\$(find \"\${_EXP1C_PCA_DIR}\" -name 'exp1c_pca_summary.json' 2>/dev/null | wc -l)
+  _NPOOLED=\$(find \"\${_EXP1C_PCA_DIR}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_pca_pooled_seed_report.json' 2>/dev/null | wc -l)
+  echo \"Files produced: \${_COUNT}\"
+  echo \"  Disclosure file   : \${_NDISC} (split_protocol_disclosure.json)\"
+  echo \"  Summary file      : \${_NSUMMARY} (exp1c_pca_summary.json)\"
+  echo \"  Pooled seed report: \${_NPOOLED}\"
+  if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
+    echo 'WARNING: exp1c_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+  fi
+  if [[ \"\${_NDISC}\" -eq 0 ]]; then
+    echo 'WARNING: split_protocol_disclosure.json not found in exp1c_pca/ — Gate B will FAIL'
+  fi
+  if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
+    echo 'WARNING: exp1c_pca_summary.json not found — qualify/audit steps will not see the v4 DeFi PCA seed-sweep solve rate'
+  fi
+  if [[ \"\${_NPOOLED}\" -eq 0 ]]; then
+    echo 'NOTE: hypatiax_defi_benchmark_pca_pooled_seed_report.json not present — expected unless this run covered all five seeds in one invocation (e.g. local run, or the CI job which runs the full sweep in a single invocation).'
+  fi
+  echo '=== end exp1c_pca ==='
 "
 
 # ── STEP 3: extrap ────────────────────────────────────────────────────────────
