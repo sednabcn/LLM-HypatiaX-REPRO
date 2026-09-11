@@ -97,6 +97,7 @@ on:
         options:
           - exp1
           - exp1b
+          - exp1c
           - exp1_ablation
           - exp1_five
           - exp1_pca
@@ -145,7 +146,7 @@ on:
 
       # -- Sharding ----------------------------------------------------------
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -307,7 +308,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca \
+          VALID_IDS="exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -447,6 +448,22 @@ jobs:
               SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
+              ;;
+
+            # -- STEP 2c: v4 validation-selected hybrid DeFi seed sweep --------------
+            # ADD-exp1c (2026-09-11): new arm, added alongside (not instead of) the
+            # frozen v3c baseline in exp1b, per the v4 report's paired-comparison
+            # recommendation. Same 74-case catalogue, same five seeds as exp1b, but
+            # a separate script/output dir so the v3c baseline JSONs are never
+            # touched. hypatiax_defi_benchmark_v4.py mirrors v3c's DEFI_SEEDS env
+            # var / --resume / --cases / --report-only argparse surface, and (when
+            # all five seeds run in one invocation) additionally emits
+            # hypatiax_defi_benchmark_v4_pooled_seed_report.json.
+            exp1c)
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="comparison_results/noise-noiseless/exp1c_v4"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
@@ -789,6 +806,9 @@ jobs:
           EXP_SHARD_TABLE = {
               "exp1":               1,
               "exp1b":              5,
+              # exp1c: mirrors exp1b's one-seed-per-shard design (ADD-exp1c) —
+              # same 5-seed list, same shard-crash blast-radius rationale.
+              "exp1c":              5,
               "exp1_ablation":      4,
               # exp1_pca / exp1b_pca intentionally NOT listed here yet — see the
               # matching gap (and hard-fail) in the `registry` dict below for why.
@@ -931,6 +951,11 @@ jobs:
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
+              # exp1c (ADD-exp1c): v4 hybrid seed sweep, same seed set as exp1b.
+              # Distinct task-ID prefix ("v4_seed<N>") so exp1c's checkpoint/
+              # shard state never collides with exp1b's "portfolio_seed<N>" IDs
+              # even though both iterate the same SEEDS list.
+              "exp1c":             [f"v4_seed{s}" for s in SEEDS],
               # exp1_ablation: Core-15 LLM ablation (PySR-only vs HypatiaX, §10.6).
               # 5 domain slugs split 2/1/1/1 across 4 shards (block-partition):
               #   shard 0: chemistry + defi_risk  → 6 equations  (~2.5 h)
@@ -1789,7 +1814,9 @@ jobs:
               #          (one file covering all 11 domains for a single sample
               #          size).  Task IDs are "sc_n{N}__{domain}"; same issue.
               # exp1/exp1b: one aggregated JSON for all tasks (see FIX-G5-EXP1).
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
+              # exp1c (ADD-exp1c): mirrors exp1b's aggregated-JSON shape, just for
+              # hypatiax_defi_benchmark_v4.py's output names / "v4_seed" task IDs.
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
               # FIX-SHARD-IDS-SCOPE: assign shard_ids BEFORE the if/else so that
               # the else branch (non-combined experiments) can reference it without
               # a NameError.  Previously shard_ids was only assigned inside the
@@ -1875,6 +1902,31 @@ jobs:
                                             f"{PVA_DIR}/*.csv",
                                             f"{PVA_DIR}/**/*.json",
                                             f"{PVA_DIR}/**/*.csv"]
+                  elif EXP == "exp1c":
+                      # ADD-exp1c: hypatiax_defi_benchmark_v4.py is a fresh script,
+                      # not a v3c fork, so no "wrong stray subdir" history to work
+                      # around — just glob its own result/pooled-report names,
+                      # scoped to this shard's seed(s) where the filename carries
+                      # one, plus the pooled report (only ever produced by a
+                      # single-invocation, all-5-seed run; harmless no-op glob on
+                      # sharded runs where it doesn't exist).
+                      shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
+                      seeds_this_shard = [
+                          tid[len("v4_seed"):] for tid in shard_ids_local
+                      ]
+                      combined_globs = [
+                          "hypatiax_defi_benchmark_v4_pooled_seed_report.json",
+                      ]
+                      for s in seeds_this_shard:
+                          combined_globs += [
+                              f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
+                              f"*defi_v4_*seed{s}*.json",
+                          ]
+                      if not seeds_this_shard:
+                          combined_globs += [
+                              "*hypatiax_defi_benchmark_v4*results*.json",
+                              "*defi_v4_*.json",
+                          ]
                   else:
                       # exp1: single shard — broad globs are safe.
                       combined_globs = [
@@ -1885,7 +1937,7 @@ jobs:
                   for pat in combined_globs:
                       # recursive=True is required for the exp1b "**" patterns
                       # above; it is a no-op for patterns without "**" so this
-                      # does not change behavior for suppB/suppB_sc/exp1.
+                      # does not change behavior for suppB/suppB_sc/exp1/exp1c.
                       for src in glob.glob(pat, recursive=True):
                           dst = os.path.join(result_dir, os.path.basename(src))
                           if os.path.abspath(src) == os.path.abspath(dst):
@@ -2222,6 +2274,47 @@ jobs:
             exit 1
           fi
           echo "  OK exp1b output files present in canonical path."
+
+      # -- Verify exp1c output files exist before upload -------------------------
+      # ADD-exp1c: mirrors the exp1b verification step above, for the v4 arm.
+      # hypatiax_defi_benchmark_v4.py writes into
+      #   hypatiax/data/results/comparison_results/noise-noiseless/exp1c_v4/
+      # after move_matching, plus (on an all-5-seed single invocation) the
+      # pooled report hypatiax_defi_benchmark_v4_pooled_seed_report.json.
+      - name: Verify exp1c output files exist
+        if: ${{ needs.plan.outputs.exp_id == 'exp1c' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
+        run: |
+          set -euo pipefail
+          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/exp1c_v4"
+          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | wc -l)
+          COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
+          COUNT_POOLED=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4_pooled_seed_report.json" 2>/dev/null | wc -l)
+          COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_DEFI + COUNT_POOLED ))
+          echo "=== exp1c output verification ==="
+          echo "  Target dir                                        : ${TARGET}"
+          echo "  hypatiax_defi_benchmark_v4*results*.json          : ${COUNT_BENCHMARK}"
+          echo "  defi_v4_*.json                                    : ${COUNT_DEFI}"
+          echo "  hypatiax_defi_benchmark_v4_pooled_seed_report.json: ${COUNT_POOLED}"
+          echo "  Total                                             : ${COUNT_TOTAL}"
+          echo "--- Directory listing ---"
+          find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
+            echo "::error::exp1c produced NO output files in '${TARGET}'."
+            echo "  Expected: hypatiax_defi_benchmark_v4*results*.json, defi_v4_*.json,"
+            echo "            or hypatiax_defi_benchmark_v4_pooled_seed_report.json"
+            echo "  The script may have written to a different path.  Check:"
+            echo "    1. 'exp1c post-run file scan' in the Run experiment tasks log"
+            echo "    2. 'Move results to RESULTS_DIR' step log for exp1c"
+            echo "  Also confirm RESULTS_DIR env was set to $(pwd)/${OUT_BASE} (absolute)."
+            exit 1
+          fi
+          # Note: the pooled report is only expected on a single-invocation
+          # all-5-seed run (e.g. local/standalone). On a sharded (one-seed-
+          # per-shard) CI dispatch, absence of the pooled report here is
+          # normal — it is not produced until all 5 per-seed shards have run.
+          echo "  OK exp1c output files present in canonical path."
 
       # -- Verify output files exist for ALL remaining experiments ------------
       # ITEM 4 (ALL EXPERIMENTS): ensures every experiment's result files land
@@ -2711,7 +2804,7 @@ jobs:
           #              sample_complexity_n{N}_*.json per shard (one sample
           #              size n, all 11 domains).  Task IDs "sc_n{N}__{domain}"
           #              have the same per-shard-combined-file property.
-          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
+          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
           search_dirs = [result_dir, "."]
 
           if EXP in COMBINED_OUTPUT_EXPS:
@@ -2798,6 +2891,23 @@ jobs:
                                         f"{PVA_DIR}/*.csv",
                                         f"{PVA_DIR}/**/*.json",
                                         f"{PVA_DIR}/**/*.csv"]
+              elif EXP == "exp1c":
+                  # ADD-exp1c: task IDs are "v4_seed{S}"; hypatiax_defi_benchmark_v4.py
+                  # has no legacy stray-subdir history, so match its own result/
+                  # pooled-report names directly. Pooled report glob is a harmless
+                  # no-op on sharded runs (only produced by an all-5-seed single run).
+                  seeds_this_shard = [tid[len("v4_seed"):] for tid in shard_ids]
+                  combined_globs = ["hypatiax_defi_benchmark_v4_pooled_seed_report.json"]
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
+                          f"*defi_v4_*seed{s}*.json",
+                      ]
+                  if not seeds_this_shard:
+                      combined_globs += [
+                          "*hypatiax_defi_benchmark_v4*results*.json",
+                          "*defi_v4_*.json",
+                      ]
               else:
                   # exp1: single shard — broad globs are safe (no concurrent shards).
                   combined_globs = [
@@ -2811,7 +2921,7 @@ jobs:
                       # recursive=True is required for the exp1b "**" patterns
                       # above (PVA_DIR); it is a no-op for patterns without "**"
                       # so this does not change matching behavior for
-                      # suppB/suppB_sc/exp1, which still effectively stay
+                      # suppB/suppB_sc/exp1/exp1c, which still effectively stay
                       # single-directory (non-recursive) matches.
                       hits = glob.glob(os.path.join(d, pat), recursive=True)
                       if hits:
@@ -3168,17 +3278,17 @@ jobs:
                 | grep -v '_checkpoint_shard[0-9].*\.json$' \
                 || true)
               if [[ -n "$OVERWRITTEN" ]]; then
-                # ISOLATION-GUARD: exp1b/exp1_ablation/exp3b/suppB/suppB_sc each carry
-                # a documented per-shard isolation suffix (HYPATIAX_NSHARDS_SUFFIX /
-                # _shard${SHARD_INDEX} tag — see run_all.sh STEP 2/8b/10/10b, and for
+                # ISOLATION-GUARD: exp1b/exp1c/exp1_ablation/exp3b/suppB/suppB_sc each
+                # carry a documented per-shard isolation suffix (HYPATIAX_NSHARDS_SUFFIX /
+                # _shard${SHARD_INDEX} tag — see run_all.sh STEP 2/2c/8b/10/10b, and for
                 # exp1_ablation the "Preserve shard-specific exp1_ablation output" mv
                 # above) whose entire purpose is to make this overwrite impossible.
-                # For those five, a modified tracked file here means the suffix
+                # For those six, a modified tracked file here means the suffix
                 # mechanism itself failed (e.g. SHARD_INDEX missing/blank, or a code
                 # path that bypassed the rename) — that is a real bug, not an
                 # expected re-run overwrite, so it hard-fails instead of warning.
                 case "${EXP}" in
-                  exp1b|exp1_ablation|exp3b|suppB|suppB_sc)
+                  exp1b|exp1c|exp1_ablation|exp3b|suppB|suppB_sc)
                     echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
                     echo "  committed result file(s); the per-shard isolation suffix should have "
                     echo "  prevented this:"

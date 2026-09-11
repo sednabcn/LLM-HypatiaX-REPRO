@@ -117,6 +117,22 @@
 #   note fully closes once a seed-123 rerun is executed and its result JSON
 #   records "temperature" and "n_candidates" alongside the solve-rate.
 #
+# ADD-exp1c (2026-09-11): new v4 validation-selected hybrid DeFi seed sweep,
+#   added as a SEPARATE step alongside (not instead of) exp1b, per the v4
+#   report's recommendation. exp1b/exp1 keep invoking hypatiax_defi_
+#   benchmark_v3c.py completely unchanged — the frozen v3c baseline is
+#   preserved so v3c-vs-v4 stays a clean, paired comparison over the same
+#   74-case catalogue and the same five seeds (42,99,123,777,2024).
+#   exp1c invokes hypatiax_defi_benchmark_v4.py and writes to a separate
+#   results directory, results/comparison_results/noise-noiseless/exp1c_v4/,
+#   so it never overwrites the v3c JSONs. When run as a single invocation
+#   covering all five seeds (e.g. locally), hypatiax_defi_benchmark_v4.py
+#   additionally emits a pooled report,
+#   hypatiax_defi_benchmark_v4_pooled_seed_report.json. exp1c has also been
+#   added to the validate/qualify stages (see those steps below) and to
+#   ci_runner_repro.yml (VALID_IDS, SCRIPT/RESULT_SUBDIR case, shard table,
+#   task-ID registry, combined-output globs, output verification step).
+#
 # FIX-suppB_sc-NOISE0 (2026-08-04):
 #   — suppB_sc was setting NOISE_LEVEL='5.0' and never passing --noiseless,
 #     so the sample-complexity sweep silently ran at sigma=0.05 instead of
@@ -129,6 +145,8 @@
 #   env_check          → verify Python, PySR, API key
 #   exp1               → core extrapolation benchmark (Tab 9, 10, 15 · Fig 9, 10)
 #   exp1b              → DeFi seed sweep + portfolio variance (Tab 11-13 · Fig 11-13)
+#   exp1c              → v4 validation-selected hybrid DeFi seed sweep (ADD-exp1c;
+#                         paired comparison against the frozen exp1b/v3c baseline)
 #   extrap             → OOD extrapolation comparative (Tab 9 OOD columns)
 #   hybrid_all_domains → hybrid LLM+NN all-domains run (§10.9 hybrid table — one-shot)
 #   instability        → Instability Index analysis + 12 figures (§10.9 Regime A/B/C)
@@ -401,7 +419,7 @@ DRY_RUN=false
 # generation is fully disabled across this pipeline); audit_figures_tables retained
 # in name only as a no-op passthrough (see its definition) so downstream step
 # numbering/scripts that reference it by name don't break.
-_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -814,6 +832,124 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
       echo 'WARNING: exp1b generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
   elif [[ \"\${count}\" -eq 0 ]]; then
       echo 'NOTE: exp1b produced no files (step was skipped — SKIP_ALLOWED=true)'
+  fi
+"
+
+
+
+# ── STEP 2c: exp1c ────────────────────────────────────────────────────────────
+# ADD-exp1c: v4 validation-selected hybrid, run as a SEPARATE experiment
+# alongside the frozen exp1b/v3c baseline (not a replacement for it — see the
+# ADD-exp1c changelog entry at the top of this file). Structure mirrors exp1b
+# closely: same shard-aware seed extraction, same DEFI_SEEDS env-var / --resume
+# invocation surface, own results subdir so v3c JSONs are never touched.
+#
+# hypatiax_defi_benchmark_v4.py's documented usage is:
+#   DEFI_SEEDS=42,99,123,777,2024 python3 hypatiax_defi_benchmark_v4.py
+# which — like v3c — loops over every seed in DEFI_SEEDS inside a single
+# process invocation, and (only when that single invocation covers all five
+# seeds) additionally writes a pooled report:
+#   hypatiax_defi_benchmark_v4_pooled_seed_report.json
+# On a sharded CI dispatch (one seed per shard, mirroring exp1b's shard
+# table), each shard only ever sees its own seed, so the pooled report is
+# only produced by a local/standalone run with the full default seed list —
+# that is expected, not an error; see the pooled-report check in the
+# verification block below.
+run exp1c "v4 validation-selected hybrid DeFi seed sweep (paired vs exp1b/v3c baseline)" bash -c "
+  cd '${REPO_ROOT}'
+
+  # Mirrors FIX-exp1b-SEED-SHARD: pull this shard's seed(s) out of
+  # SHARD_IDS/TASK_IDS (task IDs 'v4_seed<N>', distinct from exp1b's
+  # 'portfolio_seed<N>' so the two experiments' checkpoint/shard state never
+  # collide even though both iterate the same 5-seed list). Falls back to the
+  # full default seed list for local/standalone runs.
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^v4_seed[0-9]+$' | sed 's/^v4_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1c] No v4_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1c] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
+  # Full 74-case catalogue, same as exp1b (no --cases filter) -- exp1c must
+  # cover the identical case set as the exp1b/v3c baseline for the paired
+  # comparison to be valid.
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+      --resume \
+      2>&1 | tee '${RESULTS_DIR}'/exp1c_run.log
+
+  # ── Move exp1c outputs → RESULTS_DIR ─────────────────────────────────────
+  # Same shard-index + seed-tag disambiguation as exp1b's move block (BUG A
+  # FIX / FIX-exp1b-SEEDTAG), applied to v4's own output names. Search both
+  # EXPERIMENTS_DIR and RESULTS_DIR root, mirroring FIX-exp1b-1/5, in case
+  # hypatiax_defi_benchmark_v4.py resolves its hardcoded output path the same
+  # way v3c does (relative to os.getcwd()).
+  _SHARD=\${SHARD_INDEX:-0}
+  _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
+
+  dest_exp1c='${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4'
+
+  mkdir -p \"\${dest_exp1c}\"
+
+  # Move the pooled report FIRST and WITHOUT a shard/seed suffix — it is a
+  # single, all-seed summary (not a per-shard/per-seed file), so it must not
+  # be renamed the way per-seed outputs are below. Only ever produced by a
+  # single invocation that covered every seed.
+  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_v4_pooled_seed_report.json' \
+    | while IFS= read -r src; do
+        [[ \"\$src\" == \"\${dest_exp1c}\"* ]] && continue
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\${dest_exp1c}/hypatiax_defi_benchmark_v4_pooled_seed_report.json\" || true
+        fi
+    done
+  done
+
+  # Move per-seed / per-run outputs, tagged by shard+seed (same disambiguation
+  # rationale as exp1b's move block: repeated runs must not silently overwrite
+  # each other in the repo).
+  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 \
+    \( \
+        -name 'defi_v4_*.json' \
+        -o -name 'hypatiax_defi_benchmark_v4*results*.json' \
+        -o -name 'hypatiax_defi_benchmark_v4*checkpoint*.json' \
+    \) | while IFS= read -r src; do
+
+        [[ \"\$src\" == \"\${dest_exp1c}\"* ]] && continue
+
+        fname=\$(basename \"\$src\")
+        stem=\"\${fname%.*}\"
+        ext=\"\${fname##*.}\"
+
+        dst=\"\${dest_exp1c}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
+
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\$dst\" || true
+        fi
+    done
+  done
+
+  # verification
+  echo '=== exp1c verification ==='
+
+  find \"\${dest_exp1c}\" -type f 2>/dev/null | sort
+
+  count=\$(find \"\${dest_exp1c}\" -type f 2>/dev/null | wc -l)
+  pooled_count=\$(find \"\${dest_exp1c}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_v4_pooled_seed_report.json' 2>/dev/null | wc -l)
+
+  echo \"Files produced: \${count}\"
+  echo \"Pooled seed report present: \${pooled_count}\"
+
+  if [[ \"\${count}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != \"true\" ]]; then
+      echo 'WARNING: exp1c generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+  elif [[ \"\${count}\" -eq 0 ]]; then
+      echo 'NOTE: exp1c produced no files (step was skipped — SKIP_ALLOWED=true)'
+  fi
+  if [[ \"\${pooled_count}\" -eq 0 ]]; then
+      echo 'NOTE: pooled_seed_report.json not present -- expected unless this run covered all five seeds in one invocation (e.g. local run, or the final shard of a sharded CI dispatch after all seeds have completed).'
   fi
 "
 
@@ -3363,6 +3499,30 @@ if os.path.isdir(pca4060_dir):
 else:
     print("  [SKIP] exp2_feynman_pca_4060: exp2_pca_4060 dir not found (step not yet run)")
 
+# --- exp1c: v4 validation-selected hybrid DeFi seed sweep (ADD-exp1c) ---
+# Separate arm from exp1b/v3c -- checked for output presence only (no fixed
+# paper-reported numeric target exists for this new comparison arm; its
+# scientific claim is established via the paired v3c-vs-v4 comparison
+# described in the v4 report, not a single hardcoded R^2).
+exp1c_dir = f"{RESULTS}/comparison_results/noise-noiseless/exp1c_v4"
+if os.path.isdir(exp1c_dir):
+    exp1c_jsons = (glob.glob(f"{exp1c_dir}/hypatiax_defi_benchmark_v4*results*.json") +
+                   glob.glob(f"{exp1c_dir}/defi_v4_*.json"))
+    ok_exp1c = bool(exp1c_jsons)
+    checks.append(("exp1c (v4) outputs present in exp1c_v4/", 1.0 if ok_exp1c else 0.0, 1.0, ok_exp1c))
+    _tag = "OK" if ok_exp1c else "FAIL"
+    print(f"  [{_tag}] exp1c: {len(exp1c_jsons)} JSON file(s) in exp1c_v4/")
+    # Pooled seed report is informational only, not a pass/fail check: it is
+    # only produced when all five seeds were run in a single invocation, so
+    # its absence on a sharded CI run (one seed per shard) is expected, not
+    # a failure -- see the exp1c step verification note in run_all.sh.
+    pooled_ok = os.path.isfile(f"{exp1c_dir}/hypatiax_defi_benchmark_v4_pooled_seed_report.json")
+    _tag = "OK" if pooled_ok else "INFO"
+    _msg = "present" if pooled_ok else "not present yet (expected until all five seeds have been run/merged)"
+    print(f"  [{_tag}] exp1c: pooled_seed_report.json {_msg}")
+else:
+    print("  [SKIP] exp1c: exp1c_v4 dir not found (exp1c not yet run)")
+
 # --- Summary ---
 total = len(checks); passed = sum(1 for item in checks if item[-1])
 print(f"\n=== Result: {passed}/{total} checks passed ===")
@@ -3531,6 +3691,10 @@ print("\n=== Phase 5b: 5-dimension per-experiment gate ===\n")
 EXPERIMENTS = {
     "exp1":                   RESULTS / "comparison_results/noise-noiseless/noiseless/defi",
     "exp1b":                  RESULTS / "comparison_results/noise-noiseless/15",
+    # ADD-exp1c: v4 validation-selected hybrid, separate arm from exp1b/v3c —
+    # own results dir so the 5-dimension gate checks it independently and
+    # never conflates its files with the frozen v3c baseline.
+    "exp1c":                  RESULTS / "comparison_results/noise-noiseless/exp1c_v4",
     # FIX-C3-QUALIFY: PCA-corrected DeFi runs added so the 5-dimension gate checks
     # the corrected split results, not just the legacy dirs.
     "exp1_pca":               RESULTS / "comparison_results/noise-noiseless/noiseless/defi_pca",
@@ -5279,6 +5443,7 @@ echo ""
 echo "  Cross-reference with paper:"
 echo "    Table 9          <- exp1              (core extrapolation)"
 echo "    Table 11         <- exp1b             (DeFi routing)"
+echo "    (n/a, new)       <- exp1c             (v4 validation-selected hybrid -- paired vs exp1b/v3c baseline, ADD-exp1c)"
 echo "    Table 17         <- exp2_feynman      (Feynman noisy)"
 echo "    Table 19         <- exp2              (five-system comparison)"
 echo "    Table 28         <- suppB             (noise sweep)"
@@ -5291,6 +5456,11 @@ echo ""
 echo "  Instability outputs (STEP 4a, numerical only — figure generation disabled):"
 echo "    ${RESULTS_DIR}/figures/instability_analysis.csv"
 echo "    ${RESULTS_DIR}/figures/instability_extrapolation.csv  (Stage 2, if benchmark JSON found)"
+echo ""
+echo "  exp1c / v4 outputs (ADD-exp1c, paired comparison vs frozen exp1b/v3c baseline):"
+echo "    ${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4/"
+echo "    ${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4/hypatiax_defi_benchmark_v4_pooled_seed_report.json"
+echo "        (pooled report present only when all five seeds ran in one invocation)"
 echo ""
 echo "  Paper audit outputs (STEPs 14-21):"
 echo "    ${RESULTS_DIR}/qualify_run.log          (numerical spot-check + 5-dim gate)"
