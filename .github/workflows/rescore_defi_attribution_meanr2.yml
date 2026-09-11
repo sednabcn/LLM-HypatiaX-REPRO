@@ -1,4 +1,4 @@
-name: Rescore DeFi hybrid-attribution-bug + Mean R2 (FIX-D2, all 5 seeds)
+name: Rescore DeFi hybrid-attribution-bug + Mean R2 (FIX-D2, all 5 seeds, self-contained)
 
 # Purpose: close the open Mean R2 gap flagged against this repo — the
 # +0.8721 Mean R2 figure in the results table / discussion (lines 1603,
@@ -6,32 +6,65 @@ name: Rescore DeFi hybrid-attribution-bug + Mean R2 (FIX-D2, all 5 seeds)
 # every other metric in that section (success rates, breakdown table, task
 # list), which all got [Correction: ...] notes.
 #
+# SELF-CONTAINED: earlier versions of this workflow required
+# fix_defi_attribution_bug_v2.py (FIX-D2) to already be committed in the
+# target repo at `script_path` (default AUDIT/fix_defi_attribution_bug_v2.py)
+# and would hard-fail with "not found in repo" if it wasn't. That's no
+# longer necessary for the default path: this workflow now writes a known-
+# good copy of FIX-D2 into the checkout itself before running it, so the
+# only external dependency left is the checked-in seed *result data*
+# (defi_seed_dir), not the scoring script. `script_path` is kept as an
+# optional escape hatch if you deliberately want to test a different/newer
+# script variant that's already committed to the repo instead.
+#
+# The embedded copy below includes the fix for the bug found during the
+# Sept 2026 investigation: the original FIX-D2 script accepted --seed-dir /
+# --filename-pattern via argparse but then silently ignored both in the
+# --repo (5-seed) code path, always reading from the hardcoded
+# RESULTS_SUBDIR / FILENAME_TEMPLATE constants instead. That was harmless
+# only by coincidence (the constants happened to match this workflow's
+# defaults); anyone overriding --seed-dir to the non-PCA "15" contrast case
+# would have silently gotten PCA data back under the wrong label. Fixed
+# here by using the parsed args (seed_dir / filename_template) in the
+# 5-seed loop instead of the module-level constants.
+#
 # This workflow:
 #   1. Confirms fix_defi_attribution_bug.py (FIX-D1) still does not exist in
 #      the repo (paper's own retraction of the "independent script confirmed
-#      it" claim) — matches the guard already used in
-#      rescore_nguyen12_seed42.yml's spirit, but as a non-fatal informational
-#      check rather than a hard prerequisite, since FIX-D2 does not depend on
-#      FIX-D1's absence/presence.
-#   2. Runs fix_defi_attribution_bug_v2.py (FIX-D2) against all 5 seeds
-#      (42, 99, 123, 777, 2024) in noise-noiseless/15/, using the paper's
-#      actual correction rule (hybrid.test_r2 > 0.99 AND named sub-method's
-#      own success flag True) — NOT the FIX-D1 script's 0.9-threshold rule,
-#      which does not reproduce the paper's own disclosed figures.
-#   3. Emits per-seed detail JSON + a 5-seed summary JSON with both
-#      corrected_success_rate and (raw / attribution-corrected) Mean R2 —
-#      the piece that was missing entirely from FIX-D1.
-#   4. Diffs the summary's Mean R2 figures against the paper's currently
-#      printed +0.8721 so the workflow visibly FAILS if that number is still
-#      undefended, instead of silently succeeding.
+#      it" claim) — non-fatal informational check.
+#   2. Writes the embedded, corrected FIX-D2 script into the checkout.
+#   3. Runs it against all 5 seeds (42, 99, 123, 777, 2024), using the
+#      paper's actual correction rule (hybrid.test_r2 > 0.99 AND named
+#      sub-method's own success flag True) — NOT FIX-D1's 0.9-threshold
+#      rule, which does not reproduce the paper's own disclosed figures.
+#   4. Emits per-seed detail JSON + a 5-seed summary JSON with both
+#      corrected_success_rate and (raw / attribution-corrected) Mean R2.
+#   5. Diffs the summary's Mean R2 figures against the paper's currently
+#      printed +0.8721 so the workflow visibly FAILS if that number is
+#      still undefended, instead of silently succeeding.
+#
+# [FIX-D2-PCA-SOURCE] (correction, carried over from the prior version):
+# earlier runs of this workflow pointed at noise-noiseless/15/ (the non-PCA
+# "v3" split) and got raw means of 0.26-0.44 -- nowhere near 0.8721.
+# Cross-checking tab:main_results' OTHER printed figure on the same row
+# (90.5% pass rate) against noise-noiseless/15_pca/exp1b_pca_summary.json
+# shows an EXACT match (335/370 = 0.905405...). That confirms
+# tab:main_results is built from the PCA-directed 5-seed sweep
+# (ci_pipeline_repro.yml slot 5 / exp1b_pca), not the non-PCA slot 1 /
+# exp1b sweep this workflow originally targeted. defi_seed_dir below
+# defaults to noise-noiseless/15_pca accordingly. Recomputing on that
+# directory gets much closer (5-seed avg Mean R2 = 0.899, seed42 alone =
+# 0.878) but still does not land exactly on 0.8721 -- see
+# check_meanr2_aggregation.py for the aggregation-choice check on that
+# residual gap once this job has real output to compare.
 
 on:
   workflow_dispatch:
     inputs:
       script_path:
-        description: "Path to the FIX-D2 script (checked in under AUDIT/ or scripts/patches/)"
+        description: "Optional override: path (already committed in the repo checkout) to an alternate FIX-D2 script. Leave blank (default) to use this workflow's embedded, known-good copy instead."
         required: false
-        default: "AUDIT/fix_defi_attribution_bug_v2.py"
+        default: ""
       repo_results_root:
         description: "Repo-relative root passed as --repo to the script"
         required: false
@@ -44,6 +77,29 @@ on:
         description: "Absolute tolerance for the Mean R2 regression check"
         required: false
         default: "0.01"
+      defi_seed_dir:
+        description: "Repo-relative dir containing the 5 seed result files — see [FIX-D2-PCA-SOURCE] above"
+        required: false
+        default: "hypatiax/data/results/comparison_results/noise-noiseless/15_pca"
+      filename_pattern:
+        description: "printf-style pattern for seed filenames in defi_seed_dir (%s = seed)"
+        required: false
+        default: "hypatiax_defi_benchmark_pca_results_seed%s.json"
+      commit_results:
+        description: "Commit per-seed JSON, summary, evaluation, and run log back to the repo (see results_dir/results_branch below)"
+        required: false
+        default: "true"
+      results_dir:
+        description: "Repo-relative directory to store committed results under (a timestamped run subdir is created each time, plus a 'latest' pointer that's overwritten)"
+        required: false
+        default: "AUDIT/results/defi_attribution_meanr2"
+      results_branch:
+        description: "Branch to push committed results to (kept separate from the branch under test so CI-generated commits don't land directly on it)"
+        required: false
+        default: "ci-results/defi-attribution-meanr2"
+
+permissions:
+  contents: write  # required so the "Save results to repo" step can push with GITHUB_TOKEN
 
 jobs:
   rescore-defi-attribution:
@@ -63,11 +119,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt || echo "::warning::requirements.txt install failed or absent — continuing, script has no third-party deps beyond stdlib"
-
       - name: Confirm FIX-D1 (fix_defi_attribution_bug.py) still absent (informational)
         run: |
           if find . -iname "fix_defi_attribution_bug.py" | grep -q .; then
@@ -76,15 +127,300 @@ jobs:
             echo "Confirmed: fix_defi_attribution_bug.py (FIX-D1) does not exist in this checkout — matches the paper's retraction of the 'independent script confirmed it' claim."
           fi
 
-      - name: Confirm FIX-D2 script and source data exist
+      - name: Write embedded FIX-D2 script (self-contained, corrected copy)
         run: |
-          test -f "${{ inputs.script_path }}" || {
-            echo "::error::${{ inputs.script_path }} not found in repo — commit fix_defi_attribution_bug_v2.py under that path (or override script_path) before this can run.";
-            exit 1;
+          mkdir -p _ci_embedded
+          # NOTE: this heredoc's content is indented 10 spaces to match this
+          # YAML block scalar's own indentation (required so the YAML parses
+          # as one literal block). That indentation is stripped here via sed
+          # before writing the file -- otherwise every top-level line in the
+          # embedded script would carry a spurious 10-space indent and Python
+          # would fail immediately with "IndentationError: unexpected indent".
+          cat << 'PYEOF' | sed 's/^          //' > _ci_embedded/fix_defi_attribution_bug_v2.py
+          #!/usr/bin/env python3
+          """
+          fix_defi_attribution_bug_v2.py  (FIX-D2)
+
+          Embedded copy shipped inside rescore_defi_attribution_meanr2.yml so this
+          workflow is self-contained and does not depend on this script already
+          being committed to the target repo. See the workflow's header comment
+          for why, and for the --seed-dir/--filename-pattern fix applied below.
+
+          Supersedes fix_defi_attribution_bug.py (FIX-D1), which:
+            1. Never computed Mean R2 at all (only pass/fail success rates) — but
+               the unresolved gap in the paper (Mean R2 = +0.8721, never
+               recomputed after the attribution-bug fix) is specifically about
+               Mean R2.
+            2. Used the wrong correction rule: named sub-method's raw test_r2 >
+               0.9, rather than the paper's own stated rule
+               (§hybrid-attribution-bug): hybrid.test_r2 > 0.99 AND the named
+               sub-method's own success FLAG is True.
+
+          FIX-D2 (this script) does both jobs correctly, in one place, across
+          all 5 seeds (42, 99, 123, 777, 2024).
+
+            THE PAPER'S ACTUAL CORRECTION RULE (§hybrid-attribution-bug)
+            --------------------------------------------------------------
+            A task is only a genuine hybrid success if:
+                hybrid.test_r2 > 0.99  AND  <named submethod>.success is True
+            ("named submethod" = the one hybrid.decision points to: pure_llm
+            for decision=="llm"; neural_network for decision in {"nn",
+            "nn_fallback"}.)
+
+            METRICS COMPUTED PER SEED
+            --------------------------------------------------------------
+            (a) corrected_success_rate
+            (b) llm_baseline_success_rate
+            (c) mean_r2_raw — mean of hybrid.test_r2, clipped to [-10, 1],
+                over the fixed denominator of 74.
+            (d) mean_r2_corrected — same, but every fabricated-success task's
+                hybrid.test_r2 is replaced by the named sub-method's own
+                test_r2 (NaN/crashed -> -10 floor) before clipping/averaging.
+          """
+
+          import argparse
+          import json
+          import math
+          import os
+          from pathlib import Path
+
+          SEEDS = [42, 99, 123, 777, 2024]
+          DENOMINATOR = 74  # fixed, per paper
+          HYBRID_R2_THRESHOLD = 0.99  # paper's actual threshold (NOT 0.9 — see FIX-D1 note above)
+
+          RESULTS_SUBDIR = "hypatiax/data/results/comparison_results/noise-noiseless/15_pca"
+          FILENAME_TEMPLATE = "hypatiax_defi_benchmark_pca_results_seed{seed}.json"
+
+          DECISION_TO_SUBMETHOD = {
+              "llm": "pure_llm",
+              "nn": "neural_network",
+              "nn_fallback": "neural_network",
           }
+
+
+          def clip(v):
+              """Clip to [-10, 1]; treat None/NaN as the -10 catastrophic floor."""
+              if v is None or (isinstance(v, float) and math.isnan(v)):
+                  return -10.0
+              return max(-10.0, min(float(v), 1.0))
+
+
+          def is_success_flag(sub):
+              return sub.get("success") is True
+
+
+          def load(path):
+              with open(path) as f:
+                  return json.load(f)
+
+
+          def named_submethod(rec):
+              decision = rec["results"]["hybrid"].get("decision")
+              sub_key = DECISION_TO_SUBMETHOD.get(decision)
+              if sub_key is None:
+                  return decision, {}
+              return sub_key, rec["results"].get(sub_key, {})
+
+
+          def correct_task(rec):
+              hybrid = rec["results"]["hybrid"]
+              decision = hybrid.get("decision")
+              hybrid_r2 = hybrid.get("test_r2")
+
+              sub_name, sub = named_submethod(rec)
+              sub_r2 = sub.get("test_r2")
+              sub_success = sub.get("success")
+
+              llm = rec["results"].get("pure_llm", {})
+              llm_success = llm.get("success") is True
+
+              hybrid_claims_near_perfect = (hybrid_r2 is not None) and (hybrid_r2 > HYBRID_R2_THRESHOLD)
+              corrected_success = hybrid_claims_near_perfect and is_success_flag(sub)
+              fabricated = hybrid_claims_near_perfect and not is_success_flag(sub)
+
+              return {
+                  "equation_id": rec.get("equation_id"),
+                  "difficulty": rec.get("difficulty"),
+                  "decision": decision,
+                  "hybrid_test_r2": hybrid_r2,
+                  "submethod": sub_name,
+                  "submethod_test_r2": sub_r2,
+                  "submethod_success_flag": sub_success,
+                  "llm_success_flag": llm_success,
+                  "corrected_success": corrected_success,
+                  "fabricated": fabricated,
+                  "raw_r2_clipped": clip(hybrid_r2),
+                  "corrected_r2_clipped": clip(sub_r2) if fabricated else clip(hybrid_r2),
+              }
+
+
+          def score_file(path):
+              data = load(path)
+              n = len(data)
+              if n != DENOMINATOR:
+                  print(f"  [warn] {os.path.basename(path)} has {n} tasks, expected {DENOMINATOR}")
+
+              per_task = [correct_task(rec) for rec in data]
+
+              n_corrected_success = sum(1 for t in per_task if t["corrected_success"])
+              n_llm_success = sum(1 for t in per_task if t["llm_success_flag"])
+              n_fabricated = sum(1 for t in per_task if t["fabricated"])
+
+              mean_r2_raw = sum(t["raw_r2_clipped"] for t in per_task) / DENOMINATOR
+              mean_r2_corrected = sum(t["corrected_r2_clipped"] for t in per_task) / DENOMINATOR
+
+              return {
+                  "n": n,
+                  "corrected_success_rate": n_corrected_success / DENOMINATOR,
+                  "llm_baseline_success_rate": n_llm_success / DENOMINATOR,
+                  "fabricated_count": n_fabricated,
+                  "mean_r2_raw": mean_r2_raw,
+                  "mean_r2_corrected": mean_r2_corrected,
+                  "per_task": per_task,
+              }
+
+
+          def main():
+              ap = argparse.ArgumentParser(description=__doc__,
+                                            formatter_class=argparse.RawDescriptionHelpFormatter)
+              ap.add_argument("--input", help="Single result JSON (FIX-D1-compatible single-file mode)")
+              ap.add_argument("--output", help="Output path for single-file mode")
+              ap.add_argument("--repo", help="Path to LLM-HypatiaX-REPRO checkout (5-seed mode)")
+              ap.add_argument("--output-dir", help="Directory to write per-seed + summary JSON (5-seed mode)")
+              ap.add_argument("--seed", type=int, default=None, help="Only score a single seed (5-seed mode)")
+              ap.add_argument("--show-tasks", action="store_true", help="Print fabricated-success task list per seed")
+              ap.add_argument("--seed-dir", default=RESULTS_SUBDIR,
+                               help=f"Repo-relative dir holding the 5 seed files (default: {RESULTS_SUBDIR}).")
+              ap.add_argument("--filename-pattern", default=FILENAME_TEMPLATE.replace("{seed}", "%s"),
+                               help="printf-style filename pattern, %s = seed. Must be changed "
+                                    "together with --seed-dir when switching splits.")
+              args = ap.parse_args()
+
+              # FIX (Sept 2026): these parsed values were previously computed and
+              # then never used again — the --repo loop below read from the
+              # hardcoded RESULTS_SUBDIR/FILENAME_TEMPLATE constants instead,
+              # silently ignoring --seed-dir/--filename-pattern. Now used directly.
+              seed_dir = args.seed_dir
+              filename_template = args.filename_pattern.replace("%s", "{seed}")
+
+              if args.input:
+                  if not args.output:
+                      ap.error("--output is required with --input")
+                  r = score_file(args.input)
+                  out = {
+                      "benchmark": "hypatix_defi_benchmark_v3c_corrected_v2",
+                      "correction": (
+                          "FIX-D2: hybrid-attribution-bug -- success redefined as "
+                          f"hybrid.test_r2 > {HYBRID_R2_THRESHOLD} AND named sub-method's own "
+                          "success flag is True (paper's actual §hybrid-attribution-bug rule, "
+                          "not the 0.9-numeric-threshold rule used by the retracted FIX-D1 script). "
+                          "Mean R2 (raw + attribution-corrected) is now computed in the same pass."
+                      ),
+                      "source_file": Path(args.input).name,
+                      "summary": {k: v for k, v in r.items() if k != "per_task"},
+                      "per_task": r["per_task"],
+                  }
+                  out_path = Path(args.output)
+                  out_path.parent.mkdir(parents=True, exist_ok=True)
+                  out_path.write_text(json.dumps(out, indent=2))
+                  print(f"Wrote {out_path}")
+                  print(json.dumps(out["summary"], indent=2))
+                  return
+
+              if not args.repo:
+                  ap.error("either --input or --repo is required")
+
+              seeds = [args.seed] if args.seed else SEEDS
+              out_dir = Path(args.output_dir) if args.output_dir else Path(".")
+              out_dir.mkdir(parents=True, exist_ok=True)
+
+              all_results = {}
+              for seed in seeds:
+                  path = os.path.join(args.repo, seed_dir, filename_template.format(seed=seed))
+                  if not os.path.exists(path):
+                      print(f"seed {seed}: file not found at {path}, skipping")
+                      continue
+                  r = score_file(path)
+                  all_results[seed] = r
+                  print(
+                      f"seed {seed}: n={r['n']}  "
+                      f"corrected_success={r['corrected_success_rate']:.4f}  "
+                      f"llm_baseline={r['llm_baseline_success_rate']:.4f}  "
+                      f"raw_mean_R2={r['mean_r2_raw']:.4f}  "
+                      f"corrected_mean_R2={r['mean_r2_corrected']:.4f}  "
+                      f"fabricated={r['fabricated_count']}"
+                  )
+                  if args.show_tasks:
+                      for t in r["per_task"]:
+                          if t["fabricated"]:
+                              print(
+                                  f"    - {t['equation_id']} ({t['difficulty']}): "
+                                  f"hybrid={t['hybrid_test_r2']:.4f} via {t['decision']}, "
+                                  f"{t['submethod']}.test_r2={t['submethod_test_r2']} "
+                                  f"success_flag={t['submethod_success_flag']}"
+                              )
+                  seed_out = out_dir / f"fix_defi_attribution_v2_seed{seed}.json"
+                  seed_out.write_text(json.dumps(r, indent=2))
+
+              if not all_results:
+                  print("No seed files found — nothing scored.")
+                  return 1
+
+              n = len(all_results)
+              summary = {
+                  "correction": (
+                      f"FIX-D2: hybrid.test_r2 > {HYBRID_R2_THRESHOLD} AND named sub-method "
+                      "success flag True (paper's actual rule)"
+                  ),
+                  "seeds_scored": sorted(all_results.keys()),
+                  "per_seed": {
+                      str(seed): {k: v for k, v in r.items() if k != "per_task"}
+                      for seed, r in all_results.items()
+                  },
+                  "avg_corrected_success_rate": sum(r["corrected_success_rate"] for r in all_results.values()) / n,
+                  "avg_llm_baseline_success_rate": sum(r["llm_baseline_success_rate"] for r in all_results.values()) / n,
+                  "avg_mean_r2_raw": sum(r["mean_r2_raw"] for r in all_results.values()) / n,
+                  "avg_mean_r2_corrected": sum(r["mean_r2_corrected"] for r in all_results.values()) / n,
+              }
+              summary_path = out_dir / "fix_defi_attribution_v2_summary.json"
+              summary_path.write_text(json.dumps(summary, indent=2))
+
+              print()
+              print(f"5-seed average: corrected_success={summary['avg_corrected_success_rate']:.4f}  "
+                    f"llm_baseline={summary['avg_llm_baseline_success_rate']:.4f}  "
+                    f"raw_mean_R2={summary['avg_mean_r2_raw']:.4f}  "
+                    f"corrected_mean_R2={summary['avg_mean_r2_corrected']:.4f}")
+              print(f"Summary written to {summary_path}")
+
+
+          if __name__ == "__main__":
+              main()
+          PYEOF
+          echo "Embedded FIX-D2 written to _ci_embedded/fix_defi_attribution_bug_v2.py"
+          python3 -m py_compile _ci_embedded/fix_defi_attribution_bug_v2.py
+          echo "::notice::Embedded FIX-D2 script compiles cleanly."
+
+      - name: Resolve which FIX-D2 script to run
+        id: resolve_script
+        run: |
+          if [[ -n "${{ inputs.script_path }}" ]]; then
+            test -f "${{ inputs.script_path }}" || {
+              echo "::error::script_path override '${{ inputs.script_path }}' not found in repo checkout.";
+              exit 1;
+            }
+            echo "script=${{ inputs.script_path }}" >> "$GITHUB_OUTPUT"
+            echo "::notice::Using script_path override: ${{ inputs.script_path }} (embedded copy NOT used)"
+          else
+            echo "script=_ci_embedded/fix_defi_attribution_bug_v2.py" >> "$GITHUB_OUTPUT"
+            echo "::notice::Using this workflow's embedded, self-contained FIX-D2 copy."
+          fi
+
+      - name: Confirm source data exists
+        run: |
           _MISSING=0
           for seed in 42 99 123 777 2024; do
-            f="hypatiax/data/results/comparison_results/noise-noiseless/15/hypatiax_defi_benchmark_v3_results_seed${seed}.json"
+            _fname=$(printf "${{ inputs.filename_pattern }}" "${seed}")
+            f="${{ inputs.defi_seed_dir }}/${_fname}"
             if [[ ! -f "$f" ]]; then
               echo "::warning::seed ${seed} source file not found at $f — that seed will be skipped."
               _MISSING=1
@@ -97,61 +433,283 @@ jobs:
       - name: Run FIX-D2 across all 5 seeds
         run: |
           mkdir -p defi_attribution_v2_output
-          python3 "${{ inputs.script_path }}" \
+          python3 "${{ steps.resolve_script.outputs.script }}" \
             --repo "${{ inputs.repo_results_root }}" \
+            --seed-dir "${{ inputs.defi_seed_dir }}" \
+            --filename-pattern "${{ inputs.filename_pattern }}" \
             --output-dir defi_attribution_v2_output \
             --show-tasks \
             2>&1 | tee defi_attribution_v2_output/run.log
 
-      - name: Check Mean R2 against paper's currently printed figure
+      - name: Evaluate results (match check + aggregation check + verdict)
+        # Deliberately does NOT fail the job -- this step's only purpose is
+        # to compute and write evaluation.json/evaluation.md so the "Save
+        # results to repo" step below has something to commit. Pass/fail is
+        # decided later, by "Gate on Mean R2 match", so failing results are
+        # still saved instead of being lost when the job stops early.
+        if: always()
         run: |
-          python3 - <<'PYEOF'
-          import json, sys, os
+          if [[ ! -f defi_attribution_v2_output/fix_defi_attribution_v2_summary.json ]]; then
+            echo "::warning::No summary JSON found — FIX-D2 run above must have failed; nothing to evaluate."
+            exit 0
+          fi
+          # Same indentation fix as the earlier heredoc steps.
+          cat <<'PYEOF' | sed 's/^          //' | python3 -
+          import glob
+          import json
+          import os
 
-          summary_path = "defi_attribution_v2_output/fix_defi_attribution_v2_summary.json"
-          if not os.path.exists(summary_path):
-              print(f"::error::{summary_path} not found — FIX-D2 run above must have failed silently.")
-              sys.exit(1)
+          OUT = "defi_attribution_v2_output"
+          PAPER_VALUE = float("${{ inputs.paper_mean_r2 }}")
+          TOL = float("${{ inputs.tolerance }}")
+          DEFI_SEED_DIR = "${{ inputs.defi_seed_dir }}"
+          FILENAME_PATTERN = "${{ inputs.filename_pattern }}"
+          RUN_URL = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          GIT_SHA = "${{ github.sha }}"
 
-          with open(summary_path) as f:
+          with open(f"{OUT}/fix_defi_attribution_v2_summary.json") as f:
               summary = json.load(f)
-
-          paper_value = float("${{ inputs.paper_mean_r2 }}")
-          tol = float("${{ inputs.tolerance }}")
 
           raw = summary["avg_mean_r2_raw"]
           corrected = summary["avg_mean_r2_corrected"]
+          raw_matches = abs(raw - PAPER_VALUE) <= TOL
+          corrected_matches = abs(corrected - PAPER_VALUE) <= TOL
+          sign_reversal_holds = corrected > 0
 
-          print(f"Paper's printed Mean R2 (lines 1603/1676): {paper_value:.4f}")
+          print(f"Paper's printed Mean R2 (lines 1603/1676): {PAPER_VALUE:.4f}")
           print(f"FIX-D2 5-seed average raw Mean R2:         {raw:.4f}")
           print(f"FIX-D2 5-seed average corrected Mean R2:   {corrected:.4f}")
           print()
 
-          raw_matches = abs(raw - paper_value) <= tol
-          corrected_matches = abs(corrected - paper_value) <= tol
-          sign_reversal_holds = corrected > 0
+          # Aggregation check: mean-of-per-seed-means (A, what the summary
+          # reports) vs micro-average over every pooled task (B). These can
+          # only diverge if a seed file has other than 74 task records --
+          # identical values rule out aggregation choice as the explanation
+          # for any residual gap to the paper's printed figure.
+          seed_files = sorted(glob.glob(f"{OUT}/fix_defi_attribution_v2_seed*.json"))
+          pooled_raw = []
+          per_seed_means_raw = []
+          task_counts = {}
+          for path in seed_files:
+              with open(path) as f:
+                  r = json.load(f)
+              seed = os.path.basename(path).replace("fix_defi_attribution_v2_seed", "").replace(".json", "")
+              tasks = r["per_task"]
+              task_counts[seed] = len(tasks)
+              per_seed_means_raw.append(r["mean_r2_raw"])
+              pooled_raw.extend(t["raw_r2_clipped"] for t in tasks)
 
-          if raw_matches:
+          agg_a_raw = sum(per_seed_means_raw) / len(per_seed_means_raw) if per_seed_means_raw else None
+          agg_b_raw = sum(pooled_raw) / len(pooled_raw) if pooled_raw else None
+          aggregations_diverge = (
+              agg_a_raw is not None and agg_b_raw is not None
+              and abs(agg_a_raw - agg_b_raw) > 1e-9
+          )
+
+          if raw_matches and sign_reversal_holds:
+              verdict = "PROVENANCE_ESTABLISHED"
+              verdict_text = (
+                  f"Raw Mean R2 ({raw:.4f}) matches the paper's printed {PAPER_VALUE:.4f} "
+                  f"within tolerance ({TOL}), and the corrected mean stays positive "
+                  f"({corrected:.4f}). This seed set / directory / rule reproduces the "
+                  "paper's headline figure -- no paper correction needed."
+              )
               print("::notice::Raw Mean R2 matches the paper's printed figure within tolerance.")
+              print("::notice::Corrected Mean R2 is positive on the 5-seed average.")
+          elif not sign_reversal_holds:
+              verdict = "SIGN_REVERSAL_FAILS"
+              verdict_text = (
+                  f"Attribution-corrected Mean R2 ({corrected:.4f}) is negative on the "
+                  "5-seed average, undercutting the paper's claimed sign reversal "
+                  f"(negative -> +{PAPER_VALUE:.4f}). Raw Mean R2 was "
+                  f"{'within' if raw_matches else 'outside'} tolerance of the printed figure, "
+                  "but the sign-reversal claim itself does not survive attribution correction."
+              )
+              print(f"::error::Attribution-corrected Mean R2 ({corrected:.4f}) is negative on "
+                    f"the 5-seed average. This undercuts the paper's 'reversal of sign' claim "
+                    f"(that HypatiaX flips the mean from negative to +{PAPER_VALUE:.4f}) — the "
+                    f"corrected mean does not survive correction.")
           else:
+              verdict = "PROVENANCE_NOT_ESTABLISHED"
+              verdict_text = (
+                  f"Raw Mean R2 ({raw:.4f}) does not reproduce the paper's printed "
+                  f"{PAPER_VALUE:.4f} within tolerance ({TOL}), even though attribution "
+                  f"correction alone is not the issue (corrected={corrected:.4f}). Provenance "
+                  "of the printed figure is still unresolved -- see the candidate causes in "
+                  "this workflow's header comment ([FIX-D2-PCA-SOURCE]) and the aggregation "
+                  "check below."
+              )
               print(f"::error::Raw Mean R2 ({raw:.4f}) does NOT reproduce the paper's printed "
-                    f"+{paper_value:.4f}, even before attribution correction. The headline "
+                    f"+{PAPER_VALUE:.4f}, even before attribution correction. The headline "
                     f"number does not trace back to the underlying result files under the "
                     f"paper's own stated methodology (clip [-10,1], denominator 74).")
 
-          if not sign_reversal_holds:
-              print(f"::error::Attribution-corrected Mean R2 ({corrected:.4f}) is negative on "
-                    f"the 5-seed average. This undercuts the paper's 'reversal of sign' claim "
-                    f"(that HypatiaX flips the mean from negative to +{paper_value:.4f}) — the "
-                    f"corrected mean does not survive correction.")
-          else:
-              print("::notice::Corrected Mean R2 is positive on the 5-seed average.")
+          evaluation = {
+              "paper_mean_r2": PAPER_VALUE,
+              "tolerance": TOL,
+              "avg_mean_r2_raw": raw,
+              "avg_mean_r2_corrected": corrected,
+              "raw_matches_paper": raw_matches,
+              "corrected_matches_paper": corrected_matches,
+              "sign_reversal_holds": sign_reversal_holds,
+              "seeds_scored": summary.get("seeds_scored"),
+              "task_counts_per_seed": task_counts,
+              "aggregation_check": {
+                  "mean_of_per_seed_means_raw": agg_a_raw,
+                  "micro_average_raw": agg_b_raw,
+                  "diverge": aggregations_diverge,
+                  "note": (
+                      "A and B can only diverge if a seed file has other than 74 task "
+                      "records; identical values mean aggregation choice does not explain "
+                      "any gap to the paper's printed figure."
+                  ),
+              },
+              "verdict": verdict,
+              "verdict_text": verdict_text,
+              "defi_seed_dir": DEFI_SEED_DIR,
+              "filename_pattern": FILENAME_PATTERN,
+              "workflow_run_url": RUN_URL,
+              "git_sha": GIT_SHA,
+          }
 
-          if not (raw_matches and sign_reversal_holds):
+          with open(f"{OUT}/evaluation.json", "w") as f:
+              json.dump(evaluation, f, indent=2)
+
+          agg_line = (
+              f"diverge (A={agg_a_raw:.4f}, B={agg_b_raw:.4f})" if aggregations_diverge
+              else f"identical (A=B={agg_a_raw:.4f} -- not the explanation for any gap)"
+          ) if agg_a_raw is not None else "not computed (no per-seed files found)"
+
+          md = (
+              "# FIX-D2 DeFi Mean R2 evaluation\n\n"
+              f"**Verdict: {verdict}**\n\n"
+              f"{verdict_text}\n\n"
+              "| | Paper (printed) | FIX-D2 raw | FIX-D2 corrected |\n"
+              "|---|---:|---:|---:|\n"
+              f"| Mean R2 | {PAPER_VALUE:.4f} | {raw:.4f} | {corrected:.4f} |\n\n"
+              f"- Raw matches paper within tolerance ({TOL}): **{raw_matches}**\n"
+              f"- Sign reversal holds (corrected > 0): **{sign_reversal_holds}**\n"
+              f"- Aggregation check (mean-of-seed-means vs micro-average): {agg_line}\n"
+              f"- Seed source dir: `{DEFI_SEED_DIR}`\n"
+              f"- Filename pattern: `{FILENAME_PATTERN}`\n"
+              f"- Seeds scored: {summary.get('seeds_scored')}\n"
+              f"- Workflow run: {RUN_URL}\n"
+              f"- Commit: {GIT_SHA}\n"
+          )
+          with open(f"{OUT}/evaluation.md", "w") as f:
+              f.write(md)
+
+          print()
+          print(md)
+          PYEOF
+
+      - name: Save results to repo
+        # Runs regardless of whether the Mean R2 check passed, so a FAILING
+        # result (which is the interesting/actionable case here) still gets
+        # committed instead of only living in a 90-day artifact. The actual
+        # pass/fail job status is decided afterward, by "Gate on Mean R2
+        # match" below.
+        #
+        # Auth note: this pushes using the PAT_WORKFLOW_HYPATIAX repo secret,
+        # which must have push access to sednabcn/LLM-HypatiaX-REPRO. Falls
+        # back to GITHUB_TOKEN only if that secret is unset, which will only
+        # work if this workflow file lives in that same repo AND the job has
+        # been granted `contents: write` (see the `permissions:` block at
+        # the top of this workflow).
+        if: always() && inputs.commit_results == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PAT_WORKFLOW_HYPATIAX || github.token }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f defi_attribution_v2_output/fix_defi_attribution_v2_summary.json ]]; then
+            echo "::warning::No summary JSON found — nothing to save."
+            exit 0
+          fi
+
+          TS="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+          RUN_SUBDIR="${{ inputs.results_dir }}/${TS}_run${{ github.run_id }}"
+
+          # Stage the files to commit OUTSIDE the repo first, so they survive
+          # the branch switches below regardless of what's tracked on each
+          # branch.
+          STAGE="$(mktemp -d)"
+          cp defi_attribution_v2_output/fix_defi_attribution_v2_seed*.json "$STAGE"/ 2>/dev/null || true
+          cp defi_attribution_v2_output/fix_defi_attribution_v2_summary.json "$STAGE"/
+          cp defi_attribution_v2_output/run.log "$STAGE"/
+          cp defi_attribution_v2_output/evaluation.json "$STAGE"/ 2>/dev/null || true
+          cp defi_attribution_v2_output/evaluation.md "$STAGE"/ 2>/dev/null || true
+          cp "${{ steps.resolve_script.outputs.script }}" "$STAGE"/script_used.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/sednabcn/LLM-HypatiaX-REPRO.git"
+
+          PUSHED=0
+          for attempt in 1 2 3; do
+            git fetch origin "${{ inputs.results_branch }}" 2>/dev/null || true
+            if git show-ref --verify --quiet "refs/remotes/origin/${{ inputs.results_branch }}"; then
+              git checkout -B "${{ inputs.results_branch }}" "origin/${{ inputs.results_branch }}"
+            else
+              git checkout -B "${{ inputs.results_branch }}"
+            fi
+
+            mkdir -p "$RUN_SUBDIR"
+            cp "$STAGE"/* "$RUN_SUBDIR"/
+            LATEST_DIR="${{ inputs.results_dir }}/latest"
+            rm -rf "$LATEST_DIR"
+            mkdir -p "$LATEST_DIR"
+            cp "$STAGE"/* "$LATEST_DIR"/
+
+            git add "$RUN_SUBDIR" "$LATEST_DIR"
+            if git diff --cached --quiet; then
+              echo "No changes to commit (results identical to what's already in the repo)."
+              PUSHED=1
+              break
+            fi
+
+            git commit -q -m "CI: FIX-D2 DeFi Mean R2 rescore — run ${{ github.run_id }}" \
+                        -m "$(cat "$STAGE/evaluation.md" 2>/dev/null || echo 'See run.log')"
+
+            if git push origin "HEAD:${{ inputs.results_branch }}"; then
+              echo "Pushed results to ${{ inputs.results_branch }} (${RUN_SUBDIR})"
+              PUSHED=1
+              break
+            fi
+
+            echo "Push attempt ${attempt} failed (branch likely moved) — retrying..."
+            git reset --soft HEAD~1
+            sleep $((attempt * 5))
+          done
+
+          if [[ "$PUSHED" != "1" ]]; then
+            echo "::error::Failed to push results to ${{ inputs.results_branch }} after 3 attempts."
+            exit 1
+          fi
+
+      - name: Gate on Mean R2 match
+        # This is the step that actually fails the job -- deliberately last
+        # among the "real work" steps, so Evaluate + Save above have already
+        # run and committed results by the time this can stop the pipeline.
+        if: always()
+        run: |
+          if [[ ! -f defi_attribution_v2_output/evaluation.json ]]; then
+            echo "::error::evaluation.json not found — the Evaluate step above must have failed or been skipped."
+            exit 1
+          fi
+          cat <<'PYEOF' | sed 's/^          //' | python3 -
+          import json, sys
+
+          with open("defi_attribution_v2_output/evaluation.json") as f:
+              e = json.load(f)
+
+          print(f"Verdict: {e['verdict']}")
+          print(e["verdict_text"])
+
+          if not (e["raw_matches_paper"] and e["sign_reversal_holds"]):
               sys.exit(1)
           PYEOF
 
-      - name: Upload FIX-D2 output (per-seed + summary + run log)
+      - name: Upload FIX-D2 output (per-seed + summary + run log + script used + evaluation)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -160,4 +718,7 @@ jobs:
             defi_attribution_v2_output/fix_defi_attribution_v2_seed*.json
             defi_attribution_v2_output/fix_defi_attribution_v2_summary.json
             defi_attribution_v2_output/run.log
+            defi_attribution_v2_output/evaluation.json
+            defi_attribution_v2_output/evaluation.md
+            ${{ steps.resolve_script.outputs.script }}
           retention-days: 90

@@ -66,12 +66,17 @@ SEEDS = [42, 99, 123, 777, 2024]
 DENOMINATOR = 74  # fixed, per paper
 HYBRID_R2_THRESHOLD = 0.99  # paper's actual threshold (NOT 0.9 — see FIX-D1 note above)
 
-# Directory confirmed (by find over the repo) to hold the complete,
-# non-duplicated 5-seed set for the v3 DeFi benchmark. (Same directory
-# recompute_mean_r2.py uses — noiseless/defi/ only has a stray
-# duplicate-named seed42 file and is very likely the wrong one.)
-RESULTS_SUBDIR = "hypatiax/data/results/comparison_results/noise-noiseless/15"
-FILENAME_TEMPLATE = "hypatiax_defi_benchmark_v3_results_seed{seed}.json"
+# [FIX-D2-PCA-SOURCE] These were originally hardcoded to the non-PCA "15"
+# directory. That directory is real and complete, but it is NOT what
+# tab:main_results is built from: the table's OTHER printed figure on the
+# same row (90.5% pass rate) matches noise-noiseless/15_pca's
+# exp1b_pca_summary.json exactly (335/370 = 0.905405...), and does not match
+# any aggregation of the non-PCA "15" files. Default changed to the PCA
+# directory accordingly. --seed-dir / --filename-pattern below let the
+# caller override either without editing this file, so the non-PCA set
+# (still useful as a contrast case) stays one flag away.
+RESULTS_SUBDIR = "hypatiax/data/results/comparison_results/noise-noiseless/15_pca"
+FILENAME_TEMPLATE = "hypatiax_defi_benchmark_pca_results_seed{seed}.json"
 
 DECISION_TO_SUBMETHOD = {
     "llm": "pure_llm",
@@ -175,7 +180,21 @@ def main():
     ap.add_argument("--output-dir", help="Directory to write per-seed + summary JSON (5-seed mode)")
     ap.add_argument("--seed", type=int, default=None, help="Only score a single seed (5-seed mode)")
     ap.add_argument("--show-tasks", action="store_true", help="Print fabricated-success task list per seed")
+    ap.add_argument("--seed-dir", default=RESULTS_SUBDIR,
+                     help=f"Repo-relative dir holding the 5 seed files (default: {RESULTS_SUBDIR}, "
+                          "the PCA split — see [FIX-D2-PCA-SOURCE] above). Pass the non-PCA "
+                          "'noise-noiseless/15' dir here for the contrast case.")
+    ap.add_argument("--filename-pattern", default=FILENAME_TEMPLATE.replace("{seed}", "%s"),
+                     help=f"printf-style filename pattern, %s = seed (default matches --seed-dir's "
+                          f"split: {FILENAME_TEMPLATE.replace('{seed}', '%s')}). Must be changed "
+                          "together with --seed-dir when switching splits -- the two directories "
+                          "use different filename conventions (pca_results vs v3_results).")
     args = ap.parse_args()
+
+    # Resolve the two into the same {seed}-format template the rest of the
+    # script already uses, so score_file()'s path-building logic is unchanged.
+    seed_dir = args.seed_dir
+    filename_template = args.filename_pattern.replace("%s", "{seed}")
 
     if args.input:
         # ── Single-file mode (drop-in FIX-D1 CLI compatibility) ──────────────
@@ -212,7 +231,7 @@ def main():
 
     all_results = {}
     for seed in seeds:
-        path = os.path.join(args.repo, RESULTS_SUBDIR, FILENAME_TEMPLATE.format(seed=seed))
+        path = os.path.join(args.repo, seed_dir, filename_template.format(seed=seed))
         if not os.path.exists(path):
             print(f"seed {seed}: file not found at {path}, skipping")
             continue

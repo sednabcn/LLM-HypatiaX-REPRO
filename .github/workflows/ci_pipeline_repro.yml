@@ -89,9 +89,9 @@
 #    6 exp2_feynman_pca · 7 exp2_feynman · 8 exp2_feynman_extrap · 9 exp2 ·
 #    10 exp2_five · 11 exp3 · 12 exp3b · 13 suppA · 14 suppB · 15 suppB_sc ·
 #    16 hybrid_all_domains · 17 instability · 18 extrap
-#    NOTE: exp1_pca and exp1b_pca have placeholder SUBDIR/MIN_TASKS entries
-#    — confirm real values before relying on the diagnose/checkpoint gates
-#    for these two slots. exp1_five/exp2_five: SUBDIR is filled in (matches
+#    NOTE: exp1_pca and exp1b_pca now have confirmed MIN_TASKS entries
+#    (1 and 5 respectively — see [FIX-MINTASKS-PCA] in the diagnose job).
+#    exp1_five/exp2_five: SUBDIR is filled in (matches
 #    ci_runner_repro.yml/ci_postprocess.yml/ci_analysis.yml), MIN_TASKS falls
 #    back to MIN_TASKS.get(exp_id, 1) same as the pca slots, since no
 #    confirmed minimum task count was supplied for either.
@@ -350,6 +350,16 @@ jobs:
               "exp2_feynman_extrap": 5, "exp2": 5, "exp3": 5, "exp3b": 5,
               "suppA": 1, "suppB": 5, "suppB_sc": 5, "hybrid_all_domains": 1,
               "instability": 1, "extrap": 5,
+              # [FIX-MINTASKS-PCA] exp1_pca/exp1b_pca previously fell back to
+              # MIN_TASKS.get(exp_id, 1), so classify_runner() reported "done"
+              # after a single seed file landed for exp1b_pca even though it's
+              # a 5-seed sweep (mirrors exp1b). Confirmed exp1b_pca is the
+              # actual source of tab:main_results' printed 90.5% pass rate
+              # (matches exp1b_pca/exp1b_pca_summary.json's 335/370 exactly),
+              # so its completeness gate needs to be as strict as exp1b's.
+              # exp1_pca is genuinely single-seed (mirrors exp1's own "1"
+              # entry) -- listed explicitly for clarity, not a behavior change.
+              "exp1_pca": 1, "exp1b_pca": 5,
           }
 
           def classify_runner(exp_id):
