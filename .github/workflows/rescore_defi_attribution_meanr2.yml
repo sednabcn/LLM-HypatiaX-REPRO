@@ -62,7 +62,7 @@ on:
   workflow_dispatch:
     inputs:
       script_path:
-        description: "Optional override: path (already committed in the repo checkout) to an alternate FIX-D2 script. Leave blank (default) to use this workflow's embedded, known-good copy instead."
+        description: "Optional override: path (already committed in the repo checkout) to an alternate FIX-D2 script. Leave blank (default) to use this workflow's embedded, known-good copy instead[...]"
         required: false
         default: ""
       repo_results_root:
@@ -130,14 +130,9 @@ jobs:
       - name: Write embedded FIX-D2 script (self-contained, corrected copy)
         run: |
           mkdir -p _ci_embedded
-          # NOTE: this heredoc's content is indented 10 spaces to match this
-          # YAML block scalar's own indentation (required so the YAML parses
-          # as one literal block). That indentation is stripped here via sed
-          # before writing the file -- otherwise every top-level line in the
-          # embedded script would carry a spurious 10-space indent and Python
-          # would fail immediately with "IndentationError: unexpected indent".
-          cat << 'PYEOF' | sed 's/^          //' > _ci_embedded/fix_defi_attribution_bug_v2.py
-          #!/usr/bin/env python3
+          python3 << 'PYSCRIPT'
+          # Write the embedded FIX-D2 script directly using Python to avoid heredoc indentation issues
+          script_content = '''#!/usr/bin/env python3
           """
           fix_defi_attribution_bug_v2.py  (FIX-D2)
 
@@ -395,8 +390,13 @@ jobs:
 
           if __name__ == "__main__":
               main()
-          PYEOF
-          echo "Embedded FIX-D2 written to _ci_embedded/fix_defi_attribution_bug_v2.py"
+          '''
+          
+          with open("_ci_embedded/fix_defi_attribution_bug_v2.py", "w") as f:
+              f.write(script_content)
+          
+          print("Embedded FIX-D2 written to _ci_embedded/fix_defi_attribution_bug_v2.py")
+          PYSCRIPT
           python3 -m py_compile _ci_embedded/fix_defi_attribution_bug_v2.py
           echo "::notice::Embedded FIX-D2 script compiles cleanly."
 
@@ -453,8 +453,7 @@ jobs:
             echo "::warning::No summary JSON found — FIX-D2 run above must have failed; nothing to evaluate."
             exit 0
           fi
-          # Same indentation fix as the earlier heredoc steps.
-          cat <<'PYEOF' | sed 's/^          //' | python3 -
+          python3 << 'PYEOF'
           import glob
           import json
           import os
@@ -696,7 +695,7 @@ jobs:
             echo "::error::evaluation.json not found — the Evaluate step above must have failed or been skipped."
             exit 1
           fi
-          cat <<'PYEOF' | sed 's/^          //' | python3 -
+          python3 << 'PYEOF'
           import json, sys
 
           with open("defi_attribution_v2_output/evaluation.json") as f:
