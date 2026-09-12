@@ -1,63 +1,144 @@
 #!/usr/bin/env python3
 """
-hypatiax_defi_benchmark_pca.py
-================================
-HypatiaX DeFi Benchmark — PCA-directed 40/60 split variant (FIX-C3)
+hypatiax_defi_benchmark_v3.py
+==============================
+HypatiaX DeFi Extrapolation Benchmark — v4.0 (validation-selected hybrid)
 
-This is a direct derivative of hypatiax_defi_benchmark_v4.py.
-All logic (74 cases, LLM/NN/Hybrid methods, report) is identical to v4.0,
-including the validation-selected hybrid (SECTION 1B) and the Fix-12
-truncated-formula guard.
+Single authoritative script. Replaces all previous versions:
+  - test_enhanced_defi_extrapolation.py
+  - hybrid_system_nn_defi_domain.py
+  - hybrid_ensemble_system_defi_domain.py
+  - hybrid_system_defi_llm_nn.py
+  - complete_defi_hybrid_system.py
+  - hypatiax_defi_benchmark_v3.py
 
-The single intentional change vs v4 is the data-split protocol applied to
-every test case in run_benchmark():
+What changed in v2.0
+─────────────────────
+Fix 0   Reserve Ratio / Spot Price: independent log-uniform sampling
+Fix 0b  IL Breakeven flagged extrapolation_intractable
+Fix 1   Extrapolation-probe routing (NN edge-degradation → LLM)
+Fix 2   Formula-complexity routing (transcendental tokens → LLM)
+Fix 3   LLM predictions as NN input feature (residual learning)
+Fix 4   Distance-gated blend weights (shift toward LLM out-of-range)
+Fix 5   UNIFIED formula evaluator — single code path for ALL LLM evaluation
+Fix 5b  Routing-override guard — only trust LLM override when
+        LLM formula actually fitted training data (R² > 0)
 
-  OLD (v4):  build_extrap_split() / _aggressive_split() — percentile cut
-             on a single configured feature axis
-  NEW (pca): pca_directed_split() — sort by PC1, take lowest 40% as train
+Analysis-report fixes (March 2025 JMLR issues, v2.0)
+──────────────────────────────────────────────────────
+Issue 2 fix  NN wall-clock cap (_NN_MAX_TIME_S = 120 s per case).
+             Prevents runaway MLP convergence (Portfolio Sharpe Ratio
+             hit 29,088 s / 8 h, accounting for 96.7% of all NN runtime).
+             Consistent with PySR timeout_in_seconds in Exps 1–3.
 
-This mirrors the FIX-C3 split used in the Feynman benchmark
-(run_comparative_suite_benchmark_pca.py §10.7) so that the DeFi
-extrapolation results (§6.4) are produced under the same protocol
-and are directly comparable.
+Issue 3 fix  Hybrid timing now includes full NN re-run cost on fallback
+             cases instead of free-riding on the pre-computed standalone
+             NN result.  nn_rerun_time_s is tracked separately and added
+             to the wall-clock time recorded for the hybrid method.
 
-pca_directed_split is imported from hypatiax.tools.utils.pca_split_utils
-(see SECTION 6 below) — it is NOT inlined in this file. It is the same
-reference implementation verified by Gate A of ci_runner_disclosure.yml.
+Issue 4 fix  Hybrid selector bug fixed.  When LLM achieves train_r2 ≥ 0.95
+             the decision is locked to "llm" before the routing-override
+             block runs, so overrides cannot silently flip it to NN.
+             Additionally, the LLM→NN fallback path only activates on a
+             genuine evaluation failure (NaN/exception), not on a valid
+             but negative test_r2.
 
-v4 sync (2026)
-──────────────
-Ported from hypatiax_defi_benchmark_v4.py, in addition to Fix 14
-(ground-truth-leak removal, already present in this file since v3.2):
+Issue 5 fix  NaN-safe wrappers for log, sqrt, norm.cdf, norm.pdf, and
+             norm_pdf/norm_cdf name aliases added to _EXEC_GLOBALS.
+             This prevents domain-error NaN from LLM-generated Black-
+             Scholes / Greeks formulas when out-of-range inputs are
+             presented at test time.
 
-  SECTION 1B  Validation-selected hybrid. Replaces the old cascading
-              routing logic (transcendental-token / extrapolation-probe
-              overrides) with an internal-validation contest between
-              {llm, nn, residual_nn, blend} candidates, selected using
-              training data only (never the final test set). Hybrid
-              `decision` values are now "v4_llm" / "v4_nn" /
-              "v4_residual_nn" / "v4_blend" / "v4_nn_fallback".
-  Fix 12      _is_truncated_formula() guard on the pure_llm arm — a
-              formula that ends mid-line with no valid `return` cannot
-              have executed correctly, and any R² recorded against it
-              is invalid.
-  Mean-by-seed  _generate_pooled_seed_report() (ported from v4) is now
-              called automatically at the end of a multi-seed sweep,
-              writing hypatiax_defi_benchmark_pca_pooled_seed_report.json.
+What changed in v3.0
+─────────────────────
+Fix 6   Moneyness bug (critical for options):
+          - Old: moneyness = S / K  (breaks symmetry + log-normal assumptions)
+          - New: compute_moneyness(S, K, mode="log") = log(S/K) — Black-Scholes
+            consistent. Registered as "moneyness" in _EXEC_GLOBALS.
+          - Also rejects degenerate constant-output formulas (std < 1e-12) in
+            _execute_formula, preventing useless constant functions from passing
+            the evaluator.
 
-This file additionally keeps two audit fields v4 dropped: `llm_model`
-and `model_used` on the hybrid result, so a run mixing model versions
-stays auditable (see SECTION 5B). These are purely additive and do not
-change any R² or decision value relative to v4.
+Fix 7   Remove test leakage in ensemble:
+          - Old: uncertainty = std(pred - y_test)  → data leakage
+          - New: uncertainty = std(pred_train - y_train)  → leak-free
+          - _ensemble_llm_nn signature updated to require train predictions and
+            y_train. Ensemble call in _hybrid_predict_and_eval updated to match.
 
-Output files:
-  hypatiax_defi_benchmark_pca_checkpoint.json
-  hypatiax_defi_benchmark_pca_results.json
-  hypatiax_defi_benchmark_pca_pooled_seed_report.json  (multi-seed sweeps only)
-  split_protocol_disclosure.json  (written on completion)
+Fix 8   Multivariate extrapolation split:
+          - Old: argsort on X[:, 0] only  → wrong for multivariate inputs
+          - New: _sort_by_principal_direction() uses PCA first component so the
+            probe split respects the actual dominant direction of variation.
+
+Fix 9   Robust metrics:
+          - Added _compute_metrics() returning r2, mae, rmse, mape.
+          - _eval_formula_r2 and ensemble test_r2 computation now use
+            _compute_metrics for consistency.
+
+Fix 10  Strict LLM trust gate:
+          - Old: llm_trustworthy = R² > 0
+          - New: llm_trustworthy = R² > 0.5 AND no pathological code patterns
+          - _formula_has_pathological_behavior() checks for "1/0", "np.inf",
+            "nan", "**1000" patterns.
+
+What changed in v3.1
+─────────────────────
+Fix 11  Three previously skipped protocol cases now have matching test data:
+          - "Funding rate cost (extended)": mark/index premium model
+            (notional * (mark-index)/index * periods); 4 input features.
+          - "Concentrated liquidity position width (v2)": sqrt-price span
+            sqrt(P_upper) - sqrt(P_lower), distinct from the v1 ratio.
+          - "Constant product formula (multivariate)": 3-token pool z = k/(x*y).
+
+Fix 12  Borrowing Interest feature-matrix bug fixed.
+          time_years was sampled randomly and used in the ground-truth formula
+          principal * (exp(rate * t) - 1) but was NOT included as a feature,
+          making the function under-specified for any model.  This caused
+          the hard ~0.31 R² ceiling seen in the run log.  time_years is now
+          the third feature column; var_names updated to ["principal",
+          "interest_rate", "time_years"].
+
+Fix 13  LLM model updated: claude-sonnet-4-5 → claude-sonnet-4-6.
+
+What changed in v3.2
+─────────────────────
+Fix 14  CRITICAL — Ground-truth leak removed from hybrid arm's LLM prompt:
+          - Old: _generate_llm_formula()'s prompt included a literal
+            "Ground truth: {metadata['ground_truth']}" line, handing the
+            hybrid arm's LLM call the answer before asking it to derive
+            the formula. The pure_llm baseline's prompt never had this
+            line, so the two arms were not comparable.
+          - New: hybrid prompt carries only description, domain,
+            variables, and constants — the same information pure_llm
+            receives. No answer leak.
+          - IMPACT: invalidates all previously-reported hybrid vs.
+            pure_llm comparisons (runtime ratios, success-rate counts,
+            "68 of 74" / "66 of 74" citations). Full 74-case benchmark
+            must be re-run across all seeds (42, 99, 123, 777, 2024)
+            before any of those numbers are cited again.
+
+Denominator fix (updated)
+──────────────────────────
+74 cases total; 0 intractable.  The 3 formerly skipped cases are now
+included in the denominator, raising it from the effective 71 in v3.0
+back to the intended 74.
+
+
+All aggregate R²>0.99 rates use a FIXED denominator of 74
+(74 total − 0 intractable) with NaN counted as failure.
+Previous headline figures (83.6 % LLM, 77.4 % Hybrid) used
+different per-method denominators and are NOT comparable.
+
+Usage
+─────
+  python hypatiax_defi_benchmark_v3.py                            # full 74-case run
+  python hypatiax_defi_benchmark_v3.py --resume                   # continue from checkpoint
+  python hypatiax_defi_benchmark_v3.py --verify-fix5              # run only the 4 known broken cases
+  python hypatiax_defi_benchmark_v3.py --report-only              # print report from saved JSON
+  python hypatiax_defi_benchmark_v3.py --output-dir /tmp/out      # write results to a custom directory
 
 Author : HypatiaX Team
-Version: 2.0 — PCA 40/60 split variant of v4.0 (validation-selected hybrid)
+Version: 4.0 — validation-selected residual hybrid; leakage-safe internal validation; pooled multi-seed reporting
 Date   : 2026
 """
 
@@ -211,8 +292,8 @@ if _OUT_BASE:
 else:
     RESULTS_DIR = Path("hypatiax/data/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_pca_checkpoint.json"
-FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_pca_results.json"
+CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_v4_checkpoint.json"
+FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_v4_results.json"
 
 
 def _configure_output_dir(output_dir: str | None) -> None:
@@ -226,8 +307,8 @@ def _configure_output_dir(output_dir: str | None) -> None:
     global RESULTS_DIR, CHECKPOINT_FILE, FINAL_OUTPUT
     RESULTS_DIR     = Path(output_dir)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_pca_checkpoint.json"
-    FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_pca_results.json"
+    CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_v4_checkpoint.json"
+    FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_v4_results.json"
     print(f"📁 Output dir overridden via --output-dir: {RESULTS_DIR}")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -250,14 +331,6 @@ class _MLP(nn.Module):
         return self.net(x)
 
 
-# ── Model-identity constants ─────────────────────────────────────────────────
-# Single source of truth for which model produced which result. Every result
-# record below tags itself with one of these strings (or a composite of them
-# for ensemble/fallback paths) so that runs mixing models are auditable after
-# the fact, rather than silently assuming a single model throughout.
-_HYBRID_LLM_MODEL_NAME = "claude-sonnet-4-6"          # model used inside _generate_llm_formula
-_NN_MODEL_NAME          = "mlp_128_64_32"             # fixed MLP architecture used by _train_and_eval_nn
-
 _NN_SEED = 2024   # fixed seed → deterministic NN scores across resume sessions
 
 
@@ -274,13 +347,14 @@ def _compute_augment_plan(X_train: np.ndarray) -> dict:
     from the TRAINING split ONLY, and return a fixed plan. The old
     _augment_features() evaluated np.all(xi > 0) / np.all(xi >= 0)
     independently on whatever array it was given, so train and test —
-    which can have systematically different value ranges under the
-    PCA-directed 40/60 split — could qualify a different number of
-    columns for log/sqrt augmentation. That produced train/test feature
-    matrices of different width, which StandardScaler then rejected
-    ("X has 9 features, but StandardScaler is expecting 7 features").
-    Deciding the plan from X_train alone and applying it identically to
-    every other split guarantees a fixed, split-independent column count.
+    which can have systematically different value ranges, especially
+    under an extrapolation-style split — could qualify a different
+    number of columns for log/sqrt augmentation. That produced train/test
+    feature matrices of different width, which StandardScaler then
+    rejected ("X has N features, but StandardScaler is expecting M
+    features"). Deciding the plan from X_train alone and applying it
+    identically to every other split guarantees a fixed, split-independent
+    column count.
     """
     plan = {"log_cols": [], "sqrt_cols": [], "ratio": X_train.shape[1] == 2}
     for i in range(X_train.shape[1]):
@@ -297,11 +371,10 @@ def _apply_augment_plan(X: np.ndarray, plan: dict) -> np.ndarray:
     Apply a previously computed augmentation plan (see _compute_augment_plan)
     to X — train or test — so every split produces the same number of
     columns regardless of that split's own values. Values are clipped
-    before log/sqrt: a split (typically test, under PCA split) may contain
-    values outside the range that qualified the column on train (e.g. a
-    column that was all-positive on train but dips <= 0 on test); clipping
-    keeps the column finite instead of reintroducing NaN and silently
-    failing training/evaluation downstream.
+    before log/sqrt: a split may contain values outside the range that
+    qualified the column on train (e.g. a column that was all-positive on
+    train but dips <= 0 on test); clipping keeps the column finite instead
+    of reintroducing NaN and silently failing training/evaluation downstream.
     """
     cols = [X]
     eps = 1e-8
@@ -354,13 +427,14 @@ def _train_and_eval_nn(
     # same number of columns (see _compute_augment_plan/_apply_augment_plan).
     if augment:
         _plan   = _compute_augment_plan(X_train)
-        print(
-            f"NN_DEBUG case={case_name!r} "
-            f"plan={plan} "
-            f"X_train_range=({X_train.min(0)}, {X_train.max(0)}) "
-            f"X_test_range=({X_test.min(0)}, {X_test.max(0)})",
-            flush=True,
-        )
+        # SMALL-TEST-2: show what the NN is actually being asked to
+        # extrapolate over. If X_test's range sits entirely outside
+        # X_train's range for a flagged equation, that's confirmation
+        # this is a training-range/extrapolation problem, not a bug.
+        print(f"NN_INPUT_CHECK plan={_plan} "
+              f"train_min={X_train.min(axis=0)} train_max={X_train.max(axis=0)} "
+              f"test_min={X_test.min(axis=0)} test_max={X_test.max(axis=0)}",
+              flush=True)
         X_train = _apply_augment_plan(X_train, _plan)
         X_test  = _apply_augment_plan(X_test, _plan)
 
@@ -403,6 +477,204 @@ def _train_and_eval_nn(
         "timed_out":   timed_out,
         "y_pred_train": yp_tr,
         "y_pred_test":  yp_te,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION 1B — v4 validation-selected hybrid
+# ─────────────────────────────────────────────────────────────────────────────
+
+_V4_VAL_FRAC = 0.25
+_V4_MIN_VAL = 10
+_V4_ARCHITECTURES = ([64, 32], [128, 64, 32])
+_V4_MAX_TIME_S = 8
+_V4_BLEND_GRID = np.linspace(0.0, 1.0, 21)
+
+
+def _split_internal_validation(X_train: np.ndarray, y_train: np.ndarray,
+                               config: dict, val_frac: float = _V4_VAL_FRAC):
+    """Create an internal validation split using TRAINING DATA ONLY.
+
+    The validation region is the high end of the training region along the same
+    configured extrapolation variable. This is deliberately harder than a
+    random holdout and is never allowed to inspect the final test set.
+    """
+    n = len(X_train)
+    if n < 2 * _V4_MIN_VAL:
+        return X_train, y_train, None, None
+    var_idx = int(config.get("split_var_idx", 0))
+    vals = X_train[:, var_idx] if X_train.ndim >= 2 else X_train
+    order = np.argsort(vals)
+    n_val = max(_V4_MIN_VAL, int(round(n * val_frac)))
+    n_val = min(n_val, n - _V4_MIN_VAL)
+    inner = order[:-n_val]
+    val = order[-n_val:]
+    return X_train[inner], y_train[inner], X_train[val], y_train[val]
+
+
+def _fit_nn_predict(X_fit: np.ndarray, y_fit: np.ndarray, X_eval: np.ndarray,
+                    hidden: list[int], seed: int, epochs: int = 300,
+                    max_time_s: float = _V4_MAX_TIME_S) -> tuple[np.ndarray, bool]:
+    """Fit an MLP and return predictions on X_eval, using fit data only."""
+    torch.manual_seed(seed); np.random.seed(seed)
+    plan = _compute_augment_plan(X_fit)
+    Xf = _apply_augment_plan(X_fit, plan)
+    Xe = _apply_augment_plan(X_eval, plan)
+    sx, sy = StandardScaler(), StandardScaler()
+    Xfs = sx.fit_transform(Xf)
+    yfs = sy.fit_transform(y_fit.reshape(-1, 1)).flatten()
+    model = _MLP(Xf.shape[1], hidden)
+    opt = torch.optim.Adam(model.parameters(), lr=0.001)
+    crit = nn.MSELoss()
+    Xt = torch.FloatTensor(Xfs); yt = torch.FloatTensor(yfs).reshape(-1, 1)
+    start = time.time(); timed_out = False
+    model.train()
+    for epoch in range(epochs):
+        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
+        if epoch % 25 == 0 and time.time() - start >= max_time_s:
+            timed_out = True
+            break
+    model.eval()
+    with torch.no_grad():
+        pred = model(torch.FloatTensor(sx.transform(Xe))).numpy().flatten()
+    pred = sy.inverse_transform(pred.reshape(-1, 1)).flatten()
+    return pred, timed_out
+
+
+def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray,
+                        X_test: np.ndarray, llm_train: np.ndarray | None,
+                        llm_test: np.ndarray | None, hidden: list[int],
+                        blend_alpha: float, seed: int) -> dict:
+    """Fit the selected v4 candidate on ALL available training data."""
+    if candidate == "llm":
+        return {"y_pred_test": llm_test, "train_pred": llm_train}
+    if candidate == "nn":
+        pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        return {"y_pred_test": pred_te, "train_pred": pred_tr, "timed_out": timed}
+    if candidate == "residual_nn":
+        if llm_train is None or llm_test is None:
+            return None
+        residual = y_train - llm_train
+        pred_res_te, timed = _fit_nn_predict(X_train, residual, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        pred_res_tr, _ = _fit_nn_predict(X_train, residual, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        return {"y_pred_test": llm_test + pred_res_te, "train_pred": llm_train + pred_res_tr, "timed_out": timed}
+    if candidate == "blend":
+        if llm_test is None:
+            return None
+        pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
+        return {"y_pred_test": blend_alpha * llm_test + (1.0 - blend_alpha) * pred_te,
+                "train_pred": blend_alpha * llm_train + (1.0 - blend_alpha) * pred_tr,
+                "timed_out": timed}
+    return None
+
+
+def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str,
+                         constants: dict, config: dict, seed: int) -> dict:
+    """Select LLM/NN/residual-NN/blend strictly from an internal validation split.
+
+    No final-test values are read here. If an LLM formula is unavailable or fails
+    on validation, only candidates that can be evaluated remain eligible.
+    """
+    Xi, yi, Xv, yv = _split_internal_validation(X_train, y_train, config)
+    if Xv is None:
+        return {"selected": "llm" if llm_code else "nn", "hidden": _V4_ARCHITECTURES[1],
+                "blend_alpha": 1.0, "validation_r2": {}, "validation_n": 0}
+
+    llm_i = _execute_formula(llm_code, Xi, constants=constants) if llm_code else None
+    llm_v = _execute_formula(llm_code, Xv, constants=constants) if llm_code else None
+    llm_ok = llm_i is not None and llm_v is not None
+
+    candidates = {}
+    if llm_ok:
+        candidates["llm"] = {"r2": _compute_metrics(yv, llm_v)["r2"], "hidden": None, "alpha": 1.0}
+
+    for hidden in _V4_ARCHITECTURES:
+        try:
+            nn_v, _ = _fit_nn_predict(Xi, yi, Xv, hidden, seed)
+            candidates[f"nn:{hidden}"] = {"r2": _compute_metrics(yv, nn_v)["r2"], "hidden": hidden, "alpha": 0.0}
+            if llm_ok:
+                residual = yi - llm_i
+                res_v, _ = _fit_nn_predict(Xi, residual, Xv, hidden, seed)
+                residual_pred = llm_v + res_v
+                candidates[f"residual:{hidden}"] = {"r2": _compute_metrics(yv, residual_pred)["r2"], "hidden": hidden, "alpha": 1.0}
+                best_alpha, best_r2 = 0.0, -np.inf
+                for a in _V4_BLEND_GRID:
+                    bp = a * llm_v + (1.0 - a) * nn_v
+                    r2 = _compute_metrics(yv, bp)["r2"]
+                    if r2 > best_r2:
+                        best_r2, best_alpha = r2, float(a)
+                candidates[f"blend:{hidden}"] = {"r2": best_r2, "hidden": hidden, "alpha": best_alpha}
+        except Exception:
+            continue
+
+    if not candidates:
+        return {"selected": "nn", "hidden": _V4_ARCHITECTURES[1], "blend_alpha": 0.0,
+                "validation_r2": {}, "validation_n": len(yv)}
+
+    # Deterministic tie-break: prefer the simpler candidate when validation R² is tied.
+    priority = {"llm": 0, "residual": 1, "blend": 2, "nn": 3}
+    winner_key = max(candidates, key=lambda k: (candidates[k]["r2"], -priority.get(k.split(":")[0], 9)))
+    w = candidates[winner_key]
+    prefix = winner_key.split(":")[0]
+    return {
+        "selected": prefix,
+        "hidden": w.get("hidden") or _V4_ARCHITECTURES[1],
+        "blend_alpha": float(w.get("alpha", 1.0)),
+        "validation_r2": {k: float(v["r2"]) for k, v in candidates.items()},
+        "validation_n": len(yv),
+    }
+
+
+def _v4_hybrid_predict_and_eval(description: str, domain: str,
+                                X_train: np.ndarray, y_train: np.ndarray,
+                                X_test: np.ndarray, y_test: np.ndarray,
+                                var_names: list[str], metadata: dict,
+                                config: dict, seed: int = _NN_SEED) -> dict:
+    """Leakage-safe v4 hybrid: LLM formula + validation-selected correction model."""
+    llm_result = _generate_llm_formula(description, domain, var_names, metadata)
+    llm_code = llm_result.get("python_code") or ""
+    constants = metadata.get("constants") or {}
+    llm_train = _execute_formula(llm_code, X_train, constants=constants) if llm_code else None
+    llm_test = _execute_formula(llm_code, X_test, constants=constants) if llm_code else None
+    llm_train_r2 = (_compute_metrics(y_train, llm_train)["r2"] if llm_train is not None else float("nan"))
+    trustworthy = bool(llm_train is not None and llm_test is not None and llm_train_r2 > 0.5
+                       and not _formula_has_pathological_behavior(llm_code))
+    if not trustworthy:
+        llm_train = llm_test = None
+
+    selection = _select_v4_candidate(X_train, y_train, llm_code if trustworthy else "",
+                                     constants, config, seed)
+    selected = selection["selected"]
+    hidden = selection["hidden"]
+    alpha = selection["blend_alpha"]
+
+    if selected == "llm":
+        pred_test = llm_test
+        pred_train = llm_train
+        timed_out = False
+    else:
+        fitted = _fit_candidate_full(selected, X_train, y_train, X_test,
+                                     llm_train, llm_test, hidden, alpha, seed)
+        if fitted is None or fitted.get("y_pred_test") is None:
+            fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
+                                         None, None, _V4_ARCHITECTURES[1], 0.0, seed)
+            selected = "nn_fallback"
+        pred_test = fitted["y_pred_test"]
+        pred_train = fitted.get("train_pred")
+        timed_out = bool(fitted.get("timed_out", False))
+
+    test_r2 = _compute_metrics(y_test, pred_test)["r2"] if pred_test is not None else float("nan")
+    train_r2 = _compute_metrics(y_train, pred_train)["r2"] if pred_train is not None else llm_train_r2
+    return {
+        "train_r2": float(train_r2), "test_r2": float(test_r2),
+        "decision": f"v4_{selected}", "llm_train_r2": float(llm_train_r2),
+        "llm_trustworthy": trustworthy, "selected_candidate": selected,
+        "selected_hidden": hidden, "blend_alpha": alpha,
+        "validation_r2": selection["validation_r2"],
+        "validation_n": selection["validation_n"], "timed_out": timed_out,
+        "llm_code": llm_code if llm_code else None,
     }
 
 
@@ -501,8 +773,8 @@ def _execute_formula(llm_code: str, X: np.ndarray,
         return None
 
 
-# FIX 12 (ported from run_comparative_suite_benchmark_v2.py via v4.0): guard
-# against truncated PureLLM formulas — code that ends mid-line with no valid
+# FIX 12 (ported from run_comparative_suite_benchmark_v2.py): guard against
+# truncated PureLLM formulas — code that ends mid-line with no valid
 # `return <something>` cannot have executed correctly, and any R² recorded
 # against it is invalid (root cause of the 100% recovery artefact in the
 # March 2026 run, where 11/30 truncated formulas all scored R² ≈ 0.9976
@@ -676,7 +948,7 @@ def _generate_llm_formula(
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
-                "error": f"API client error: {e}", "model": _HYBRID_LLM_MODEL_NAME}
+                "error": f"API client error: {e}"}
 
     var_list = ", ".join(var_names)
     constants = metadata.get("constants", {})
@@ -686,6 +958,18 @@ def _generate_llm_formula(
         for k, v in constants.items():
             constants_block += f"  {k} = {v}\n"
 
+    # FIX 14 (2026-08-10): Removed ground-truth leak. This prompt used to
+    # include a "Ground truth: {metadata.get('ground_truth', ...)}" line,
+    # handing the hybrid arm's LLM call the answer before asking it to
+    # derive the formula — while the pure_llm baseline's prompt
+    # (_generate_standard_prompt / _generate_specialized_prompt in
+    # baseline_pure_llm_defi_discovery.py) never included it. This is the
+    # root cause of the hybrid arm's near-universal test_r2=1.0 on
+    # decision="llm" cases, including 20/21 cases where pure_llm's
+    # independently-derived formula failed outright (nan / large-negative
+    # R²) — those were two different LLM calls with two different prompts,
+    # not the same formula scored two different ways. See analysis in
+    # exp1b run notes, 2026-08-10.
     prompt   = f"""You are an expert in DeFi (decentralised finance) mathematics.
 
 Task: Derive the mathematical formula for the following quantity.
@@ -704,7 +988,7 @@ def formula({var_list}):
 """
     try:
         resp = client.messages.create(
-            model=_HYBRID_LLM_MODEL_NAME,
+            model="claude-sonnet-4-6",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -715,11 +999,10 @@ def formula({var_list}):
                      if not ln.strip().startswith("```")]
             code  = "\n".join(lines).strip()
         return {"python_code": code, "formula": code,
-                "success": "def formula" in code, "error": None,
-                "model": _HYBRID_LLM_MODEL_NAME}
+                "success": "def formula" in code, "error": None}
     except Exception as e:
         return {"python_code": None, "formula": None,
-                "success": False, "error": str(e), "model": _HYBRID_LLM_MODEL_NAME}
+                "success": False, "error": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -769,9 +1052,6 @@ def _hybrid_predict_and_eval(
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
     llm_code   = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
-    # Model that generated llm_code — recorded regardless of whether the LLM
-    # path is ultimately used, so the audit trail shows what was *tried*.
-    llm_model_name = llm_result.get("model", _HYBRID_LLM_MODEL_NAME)
 
     # Extract constants from metadata — injected into exec globals so formulas
     # that reference protocol constants (e.g. K=100) don't NameError at eval time.
@@ -869,7 +1149,6 @@ def _hybrid_predict_and_eval(
     else:
         # decision == "nn"
         # Fix 3: if formula trustworthy, augment X with LLM predictions
-        nn_used_llm_features = False  # tracks whether X was augmented with LLM output
         if llm_trustworthy:
             try:
                 llm_tr_preds = _execute_formula(llm_code, X_train, constants=constants)
@@ -880,7 +1159,6 @@ def _hybrid_predict_and_eval(
                     _t_nn0 = time.time()
                     nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test, seed=seed)
                     nn_rerun_time_s = time.time() - _t_nn0
-                    nn_used_llm_features = True
                 else:
                     _t_nn0 = time.time()
                     nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test, seed=seed)
@@ -895,30 +1173,12 @@ def _hybrid_predict_and_eval(
             nn_rerun_time_s = time.time() - _t_nn0
         test_r2 = nn_m["test_r2"]
 
-    # ── Model-identity audit trail ──────────────────────────────────────────
-    # `decision` reflects which path actually produced test_r2 (it may have
-    # been overwritten to "nn_fallback" above). Map it to the concrete model
-    # name(s) responsible, rather than leaving that implicit in `decision`.
-    if decision == "llm":
-        model_used = llm_model_name
-    elif decision == "ensemble":
-        model_used = f"ensemble({llm_model_name}+{_NN_MODEL_NAME})"
-    elif decision == "nn_fallback":
-        model_used = _NN_MODEL_NAME
-    else:  # decision == "nn"
-        model_used = (
-            f"{_NN_MODEL_NAME}(llm_augmented_features={llm_model_name})"
-            if nn_used_llm_features else _NN_MODEL_NAME
-        )
-
     return {
         "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
         "test_r2":        float(test_r2),
         "decision":       decision,
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
-        "llm_model":      llm_model_name,     # model that generated llm_code, whether or not it was ultimately used
-        "model_used":     model_used,         # model(s) that actually produced test_r2 — the auditable ground truth
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         # NOTE: this is a placeholder, not the operative success field — the
         # caller (see FIX 13 in run_benchmark's per-case loop) recomputes
@@ -929,283 +1189,69 @@ def _hybrid_predict_and_eval(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 5B — v4.0 validation-selected hybrid (supersedes the cascading
-# routing logic in _hybrid_predict_and_eval above, which is kept only as
-# reference/history and is no longer called from run_benchmark()).
-# ─────────────────────────────────────────────────────────────────────────────
-
-_V4_VAL_FRAC = 0.25
-_V4_MIN_VAL = 10
-_V4_ARCHITECTURES = ([64, 32], [128, 64, 32])
-_V4_MAX_TIME_S = 8
-_V4_BLEND_GRID = np.linspace(0.0, 1.0, 21)
-
-
-def _split_internal_validation(X_train: np.ndarray, y_train: np.ndarray,
-                               config: dict, val_frac: float = _V4_VAL_FRAC):
-    """Create an internal validation split using TRAINING DATA ONLY.
-
-    The validation region is the high end of the training region along the
-    same configured extrapolation variable. This is deliberately harder than
-    a random holdout and is never allowed to inspect the final (PCA-split)
-    test set.
-    """
-    n = len(X_train)
-    if n < 2 * _V4_MIN_VAL:
-        return X_train, y_train, None, None
-    var_idx = int(config.get("split_var_idx", 0))
-    vals = X_train[:, var_idx] if X_train.ndim >= 2 else X_train
-    order = np.argsort(vals)
-    n_val = max(_V4_MIN_VAL, int(round(n * val_frac)))
-    n_val = min(n_val, n - _V4_MIN_VAL)
-    inner = order[:-n_val]
-    val = order[-n_val:]
-    return X_train[inner], y_train[inner], X_train[val], y_train[val]
-
-
-def _fit_nn_predict(X_fit: np.ndarray, y_fit: np.ndarray, X_eval: np.ndarray,
-                    hidden: list[int], seed: int, epochs: int = 300,
-                    max_time_s: float = _V4_MAX_TIME_S) -> tuple[np.ndarray, bool]:
-    """Fit an MLP and return predictions on X_eval, using fit data only."""
-    torch.manual_seed(seed); np.random.seed(seed)
-    plan = _compute_augment_plan(X_fit)
-    Xf = _apply_augment_plan(X_fit, plan)
-    Xe = _apply_augment_plan(X_eval, plan)
-    sx, sy = StandardScaler(), StandardScaler()
-    Xfs = sx.fit_transform(Xf)
-    yfs = sy.fit_transform(y_fit.reshape(-1, 1)).flatten()
-    model = _MLP(Xf.shape[1], hidden)
-    opt = torch.optim.Adam(model.parameters(), lr=0.001)
-    crit = nn.MSELoss()
-    Xt = torch.FloatTensor(Xfs); yt = torch.FloatTensor(yfs).reshape(-1, 1)
-    start = time.time(); timed_out = False
-    model.train()
-    for epoch in range(epochs):
-        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
-        if epoch % 25 == 0 and time.time() - start >= max_time_s:
-            timed_out = True
-            break
-    model.eval()
-    with torch.no_grad():
-        pred = model(torch.FloatTensor(sx.transform(Xe))).numpy().flatten()
-    pred = sy.inverse_transform(pred.reshape(-1, 1)).flatten()
-    return pred, timed_out
-
-
-def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray,
-                        X_test: np.ndarray, llm_train: np.ndarray | None,
-                        llm_test: np.ndarray | None, hidden: list[int],
-                        blend_alpha: float, seed: int) -> dict:
-    """Fit the selected v4 candidate on ALL available training data."""
-    if candidate == "llm":
-        return {"y_pred_test": llm_test, "train_pred": llm_train}
-    if candidate == "nn":
-        pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        return {"y_pred_test": pred_te, "train_pred": pred_tr, "timed_out": timed}
-    if candidate == "residual_nn":
-        if llm_train is None or llm_test is None:
-            return None
-        residual = y_train - llm_train
-        pred_res_te, timed = _fit_nn_predict(X_train, residual, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        pred_res_tr, _ = _fit_nn_predict(X_train, residual, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        return {"y_pred_test": llm_test + pred_res_te, "train_pred": llm_train + pred_res_tr, "timed_out": timed}
-    if candidate == "blend":
-        if llm_test is None:
-            return None
-        pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
-        return {"y_pred_test": blend_alpha * llm_test + (1.0 - blend_alpha) * pred_te,
-                "train_pred": blend_alpha * llm_train + (1.0 - blend_alpha) * pred_tr,
-                "timed_out": timed}
-    return None
-
-
-def _v4_extrapolates(X_train: np.ndarray, X_test: np.ndarray) -> bool:
-    """True if any feature in X_test falls outside the observed X_train range.
-
-    This only inspects feature values (never y_test), so it introduces no
-    label leakage into the selection step. It exists because a bare NN's
-    internal-validation R² is measured on a split drawn from the training
-    domain -- it says nothing about NN behavior once the benchmark's actual
-    test points fall outside that domain, which is exactly where NN
-    extrapolation failures (train R² ~0.9999, test R² deeply negative) occur.
-    """
-    X_train = np.asarray(X_train, dtype=float)
-    X_test = np.asarray(X_test, dtype=float)
-    train_min = X_train.min(axis=0)
-    train_max = X_train.max(axis=0)
-    test_min = X_test.min(axis=0)
-    test_max = X_test.max(axis=0)
-    return bool(np.any(test_min < train_min) or np.any(test_max > train_max))
-
-
-def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str,
-                         constants: dict, config: dict, seed: int,
-                         extrapolative: bool = False) -> dict:
-    """Select LLM/NN/residual-NN/blend strictly from an internal validation split.
-
-    No final-test values are read here. If an LLM formula is unavailable or
-    fails on validation, only candidates that can be evaluated remain
-    eligible.
-
-    `extrapolative` flags that the benchmark's test features fall outside the
-    training domain (see `_v4_extrapolates`). When True, a bare NN candidate
-    is prevented from winning solely because its internal-validation R² looks
-    good -- llm/residual/blend candidates are preferred instead, as long as
-    at least one of them is available. NN remains selectable when it's the
-    only candidate at all (e.g. no usable LLM formula), and residual/blend
-    candidates -- which stay anchored to the LLM formula -- are untouched by
-    this guard.
-    """
-    Xi, yi, Xv, yv = _split_internal_validation(X_train, y_train, config)
-    if Xv is None:
-        return {"selected": "llm" if llm_code else "nn", "hidden": _V4_ARCHITECTURES[1],
-                "blend_alpha": 1.0, "validation_r2": {}, "validation_n": 0}
-
-    llm_i = _execute_formula(llm_code, Xi, constants=constants) if llm_code else None
-    llm_v = _execute_formula(llm_code, Xv, constants=constants) if llm_code else None
-    llm_ok = llm_i is not None and llm_v is not None
-
-    candidates = {}
-    if llm_ok:
-        candidates["llm"] = {"r2": _compute_metrics(yv, llm_v)["r2"], "hidden": None, "alpha": 1.0}
-
-    for hidden in _V4_ARCHITECTURES:
-        try:
-            nn_v, _ = _fit_nn_predict(Xi, yi, Xv, hidden, seed)
-            candidates[f"nn:{hidden}"] = {"r2": _compute_metrics(yv, nn_v)["r2"], "hidden": hidden, "alpha": 0.0}
-            if llm_ok:
-                residual = yi - llm_i
-                res_v, _ = _fit_nn_predict(Xi, residual, Xv, hidden, seed)
-                residual_pred = llm_v + res_v
-                candidates[f"residual:{hidden}"] = {"r2": _compute_metrics(yv, residual_pred)["r2"], "hidden": hidden, "alpha": 1.0}
-                best_alpha, best_r2 = 0.0, -np.inf
-                for a in _V4_BLEND_GRID:
-                    bp = a * llm_v + (1.0 - a) * nn_v
-                    r2 = _compute_metrics(yv, bp)["r2"]
-                    if r2 > best_r2:
-                        best_r2, best_alpha = r2, float(a)
-                candidates[f"blend:{hidden}"] = {"r2": best_r2, "hidden": hidden, "alpha": best_alpha}
-        except Exception:
-            continue
-
-    if not candidates:
-        return {"selected": "nn", "hidden": _V4_ARCHITECTURES[1], "blend_alpha": 0.0,
-                "validation_r2": {}, "validation_n": len(yv)}
-
-    # Deterministic tie-break: prefer the simpler candidate when validation R² is tied.
-    priority = {"llm": 0, "residual": 1, "blend": 2, "nn": 3}
-    pool = candidates
-    if extrapolative:
-        # Don't let a bare NN win purely on internal-validation R² when the
-        # benchmark test domain lies outside training range -- prefer any
-        # LLM-anchored candidate if one exists. Bare NN stays eligible only
-        # when nothing anchored is available.
-        anchored = {k: v for k, v in candidates.items() if not k.startswith("nn:")}
-        if anchored:
-            pool = anchored
-    winner_key = max(pool, key=lambda k: (pool[k]["r2"], -priority.get(k.split(":")[0], 9)))
-    w = candidates[winner_key]
-    prefix = winner_key.split(":")[0]
-    return {
-        "selected": prefix,
-        "hidden": w.get("hidden") or _V4_ARCHITECTURES[1],
-        "blend_alpha": float(w.get("alpha", 1.0)),
-        "validation_r2": {k: float(v["r2"]) for k, v in candidates.items()},
-        "validation_n": len(yv),
-    }
-
-
-def _v4_hybrid_predict_and_eval(description: str, domain: str,
-                                X_train: np.ndarray, y_train: np.ndarray,
-                                X_test: np.ndarray, y_test: np.ndarray,
-                                var_names: list[str], metadata: dict,
-                                config: dict, seed: int = _NN_SEED) -> dict:
-    """Leakage-safe v4 hybrid: LLM formula + validation-selected correction model.
-
-    Same selection logic as hypatiax_defi_benchmark_v4.py's
-    _v4_hybrid_predict_and_eval(); this copy additionally reports
-    `llm_model` / `model_used` (pca.py's pre-existing audit-trail fields,
-    not present in v4) so a run mixing model versions stays auditable.
-    """
-    llm_result = _generate_llm_formula(description, domain, var_names, metadata)
-    llm_code = llm_result.get("python_code") or ""
-    llm_model_name = llm_result.get("model", _HYBRID_LLM_MODEL_NAME)
-    constants = metadata.get("constants") or {}
-    llm_train = _execute_formula(llm_code, X_train, constants=constants) if llm_code else None
-    llm_test = _execute_formula(llm_code, X_test, constants=constants) if llm_code else None
-    llm_train_r2 = (_compute_metrics(y_train, llm_train)["r2"] if llm_train is not None else float("nan"))
-    trustworthy = bool(llm_train is not None and llm_test is not None and llm_train_r2 > 0.5
-                       and not _formula_has_pathological_behavior(llm_code))
-    if not trustworthy:
-        llm_train = llm_test = None
-
-    selection = _select_v4_candidate(X_train, y_train, llm_code if trustworthy else "",
-                                     constants, config, seed,
-                                     extrapolative=_v4_extrapolates(X_train, X_test))
-    selected = selection["selected"]
-    hidden = selection["hidden"]
-    alpha = selection["blend_alpha"]
-
-    if selected == "llm":
-        pred_test = llm_test
-        pred_train = llm_train
-        timed_out = False
-    else:
-        fitted = _fit_candidate_full(selected, X_train, y_train, X_test,
-                                     llm_train, llm_test, hidden, alpha, seed)
-        if fitted is None or fitted.get("y_pred_test") is None:
-            fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
-                                         None, None, _V4_ARCHITECTURES[1], 0.0, seed)
-            selected = "nn_fallback"
-        pred_test = fitted["y_pred_test"]
-        pred_train = fitted.get("train_pred")
-        timed_out = bool(fitted.get("timed_out", False))
-
-    test_r2 = _compute_metrics(y_test, pred_test)["r2"] if pred_test is not None else float("nan")
-    train_r2 = _compute_metrics(y_train, pred_train)["r2"] if pred_train is not None else llm_train_r2
-
-    # ── Model-identity audit trail (kept from pca.py's pre-v4 hybrid) ──────
-    if selected == "llm":
-        model_used = llm_model_name
-    elif selected == "residual_nn":
-        model_used = f"residual({llm_model_name}+{_NN_MODEL_NAME})"
-    elif selected == "blend":
-        model_used = f"blend({llm_model_name}+{_NN_MODEL_NAME},alpha={alpha:.2f})"
-    else:  # "nn" or "nn_fallback"
-        model_used = _NN_MODEL_NAME
-
-    return {
-        "train_r2": float(train_r2), "test_r2": float(test_r2),
-        "decision": f"v4_{selected}", "llm_train_r2": float(llm_train_r2),
-        "llm_trustworthy": trustworthy, "selected_candidate": selected,
-        "selected_hidden": hidden, "blend_alpha": alpha,
-        "validation_r2": selection["validation_r2"],
-        "validation_n": selection["validation_n"], "timed_out": timed_out,
-        "llm_code": llm_code if llm_code else None,
-        "llm_model": llm_model_name,   # model that generated llm_code
-        "model_used": model_used,      # model(s) that actually produced test_r2
-    }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
 
-# FIX-C3: PCA-directed 40/60 split — imported from the local hypatiax
-# package (NOT inlined). Identical to the reference implementation
-# verified by Gate A of ci_runner_disclosure.yml. Called directly at the
-# case loop (see pca_directed_split() call below); replaces v3c.py's
-# _aggressive_split() for every case.
-from hypatiax.tools.utils.pca_split_utils import pca_directed_split
+def _aggressive_split(
+    X: np.ndarray, y: np.ndarray, config: dict
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Train on lower 40% of primary variable; test on upper 60%.
+    Falls back to index-based split when array is too small.
+    """
+    var_idx    = config.get("split_var_idx", 0)
+    split_type = config.get("split_type", "high")
+    vals       = X[:, var_idx] if (X.ndim >= 2 and X.shape[1] > var_idx) else X.flatten()
 
-# NOTE: the old v3c.py-style _aggressive_split() wrapper was removed here.
-# It was dead code (never called) whose return-tuple order
-# (X_train, X_test, y_train, y_test) did not match v3c.py's convention
-# (X_train, y_train, X_test, y_test), and would have silently swapped
-# y_train/X_test if anyone had wired it in. The call site below unpacks
-# pca_directed_split() directly and correctly.
+    if split_type == "high":
+        thresh      = np.percentile(vals, 40)
+        train_mask  = vals <= thresh
+        test_mask   = vals >  thresh
+    else:
+        thresh      = np.percentile(vals, 60)
+        train_mask  = vals >= thresh
+        test_mask   = vals <  thresh
+
+    if train_mask.sum() < 20 or test_mask.sum() < 20:
+        idx        = np.arange(len(X))
+        train_mask = idx < int(0.4 * len(X))
+        test_mask  = ~train_mask
+
+    return X[train_mask], y[train_mask], X[test_mask], y[test_mask]
+
+
+# FIX-C3/DISCLOSURE: Gate B requires every DeFi benchmark to expose either
+# pca_directed_split or build_extrap_split as the protocol split function.
+# _aggressive_split IS the 40/60 extrapolation split for v3c (percentile on the
+# primary variable axis, same intent as build_extrap_split).
+#
+# v10 fix (report §R6): this used to be a wrapper that was never actually
+# called anywhere (the real split call site invoked _aggressive_split
+# directly), so Gate B's static-scan check was satisfied by dead code. It
+# also had a signature mismatch -- it declared `extrap_train_frac: float`
+# as its third parameter instead of the `config: dict` that
+# _aggressive_split (and every real call site) actually uses, so if it HAD
+# been called positionally as `build_extrap_split(X, y, tc["config"])`, the
+# config dict would have silently bound to `extrap_train_frac` and been
+# discarded, always falling back to the default split_var_idx=0 regardless
+# of what the catalogue declared. Both issues are fixed together: the
+# signature now matches _aggressive_split exactly, and the real split call
+# site below now calls this function instead of _aggressive_split directly,
+# so it is a genuine (if trivial) delegate rather than dead code. Behavior
+# is unchanged -- this is a pure pass-through to _aggressive_split with the
+# identical config dict.
+def build_extrap_split(
+    X: np.ndarray, y: np.ndarray, config: dict
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Gate B split entry point. Delegates to _aggressive_split unchanged.
+
+    Exposes the build_extrap_split name required by Gate B of
+    ci_runner_repro.yml so the CI scan confirms this script uses the
+    standard 40/60 extrapolation-split protocol -- and, as of this fix, is
+    actually the function invoked at the real split call site (see the
+    module's main run loop), not merely a name-only alias.
+    """
+    return _aggressive_split(X, y, config)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1313,13 +1359,10 @@ def _load_checkpoint() -> tuple[list, int]:
         data = json.loads(CHECKPOINT_FILE.read_text())
         if not isinstance(data, list):
             return [], 0
-        # Deduplicate — keep last occurrence of each (case name, seed) pair.
-        # seed-loop fix: without the seed in the key, a multi-seed sweep would
-        # collapse to one record per case (last seed wins) on resume.
+        # Deduplicate — keep last occurrence of each case name
         seen = {}
         for item in data:
-            key = (item.get("equation_id", id(item)), item.get("seed"))
-            seen[key] = item
+            seen[item.get("equation_id", id(item))] = item
         data = list(seen.values())
         return data, len(data)
     except Exception:
@@ -1390,7 +1433,7 @@ def _generate_report(results: list):
     denom = max(len(standard), 1)
 
     print("\n" + "=" * 80)
-    print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0")
+    print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v4.0")
     print("=" * 80)
     print(f"Total cases run : {len(results)}")
     print(f"  Standard      : {len(standard)}  (used in aggregate, denominator = {denom})")
@@ -1414,13 +1457,7 @@ def _generate_report(results: list):
         print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
         for r in intractable:
             hy = r["results"].get("hybrid", {}).get("test_r2")
-            # BUGFIX: this read r["test_case"], a key that has never existed on
-            # these records (only "equation_id" does) — dead code that would
-            # have raised KeyError the first time this codebase actually had
-            # an intractable case in `results`. Currently unreachable in
-            # practice since _get_test_cases() ships 0 intractable cases, but
-            # fixed here while touching this section rather than left latent.
-            print(f"  {r['equation_id'][:55]:<55}  hybrid test R² = "
+            print(f"  {r['test_case'][:55]:<55}  hybrid test R² = "
                   f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
 
     # By-difficulty breakdown
@@ -1477,18 +1514,15 @@ def _generate_report(results: list):
               f"median-based {reduction_median:.1f}% reduction")
 
         # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are the only fair comparison — pure LLM call vs NN).
-        # v4 decision values are "v4_llm" / "v4_nn" / "v4_residual_nn" /
-        # "v4_blend" / "v4_nn_fallback" — filter on the whole "v4_nn"/
-        # "v4_nn_fallback" strings rather than the old bare "nn"/"nn_fallback".
+        # (these are the only fair comparison — pure LLM call vs NN)
         llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("v4_nn", "v4_nn_fallback") and r["results"].get("neural_network")]
+                          ("nn", "nn_fallback") and r["results"].get("neural_network")]
         llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("v4_nn", "v4_nn_fallback") and r["results"].get("hybrid")]
+                          ("nn", "nn_fallback") and r["results"].get("hybrid")]
         if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
             sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
             print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
@@ -1567,25 +1601,50 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
     global CHECKPOINT_FILE, FINAL_OUTPUT
 
-    # ── Multi-seed sweep support (mirrors hypatiax_defi_benchmark_v3c.py) ──
-    # `seeds` (from DEFI_SEEDS env, a bare SEED override, or an explicit
-    # seeds= kwarg) drives a real sweep: we loop over every seed in
+    # ── Multi-seed sweep support ───────────────────────────────────────────
+    # `seeds` (from DEFI_SEEDS env or a single SEED override) previously had
+    # no effect beyond being parsed: run_benchmark only ever executed once,
+    # silently dropping every seed but whichever _resolve_seed() happened to
+    # return (or the module default of 42). We now loop over every seed in
     # `seeds`, reseeding all RNGs and writing a DISTINCT, seed-tagged
-    # checkpoint/output file per seed whenever a sweep was explicitly
-    # requested — not just when more than one seed is present, since a
-    # single-seed CI shard run is still logically part of a sweep and must
-    # get a file that survives alongside every other shard's (see
-    # FIX-SINGLE-SEED-SHARD in v3c.py). Single-seed / no-seed runs keep the
-    # plain, unsuffixed filenames.
+    # checkpoint/output file per seed when more than one seed is requested.
+    # Single-seed / no-seed runs (exp1, exp1_ablation, etc.) are unaffected —
+    # they keep writing the original fixed filenames.
     _base_results_dir = RESULTS_DIR
     _orig_checkpoint, _orig_final = CHECKPOINT_FILE, FINAL_OUTPUT
-    seed_list  = seeds if seeds else [None]
-    multi_seed = len(seed_list) > 1 or bool(_seeds_env)
+    seed_list   = seeds if seeds else [None]
+    # FIX-SINGLE-SEED-SHARD (2026-07-11): ci_runner.yml's exp1b EXP_SHARD_TABLE
+    # now dispatches ONE seed per shard (5 shards, one seed each, instead of
+    # the previous 4-shard split where one shard carried two seeds). That
+    # means DEFI_SEEDS is passed to every shard's invocation of this script
+    # with exactly ONE value, so `len(seed_list) > 1` is now ALWAYS False for
+    # every exp1b shard — the multi-seed branch below (which writes the
+    # seed-suffixed filename hypatiax_defi_benchmark_v3_results_seed{S}.json)
+    # never triggers. Every shard then falls back to the fixed, unsuffixed
+    # filename (hypatiax_defi_benchmark_v4_results.json), so all 5 shards
+    # collide on the same output name — only the last-committed shard
+    # survives, and none of the seed sentinels (ci_runner.yml's
+    # combined_globs, ci_pipeline_check.yml's REGISTRY["exp1b"] substring
+    # match) can find a matching file, so every seed reports as incomplete
+    # even on a fully successful run (see CI run 78899826639).
+    #
+    # Fix: trigger seed-suffixed naming whenever DEFI_SEEDS was explicitly
+    # set by the CI harness — regardless of how many seeds it contains —
+    # not just when more than one seed is present. A CI-driven single-seed
+    # shard run is still logically part of a seed sweep and must get a
+    # distinct, seed-tagged output filename so its result survives
+    # alongside every other shard's. Local/Colab runs that pass a bare
+    # SEED override (not DEFI_SEEDS) are unaffected — they still get the
+    # plain fixed filename, matching the historical exp1/exp1_ablation
+    # single-seed convention.
+    multi_seed  = len(seed_list) > 1 or bool(_seeds_env)
     all_seed_results = []
 
     for _seed_idx, _seed in enumerate(seed_list, 1):
         if _seed is not None:
-            random.seed(_seed); np.random.seed(_seed); torch.manual_seed(_seed)
+            random.seed(_seed)
+            np.random.seed(_seed)
+            torch.manual_seed(_seed)
             if multi_seed:
                 print(f"\n🌱 Seed sweep {_seed_idx}/{len(seed_list)}: seed={_seed}")
             else:
@@ -1595,8 +1654,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             _nn_seed = _NN_SEED
 
         if multi_seed:
-            CHECKPOINT_FILE = _base_results_dir / f"hypatiax_defi_benchmark_pca_checkpoint_seed{_seed}.json"
-            FINAL_OUTPUT    = _base_results_dir / f"hypatiax_defi_benchmark_pca_results_seed{_seed}.json"
+            CHECKPOINT_FILE = _base_results_dir / f"hypatiax_defi_benchmark_v4_checkpoint_seed{_seed}.json"
+            FINAL_OUTPUT    = _base_results_dir / f"hypatiax_defi_benchmark_v4_results_seed{_seed}.json"
         else:
             CHECKPOINT_FILE, FINAL_OUTPUT = _orig_checkpoint, _orig_final
 
@@ -1614,10 +1673,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 print(f"  [fresh run] Removed stale output: {FINAL_OUTPUT}")
 
         existing, n_done = _load_checkpoint() if resume else ([], 0)
-        all_results       = list(existing)
+        all_results      = list(existing)
 
         print("=" * 80)
-        print("HypatiaX DeFi Extrapolation Benchmark v3.0 (PCA split)")
+        print("HypatiaX DeFi Extrapolation Benchmark v4.0")
         print("=" * 80)
         print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
               f"Cases: {total} | Fresh run")
@@ -1626,8 +1685,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         print("=" * 80)
 
         for i, tc in enumerate(test_cases, 1):
-            # Skip already-done cases when resuming (separate file per seed,
-            # so no need to also match on seed here).
+            # Skip already-done cases when resuming
             if resume and any(r.get("equation_id") == tc["name"] for r in all_results):
                 print(f"[{i:02d}/{total}] ⏭  {tc['name']} — already done")
                 continue
@@ -1635,8 +1693,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             is_intractable = tc.get("extrapolation_intractable", False)
             print(f"\n[{i:02d}/{total}] {tc['name']}  "
                   f"({tc['difficulty'].upper()}"
-                  f"{' — INTRACTABLE' if is_intractable else ''})"
-                  f"{f' seed={_seed}' if _seed is not None else ''}")
+                  f"{' — INTRACTABLE' if is_intractable else ''})")
 
             try:
                 # Load protocol data
@@ -1660,21 +1717,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 })
                 tc.setdefault("description", desc)
 
-                # FIX-C3: PCA-directed 40/60 split replaces _aggressive_split.
-                # Matches the Feynman benchmark protocol (run_comparative_suite_benchmark_pca.py).
-                # FIX-C3b (audit finding): random_state was hardcoded to the literal
-                # 42 here, so every seed in a multi-seed sweep (exp1b_pca /
-                # DEFI_SEEDS=42,99,123,777,2024) trained/tested on the IDENTICAL
-                # data partition — only NN init and LLM sampling varied. The sweep
-                # therefore never measured split-sensitivity, only two much
-                # narrower sources of stochasticity. Now uses the loop's actual
-                # _seed (falling back to 42 to preserve single-run behavior when
-                # no seed is supplied), so each swept seed gets its own split.
-                _split_seed = _seed if _seed is not None else 42
-                X_tr, X_te, y_tr, y_te = pca_directed_split(
-                    X_full, y_full, test_size=0.6, random_state=_split_seed
-                )
-                print(f"  Split (PCA 40/60, random_state={_split_seed}) → train={len(X_tr)}, test={len(X_te)}")
+                X_tr, y_tr, X_te, y_te = build_extrap_split(X_full, y_full, tc["config"])
+                print(f"  Split → train={len(X_tr)}, test={len(X_te)}")
 
                 case_results = {}
 
@@ -1684,41 +1728,38 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
                         PureLLMBaseline,
                     )
-                    import sys
-                    import hypatiax
-                    import hypatiax.core.base_pure_llm as _m
-
-                    print(
-                        f"MODULE_RESOLUTION: "
-                        f"hypatiax={hypatiax.__file__} "
-                        f"base_pure_llm_defi_discovery={_m.baseline_pure_llm_defi_discovery.__file__} "
-                        f"sys_path0={sys.path[0]}",
-                        flush=True,
-                    )
+                    # SMALL-TEST-1: prove which copy of the module is actually
+                    # running. Prints once per case (cheap) so it shows up
+                    # even on a 1-case smoke run. Compare this path against
+                    # the repo checkout path by hand after the run.
+                    import hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery as _resolved_mod
+                    print(f"MODULE_RESOLUTION: {_resolved_mod.__file__}", flush=True)
                     # FIX-ITEM1-MODEL-MISMATCH: pin explicitly to the same
-                    # constant the hybrid arm's inline LLM call uses, rather
-                    # than relying on PureLLMBaseline's own default, which
-                    # drifted out of sync with Fix 13/14 and caused every
+                    # model the hybrid arm's inline LLM call uses (line ~983)
+                    # rather than relying on PureLLMBaseline's own default,
+                    # which drifted out of sync with Fix 13 and caused every
                     # standalone pure_llm call to fail near-instantly on an
                     # invalid model string (see consolidation report §4 item 1).
-                    llm_base  = PureLLMBaseline(model=_HYBRID_LLM_MODEL_NAME)
+                    llm_base  = PureLLMBaseline(model="claude-sonnet-4-6")
                     llm_res   = llm_base.generate_formula(desc, tc["domain"],
                                                           var_names, metadata)
 
-                    # DEBUG-ITEM1-CACHE-HYPOTHESIS: see matching comment in
-                    # hypatiax_defi_benchmark_v4.py. This script's non-PCA
-                    # sibling shows exactly one real-network-latency pure_llm
-                    # call per shard (the first case, ~0.6-0.8s) followed by
-                    # ~73 near-zero-time (0.001s) failures too fast to be real
-                    # API round trips -- consistent with an external patch
-                    # (PureLLMBaseline's unused self._cache, "added by
-                    # apply_patches") memoizing on a key that doesn't vary
-                    # per-equation. This matters even more here: if seed 42's
-                    # reported partial pure_llm success is a cache hit from
-                    # this shard's own first case rather than an independently
-                    # -derived answer for each equation, the same cached
-                    # formula could be getting silently stamped onto every
-                    # case in this shard.
+                    # DEBUG-ITEM1-CACHE-HYPOTHESIS: baseline_pure_llm_defi_
+                    # discovery.py's PureLLMBaseline.__init__ carries an
+                    # unused `self._cache: dict = {}  # added by apply_patches`
+                    # attribute -- declared but never read/written anywhere
+                    # in that file. Seed-level result data shows exactly one
+                    # real-network-latency pure_llm call per shard (the
+                    # first case processed, ~0.6-0.8s) followed by ~73
+                    # near-zero-time (0.001s) failures -- too fast to be
+                    # real API round trips. That pattern is consistent with
+                    # an external patch memoizing generate_formula() on a
+                    # key that doesn't vary per-equation, replaying the
+                    # first call's result (success OR failure) for every
+                    # later case. Logging id(llm_base._cache), its contents,
+                    # and a hash of the raw response lets us confirm or rule
+                    # this out directly on the next run, rather than
+                    # inferring it from timing alone.
                     import hashlib as _hashlib
                     _raw = llm_res.get("raw_response", "") or ""
                     print(
@@ -1730,8 +1771,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         f"raw_response_snippet={_raw[:80]!r}"
                     )
 
-                    # FIX 12 (ported from v4.0): reject truncated formulas before
-                    # scoring — see _is_truncated_formula() above for why.
+                    # FIX 12: reject truncated formulas before scoring — see
+                    # _is_truncated_formula() above for why.
                     _llm_code = llm_res.get("python_code", "") or llm_res.get("formula_code", "") or ""
                     if _is_truncated_formula(_llm_code):
                         case_results["pure_llm"] = {
@@ -1739,13 +1780,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                             "executed": False, "success": False,
                             "time_s": round(time.time() - _t0_llm, 3),
                             "error": "truncated_formula: no valid return statement",
-                            "model": llm_res.get("model"),
-                            # DEBUG-ITEM1-CACHE-HYPOTHESIS: real exception text
-                            # from generate_formula()'s except clause, previously
-                            # discarded in favor of the generic message above —
-                            # persisted here so it survives into the JSON we
-                            # already collect, no separate logs needed.
+                            # DEBUG-ITEM1-CACHE-HYPOTHESIS: previously this
+                            # generic string was the ONLY error info kept —
+                            # llm_res's own "error" key (the real exception
+                            # text from generate_formula()'s except clause,
+                            # e.g. an API 400 message) was silently discarded
+                            # here. Persisting it directly into the result
+                            # JSON means the actual failure reason survives
+                            # into the artifact we already collect, with no
+                            # dependency on capturing separate stdout/logs.
                             "llm_internal_error": llm_res.get("error"),
+                            "llm_model_used": llm_res.get("model"),
                             "debug_cache_keys": list(getattr(llm_base, "_cache", {}).keys()),
                         }
                     else:
@@ -1757,32 +1802,26 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                             "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
                             "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
                             "executed": llm_te_m.get("success", False),
-                            # FIX 11: PureLLMBaseline.test_formula_accuracy()'s own "success"
-                            # only means the generated code executed without raising — it does
-                            # NOT gate on fit quality (observed: 11/74 exp1_pca cases report
-                            # success=True with test_r2 as low as -126,483). Recompute success
-                            # here as a fit-quality gate, reusing the >0.5 "trustworthy"
-                            # threshold already established for the hybrid arm's LLM trust
-                            # gate (FIX 10, above) so both arms share one pass definition.
+                            # FIX 11 (ported from hypatiax_defi_benchmark_pca.py): the
+                            # baseline's own "success" only means the generated code
+                            # executed without raising — it does NOT gate on fit
+                            # quality (observed: 11/74 exp1_pca cases report
+                            # success=True with test_r2 as low as -126,483). Recompute
+                            # success here as a fit-quality gate, reusing the >0.5
+                            # "trustworthy" threshold already established for the
+                            # hybrid arm's LLM trust gate elsewhere in this file, so
+                            # both arms share one pass definition.
                             "success": bool(
                                 llm_te_m.get("success", False)
                                 and not _math.isnan(llm_te_m.get("r2", float("nan")))
                                 and llm_te_m["r2"] > 0.5
                             ),
                             "time_s":   round(time.time() - _t0_llm, 3),
-                            # Model tracking: PureLLMBaseline.generate_formula() reports
-                            # which model it used (self.model) at every return path —
-                            # surface it here so a run mixing model versions is auditable.
-                            "model":    llm_res.get("model"),
                         }
                 except Exception as e:
-                    # llm_res may not exist if generate_formula() itself raised —
-                    # fall back to None rather than assuming a model was used.
-                    _attempted_model = llm_res.get("model") if "llm_res" in dir() else None
                     case_results["pure_llm"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "executed": False, "success": False, "time_s": 0.0, "error": str(e),
-                        "model": _attempted_model,
                     }
 
                 # ── Neural Network ───────────────────────────────────────────────
@@ -1797,23 +1836,28 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "time_s":      round(time.time() - _t0_nn, 3),
                         "y_pred_train": nn_m["y_pred_train"].tolist(),
                         "y_pred_test":  nn_m["y_pred_test"].tolist(),
-                        "model":       _NN_MODEL_NAME,
                     }
                 except Exception as e:
                     case_results["neural_network"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
-                        "model": _NN_MODEL_NAME,
                     }
 
-                # ── Hybrid (v4.0 validation-selected, all Fixes applied) ──────────
+                # ── Hybrid (all Fixes applied) ────────────────────────────────────
                 try:
                     _t0_hyb = time.time()
                     hy_m = _v4_hybrid_predict_and_eval(
                         desc, tc["domain"], X_tr, y_tr, X_te, y_te, var_names, metadata,
                         config=tc["config"], seed=_nn_seed,
                     )
-                    hyb_time = round(time.time() - _t0_hyb, 3)
+                    _hyb_wall = round(time.time() - _t0_hyb, 3)
+
+                    # Issue 3 fix: when hybrid fell back to NN, the time already
+                    # recorded for the standalone NN run CANNOT be reused — the
+                    # hybrid must pay the full NN training cost itself.
+                    # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
+                    # fallback cases so the reported hybrid time is self-contained.
+                    hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
 
                     _train_r2 = hy_m["train_r2"]
                     _test_r2  = hy_m["test_r2"]
@@ -1822,11 +1866,15 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     # FIX 13 (Issue 9 — decision-attribution / masked-failure fix):
                     # the previous "fixed" success computation only excluded NaN
                     # test_r2 values, so a catastrophic-but-numeric test_r2 (e.g.
-                    # an LLM formula that executes cleanly but extrapolates to a
-                    # value like -126,483 — see FIX 11's comment above) still
-                    # reported success=True. Recompute success as a real
-                    # fit-quality gate, reusing the same >0.5 threshold as
-                    # pure_llm's FIX 11, so both arms share one pass definition.
+                    # an LLM formula that executes cleanly but extrapolates to
+                    # -141,000) still reported success=True — the hybrid arm's own
+                    # accounting masked the failure instead of surfacing it. This
+                    # is the exact bug the abstract's masking-disclosure footnote
+                    # describes. Recompute success as a real fit-quality gate,
+                    # reusing the same >0.5 threshold as pure_llm's FIX 11 above
+                    # (see comment there), so both arms share one pass definition
+                    # and neither can report success=True on a catastrophic result
+                    # merely because the number wasn't NaN.
                     _hybrid_success = bool(
                         not _nan(_train_r2)
                         and not _nan(_test_r2)
@@ -1834,29 +1882,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     )
 
                     case_results["hybrid"] = {
-                        "train_r2":          _train_r2,
-                        "test_r2":           _test_r2,
-                        "decision":          hy_m["decision"],       # "v4_llm" / "v4_nn" / "v4_residual_nn" / "v4_blend" / "v4_nn_fallback"
-                        "success":           _hybrid_success,        # FIX 13 — fit-quality gate
-                        "time_s":            round(hyb_time, 3),
-                        "llm_trustworthy":   hy_m.get("llm_trustworthy"),
-                        "selected_candidate": hy_m.get("selected_candidate"),
-                        "validation_r2":     hy_m.get("validation_r2"),
-                        "validation_n":      hy_m.get("validation_n"),
-                        "timed_out":         hy_m.get("timed_out", False),
-                        # Model tracking: llm_model is what generated the candidate
-                        # formula; model_used is what actually produced test_r2
-                        # (they can differ — e.g. decision="v4_nn_fallback" still
-                        # tried an LLM formula first). Both are needed to audit
-                        # whether/how models were mixed within this one case.
-                        "llm_model":         hy_m.get("llm_model"),
-                        "model_used":        hy_m.get("model_used"),
+                        "train_r2":        _train_r2,
+                        "test_r2":         _test_r2,
+                        "decision":        hy_m["decision"],
+                        "success":         _hybrid_success,  # FIX 13 — fit-quality gate
+                        "time_s":          round(hyb_time, 3),
+                        "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                     }
                 except Exception as e:
                     case_results["hybrid"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
-                        "llm_model": None, "model_used": None,
                     }
 
                 # ── Augment with extrapolation gap and stability score ────────────
@@ -1897,7 +1933,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 print(f"  ❌ Outer error: {outer_e}")
                 continue
 
-        # Final report + save (per seed — each seed gets its own report/output)
+        # Final report + save
         _generate_report(all_results)
         _save_final(all_results)
 
@@ -1908,45 +1944,23 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
         all_seed_results.append(all_results)
 
-    # FIX-C3: write split_protocol_disclosure.json so Gate B of
-    # ci_runner_disclosure.yml can verify protocol parity with the
-    # Feynman benchmark (run_comparative_suite_benchmark_pca.py). One
-    # disclosure file for the whole sweep — the split protocol doesn't
-    # vary by seed.
-    import datetime as _dt
-    _disclosure = {
-        "split_protocol":   "pca_40_60",
-        "script":           Path(__file__).name,
-        "test_size":        0.6,
-        "train_size":       0.4,
-        "random_split_used": False,       # FIX Bug 1: was missing — Gate B key-presence check failed
-        "split_function":   "pca_directed_split",
-        "split_level":      "outer_loop",
-        "force_fresh":      True,
-        "seeds":            seed_list,
-        "description":      "PC1-directed sort; train on lowest 40%, test on highest 60%",
-        "timestamp_utc":    _dt.datetime.now(_dt.timezone.utc).isoformat(),
-    }
-    _disc_path = _base_results_dir / "split_protocol_disclosure.json"
-    _disc_path.write_text(json.dumps(_disclosure, indent=2))
-    print(f"📋 split_protocol_disclosure.json written → {_disc_path}")
-
     if len(all_seed_results) > 1:
         pooled = _generate_pooled_seed_report(all_seed_results)
-        pooled_path = _base_results_dir / "hypatiax_defi_benchmark_pca_pooled_seed_report.json"
+        pooled_path = _base_results_dir / "hypatiax_defi_benchmark_v4_pooled_seed_report.json"
         pooled_path.write_text(json.dumps(pooled, indent=2))
         print(f"\n📊 Pooled seed report saved → {pooled_path}")
 
     return all_seed_results[0] if len(all_seed_results) == 1 else all_seed_results
 
 
+
 def _generate_pooled_seed_report(seed_results: list[list]) -> dict:
-    """Compute mean test R² by seed, per method (ported from v4.0).
+    """Aggregate per-seed test R² without pooling individual observations.
 
     Each seed is first reduced to a per-case mean, then seed-level means are
-    summarized. This avoids giving seeds with duplicate case rows extra
-    weight. Both raw and clip-10 means are reported so the old 0.8427-style
-    ambiguity is impossible to miss.
+    summarized. This avoids giving seeds with duplicate case rows extra weight.
+    Both raw and clip-10 means are reported so the old 0.8427-style ambiguity is
+    impossible to miss.
     """
     methods = ["pure_llm", "neural_network", "hybrid"]
     out = {"n_seeds": len(seed_results), "methods": {}}
@@ -1970,7 +1984,7 @@ def _generate_pooled_seed_report(seed_results: list[list]) -> dict:
             "n_seed_means": len(seed_means_raw),
         }
     print("\n" + "=" * 80)
-    print("POOLED SEED REPORT — HypatiaX DeFi Benchmark (PCA 40/60 split)")
+    print("POOLED FIVE-SEED REPORT — HypatiaX DeFi Benchmark v4.0")
     print("=" * 80)
     print("Metric: test R². Seeds are summarized separately, then averaged.")
     print("Raw mean is un-clipped; clip-10 is shown only for historical comparability.")
@@ -2000,7 +2014,7 @@ def report_only():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="HypatiaX DeFi Extrapolation Benchmark v3.0",
+        description="HypatiaX DeFi Extrapolation Benchmark v4.0",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
@@ -2016,12 +2030,6 @@ Examples:
     )
     parser.add_argument("--resume",      action="store_true",
                         help="Resume from checkpoint")
-    parser.add_argument("--force-fresh", action="store_true", dest="force_fresh",
-                        help=(
-                            "Delete any existing checkpoint and results files before "
-                            "running, guaranteeing fresh results regardless of how "
-                            "the script is invoked. Overrides --resume."
-                        ))
     parser.add_argument("--verify-fix5", action="store_true",
                         help="Run only the 4 cases targeted by Fix 5 to verify the fix")
     parser.add_argument("--report-only", action="store_true",
@@ -2041,12 +2049,6 @@ Examples:
                             "'hypatiax/data/results' path. Created if it does not exist. "
                             "E.g. --output-dir /tmp/benchmark_out"
                         ))
-    parser.add_argument("--seeds",       nargs="+", type=int, metavar="SEED", default=None,
-                        help=(
-                            "One or more seeds to sweep (each case is run once per "
-                            "seed, with results tagged by seed). Equivalent to setting "
-                            "the DEFI_SEEDS env var. E.g. --seeds 42 99 123 777 2024"
-                        ))
 
     args = parser.parse_args()
 
@@ -2056,25 +2058,9 @@ Examples:
     if args.report_only:
         report_only()
     else:
-        # --force-fresh overrides --resume: purge stale files before calling run_benchmark
-        if getattr(args, "force_fresh", False):
-            import glob as _glob
-            for _stale in [CHECKPOINT_FILE, FINAL_OUTPUT]:
-                if _stale.exists():
-                    _stale.unlink()
-                    print(f"  [--force-fresh] Removed stale file: {_stale}")
-            # Also purge any shard/seed-tagged variants in the same directory
-            for _pat in ["hypatiax_defi_benchmark_pca_checkpoint*.json",
-                         "hypatiax_defi_benchmark_pca_results*.json"]:
-                for _f in CHECKPOINT_FILE.parent.glob(_pat):
-                    _f.unlink()
-                    print(f"  [--force-fresh] Removed stale file: {_f}")
-            args.resume = False
-            print("  [--force-fresh] Checkpoint cleared — running fresh.")
         run_benchmark(
             resume=args.resume,
             verify_fix5=args.verify_fix5,
             verbose=args.verbose,
             cases=args.cases,
-            seeds=args.seeds,
         )

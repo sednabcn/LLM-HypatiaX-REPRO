@@ -1,0 +1,211 @@
+python-dotenv could not parse statement starting at line 8
+✅ Loaded .env from: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/.env
+✅ Loaded experiment_protocol_defi.py
+
+🔍 Case filter active: running 11 case(s) — ['Slashing penalty', 'Liquidation Price Short', 'Effective Leverage', 'Compounding Staking Returns', 'Capital efficiency', 'Options Delta', 'Black-Scholes Call Price', 'Convexity Adjustment', 'Liquidation price for leveraged short', 'Portfolio Expected Shortfall for correlated', 'Theta of option']
+  [fresh run] Removed stale output: hypatiax/data/results/hypatiax_defi_benchmark_v4_results.json
+================================================================================
+HypatiaX DeFi Extrapolation Benchmark v4.0
+================================================================================
+Cases: 11 | Fresh run
+Checkpoint: hypatiax/data/results/hypatiax_defi_benchmark_v4_checkpoint.json
+Output    : hypatiax/data/results/hypatiax_defi_benchmark_v4_results.json
+================================================================================
+
+[01/11] Slashing penalty  (EASY)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='staking' description_hash=d852ee583bbc generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=10.252978s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.253546s description_hash=d852ee583bbc
+DEBUG pure_llm[Slashing penalty]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=f97893892bd4 raw_response_snippet='FORMULA:\nslash_amount = staked_amount × (slash_pct / 100)\n\nLATEX:\n\\text{slash\\_a'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': True} train_min=[1.e+03 5.e-03] train_max=[1.99095477e+05 4.27135678e-02] test_min=[2.01603015e+05 4.31909548e-02] test_max=[5.e+05 1.e-01]
+  pure_llm       : train=-1.3605, test=-4.7088
+  neural_network : train=0.9998, test=-2.4424
+  hybrid         : train=0.9998, test=-2.4002 [v4_nn]
+  💾 Checkpoint saved (1/11)
+
+[02/11] Liquidation Price Short  (MEDIUM)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='trading' description_hash=c9188392b311 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=12.024656s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.025053s description_hash=c9188392b311
+DEBUG pure_llm[Liquidation Price Short]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=892644d160cb raw_response_snippet='# Liquidation Price (Short Position)\n\n## Formula\n\n$$P_{liq} = P_e \\times \\left(1'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': True} train_min=[1000.    2.] train_max=[2.04522613e+04 5.17587940e+00] test_min=[2.06984925e+04 5.21608040e+00] test_max=[5.e+04 1.e+01]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9999, test=-2.5264
+  hybrid         : train=0.9999, test=-2.5264 [v4_nn_fallback]
+  💾 Checkpoint saved (2/11)
+
+[03/11] Effective Leverage  (MEDIUM)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='trading' description_hash=1ad6ffa6a07f generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=12.325435s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.326019s description_hash=1ad6ffa6a07f
+DEBUG pure_llm[Effective Leverage]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=f6817ce600b8 raw_response_snippet='FORMULA:\nEffective Leverage = Initial Leverage / (1 + Initial Leverage × Price C'
+NN_INPUT_CHECK plan={'log_cols': [0], 'sqrt_cols': [0], 'ratio': True} train_min=[ 2.  -0.2] train_max=[ 5.1758794  -0.04120603] test_min=[ 5.2160804  -0.03919598] test_max=[10.   0.2]
+  pure_llm       : train=1.0000, test=1.0000
+  neural_network : train=0.9999, test=-3.5605
+  hybrid         : train=0.9999, test=-3.5605 [v4_nn]
+  💾 Checkpoint saved (3/11)
+
+[04/11] Compounding Staking Returns  (MEDIUM)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='staking' description_hash=6cc7dca75595 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=15.120523s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.125686s description_hash=6cc7dca75595
+DEBUG pure_llm[Compounding Staking Returns]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=bf96557a78a8 raw_response_snippet='FORMULA:\nA = P × (1 + r/n)^(n×t)\n\nWhere A is the final amount after compounding,'
+NN_INPUT_CHECK plan={'log_cols': [0, 1, 2], 'sqrt_cols': [0, 1, 2], 'ratio': False} train_min=[1.0e+03 5.0e-02 1.2e+01] train_max=[4.03015075e+04 2.28643216e-01 3.65000000e+02] test_min=[4.07989950e+04 2.30904523e-01 1.20000000e+01] test_max=[1.00e+05 5.00e-01 3.65e+02]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9999, test=-2.3734
+  hybrid         : train=0.9999, test=-2.3734 [v4_nn]
+  💾 Checkpoint saved (4/11)
+
+[05/11] Capital efficiency  (MEDIUM)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='liquidity' description_hash=46006533a507 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=13.560815s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=13.561335s description_hash=46006533a507
+DEBUG pure_llm[Capital efficiency]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=e78b74c07c29 raw_response_snippet='# Capital Efficiency Multiplier for Concentrated Liquidity\n\n## Formula\n\n$$\\text{'
+NN_INPUT_CHECK plan={'log_cols': [0, 1, 2], 'sqrt_cols': [0, 1, 2], 'ratio': False} train_min=[1800. 2200. 1900.] train_max=[1879.39698492 2279.39698492 2058.79396985] test_min=[1880.40201005 2280.40201005 2060.8040201 ] test_max=[2000. 2400. 2300.]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9998, test=-2.0953
+  hybrid         : train=0.9998, test=-2.0953 [v4_nn]
+  💾 Checkpoint saved (5/11)
+
+[06/11] Options Delta  (MEDIUM)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='derivatives' description_hash=01bff4d53aeb generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=23.529820s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=23.531773s description_hash=01bff4d53aeb
+DEBUG pure_llm[Options Delta]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=cb4950fab825 raw_response_snippet='FORMULA:\nΔ = N(d₁)\n\nwhere d₁ = [ln(S/K) + (r + σ²/2)·T] / (σ·√T)\n\nFor moneyness '
+<string>:12: RuntimeWarning: invalid value encountered in log
+<string>:12: RuntimeWarning: invalid value encountered in log
+NN_INPUT_CHECK plan={'log_cols': [1], 'sqrt_cols': [1], 'ratio': True} train_min=[-0.5  0.1] train_max=[-0.10301508  0.29849246] test_min=[-0.09798995  0.30100503] test_max=[0.5 0.6]
+<string>:15: RuntimeWarning: invalid value encountered in log
+<string>:15: RuntimeWarning: invalid value encountered in log
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.8370, test=-10.3199
+  hybrid         : train=0.8370, test=-10.3199 [v4_nn]
+  💾 Checkpoint saved (6/11)
+
+[07/11] Black-Scholes Call Price  (HARD)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='derivatives' description_hash=832215b26e61 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=19.820562s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=19.820977s description_hash=832215b26e61
+DEBUG pure_llm[Black-Scholes Call Price]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=0cfeaef24fb5 raw_response_snippet='FORMULA:\nC = S · N(d₁) - K · e^(-rT) · N(d₂)\n\nwhere:\nd₁ = [ln(S/K) + (r + σ²/2)·'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': True} train_min=[80.          0.10151515] train_max=[95.87939698  0.49393939] test_min=[96.08040201  0.1       ] test_max=[120.    0.5]
+  pure_llm       : train=-1.0979, test=0.2464
+  neural_network : train=0.9106, test=-1.7313
+  hybrid         : train=0.8258, test=-2.5153 [v4_nn]
+  💾 Checkpoint saved (7/11)
+
+[08/11] Convexity Adjustment  (HARD)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='amm' description_hash=99ae1333fd52 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=15.602035s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.602709s description_hash=99ae1333fd52
+DEBUG pure_llm[Convexity Adjustment]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=61ede5867ddc raw_response_snippet='FORMULA:\nP_eff = S × (1 + Q/(2×D) + (Q/(2×D))²)\n\nWhere the convexity adjustment '
+NN_INPUT_CHECK plan={'log_cols': [0, 1, 2], 'sqrt_cols': [0, 1, 2], 'ratio': False} train_min=[  1000.    100. 100000.] train_max=[2.58793970e+03 1.99095477e+04 4.03015075e+06] test_min=[2.60804020e+03 2.01603015e+04 4.07989950e+06] test_max=[5.e+03 5.e+04 1.e+07]
+  pure_llm       : train=1.0000, test=1.0000
+  neural_network : train=0.9999, test=-2.3900
+  hybrid         : train=0.9999, test=-2.3900 [v4_nn_fallback]
+  💾 Checkpoint saved (8/11)
+
+[09/11] Liquidation price for leveraged short  (HARD)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='liquidation' description_hash=22479d4e38b8 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=12.539933s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.540250s description_hash=22479d4e38b8
+DEBUG pure_llm[Liquidation price for leveraged short]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=13456af21746 raw_response_snippet='# Liquidation Price for Leveraged Short Position\n\n## Formula\n\n$$P_{liq} = P_e \\t'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': True} train_min=[3.e+04 2.e+00] train_max=[3.79396985e+04 5.17587940e+00] test_min=[3.8040201e+04 5.2160804e+00] test_max=[5.e+04 1.e+01]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9997, test=-1.4582
+  hybrid         : train=0.9997, test=-1.4582 [v4_nn]
+  💾 Checkpoint saved (9/11)
+
+[10/11] Portfolio Expected Shortfall for correlated  (HARD)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='expected_shortfall' description_hash=2681e4668925 generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=19.915049s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=19.916905s description_hash=2681e4668925
+DEBUG pure_llm[Portfolio Expected Shortfall for correlated]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=b38cd3ac25aa raw_response_snippet='# Portfolio Expected Shortfall Calculator\n\n## Formula\n\n$$ES_p = ES_1 + ES_2 + \\r'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': False} train_min=[ 1.e+04  5.e+03 -3.e-01] train_max=[4.57286432e+04 2.28643216e+04 1.36683417e-01] test_min=[4.61809045e+04 2.30904523e+04 1.42211055e-01] test_max=[1.e+05 5.e+04 8.e-01]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9998, test=-3.1512
+  hybrid         : train=0.9998, test=-3.1512 [v4_nn_fallback]
+  💾 Checkpoint saved (10/11)
+
+[11/11] Theta of option  (HARD)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='derivatives' description_hash=912171f2769e generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=29.660698s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=29.661044s description_hash=912171f2769e
+DEBUG pure_llm[Theta of option]: cache_id=140145455481920 cache_keys=[] python_code_present=True raw_response_hash=0a6e9f761ec5 raw_response_snippet="FORMULA:\nTheta = -[S · σ · N'(d1)] / [2 · √T] / 365\n\nWhere:\nd1 = [ln(S/K) + (r +"
+<string>:17: RuntimeWarning: divide by zero encountered in divide
+<string>:17: RuntimeWarning: divide by zero encountered in divide
+NN_INPUT_CHECK plan={'log_cols': [0, 1, 2], 'sqrt_cols': [0, 1, 2], 'ratio': False} train_min=[80.          0.1         0.16366946] train_max=[95.87939698  0.25879397  1.04839577] test_min=[96.08040201  0.26080402  0.15595236] test_max=[120.           0.5          1.04577112]
+  pure_llm       : train=   nan, test=   nan
+  neural_network : train=0.9997, test=-0.8457
+  hybrid         : train=0.9997, test=-0.8457 [v4_nn]
+  💾 Checkpoint saved (11/11)
+
+================================================================================
+STATISTICAL REPORT — HypatiaX DeFi Benchmark v4.0
+================================================================================
+Total cases run : 11
+  Standard      : 11  (used in aggregate, denominator = 11)
+  Intractable   : 0  (reported separately, excluded from aggregate)
+
+NOTE: All percentages use FIXED denominator (standard cases only).
+      NaN / failure counts as 0 toward the denominator. This makes
+      LLM, NN, and Hybrid rates directly comparable.
+
+  Pure LLM      : median=0.6232, mean(clip-10)=-0.6156, >0.9: 18.2%, >0.99: 18.2%  (catastrophic R²<-10.0: 0)
+  Neural Network: median=-2.3900, mean(clip-10)=-2.9613, >0.9: 0.0%, >0.99: 0.0%  (catastrophic R²<-10.0: 1)
+  Hybrid        : median=-2.4002, mean(clip-10)=-3.0288, >0.9: 0.0%, >0.99: 0.0%  (catastrophic R²<-10.0: 1)
+
+── By difficulty ─────────────────────────────────────────────────────────
+  easy   | pure_llm      : median=-4.7088, >0.99: 0.0%  (n=1)
+  easy   | hybrid        : median=-2.4002, >0.99: 0.0%  (n=1)
+  medium | pure_llm      : median=1.0000, >0.99: 20.0%  (n=5)
+  medium | hybrid        : median=-2.5264, >0.99: 0.0%  (n=5)
+  hard   | pure_llm      : median=0.6232, >0.99: 20.0%  (n=5)
+  hard   | hybrid        : median=-2.3900, >0.99: 0.0%  (n=5)
+
+── Timing summary (per-case mean) ────────────────────────────────────────
+  Pure LLM      : mean=17.0s, median=15.2s  (n=11)
+  Neural Network: mean=4.3s, median=4.1s  (n=11)
+  Hybrid        : mean=21.3s, median=24.0s  (n=11)
+  Hybrid vs NN speedup: Hybrid 5.02× slower than NN (mean)
+  Hybrid vs NN speedup (median): 0.17×
+  (Paper claims 73% reduction = 3.7×)
+  This run: mean-based -402.0% reduction, median-based -479.1% reduction
+  Hybrid vs NN speedup (LLM-routed cases only, n=11): 0.20× — this is the cleanest comparison for the paper
+
+================================================================================
+
+✅ Final results saved → hypatiax/data/results/hypatiax_defi_benchmark_v4_results.json
+🗑️  Checkpoint removed (run complete)

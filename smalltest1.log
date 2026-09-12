@@ -1,0 +1,60 @@
+python-dotenv could not parse statement starting at line 8
+✅ Loaded .env from: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/.env
+✅ Loaded experiment_protocol_defi.py
+
+🔍 Case filter active: running 1 case(s) — ['Value at Risk at 95%']
+================================================================================
+HypatiaX DeFi Extrapolation Benchmark v4.0
+================================================================================
+Cases: 1 | Fresh run
+Checkpoint: hypatiax/data/results/hypatiax_defi_benchmark_v4_checkpoint.json
+Output    : hypatiax/data/results/hypatiax_defi_benchmark_v4_results.json
+================================================================================
+
+[01/1] Value at Risk at 95%  (EASY)
+  Split → train=80, test=120
+MODULE_RESOLUTION: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py
+GENERATE_ENTER model='claude-sonnet-4-6' domain='risk_var' description_hash=b88f5928f77d generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=11.451793s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.452134s description_hash=b88f5928f77d
+DEBUG pure_llm[Value at Risk at 95%]: cache_id=140216416814144 cache_keys=[] python_code_present=True raw_response_hash=2683ad77e433 raw_response_snippet='FORMULA:\nVaR = portfolio_value × daily_volatility × z_score_95\n\nwhere z_score_95'
+NN_INPUT_CHECK plan={'log_cols': [0, 1], 'sqrt_cols': [0, 1], 'ratio': True} train_min=[1.e+04 1.e-02] train_max=[4.03015075e+05 5.00000000e-02] test_min=[4.07989950e+05 1.06060606e-02] test_max=[1.00000000e+06 4.98484848e-02]
+  pure_llm       : train=1.0000, test=1.0000
+  neural_network : train=0.9999, test=-0.3251
+  hybrid         : train=1.0000, test=1.0000 [v4_llm]
+  💾 Checkpoint saved (1/1)
+
+================================================================================
+STATISTICAL REPORT — HypatiaX DeFi Benchmark v4.0
+================================================================================
+Total cases run : 1
+  Standard      : 1  (used in aggregate, denominator = 1)
+  Intractable   : 0  (reported separately, excluded from aggregate)
+
+NOTE: All percentages use FIXED denominator (standard cases only).
+      NaN / failure counts as 0 toward the denominator. This makes
+      LLM, NN, and Hybrid rates directly comparable.
+
+  Pure LLM      : median=1.0000, mean(clip-10)=1.0000, >0.9: 100.0%, >0.99: 100.0%  (catastrophic R²<-10.0: 0)
+  Neural Network: median=-0.3251, mean(clip-10)=-0.3251, >0.9: 0.0%, >0.99: 0.0%  (catastrophic R²<-10.0: 0)
+  Hybrid        : median=1.0000, mean(clip-10)=1.0000, >0.9: 100.0%, >0.99: 100.0%  (catastrophic R²<-10.0: 0)
+
+── By difficulty ─────────────────────────────────────────────────────────
+  easy   | pure_llm      : median=1.0000, >0.99: 100.0%  (n=1)
+  easy   | hybrid        : median=1.0000, >0.99: 100.0%  (n=1)
+
+── Timing summary (per-case mean) ────────────────────────────────────────
+  Pure LLM      : mean=16.2s, median=16.2s  (n=1)
+  Neural Network: mean=5.8s, median=5.8s  (n=1)
+  Hybrid        : mean=15.4s, median=15.4s  (n=1)
+  Hybrid vs NN speedup: Hybrid 2.66× slower than NN (mean)
+  Hybrid vs NN speedup (median): 0.38×
+  (Paper claims 73% reduction = 3.7×)
+  This run: mean-based -166.0% reduction, median-based -166.0% reduction
+  Hybrid vs NN speedup (LLM-routed cases only, n=1): 0.38× — this is the cleanest comparison for the paper
+
+================================================================================
+
+✅ Final results saved → hypatiax/data/results/hypatiax_defi_benchmark_v4_results.json
+🗑️  Checkpoint removed (run complete)

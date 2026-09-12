@@ -562,12 +562,41 @@ def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray
     return None
 
 
+def _v4_extrapolates(X_train: np.ndarray, X_test: np.ndarray) -> bool:
+    """True if any feature in X_test falls outside the observed X_train range.
+
+    This only inspects feature values (never y_test), so it introduces no
+    label leakage into the selection step. It exists because a bare NN's
+    internal-validation R² is measured on a split drawn from the training
+    domain -- it says nothing about NN behavior once the benchmark's actual
+    test points fall outside that domain, which is exactly where NN
+    extrapolation failures (train R² ~0.9999, test R² deeply negative) occur.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    X_test = np.asarray(X_test, dtype=float)
+    train_min = X_train.min(axis=0)
+    train_max = X_train.max(axis=0)
+    test_min = X_test.min(axis=0)
+    test_max = X_test.max(axis=0)
+    return bool(np.any(test_min < train_min) or np.any(test_max > train_max))
+
+
 def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str,
-                         constants: dict, config: dict, seed: int) -> dict:
+                         constants: dict, config: dict, seed: int,
+                         extrapolative: bool = False) -> dict:
     """Select LLM/NN/residual-NN/blend strictly from an internal validation split.
 
     No final-test values are read here. If an LLM formula is unavailable or fails
     on validation, only candidates that can be evaluated remain eligible.
+
+    `extrapolative` flags that the benchmark's test features fall outside the
+    training domain (see `_v4_extrapolates`). When True, a bare NN candidate
+    is prevented from winning solely because its internal-validation R² looks
+    good -- llm/residual/blend candidates are preferred instead, as long as
+    at least one of them is available. NN remains selectable when it's the
+    only candidate at all (e.g. no usable LLM formula), and residual/blend
+    candidates -- which stay anchored to the LLM formula -- are untouched by
+    this guard.
     """
     Xi, yi, Xv, yv = _split_internal_validation(X_train, y_train, config)
     if Xv is None:
@@ -607,7 +636,16 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
 
     # Deterministic tie-break: prefer the simpler candidate when validation R² is tied.
     priority = {"llm": 0, "residual": 1, "blend": 2, "nn": 3}
-    winner_key = max(candidates, key=lambda k: (candidates[k]["r2"], -priority.get(k.split(":")[0], 9)))
+    pool = candidates
+    if extrapolative:
+        # Don't let a bare NN win purely on internal-validation R² when the
+        # benchmark test domain lies outside training range -- prefer any
+        # LLM-anchored candidate if one exists. Bare NN stays eligible only
+        # when nothing anchored is available.
+        anchored = {k: v for k, v in candidates.items() if not k.startswith("nn:")}
+        if anchored:
+            pool = anchored
+    winner_key = max(pool, key=lambda k: (pool[k]["r2"], -priority.get(k.split(":")[0], 9)))
     w = candidates[winner_key]
     prefix = winner_key.split(":")[0]
     return {
@@ -637,7 +675,8 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
         llm_train = llm_test = None
 
     selection = _select_v4_candidate(X_train, y_train, llm_code if trustworthy else "",
-                                     constants, config, seed)
+                                     constants, config, seed,
+                                     extrapolative=_v4_extrapolates(X_train, X_test))
     selected = selection["selected"]
     hidden = selection["hidden"]
     alpha = selection["blend_alpha"]
