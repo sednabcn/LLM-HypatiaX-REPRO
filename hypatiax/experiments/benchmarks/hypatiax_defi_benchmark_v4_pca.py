@@ -354,13 +354,6 @@ def _train_and_eval_nn(
     # same number of columns (see _compute_augment_plan/_apply_augment_plan).
     if augment:
         _plan   = _compute_augment_plan(X_train)
-        print(
-            f"NN_DEBUG case={case_name!r} "
-            f"plan={plan} "
-            f"X_train_range=({X_train.min(0)}, {X_train.max(0)}) "
-            f"X_test_range=({X_test.min(0)}, {X_test.max(0)})",
-            flush=True,
-        )
         X_train = _apply_augment_plan(X_train, _plan)
         X_test  = _apply_augment_plan(X_test, _plan)
 
@@ -1177,7 +1170,17 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
     else:
         fitted = _fit_candidate_full(selected, X_train, y_train, X_test,
                                      llm_train, llm_test, hidden, alpha, seed)
-        if fitted is None or fitted.get("y_pred_test") is None:
+        # Guard against both hard failures (_fit_candidate_full returns None,
+        # e.g. residual/blend requested without a usable LLM formula) and
+        # soft failures (a live fit that silently produced NaN/Inf, e.g. an
+        # MLP numerically blowing up on an out-of-range extrapolative test
+        # point). Checking only `is None` would miss the second case: the
+        # candidate would keep decision="v4_residual_nn"/"v4_blend" and
+        # extrapolation_unmitigated=False even though nothing usable was
+        # actually produced.
+        _pred = fitted.get("y_pred_test") if fitted is not None else None
+        _pred_bad = _pred is None or not np.all(np.isfinite(_pred))
+        if _pred_bad:
             fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
                                          None, None, _V4_ARCHITECTURES[1], 0.0, seed)
             selected = "nn_fallback"
@@ -1417,7 +1420,7 @@ def _generate_report(results: list):
     denom = max(len(standard), 1)
 
     print("\n" + "=" * 80)
-    print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0")
+    print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v4.0 (PCA split)")
     print("=" * 80)
     print(f"Total cases run : {len(results)}")
     print(f"  Standard      : {len(standard)}  (used in aggregate, denominator = {denom})")
@@ -1644,7 +1647,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
         all_results       = list(existing)
 
         print("=" * 80)
-        print("HypatiaX DeFi Extrapolation Benchmark v3.0 (PCA split)")
+        print("HypatiaX DeFi Extrapolation Benchmark v4.0 (PCA split)")
         print("=" * 80)
         print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
               f"Cases: {total} | Fresh run")
@@ -1890,7 +1893,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     case_results["hybrid"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
-                        "llm_model": None, "model_used": None,
+                        "llm_trustworthy": None, "selected_candidate": None,
+                        "validation_r2": None, "validation_n": None,
+                        "timed_out": None, "llm_model": None, "model_used": None,
+                        "extrapolation_unmitigated": None,
                     }
 
                 # ── Augment with extrapolation gap and stability score ────────────
@@ -2034,7 +2040,7 @@ def report_only():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="HypatiaX DeFi Extrapolation Benchmark v3.0",
+        description="HypatiaX DeFi Extrapolation Benchmark v4.0 (PCA split)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:

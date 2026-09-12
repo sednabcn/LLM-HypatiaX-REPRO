@@ -710,7 +710,17 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
     else:
         fitted = _fit_candidate_full(selected, X_train, y_train, X_test,
                                      llm_train, llm_test, hidden, alpha, seed)
-        if fitted is None or fitted.get("y_pred_test") is None:
+        # Guard against both hard failures (_fit_candidate_full returns None,
+        # e.g. residual/blend requested without a usable LLM formula) and
+        # soft failures (a live fit that silently produced NaN/Inf, e.g. an
+        # MLP numerically blowing up on an out-of-range extrapolative test
+        # point). Checking only `is None` would miss the second case: the
+        # candidate would keep decision="v4_residual_nn"/"v4_blend" and
+        # extrapolation_unmitigated=False even though nothing usable was
+        # actually produced.
+        _pred = fitted.get("y_pred_test") if fitted is not None else None
+        _pred_bad = _pred is None or not np.all(np.isfinite(_pred))
+        if _pred_bad:
             fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
                                          None, None, _V4_ARCHITECTURES[1], 0.0, seed)
             selected = "nn_fallback"
@@ -1417,10 +1427,13 @@ def _load_checkpoint() -> tuple[list, int]:
         data = json.loads(CHECKPOINT_FILE.read_text())
         if not isinstance(data, list):
             return [], 0
-        # Deduplicate — keep last occurrence of each case name
+        # Deduplicate — keep last occurrence of each (case name, seed) pair.
+        # seed-loop fix: without the seed in the key, a multi-seed sweep would
+        # collapse to one record per case (last seed wins) on resume.
         seen = {}
         for item in data:
-            seen[item.get("equation_id", id(item))] = item
+            key = (item.get("equation_id", id(item)), item.get("seed"))
+            seen[key] = item
         data = list(seen.values())
         return data, len(data)
     except Exception:
@@ -1515,7 +1528,13 @@ def _generate_report(results: list):
         print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
         for r in intractable:
             hy = r["results"].get("hybrid", {}).get("test_r2")
-            print(f"  {r['test_case'][:55]:<55}  hybrid test R² = "
+            # BUGFIX: this read r["test_case"], a key that has never existed on
+            # these records (only "equation_id" does) — dead code that would
+            # have raised KeyError the first time this codebase actually had
+            # an intractable case in `results`. Currently unreachable in
+            # practice since _get_test_cases() ships 0 intractable cases, but
+            # fixed here while touching this section rather than left latent.
+            print(f"  {r['equation_id'][:55]:<55}  hybrid test R² = "
                   f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
 
     # By-difficulty breakdown
@@ -1572,15 +1591,18 @@ def _generate_report(results: list):
               f"median-based {reduction_median:.1f}% reduction")
 
         # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are the only fair comparison — pure LLM call vs NN)
+        # (these are the only fair comparison — pure LLM call vs NN).
+        # v4 decision values are "v4_llm" / "v4_nn" / "v4_residual_nn" /
+        # "v4_blend" / "v4_nn_fallback" — filter on the whole "v4_nn"/
+        # "v4_nn_fallback" strings rather than the old bare "nn"/"nn_fallback".
         llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback") and r["results"].get("neural_network")]
+                          ("v4_nn", "v4_nn_fallback") and r["results"].get("neural_network")]
         llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback") and r["results"].get("hybrid")]
+                          ("v4_nn", "v4_nn_fallback") and r["results"].get("hybrid")]
         if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
             sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
             print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
@@ -1951,12 +1973,26 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "success":         _hybrid_success,  # FIX 13 — fit-quality gate
                         "time_s":          round(hyb_time, 3),
                         "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
+                        # FIX-HYBRID-DIAGNOSTICS: _v4_hybrid_predict_and_eval() already
+                        # computes these (see its return dict) but they were dropped
+                        # here before ever reaching the output JSON, making it
+                        # impossible to tell after the fact whether a "v4_nn" decision
+                        # on an extrapolative case came from the guard legitimately
+                        # finding no LLM-anchored candidate (llm_trustworthy=False) or
+                        # from something else. Keep them so post-hoc audits (e.g. why
+                        # did "Effective Leverage" / "Slashing penalty" select nn on
+                        # every seed) don't require a re-run just to see them.
+                        "llm_trustworthy": hy_m.get("llm_trustworthy"),
+                        "selected_candidate": hy_m.get("selected_candidate"),
+                        "llm_train_r2":    hy_m.get("llm_train_r2"),
+                        "validation_r2":   hy_m.get("validation_r2"),
+                        "validation_n":    hy_m.get("validation_n"),
+                        "timed_out":       hy_m.get("timed_out"),
                         # True when the test domain was extrapolative and no
-                        # LLM-anchored candidate was available at all, so the
-                        # extrapolation guard in _select_v4_candidate had
-                        # nothing to prefer NN over (or the selected candidate
-                        # failed to fit and was force-replaced by bare NN).
-                        # Distinguishes "genuinely nothing better was
+                        # LLM-anchored candidate was available at all (or the
+                        # selected candidate failed to fit — or fit but produced
+                        # non-finite predictions — and was force-replaced by bare
+                        # NN) -- distinguishes "genuinely nothing better was
                         # available" from an ordinary confident NN win.
                         "extrapolation_unmitigated": hy_m.get("extrapolation_unmitigated", False),
                     }
@@ -1964,6 +2000,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     case_results["hybrid"] = {
                         "train_r2": float("nan"), "test_r2": float("nan"),
                         "success": False, "time_s": 0.0, "error": str(e),
+                        "llm_trustworthy": None, "selected_candidate": None,
+                        "llm_train_r2": None, "validation_r2": None,
+                        "validation_n": None, "timed_out": None,
+                        "extrapolation_unmitigated": None,
                     }
 
                 # ── Augment with extrapolation gap and stability score ────────────
