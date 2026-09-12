@@ -1,0 +1,77 @@
+[
+  {
+    "index": 1,
+    "case": "Value at Risk at 95%",
+    "domain": "risk_var",
+    "model_requested": "claude-sonnet-4-6",
+    "description_hash": "b88f5928f77d",
+    "description": "Parametric Value at Risk at 95% confidence (1-day)",
+    "variable_names": [
+      "portfolio_value",
+      "daily_volatility"
+    ],
+    "baseline_id": 140497322178944,
+    "client_id": 140497322167088,
+    "client_type": "anthropic.Anthropic",
+    "cache_attribute_present": true,
+    "cache_value": "{}",
+    "elapsed_s": 12.54607,
+    "result_method": "pure_llm",
+    "result_model": "claude-sonnet-4-6",
+    "has_python_code": true,
+    "raw_response_hash": "3cfd42661dc0",
+    "error_type": null,
+    "error": null,
+    "error_repr": null
+  },
+  {
+    "index": 2,
+    "case": "Value at Risk at 99%",
+    "domain": "risk_var",
+    "model_requested": "claude-sonnet-4-6",
+    "description_hash": "3053851ce38b",
+    "description": "Parametric Value at Risk at 99% confidence (1-day)",
+    "variable_names": [
+      "portfolio_value",
+      "daily_volatility"
+    ],
+    "baseline_id": 140496454663296,
+    "client_id": 140496460207536,
+    "client_type": "anthropic.Anthropic",
+    "cache_attribute_present": true,
+    "cache_value": "{}",
+    "elapsed_s": 10.689786,
+    "result_method": "pure_llm",
+    "result_model": "claude-sonnet-4-6",
+    "has_python_code": true,
+    "raw_response_hash": "916c0066b0c0",
+    "error_type": null,
+    "error": null,
+    "error_repr": null
+  },
+  {
+    "index": 3,
+    "case": "Partial liquidation amount",
+    "domain": "liquidation",
+    "model_requested": "claude-sonnet-4-6",
+    "description_hash": "0184f8032743",
+    "description": "Partial liquidation amount to restore undercollateralised position",
+    "variable_names": [
+      "deficit",
+      "liquidation_fee"
+    ],
+    "baseline_id": 140496445390976,
+    "client_id": 140496443811472,
+    "client_type": "anthropic.Anthropic",
+    "cache_attribute_present": true,
+    "cache_value": "{}",
+    "elapsed_s": 10.329174,
+    "result_method": "pure_llm",
+    "result_model": "claude-sonnet-4-6",
+    "has_python_code": true,
+    "raw_response_hash": "0aa25813cd03",
+    "error_type": null,
+    "error": null,
+    "error_repr": null
+  }
+]

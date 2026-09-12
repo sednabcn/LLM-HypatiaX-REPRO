@@ -1683,6 +1683,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                             "time_s": round(time.time() - _t0_llm, 3),
                             "error": "truncated_formula: no valid return statement",
                             "model": llm_res.get("model"),
+                            # DEBUG-ITEM1-CACHE-HYPOTHESIS: real exception text
+                            # from generate_formula()'s except clause, previously
+                            # discarded in favor of the generic message above —
+                            # persisted here so it survives into the JSON we
+                            # already collect, no separate logs needed.
+                            "llm_internal_error": llm_res.get("error"),
+                            "debug_cache_keys": list(getattr(llm_base, "_cache", {}).keys()),
                         }
                     else:
                         llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,

@@ -18,6 +18,7 @@ BUG FIXES vs previous version:
 """
 
 import inspect
+import hashlib
 import json
 import os
 import random
@@ -41,30 +42,46 @@ load_dotenv(dotenv_path=env_path)
 
 
 def _create_message_deterministic(client, **kwargs):
-    """Call client.messages.create(), preferring temperature=0.0 for
-    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE above), but tolerate
-    newer models that no longer accept the parameter at all.
+    """Make one direct Anthropic API call.
 
-    FIX-TEMPERATURE-DEPRECATED: Anthropic deprecated the temperature/top_p/
-    top_k sampling parameters for models released after Claude Opus 4.6
-    (this includes Sonnet 4.6+ and Opus 4.7+, i.e. exactly the models this
-    codebase targets by default). Unlike older models, which just accepted
-    temperature=0.0 as one valid value among many, these newer models
-    reject the request outright with a 400 "`temperature` is deprecated for
-    this model." error the moment the parameter is present — observed
-    failing the CI benchmark run after the reproducibility fix above was
-    applied. Rather than dropping temperature=0.0 entirely (and losing the
-    determinism benefit on any older/other model that still honours it),
-    this tries with temperature=0.0 first and retries once without it only
-    on that specific deprecation error.
+    Diagnostic/JMLR reproducibility mode: do not send the deprecated
+    ``temperature`` parameter.  Claude 4.6 models reject it, and the
+    previous retry-on-error logic could obscure where the failure occurred.
+
+    The function deliberately has no cache, memoization, retry, or fallback.
+    Every invocation reaches ``client.messages.create`` exactly once unless
+    the client raises before returning.
     """
+    t0 = time.perf_counter()
+    print(
+        "API_ENTER "
+        f"model={kwargs.get('model')!r} "
+        f"max_tokens={kwargs.get('max_tokens')!r} "
+        f"messages={len(kwargs.get('messages', []))}"
+    )
     try:
-        return client.messages.create(temperature=0.0, **kwargs)
+        response = client.messages.create(**kwargs)
     except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
+        dt = time.perf_counter() - t0
+        print(
+            "API_ERROR "
+            f"dt={dt:.6f}s "
+            f"type={type(e).__name__} "
+            f"message={str(e)!r}"
+        )
         raise
+    dt = time.perf_counter() - t0
+    block_types = [
+        getattr(b, "type", type(b).__name__)
+        for b in getattr(response, "content", [])
+    ]
+    print(
+        "API_EXIT "
+        f"dt={dt:.6f}s "
+        f"response_type={type(response).__name__} "
+        f"block_types={block_types!r}"
+    )
+    return response
 
 
 class PureLLMBaseline:
@@ -95,7 +112,7 @@ class PureLLMBaseline:
         self.client = Anthropic(api_key=api_key)
         self.model = model
         self.results = []
-        self._cache: dict = {}  # added by apply_patches
+        # No per-instance cache: each benchmark case owns a fresh baseline.
 
     @staticmethod
     def evaluate_function(func, X, var_names=None):
@@ -454,11 +471,26 @@ class PureLLMBaseline:
             # temperature=0.0 narrows (does not fully guarantee, since
             # provider-side serving batching can still vary) run-to-run
             # sampling variance.
+            _gen_t0 = time.perf_counter()
+            print(
+                "GENERATE_ENTER "
+                f"model={self.model!r} "
+                f"domain={domain!r} "
+                f"description_hash={hashlib.sha256(description.encode()).hexdigest()[:12]} "
+                f"generate_formula_source={inspect.getsourcefile(self.generate_formula)!r} "
+                f"api_helper_source={inspect.getsourcefile(_create_message_deterministic)!r} "
+                f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
+            )
             response = _create_message_deterministic(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
+            )
+            print(
+                "GENERATE_API_RETURN "
+                f"dt={time.perf_counter() - _gen_t0:.6f}s "
+                f"description_hash={hashlib.sha256(description.encode()).hexdigest()[:12]}"
             )
             # FIX (ThinkingBlock crash): response.content[0] is not guaranteed to be
             # the text block. When the model returns extended-thinking output, the
@@ -492,13 +524,17 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            print(f"\n❌ ERROR: {str(e)}")
+            print(
+                f"\n❌ ERROR: {type(e).__name__}: {str(e)}"
+            )
             return {
                 "method": "pure_llm",
                 "model": self.model,
                 "description": description,
                 "domain": domain,
                 "error": str(e),
+                "error_type": type(e).__name__,
+                "error_repr": repr(e),
                 "timestamp": datetime.now().isoformat(),
             }
 

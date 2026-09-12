@@ -1766,6 +1766,18 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                             "executed": False, "success": False,
                             "time_s": round(time.time() - _t0_llm, 3),
                             "error": "truncated_formula: no valid return statement",
+                            # DEBUG-ITEM1-CACHE-HYPOTHESIS: previously this
+                            # generic string was the ONLY error info kept —
+                            # llm_res's own "error" key (the real exception
+                            # text from generate_formula()'s except clause,
+                            # e.g. an API 400 message) was silently discarded
+                            # here. Persisting it directly into the result
+                            # JSON means the actual failure reason survives
+                            # into the artifact we already collect, with no
+                            # dependency on capturing separate stdout/logs.
+                            "llm_internal_error": llm_res.get("error"),
+                            "llm_model_used": llm_res.get("model"),
+                            "debug_cache_keys": list(getattr(llm_base, "_cache", {}).keys()),
                         }
                     else:
                         llm_tr_m  = llm_base.test_formula_accuracy(llm_res, X_tr, y_tr,

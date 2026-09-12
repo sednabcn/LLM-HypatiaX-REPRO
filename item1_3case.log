@@ -1,0 +1,36 @@
+python-dotenv could not parse statement starting at line 8
+✅ Loaded .env from: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/.env
+✅ Loaded experiment_protocol_defi.py
+========================================================================================
+ITEM 1 — PURE LLM API DIAGNOSTIC SHARD
+========================================================================================
+repo_root=/home/agagora/Downloads
+model='claude-sonnet-4-6'
+cases=3
+baseline_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py'
+generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py'
+========================================================================================
+
+[1/3] Value at Risk at 95%
+CASE_SETUP baseline_id=140497322178944 client_id=140497322167088 cache_attribute_present=True cache={}
+CASE_RESULT elapsed=12.546070s method='pure_llm' model='claude-sonnet-4-6' has_python_code=True error_type=None
+
+[2/3] Value at Risk at 99%
+CASE_SETUP baseline_id=140496454663296 client_id=140496460207536 cache_attribute_present=True cache={}
+CASE_RESULT elapsed=10.689786s method='pure_llm' model='claude-sonnet-4-6' has_python_code=True error_type=None
+
+[3/3] Partial liquidation amount
+CASE_SETUP baseline_id=140496445390976 client_id=140496443811472 cache_attribute_present=True cache={}
+WARNING: _generate_specialized_prompt matched no branch for 'Partial liquidation amount to restore undercollateralised position' (domain=liquidation). Falling back to standard prompt. Add a matching branch if this case requires structured output.
+CASE_RESULT elapsed=10.329174s method='pure_llm' model='claude-sonnet-4-6' has_python_code=True error_type=None
+
+========================================================================================
+Saved: item1_3case_diagnostic.json
+========================================================================================
+
+INTERPRETATION:
+  API_ENTER + API_EXIT for every case  -> all cases reached Anthropic.
+  API_ENTER only for case 1            -> later cases are short-circuited before API.
+  API_ENTER + API_ERROR                 -> real API failure; inspect exception.
+  No API_ENTER on a case                -> generate_formula returned before API.
+========================================================================================
