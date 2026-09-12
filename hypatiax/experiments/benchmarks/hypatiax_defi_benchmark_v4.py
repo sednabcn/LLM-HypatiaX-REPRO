@@ -1730,6 +1730,33 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     llm_res   = llm_base.generate_formula(desc, tc["domain"],
                                                           var_names, metadata)
 
+                    # DEBUG-ITEM1-CACHE-HYPOTHESIS: baseline_pure_llm_defi_
+                    # discovery.py's PureLLMBaseline.__init__ carries an
+                    # unused `self._cache: dict = {}  # added by apply_patches`
+                    # attribute -- declared but never read/written anywhere
+                    # in that file. Seed-level result data shows exactly one
+                    # real-network-latency pure_llm call per shard (the
+                    # first case processed, ~0.6-0.8s) followed by ~73
+                    # near-zero-time (0.001s) failures -- too fast to be
+                    # real API round trips. That pattern is consistent with
+                    # an external patch memoizing generate_formula() on a
+                    # key that doesn't vary per-equation, replaying the
+                    # first call's result (success OR failure) for every
+                    # later case. Logging id(llm_base._cache), its contents,
+                    # and a hash of the raw response lets us confirm or rule
+                    # this out directly on the next run, rather than
+                    # inferring it from timing alone.
+                    import hashlib as _hashlib
+                    _raw = llm_res.get("raw_response", "") or ""
+                    print(
+                        f"DEBUG pure_llm[{tc['name']}]: "
+                        f"cache_id={id(getattr(llm_base, '_cache', None))} "
+                        f"cache_keys={list(getattr(llm_base, '_cache', {}).keys())} "
+                        f"python_code_present={'python_code' in llm_res} "
+                        f"raw_response_hash={_hashlib.sha256(_raw.encode()).hexdigest()[:12]} "
+                        f"raw_response_snippet={_raw[:80]!r}"
+                    )
+
                     # FIX 12: reject truncated formulas before scoring — see
                     # _is_truncated_formula() above for why.
                     _llm_code = llm_res.get("python_code", "") or llm_res.get("formula_code", "") or ""

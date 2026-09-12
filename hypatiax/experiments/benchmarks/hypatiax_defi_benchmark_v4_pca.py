@@ -1648,6 +1648,31 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     llm_res   = llm_base.generate_formula(desc, tc["domain"],
                                                           var_names, metadata)
 
+                    # DEBUG-ITEM1-CACHE-HYPOTHESIS: see matching comment in
+                    # hypatiax_defi_benchmark_v4.py. This script's non-PCA
+                    # sibling shows exactly one real-network-latency pure_llm
+                    # call per shard (the first case, ~0.6-0.8s) followed by
+                    # ~73 near-zero-time (0.001s) failures too fast to be real
+                    # API round trips -- consistent with an external patch
+                    # (PureLLMBaseline's unused self._cache, "added by
+                    # apply_patches") memoizing on a key that doesn't vary
+                    # per-equation. This matters even more here: if seed 42's
+                    # reported partial pure_llm success is a cache hit from
+                    # this shard's own first case rather than an independently
+                    # -derived answer for each equation, the same cached
+                    # formula could be getting silently stamped onto every
+                    # case in this shard.
+                    import hashlib as _hashlib
+                    _raw = llm_res.get("raw_response", "") or ""
+                    print(
+                        f"DEBUG pure_llm[{tc['name']}]: "
+                        f"cache_id={id(getattr(llm_base, '_cache', None))} "
+                        f"cache_keys={list(getattr(llm_base, '_cache', {}).keys())} "
+                        f"python_code_present={'python_code' in llm_res} "
+                        f"raw_response_hash={_hashlib.sha256(_raw.encode()).hexdigest()[:12]} "
+                        f"raw_response_snippet={_raw[:80]!r}"
+                    )
+
                     # FIX 12 (ported from v4.0): reject truncated formulas before
                     # scoring — see _is_truncated_formula() above for why.
                     _llm_code = llm_res.get("python_code", "") or llm_res.get("formula_code", "") or ""
