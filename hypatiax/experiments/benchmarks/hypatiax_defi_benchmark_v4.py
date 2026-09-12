@@ -1720,6 +1720,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
                         PureLLMBaseline,
                     )
+                    import sys
+                    import hypatiax
+                    import hypatiax.core.base_pure_llm as _m
+                    
+                    print(
+                        f"MODULE_RESOLUTION: "
+                        f"hypatiax={hypatiax.__file__} "
+                        f"base_pure_llm_defi_discovery={_m.baseline_pure_llm_defi_discovery.__file__} "
+                        f"sys_path0={sys.path[0]}",
+                        flush=True,
+                    )
                     # FIX-ITEM1-MODEL-MISMATCH: pin explicitly to the same
                     # model the hybrid arm's inline LLM call uses (line ~983)
                     # rather than relying on PureLLMBaseline's own default,

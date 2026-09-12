@@ -354,6 +354,13 @@ def _train_and_eval_nn(
     # same number of columns (see _compute_augment_plan/_apply_augment_plan).
     if augment:
         _plan   = _compute_augment_plan(X_train)
+        print(
+            f"NN_DEBUG case={case_name!r} "
+            f"plan={plan} "
+            f"X_train_range=({X_train.min(0)}, {X_train.max(0)}) "
+            f"X_test_range=({X_test.min(0)}, {X_test.max(0)})",
+            flush=True,
+        )
         X_train = _apply_augment_plan(X_train, _plan)
         X_test  = _apply_augment_plan(X_test, _plan)
 
@@ -1637,6 +1644,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     _t0_llm = time.time()
                     from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
                         PureLLMBaseline,
+                    )
+                    import sys
+                    import hypatiax
+                    import hypatiax.core.base_pure_llm as _m
+
+                    print(
+                        f"MODULE_RESOLUTION: "
+                        f"hypatiax={hypatiax.__file__} "
+                        f"base_pure_llm_defi_discovery={_m.baseline_pure_llm_defi_discovery.__file__} "
+                        f"sys_path0={sys.path[0]}",
+                        flush=True,
                     )
                     # FIX-ITEM1-MODEL-MISMATCH: pin explicitly to the same
                     # constant the hybrid arm's inline LLM call uses, rather
