@@ -1638,7 +1638,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
                         PureLLMBaseline,
                     )
-                    llm_base  = PureLLMBaseline()
+                    # FIX-ITEM1-MODEL-MISMATCH: pin explicitly to the same
+                    # constant the hybrid arm's inline LLM call uses, rather
+                    # than relying on PureLLMBaseline's own default, which
+                    # drifted out of sync with Fix 13/14 and caused every
+                    # standalone pure_llm call to fail near-instantly on an
+                    # invalid model string (see consolidation report §4 item 1).
+                    llm_base  = PureLLMBaseline(model=_HYBRID_LLM_MODEL_NAME)
                     llm_res   = llm_base.generate_formula(desc, tc["domain"],
                                                           var_names, metadata)
 

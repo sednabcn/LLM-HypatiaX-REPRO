@@ -70,7 +70,25 @@ def _create_message_deterministic(client, **kwargs):
 class PureLLMBaseline:
     """Fixed Pure LLM baseline with liquidation domain corrections."""
 
-    def __init__(self, model: str = "claude-sonnet-5"):
+    # FIX-ITEM1-MODEL-MISMATCH (consolidation report §4 item 1): this
+    # default was "claude-sonnet-5" — a different, unrelated model string
+    # from the one the hybrid arm's own inline LLM call uses
+    # (_HYBRID_LLM_MODEL_NAME / model="claude-sonnet-4-6" in both
+    # hypatiax_defi_benchmark_v4.py and hypatiax_defi_benchmark_v4_pca.py).
+    # When "claude-sonnet-4-5" -> "claude-sonnet-4-6" (Fix 13) was applied,
+    # it only touched the two benchmark scripts' inline hybrid call sites —
+    # this module's own default was never part of that change and drifted.
+    # An invalid/unavailable model string causes the API to reject the
+    # request immediately (no tokens generated), which _create_message_
+    # deterministic() re-raises and generate_formula()'s broad except
+    # catches, returning a dict with no "python_code" key at all. Downstream,
+    # that empty code is misclassified by _is_truncated_formula() as
+    # "truncated_formula: no valid return statement" even though nothing was
+    # generated or truncated. This is the confirmed root cause of the
+    # universal pure_llm near-instant failure (100% of non-PCA calls,
+    # 4/5 seeds of PCA calls). Aligning the default here with the model the
+    # working hybrid path actually uses closes the gap.
+    def __init__(self, model: str = "claude-sonnet-4-6"):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
