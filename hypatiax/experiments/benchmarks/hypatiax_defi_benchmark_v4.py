@@ -601,7 +601,8 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
     Xi, yi, Xv, yv = _split_internal_validation(X_train, y_train, config)
     if Xv is None:
         return {"selected": "llm" if llm_code else "nn", "hidden": _V4_ARCHITECTURES[1],
-                "blend_alpha": 1.0, "validation_r2": {}, "validation_n": 0}
+                "blend_alpha": 1.0, "validation_r2": {}, "validation_n": 0,
+                "extrapolation_unmitigated": bool(extrapolative and not llm_code)}
 
     llm_i = _execute_formula(llm_code, Xi, constants=constants) if llm_code else None
     llm_v = _execute_formula(llm_code, Xv, constants=constants) if llm_code else None
@@ -632,19 +633,38 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
 
     if not candidates:
         return {"selected": "nn", "hidden": _V4_ARCHITECTURES[1], "blend_alpha": 0.0,
-                "validation_r2": {}, "validation_n": len(yv)}
+                "validation_r2": {}, "validation_n": len(yv),
+                "extrapolation_unmitigated": bool(extrapolative)}
 
     # Deterministic tie-break: prefer the simpler candidate when validation R² is tied.
     priority = {"llm": 0, "residual": 1, "blend": 2, "nn": 3}
     pool = candidates
+    extrapolation_unmitigated = False
     if extrapolative:
         # Don't let a bare NN win purely on internal-validation R² when the
         # benchmark test domain lies outside training range -- prefer any
-        # LLM-anchored candidate if one exists. Bare NN stays eligible only
-        # when nothing anchored is available.
+        # LLM-anchored candidate if one exists.
         anchored = {k: v for k, v in candidates.items() if not k.startswith("nn:")}
         if anchored:
             pool = anchored
+        else:
+            # Extrapolative test domain but no LLM-anchored candidate exists
+            # at all (LLM formula unavailable/untrustworthy) -- there is
+            # nothing for the guard above to prefer NN over, so it would
+            # otherwise be a silent no-op here. Rather than trusting whichever
+            # NN architecture happened to score best on the in-domain
+            # validation split -- which rewards the architecture most prone to
+            # overfitting that domain -- fall back to the simplest available
+            # architecture (fewest total hidden units), the least likely of
+            # the candidates on hand to blow up under extrapolation. This is
+            # still a guess, not a real fix, so it's flagged via
+            # `extrapolation_unmitigated` rather than left indistinguishable
+            # from an ordinary validation-selected win.
+            extrapolation_unmitigated = True
+            nn_keys = [k for k in candidates if k.startswith("nn:")]
+            if nn_keys:
+                simplest = min(nn_keys, key=lambda k: sum(candidates[k]["hidden"] or []))
+                pool = {simplest: candidates[simplest]}
     winner_key = max(pool, key=lambda k: (pool[k]["r2"], -priority.get(k.split(":")[0], 9)))
     w = candidates[winner_key]
     prefix = winner_key.split(":")[0]
@@ -654,6 +674,7 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
         "blend_alpha": float(w.get("alpha", 1.0)),
         "validation_r2": {k: float(v["r2"]) for k, v in candidates.items()},
         "validation_n": len(yv),
+        "extrapolation_unmitigated": extrapolation_unmitigated,
     }
 
 
@@ -680,6 +701,7 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
     selected = selection["selected"]
     hidden = selection["hidden"]
     alpha = selection["blend_alpha"]
+    extrapolation_unmitigated = bool(selection.get("extrapolation_unmitigated", False))
 
     if selected == "llm":
         pred_test = llm_test
@@ -692,6 +714,10 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
             fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
                                          None, None, _V4_ARCHITECTURES[1], 0.0, seed)
             selected = "nn_fallback"
+            # The originally selected (possibly anchored) candidate failed to
+            # fit at all, so whatever protection the extrapolation guard
+            # offered upstream doesn't apply to what actually got predicted.
+            extrapolation_unmitigated = True
         pred_test = fitted["y_pred_test"]
         pred_train = fitted.get("train_pred")
         timed_out = bool(fitted.get("timed_out", False))
@@ -706,6 +732,7 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
         "validation_r2": selection["validation_r2"],
         "validation_n": selection["validation_n"], "timed_out": timed_out,
         "llm_code": llm_code if llm_code else None,
+        "extrapolation_unmitigated": extrapolation_unmitigated,
     }
 
 
@@ -1924,6 +1951,14 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                         "success":         _hybrid_success,  # FIX 13 — fit-quality gate
                         "time_s":          round(hyb_time, 3),
                         "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
+                        # True when the test domain was extrapolative and no
+                        # LLM-anchored candidate was available at all, so the
+                        # extrapolation guard in _select_v4_candidate had
+                        # nothing to prefer NN over (or the selected candidate
+                        # failed to fit and was force-replaced by bare NN).
+                        # Distinguishes "genuinely nothing better was
+                        # available" from an ordinary confident NN win.
+                        "extrapolation_unmitigated": hy_m.get("extrapolation_unmitigated", False),
                     }
                 except Exception as e:
                     case_results["hybrid"] = {

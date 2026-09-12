@@ -3131,7 +3131,35 @@ jobs:
             if ! git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1; then
               echo "::warning::git pull --rebase failed (possibly untracked file conflict) — stashing untracked files and retrying"
               git stash --include-untracked --quiet || true
-              git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1 || true
+
+              # FIX-RETRY-PULL-EXIT-CHECK: the retry pull below used to discard
+              # its exit code with '|| true'. That's correct ONLY for the
+              # untracked-file-collision case the block above was written for,
+              # where the retry is expected to succeed once the conflicting
+              # untracked path is safely stashed. But this retry can ALSO fail
+              # for a different reason entirely: a genuine rebase conflict
+              # against a shared tracked file (e.g. fixc3_baseline.json, or
+              # another shard's checkpoint) that a concurrent shard pushed in
+              # the gap between our two pull attempts. Swallowing that failure
+              # left the tree mid-rebase / in an inconsistent state, and the
+              # 'git add -f' / 'git diff --cached' checks further down would
+              # then legitimately come back empty — not because there was
+              # nothing new, but because this shard's real result was never
+              # staged onto a clean tree in the first place. Seen in run
+              # 34711535336: shards 0/1/2/4 hit this warning, none hit a
+              # visible ::error::, yet only shard 3's result ever reached
+              # master. Check this retry's exit status explicitly; on failure,
+              # abort the rebase, best-effort restore whatever we stashed
+              # above, and return failure so the existing outer
+              # 'until commit_and_push' retry loop (MAX_ATTEMPTS, with
+              # backoff) restarts this whole function from a clean pull
+              # instead of continuing on a possibly-broken tree.
+              if ! git pull --rebase --autostash origin "${{ github.ref_name }}" 2>&1; then
+                echo "::warning::retry pull ALSO failed for shard ${SHARD} (${EXP}) — not the untracked-file case above (likely a genuine rebase conflict against a shared file from a concurrent shard). Aborting rebase and restarting commit_and_push from a clean pull instead of proceeding on a possibly-broken tree."
+                git rebase --abort 2>/dev/null || true
+                git stash pop --quiet 2>/dev/null || true
+                return 1
+              fi
 
               # FIX-STASH-POP-RESCUE: a pop fails here when the file this
               # shard just produced collides, path-for-path, with a file the
