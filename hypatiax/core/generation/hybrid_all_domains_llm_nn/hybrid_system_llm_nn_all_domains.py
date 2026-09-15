@@ -358,6 +358,29 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "error": "Insufficient data",
             }
 
+        # FIX (crash-to-failure-dict): the rest of the method is wrapped in
+        # try/except so a training blow-up (NaN from log-transform on a
+        # non-positive value, a singular matrix in StandardScaler, a bad
+        # architecture choice, non-finite predictions, etc.) degrades to a
+        # failure metrics dict in the same shape as the insufficient-data
+        # early-return above, instead of an uncaught crash taking down the
+        # whole hybrid run — matching evaluate_llm_formula()'s existing
+        # graceful-failure contract in this same class.
+        try:
+            return self._train_nn_inner(X, y, epochs, seed)
+        except Exception as e:
+            return None, {
+                "r2": 0.0,
+                "rmse": float("inf"),
+                "mae": float("inf"),
+                "error": f"{type(e).__name__}: {e}",
+            }
+
+    def _train_nn_inner(
+        self, X: np.ndarray, y: np.ndarray, epochs: int, seed: int | None
+    ) -> tuple[nn.Module, dict]:
+        """Actual training body of train_nn(), split out so train_nn() can
+        wrap it in a single try/except (see FIX comment above)."""
         # 80/20 split for early stopping only; final metrics on full dataset
         from sklearn.model_selection import train_test_split as _tts
         X_train, X_val, y_train, y_val = _tts(X, y, test_size=0.2, random_state=42)
@@ -465,6 +488,9 @@ NO markdown code blocks, individual parameters NOT dict."""
 
         y_pred_w = scaler_y.inverse_transform(y_pred_s.reshape(-1, 1)).flatten()
         y_pred   = np.exp(y_pred_w) if use_logy else y_pred_w
+
+        if not np.all(np.isfinite(y_pred)):
+            raise ValueError("Non-finite predictions after inverse-transform")
 
         ss_res = np.sum((y - y_pred) ** 2)
         ss_tot = np.sum((y - np.mean(y)) ** 2)

@@ -44,9 +44,17 @@ load_dotenv(dotenv_path=env_path)
 def _create_message_deterministic(client, **kwargs):
     """Make one direct Anthropic API call.
 
-    Diagnostic/JMLR reproducibility mode: do not send the deprecated
-    ``temperature`` parameter.  Claude 4.6 models reject it, and the
-    previous retry-on-error logic could obscure where the failure occurred.
+    Diagnostic/JMLR reproducibility mode: pass through whatever kwargs the
+    caller supplies (including ``temperature`` when the caller sets it —
+    see FIX-ISSUE2B-LLM-TEMPERATURE at the generate_formula() call site)
+    with no retry-on-error logic, so a failure can't be obscured by a
+    silent retry.
+
+    CORRECTED (previously claimed "Claude 4.6 models reject
+    `temperature`" and said this function deliberately omitted it — a
+    live smoke test against model="claude-sonnet-4-6" confirmed
+    `temperature=0.0` is accepted, so that claim was wrong and the
+    generate_formula() call site now sends it).
 
     The function deliberately has no cache, memoization, retry, or fallback.
     Every invocation reaches ``client.messages.create`` exactly once unless
@@ -471,6 +479,15 @@ class PureLLMBaseline:
             # temperature=0.0 narrows (does not fully guarantee, since
             # provider-side serving batching can still vary) run-to-run
             # sampling variance.
+            #
+            # FIX-ISSUE2B-LLM-TEMPERATURE (applied): the comment above
+            # described this mitigation but `temperature` was never
+            # actually passed to _create_message_deterministic() below,
+            # so the API default (non-zero) was silently used the whole
+            # time. Confirmed via a live smoke test that this model
+            # (self.model, default "claude-sonnet-4-6") accepts
+            # temperature=0.0 rather than rejecting it, so it's now
+            # passed through for real.
             _gen_t0 = time.perf_counter()
             print(
                 "GENERATE_ENTER "
@@ -485,6 +502,7 @@ class PureLLMBaseline:
                 self.client,
                 model=self.model,
                 max_tokens=4000,
+                temperature=0.0,
                 messages=[{"role": "user", "content": prompt}],
             )
             print(

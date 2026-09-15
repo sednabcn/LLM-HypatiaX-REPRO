@@ -1,8 +1,65 @@
 #!/usr/bin/env python3
 """
-exp3_nguyen12_hybrid50v_02.py  —  Exp 3 · Nguyen-12 SR suite  (§10.8 primary)
+exp3_nguyen12_hybrid50v_consolidated.py  —  Exp 3 · Nguyen-12 SR suite (§10.8 primary)
 ==============================================================================
 Standalone Python script version — safe to run with `python3` directly.
+
+CONSOLIDATION NOTE (this file)
+-------------------------------
+The four prior scripts in this benchmark (_02.py, _02_patched.py,
+_02_patched_extrap_safe.py, _03.py) were two fix lineages that never got
+merged: branch A (_02_patched -> _02_patched_extrap_safe) added the PySR
+hall-of-fame trajectory monitor and boundary-buffer extrapolation-safety
+fix; branch B (_03, renamed from _02) added --temperature/--n-candidates
+CLI flags, per-run output filenames, and a repo-root off-by-one fix. This
+file merges both lineages onto branch A's base (the more complete one on
+the trajectory/extrapolation-safety axis) and additionally fixes several
+bugs found during a full audit (see audit-exp3.txt) that were present,
+unfixed, in ALL four prior scripts:
+  [FIX-N3-ii-*]      branch B's CLI flags, filenames, config logging, and
+                      repo-root fix — ported in, INCLUDING fixing the
+                      off-by-one in the ImportError fallback path that
+                      _03.py itself missed (audit #4).
+  [FIX-CACHE-SCHEMA]  addresses audit #2 — a cache file is only reused if
+                      it carries a matching schema_version; otherwise it's
+                      treated as stale and re-run, instead of silently
+                      returning a differently-defined "r2" from an older
+                      script version.
+  [FIX-SEED-ZERO]     addresses audit #6 — an explicit seed of 0 is no
+                      longer silently replaced by the argparse default.
+  [FIX-MANAGER-LEAK]  addresses audit #7 — mp.Manager() is now explicitly
+                      shut down in a try/finally.
+  [FIX-STALE-CLAIM]   addresses audit #3 — the unverified 11/12 H (91.7%)
+                      headline figure is no longer asserted as this
+                      script's expected result; it's reported as an
+                      unverified, different-metric prior figure instead.
+  [FIX-LLM-WARMSTART] addresses audit #1 — RESOLVED (was KNOWN-BUG-1,
+                      "NOT FIXED HERE", in the prior revision of this
+                      file). llm_exprs (the LLM warm-start candidates) are
+                      now converted to PySR `guesses`-compatible strings
+                      (see _llm_exprs_to_pysr_guesses /
+                      _sympy_pow_to_pysr_str) and actually passed into
+                      model_h.fit(..., guesses=...) for the "H" run only
+                      — "P" still fits unseeded, so H and P are now a
+                      genuine hybrid-vs-baseline comparison instead of the
+                      same PySR fit run twice. This was an explicit,
+                      owner-approved decision to change what the
+                      experiment measures (per the prior note's own
+                      caveat that this call belonged to whoever owns
+                      §10.8's results, not to a silent consolidation-pass
+                      fix) — see the CHANGELOG entry below and
+                      _llm_exprs_to_pysr_guesses()'s docstring for exactly
+                      what does and doesn't survive conversion, and how a
+                      guess that fails to convert or fails to apply is
+                      surfaced (never silently dropped without a printed
+                      warning and a `llm_guesses_used` field in the saved
+                      record). Any result file produced by THIS script
+                      version should be treated as a first hybrid-vs-
+                      baseline run needing its own verification pass —
+                      not as a continuation of, or replacement for, the
+                      unverified 11/12 H figure flagged in
+                      [FIX-STALE-CLAIM]/audit #3, which came from a
+                      pre-fix script where H and P were identical.
 
 Origin: extracted from HypatiaX_Experiments_v6_PUBLIC.ipynb (Cell 27)
 Fixes applied (v02 → v03):
@@ -69,20 +126,26 @@ CI / sharding fixes (v03 → current):
           `expression`/`r2`. There is no second, independent code path
           that could disagree with it.
 
-Expected result : 11/12 H (91.7 %) · 10/12 P (83.3 %) · 0/12 NN
-                  MW P>NN U=113, p=0.0097
+Expected result : UNVERIFIED — see [FIX-STALE-CLAIM] above. Prior figure
+                  (different script version, different metric — training
+                  r2, not this script's extrapolation r2): 11/12 H (91.7%)
+                  · 10/12 P (83.3%) · 0/12 NN, MW P>NN U=113, p=0.0097.
+                  Also see [KNOWN-BUG-1]: as written, H and P are the same
+                  PySR fit, so this is not yet a hybrid-vs-baseline result.
 Wall time       : 30–90 min
 SEED            : 42 (fixed for reproducibility; override with --seed)
 
 Usage
 -----
-    python3 exp3_nguyen12_hybrid50v_02_patched.py             # SEED=42 (default)
-    python3 exp3_nguyen12_hybrid50v_02_patched.py --seed 123  # stability check
-    python3 exp3_nguyen12_hybrid50v_02_patched.py --seed 777  # stability check
+    python3 exp3_nguyen12_hybrid50v_consolidated.py                                 # SEED=42, temp=0.25 (defaults)
+    python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 123                      # stability check, temp=0.25
+    python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 777                      # stability check, temp=0.25
+    python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 123 --temperature 0      # determinism control
+    python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 123 --temperature 0 --run-index 3   # 3rd of N repeats
 
 CI shard usage (set by ci_runner.yml worker dispatch):
     TASK_IDS="N1 N3 N7" PYSR_SEED=42 EXPERIMENT_SEED=42 \\
-        python3 exp3_nguyen12_hybrid50v_02_patched.py --seed 42
+        python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 42 --temperature 0.25
 
 Trajectory-monitor env vars (read by _fit_with_pysr_trajectory / the poller):
     PYSR_TRAJECTORY_POLL_SECONDS  poll interval in seconds (default: 2.0;
@@ -96,14 +159,22 @@ Trajectory-monitor env vars (read by _fit_with_pysr_trajectory / the poller):
 import argparse
 import csv
 import importlib
+import inspect
 import multiprocessing as mp
 import os
 import pathlib
 import random
+import re
 import sys
 import time
+import warnings
 
 import numpy as np
+# [FIX-LLM-WARMSTART] sympy was already a required dependency (see
+# _REQUIRED below, and model.sympy() elsewhere in this file) -- imported
+# at module level here so _llm_exprs_to_pysr_guesses() doesn't have to
+# guess at import timing relative to the dependency check.
+import sympy as sp
 
 # ── CASE RANGE INJECTION (auto-generated by add_case_range_benchmark.py) ──
 def _apply_case_range(seq):
@@ -205,16 +276,19 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── 1. Resolve repo root & set sys.path ───────────────────────────────────
-# Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_02.py
-# Repo root is 4 levels up (parents[3]):
-#   parents[0] = benchmarks/
-#   parents[1] = experiments/
-#   parents[2] = hypatiax/      <- was incorrectly used as repo root
-#   parents[3] = <repo>/        <- correct repo root
-# [BUG-ROOT-FIX] parents[2] pointed at hypatiax/ not the repo root, so
-# _REPRO_ROOT / "hypatiax" resolved to hypatiax/hypatiax/ (non-existent).
+# Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_consolidated.py
+# [FIX-N3-ii-d, merged from _03.py] _SCRIPT_DIR is already benchmarks/
+# (Path(__file__).parent already strips the filename), so repo root is only
+# 2 more hops up, not 3:
+#   parents[0] = experiments/
+#   parents[1] = hypatiax/
+#   parents[2] = <repo>/        <- correct repo root
+# The old parents[3] indexing was calibrated as if _SCRIPT_DIR were still the
+# file path itself, so it walked one directory too far up in every layout —
+# IndexError on a flat/local checkout, and a silently-wrong _REPRO_ROOT
+# (missing hypatiax/) on CI's nested runner/work/<repo>/<repo>/ checkout.
 _SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT  = _SCRIPT_DIR.parents[3]   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
+_REPO_ROOT  = _SCRIPT_DIR.parents[2]   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
 
 # Support override via environment variable (set by pipeline or notebook)
 _REPRO_ROOT = pathlib.Path(os.environ.get("REPRO_ROOT", str(_REPO_ROOT)))
@@ -235,12 +309,44 @@ def _parse_args():
         "--seed", type=int, default=42,
         help="Random seed for all RNG sources (default: 42)"
     )
+    # [FIX-N3-ii-a, merged from _03.py] Explicit, loggable sampling
+    # temperature for the LLM warm-start call, in place of hypatia.py's
+    # implicit temperature=0.25 default.
+    parser.add_argument(
+        "--temperature", type=float, default=0.25,
+        help="LLM sampling temperature passed to get_llm_prior() "
+             "(default: 0.25, matching hypatia.py's prior default)"
+    )
+    # [FIX-N3-ii-b, merged from _03.py] Distinguishes repeated runs at the
+    # same (seed, temperature) pair so their output files don't collide
+    # with the "already exists, skip" guard in run().
+    parser.add_argument(
+        "--run-index", type=int, default=1,
+        help="1-based index of this run among repeated runs at the same "
+             "seed/temperature, used only to disambiguate output filenames "
+             "(default: 1)"
+    )
+    # [FIX-N3-ii-c, merged from _03.py] hypatia.py's get_llm_prior()
+    # candidate-sampling width, recorded alongside temperature/solve-rate.
+    parser.add_argument(
+        "--n-candidates", "--candidate-count",
+        dest="n_candidates", type=int, default=None,
+        help="Number of LLM-proposed candidate expressions to sample per "
+             "equation before trust-gating, passed to get_llm_prior() "
+             "(default: LLM_N_CANDIDATES env var, else 8)"
+    )
     return parser.parse_args()
 
 # Parse early so SEED is available for the seed block below.
 # (argparse is safe to call at module level — it only reads sys.argv)
 _args = _parse_args()
-SEED  = _resolve_seed() or int(os.environ.get("EXPERIMENT_SEED", str(_args.seed)))
+# [FIX-SEED-ZERO] `_resolve_seed() or ...` silently discarded an explicit,
+# legitimate seed of 0 (0 is falsy in Python), replacing it with the
+# EXPERIMENT_SEED/--seed fallback (typically 42). Any CI run that set
+# PYSR_SEED=0 / EXPERIMENT_SEED=0 / NN_SEED=0 was silently reseeded to 42
+# without warning. Use an explicit None check instead.
+_resolved_seed = _resolve_seed()
+SEED = _resolved_seed if _resolved_seed is not None else int(os.environ.get("EXPERIMENT_SEED", str(_args.seed)))
 
 # ── 3. [PATCH A] Unified seed block — ALL sources seeded from SEED ────────
 random.seed(SEED)
@@ -494,7 +600,13 @@ def _score_expr(expr_py, X, y, variable_names):
     try:
         ns = {v: X[:, i] for i, v in enumerate(variable_names)}
         ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
-                   "sqrt": np.sqrt, "exp": np.exp})
+                   "sqrt": np.sqrt, "exp": np.exp,
+                   # [FIX-SAFE-POW] square/cube replace the generic "^"
+                   # operator below -- see _pysr_kwargs. Expressions coming
+                   # back from PySR now use these names instead of "**"
+                   # with a fractional/negative-base exponent, so the eval
+                   # namespace has to know them too.
+                   "square": np.square, "cube": lambda z: z ** 3})
         y_pred = eval(expr_py, {"__builtins__": {}}, ns)
         ss_res = np.sum((y - y_pred) ** 2)
         ss_tot = np.sum((y - np.mean(y)) ** 2)
@@ -503,8 +615,216 @@ def _score_expr(expr_py, X, y, variable_names):
         return None
 
 
+# [FIX-LLM-WARMSTART] Operators this script's PySR model is actually
+# configured with (see _pysr_kwargs: binary_operators=["+","-","*","/"],
+# unary_operators=["sin","cos","log","sqrt","exp","square","cube"] —
+# no "^", removed by [FIX-SAFE-POW] to keep exponents integer and stop
+# fractional/negative-base powers reaching PySR's search). A converted
+# guess must stay inside this exact set or PySR's `guesses` parser will
+# reject it.
+_PYSR_ALLOWED_UNARY_FUNCS = {"sin", "cos", "log", "sqrt", "exp"}
+_PYSR_MAX_INT_POWER = 6  # sanity cap; every Nguyen-12 ground truth needs <=4
+
+
+def _sympy_pow_to_pysr_str(expr, variable_names):
+    """Render a sympy expression as a string PySR's `guesses` parser can
+    read, restricted to exactly this script's operator set (see
+    _PYSR_ALLOWED_UNARY_FUNCS / _pysr_kwargs above — no "^", so integer
+    powers are expanded into square()/cube()/repeated-multiplication
+    instead).
+
+    Returns None if `expr` can't be represented under that restricted set
+    (a fractional or symbolic exponent, a function PySR doesn't have, an
+    exponent above _PYSR_MAX_INT_POWER) -- callers treat None as "drop
+    this guess", not "guess at a lossy translation". A rejected sub-term
+    fails the whole guess (the caller only ever sees a clean string or
+    None) rather than silently substituting something PySR happens to
+    accept but which no longer means what the LLM proposed.
+    """
+    if expr.is_Symbol:
+        name = str(expr)
+        return name if name in variable_names else None
+    if expr.is_Number:
+        try:
+            return repr(float(expr))
+        except (TypeError, ValueError):
+            return None
+    if expr.is_Add:
+        parts = [_sympy_pow_to_pysr_str(a, variable_names) for a in expr.args]
+        return None if any(p is None for p in parts) else "(" + " + ".join(parts) + ")"
+    if expr.is_Mul:
+        # Route any Pow(base, negative_int) factor through division --
+        # "^" (and therefore a negative exponent) isn't in the allowed
+        # operator set, but "/" is.
+        num_terms, den_terms = [], []
+        for a in expr.args:
+            if a.is_Pow and a.args[1].is_Integer and int(a.args[1]) < 0:
+                den_terms.append(sp.Pow(a.args[0], -int(a.args[1])))
+            else:
+                num_terms.append(a)
+        num_parts = [_sympy_pow_to_pysr_str(a, variable_names) for a in num_terms] or ["1.0"]
+        if any(p is None for p in num_parts):
+            return None
+        num_str = "(" + " * ".join(num_parts) + ")"
+        if not den_terms:
+            return num_str
+        den_parts = [_sympy_pow_to_pysr_str(a, variable_names) for a in den_terms]
+        if any(p is None for p in den_parts):
+            return None
+        return "(" + num_str + " / (" + " * ".join(den_parts) + "))"
+    if expr.is_Pow:
+        base, exponent = expr.args
+        base_str = _sympy_pow_to_pysr_str(base, variable_names)
+        if base_str is None or not exponent.is_Integer:
+            return None  # fractional/symbolic power -- unrepresentable here
+        n = int(exponent)
+        if n == 0:
+            return "1.0"
+        if n < 0:
+            recip = _sympy_pow_to_pysr_str(base ** (-n), variable_names)
+            return None if recip is None else f"(1.0 / {recip})"
+        if n > _PYSR_MAX_INT_POWER:
+            return None
+        if n == 2:
+            return f"square({base_str})"
+        if n == 3:
+            return f"cube({base_str})"
+        # n in {4,5,6}: plain repeated multiplication -- always valid
+        # under +,-,*,/ regardless of whether n factors nicely into
+        # square/cube compositions.
+        return "(" + " * ".join([base_str] * n) + ")"
+    func_name = getattr(expr, "func", None) and expr.func.__name__
+    if func_name in _PYSR_ALLOWED_UNARY_FUNCS and len(expr.args) == 1:
+        arg_str = _sympy_pow_to_pysr_str(expr.args[0], variable_names)
+        return None if arg_str is None else f"{func_name}({arg_str})"
+    # Anything else (tan, asin, Abs, a leftover free symbol not in
+    # variable_names, ...) can't be expressed under this script's
+    # restricted PySR operator set.
+    return None
+
+
+def _llm_exprs_to_pysr_guesses(llm_exprs, variable_names):
+    """[FIX-LLM-WARMSTART, resolves audit-exp3.txt item #1] Convert
+    get_llm_prior()'s Python/numpy-syntax expression strings (e.g.
+    "np.sin(x)**2 + x**4") into strings PySRRegressor.fit(guesses=...)
+    can parse, under this script's actual restricted operator set (see
+    _pysr_kwargs / _PYSR_ALLOWED_UNARY_FUNCS — no "^", integer powers
+    only, sin/cos/log/sqrt/exp/square/cube only).
+
+    Each candidate is converted independently; one that fails to parse
+    or uses an operator outside the allowed set is logged with a
+    printed warning and dropped, not silently skipped -- callers should
+    not treat an empty return as equivalent to `USE_LLM=False` without
+    surfacing that distinction (see the `llm_guesses_used` field written
+    into each saved record in run()).
+    """
+    local_dict = {v: sp.Symbol(v) for v in variable_names}
+    guesses = []
+    for raw in llm_exprs:
+        cleaned = re.sub(r"\bnp\.", "", str(raw))
+        try:
+            parsed = sp.sympify(cleaned, locals=local_dict)
+        except (sp.SympifyError, TypeError, SyntaxError, AttributeError) as e:
+            print(f"    ⚠ [FIX-LLM-WARMSTART] could not parse LLM candidate "
+                  f"{raw!r}: {e} -- skipped, not used as a PySR guess.")
+            continue
+        rendered = _sympy_pow_to_pysr_str(parsed, variable_names)
+        if rendered is None:
+            print(f"    ⚠ [FIX-LLM-WARMSTART] LLM candidate {raw!r} uses an "
+                  f"operator/power outside this script's PySR operator set "
+                  f"-- skipped, not used as a PySR guess.")
+            continue
+        guesses.append(rendered)
+    return guesses
+
+
+def _build_boundary_buffer(X, y, meta, variable_names,
+                            buffer_frac=0.15, gap_frac=0.4, n_buffer=40):
+    """[FIX-SINGULARITY-BUFFER] Widen the FIT data (not the reported R^2,
+    not the real held-out extrapolation set) with points sampled from a
+    band just outside the training range, using the same ground-truth
+    formula that generated the training data in the first place.
+
+    This is what catches the N12/seed99 failure mode: PySR fit an
+    exp(.../cos(x)...) term whose denominator approaches zero just past
+    x=1 (the training boundary), so training loss kept improving while the
+    fitted curve blew up to R^2 ~ -10^47 a short distance outside the box.
+    A candidate like that scores terribly the moment the buffer band is
+    part of the loss, so it gets weeded out of the hall-of-fame during the
+    search instead of surviving to become "best" and only failing on the
+    real extrapolation split we never let the search see.
+
+    [FIX-SINGULARITY-BUFFER-v2] The original version sized the buffer band
+    as `buffer_frac` of the TRAINING width on each side (e.g. 15% of a
+    width-2 box = 0.3 units). That was too narrow relative to how far some
+    equations' actual extrapolation set reaches: N7/seed777 has training
+    x in [0,2] but extrapolation x in [2,5] -- a gap of 3 units -- so a
+    0.3-unit buffer only ever "saw" as far as x=2.3, and a denominator
+    that's safely nonzero there could still approach zero somewhere in the
+    remaining [2.3, 5] the buffer never touched (this is exactly what
+    happened: N7/seed777 went from NaN to a real but still-overfit
+    r2_extrap=0.76 after the v1 fix). This version prefers sizing the
+    buffer as `gap_frac` of the actual distance to `extrap_ranges` (from
+    the metadata) when that's available, falling back to the old
+    training-width-based sizing when it isn't. `gap_frac` is deliberately
+    NOT 1.0 -- covering 100% of the gap would make "extrapolation R^2"
+    measure something close to interpolation again. 0.4 is a compromise:
+    wide enough to catch a singularity that would otherwise only surface
+    partway through the real extrapolation region, without training on
+    (and thus disguising failure on) most of that region.
+
+    Returns (X_aug, y_aug). Falls back to (X, y) unchanged if the ground
+    truth expression can't be parsed/evaluated for any reason -- augmenting
+    training data should never be able to crash a run that would otherwise
+    have worked.
+    """
+    ranges = meta.get("variable_ranges")
+    extrap_ranges = meta.get("extrap_ranges") or {}
+    formula = meta.get("ground_truth")
+    if not ranges or not formula:
+        return X, y
+    try:
+        rng = np.random.RandomState(0)
+        buf_cols = []
+        for v in variable_names:
+            lo, hi = ranges[v]
+            width = hi - lo
+            ext = extrap_ranges.get(v)
+            if ext is not None:
+                ext_lo, ext_hi = ext
+                # gap on each side between the training box and where the
+                # real extrapolation set actually goes (0 if the extrap
+                # range doesn't extend that direction, e.g. N7's ext_lo
+                # equals its train lo -- no lower-side extrapolation there)
+                gap_lo = max(lo - ext_lo, 0.0)
+                gap_hi = max(ext_hi - hi, 0.0)
+                pad_lo = gap_frac * gap_lo
+                pad_hi = gap_frac * gap_hi
+            else:
+                # no extrap_ranges in metadata -- fall back to the original
+                # training-width-based sizing rather than skip the buffer
+                pad_lo = pad_hi = buffer_frac * width
+            lo_band = rng.uniform(lo - pad_lo, lo, size=n_buffer // 2) \
+                if pad_lo > 0 else np.full(n_buffer // 2, lo)
+            hi_band = rng.uniform(hi, hi + pad_hi, size=n_buffer - n_buffer // 2) \
+                if pad_hi > 0 else np.full(n_buffer - n_buffer // 2, hi)
+            buf_cols.append(np.concatenate([lo_band, hi_band]))
+        X_buf = np.column_stack(buf_cols)
+        ns = {v: X_buf[:, i] for i, v in enumerate(variable_names)}
+        ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
+                   "sqrt": np.sqrt, "exp": np.exp})
+        y_buf = eval(formula, {"__builtins__": {}}, ns)
+        y_buf = np.asarray(y_buf, dtype=float)
+        if not np.all(np.isfinite(y_buf)):
+            return X, y  # ground truth itself is singular in the buffer band
+        return np.vstack([X, X_buf]), np.concatenate([y, y_buf])
+    except Exception:
+        return X, y
+
+
 def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
-                               poll_seconds=None, output_dir=None):
+                               poll_seconds=None, output_dir=None,
+                               X_score=None, y_score=None, fit_kwargs=None):
     """Fit `model` (a PySRRegressor) on (X, y) while recording a hall-of-fame
     trajectory, and return (r2, best_expr, trajectory) where `r2` and
     `best_expr` are derived from EXACTLY the same final snapshot that ends
@@ -520,7 +840,23 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
     `expression` and the scoring value could in principle come from
     different reads -- and even then, both still come from the same
     `model` object's own post-fit state, not from a stale trajectory poll.
+
+    `fit_kwargs`, if given, is forwarded verbatim into model.fit(). Not
+    currently used by the H run: [FIX-LLM-WARMSTART-CTOR] moved `guesses`
+    to a PySRRegressor constructor argument (this pysr build, 2.0.0a1,
+    has no `guesses` parameter on fit() itself -- see the module-level
+    guard and the H-run call site), so this parameter is kept as a
+    general-purpose passthrough for any future fit()-level kwarg, not
+    for guesses.
     """
+    # [FIX-SINGULARITY-BUFFER] `model.fit(X, y, ...)` below fits on whatever
+    # X/y the caller passes in -- which may now be the boundary-buffer-
+    # augmented set. r2_train should still describe the ORIGINAL training
+    # domain only (X_score/y_score), so it stays comparable to past runs
+    # and doesn't quietly include the buffer band in its own score.
+    X_score = X if X_score is None else X_score
+    y_score = y if y_score is None else y_score
+
     poll_seconds = _TRAJ_POLL_SECONDS if poll_seconds is None else poll_seconds
     output_dir = _TRAJ_OUTPUT_DIR if output_dir is None else pathlib.Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -533,80 +869,95 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
     model.set_params(output_directory=str(output_dir), run_id=run_id)
     csv_path = run_dir / "hall_of_fame.csv"
 
+    # [FIX-MANAGER-LEAK, addresses audit #7] mp.Manager() spins up its own
+    # server process and was never explicitly shut down — called twice per
+    # equation (H and P) x 12 equations = up to 24 leaked Manager server
+    # processes per run. Wrap the manager's whole lifetime (not just
+    # model.fit()) in try/finally so manager.shutdown() always runs, even
+    # if fit() raises or an early return happens below.
     manager = mp.Manager()
-    queue = manager.Queue()
-    stop_event = manager.Event()
-    t_start = time.time()
-
-    poller = mp.Process(
-        target=_poll_hof_dir_proc,
-        args=(str(csv_path), poll_seconds, label, queue, stop_event, t_start),
-        daemon=True,
-    )
-    poller.start()
-
     try:
-        model.fit(X, y, variable_names=variable_names)
+        queue = manager.Queue()
+        stop_event = manager.Event()
+        t_start = time.time()
+
+        poller = mp.Process(
+            target=_poll_hof_dir_proc,
+            args=(str(csv_path), poll_seconds, label, queue, stop_event, t_start),
+            daemon=True,
+        )
+        poller.start()
+
+        try:
+            # [FIX-LLM-WARMSTART-CTOR] guesses is no longer threaded through
+            # fit_kwargs -- it's passed into PySRRegressor(...) at
+            # construction (see the H-run call site), since this pysr
+            # build's fit() has no `guesses` parameter at all. fit_kwargs
+            # remains a generic passthrough for any other fit()-level
+            # kwarg a caller might want; unused by both H and P today.
+            model.fit(X, y, variable_names=variable_names, **(fit_kwargs or {}))
+        finally:
+            stop_event.set()
+            poller.join(timeout=max(5.0, poll_seconds * 3))
+            if poller.is_alive():
+                poller.terminate()
+
+        # Drain every snapshot the poller captured during the fit into the
+        # trajectory log, in order.
+        trajectory = []
+        while not queue.empty():
+            trajectory.append(queue.get())
+
+        # The single authoritative post-fit read: taken AFTER fit() has fully
+        # returned and AFTER the poller has been joined, so nothing else can
+        # touch csv_path concurrently. If this snapshot differs from the last
+        # entry the poller captured, it replaces it as the final trajectory
+        # entry -- fit() may have written its last update after the poller's
+        # final pre-stop poll but before its post-stop catch-up poll landed.
+        final_snapshot = _read_pysr_hof_snapshot(
+            csv_path, label=label, iteration=len(trajectory) + 1,
+            elapsed_seconds=time.time() - t_start,
+        )
+        if final_snapshot is not None:
+            if trajectory and trajectory[-1]["source_mtime_ns"] == final_snapshot["source_mtime_ns"]:
+                trajectory[-1] = final_snapshot  # same file state, richer record
+            else:
+                trajectory.append(final_snapshot)
+            best_expr = final_snapshot["best_expression"]
+            # PySR's raw hall_of_fame.csv stores '^' for power; normalize to
+            # Python's '**' so downstream eval()/rescoring works without a
+            # separate translation step (this is a display/audit-file
+            # convenience -- normalize the same way, everywhere it's read).
+            best_expr_py = best_expr.replace("^", "**") if best_expr else None
+            r2 = _score_expr(best_expr_py, X_score, y_score, variable_names)
+            if r2 is None:
+                # Expression-based scoring failed (e.g. a function the eval
+                # namespace above doesn't cover) -- fall back to PySR's own
+                # predict(), still against the SAME model/expression PySR
+                # itself considers current, not a second independent read.
+                from sklearn.metrics import r2_score
+                r2 = float(r2_score(y_score, model.predict(X_score)))
+            return r2, best_expr_py, trajectory
+
+        # No hall-of-fame snapshot could be read at all -- fall back loudly.
+        warnings.warn(
+            f"[_fit_with_pysr_trajectory] no hall_of_fame.csv snapshot readable "
+            f"at {csv_path} for label={label!r} after fit() completed; falling "
+            f"back to model.sympy()/model.predict(). Trajectory will be empty.",
+            RuntimeWarning, stacklevel=2,
+        )
+        from sklearn.metrics import r2_score
+        y_pred = model.predict(X)
+        r2 = float(r2_score(y, y_pred))
+        best_expr = str(model.sympy())
+        return r2, best_expr, trajectory
     finally:
-        stop_event.set()
-        poller.join(timeout=max(5.0, poll_seconds * 3))
-        if poller.is_alive():
-            poller.terminate()
-
-    # Drain every snapshot the poller captured during the fit into the
-    # trajectory log, in order.
-    trajectory = []
-    while not queue.empty():
-        trajectory.append(queue.get())
-
-    # The single authoritative post-fit read: taken AFTER fit() has fully
-    # returned and AFTER the poller has been joined, so nothing else can
-    # touch csv_path concurrently. If this snapshot differs from the last
-    # entry the poller captured, it replaces it as the final trajectory
-    # entry -- fit() may have written its last update after the poller's
-    # final pre-stop poll but before its post-stop catch-up poll landed.
-    final_snapshot = _read_pysr_hof_snapshot(
-        csv_path, label=label, iteration=len(trajectory) + 1,
-        elapsed_seconds=time.time() - t_start,
-    )
-    if final_snapshot is not None:
-        if trajectory and trajectory[-1]["source_mtime_ns"] == final_snapshot["source_mtime_ns"]:
-            trajectory[-1] = final_snapshot  # same file state, richer record
-        else:
-            trajectory.append(final_snapshot)
-        best_expr = final_snapshot["best_expression"]
-        # PySR's raw hall_of_fame.csv stores '^' for power; normalize to
-        # Python's '**' so downstream eval()/rescoring works without a
-        # separate translation step (this is a display/audit-file
-        # convenience -- normalize the same way, everywhere it's read).
-        best_expr_py = best_expr.replace("^", "**") if best_expr else None
-        r2 = _score_expr(best_expr_py, X, y, variable_names)
-        if r2 is None:
-            # Expression-based scoring failed (e.g. a function the eval
-            # namespace above doesn't cover) -- fall back to PySR's own
-            # predict(), still against the SAME model/expression PySR
-            # itself considers current, not a second independent read.
-            from sklearn.metrics import r2_score
-            r2 = float(r2_score(y, model.predict(X)))
-        return r2, best_expr_py, trajectory
-
-    # No hall-of-fame snapshot could be read at all -- fall back loudly.
-    import warnings
-    warnings.warn(
-        f"[_fit_with_pysr_trajectory] no hall_of_fame.csv snapshot readable "
-        f"at {csv_path} for label={label!r} after fit() completed; falling "
-        f"back to model.sympy()/model.predict(). Trajectory will be empty.",
-        RuntimeWarning, stacklevel=2,
-    )
-    from sklearn.metrics import r2_score
-    y_pred = model.predict(X)
-    r2 = float(r2_score(y, y_pred))
-    best_expr = str(model.sympy())
-    return r2, best_expr, trajectory
+        manager.shutdown()
 
 
 # ── 8. Main experiment logic ───────────────────────────────────────────────
-def run(seed: int = 42):
+def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
+        n_candidates: "int | None" = None):
     """Run the Nguyen-12 benchmark directly (no subprocess recursion)."""
     import json
     import time
@@ -617,13 +968,39 @@ def run(seed: int = 42):
     _results_dir = _resolve_results_dir(_repo_results_dir)
     _results_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Skip if result already exists for this seed (avoids redundant ────
-    # ── subprocess re-run triggered by run_task after direct execution)  ──
-    _out_path = _results_dir / f"exp3_nguyen12_seed{seed}.json"
+    # [FIX-N3-ii-b, merged from _03.py] Filename now encodes temperature and
+    # run_index so repeated runs at the same seed land in distinct files
+    # instead of the first run's "already exists, skipping" guard silently
+    # no-op'ing every subsequent repeat.
+    _temp_tag = str(temperature).rstrip("0").rstrip(".").replace(".", "p") or "0"
+    _out_path = _results_dir / f"exp3_nguyen12_seed{seed}_temp{_temp_tag}_run{run_index}.json"
+
+    # [FIX-CACHE-SCHEMA, addresses audit #2] The "r2" field's MEANING changed
+    # across script versions: earlier scripts (_02, _02_patched) report
+    # TRAINING r2 under that key; this script (extrap-safe lineage)
+    # deliberately redefines "r2" to mean EXTRAPOLATION r2. A cache file
+    # written by an old script version has no version tag, so blindly
+    # trusting "file exists -> reuse it" would silently hand back
+    # mislabeled training-R2 numbers as if they were extrapolation-R2.
+    # This script only ever reuses a cache file it can confirm was written
+    # by a script of this same schema (schema_version below); anything else
+    # (missing key, older/unversioned file, mismatched value) is treated as
+    # absent and re-run from scratch rather than trusted.
+    _SCHEMA_VERSION = "consolidated-extrap-r2-v1"
     if _out_path.exists():
-        print(f"  ✓ Results already exist for seed={seed}, skipping re-run.")
-        with open(_out_path) as _f:
-            return json.load(_f)
+        try:
+            with open(_out_path) as _f:
+                _cached = json.load(_f)
+            if _cached.get("config", {}).get("schema_version") == _SCHEMA_VERSION:
+                print(f"  ✓ Results already exist for seed={seed} temp={temperature} "
+                      f"run={run_index} (schema={_SCHEMA_VERSION}), skipping re-run.")
+                return _cached
+            else:
+                print(f"  ⚠ Cache at {_out_path} has no/mismatched schema_version "
+                      f"(expected {_SCHEMA_VERSION}) — treating as stale and re-running "
+                      f"rather than trusting a possibly differently-defined 'r2' field.")
+        except (json.JSONDecodeError, OSError):
+            print(f"  ⚠ Cache at {_out_path} unreadable — re-running.")
 
     # [FIX-CHECKPOINT] The old version of this script only ever wrote
     # exp3_nguyen12_seed{seed}.json ONCE, after the full 12-equation loop
@@ -642,7 +1019,7 @@ def run(seed: int = 42):
     # mid-write.
     _start_time    = time.time()
     _job_deadline  = int(os.environ.get("JOB_DEADLINE", 0)) or None  # seconds; 0/unset = no cap
-    _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_partial.json"
+    _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_temp{_temp_tag}_run{run_index}_partial.json"
 
     def _save(results_hypatia, results_pysr, n_total, complete):
         h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= 0.9999)
@@ -652,6 +1029,15 @@ def run(seed: int = 42):
                 "name": "nguyen12_exp3", "seed": seed, "n_tasks": n_total,
                 "niterations": _niter, "populations": _pops,
                 "timeout": _timeout, "use_llm": USE_LLM,
+                # [FIX-CACHE-SCHEMA] lets a future run tell whether a cache
+                # file was produced by this script's metric definitions
+                # (extrapolation r2 + boundary-buffer fit) before reusing it.
+                "schema_version": _SCHEMA_VERSION,
+                # [FIX-N3-ii-b, merged from _03.py] previously unlogged —
+                # a reader had to cross-reference hypatia.py's source to
+                # know these values.
+                "temperature": temperature, "n_candidates": _n_candidates,
+                "run_index": run_index,
             },
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
             "summary": {
@@ -679,12 +1065,29 @@ def run(seed: int = 42):
     _pysr_timeout   = int(os.environ.get("PYSR_TIMEOUT",   1100))
     _method_timeout = int(os.environ.get("METHOD_TIMEOUT", _pysr_timeout))
     _timeout        = _pysr_timeout   # passed to PySR's timeout_in_seconds
+    # [FIX-N3-ii-b/c, merged from _03.py] Named so it can be logged in the
+    # config payload above, not just embedded inline in the get_llm_prior()
+    # call below. The run() arg takes priority when given; otherwise falls
+    # back to the pre-existing LLM_N_CANDIDATES env var / 8.
+    _n_candidates   = n_candidates if n_candidates is not None else int(os.environ.get("LLM_N_CANDIDATES", 8))
 
     print(f"\n{'='*68}")
-    print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}")
-    print("  Expected: 11/12 H (91.7%) · 10/12 P · MW U=113, p=0.0097")
+    print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
+    # [FIX-STALE-CLAIM, addresses audit #3] The 11/12 H (91.7%) figure was
+    # never re-run/re-verified after the trajectory-monitor patch that
+    # produced it — that patch's own docstring documents a prior,
+    # never-located discrepancy bug (reported expression not reproducing
+    # reported R^2 on 2/60 records) as its justification for the jump from
+    # 7/12. This script also redefines "r2" to mean EXTRAPOLATION r2, not
+    # the training r2 the 11/12 figure was computed against, so even if
+    # verified that number would describe a different metric than the one
+    # this script reports. Treat as UNVERIFIED until re-run end-to-end.
+    print("  Expected: UNVERIFIED pending re-run — see [FIX-STALE-CLAIM] docstring note.")
+    print("  Prior (unverified, different-metric) figures: 11/12 H (91.7%) train-r2 · "
+          "10/12 P train-r2 · MW U=113, p=0.0097")
     print(f"  Config  : n_tasks={_n_tasks}  niterations={_niter}  populations={_pops}"
-          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s")
+          f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s"
+          f"  temperature={temperature}  n_candidates={_n_candidates}")
     print(f"{'='*68}\n")
 
     # ── Import protocol data layer ────────────────────────────────────────
@@ -693,8 +1096,12 @@ def run(seed: int = 42):
     except ImportError:
         # [FIX-IMPORT] 'protocols' is a subpackage of hypatiax/, not standalone.
         # Re-insert repo root and retry with the full dotted path.
+        # [FIX-N3-ii-d] Same off-by-one as the primary _REPO_ROOT calc above —
+        # this fallback path used parents[3] even after _03.py fixed the
+        # primary computation to parents[2], so a failed primary import still
+        # inserted a directory one level too high into sys.path. Fixed here.
         import pathlib as _pl
-        _root = str(_pl.Path(__file__).resolve().parents[3])
+        _root = str(_pl.Path(__file__).resolve().parents[2])
         if _root not in sys.path:
             sys.path.insert(0, _root)
         from hypatiax.protocols.experiment_protocol_nguyen12 import NguYenProtocol
@@ -702,6 +1109,36 @@ def run(seed: int = 42):
     # ── Import SR engine ──────────────────────────────────────────────────
     from pysr import PySRRegressor
     from sklearn.metrics import r2_score
+
+    # [FIX-LLM-WARMSTART-CTOR] Fail fast, once, before burning any LLM API
+    # budget or PySR search time: if this pysr build's PySRRegressor has no
+    # `guesses` parameter ANYWHERE (constructor or fit()), the hybrid
+    # seeding this script depends on cannot happen. Silently falling back
+    # to an unseeded H run here would reproduce audit #1's exact failure
+    # mode (H and P identical) in a new place -- so this refuses to run at
+    # all rather than degrade quietly. Only enforced when USE_LLM is
+    # actually on; a pure-PySR-only run (no API key / USE_LLM False) never
+    # needs `guesses` and shouldn't be blocked by this check.
+    #
+    # NOTE (supersedes the original [FIX-LLM-WARMSTART] check): that check
+    # looked for `guesses` in PySRRegressor.fit()'s signature. As of
+    # pysr==2.0.0a1 (see requirements.txt), `guesses` moved to be a
+    # PySRRegressor.__init__() constructor argument -- it is NOT a fit()
+    # parameter in this version, so the old check raised unconditionally
+    # whenever USE_LLM was on, even though this pysr build DOES support
+    # guesses (just via the constructor). Checking __init__ instead of
+    # fit() is what actually reflects whether this pysr build can accept
+    # guesses at all; see the matching change at the H-run call site below
+    # (guesses is now passed into PySRRegressor(...), not into .fit()).
+    if USE_LLM and "guesses" not in inspect.signature(PySRRegressor.__init__).parameters:
+        raise RuntimeError(
+            "[FIX-LLM-WARMSTART-CTOR] Installed pysr version's PySRRegressor "
+            "has no 'guesses' parameter on __init__ or fit(), so LLM "
+            "warm-start candidates cannot be wired into the PySR search. "
+            "Upgrade pysr, or set USE_LLM=False / unset the API key to run "
+            "PySR-only intentionally. Refusing to start rather than silently "
+            "fall back to an unseeded H run -- see audit-exp3.txt item #1."
+        )
 
     # ── Import LLM warm-start ─────────────────────────────────────────────
     # hypatia.py must be committed to the repo at:
@@ -741,6 +1178,9 @@ def run(seed: int = 42):
 
     results_hypatia = []
     results_pysr    = []
+    # [KNOWN-BUG-1] tracked only to surface the end-of-run warning below —
+    # does not change any fitting behavior.
+    llm_exprs_any_used = False
 
     for i, (desc, X, y, var_names, meta) in enumerate(all_cases):
         nid = meta["nguyen_id"]
@@ -760,9 +1200,10 @@ def run(seed: int = 42):
             try:
                 llm_exprs = get_llm_prior(
                     eq_dict, X, y,
-                    n_candidates=8,
+                    n_candidates=_n_candidates,
                     verbose=False,
                     model=os.environ["LLM_MODEL"],
+                    temperature=temperature,
                 )
                 print(f"    LLM candidates: {llm_exprs[:3]} ...")
             except Exception as _e:
@@ -778,38 +1219,81 @@ def run(seed: int = 42):
             parallelism="serial",
             verbosity=0,
             progress=False,
-            binary_operators=["+", "-", "*", "/", "^"],
-            unary_operators=["sin", "cos", "log", "sqrt", "exp"],
-            # [CONSTRAINTS-FIX] PySR was warning on every single run:
-            #   "You are using the `^` operator, but have not set up
-            #   `constraints` for it. This may lead to overly complex
-            #   expressions." Leaving this unset let PySR build expressions
-            #   with arbitrarily complex exponents (e.g. powers of entire
-            #   subexpressions), which can fit the training range extremely
-            #   well while being a completely different function outside it
-            #   -- exactly the extrapolation-divergence pattern seen in
-            #   N4/N7/N9/N12 (fits training R^2 near 1.0, then reproduces
-            #   nowhere near the reported R^2 on held-out extrapolation
-            #   data). (-1, 1) means: base can be arbitrarily complex,
-            #   exponent must be a single leaf (a bare variable or constant,
-            #   e.g. x**4, y**2) -- matching the actual structure of the
-            #   Nguyen benchmark ground-truth formulas, and PySR's own
-            #   documented recommendation for this warning.
-            constraints={"^": (-1, 1)},
+            # [FIX-SAFE-POW] The old [CONSTRAINTS-FIX] pass restricted "^"'s
+            # exponent to a single leaf (constraints={"^": (-1, 1)}) to stop
+            # PySR fitting whole-subexpression exponents. That did NOT stop
+            # it fitting e.g. sin(x) ^ 1.84 -- a bare-constant exponent, so
+            # it satisfied the constraint -- which is undefined/NaN the
+            # moment sin(x) goes negative, and was the actual cause of the
+            # N7/seed777 extrapolation failure (train R^2 -> 0.999999998,
+            # extrap R^2 -> NaN for the back half of the run). Every
+            # Nguyen-12-family ground truth only ever needs small INTEGER
+            # powers of a bare variable (x**4, x**3, y**2), so instead of
+            # trying to constrain "^" further, remove it entirely and give
+            # PySR dedicated integer-power unary ops it can compose (e.g.
+            # x**4 = square(square(x))). This makes fractional/negative-base
+            # powers structurally unreachable rather than just discouraged.
+            binary_operators=["+", "-", "*", "/"],
+            unary_operators=["sin", "cos", "log", "sqrt", "exp",
+                              "square", "cube"],
         )
 
+        # [FIX-SINGULARITY-BUFFER] Fit on the training domain PLUS a thin
+        # boundary band so near-boundary singularities (e.g. 1/cos(x) just
+        # past x=1) show up in the loss during search, not only on the real
+        # held-out extrapolation split afterwards. r2_h/r2_p are still
+        # scored against the original (X, y) only -- see X_score/y_score
+        # below -- so "training R^2" keeps meaning what it always meant.
+        X_fit, y_fit = _build_boundary_buffer(X, y, meta, var_names)
+
         # ── HypatiaX run (PySR + LLM warm-start) ─────────────────────────
+        # [FIX-LLM-WARMSTART, resolves audit-exp3.txt item #1] llm_exprs
+        # are now actually converted (see _llm_exprs_to_pysr_guesses) and
+        # passed into model_h.fit(guesses=...) below. P (further down)
+        # deliberately does NOT receive guesses, so H vs P is now a real
+        # hybrid-vs-baseline comparison instead of the same PySR fit run
+        # twice. `llm_guesses_used` is recorded on this record (not just
+        # a module-level flag) so a per-equation conversion failure is
+        # auditable after the fact, not just visible in the run log.
+        pysr_guesses = []
+        n_llm_candidates = len(llm_exprs)
+        if llm_exprs:
+            pysr_guesses = _llm_exprs_to_pysr_guesses(llm_exprs, var_names)
+            if pysr_guesses:
+                llm_exprs_any_used = True
+                print(f"    ✓ [FIX-LLM-WARMSTART] seeding H run with "
+                      f"{len(pysr_guesses)}/{n_llm_candidates} converted "
+                      f"LLM guess(es).")
+            else:
+                print(f"    ⚠ [FIX-LLM-WARMSTART] none of the "
+                      f"{n_llm_candidates} LLM candidate(s) for {nid} "
+                      f"survived conversion to this script's PySR operator "
+                      f"set -- H run for THIS equation only falls back to "
+                      f"unseeded (see llm_guesses_used in the saved "
+                      f"record; llm_exprs_any_used stays keyed off other "
+                      f"equations that did convert).")
         t0 = time.time()
         try:
+            # [FIX-LLM-WARMSTART-CTOR] `guesses` is a PySRRegressor
+            # constructor argument in this pysr build (2.0.0a1), not a
+            # fit() kwarg -- see the module-level guard above. Passing it
+            # here (rather than via fit_kwargs into .fit()) is what
+            # actually reaches PySR's search; the old fit_kwargs route
+            # silently raised a TypeError on every H run (caught by the
+            # except below and recorded as a FAILED "H" result), which
+            # defeated the hybrid-vs-baseline comparison entirely despite
+            # the guard above appearing to pass. `guesses` is only set
+            # when there's at least one converted candidate -- passing
+            # guesses=None here (the constructor default) keeps a
+            # no-candidates H run behaving exactly like before.
             model_h = PySRRegressor(
                 **_pysr_kwargs,
                 warm_start=False,
+                guesses=pysr_guesses or None,
             )
-            if llm_exprs:
-                # Inject LLM expressions as the initial population hint
-                model_h.set_params(extra_sympy_mappings={})
             r2_h, best_expr_h, trajectory_h = _fit_with_pysr_trajectory(
-                model_h, X, y, var_names, label="H",
+                model_h, X_fit, y_fit, var_names, label="H",
+                X_score=X, y_score=y,
             )
         except Exception as _e:
             print(f"    ✗ HypatiaX run failed: {_e}")
@@ -823,7 +1307,8 @@ def run(seed: int = 42):
         try:
             model_p = PySRRegressor(**_pysr_kwargs)
             r2_p, best_expr_p, trajectory_p = _fit_with_pysr_trajectory(
-                model_p, X, y, var_names, label="P",
+                model_p, X_fit, y_fit, var_names, label="P",
+                X_score=X, y_score=y,
             )
         except Exception as _e:
             print(f"    ✗ PySR-only run failed: {_e}")
@@ -900,6 +1385,12 @@ def run(seed: int = 42):
             },
             "elapsed":    elapsed_h,
             "trajectory": trajectory_h,
+            # [FIX-LLM-WARMSTART] Per-equation audit trail for the hybrid
+            # seeding, so "was H actually hybrid for THIS record" never
+            # has to be inferred from the run-level llm_exprs_any_used
+            # flag or the console log.
+            "llm_guesses_used":       len(pysr_guesses),
+            "llm_candidates_total":   n_llm_candidates,
         })
         results_pysr.append({
             "system":     "pysr",
@@ -933,10 +1424,30 @@ def run(seed: int = 42):
     n           = len(all_cases)
 
     print(f"\n{'='*68}")
-    print(f"  RESULTS  (strict R²≥{THRESH}, seed={seed})")
+    print(f"  RESULTS  (strict R²≥{THRESH}, seed={seed}, temp={temperature}, run={run_index})")
     print(f"  HypatiaX : {h_recovered}/{n}  ({100*h_recovered/n:.1f}%)")
     print(f"  PySR-only: {p_recovered}/{n}  ({100*p_recovered/n:.1f}%)")
-    print("  Expected : 11/12 H (91.7%) · 10/12 P")
+    # [FIX-STALE-CLAIM, addresses audit #3] see note earlier in run() —
+    # this figure is unverified and was computed against a different
+    # metric (training r2) than the one this script reports (extrap r2).
+    print("  Expected : UNVERIFIED pending re-run (prior figure, different metric: "
+          "11/12 H (91.7%) train-r2 · 10/12 P)")
+    n_h_with_guesses = sum(1 for r in results_hypatia if r.get("llm_guesses_used"))
+    print(f"  LLM guesses used: {n_h_with_guesses}/{n} equation(s) had >=1 "
+          f"converted LLM candidate wired into the H run "
+          f"[FIX-LLM-WARMSTART, resolves audit-exp3.txt item #1].")
+    if not llm_exprs_any_used:
+        # [FIX-LLM-WARMSTART] This is no longer the audit #1 bug (that
+        # path is fixed) -- it now means either USE_LLM was off this run
+        # (no API key / disabled), or every LLM candidate this run failed
+        # to convert to this script's PySR operator set. Either way, H and
+        # P below are NOT a hybrid-vs-baseline comparison for this run;
+        # check the per-equation "⚠ [FIX-LLM-WARMSTART] ... skipped" lines
+        # above (or each record's llm_guesses_used field) to see which.
+        print("  ⚠ No LLM guesses were wired into any H run this session — "
+              "HypatiaX and PySR-only results above are NOT a hybrid-vs-"
+              "baseline comparison for this run. Check USE_LLM and the "
+              "per-equation conversion warnings above.")
     print(f"{'='*68}\n")
 
     # ── Save JSON output (final) ──────────────────────────────────────────
@@ -972,4 +1483,5 @@ def run(seed: int = 42):
 
 # ── 9. Entry point ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    run(seed=SEED)
+    run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index,
+        n_candidates=_args.n_candidates)

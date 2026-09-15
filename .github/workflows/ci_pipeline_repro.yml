@@ -86,7 +86,7 @@
 #
 #  Slot queue (19 entries, index 0-18):
 #    0 exp1 · 1 exp1b · 2 exp1_ablation · 3 exp1_five · 4 exp1_pca · 5 exp1b_pca ·
-#    6 exp2_feynman_pca · 7 exp2_feynman · 8 exp2_feynman_extrap · 9 exp2 ·
+#    6 exp2_feynman_pca_4060 · 7 exp2_feynman · 8 exp2_feynman_extrap · 9 exp2 ·
 #    10 exp2_five · 11 exp3 · 12 exp3b · 13 suppA · 14 suppB · 15 suppB_sc ·
 #    16 hybrid_all_domains · 17 instability · 18 extrap
 #    NOTE: exp1_pca and exp1b_pca now have confirmed MIN_TASKS entries
@@ -197,7 +197,7 @@ jobs:
               "exp1_five",
               "exp1_pca",
               "exp1b_pca",
-              "exp2_feynman_pca",
+              "exp2_feynman_pca_4060",
               "exp2_feynman",
               "exp2_feynman_extrap",
               "exp2",
@@ -309,7 +309,7 @@ jobs:
               "exp1_pca":           "comparison_results/noise-noiseless/noiseless/defi_pca",
               "exp1b_pca":          "comparison_results/noise-noiseless/15_pca",
               "exp2_feynman":       "comparison_results/feynman-tests/exp2",
-              "exp2_feynman_pca":   "comparison_results/feynman-tests/exp2_pca_4060",
+              "exp2_feynman_pca_4060":   "comparison_results/feynman-tests/exp2_pca_4060",
               "exp2_feynman_extrap":"comparison_results/feynman-tests/exp2_extrap",
               "exp2":               "comparison_results/feynman-tests/exp2_multi",
               "exp2_five":          "five_systems/exp2_five",
@@ -346,7 +346,7 @@ jobs:
           # MIN_TASKS.get(exp_id, 1) until real values are supplied. Update
           # this dict once known.
           MIN_TASKS = {
-              "exp1": 1, "exp1b": 5, "exp2_feynman": 10, "exp2_feynman_pca": 5,
+              "exp1": 1, "exp1b": 5, "exp2_feynman": 10, "exp2_feynman_pca_4060": 5,
               "exp2_feynman_extrap": 5, "exp2": 5, "exp3": 5, "exp3b": 5,
               "suppA": 1, "suppB": 5, "suppB_sc": 5, "hybrid_all_domains": 1,
               "instability": 1, "extrap": 5,

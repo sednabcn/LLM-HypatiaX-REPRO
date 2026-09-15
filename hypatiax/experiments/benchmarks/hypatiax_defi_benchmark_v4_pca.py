@@ -348,55 +348,88 @@ def _train_and_eval_nn(
     torch.manual_seed(seed); np.random.seed(seed)
     hidden = hidden or [128, 64, 32]
 
-    # v3c2-fix4: augment features BEFORE scaling
-    # FIX (feature-count mismatch): plan is derived from X_train only and
-    # applied identically to X_test, so the two splits always produce the
-    # same number of columns (see _compute_augment_plan/_apply_augment_plan).
-    if augment:
-        _plan   = _compute_augment_plan(X_train)
-        X_train = _apply_augment_plan(X_train, _plan)
-        X_test  = _apply_augment_plan(X_test, _plan)
+    # FIX (crash-to-success:False): the entire body is now wrapped in
+    # try/except so a training blow-up (non-finite values, a singular
+    # matrix, a bad augment plan, etc.) degrades to a success:False result
+    # instead of crashing the whole benchmark run — matching the Pure LLM
+    # baseline's error-handling contract. The returned dict always has the
+    # same keys (train_r2, test_r2, y_pred_train, y_pred_test) so existing
+    # unconditional callers (nn_m["test_r2"], etc.) keep working unchanged;
+    # only "success" and the new "error"/"error_type" keys signal failure.
+    try:
+        # v3c2-fix4: augment features BEFORE scaling
+        # FIX (feature-count mismatch): plan is derived from X_train only and
+        # applied identically to X_test, so the two splits always produce the
+        # same number of columns (see _compute_augment_plan/_apply_augment_plan).
+        if augment:
+            _plan   = _compute_augment_plan(X_train)
+            X_train = _apply_augment_plan(X_train, _plan)
+            X_test  = _apply_augment_plan(X_test, _plan)
 
-    sx, sy = StandardScaler(), StandardScaler()
-    Xtr = sx.fit_transform(X_train)
-    ytr = sy.fit_transform(y_train.reshape(-1, 1)).flatten()
+        if not (np.all(np.isfinite(X_train)) and np.all(np.isfinite(y_train))
+                and np.all(np.isfinite(X_test)) and np.all(np.isfinite(y_test))):
+            raise ValueError("Non-finite values in inputs before NN training")
 
-    model = _MLP(X_train.shape[1], hidden)
-    opt   = torch.optim.Adam(model.parameters(), lr=0.001)
-    crit  = nn.MSELoss()
-    Xt = torch.FloatTensor(Xtr)
-    yt = torch.FloatTensor(ytr).reshape(-1, 1)
+        sx, sy = StandardScaler(), StandardScaler()
+        Xtr = sx.fit_transform(X_train)
+        ytr = sy.fit_transform(y_train.reshape(-1, 1)).flatten()
 
-    timed_out  = False
-    _wall_start = time.time()
-    model.train()
-    for epoch in range(epochs):
-        opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
-        # Check wall-clock every 25 epochs to avoid per-epoch overhead
-        if epoch % 25 == 0 and (time.time() - _wall_start) >= max_time_s:
-            timed_out = True
-            print(f"    ⏱  NN wall-clock limit ({max_time_s}s) reached at epoch {epoch} — stopping early")
-            break
+        model = _MLP(X_train.shape[1], hidden)
+        opt   = torch.optim.Adam(model.parameters(), lr=0.001)
+        crit  = nn.MSELoss()
+        Xt = torch.FloatTensor(Xtr)
+        yt = torch.FloatTensor(ytr).reshape(-1, 1)
 
-    def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
-    def _r2(yt_, yp_):
-        ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
-        return float(1 - ss_r / ss_t) if ss_t > 1e-10 else 0.0
+        timed_out  = False
+        _wall_start = time.time()
+        model.train()
+        for epoch in range(epochs):
+            opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
+            # Check wall-clock every 25 epochs to avoid per-epoch overhead
+            if epoch % 25 == 0 and (time.time() - _wall_start) >= max_time_s:
+                timed_out = True
+                print(f"    ⏱  NN wall-clock limit ({max_time_s}s) reached at epoch {epoch} — stopping early")
+                break
 
-    model.eval()
-    with torch.no_grad():
-        yp_tr = _decode(model(Xt).numpy().flatten())
-        Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
-        yp_te = _decode(model(Xte).numpy().flatten())
+        def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
+        def _r2(yt_, yp_):
+            # FIX (magnitude-scaled threshold): mirrors the Pure LLM
+            # baseline's scale = max(|y_true|)**2 * len(y) fix so tiny-y
+            # equations (Photon ~1e-19, Zeeman ~1e-23) aren't misclassified
+            # as constant targets by a flat 1e-10 cutoff.
+            ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
+            _tol = 1e-10 * (np.max(np.abs(yt_)) ** 2) * len(yt_)
+            return float(1 - ss_r / ss_t) if ss_t > _tol else 0.0
 
-    return {
-        "train_r2":    _r2(y_train, yp_tr),
-        "test_r2":     _r2(y_test,  yp_te),
-        "success":     True,
-        "timed_out":   timed_out,
-        "y_pred_train": yp_tr,
-        "y_pred_test":  yp_te,
-    }
+        model.eval()
+        with torch.no_grad():
+            yp_tr = _decode(model(Xt).numpy().flatten())
+            Xte   = torch.FloatTensor(sx.transform(X_test))  # X_test already augmented above
+            yp_te = _decode(model(Xte).numpy().flatten())
+
+        if not (np.all(np.isfinite(yp_tr)) and np.all(np.isfinite(yp_te))):
+            raise ValueError("Non-finite predictions after inverse-transform")
+
+        return {
+            "train_r2":    _r2(y_train, yp_tr),
+            "test_r2":     _r2(y_test,  yp_te),
+            "success":     True,
+            "timed_out":   timed_out,
+            "y_pred_train": yp_tr,
+            "y_pred_test":  yp_te,
+        }
+    except Exception as e:
+        print(f"    ⚠  NN training/eval failed: {type(e).__name__}: {e}")
+        return {
+            "train_r2":    0.0,
+            "test_r2":     0.0,
+            "success":     False,
+            "timed_out":   False,
+            "error":       str(e),
+            "error_type":  type(e).__name__,
+            "y_pred_train": np.zeros_like(np.asarray(y_train, dtype=float)),
+            "y_pred_test":  np.zeros_like(np.asarray(y_test, dtype=float)),
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1819,10 +1852,24 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 try:
                     _t0_nn = time.time()
                     nn_m = _train_and_eval_nn(X_tr, y_tr, X_te, y_te, seed=_nn_seed)
+                    # FIX (audit item 1): the NN arm previously hardcoded
+                    # "success": True regardless of what _train_and_eval_nn
+                    # actually reported, so an internally-caught training
+                    # failure (non-finite values, singular matrices, bad
+                    # augmentation -> success=False, r2=0.0) still showed up
+                    # as a "successful" run in the output. Gate on the NN's
+                    # own success flag *and* the same test_r2 > 0.5
+                    # fit-quality threshold used by the pure_llm and hybrid
+                    # arms, so all three arms share one pass definition.
+                    _nn_success = bool(
+                        nn_m.get("success", True)
+                        and not _math.isnan(nn_m.get("test_r2", float("nan")))
+                        and nn_m["test_r2"] > 0.5
+                    )
                     case_results["neural_network"] = {
                         "train_r2":    nn_m["train_r2"],
                         "test_r2":     nn_m["test_r2"],
-                        "success":     True,
+                        "success":     _nn_success,
                         "timed_out":   nn_m.get("timed_out", False),
                         "time_s":      round(time.time() - _t0_nn, 3),
                         "y_pred_train": nn_m["y_pred_train"].tolist(),
