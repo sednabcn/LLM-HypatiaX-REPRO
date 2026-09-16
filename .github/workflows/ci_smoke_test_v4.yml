@@ -1,0 +1,258 @@
+# ==============================================================================
+#  ci_smoke_test_v4.yml - fast wiring check for the v4 / v4_pca / consolidated
+#                          exp3 scripts, on a tiny 1-2 case slice.
+#
+#  This is deliberately NOT part of ci_runner_repro.yml's sharded plan/worker
+#  architecture. It exists to answer one question quickly (a few minutes, not
+#  hours): "do hypatiax_defi_benchmark_v4.py, hypatiax_defi_benchmark_v4_pca.py,
+#  and exp3_nguyen12_consolidated.py still run end-to-end and produce a result
+#  JSON?" Use ci_runner_repro.yml for the full paper-quality reproduction runs.
+#
+#  Script CLI surface (verified 2026-09-16 against the actual scripts):
+#    - hypatiax_defi_benchmark_v4.py DOES have --output-dir (this was wrongly
+#      assumed absent in an earlier draft of this workflow - it mirrors
+#      v4_pca's CLI, not v3c's). It also accepts --cases SUBSTRING [SUBSTRING
+#      ...] for a name-filtered subset, and DEFI_SEEDS (env) / no --seeds
+#      flag for a seed sweep.
+#    - hypatiax_defi_benchmark_v4_pca.py accepts --output-dir, --cases,
+#      --force-fresh, and --seeds SEED [SEED ...] (equivalent to DEFI_SEEDS).
+#      Writes its own split_protocol_disclosure.json alongside results.
+#    - exp3_nguyen12_consolidated.py accepts --seed, --temperature,
+#      --run-index and --n-candidates, same as the exp3_nguyen12_hybrid50v_03.py
+#      script it replaces. It DOES have a per-equation filter, via the
+#      TASK_IDS (or SHARD_IDS) env var - a space/comma-separated list of
+#      Nguyen IDs such as "N1 N3" (see _apply_task_ids_nguyen). A 0-match is
+#      a hard exit (FIX-1), so the smoke test now runs a genuine 2-equation
+#      pair instead of the smallest available unit (a full seed = all 12
+#      equations). Output path honours RESULTS_DIR (env), already set below.
+#  If any of the above no longer holds, adjust the "Run ..." steps below —
+#  each one first calls the script with --help and greps for the flag so a
+#  mismatch fails loudly instead of silently running the full-size job.
+# ==============================================================================
+
+name: "HypatiaX - smoke test (v4 / v4_pca / exp3 consolidated)"
+run-name: "Smoke test v4 · ${{ inputs.defi_case_1 }} / ${{ inputs.defi_case_2 }} · ${{ inputs.nguyen_task_1 }} / ${{ inputs.nguyen_task_2 }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      defi_case_1:
+        description: "First DeFi case name substring to test (hypatiax_defi_benchmark_v4.py --cases)"
+        required: false
+        default: "Portfolio Sharpe Ratio"
+      defi_case_2:
+        description: "Second DeFi case name substring to test (leave blank to test only one case)"
+        required: false
+        default: "Correlated Portfolio VaR"
+      nguyen_seed:
+        description: "Seed to smoke-test exp3_nguyen12_consolidated.py with"
+        required: false
+        default: "42"
+      nguyen_task_1:
+        description: "First Nguyen equation ID to test (exp3_nguyen12_consolidated.py TASK_IDS)"
+        required: false
+        default: "N1"
+      nguyen_task_2:
+        description: "Second Nguyen equation ID to test (leave blank to test only one)"
+        required: false
+        default: "N3"
+      temperature:
+        description: "LLM temperature passed to exp3_nguyen12_consolidated.py"
+        required: false
+        default: "0.25"
+  pull_request:
+    paths:
+      - "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+      - "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4_pca.py"
+      - "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py"
+      - "run_all.sh"
+
+concurrency:
+  group: ci-smoke-test-v4-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  OUT_BASE: "hypatiax/data/results"
+  SMOKE_DIR: "hypatiax/data/results/_smoke_test_v4"
+  # Small, fast hyperparameters - this job is a correctness/wiring check,
+  # not a paper-quality run. Do not compare these numbers to the paper.
+  PYSR_GENERATIONS: "200"
+  PYSR_POPULATIONS: "4"
+  METHOD_TIMEOUT: "120"
+  PYSR_FIT_WALL_TIMEOUT: "150"
+  PYSR_FIT_GRACE_SECS: "30"
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  JULIA_NUM_THREADS: "2"
+  JULIA_EXCLUSIVE: "0"
+
+jobs:
+  smoke_test:
+    name: "Smoke test: v4 / v4_pca / exp3 consolidated"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Julia 1.11
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            anthropic \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pmlb \
+            pint \
+            psutil
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Create scratch results directory
+        run: |
+          mkdir -p "${SMOKE_DIR}/defi_v4" "${SMOKE_DIR}/defi_v4_pca" "${SMOKE_DIR}/exp3"
+
+      - name: Validate ANTHROPIC_API_KEY
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "::error::ANTHROPIC_API_KEY secret is empty or unset."; exit 1; }
+          echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
+
+      # ── v4: 1-2 named DeFi cases ────────────────────────────────────────────
+      - name: "Smoke test: hypatiax_defi_benchmark_v4.py"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEFI_SEEDS: "${{ inputs.nguyen_seed || '42' }}"
+        run: |
+          SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+          [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
+
+          CASE_ARGS=("${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}")
+          if [[ -n "${{ inputs.defi_case_2 }}" ]]; then
+            CASE_ARGS+=("${{ inputs.defi_case_2 }}")
+          fi
+
+          if python3 "${SCRIPT}" --help 2>&1 | grep -q -- '--cases'; then
+            echo "[v4] running with --cases filter: ${CASE_ARGS[*]}"
+            python3 "${SCRIPT}" \
+              --output-dir "${SMOKE_DIR}/defi_v4" \
+              --cases "${CASE_ARGS[@]}" \
+              2>&1 | tee "${SMOKE_DIR}/defi_v4/run.log"
+          else
+            echo "::warning::hypatiax_defi_benchmark_v4.py has no --cases flag - running full catalogue instead of the requested 1-2 cases."
+            python3 "${SCRIPT}" \
+              --output-dir "${SMOKE_DIR}/defi_v4" \
+              2>&1 | tee "${SMOKE_DIR}/defi_v4/run.log"
+          fi
+
+          COUNT=$(find "${SMOKE_DIR}/defi_v4" -name '*.json' 2>/dev/null | wc -l)
+          echo "v4 result JSON files: ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4.py produced no result JSON"; exit 1; }
+
+      # ── v4_pca: same 1-2 named DeFi cases, PCA 40/60 split ──────────────────
+      - name: "Smoke test: hypatiax_defi_benchmark_v4_pca.py"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4_pca.py"
+          [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
+
+          CASE_ARGS=("${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}")
+          if [[ -n "${{ inputs.defi_case_2 }}" ]]; then
+            CASE_ARGS+=("${{ inputs.defi_case_2 }}")
+          fi
+
+          if python3 "${SCRIPT}" --help 2>&1 | grep -q -- '--cases'; then
+            echo "[v4_pca] running with --cases filter: ${CASE_ARGS[*]}"
+            python3 "${SCRIPT}" \
+              --output-dir "${SMOKE_DIR}/defi_v4_pca" \
+              --cases "${CASE_ARGS[@]}" \
+              --force-fresh \
+              2>&1 | tee "${SMOKE_DIR}/defi_v4_pca/run.log"
+          else
+            echo "::warning::hypatiax_defi_benchmark_v4_pca.py has no --cases flag - running full catalogue instead of the requested 1-2 cases."
+            python3 "${SCRIPT}" \
+              --output-dir "${SMOKE_DIR}/defi_v4_pca" \
+              --force-fresh \
+              2>&1 | tee "${SMOKE_DIR}/defi_v4_pca/run.log"
+          fi
+
+          COUNT=$(find "${SMOKE_DIR}/defi_v4_pca" -name '*.json' 2>/dev/null | wc -l)
+          echo "v4_pca result JSON files: ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4_pca.py produced no result JSON"; exit 1; }
+
+      # ── exp3_nguyen12_consolidated.py: 1-2 named Nguyen equations via TASK_IDS ─
+      - name: "Smoke test: exp3_nguyen12_consolidated.py"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RESULTS_DIR: "${{ github.workspace }}/${{ env.SMOKE_DIR }}/exp3"
+        run: |
+          SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py"
+          [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
+
+          SEED="${{ inputs.nguyen_seed || '42' }}"
+          TEMP="${{ inputs.temperature || '0.25' }}"
+
+          TASK_ARGS=("${{ inputs.nguyen_task_1 || 'N1' }}")
+          if [[ -n "${{ inputs.nguyen_task_2 }}" ]]; then
+            TASK_ARGS+=("${{ inputs.nguyen_task_2 }}")
+          fi
+          export TASK_IDS="${TASK_ARGS[*]}"
+
+          # exp3 has a real per-equation filter (TASK_IDS / SHARD_IDS env var,
+          # see _apply_task_ids_nguyen) - a 0-match is a hard exit (FIX-1), so
+          # this fails loudly rather than silently falling back to all 12.
+          echo "[exp3] seed=${SEED} temperature=${TEMP} TASK_IDS='${TASK_IDS}'"
+
+          python3 "${SCRIPT}" \
+            --seed "${SEED}" \
+            --temperature "${TEMP}" \
+            2>&1 | tee "${SMOKE_DIR}/exp3/run.log"
+
+          COUNT=$(find "${SMOKE_DIR}/exp3" -name '*.json' 2>/dev/null | wc -l)
+          echo "exp3 result JSON files: ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::exp3_nguyen12_consolidated.py produced no result JSON for seed ${SEED}, TASK_IDS='${TASK_IDS}'"; exit 1; }
+
+      - name: Print summary
+        if: always()
+        run: |
+          echo "=== Smoke test summary ==="
+          find "${SMOKE_DIR}" -type f -name '*.json' | sort
+          echo "==========================="
+
+      - name: Upload smoke-test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-v4-results
+          path: ${{ env.SMOKE_DIR }}
+          retention-days: 5
