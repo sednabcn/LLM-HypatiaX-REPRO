@@ -117,6 +117,27 @@ Fix 14  CRITICAL — Ground-truth leak removed from hybrid arm's LLM prompt:
             must be re-run across all seeds (42, 99, 123, 777, 2024)
             before any of those numbers are cited again.
 
+Fix 16  Ranked validation fallback after full-fit candidate failure
+Fix 15  Hybrid fallback discarded a trustworthy LLM prediction:
+          - Old: in _v4_hybrid_predict_and_eval(), when the selected
+            candidate (residual_nn / blend, anchored by the extrapolation
+            guard) produced NaN/Inf on the extrapolative test range, the
+            recovery path always refit a fresh bare NN ("nn_fallback") —
+            exactly the candidate type the extrapolation guard exists to
+            avoid — and ignored llm_test, which was already computed and
+            already known trustworthy (trustworthy=True).
+          - New: fallback now prefers the trustworthy LLM prediction
+            ("llm_fallback") and only drops to a fresh bare NN
+            ("nn_fallback") when no trustworthy LLM prediction is
+            available. extrapolation_unmitigated is still set True either
+            way, since the originally selected candidate still failed.
+          - IMPACT: on the smoke-test Sharpe Ratio (MEDIUM) case, hybrid
+            previously landed on v4_nn_fallback with test R²=-0.6394 even
+            though pure_llm scored R²=1.0000 on the same case — the worst
+            of the four candidates, chosen only because the better one
+            crashed numerically. Same bug present verbatim in the _pca
+            variant of this function.
+
 Denominator fix (updated)
 ──────────────────────────
 74 cases total; 0 intractable.  The 3 formerly skipped cases are now
@@ -577,7 +598,7 @@ def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray
         pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
         pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
         return {"y_pred_test": pred_te, "train_pred": pred_tr, "timed_out": timed}
-    if candidate == "residual_nn":
+    if candidate in ("residual", "residual_nn"):
         if llm_train is None or llm_test is None:
             return None
         residual = y_train - llm_train
@@ -701,11 +722,24 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
     winner_key = max(pool, key=lambda k: (pool[k]["r2"], -priority.get(k.split(":")[0], 9)))
     w = candidates[winner_key]
     prefix = winner_key.split(":")[0]
+    # Keep the externally reported name consistent with the candidate
+    # implementation: validation keys use "residual:<hidden>", while the
+    # fitted candidate/audit trail use "residual_nn".
+    selected_name = "residual_nn" if prefix == "residual" else prefix
     return {
-        "selected": prefix,
+        "selected": selected_name,
         "hidden": w.get("hidden") or _V4_ARCHITECTURES[1],
         "blend_alpha": float(w.get("alpha", 1.0)),
         "validation_r2": {k: float(v["r2"]) for k, v in candidates.items()},
+        "validation_candidates": {
+            k: {
+                "candidate": ("residual_nn" if k.startswith("residual:") else k.split(":")[0]),
+                "hidden": v.get("hidden"),
+                "alpha": float(v.get("alpha", 1.0)),
+                "r2": float(v["r2"]),
+            }
+            for k, v in candidates.items()
+        },
         "validation_n": len(yv),
         "extrapolation_unmitigated": extrapolation_unmitigated,
     }
@@ -754,16 +788,71 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
         _pred = fitted.get("y_pred_test") if fitted is not None else None
         _pred_bad = _pred is None or not np.all(np.isfinite(_pred))
         if _pred_bad:
-            fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
-                                         None, None, _V4_ARCHITECTURES[1], 0.0, seed)
-            selected = "nn_fallback"
-            # The originally selected (possibly anchored) candidate failed to
-            # fit at all, so whatever protection the extrapolation guard
-            # offered upstream doesn't apply to what actually got predicted.
+            # Fix 15/16: if the validation-selected candidate fails at full-fit
+            # time, walk the remaining candidates in descending validation R²
+            # order. This stays leakage-safe because ranking comes exclusively
+            # from the internal validation split; y_test is never consulted.
+            # The trustworthy LLM is therefore a normal ranked fallback rather
+            # than a special-case shortcut, and bare NN is only used if it was
+            # actually the next viable validation-ranked candidate (or the
+            # final defensive fallback when no ranked candidate can be fit).
+            ranked = sorted(selection.get("validation_candidates", {}).items(),
+                            key=lambda kv: kv[1].get("r2", selection["validation_r2"].get(kv[0], -np.inf)),
+                            reverse=True)
+            attempted = {selected}
+            fallback_fit = None
+            fallback_name = None
+            fallback_hidden = hidden
+            fallback_alpha = alpha
+
+            for key, spec in ranked:
+                candidate = spec["candidate"]
+                if candidate in attempted:
+                    continue
+                attempted.add(candidate)
+                if candidate == "llm":
+                    if trustworthy and llm_test is not None:
+                        fallback_fit = {"y_pred_test": llm_test, "train_pred": llm_train, "timed_out": False}
+                    else:
+                        continue
+                else:
+                    candidate_hidden = spec.get("hidden") or _V4_ARCHITECTURES[1]
+                    candidate_alpha = float(spec.get("alpha", 1.0))
+                    fallback_fit = _fit_candidate_full(candidate, X_train, y_train, X_test,
+                                                       llm_train, llm_test, candidate_hidden,
+                                                       candidate_alpha, seed)
+                fp = fallback_fit.get("y_pred_test") if fallback_fit is not None else None
+                if fp is not None and np.all(np.isfinite(fp)):
+                    fallback_name = "llm_fallback" if candidate == "llm" else candidate
+                    fallback_hidden = spec.get("hidden") or _V4_ARCHITECTURES[1]
+                    fallback_alpha = float(spec.get("alpha", 1.0))
+                    break
+                fallback_fit = None
+
+            if fallback_fit is not None and fallback_name is not None:
+                pred_test = fallback_fit["y_pred_test"]
+                pred_train = fallback_fit.get("train_pred")
+                timed_out = bool(fallback_fit.get("timed_out", False))
+                selected = fallback_name
+                hidden = fallback_hidden
+                alpha = fallback_alpha
+            else:
+                # Last resort only: there was no usable validation-ranked
+                # candidate left. Preserve the historical defensive NN path.
+                fitted = _fit_candidate_full("nn", X_train, y_train, X_test,
+                                             None, None, _V4_ARCHITECTURES[1], 0.0, seed)
+                selected = "nn_fallback"
+                pred_test = fitted["y_pred_test"]
+                pred_train = fitted.get("train_pred")
+                timed_out = bool(fitted.get("timed_out", False))
+            # The originally selected candidate failed, so the extrapolation
+            # protection attached to that selection no longer describes the
+            # model actually used.
             extrapolation_unmitigated = True
-        pred_test = fitted["y_pred_test"]
-        pred_train = fitted.get("train_pred")
-        timed_out = bool(fitted.get("timed_out", False))
+        else:
+            pred_test = fitted["y_pred_test"]
+            pred_train = fitted.get("train_pred")
+            timed_out = bool(fitted.get("timed_out", False))
 
     test_r2 = _compute_metrics(y_test, pred_test)["r2"] if pred_test is not None else float("nan")
     train_r2 = _compute_metrics(y_train, pred_train)["r2"] if pred_train is not None else llm_train_r2
