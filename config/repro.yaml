@@ -92,7 +92,9 @@ benchmarks:
     expected:
       mw_u: 126.0
       mw_p: 0.295
-      speedup: 1.73
+      hybrid_slower_than_nn:
+        v3c_split_range: [6.3, 9.3]
+        pca_split_range: [2.5, 6.1]
   feynman:
     enabled: true
     script: "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
@@ -106,11 +108,9 @@ benchmarks:
     enabled: true
     output_subdir: "nguyen12"
     expected:
-      hypatia_success: 11
-      pysr_success: 10
+      hypatia_success: 7
+      pysr_success: 8
       nn_success: 0
-      mw_u: 113
-      mw_p: 0.0097
   noise_sweep:
     enabled: true
     script: "hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py"
@@ -176,4 +176,14 @@ fixes:
   FIX-B3:
     description: "Remove duplicate bibkey udrescu2020aifeynman"
     target:      "paper/jmlr-hypatiax-paper-final.tex"
+
+  FIX-AUDIT-B:
+    description: "Withdraw core15 73%/1.73x Hybrid-faster-than-NN speedup claim; replace with audited 6.3x-9.3x (v3c) / 2.5x-6.1x (PCA) SLOWER finding"
+    status:      "applied_2026-04 — see AUDIT/audit-docs/hypatiax_audit_summary.md, item B (closed/superseded)"
+    target:      "config/repro.yaml benchmarks.core15.expected"
+
+  FIX-STALE-CLAIM:
+    description: "nguyen12 expected success counts (11/12, 10/12) used the old train-R2 metric; corrected to 7/12 (58.3%) / 8/12 (66.7%) under the R2>=0.9999 4-decimal convention actually enforced by audit_paper / NB-04"
+    status:      "applied — mw_u/mw_p for corrected counts still need regeneration (open)"
+    target:      "config/repro.yaml benchmarks.nguyen12.expected"
  
