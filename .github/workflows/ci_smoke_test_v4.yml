@@ -8,26 +8,38 @@
 #  and exp3_nguyen12_consolidated.py still run end-to-end and produce a result
 #  JSON?" Use ci_runner_repro.yml for the full paper-quality reproduction runs.
 #
-#  Script CLI surface (verified 2026-09-16 against the actual scripts):
-#    - hypatiax_defi_benchmark_v4.py DOES have --output-dir (this was wrongly
-#      assumed absent in an earlier draft of this workflow - it mirrors
-#      v4_pca's CLI, not v3c's). It also accepts --cases SUBSTRING [SUBSTRING
-#      ...] for a name-filtered subset, and DEFI_SEEDS (env) / no --seeds
-#      flag for a seed sweep.
-#    - hypatiax_defi_benchmark_v4_pca.py accepts --output-dir, --cases,
-#      --force-fresh, and --seeds SEED [SEED ...] (equivalent to DEFI_SEEDS).
-#      Writes its own split_protocol_disclosure.json alongside results.
-#    - exp3_nguyen12_consolidated.py accepts --seed, --temperature,
-#      --run-index and --n-candidates, same as the exp3_nguyen12_hybrid50v_03.py
-#      script it replaces. It DOES have a per-equation filter, via the
-#      TASK_IDS (or SHARD_IDS) env var - a space/comma-separated list of
-#      Nguyen IDs such as "N1 N3" (see _apply_task_ids_nguyen). A 0-match is
-#      a hard exit (FIX-1), so the smoke test now runs a genuine 2-equation
-#      pair instead of the smallest available unit (a full seed = all 12
-#      equations). Output path honours RESULTS_DIR (env), already set below.
-#  If any of the above no longer holds, adjust the "Run ..." steps below —
-#  each one first calls the script with --help and greps for the flag so a
-#  mismatch fails loudly instead of silently running the full-size job.
+#  Script CLI surface (asserted at runtime, not assumed):
+#    - hypatiax_defi_benchmark_v4.py     : --output-dir, --cases SUBSTRING [...],
+#                                          DEFI_SEEDS (env), no --seeds flag.
+#    - hypatiax_defi_benchmark_v4_pca.py : --output-dir, --cases, --force-fresh,
+#                                          --seeds SEED [...]. Writes its own
+#                                          split_protocol_disclosure.json.
+#    - exp3_nguyen12_consolidated.py     : --seed, --temperature, --run-index,
+#                                          --n-candidates. Per-equation filter
+#                                          via TASK_IDS / SHARD_IDS env var (see
+#                                          _apply_task_ids_nguyen); 0-match is a
+#                                          hard exit (FIX-1). Output path honours
+#                                          RESULTS_DIR (env).
+#
+#  HARDENING NOTES (why this file looks paranoid):
+#    1. Every `run:` block sets `shell: bash` and `set -o pipefail`. Without it,
+#       `python3 ... | tee run.log` reports tee's exit status, so a script that
+#       dies on argparse / import / API-auth errors looks like a clean run and
+#       only surfaces later as a misleading "produced no result JSON".
+#    2. --output-dir and --cases are PROBED via --help before use, and a missing
+#       flag is a hard failure. Previously --cases fell back to running the FULL
+#       catalogue, which blows the job timeout; and --output-dir was asserted
+#       blind, so a renamed/ignored flag silently dumped results into the
+#       script's own default directory.
+#    3. A sentinel file timestamps the start of each script run, so the JSON
+#       count only sees files that THIS run produced - stale files from a cache
+#       or a previous step cannot create a false pass.
+#    4. A "Locate stray result JSON" step lists every JSON written anywhere in
+#       the workspace, so "results didn't save" is diagnosable in one run: files
+#       under OUT_BASE instead of SMOKE_DIR == --output-dir is being ignored.
+#    5. Workflow inputs are passed through `env:` rather than interpolated into
+#       the shell with ${{ }}. Direct interpolation lets a crafted input string
+#       execute arbitrary commands in the runner.
 # ==============================================================================
 
 name: "HypatiaX - smoke test (v4 / v4_pca / exp3 consolidated)"
@@ -69,10 +81,17 @@ on:
 
 concurrency:
   group: ci-smoke-test-v4-${{ github.ref }}
-  cancel-in-progress: true
+  # NOTE: deliberately false. With cancel-in-progress:true, a second push kills
+  # the first job before its `if: always()` upload step runs, which presents
+  # as "the artifacts vanished" and is easy to misdiagnose as a script bug.
+  cancel-in-progress: false
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
 
 env:
   OUT_BASE: "hypatiax/data/results"
@@ -120,6 +139,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip setuptools wheel
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install "pandas==2.2.3"
@@ -138,12 +158,14 @@ jobs:
 
       - name: Create scratch results directory
         run: |
+          set -euo pipefail
           mkdir -p "${SMOKE_DIR}/defi_v4" "${SMOKE_DIR}/defi_v4_pca" "${SMOKE_DIR}/exp3"
 
       - name: Validate ANTHROPIC_API_KEY
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
+          set -euo pipefail
           [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "::error::ANTHROPIC_API_KEY secret is empty or unset."; exit 1; }
           echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
 
@@ -152,107 +174,180 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DEFI_SEEDS: "${{ inputs.nguyen_seed || '42' }}"
+          DEFI_CASE_1: "${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}"
+          DEFI_CASE_2: "${{ inputs.defi_case_2 }}"
         run: |
+          set -euo pipefail
+
           SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+          OUTDIR="${SMOKE_DIR}/defi_v4"
           [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
 
-          CASE_ARGS=("${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}")
-          if [[ -n "${{ inputs.defi_case_2 }}" ]]; then
-            CASE_ARGS+=("${{ inputs.defi_case_2 }}")
+          # Probe the CLI surface. A --help that fails at all means the script
+          # cannot even import; running it would just waste the job timeout.
+          if ! HELP="$(python3 "${SCRIPT}" --help 2>&1)"; then
+            echo "::error::${SCRIPT} --help failed (import-time error?). Output follows:"
+            echo "${HELP}"
+            exit 1
           fi
+          grep -q -- '--output-dir' <<<"${HELP}" \
+            || { echo "::error::${SCRIPT} has no --output-dir flag; results would land outside ${OUTDIR}"; exit 1; }
+          grep -q -- '--cases' <<<"${HELP}" \
+            || { echo "::error::${SCRIPT} has no --cases flag; refusing to run the full catalogue in a smoke test"; exit 1; }
 
-          if python3 "${SCRIPT}" --help 2>&1 | grep -q -- '--cases'; then
-            echo "[v4] running with --cases filter: ${CASE_ARGS[*]}"
-            python3 "${SCRIPT}" \
-              --output-dir "${SMOKE_DIR}/defi_v4" \
-              --cases "${CASE_ARGS[@]}" \
-              2>&1 | tee "${SMOKE_DIR}/defi_v4/run.log"
-          else
-            echo "::warning::hypatiax_defi_benchmark_v4.py has no --cases flag - running full catalogue instead of the requested 1-2 cases."
-            python3 "${SCRIPT}" \
-              --output-dir "${SMOKE_DIR}/defi_v4" \
-              2>&1 | tee "${SMOKE_DIR}/defi_v4/run.log"
-          fi
+          CASE_ARGS=("${DEFI_CASE_1}")
+          [[ -n "${DEFI_CASE_2}" ]] && CASE_ARGS+=("${DEFI_CASE_2}")
+          echo "[v4] --cases filter: ${CASE_ARGS[*]}"
 
-          COUNT=$(find "${SMOKE_DIR}/defi_v4" -name '*.json' 2>/dev/null | wc -l)
-          echo "v4 result JSON files: ${COUNT}"
-          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4.py produced no result JSON"; exit 1; }
+          # Sentinel: only JSON newer than this counts as produced by THIS run.
+          touch "${RUNNER_TEMP}/v4.stamp"
+
+          python3 "${SCRIPT}" \
+            --output-dir "${OUTDIR}" \
+            --cases "${CASE_ARGS[@]}" \
+            2>&1 | tee "${OUTDIR}/run.log"
+
+          COUNT=$(find "${OUTDIR}" -name '*.json' -newer "${RUNNER_TEMP}/v4.stamp" 2>/dev/null | wc -l)
+          echo "v4 result JSON files (this run): ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4.py produced no result JSON in ${OUTDIR}"; exit 1; }
 
       # ── v4_pca: same 1-2 named DeFi cases, PCA 40/60 split ──────────────────
       - name: "Smoke test: hypatiax_defi_benchmark_v4_pca.py"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEFI_CASE_1: "${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}"
+          DEFI_CASE_2: "${{ inputs.defi_case_2 }}"
         run: |
+          set -euo pipefail
+
           SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4_pca.py"
+          OUTDIR="${SMOKE_DIR}/defi_v4_pca"
           [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
 
-          CASE_ARGS=("${{ inputs.defi_case_1 || 'Portfolio Sharpe Ratio' }}")
-          if [[ -n "${{ inputs.defi_case_2 }}" ]]; then
-            CASE_ARGS+=("${{ inputs.defi_case_2 }}")
+          if ! HELP="$(python3 "${SCRIPT}" --help 2>&1)"; then
+            echo "::error::${SCRIPT} --help failed (import-time error?). Output follows:"
+            echo "${HELP}"
+            exit 1
           fi
+          for FLAG in --output-dir --cases --force-fresh; do
+            grep -q -- "${FLAG}" <<<"${HELP}" \
+              || { echo "::error::${SCRIPT} has no ${FLAG} flag"; exit 1; }
+          done
 
-          if python3 "${SCRIPT}" --help 2>&1 | grep -q -- '--cases'; then
-            echo "[v4_pca] running with --cases filter: ${CASE_ARGS[*]}"
-            python3 "${SCRIPT}" \
-              --output-dir "${SMOKE_DIR}/defi_v4_pca" \
-              --cases "${CASE_ARGS[@]}" \
-              --force-fresh \
-              2>&1 | tee "${SMOKE_DIR}/defi_v4_pca/run.log"
-          else
-            echo "::warning::hypatiax_defi_benchmark_v4_pca.py has no --cases flag - running full catalogue instead of the requested 1-2 cases."
-            python3 "${SCRIPT}" \
-              --output-dir "${SMOKE_DIR}/defi_v4_pca" \
-              --force-fresh \
-              2>&1 | tee "${SMOKE_DIR}/defi_v4_pca/run.log"
+          CASE_ARGS=("${DEFI_CASE_1}")
+          [[ -n "${DEFI_CASE_2}" ]] && CASE_ARGS+=("${DEFI_CASE_2}")
+          echo "[v4_pca] --cases filter: ${CASE_ARGS[*]}"
+
+          touch "${RUNNER_TEMP}/v4_pca.stamp"
+
+          python3 "${SCRIPT}" \
+            --output-dir "${OUTDIR}" \
+            --cases "${CASE_ARGS[@]}" \
+            --force-fresh \
+            2>&1 | tee "${OUTDIR}/run.log"
+
+          COUNT=$(find "${OUTDIR}" -name '*.json' -newer "${RUNNER_TEMP}/v4_pca.stamp" 2>/dev/null | wc -l)
+          echo "v4_pca result JSON files (this run): ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4_pca.py produced no result JSON in ${OUTDIR}"; exit 1; }
+
+          # v4_pca is documented to emit this alongside its results; a missing
+          # file here usually means --output-dir was parsed but not threaded
+          # through to the disclosure writer.
+          if [[ -z "$(find "${OUTDIR}" -name 'split_protocol_disclosure.json' -print -quit)" ]]; then
+            echo "::warning::split_protocol_disclosure.json not found in ${OUTDIR} - check whether --output-dir reaches the disclosure writer."
           fi
-
-          COUNT=$(find "${SMOKE_DIR}/defi_v4_pca" -name '*.json' 2>/dev/null | wc -l)
-          echo "v4_pca result JSON files: ${COUNT}"
-          [[ "${COUNT}" -gt 0 ]] || { echo "::error::hypatiax_defi_benchmark_v4_pca.py produced no result JSON"; exit 1; }
 
       # ── exp3_nguyen12_consolidated.py: 1-2 named Nguyen equations via TASK_IDS ─
       - name: "Smoke test: exp3_nguyen12_consolidated.py"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           RESULTS_DIR: "${{ github.workspace }}/${{ env.SMOKE_DIR }}/exp3"
+          NGUYEN_SEED: "${{ inputs.nguyen_seed || '42' }}"
+          NGUYEN_TEMP: "${{ inputs.temperature || '0.25' }}"
+          NGUYEN_TASK_1: "${{ inputs.nguyen_task_1 || 'N1' }}"
+          NGUYEN_TASK_2: "${{ inputs.nguyen_task_2 }}"
         run: |
+          set -euo pipefail
+
           SCRIPT="hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py"
+          OUTDIR="${SMOKE_DIR}/exp3"
           [[ -f "${SCRIPT}" ]] || { echo "::error::${SCRIPT} not found"; exit 1; }
 
-          SEED="${{ inputs.nguyen_seed || '42' }}"
-          TEMP="${{ inputs.temperature || '0.25' }}"
-
-          TASK_ARGS=("${{ inputs.nguyen_task_1 || 'N1' }}")
-          if [[ -n "${{ inputs.nguyen_task_2 }}" ]]; then
-            TASK_ARGS+=("${{ inputs.nguyen_task_2 }}")
+          if ! HELP="$(python3 "${SCRIPT}" --help 2>&1)"; then
+            echo "::error::${SCRIPT} --help failed (import-time error?). Output follows:"
+            echo "${HELP}"
+            exit 1
           fi
+          for FLAG in --seed --temperature; do
+            grep -q -- "${FLAG}" <<<"${HELP}" \
+              || { echo "::error::${SCRIPT} has no ${FLAG} flag"; exit 1; }
+          done
+
+          # TASK_IDS is an env var, not a flag, so --help cannot confirm it.
+          # Assert the source still reads it - otherwise this step silently
+          # runs all 12 equations and blows the 45-minute job timeout.
+          grep -qE 'TASK_IDS|SHARD_IDS' "${SCRIPT}" \
+            || { echo "::error::${SCRIPT} no longer references TASK_IDS/SHARD_IDS; the per-equation filter is gone and this would run all 12 equations"; exit 1; }
+
+          TASK_ARGS=("${NGUYEN_TASK_1}")
+          [[ -n "${NGUYEN_TASK_2}" ]] && TASK_ARGS+=("${NGUYEN_TASK_2}")
           export TASK_IDS="${TASK_ARGS[*]}"
 
-          # exp3 has a real per-equation filter (TASK_IDS / SHARD_IDS env var,
-          # see _apply_task_ids_nguyen) - a 0-match is a hard exit (FIX-1), so
-          # this fails loudly rather than silently falling back to all 12.
-          echo "[exp3] seed=${SEED} temperature=${TEMP} TASK_IDS='${TASK_IDS}'"
+          echo "[exp3] seed=${NGUYEN_SEED} temperature=${NGUYEN_TEMP} TASK_IDS='${TASK_IDS}'"
+          echo "[exp3] RESULTS_DIR=${RESULTS_DIR}"
+
+          touch "${RUNNER_TEMP}/exp3.stamp"
 
           python3 "${SCRIPT}" \
-            --seed "${SEED}" \
-            --temperature "${TEMP}" \
-            2>&1 | tee "${SMOKE_DIR}/exp3/run.log"
+            --seed "${NGUYEN_SEED}" \
+            --temperature "${NGUYEN_TEMP}" \
+            2>&1 | tee "${OUTDIR}/run.log"
 
-          COUNT=$(find "${SMOKE_DIR}/exp3" -name '*.json' 2>/dev/null | wc -l)
-          echo "exp3 result JSON files: ${COUNT}"
-          [[ "${COUNT}" -gt 0 ]] || { echo "::error::exp3_nguyen12_consolidated.py produced no result JSON for seed ${SEED}, TASK_IDS='${TASK_IDS}'"; exit 1; }
+          COUNT=$(find "${OUTDIR}" -name '*.json' -newer "${RUNNER_TEMP}/exp3.stamp" 2>/dev/null | wc -l)
+          echo "exp3 result JSON files (this run): ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::exp3_nguyen12_consolidated.py produced no result JSON in ${OUTDIR} for seed ${NGUYEN_SEED}, TASK_IDS='${TASK_IDS}'"; exit 1; }
+
+      # ── Diagnostics ─────────────────────────────────────────────────────────
+      - name: Locate stray result JSON
+        if: always()
+        run: |
+          set -uo pipefail
+          echo "=== JSON written anywhere in the workspace in the last 60 min ==="
+          echo "(anything under ${OUT_BASE} but OUTSIDE ${SMOKE_DIR} means the"
+          echo " --output-dir / RESULTS_DIR override is being ignored)"
+          find "${GITHUB_WORKSPACE}" -name '*.json' -mmin -60 \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.git/*' \
+            -not -path '*/site-packages/*' \
+            -printf '%TY-%Tm-%Td %TH:%TM  %p\n' 2>/dev/null \
+            | sort -r || true
+          echo "================================================================"
 
       - name: Print summary
         if: always()
         run: |
+          set -uo pipefail
           echo "=== Smoke test summary ==="
-          find "${SMOKE_DIR}" -type f -name '*.json' | sort
+          find "${SMOKE_DIR}" -type f -name '*.json' 2>/dev/null | sort || true
           echo "==========================="
+          echo "--- tail of each run.log ---"
+          for LOG in "${SMOKE_DIR}"/*/run.log; do
+            [[ -f "${LOG}" ]] || continue
+            echo "### ${LOG}"
+            tail -n 40 "${LOG}"
+            echo
+          done
 
       - name: Upload smoke-test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: smoke-test-v4-results
-          path: ${{ env.SMOKE_DIR }}
+          # OUT_BASE is included deliberately: if a script ignores --output-dir
+          # and writes to its own default location, the results are still
+          # captured instead of being lost with the runner.
+          path: |
+            ${{ env.SMOKE_DIR }}
+            ${{ env.OUT_BASE }}
+          if-no-files-found: warn
           retention-days: 5
