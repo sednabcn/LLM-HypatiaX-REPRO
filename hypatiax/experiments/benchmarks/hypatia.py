@@ -127,9 +127,16 @@ def get_llm_prior(
     timeout:
         Seconds to wait for the API call before raising.
     temperature:
-        Anthropic API sampling temperature in [0, 1] (default: 0.25).
-        0.0 requests near-deterministic sampling; used as the FIX-N3-ii
-        determinism control.
+        Deprecated/no-op as of [FIX-SDK1.0-TEMPERATURE]. Anthropic SDK v1.0+
+        removed `temperature` from Messages.create() entirely, and current
+        models reject it server-side (400) regardless of SDK version. This
+        argument is accepted for backward-compatible call signatures but is
+        NOT sent to the API; the model's own default sampling always
+        applies. Kept so existing callers (e.g. exp3's --temperature flag)
+        don't need to change their call sites, but the FIX-N3-ii
+        determinism-via-temperature=0 control this used to provide no
+        longer exists — see caller-side notes if exact-reproducibility is
+        required.
     verbose:
         Print progress to stdout.
 
@@ -174,10 +181,24 @@ def get_llm_prior(
     try:
         anthropic = _get_anthropic()
         client = anthropic.Anthropic(api_key=resolved_key)
+        # [FIX-SDK1.0-TEMPERATURE] anthropic SDK v1.0 (2026-08-20) removed
+        # temperature/top_p/top_k from Messages.create() with no **kwargs
+        # passthrough (TypeError, not a network call), and current models
+        # reject the parameter server-side anyway (400: "temperature is
+        # deprecated for this model"). There is no version of the SDK that
+        # both installs cleanly today and accepts this argument, so it is
+        # no longer sent. This removes the temperature=0 determinism
+        # control the `temperature` parameter used to provide — see the
+        # docstring note below.
+        if temperature != 0.25 and verbose:
+            print(
+                f"  [LLM] note: temperature={temperature} was requested but "
+                "is no longer sent (unsupported by current models/SDK); "
+                "the model's own default sampling applies."
+            )
         message = client.messages.create(
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature,
             messages=[{"role": "user", "content": prompt}],
             timeout=timeout,
         )

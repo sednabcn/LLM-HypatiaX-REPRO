@@ -498,11 +498,22 @@ class PureLLMBaseline:
                 f"api_helper_source={inspect.getsourcefile(_create_message_deterministic)!r} "
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
+            # [FIX-SDK1.0-TEMPERATURE] Superseding FIX-ISSUE2B-LLM-TEMPERATURE
+            # above: that fix made this call start sending temperature=0.0
+            # right as anthropic SDK v1.0 (2026-08-20) removed temperature/
+            # top_p/top_k from Messages.create() outright -- it's a
+            # client-side TypeError now (no **kwargs passthrough), and
+            # current models also 400 on it server-side regardless of SDK
+            # version. So this goes back to not sending temperature, but
+            # for the opposite reason: it's no longer accepted at all, not
+            # "not yet wired up". The temperature=0 determinism control
+            # described in FIX-ISSUE2B-LLM-TEMPERATURE's comment above no
+            # longer exists as an option -- run-to-run sampling variance
+            # should be expected again.
             response = _create_message_deterministic(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
-                temperature=0.0,
                 messages=[{"role": "user", "content": prompt}],
             )
             print(
