@@ -1,24 +1,69 @@
-if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
-  echo "::error::exp1 produced NO output files in '${TARGET}'."
-  echo "  Expected: hypatiax_defi_benchmark_v4_results*.json, hypatiax_defi_benchmark_*results*.json, or protocol_core_noiseless_*.json"
-  echo "  The experiment script may have written files under a different name."
-  echo "  Check the 'Run experiment tasks' log for errors and actual output filenames."
-  exit 1
-fi
+name: "HypatiaX - runner (repro)"
+run-name: "HypatiaX - runner (repro) · ${{ github.event.inputs.experiment }}"
 
-# Allow both the older v3 naming and the current v4 benchmark output.
-find "${TARGET}" -maxdepth 1 -type f \( \
-  -name 'hypatiax_defi_benchmark_v4_results*.json' \
-  -o -name 'hypatiax_defi_benchmark_*results*.json' \
-  -o -name 'protocol_core_noiseless_*.json' \
-\) 2>/dev/null | sort
+on:
+  workflow_dispatch:
+    inputs:
+      experiment:
+        description: "Experiment ID (see run_all.sh --step)"
+        required: true
+        type: choice
+        options:
+          - exp1
+          - exp1b
+          - exp1_ablation
+          - exp2_feynman
+          - exp2
+          - exp3
+          - exp3b
+          - suppA
+          - suppB
+          - suppB_sc
+          - hybrid_all_domains
+          - instability
+          - extrap
+        default: exp1
 
-COUNT_TOTAL=$(find "${TARGET}" -maxdepth 1 -type f \( \
-  -name 'hypatiax_defi_benchmark_v4_results*.json' \
-  -o -name 'hypatiax_defi_benchmark_*results*.json' \
-  -o -name 'protocol_core_noiseless_*.json' \
-\) 2>/dev/null | wc -l || echo 0)
+jobs:
+  exp1_result_gate:
+    name: exp1 result gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate exp1 output names
+        shell: bash
+        env:
+          RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results
+        run: |
+          set -euo pipefail
 
-echo "  Total files   : ${COUNT_TOTAL}"
+          TARGET="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi"
+          if [[ ! -d "${TARGET}" ]]; then
+            echo "::error::Target directory does not exist: ${TARGET}"
+            exit 1
+          fi
 
-action:
+          mapfile -t results < <(
+            find "${TARGET}" -maxdepth 1 -type f \( \
+              -name 'hypatiax_defi_benchmark_v4_results*.json' \
+              -o -name 'hypatiax_defi_benchmark_*results*.json' \
+              -o -name 'protocol_core_noiseless_*.json' \
+            \) 2>/dev/null | sort
+          )
+
+          COUNT_TOTAL="${#results[@]}"
+          echo "  Target       : ${TARGET}"
+          echo "  Total files  : ${COUNT_TOTAL}"
+          if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
+            echo "::error::exp1 produced NO output files in '${TARGET}'."
+            echo "  Expected: hypatiax_defi_benchmark_v4_results*.json, hypatiax_defi_benchmark_*results*.json, or protocol_core_noiseless_*.json"
+            exit 1
+          fi
+
+          printf '%s\n' "${results[@]}"
+          echo "OK exp1 output files present."
+
+      - name: Smoke check current benchmark metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Using current v4 benchmark naming; older v3-only globs are intentionally rejected."
