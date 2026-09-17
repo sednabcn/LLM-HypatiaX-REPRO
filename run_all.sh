@@ -1,61 +1,433 @@
 #!/usr/bin/env bash
+# =============================================================================
+# run_all.sh — HypatiaX JMLR v3.0 full numerical reproduction pipeline
+#
+# FIX CRITICAL-GT-LEAK (2026-08-10): ground-truth answer was leaking into
+#   LLM formula-generation prompts in THREE confirmed locations (same bug
+#   class, independently introduced):
+#     1. hypatiax_defi_benchmark_v3c.py :: _generate_llm_formula
+#        "Ground truth: {metadata['ground_truth']}" — always fired.
+#        Affects: exp1, exp1b — Tables 9, 10, 11, 12, 13, 15 · Figures 9-13.
+#        FIXED (script's own Fix 14 changelog entry).
+#     2. hybrid_system_llm_nn_all_domains.py :: _generate_prompt
+#        "Expected form: {metadata['ground_truth']}" — fires only on the
+#        LOCAL FALLBACK path (clean PureLLMBaseline delegate fails/N-A),
+#        skewed toward the hardest cases. Affects: hybrid_all_domains step
+#        — tab:hybrid_all. FIXED (script's own FIX GT-LEAK comment).
+#     3. hybrid_system_nn_defi_domain.py :: _specialized_prompt
+#        WORST instance — not a hint, the complete pre-solved answer
+#        (already formatted as FORMULA:/PYTHON:/EXPLANATION:) was sent
+#        as the "prompt" with no derivation task posed at all, for
+#        kelly/impermanent-loss/VaR/expected-shortfall. Fires only on
+#        fallback (same condition as #2). Affects: suppA step (via
+#        run_hybrid_system_benchmark.py --batch) — Tab 11-13 routing.
+#        FIXED (call site now always uses the genuine _standard_prompt;
+#        _specialized_prompt left in place but marked DEPRECATED/unused).
+#   pure_llm's own prompt (baseline_pure_llm_defi_discovery.py) was audited
+#   and is clean — confirms the leak is arm-specific, not shared.
+#   run_hybrid_system_benchmark.py itself is a pure orchestrator with no
+#   prompt code — clean. test_enhanced_defi_extrapolation.py delegates
+#   directly to the clean PureLLMBaseline with no local prompt path —
+#   clean. analyze_hybrid_performance.py makes no LLM calls — not
+#   applicable. suppA's audit is now COMPLETE across all 3 scripts it
+#   subprocess-calls.
+#   SEPARATE ISSUE (not a leak, flag for maintainers): hypatiax_defi_
+#   benchmark_v3c.py's own header lists hybrid_system_nn_defi_domain.py
+#   and test_enhanced_defi_extrapolation.py as scripts it "replaces" —
+#   yet suppA still runs both directly. Worth resolving whether suppA
+#   should be retired in favor of v3c, independent of this leak fix.
+#   ALL affected steps (exp1, exp1b, hybrid_all_domains, suppA) must be
+#   rerun from scratch before any hybrid-vs-pure_llm number in the paper
+#   is cited again.
+#
+# FIX CRITICAL 1 : 'instability' → 'hybrid_all_domains' (CI naming alignment)
+# FIX CRITICAL 2 : suppB_sc step added (sample-complexity sweep)
+# FIX CRITICAL 3 : hybrid_llm_nn/all_domains (not /defi) used throughout
+# FIX NO-TABLES-FIGURES: all table (.tex) and figure (.png/.pdf) generation has
+#                  been removed from this pipeline. The former 'tables' (Step 11)
+#                  and 'figures' (Step 12) steps are deleted; exp1_ablation and
+#                  instability now purge their .tex/.png/.pdf byproducts
+#                  immediately after running; downstream steps (validate,
+#                  qualify, audit_figures_tables, audit_final_gate) no longer
+#                  check for table/figure presence. Only numerical (.json/.csv)
+#                  outputs are produced and checked throughout.
+# FIX STEP-11-12 (historical, superseded by FIX NO-TABLES-FIGURES above)
+# FIX WARN-2     : HYBRID_ALL_DOMAINS_EXPECTED corrected to 10-domain list that
+#                  matches CI HYBRID_ALL_DOMAINS_IDS and ExperimentProtocolAll
+# FIX STEP-ORDER : removed exp2_sym / exp2_hyb (no run-blocks exist for them)
+# FIX-suppA-1    : suppA cd REPO_ROOT (not EXPERIMENTS_DIR) — fixes doubled-path
+#                  ENOENT on all three Python scripts (hypatiax/core/..., etc.)
+# FIX-suppA-2    : suppA mkdir -p results dirs before first tee — fixes
+#                  "tee: No such file or directory" when run standalone
+# FIX-suppA-3    : suppA runs all three scripts (run_hybrid_system_benchmark.py,
+#                  test_enhanced_defi_extrapolation.py, analyze_hybrid_performance.py)
+#                  with tee / tee -a into suppA_run.log
+# FIX-exp1b-1    : exp1b cd REPO_ROOT (not EXPERIMENTS_DIR) — mirrors suppA-1/exp1 fix.
+#                  hypatiax_defi_benchmark_v3c.py writes to os.getcwd()/hypatiax/data/results;
+#                  calling from EXPERIMENTS_DIR doubled the path → ENOENT on all outputs.
+# FIX-exp1b-2/3  : removed --noise-level 15 and --output-dir from exp1b invocation.
+#                  Those flags are NOT in hypatiax_defi_benchmark_v3c.py's argparse;
+#                  passing them caused "unrecognized arguments" SystemExit(2) (CI log line 426).
+#                  The noise-level/output-dir concern is handled by the dest15 mv block.
+# FIX-exp1b-4    : portfolio_variance_v3c2.py now guarded by a pre-flight JSON check.
+#                  It reads the benchmark JSON as a prerequisite; when that file is absent
+#                  df_pysr=None → AttributeError on line 375 "df_pysr.columns" (CI log line 448).
+#                  Fix: skip with a warning when benchmark JSON not yet present; use || echo
+#                  so a non-zero exit from the variance script doesn't abort the whole step.
+# FIX-exp1b-5    : move block now searches both EXPERIMENTS_DIR and RESULTS_DIR root.
+#                  After the cd REPO_ROOT fix, outputs land in RESULTS_DIR (not EXPERIMENTS_DIR),
+#                  so the original single-root find missed them entirely.
+# FIX-suppA-4    : suppA move block now searches REPO_ROOT, EXPERIMENTS_DIR, and RESULTS_DIR.
+#                  After cd REPO_ROOT, run_hybrid_system_benchmark.py may write to RESULTS_DIR
+#                  directly; searching only EXPERIMENTS_DIR missed all files.
+# FIX-suppA-5    : suppA move glob aligned with CI YAML move_matching calls (lines 1455-1458).
+#                  CI matches: consolidated_hybrid_*.json → hybrid_pysr/defi
+#                              hybrid_llm_nn_all_domains_*.json → hybrid_llm_nn/all_domains
+#                              ablation_exp1_*.json + hypatiax_defi_benchmark_v3_results* → RESULTS_DIR root
+#                  run_all.sh previously matched hybrid_system*.json (wrong glob, not in CI).
+# SYNC-ci (2026-05-14):
+#   — git push now uses HEAD:ref_name (not hardcoded master)
+#   — consolidate timeout-minutes: 30 added
+#   — Upload consolidated artifact: if: always() added
+#   — shard_matrix=[] emitted on empty-pending to let worker if-guard fire
+#   — JOB_DEADLINE exported to exp3/exp3b subprocess env
+#   — python3 -c IndentationErrors fixed (3 sites in worker step)
+#
+# FIX-NSHARDS1-AUDIT (2026-05-25):
+#   — extrap: added --resume flag to match exp2_feynman; without it extrap re-runs
+#     all 11 domains from scratch on every retry, ignoring the CI RESUME=true env var.
+#     run_comparative_suite_benchmark_v2.py only honours --resume (not the env var).
+#   — suppB: NOISE_LEVELS forwarded explicitly as env var to run_noise_sweep_benchmark.py
+#     so custom dispatch inputs are respected; previously the script used its own default.
+#   — suppB: --samples, --pysr-timeout, --method-timeout, --populations, --parsimony
+#     now passed as CLI args (matching repro.yaml / CI values) rather than relying on
+#     the script picking them up from the environment — eliminates the env-vs-CLI gap.
+#   — suppB_sc: same repro.yaml CLI flag set added (--samples, --pysr-timeout,
+#     --method-timeout, --populations, --parsimony) — mirrors suppB fix.
+#   — exp1, exp2_feynman: confirmed correct for NSHARDS=1; no changes needed.
+#
+# FIX-N3-ii (2026-09-03, Fix01 S1): exp3 (STEP 7) and exp3b (STEP 8) now
+#   invoke exp3_nguyen12_hybrid50v_03.py instead of the _02.py file. _03.py
+#   adds an explicit --temperature flag (0.25, matching hypatia.py's own
+#   default) and per-run output naming (temperature + --run-index) so
+#   repeated same-seed runs land in separate files instead of silently
+#   no-op'ing on the "already exists" guard. Both invocations below now pass
+#   --temperature 0.25 explicitly. ci_runner_repro.yml's exp3/exp3b SCRIPT=
+#   entries were updated to match. Item (ii) of the seed-123 reproducibility
+#   note fully closes once a seed-123 rerun is executed and its result JSON
+#   records "temperature" and "n_candidates" alongside the solve-rate.
+#
+# ADD-exp1c (2026-09-11): new v4 validation-selected hybrid DeFi seed sweep,
+#   added as a SEPARATE step alongside (not instead of) exp1b, per the v4
+#   report's recommendation. exp1b/exp1 keep invoking hypatiax_defi_
+#   benchmark_v3c.py completely unchanged — the frozen v3c baseline is
+#   preserved so v3c-vs-v4 stays a clean, paired comparison over the same
+#   74-case catalogue and the same five seeds (42,99,123,777,2024).
+#   exp1c invokes hypatiax_defi_benchmark_v4.py and writes to a separate
+#   results directory, results/comparison_results/noise-noiseless/exp1c_v4/,
+#   so it never overwrites the v3c JSONs. When run as a single invocation
+#   covering all five seeds (e.g. locally), hypatiax_defi_benchmark_v4.py
+#   additionally emits a pooled report,
+#   hypatiax_defi_benchmark_v4_pooled_seed_report.json. exp1c has also been
+#   added to the validate/qualify stages (see those steps below) and to
+#   ci_runner_repro.yml (VALID_IDS, SCRIPT/RESULT_SUBDIR case, shard table,
+#   task-ID registry, combined-output globs, output verification step).
+#
+# FIX-suppB_sc-NOISE0 (2026-08-04):
+#   — suppB_sc was setting NOISE_LEVEL='5.0' and never passing --noiseless,
+#     so the sample-complexity sweep silently ran at sigma=0.05 instead of
+#     the required noise=0%. Replaced with --noiseless (run_sample_complexity_
+#     benchmark.py's documented sigma=0 mode, directly comparable to published
+#     SR figures); NOISE_LEVEL is ignored by the script whenever --noiseless
+#     is set, so the stray env var was removed rather than just zeroed.
+#
+# STEP IDs (linear order):
+#   env_check          → verify Python, PySR, API key
+#   exp1               → core extrapolation benchmark (Tab 9, 10, 15 · Fig 9, 10)
+#   exp1b              → DeFi seed sweep + portfolio variance (Tab 11-13 · Fig 11-13)
+#   exp1c              → v4 validation-selected hybrid DeFi seed sweep (ADD-exp1c;
+#                         paired comparison against the frozen exp1b/v3c baseline)
+#   extrap             → OOD extrapolation comparative (Tab 9 OOD columns)
+#   hybrid_all_domains → hybrid LLM+NN all-domains run (§10.9 hybrid table — one-shot)
+#   instability        → Instability Index analysis + 12 figures (§10.9 Regime A/B/C)
+#   exp2_feynman       → Feynman SR noisy benchmark (Tab 16-18 · Phase 2)
+#   exp2_feynman_extrap
+#   exp2               → Combined five-system comparison injection (Tab 19 full)
+#   exp3               → Nguyen-12 benchmark (tab:nguyen12 · §10.8)
+#   exp3b              → Nguyen-12 extended seeds 99/123/777/2024
+#   suppA              → DeFi routing improvement experiments (Tab 11-13 routing)
+#   suppB              → Noise sweep (Tab 28, 29 · suppB)
+#   suppB_sc           → Sample-complexity sweep (Tab 29 · suppB)   ← FIX CRITICAL 2
+#   (FIX NO-TABLES-FIGURES: 'tables' and 'figures' steps removed — no table/figure
+#    generation occurs anywhere in this pipeline any more)
+#   validate           → Cross-check all result files against expected checksums
+#   qualify            → numerical spot-check + per-experiment gate
+#                        (_merged.json ✓  git ✓  checkpoint ✓)
+#   audit_paper        → Cross-check every paper claim vs result JSONs (paper_targets.json)
+#                        PASS/WARN/FAIL/MISSING per claim; Nguyen-12 dual-threshold;
+#                        writes logs/paper_audit_findings.json
+#   audit_setup        → Copy .tex source files into notebooks/ for notebook steps
+#   audit_nb01         → NB-01 Citation & Bibliography Audit
+#   audit_nb02         → NB-02 Cross-Reference & Label Integrity
+#   audit_nb03         → NB-03 Section Structure & Numbering
+#   audit_nb04         → NB-04 Numerical Consistency & Abstract Claims
+#   audit_nb05         → NB-05 Figure Files & Image Dependencies
+#
+# FIX-MERGE-QUOTING (2026-06-07):
+#   — exp2_feynman_extrap merge block: extracted from bash -c "" into a standalone
+#     ( ) subshell block.  The original \\\\\\" (3-backslash+quote) and \\\\\\$
+#     (3-backslash+dollar) patterns inside the double-quoted outer string produced
+#     literal backslashes in paths after bash parsing (_PAIRED=\"path\") and
+#     suppressed command substitution (_NR=\$(...) never ran).  Rewritten as plain
+#     bash with no nesting, matching the exp2_feynman_pca_comparison_table and
+#     exp3_symbolic_equivalence inlined blocks.
+#   — Final summary: corrected phantom log reference qualify_verify_run.log ->
+#     qualify_run.log (the qualify step only ever writes qualify_run.log).
+#
+# FIX-SYNC-CI (2026-06-05):
+#   — exp2_feynman_pca_comparison_table logic inlined after exp2_feynman_pca_4060.
+#     Calls scripts/patches/generate_exp2_pca_comparison_table.py to produce
+#     exp2_pca_comparison.{tex,csv,md} — mirrors ci_analysis.yml and ci_postprocess.yml.
+#     NOT a separate registered step; runs as plain shell after exp2_feynman_pca_4060.
+#   — exp3_symbolic_equivalence logic inlined after exp3b.
+#     Calls scripts/check_symbolic_equivalence.py against all
+#     exp3_nguyen12_seed*.json files — mirrors ci_analysis.yml Check symbolic
+#     equivalence step.  Output: symbolic_equivalence_report.csv + _summary.txt.
+#     NOT a separate registered step; runs as plain shell after exp3b.
+#   — merge_extrap_into_benchmark.py now called inside exp2_feynman_extrap step
+#     (replacing the NOTE that deferred it entirely to ci_analysis.yml).
+#     Produces ablation_paired.json in exp2_extrap/ so qualify and audit_paper
+#     can run locally without requiring ci_analysis.yml to run first.
+#     Skips gracefully when the script or benchmark_results_extrap*.json is absent.
+#   — tables step now also calls generate_exp2_pca_comparison_table.py and
+#     generate_nguyen12_symequiv_table.py — mirrors ci_postprocess.yml's
+#     "Generate PCA comparison table" and "Generate symbolic equivalence table"
+#     steps.  Both are skipped gracefully when prerequisite files are absent.
+#   — _STEP_ORDER kept at 35 entries (tracer _DECLARED_ORDER); the two new
+#     sub-steps are not registered so --step / --from targeting is unaffected.
+#
+# FIX-C3-ESCAPE (2026-06-04):
+#   — exp1_pca and exp1b_pca: removed erroneous backslash-escaping on
+#     REPO_ROOT, EXPERIMENTS_DIR, and RESULTS_DIR inside the outer bash -c
+#     double-quoted string.  \${REPO_ROOT} was passed as a literal string to
+#     the subshell (which has no such variable), causing:
+#       bash: cd: ${REPO_ROOT}: No such file or directory
+#       python3: can't open file '.../${EXPERIMENTS_DIR}/...': No such file or directory
+#       FileNotFoundError: .../defi_pca/split_protocol_disclosure.json
+#     All three outer-scope variables (REPO_ROOT, EXPERIMENTS_DIR, RESULTS_DIR)
+#     now use unescaped ${VAR} so bash expands them at parse time, matching the
+#     pattern used correctly in exp1, exp1b, extrap, suppA, and all other steps.
+#     Inner subshell variables (_PCA_DEFI_DIR, _PCA15_DIR, _SHARD, etc.) retain
+#     their \${ escaping so they are evaluated inside the subshell as intended.
+#
+# FIX-C3 (2026-06-02):
+#   — exp2_feynman_pca_4060 step added (STEP 5b) immediately after exp2_feynman.
+#     Reruns the Feynman benchmark using the PCA-directed 40/60 extrapolation
+#     split (build_extrap_split, extrap_train_frac=0.6) identical to all DeFi
+#     benchmarks.  Outputs land in comparison_results/feynman-tests/exp2_pca_4060/
+#     alongside a split_protocol_disclosure.json so downstream consumers can
+#     detect any future split-config mismatch immediately.
+#     The legacy random 80/20 results (9/30) are preserved under exp2/ and
+#     locked as fixc3_baseline.json before the corrected run can proceed.
+#     ci_runner_disclosure.yml gates A/B/C are triggered automatically once
+#     the corrected run completes.
+#
+# FIX-0.05 (2026-06-01):
+#   — NOISE_LEVELS default updated from "0.0,0.5,1.0,5.0,10.0" to "0.0,0.05,0.1,0.5,1.0"
+#     at both the global export (line ~210) and the suppB inline env override.
+#     The audit script expects noise_vals=[0.0,0.05,0.1,0.5,1.0]; the old default
+#     omitted 0.05 (5%), causing noise_vals=[] / MISSING ehd_noise_robust_5pct.
+#     New schedule matches paper audit expectations and CI dispatch input values.
+#
+# FIX-SCHEMA-C-NOISE (2026-06-01):
+#   — _compute_ehd_noise_robust Schema C: fixed noise level extraction order.
+#     suppB files are one-file-per-equation-per-noise-level; "noise_levels" in
+#     each file is the FULL schedule (e.g. [0.0,0.05,0.1,0.5,1.0]) stored as
+#     config metadata — NOT the noise level that file was actually run at.
+#     The old code took max(noise_levels) = 1.0 for every file, so all rows
+#     appeared to be at max_noise while the actual per-file noise level was lost.
+#     New priority order:
+#       1. Scalar "noise_level"/"sigma"/"noise" field in the JSON body
+#       2. Noise level encoded in the filename
+#       3. noise_levels list ONLY when it has exactly one element (unambiguous)
+#          OR cross_noise_summary dict keys (true per-noise aggregates)
+#     This restores the correct per-file noise level so max-noise rows are only
+#     counted for files genuinely run at noise=1.0, resolving MISSING ehd_noise_robust_100pct.
+#
+# FIX-SCHEMA-C (2026-05-31):
+#   — _compute_ehd_noise_robust: added Schema C handler for suppB files that have
+#     NO per_noise dict. Actual suppB output is one-file-per-equation-per-noise-level
+#     with r2 at the top level and noise level in noise_levels:[x] list.
+#     flattened=0 confirmed per_noise was absent from every file; the per_noise loop
+#     skipped all via "if not isinstance(per_noise, dict): continue".
+#     Fix: after the per_noise loop, scan files without per_noise, extract file-level
+#     r2 and noise level (noise_levels list / cross_noise_summary / scalar / filename),
+#     and emit one synthetic row per file for the max-noise robustness check.
+#
+# FIX-FORCE-NOISE-LEVEL (2026-05-31):
+#   — _compute_ehd_noise_robust: noise_level is now FORCE-ASSIGNED from the per_noise
+#     dict key (not setdefault). setdefault was silently losing to inner dict fields
+#     that carried a stale noise_level value from a different noise bucket, causing
+#     all rows to appear at the wrong noise level and failing the max_noise filter.
+#   — _file_r2 extraction switched from "or" chaining to explicit None check so
+#     r2=0.0 (a valid value) is not treated as absent.
+#   — _emit() helper consolidates row construction in one place for all code paths.
+#   — sample diagnostic upgraded: explicit None check (not "or -1"), plus
+#     flattened row count and all noise values seen in rows for CI debugging.
+#
+# FIX-NOISE-LEVELS-KEY (2026-05-31):
+#   — _compute_ehd_noise_robust: noise_vals now seeded from file-level "noise_levels"
+#     list and "per_noise" dict keys before falling back to row-level field scan.
+#     suppB files store the noise schedule as top-level "noise_levels":[0.0,0.5,...]
+#     and as keys of "per_noise" — no per-row "noise_level" scalar exists, so the
+#     original row-scan found nothing and exited with "no noise_level field found".
+#   — _has_r2 widened to include "success","r2_mean","r2_median","mean_r2","median_r2"
+#     which appear in actual suppB noise-sweep JSON output files.
+#
+# FIX-EHD-SCHEMA (2026-05-31):
+#   — _compute_ehd_noise_robust: added equation-name-keyed schema support for suppB.
+#     suppB JSON files use per_noise[noise_level][equation_name] = {r2: ...} (not
+#     the per_noise[noise_level] = {r2: ...} flat schema assumed previously).
+#     _iter_rows yielded the equation-name dict as a leaf (no recognised container key),
+#     making _r2_from_row return None for every row → n_total=0 → MISSING.
+#     Two-part fix:
+#     (1) _nested walk now checks each equation-keyed value directly as a metric row
+#         before falling through to per_equation/method_summary sub-keys.
+#     (2) Last-resort fallback now only appends a row when _r2_from_row succeeds on
+#         it directly, and recurses into its children if not — prevents appending
+#         equation-name dicts that have zero R² fields.
+#
+# FIXES (observ-02 audit 2026-05-27):
+#   — FIX-suppA-BUG-A : purge_dir moved BEFORE run_hybrid_system_benchmark.py in suppA.
+#                        Previously purge_dir ran after the script wrote its outputs,
+#                        deleting all results (critical/breaking).
+#   — FIX-NOISE_LEVELS : export NOISE_LEVELS globally at config level.
+#                        Without this, suppB silently fell back to its internal default
+#                        instead of the CI/dispatch value → silent reproducibility drift.
+#   — FIX-PYSR_POPULATION : removed export PYSR_POPULATION=100 (singular).
+#                        Only PYSR_POPULATIONS (plural, value 30) is read by scripts.
+#                        The singular variable was never used but scripts calling
+#                        os.getenv("PYSR_POPULATION") would silently get 100 (wrong).
+#   — FIX-exp1b-D      : relaxed exp1b count=0 from hard exit 1 to conditional warning.
+#                        A zero count is valid when the step is intentionally skipped;
+#                        hard failure broke --from / shard-filter workflows.
+#                        Override with SKIP_ALLOWED=true to suppress the warning.
+# =============================================================================
 
 set -euo pipefail
 
+# ── Configuration ─────────────────────────────────────────────────────────────
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+# FIX-ABS-PATH: always resolve RESULTS_DIR to an absolute path.
+# If the caller passed a relative path (e.g. RESULTS_DIR=hypatiax/data/results)
+# scripts that cd before writing will produce doubled/wrong paths.
+# realpath -m tolerates non-existent dirs (no --canonicalize-missing needed on macOS).
 _RESULTS_RAW="${RESULTS_DIR:-${REPO_ROOT}/hypatiax/data/results}"
 RESULTS_DIR="$(cd "$(dirname "${_RESULTS_RAW}")" 2>/dev/null && pwd)/$(basename "${_RESULTS_RAW}")" \
   || RESULTS_DIR="${REPO_ROOT}/hypatiax/data/results"
 export RESULTS_DIR
 EXPERIMENTS_DIR="${EXPERIMENTS_DIR:-${REPO_ROOT}/hypatiax/experiments/benchmarks}"
+# FIX PATH-1: GENERATION_DIR corrected to hypatiax/core/generation/ to match
+# CI script_path: hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+# (was: hypatiax/experiments/generation — wrong tree; caused ENOENT on hybrid_all_domains step
+#  and FIX TASK 7 domain-list validation both in run_all.sh and CI parity check)
 GENERATION_DIR="${GENERATION_DIR:-${REPO_ROOT}/hypatiax/core/generation}"
 CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
 ANALYSIS_DIR="${ANALYSIS_DIR:-${REPO_ROOT}/hypatiax/analysis}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 
+# PySR hyperparameters (Table 23)
+# NOTE: PYSR_POPULATION (singular) removed — it was unused and conflicted with
+# PYSR_POPULATIONS (plural) which is the variable actually read by all scripts.
+# Any script using os.getenv("PYSR_POPULATION") was silently getting 100 instead
+# of the paper value 30. Prefer PYSR_POPULATIONS throughout.
 export PYSR_GENERATIONS=10000
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
 export PYSR_PARETO_PRESSURE=0.001
 export PYSR_SEED=42
+# FIX-1: default was 2, then 4; CI and repro.yaml now use 30 (paper value).
+# Local runs with fewer populations diverge from paper results.
 export PYSR_POPULATIONS="${PYSR_POPULATIONS:-30}"
 
+# FIX-B: export NOISE_LEVELS globally so CI and local runs are consistent.
+# FIX-0.05: include 0.05 (5%) in the default sweep to match paper audit expectations.
+# Without this, suppB silently falls back to the script's own default,
+# causing reproducibility drift vs. CI (which sets this via dispatch input).
 export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 
+# Method timeouts — mirrors ci_experiment.yml global env block.
+# METHOD_TIMEOUT: PySR methods 5/6 budget (repro.yaml timeouts.method_seconds).
+# LLM_METHOD_TIMEOUT: tight cap for LLM/NN-only steps (retained for any custom invocations).
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
 export LLM_METHOD_TIMEOUT="${LLM_METHOD_TIMEOUT:-120}"
+# PYSR_FIT_WALL_TIMEOUT: hard per-fit wall-clock cap passed to DiscoveryConfig.
+# PYSR_FIT_GRACE_SECS:   extra grace seconds before forceful kill after timeout.
+# Both must be exported so worker sub-processes and Python scripts inherit them.
 export PYSR_FIT_WALL_TIMEOUT="${PYSR_FIT_WALL_TIMEOUT:-1200}"
 export PYSR_FIT_GRACE_SECS="${PYSR_FIT_GRACE_SECS:-120}"
 
+# Feynman benchmark defaults (Appendix A)
+# FIX-10: exported so subshells and child processes inherit the values.
 export FEYNMAN_SAMPLES=200
-export FEYNMAN_TIMEOUT=1100
-export FEYNMAN_NOISELESS_THRESHOLD=0.999999
+export FEYNMAN_TIMEOUT=1100        # FIX-G2: paper value 1100s (was 900)
+export FEYNMAN_NOISELESS_THRESHOLD=0.999999  # FIX-THRESHOLD: matches ci_experiment_simplify.yml (was 0.9999)
 
+# Julia signal handling — FIX-6 (FIX-G10): must be set before any juliacall
+# import so Julia segfaults produce traceable Python exceptions.
 export PYTHON_JULIACALL_HANDLE_SIGNALS=yes
 
+# Julia threading — FIX-7: match CI env (JULIA_NUM_THREADS: "4", JULIA_EXCLUSIVE: "0")
 export JULIA_NUM_THREADS="${JULIA_NUM_THREADS:-4}"
 export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
+# Repro config — FIX-8 (FIX-G2): paper-quality hyperparameters loaded at runtime.
+# Scripts that honour REPRO_CFG will prefer values from config/repro.yaml
+# over their own compile-time defaults (e.g. FEYNMAN_TIMEOUT=1100 from paper).
 export REPRO_CFG="${REPRO_CFG:-${REPO_ROOT}/config/repro.yaml}"
 
+# Job deadline — FIX-9: CI passes JOB_DEADLINE=19800 (330 min) to run_all.sh.
+# Set the same default locally so deadline-aware scripts behave consistently.
+# Override with JOB_DEADLINE=0 to disable deadline enforcement locally.
 export JOB_DEADLINE="${JOB_DEADLINE:-19800}"
 
+# Expected domain list for hybrid_all_domains validation (FIX WARN-2)
+# Must match ExperimentProtocolAll.get_all_domains() in experiment_protocol_all_30.py v4.1.
+# FIX: removed "statistics", "finance", "other" (never existed in protocol);
+#      added "fluid_dynamics" and "mathematics" (present in protocol).
 HYBRID_ALL_DOMAINS_EXPECTED="biology,chemistry,economics,electromagnetism,fluid_dynamics,mathematics,mechanics,optics,quantum,thermodynamics"
 
+# FIX-FEYNMAN_DOMAINS-HOIST: defined here (not at first use in exp2_feynman/extrap steps)
+# so bash does not hit an unbound-variable error when expanding double-quoted run()
+# arguments for those steps while running a different --step (e.g. exp1b).
+# With set -euo pipefail, bash expands ${FEYNMAN_DOMAINS} in the argument list of every
+# run() call that embeds it in a double-quoted string -- even when run() would skip the
+# step -- causing 'unbound variable' before run() is ever entered.
 FEYNMAN_DOMAINS="feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
 
+# ── CLI parsing ───────────────────────────────────────────────────────────────
 ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+# FIX STEP-ORDER: removed exp2_sym and exp2_hyb — no run-blocks exist for them
+# FIX CRITICAL 1: instability → hybrid_all_domains
+# FIX CRITICAL 2: suppB_sc added after suppB
+# SPLIT STEP 4: hybrid_all_domains (one-shot run) + instability (K-run II analysis)
+# FIX NO-TABLES-FIGURES: removed 'tables' and 'figures' steps entirely (table/figure
+# generation is fully disabled across this pipeline); audit_figures_tables retained
+# in name only as a no-op passthrough (see its definition) so downstream step
+# numbering/scripts that reference it by name don't break.
+_STEP_ORDER="env_check exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --step)    ONLY_STEP="$2"; shift 2 ;;
     --from)    FROM_STEP="$2"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
+    # Bare step name: "bash run_all.sh audit_paper" treated as "--step audit_paper".
+    # Validated against _STEP_ORDER so typos still produce a clear error.
     *)
       BARE="$1"; shift
       if [[ " $_STEP_ORDER " == *" ${BARE} "* ]]; then
@@ -70,6 +442,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[run_all]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
@@ -79,6 +452,9 @@ run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
   if [[ -n "$FROM_STEP" ]]; then
+    # Scan the ordered step list; once FROM_STEP is reached flip skip→false.
+    # Break as soon as we hit the current step.  If skip is still true at that
+    # point the current step precedes FROM_STEP → skip it.
     local skip=true
     for s in $_STEP_ORDER; do
       [[ "$s" == "$FROM_STEP" ]] && skip=false
@@ -97,12 +473,16 @@ run() {
 }
 
 
+# ── STEP 0: env_check ─────────────────────────────────────────────────────────
 run env_check "Verify environment (Python, Julia/PySR, API key, directories)" bash -c '
   set -e
   echo "Python: $(python3 --version)"
   python3 -c "import pysr; print(\"PySR:\", pysr.__version__)" || { echo "ERROR: pysr not installed"; exit 1; }
   python3 -c "import torch; print(\"PyTorch:\", torch.__version__)"
   python3 -c "import anthropic; print(\"anthropic SDK: ok\")"
+  # BUG 10 FIX: claude-sonnet-4-20250514 (repro.yaml llm_model) requires SDK >= 0.40.0.
+  # environment.yml was pinned to 0.28.0 which predates this model family.
+  # Assert the minimum here so local runs fail fast with a clear message.
   python3 - <<'SDKCHECK'
 import anthropic, sys
 ver = tuple(int(x) for x in anthropic.__version__.split(".")[:3])
@@ -111,12 +491,20 @@ if ver < (0, 40, 0):
     sys.exit(1)
 print("anthropic SDK version: " + anthropic.__version__ + " (>= 0.40.0 OK)")
 SDKCHECK
+  # BUG 4 FIX: the '[ $? -eq 0 ] || exit 1' guard that was here is dead code —
+  # set -e (line above) exits the subshell immediately if python3 fails, so $?
+  # is never checked. Removed to avoid misleading future readers.
   python3 -c "import sympy; print(\"SymPy:\", sympy.__version__)"
   python3 -c "import scipy; print(\"SciPy:\", scipy.__version__)"
+  # FIX-11: match CI pip-installed + checked deps (scikit-learn, pyyaml, matplotlib, pmlb)
   python3 -c "import sklearn; print(\"scikit-learn:\", sklearn.__version__)" || { echo "ERROR: scikit-learn not installed"; exit 1; }
   python3 -c "import yaml; print(\"PyYAML: ok\")" || { echo "ERROR: pyyaml not installed"; exit 1; }
   python3 -c "import matplotlib; print(\"matplotlib:\", matplotlib.__version__)" || { echo "ERROR: matplotlib not installed"; exit 1; }
   python3 -c "import pmlb; print(\"pmlb: ok\")" || { echo "ERROR: pmlb not installed"; exit 1; }
+  # ITEM 2 FIX: seaborn is required by statistical_analysis.py (exp1 step).
+  # If it is missing the script crashes before producing any figures or stats,
+  # leaving exp1 tables and PDFs empty.  Check here and self-heal so the run
+  # never reaches the analysis step without it.
   python3 -c "import seaborn; print(\"seaborn:\", seaborn.__version__)" 2>/dev/null || {
     echo "WARNING: seaborn not found — installing now (required by statistical_analysis.py)"
     python3 -m pip install --quiet seaborn || { echo "ERROR: seaborn install failed"; exit 1; }
@@ -124,6 +512,7 @@ SDKCHECK
   }
   [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
   echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
+  # FIX-13: echo all CI-parity env vars for auditability
   echo "PYSR_POPULATIONS: ${PYSR_POPULATIONS}"
   echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
   echo "JULIA_EXCLUSIVE: ${JULIA_EXCLUSIVE}"
@@ -133,6 +522,7 @@ SDKCHECK
   echo "FEYNMAN_NOISELESS_THRESHOLD: ${FEYNMAN_NOISELESS_THRESHOLD}"
   echo "JOB_DEADLINE: ${JOB_DEADLINE}s"
   echo "REPRO_CFG: ${REPRO_CFG}"
+  # FIX-12: REPRO_CFG audit — mirrors CI FIX-G2 print_repro.py log
   if [ -f "${REPRO_CFG}" ]; then
     echo "repro.yaml found -- printing key values:"
     python3 -c "
@@ -144,6 +534,15 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
     echo "WARNING: repro.yaml not found at ${REPRO_CFG} -- using env defaults"
   fi
   echo "Results dir: '"${RESULTS_DIR}"'"
+  # --------------------------------------------------------------------------
+  # extrap_r2_far INTERNAL MODE	
+  #
+  # compute_extrap_r2_far and all extrapolation helpers are now inlined
+  # directly inside run_comparative_suite_benchmark_v2.py.
+  #
+  # No external extrap_r2_far.py module is required.
+  # No sys.path manipulation or auto-install logic is needed.
+  # --------------------------------------------------------------------------
   
   echo "extrap_r2_far: internal inlined implementation enabled"
   _EXTRAP_DEST="${EXPERIMENTS_DIR}/extrap_r2_far.py"
@@ -169,19 +568,31 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
+  # FIX CRITICAL 3: hybrid_llm_nn/all_domains (not /defi)
+  # BUG 2 FIX: added extrapolation/multi_seed — exp3b now writes to this subdir
+  # (was: extrapolation/) to avoid collision with exp3 outputs.
+  # BUG 1 FIX: added comparison_results/feynman-tests/exp2_multi (exp2 tee target)
+  # and bare extrapolation/ (exp3 RESULT_SUBDIR) — both present in the CI mkdir
+  # step but absent here, causing tee/mv failures when those steps run standalone.
+  # Mirrors ci_experiment.yml Create results directory structure step exactly.
   mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},noise-noiseless/{noiseless/defi,15},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
 
+# ── STEP 0b: gt_leak_guard ──────────────────────────────────────────────────
+# FIX CRITICAL-GT-LEAK regression gate: fails fast, before any LLM calls are
+# made, if the ground-truth leak pattern ever reappears in any hybrid-arm
+# prompt (e.g. from a bad merge/revert). Cheap grep, no API calls. Checks
+# BOTH confirmed leak sites — one per script, different literal wording.
 run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" bash -c "
   cd '${REPO_ROOT}'
   _FAIL=0
 
-  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4c.py'
+  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py'
   if [[ -f \"\${_T1}\" ]]; then
     if grep -n \"Ground truth:.*metadata\.get(.ground_truth\" \"\${_T1}\" | grep -v '^[0-9]*:# ' ; then
-      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v4c.py _generate_llm_formula prompt.'
+      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v3c.py _generate_llm_formula prompt.'
       echo '         See Fix 14 changelog entry in that file.'
       _FAIL=1
     fi
@@ -219,40 +630,17 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
   echo '  [OK]  gt_leak_guard — no ground-truth leak pattern found in any of the 3 hybrid prompt paths.'
 "
 
+# ── STEP 1: exp1 ──────────────────────────────────────────────────────────────
 run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
+  # FIX-exp1-cd: cd REPO_ROOT so statistical_analysis.py and any repo-relative
+  # imports resolve correctly.  Mirrors the fix applied to exp1b, suppA, extrap.
   cd '${REPO_ROOT}'
   _DEFI_TARGET='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
   mkdir -p \"\${_DEFI_TARGET}\"
 
-  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
     --output-dir \"\${_DEFI_TARGET}\" \
     2>&1 | tee '${RESULTS_DIR}/exp1_run.log'
-
-  # RESCUE: hypatiax_defi_benchmark_v4.py may not fully honor --output-dir
-  # (same failure class documented for the PCA variant under exp1_pca, and
-  # for the v3c script under exp1b/FIX-exp1b-1) and can write results to
-  # REPO_ROOT, its own hardcoded RESULTS_DIR-relative path, or
-  # EXPERIMENTS_DIR instead of _DEFI_TARGET. Search the common root
-  # locations and move anything matching into _DEFI_TARGET before running
-  # statistical_analysis.py / verification.
-  echo '[exp1] Scanning for stray output files outside _DEFI_TARGET...'
-  for _search_root in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 -type f \
-    \( \
-        -name 'defi_v4_*.json' \
-        -o -name 'hypatiax_defi_benchmark_*results*.json' \
-        -o -name 'hypatiax_defi_benchmark_*checkpoint*.json' \
-    \) 2>/dev/null | while IFS= read -r _src; do
-        [[ \"\${_src}\" == \"\${_DEFI_TARGET}\"* ]] && continue
-        _fname=\$(basename \"\${_src}\")
-        _dst=\"\${_DEFI_TARGET}/\${_fname}\"
-        if [[ -e \"\${_dst}\" ]]; then
-          echo \"  [exp1] rescue target already exists, skipping: \${_dst}\"
-          continue
-        fi
-        mv -v \"\${_src}\" \"\${_dst}\"
-    done
-  done
 
   python3 -c 'import seaborn' 2>/dev/null || \
     python3 -m pip install --quiet seaborn || \
@@ -273,9 +661,47 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   echo '=== end exp1 verification ==='
 "
 
+# ── STEP 2: exp1b ─────────────────────────────────────────────────────────────
+# FIX-exp1b-1: cd to REPO_ROOT (not EXPERIMENTS_DIR).
+#   hypatiax_defi_benchmark_v3c.py hardcodes "hypatiax/data/results" relative
+#   to os.getcwd().  When called from EXPERIMENTS_DIR, CWD becomes
+#   .../hypatiax/experiments/benchmarks and outputs land in the doubled path
+#   .../benchmarks/hypatiax/data/results/... — nothing downstream finds them.
+#   Fix mirrors suppA-1 and exp1: stay at REPO_ROOT, invoke by full path.
+#
+# FIX-exp1b-2/3: removed --noise-level 15 and --output-dir.
+#   hypatiax_defi_benchmark_v3c.py's argparse does NOT accept these flags:
+#     usage: hypatiax_defi_benchmark_v3c.py [-h] [--resume] [--verify-fix5]
+#            [--report-only] [--verbose] [--cases SUBSTRING [SUBSTRING ...]]
+#   Passing them caused "error: unrecognized arguments" (log line 426) and an
+#   immediate SystemExit(2) before any work was done.
+#   The noise-level=15 / output-dir are encoded by setting RESULT_SUBDIR in
+#   the plan job (CI YAML line 216) and via the dest15 mv block below — the
+#   script itself writes to its hardcoded path, then we move the files.
+#
+# FIX-exp1b-4: portfolio_variance_v3c2.py guard.
+#   This script reads portfolio_variance_seed_sweep.json and
+#   hypatiax_defi_benchmark_v3c3_results.json as prerequisites.  When those
+#   files do not exist yet (first run), df_pysr is None and line 375
+#   "if 'success' not in df_pysr.columns" raises AttributeError.
+#   Fix: skip portfolio_variance_v3c2.py if the benchmark JSON it needs has
+#   not been produced yet, with a clear warning rather than a fatal crash.
+#   Cross-reference: CI YAML safety-net (FIX-G5) rescues partial outputs;
+#   portfolio_variance_v3c2.py is a post-processing script that must run
+#   AFTER the benchmark JSON exists, not simultaneously with it.
 run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c "
   cd '${REPO_ROOT}'
 
+  # FIX-exp1b-SEED-SHARD: previously DEFI_SEEDS was hardcoded to the FULL
+  # 5-seed list on every shard, ignoring the per-shard portfolio_seedNN task
+  # IDs that ci_runner.yml's plan step already computed (SHARD_IDS/TASK_IDS,
+  # e.g. 'portfolio_seed42 portfolio_seed99' for shard 0). Since
+  # hypatiax_defi_benchmark_v3c.py's run_benchmark() now actually loops over
+  # every seed in DEFI_SEEDS (see companion fix in that file), passing all 5
+  # seeds to all 4 shards would make every shard redundantly re-run the full
+  # sweep. Extract just THIS shard's seed(s) from SHARD_IDS/TASK_IDS, mirroring
+  # the suppB / suppB_sc task-ID-parsing pattern above. Falls back to the full
+  # default list when SHARD_IDS/TASK_IDS are unset (local / standalone runs).
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
@@ -285,90 +711,112 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     echo \"  [exp1b] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
+  # FIX-exp1b-CASEFILTER: DEFI_TASK_FILTER=portfolio used to be set here.
+  # run_benchmark() turns it into cases=["portfolio"], then keeps only
+  # test cases whose NAME contains the substring "portfolio" (see the
+  # 'if cases:' substring filter in hypatiax_defi_benchmark_v3c.py). Only
+  # 5 of the 74 cases in the catalogue match that substring (Annualised
+  # Portfolio tracking error, Portfolio Sharpe Ratio, Portfolio VaR for
+  # two correlated, Correlated Portfolio VaR, Portfolio Expected
+  # Shortfall for correlated), so every shard silently ran a 5-case sweep
+  # instead of the full 74-case catalogue that Table 11 (DeFi routing) is
+  # built from -- 5 seeds x 5 cases instead of 5 seeds x 74 cases.
+  # portfolio_variance_v3c2.py (run right below) is the step that
+  # actually needs the portfolio-specific slice, and it reads that out of
+  # the full benchmark JSON itself -- the upstream benchmark run must NOT
+  # be pre-filtered. Removed here so each shard's seed runs the full
+  # 74-case catalogue.
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
-    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
 
+  # FIX-exp1b-4: only run portfolio_variance_v3c2.py when its input JSON exists.
+  # It needs hypatiax_defi_benchmark_*results*.json in RESULTS_DIR or
+  # portfolio_variance_seed_sweep.json — both written by the step above.
   _BENCH_JSON=\$(ls -t '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON}\" ]]; then
-    echo 'WARNING: portfolio_variance_v4c2.py skipped — benchmark JSON not found in ${RESULTS_DIR}.'
-    echo '         This is expected on the first shard run when hypatiax_defi_benchmark_v4.py'
+    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in ${RESULTS_DIR}.'
+    echo '         This is expected on the first shard run when hypatiax_defi_benchmark_v3c.py'
     echo '         writes its output to the doubled path or has not yet produced results.'
     echo '         Re-run exp1b after confirming the benchmark JSON is present.'
   else
-    echo '[exp1b] Running portfolio_variance_v4c2.py against: '\"\${_BENCH_JSON}\"
+    echo '[exp1b] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON}\"
     RESULTS_DIR='${RESULTS_DIR}' \
-      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v4c2.py' \
+      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log \
-      || echo 'WARNING: portfolio_variance_v4c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
   fi
+  # ── Move exp1b outputs → RESULTS_DIR ─────────────────────────────────────
+  # BUG A FIX: comparison_FIXED_<TS>.json filenames are not unique across shards
+  # or repeated runs — the second writer silently overwrites the first in the repo.
+  # Rename each file to include SHARD_INDEX (from CI env) and a short seed tag so
+  # every output has a distinct name.  SHARD_INDEX defaults to 0 for local runs.
   _SHARD=\${SHARD_INDEX:-0}
+  # FIX-exp1b-SEEDTAG: DEFI_SEEDS above is only a command-prefix env var
+  # scoped to the python3 invocation — it was never visible to this later
+  # shell command, so \${DEFI_SEEDS:-42} always silently fell back to '42',
+  # mislabeling every shard's output as seed42 regardless of which seed(s)
+  # it actually ran. Use \${_SHARD_SEEDS}, the real value we resolved above.
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
-  _SUFFIX=\"_shard\${_SHARD}_seed\${_SEED_TAG}\"
 
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
 
   mkdir -p \"\${dest15}\"
 
-  rename_exp1b_file() {
-    local src=\"\$1\"
-    local fname stem ext dst
-
-    [[ -f \"\$src\" ]] || return 0
-
-    fname=\$(basename \"\$src\")
-
-    # Already isolated (e.g. a previous shard already suffixed it) — skip.
-    if [[ \"\$fname\" == *\"_shard\"* || \"\$fname\" == *\"_nshards\"* ]]; then
-      return 0
-    fi
-
-    stem=\"\${fname%.*}\"
-    ext=\"\${fname##*.}\"
-    dst=\"\${dest15}/\${stem}\${_SUFFIX}.\${ext}\"
-
-    if [[ \"\$src\" == \"\$dst\" ]]; then
-      return 0
-    fi
-
-    if [[ -e \"\$dst\" ]]; then
-      echo \"::error::exp1b shard destination already exists: \$dst\"
-      return 1
-    fi
-
-    mv -v \"\$src\" \"\$dst\"
-  }
-
-  # Files written by the benchmark in common root locations.
+  # move primary outputs
+  # FIX-exp1b-1 (move block): after cd REPO_ROOT, hypatiax_defi_benchmark_v3c.py
+  # writes to REPO_ROOT/hypatiax/data/results/ (its hardcoded relative path).
+  # That resolves to RESULTS_DIR, so files land there directly — not in
+  # EXPERIMENTS_DIR root as the original code assumed.  Search BOTH locations
+  # so the move works whether the script writes to RESULTS_DIR root or
+  # EXPERIMENTS_DIR root (e.g. if the script is run standalone from a different CWD).
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 -type f \
+    find \"\${_search_root}\" -maxdepth 1 \
     \( \
-        -name 'defi_v4_*.json' \
+        -name 'defi_v3_*.json' \
         -o -name '*portfolio*variance*.json' \
         -o -name 'hypatiax_defi_benchmark_*results*.json' \
-        -o -name 'comparison_FIXED_*.json' \
-        -o -name 'comparison_FIXED_*.txt' \
     \) | while IFS= read -r src; do
+
+        # Skip if already inside dest15 (avoid self-move loop)
         [[ \"\$src\" == \"\${dest15}\"* ]] && continue
-        rename_exp1b_file \"\$src\"
+
+        fname=\$(basename \"\$src\")
+        stem=\"\${fname%.*}\"
+        ext=\"\${fname##*.}\"
+
+        dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
+
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\$dst\" || true
+        fi
     done
   done
 
-  # Important: the benchmark may write directly into dest15 with an
-  # unsuffixed filename (this is what triggers the isolation guard).
-  # Normalize any such files there too.
-  find \"\${dest15}\" -maxdepth 1 -type f \
+  # move comparison files
+  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 \
     \( \
-        -name 'defi_v4_*.json' \
-        -o -name '*portfolio*variance*.json' \
-        -o -name 'hypatiax_defi_benchmark_*results*.json' \
-        -o -name 'comparison_FIXED_*.json' \
+        -name 'comparison_FIXED_*.json' \
         -o -name 'comparison_FIXED_*.txt' \
-    \) ! -name '*_shard*' ! -name '*_nshards*' | while IFS= read -r src; do
-      rename_exp1b_file \"\$src\"
+    \) | while IFS= read -r src; do
+
+        [[ \"\$src\" == \"\${dest15}\"* ]] && continue
+
+        fname=\$(basename \"\$src\")
+        stem=\"\${fname%.*}\"
+        ext=\"\${fname##*.}\"
+
+        dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
+
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\$dst\" || true
+        fi
+    done
   done
 
+  # verification
   echo '=== exp1b verification ==='
 
   find \"\${dest15}\" -type f 2>/dev/null | sort
@@ -377,6 +825,9 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
   echo \"Files produced: \${count}\"
 
+  # FIX-D: relax hard failure — count=0 is valid when the step was intentionally
+  # skipped (e.g. shard filter, or --from started at a later step).
+  # Set SKIP_ALLOWED=true to suppress this warning when skipping is expected.
   if [[ \"\${count}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != \"true\" ]]; then
       echo 'WARNING: exp1b generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
   elif [[ \"\${count}\" -eq 0 ]]; then
@@ -386,6 +837,144 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
 
 
+# ── STEP 2c: exp1c ────────────────────────────────────────────────────────────
+# ADD-exp1c: v4 validation-selected hybrid, run as a SEPARATE experiment
+# alongside the frozen exp1b/v3c baseline (not a replacement for it — see the
+# ADD-exp1c changelog entry at the top of this file). Structure mirrors exp1b
+# closely: same shard-aware seed extraction, same DEFI_SEEDS env-var / --resume
+# invocation surface, own results subdir so v3c JSONs are never touched.
+#
+# hypatiax_defi_benchmark_v4.py's documented usage is:
+#   DEFI_SEEDS=42,99,123,777,2024 python3 hypatiax_defi_benchmark_v4.py
+# which — like v3c — loops over every seed in DEFI_SEEDS inside a single
+# process invocation, and (only when that single invocation covers all five
+# seeds) additionally writes a pooled report:
+#   hypatiax_defi_benchmark_v4_pooled_seed_report.json
+# On a sharded CI dispatch (one seed per shard, mirroring exp1b's shard
+# table), each shard only ever sees its own seed, so the pooled report is
+# only produced by a local/standalone run with the full default seed list —
+# that is expected, not an error; see the pooled-report check in the
+# verification block below.
+run exp1c "v4 validation-selected hybrid DeFi seed sweep (paired vs exp1b/v3c baseline)" bash -c "
+  cd '${REPO_ROOT}'
+
+  # Mirrors FIX-exp1b-SEED-SHARD: pull this shard's seed(s) out of
+  # SHARD_IDS/TASK_IDS (task IDs 'v4_seed<N>', distinct from exp1b's
+  # 'portfolio_seed<N>' so the two experiments' checkpoint/shard state never
+  # collide even though both iterate the same 5-seed list). Falls back to the
+  # full default seed list for local/standalone runs.
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^v4_seed[0-9]+$' | sed 's/^v4_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1c] No v4_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1c] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
+  # Full 74-case catalogue, same as exp1b (no --cases filter) -- exp1c must
+  # cover the identical case set as the exp1b/v3c baseline for the paired
+  # comparison to be valid.
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+      --resume \
+      2>&1 | tee '${RESULTS_DIR}'/exp1c_run.log
+
+  # ── Move exp1c outputs → RESULTS_DIR ─────────────────────────────────────
+  # Same shard-index + seed-tag disambiguation as exp1b's move block (BUG A
+  # FIX / FIX-exp1b-SEEDTAG), applied to v4's own output names. Search both
+  # EXPERIMENTS_DIR and RESULTS_DIR root, mirroring FIX-exp1b-1/5, in case
+  # hypatiax_defi_benchmark_v4.py resolves its hardcoded output path the same
+  # way v3c does (relative to os.getcwd()).
+  _SHARD=\${SHARD_INDEX:-0}
+  _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
+
+  dest_exp1c='${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4'
+
+  mkdir -p \"\${dest_exp1c}\"
+
+  # Move the pooled report FIRST and WITHOUT a shard/seed suffix — it is a
+  # single, all-seed summary (not a per-shard/per-seed file), so it must not
+  # be renamed the way per-seed outputs are below. Only ever produced by a
+  # single invocation that covered every seed.
+  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_v4_pooled_seed_report.json' \
+    | while IFS= read -r src; do
+        [[ \"\$src\" == \"\${dest_exp1c}\"* ]] && continue
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\${dest_exp1c}/hypatiax_defi_benchmark_v4_pooled_seed_report.json\" || true
+        fi
+    done
+  done
+
+  # Move per-seed / per-run outputs, tagged by shard+seed (same disambiguation
+  # rationale as exp1b's move block: repeated runs must not silently overwrite
+  # each other in the repo).
+  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 \
+    \( \
+        -name 'defi_v4_*.json' \
+        -o -name 'hypatiax_defi_benchmark_v4*results*.json' \
+        -o -name 'hypatiax_defi_benchmark_v4*checkpoint*.json' \
+    \) | while IFS= read -r src; do
+
+        [[ \"\$src\" == \"\${dest_exp1c}\"* ]] && continue
+
+        fname=\$(basename \"\$src\")
+        stem=\"\${fname%.*}\"
+        ext=\"\${fname##*.}\"
+
+        dst=\"\${dest_exp1c}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
+
+        if [ -f \"\$src\" ]; then
+            mv -v \"\$src\" \"\$dst\" || true
+        fi
+    done
+  done
+
+  # verification
+  echo '=== exp1c verification ==='
+
+  find \"\${dest_exp1c}\" -type f 2>/dev/null | sort
+
+  count=\$(find \"\${dest_exp1c}\" -type f 2>/dev/null | wc -l)
+  pooled_count=\$(find \"\${dest_exp1c}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_v4_pooled_seed_report.json' 2>/dev/null | wc -l)
+
+  echo \"Files produced: \${count}\"
+  echo \"Pooled seed report present: \${pooled_count}\"
+
+  if [[ \"\${count}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != \"true\" ]]; then
+      echo 'WARNING: exp1c generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+  elif [[ \"\${count}\" -eq 0 ]]; then
+      echo 'NOTE: exp1c produced no files (step was skipped — SKIP_ALLOWED=true)'
+  fi
+  if [[ \"\${pooled_count}\" -eq 0 ]]; then
+      echo 'NOTE: pooled_seed_report.json not present -- expected unless this run covered all five seeds in one invocation (e.g. local run, or the final shard of a sharded CI dispatch after all seeds have completed).'
+  fi
+"
+
+
+
+# ── STEP 2a: exp1_ablation ────────────────────────────────────────────────────
+# Runs exp1_ablation.py (§10.6 Core-15 ablation: PySR-only vs HypatiaX).
+# Produces (numerical only — see FIX NO-TABLES-FIGURES below):
+#   exp1_ablation_results.json
+#   exp1_rf01_mannwhitney.json
+#   exp1_instability_stats.json
+#   instability_extrapolation_v2.csv
+#   provenance_map_exp1.json
+#
+# FIX NO-TABLES-FIGURES: exp1_ablation.py (external script, not edited here) also
+# writes exp1_ablation_table.tex, exp1_rf01_significant.tex, and
+# exp1_rf01_subdomain.tex as a side effect. This step now deletes those .tex
+# files immediately after the run so no table artifacts are produced or persisted.
+#
+# Output directory: ${RESULTS_DIR}/ablation/exp1_ablation/
+# (matches ci_experiment.yml RESULT_SUBDIR = ablation/exp1_ablation)
+#
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1_ablation
+# ─────────────────────────────────────────────────────────────────────────────
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" bash -c "
   cd '${REPO_ROOT}'
   _ABL_DIR='${RESULTS_DIR}/ablation/exp1_ablation'
@@ -402,6 +991,7 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
     2>&1 | tee \"\${_ABL_DIR}/exp1_ablation_run.log\" \
   || echo 'WARNING: exp1_ablation.py exited non-zero — check exp1_ablation_run.log'
 
+  # FIX NO-TABLES-FIGURES: purge any .tex table byproducts at the source.
   _NTEX=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' 2>/dev/null | wc -l)
   find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' -delete 2>/dev/null
   echo \"[exp1_ablation] removed \${_NTEX} .tex table byproduct(s) — table generation disabled\"
@@ -423,6 +1013,37 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
 "
 
 
+# ── STEP 2a2: exp1_five ────────────────────────────────────────────────────────
+# Runs exp1_five_system.py (§10.1 Five-System Comparison: extends the
+# exp1_ablation Core-15 protocol from 2 conditions — pysr_only vs hypatia —
+# to 5 methods, using the method set/interfaces from
+# run_comparative_suite_benchmark_v2.py).
+#
+# RUNNABLE: exp1_five_system.py now exists alongside exp1_ablation.py and
+# run_comparative_suite_benchmark_v2.py in ${EXPERIMENTS_DIR}, and loads both
+# as modules (importlib) to reuse their Core-15 suite / method classes rather
+# than reimplementing them — see generate_tables.py's removed
+# _FIVE_SYSTEM_CANDIDATES fallback for the prior state of this gap. It runs
+# METHOD_REGISTRY indices 1,2,4,5,6 (SymbolicEngineMethod and
+# HybridSystemV50_2Method among them), pulled from
+# run_comparative_suite_benchmark_v2.py — the same script exp2/exp2_five
+# below require Julia for — so this step needs a Julia-capable runner even
+# though the CLI here never mentions PySR/Julia directly (see the matching
+# NEEDS_JULIA fix in ci_runner_repro.yml's exp1_five case entry).
+#
+# Produces (numerical only, same no-tex-byproducts convention as exp1_ablation):
+#   exp1_five_results.json        — one record per (equation, method) pair
+#   exp1_five_performance.json    — performance sub-table source (train_r2/train_rmse)
+#   exp1_five_extrapolation.json  — extrapolation sub-table source (extrap_r2/rmse near/medium/far)
+#   provenance_map_exp1_five.json
+#
+# Output directory: ${RESULTS_DIR}/five_systems/exp1_five/
+# (distinct from ablation/exp1_ablation/ — five_system.tex must no longer read
+# from the ablation dir; see generate_tables.py fallback-removal.)
+#
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1_five
+# ─────────────────────────────────────────────────────────────────────────────
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
@@ -457,45 +1078,30 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
 "
 
 
-run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 with PCA split)" bash -c "
+# ── STEP 2b: exp1_pca ─────────────────────────────────────────────────────────
+# FIX-C3 DeFi variant: reruns all 74 DeFi cases via hypatiax_defi_benchmark_pca.py
+# (PCA-directed 40/60 split, method-level — mirrors exp2_feynman_pca_4060 for DeFi).
+# Outputs land in comparison_results/noise-noiseless/noiseless/defi_pca/.
+# Writes split_protocol_disclosure.json so Gate B can verify DeFi protocol parity.
+#
+# Output directory: comparison_results/noise-noiseless/noiseless/defi_pca/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1_pca
+# ─────────────────────────────────────────────────────────────────────────────
+run exp1_pca "FIX-C3 DeFi: all 74 cases with PCA 40/60 split (mirrors exp1 with PCA split)" bash -c "
   cd '${REPO_ROOT}'
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
+  # --force-fresh is passed to the script itself — guarantees fresh results
+  # even when the script is invoked directly, bypassing this shell wrapper.
   echo '[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split)'
   python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
     --output-dir \"\${_PCA_DEFI_DIR}\" \\
     --force-fresh \\
     2>&1 | tee '${RESULTS_DIR}/exp1_pca_run.log'
 
-  # RESCUE: hypatiax_defi_benchmark_pca.py may not fully honor --output-dir
-  # (same failure class already documented for the v3c/v4 script under
-  # exp1b -- see FIX-exp1b-1) and can write results to REPO_ROOT, its
-  # hardcoded RESULTS_DIR-relative path, or EXPERIMENTS_DIR instead of
-  # _PCA_DEFI_DIR. exp1b_pca already guards against this for the same
-  # underlying script; exp1_pca was missing the equivalent rescue, which is
-  # why verification below was seeing zero result JSONs even on a
-  # successful run. Search the common root locations and move anything
-  # matching into _PCA_DEFI_DIR before checking for results.
-  echo '[exp1_pca] Scanning for stray output files outside _PCA_DEFI_DIR...'
-  for _search_root in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 -type f \\
-    \\( \\
-        -name 'defi_pca_v4_*.json' \\
-        -o -name 'hypatiax_defi_benchmark_pca*results*.json' \\
-        -o -name 'hypatiax_defi_benchmark_pca*checkpoint*.json' \\
-    \\) 2>/dev/null | while IFS= read -r _src; do
-        [[ \"\${_src}\" == \"\${_PCA_DEFI_DIR}\"* ]] && continue
-        _fname=\$(basename \"\${_src}\")
-        _dst=\"\${_PCA_DEFI_DIR}/\${_fname}\"
-        if [[ -e \"\${_dst}\" ]]; then
-          echo \"  [exp1_pca] rescue target already exists, skipping: \${_dst}\"
-          continue
-        fi
-        mv -v \"\${_src}\" \"\${_dst}\"
-    done
-  done
-
+  # Write split_protocol_disclosure.json (required by Gate B)
   python3 - <<'PYEOF'
 import json, pathlib, datetime
 PCA_DIR   = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
@@ -519,6 +1125,10 @@ DISC_FILE.write_text(json.dumps(disclosure, indent=2))
 print(f'  [exp1_pca] split_protocol_disclosure.json written → {DISC_FILE}')
 PYEOF
 
+  # FIX-C5c-3: Compute exp1_pca_summary.json so qualify/audit_paper can read
+  # the DeFi PCA solve rate without globbing raw JSONs.
+  # Uses results.hybrid.test_r2 — the actual structure of hypatiax_defi_benchmark_pca_results.json
+  # (list of 74 case dicts, each with results.hybrid.test_r2).
   echo '[exp1_pca] Computing exp1_pca_summary.json...'
   python3 - <<'PYEOF_SUMMARY'
 import json, pathlib, datetime
@@ -580,6 +1190,12 @@ if n_total == 0:
     print('  [WARN]  No results in defi_pca/ yet — rerun after benchmark completes.')
 PYEOF_SUMMARY
 
+  # FIX-NN-FINGERPRINT: scan for the feature-count mismatch fingerprint
+  # ("X has N features, but StandardScaler is expecting M features") that
+  # check_nn_nan_fingerprint.py was written to catch — see the
+  # _compute_augment_plan/_apply_augment_plan fix in hypatiax_defi_benchmark_pca.py.
+  # This previously required a manual terminal run after the fact; now it runs
+  # automatically so a regression surfaces here instead of silently.
   echo '[exp1_pca] Scanning for NN feature-count-mismatch fingerprint...'
   python3 - <<'PYEOF_FINGERPRINT_1'
 import json, math, pathlib
@@ -614,6 +1230,7 @@ if hits:
           'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
 PYEOF_FINGERPRINT_1
 
+  # Verification
   echo '=== exp1_pca verification ==='
   find \"\${_PCA_DEFI_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _NRESULT=\$(find \"\${_PCA_DEFI_DIR}\" -name '*.json' \\
@@ -636,11 +1253,32 @@ PYEOF_FINGERPRINT_1
   echo '=== end exp1_pca ==='
 "
 
+# ── STEP 2c: exp1b_pca ────────────────────────────────────────────────────────
+# FIX-C3 DeFi seed-sweep variant: reruns the portfolio seed sweep via
+# hypatiax_defi_benchmark_pca.py with DEFI_TASK_FILTER=portfolio (mirrors exp1b
+# but with PCA 40/60 split). Outputs land in comparison_results/noise-noiseless/15_pca/.
+# Depends on exp1_pca completing first.
+#
+# Output directory: comparison_results/noise-noiseless/15_pca/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1b_pca
+# ─────────────────────────────────────────────────────────────────────────────
 run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with PCA split)" bash -c "
   cd '${REPO_ROOT}'
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
 
+  # FIX-exp1b_pca-SEED-SHARD: mirrors FIX-exp1b-SEED-SHARD from the exp1b step.
+  # DEFI_SEEDS was hardcoded to the full 5-seed list on every shard here,
+  # ignoring the per-shard portfolio_seedNN task IDs that ci_runner.yml's plan
+  # step computes (SHARD_IDS/TASK_IDS). This was harmless as long as
+  # hypatiax_defi_benchmark_pca.py's run_benchmark() silently ignored
+  # DEFI_SEEDS (see audit finding F6/F7) — but now that the seed loop in that
+  # script actually sweeps every seed it's given, passing all 5 seeds to all
+  # 4 shards makes every shard redundantly rerun the full sweep instead of
+  # just its own slice. Extract just THIS shard's seed(s), same as exp1b.
+  # Falls back to the full default list when SHARD_IDS/TASK_IDS are unset
+  # (local / standalone runs).
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
@@ -650,19 +1288,29 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
+  # --force-fresh is passed to the script itself — guarantees fresh results
+  # even when the script is invoked directly, bypassing this shell wrapper.
   echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
+  # FIX-exp1b_pca-CASEFILTER: mirrors FIX-exp1b-CASEFILTER above -- removed
+  # DEFI_TASK_FILTER=portfolio so exp1b_pca also sweeps the full 74-case
+  # catalogue per seed instead of only the 5 "portfolio"-named cases.
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
       --output-dir \"\${_PCA15_DIR}\" \\
       --force-fresh \\
       2>&1 | tee '${RESULTS_DIR}/exp1b_pca_run.log'
 
+  # Move any loose outputs (same pattern as exp1b move block)
   _SHARD=\${SHARD_INDEX:-0}
+  # FIX-exp1b_pca-SEEDTAG: mirrors FIX-exp1b-SEEDTAG. DEFI_SEEDS above is only
+  # a command-prefix env var scoped to the python3 invocation — not visible to
+  # this later shell command, so \${DEFI_SEEDS:-42} always silently fell back
+  # to '42'. Use \${_SHARD_SEEDS}, the real value resolved above.
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \\
     \\( \\
-        -name 'defi_pca_v4_*.json' \\
+        -name 'defi_pca_v3_*.json' \\
         -o -name '*portfolio*variance*pca*.json' \\
     \\) | while IFS= read -r src; do
         [[ \"\$src\" == \"\${_PCA15_DIR}\"* ]] && continue
@@ -674,6 +1322,10 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     done
   done
 
+  # FIX Bug 1: write split_protocol_disclosure.json for exp1b_pca.
+  # The exp1_pca step writes its own disclosure in defi_pca/.
+  # exp1b_pca previously wrote NOTHING here — Gate B key-presence check
+  # failed because random_split_used was absent from the 15_pca copy.
   python3 - <<'PYEOF_DISC_1B'
 import json, pathlib, datetime
 PCA15_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca')
@@ -698,6 +1350,15 @@ DISC_FILE.write_text(json.dumps(disclosure, indent=2))
 print(f'  [exp1b_pca] split_protocol_disclosure.json written → {DISC_FILE}')
 PYEOF_DISC_1B
 
+  # FIX-C5c-3-mirror: exp1b_pca_summary.json, mirroring exp1_pca_summary.json
+  # (see exp1_pca step above) so qualify/audit_paper can read the portfolio
+  # seed-sweep solve rate without globbing raw JSONs per shard. Unlike
+  # exp1_pca (single seed), this also breaks the solve rate down PER SEED and
+  # records which seeds were actually observed in the data — this is the
+  # concrete verification the audit's Recommendation 5 asked for ('confirm
+  # the resulting 15_pca/ result file(s) actually contain five distinct seed
+  # values per case, not one value repeated') rather than just re-asserting
+  # it. Uses results.hybrid.test_r2, same threshold/structure as exp1_pca.
   echo '[exp1b_pca] Computing exp1b_pca_summary.json...'
   python3 - <<'PYEOF_SUMMARY_1B'
 import json, pathlib, datetime
@@ -790,6 +1451,11 @@ if len(seeds_observed) < 2:
           f'this may be a single shard, an incomplete sweep, or a regression of the F6 seed-loop fix.')
 PYEOF_SUMMARY_1B
 
+  # FIX-NN-FINGERPRINT: same fingerprint scan as exp1_pca, run here too since
+  # exp1b_pca exercises the seed-sweep path (a distinct code path through
+  # _compute_augment_plan/_apply_augment_plan) with its own dedicated
+  # dir/schema — a regression could show up here without showing up in
+  # exp1_pca, or vice versa.
   echo '[exp1b_pca] Scanning for NN feature-count-mismatch fingerprint...'
   python3 - <<'PYEOF_FINGERPRINT_1B'
 import json, math, pathlib
@@ -824,6 +1490,7 @@ if hits:
           'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
 PYEOF_FINGERPRINT_1B
 
+  # Verification
   echo '=== exp1b_pca verification ==='
   find \"\${_PCA15_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _COUNT=\$(find \"\${_PCA15_DIR}\" -type f 2>/dev/null | wc -l)
@@ -844,7 +1511,277 @@ PYEOF_FINGERPRINT_1B
   echo '=== end exp1b_pca ==='
 "
 
+# ── STEP 2d: exp1c_pca ──────────────────────────────────────────────────────────
+# PCA counterpart of exp1c (v4 validation-selected hybrid DeFi seed sweep),
+# exactly analogous to how exp1_pca is the PCA counterpart of exp1. Runs
+# hypatiax_defi_benchmark_v4_pca.py — a direct PCA-split derivative of
+# hypatiax_defi_benchmark_v4.py (see that script's own docstring) — across
+# the same 5-seed sweep and full 74-case catalogue as exp1c (no
+# DEFI_TASK_FILTER), so the paired v4-vs-v3c comparison introduced by exp1c
+# has a PCA-split counterpart, the same way exp1_pca/exp1b_pca are the
+# PCA-split counterparts of exp1/exp1b.
+#
+# Unlike exp1c (which wraps hypatiax_defi_benchmark_v4.py — a script with no
+# --output-dir flag, so exp1c has to mv loose outputs into place after the
+# fact): hypatiax_defi_benchmark_v4_pca.py DOES support --output-dir, so this
+# step follows exp1_pca's simpler pattern — point --output-dir straight at
+# the destination and skip the move dance entirely.
+#
+# Also unlike exp1_pca/exp1b_pca's underlying hypatiax_defi_benchmark_pca.py
+# (which does not write its own split_protocol_disclosure.json, so run_all.sh
+# writes one manually for those two steps): hypatiax_defi_benchmark_v4_pca.py
+# writes split_protocol_disclosure.json itself at the end of run_benchmark(),
+# already including random_split_used, so no manual disclosure write is
+# needed here — see the verification block below, which just confirms the
+# script's own file landed.
+#
+# NOTE ON OUTPUT NAMES: hypatiax_defi_benchmark_v4_pca.py's own module-level
+# output paths are literally named hypatiax_defi_benchmark_pca_*.json /
+# hypatiax_defi_benchmark_pca_pooled_seed_report.json — IDENTICAL basenames
+# to hypatiax_defi_benchmark_pca.py's output (the script exp1_pca/exp1b_pca
+# use). This is harmless ONLY because --output-dir below points at a
+# dedicated exp1c_pca/ directory that exp1_pca/exp1b_pca never write to.
+# Do NOT repoint this step's --output-dir at defi_pca/ or 15_pca/, and do not
+# point mean_r2_by_seed.py at more than one of defi_pca/, 15_pca/, exp1c_pca/
+# in the same invocation — see the updated header note in that script.
+#
+# Output directory: comparison_results/noise-noiseless/exp1c_pca/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp1c_pca
+# ─────────────────────────────────────────────────────────────────────────────
+run exp1c_pca "PCA counterpart of exp1c: v4 validation-selected hybrid DeFi seed sweep, PCA 40/60 split" bash -c "
+  cd '${REPO_ROOT}'
+  _EXP1C_PCA_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca'
+  mkdir -p \"\${_EXP1C_PCA_DIR}\"
+
+  # FIX-exp1c_pca-SEED-SHARD: mirrors FIX-exp1b-SEED-SHARD / exp1c's own
+  # shard-seed extraction. Distinct task-ID prefix ('v4pca_seed<N>') so this
+  # step's checkpoint/shard state never collides with exp1c's 'v4_seed<N>' or
+  # exp1b_pca's 'portfolio_seed<N>' IDs. Falls back to the full default seed
+  # list for local/standalone runs — also what the current CI job does (it
+  # runs the full sweep in one invocation, no shard matrix, mirroring
+  # exp1b_pca's CI job).
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^v4pca_seed[0-9]+$' | sed 's/^v4pca_seed//' | paste -sd, -)
+  if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
+    echo '  [exp1c_pca] No v4pca_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
+    _SHARD_SEEDS='42,99,123,777,2024'
+  else
+    echo \"  [exp1c_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
+  fi
+
+  # Full 74-case catalogue (no DEFI_TASK_FILTER), same as exp1c — must cover
+  # the identical case set as exp1c/exp1b_pca for the paired comparison to be
+  # valid. --force-fresh guarantees fresh results even when the script is
+  # invoked directly, bypassing this shell wrapper.
+  echo '[exp1c_pca] Running hypatiax_defi_benchmark_v4_pca.py (v4 validation-selected hybrid, PCA 40/60 split)'
+  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4_pca.py' \\
+      --output-dir \"\${_EXP1C_PCA_DIR}\" \\
+      --force-fresh \\
+      2>&1 | tee '${RESULTS_DIR}/exp1c_pca_run.log'
+
+  # split_protocol_disclosure.json is written by the script itself (see note
+  # in the header comment above) — no manual write needed here, unlike
+  # exp1_pca/exp1b_pca.
+
+  # FIX-C5c-3-mirror: exp1c_pca_summary.json, mirroring exp1b_pca_summary.json
+  # (per-seed breakdown, since this is a seed sweep like exp1b_pca, not a
+  # single run like exp1_pca). Uses results.hybrid.test_r2, same
+  # threshold/structure as exp1_pca/exp1b_pca.
+  echo '[exp1c_pca] Computing exp1c_pca_summary.json...'
+  python3 - <<'PYEOF_SUMMARY_1C_PCA'
+import json, pathlib, datetime
+from collections import defaultdict
+
+EXP1C_PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca')
+SUMMARY       = EXP1C_PCA_DIR / 'exp1c_pca_summary.json'
+THRESHOLD     = 0.999999
+
+n_pass = n_total = 0
+source_files = []
+per_seed = defaultdict(lambda: {'n_pass': 0, 'n_total': 0})
+seen_case_seed = set()  # dedup: keep one record per (equation_id, seed) across shard files
+
+for fp in sorted(EXP1C_PCA_DIR.glob('*.json')) if EXP1C_PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline', 'pooled_seed_report')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    source_files.append(fp.name)
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for case in cases:
+        if not isinstance(case, dict):
+            continue
+        seed = case.get('seed')
+        key = (case.get('equation_id'), seed)
+        if key in seen_case_seed:
+            continue  # same (case, seed) may appear in more than one shard file
+        seen_case_seed.add(key)
+
+        hybrid = case.get('results', {}).get('hybrid', {})
+        r2 = hybrid.get('test_r2')
+        if r2 is None:
+            for k in ('r2', 'r2_test', 'best_r2', 'R2'):
+                v = case.get(k)
+                if v is not None:
+                    r2 = v
+                    break
+        if r2 is None:
+            continue
+        try:
+            r2 = float(r2)
+        except (TypeError, ValueError):
+            continue
+        if r2 > 1.01:
+            continue
+
+        n_total += 1
+        per_seed[seed]['n_total'] += 1
+        if r2 >= THRESHOLD:
+            n_pass += 1
+            per_seed[seed]['n_pass'] += 1
+
+seeds_observed = sorted([s for s in per_seed if s is not None])
+per_seed_out = {
+    str(s): {
+        'n_pass':     v['n_pass'],
+        'n_total':    v['n_total'],
+        'solve_rate': (v['n_pass'] / v['n_total']) if v['n_total'] > 0 else None,
+    }
+    for s, v in sorted(per_seed.items(), key=lambda kv: (kv[0] is None, kv[0]))
+}
+
+summary = {
+    'fixc3_step':       'exp1c_pca',
+    'description':      'v4 validation-selected hybrid DeFi PCA seed-sweep result — PCA-directed 40/60 split (PCA counterpart of exp1c)',
+    'split_protocol':   'pca_40_60',
+    'test_size':        0.6,
+    'train_size':       0.4,
+    'script':           'hypatiax_defi_benchmark_v4_pca.py',
+    'n_pass':           n_pass,
+    'n_total':          n_total,
+    'solve_rate':       (n_pass / n_total) if n_total > 0 else None,
+    'seeds_observed':   seeds_observed,
+    'n_seeds_observed': len(seeds_observed),
+    'per_seed':         per_seed_out,
+    'source_files':     source_files[:20],
+    'timestamp':        datetime.datetime.now(datetime.timezone.utc).isoformat(),
+}
+SUMMARY.write_text(json.dumps(summary, indent=2))
+rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
+print(f'  [exp1c_pca] DeFi PCA v4 seed-sweep solve rate: {rate_str} → exp1c_pca_summary.json')
+print(f'  [exp1c_pca] Seeds observed: {seeds_observed}')
+if n_total == 0:
+    print('  [WARN]  No results in exp1c_pca/ yet — rerun after benchmark completes.')
+if len(seeds_observed) < 2:
+    print(f'  [WARN]  Only {len(seeds_observed)} distinct seed(s) observed in exp1c_pca/ — '
+          f'this may be a single shard, an incomplete sweep, or a local single-seed run.')
+PYEOF_SUMMARY_1C_PCA
+
+  # FIX-NN-FINGERPRINT: same fingerprint scan as exp1_pca/exp1b_pca — run
+  # here too since exp1c_pca exercises v4's validation-selected hybrid
+  # routing through its own dedicated dir/schema; a regression could show up
+  # here without showing up in exp1_pca/exp1b_pca, or vice versa.
+  echo '[exp1c_pca] Scanning for NN feature-count-mismatch fingerprint...'
+  python3 - <<'PYEOF_FINGERPRINT_1C_PCA'
+import json, math, pathlib
+
+EXP1C_PCA_DIR = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_pca')
+hits, n_scanned = [], 0
+for fp in sorted(EXP1C_PCA_DIR.glob('*.json')) if EXP1C_PCA_DIR.exists() else []:
+    if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline', 'pooled_seed_report')):
+        continue
+    try:
+        data = json.loads(fp.read_text())
+    except Exception:
+        continue
+    cases = data if isinstance(data, list) else data.get('results', [data])
+    for c in cases:
+        if not isinstance(c, dict):
+            continue
+        n_scanned += 1
+        nn  = c.get('results', {}).get('neural_network', {})
+        err = nn.get('error', '') or ''
+        tr2 = nn.get('test_r2')
+        is_nan = tr2 is None or (isinstance(tr2, float) and math.isnan(tr2))
+        if 'StandardScaler is expecting' in err or 'features, but' in err or is_nan:
+            hits.append((c.get('equation_id'), c.get('seed'), err or '(nan, no error string)'))
+
+print(f'  [exp1c_pca] Scanned {n_scanned} record(s) for NN feature-count-mismatch fingerprint')
+print(f'  [exp1c_pca] Records matching fingerprint: {len(hits)}')
+for h in hits[:20]:
+    print('   ', h)
+if hits:
+    print('  WARNING: exp1c_pca NN feature-count-mismatch fingerprint detected — '
+          'see hypatiax_defi_benchmark_v4_pca.py _compute_augment_plan/_apply_augment_plan.')
+PYEOF_FINGERPRINT_1C_PCA
+
+  # Verification
+  echo '=== exp1c_pca verification ==='
+  find \"\${_EXP1C_PCA_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
+  _COUNT=\$(find \"\${_EXP1C_PCA_DIR}\" -type f 2>/dev/null | wc -l)
+  _NDISC=\$(find \"\${_EXP1C_PCA_DIR}\" -name 'split_protocol_disclosure.json' 2>/dev/null | wc -l)
+  _NSUMMARY=\$(find \"\${_EXP1C_PCA_DIR}\" -name 'exp1c_pca_summary.json' 2>/dev/null | wc -l)
+  _NPOOLED=\$(find \"\${_EXP1C_PCA_DIR}\" -maxdepth 1 -name 'hypatiax_defi_benchmark_pca_pooled_seed_report.json' 2>/dev/null | wc -l)
+  echo \"Files produced: \${_COUNT}\"
+  echo \"  Disclosure file   : \${_NDISC} (split_protocol_disclosure.json)\"
+  echo \"  Summary file      : \${_NSUMMARY} (exp1c_pca_summary.json)\"
+  echo \"  Pooled seed report: \${_NPOOLED}\"
+  if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
+    echo 'WARNING: exp1c_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+  fi
+  if [[ \"\${_NDISC}\" -eq 0 ]]; then
+    echo 'WARNING: split_protocol_disclosure.json not found in exp1c_pca/ — Gate B will FAIL'
+  fi
+  if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
+    echo 'WARNING: exp1c_pca_summary.json not found — qualify/audit steps will not see the v4 DeFi PCA seed-sweep solve rate'
+  fi
+  if [[ \"\${_NPOOLED}\" -eq 0 ]]; then
+    echo 'NOTE: hypatiax_defi_benchmark_pca_pooled_seed_report.json not present — expected unless this run covered all five seeds in one invocation (e.g. local run, or the CI job which runs the full sweep in a single invocation).'
+  fi
+  echo '=== end exp1c_pca ==='
+"
+
+# ── STEP 3: extrap ────────────────────────────────────────────────────────────
+# Patch 4 — FULL REWRITE STEP 3
+#
+# Activates the OOD extrapolation path in run_comparative_suite_benchmark_v2.py
+# via three argparse flags introduced in Patch 4 (line 3585):
+#
+#   --extrap               Enable STEP 3 OOD comparative mode (Tab 9 OOD columns).
+#                          Without this flag the script runs the standard in-dist
+#                          benchmark and extrap_r2 is never computed.
+#
+#   --extrap-multiplier X  OOD test range upper bound as a multiple of training max.
+#                          Default / paper value: 2.0  →  test on [x_max … 2·x_max].
+#                          Override via env: EXTRAP_MULTIPLIER (e.g. CI fast-mode 1.5).
+#
+#   --extrap-train-frac F  Fraction of each variable range used for training.
+#                          Default / paper value: 0.8  →  train on [x_min … x_min + 0.8·Δx].
+#                          Top 20 % of the in-distribution range is held out; OOD
+#                          test begins at x_max (= x_min + Δx).
+#                          Override via env: EXTRAP_TRAIN_FRAC.
+#
+# Output: comparison_results/extrapolation/all_domains_extrap_v4_<TS>.json
+#         Schema includes extrap_r2 / extrap_rmse / extrap_error_pct per method
+#         per equation — these were formerly the Tab 9 OOD columns consumed by
+#         table generation (now removed; see FIX NO-TABLES-FIGURES).
+#
+# Env-override knobs (CI / ablation use):
+#   EXTRAP_MULTIPLIER   (default: 2.0)   — paper "medium" OOD regime
+#   EXTRAP_TRAIN_FRAC   (default: 0.8)   — paper train/test split fraction
+# -----------------------------------------------------------------------------
 run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
+  # FIX-extrap-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path fix as
+  #   exp1, exp1b, suppA.  Invoke script by full path so os.getcwd()=REPO_ROOT.
+  # FIX-extrap-2: per-domain loop matching CI YAML lines 1203-1237 exactly.
+  #   Previous monolithic call had no --domain flag, so every invocation ran ALL
+  #   domains regardless of SHARD_IDS, and results landed in the wrong path.
+  #   Now loops over FEYNMAN_DOMAINS (same list as CI FEYNMAN_DOMAINS) and passes
+  #   --domain and an absolute --output-dir on every invocation.
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/extrapolation'
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
@@ -879,14 +1816,36 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
 "
 
+# ── STEP 4: hybrid_all_domains ────────────────────────────────────────────────
+# FIX CRITICAL 1 : renamed from 'instability' → 'hybrid_all_domains'
+# FIX CRITICAL 3 : outputs written to hybrid_llm_nn/all_domains/ (not /defi)
+# FIX WARN-2     : domain list validated against corrected 10-domain set
+# FIX TASK 7     : runtime domain-list cross-check before the long run starts
+#
+# Runs the one-shot hybrid LLM+NN system across 10 domains (§10.9 hybrid table).
+# Produces: hybrid_llm_nn/all_domains/hybrid_llm_nn_all_domains_<TS>.json
+#
+# NOTE: This step does NOT reproduce the §10.9 Instability Index (Regime A/B/C,
+# Spearman ρ). That is STEP 4a (instability) which runs run_instability_suite.py
+# against the K-run DeFi benchmark results from STEP 1 (exp1).
 run hybrid_all_domains "Hybrid LLM+NN all-domains run -- 10 domains (SS10.9 hybrid)" bash -c "
   set -euo pipefail
+  # ── FIX TASK 7: runtime domain-list validation ────────────────────────────
   ACTUAL_DOMAINS=\$(python3 - << 'PYEOF'
 import importlib.util, sys, pathlib, io, contextlib
+# FIX TASK 7b: import/exec_module and ExperimentProtocolAll() can print banner
+# side effects (dotenv warning, \"Loaded ExperimentProtocolAll from...\") to
+# stdout. Since ACTUAL_DOMAINS=\$(python3 ...) captures ALL stdout, those
+# banner lines were leaking into the comma-joined domain string and breaking
+# the comparison even when the underlying domain set was correct. Silence
+# stdout during import/instantiation and only emit the real result at the end.
 _muted = io.StringIO()
+# PATH-1 FIX: GENERATION_DIR = hypatiax/core/generation (matches CI script_path).
+# Previously this comment said \"hypatiax/experiments/generation/\" — that was wrong.
 spec = importlib.util.spec_from_file_location(
     'hybrid_mod',
     pathlib.Path('${GENERATION_DIR}/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py')
+    # PATH-1 FIX: GENERATION_DIR = hypatiax/core/generation (matches CI script_path)
 )
 mod = importlib.util.module_from_spec(spec)
 with contextlib.redirect_stdout(_muted):
@@ -916,11 +1875,23 @@ PYEOF
     exit 1
   fi
   echo '[hybrid_all_domains] Domain-list OK: '\"\${ACTUAL_SORTED}\"
+  # ── Main experiment — cd to GENERATION_DIR (hypatiax/core/generation) ───────
+  # PATH-1 FIX: GENERATION_DIR now correctly points to hypatiax/core/generation/
+  # matching CI script_path. Previous stale comment said \"not CORE_DIR\" — reversed.
   cd '${GENERATION_DIR}/hybrid_all_domains_llm_nn'
+  # FIX-OUTDIR-2: hybrid_system_llm_nn_all_domains.py's argparse only defines
+  # --domains / --samples / --verbose / --no-llm-cache -- it has NO --output-dir
+  # flag (confirmed by reading the script). The FIX-OUTDIR-1 comment below was a
+  # stale assumption; passing --output-dir made argparse fail with
+  # 'unrecognized arguments' (exit code 2). The script instead writes to a
+  # hardcoded CWD-relative path: hypatiax/data/results/hybrid_llm_nn_all_domains_<TS>.json
+  # so we let it write there, then move the result into RESULTS_DIR ourselves —
+  # same pattern as FIX-exp1b-2/3 above.
   mkdir -p '${RESULTS_DIR}/hybrid_llm_nn/all_domains'
   python3 hybrid_system_llm_nn_all_domains.py \
     --samples '${FEYNMAN_SAMPLES}' \
     2>&1 | tee '${RESULTS_DIR}'/hybrid_all_domains_run.log
+  # ── Move script's hardcoded-path output → RESULTS_DIR ──────────────────────
   _HYBRID_OUT_SRC='hypatiax/data/results'
   if [[ -d \"\${_HYBRID_OUT_SRC}\" ]]; then
     find \"\${_HYBRID_OUT_SRC}\" -maxdepth 1 -name 'hybrid_llm_nn_all_domains_*.json' \
@@ -934,8 +1905,27 @@ PYEOF
   fi
 "
 
+# ── STEP 4a: instability ──────────────────────────────────────────────────────
+# Reproduces §10.9 Instability Index: Regime A/B/C taxonomy, Spearman ρ,
+# complexity–instability theorem, and all 12 instability figures (Groups A, B, C
+# + extrapolation scatter EX).
+#
+# Data sources (auto-detected in priority order by run_instability_suite.py):
+#   1. hypatiax_defi_variance_results.json           ← preferred (--variance run)
+#   2. hypatiax_defi_benchmark_v3_results_<TS>Z.json ← timestamped multi-run files
+#   3. hypatiax_defi_benchmark_v3_results.json        ← single-run fallback (II=0)
+#
+# To get meaningful II values (σ > 0), STEP 1 (exp1) must have been run with
+# K ≥ 2 repeat runs or --variance mode.  A single exp1 run produces a valid
+# instability_analysis.csv but all II values will be 0 (Regime A/B only).
+#
+# Outputs (all under ${RESULTS_DIR}/figures/, numerical only — see
+# FIX NO-TABLES-FIGURES below; all .png/.pdf figures are purged post-run):
+#   instability_analysis.csv
+#   instability_extrapolation.csv          (Stage 2, if benchmark JSON present)
 run instability "Instability Index analysis (numerical only, no figures) -- SS10.9 (Regime A/B/C)" bash -c "
   mkdir -p '${RESULTS_DIR}/figures'
+  # Purge only instability-specific files; preserve exp1 benchmark JSONs.
   rm -f \
     '${RESULTS_DIR}/figures/instability_analysis.csv' \
     '${RESULTS_DIR}/figures/instability_extrapolation.csv' \
@@ -945,6 +1935,9 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
        -o -name 'hypatiax_instability_*.pdf' -o -name 'hypatiax_instability_*.png' \) \
     -delete 2>/dev/null || true
 
+  # Canonical exp1 output directory (matches RESULT_SUBDIR in CI YAML).
+  # All hypatiax_defi_benchmark_*results*.json from exp1 are moved here
+  # by the _exp1_body move block and CI move_matching.
   DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
 
   BENCH_JSON=\$(ls -t \"\${DEFI_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
@@ -966,10 +1959,25 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
     --format png pdf \
     2>&1 | tee '${RESULTS_DIR}'/instability_run.log
 
+  # FIX NO-TABLES-FIGURES: run_instability_suite.py (external script, not edited
+  # here) still requires a --format flag to run, but we purge every .png/.pdf
+  # figure it writes immediately afterward so no figure artifacts persist.
   _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) 2>/dev/null | wc -l)
   find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
   echo \"[instability] removed \${_NFIG} figure byproduct(s) — figure generation disabled\"
 
+  # FIX-INSTABILITY-CSV-RESCUE: run_instability_suite.py has been observed
+  # (CI run 2026-06-26) writing instability_analysis.csv to a CWD-relative
+  # 'figures/' directory (e.g. \${REPO_ROOT}/figures/instability_analysis.csv)
+  # instead of honouring --csv-out's full path, even though the 46 image/pdf
+  # figures from the SAME run land correctly under --out. Net effect: the run
+  # exits 0, figures are present, but \${RESULTS_DIR}/figures/instability_analysis.csv
+  # is missing and the CI 'Verify instability output files exist' step fails.
+  # Rescue: if the canonical CSV is absent but a same-named CSV exists
+  # elsewhere under REPO_ROOT (most recently written one wins), copy it into
+  # place instead of letting the whole step fail on what is otherwise a
+  # successful run. This mirrors the CI-side FIX-G5 safety-net pattern and
+  # the suppB doubled-path fix already applied above in this file.
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
   if [[ ! -s \"\${_CANON_CSV}\" ]]; then
     echo \"[instability] WARNING: \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
@@ -988,7 +1996,27 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 "
 
 
+# ── STEP 5: exp2_feynman ──────────────────────────────────────────────────────
+# SYNC-ci: per-domain loop matching ci_experiment.yml exp2_feynman worker step.
+# BUG 1 + BUG 4 FIX (ci parity): previous monolithic call ran ALL 11 Feynman
+#   domains on a single worker (no --domain filter) and omitted --output-dir,
+#   so results landed in the default comparison_results/ path rather than
+#   comparison_results/feynman-tests/exp2/ (RESULT_SUBDIR).
+# All 6 methods active; METHOD_TIMEOUT (900s) gives methods 5+6 (SymbolicEngine, HybridV50_2)
+#   adequate PySR budget.
+# --noiseless --threshold 0.9999: exp2_feynman uses the noiseless Feynman
+#   protocol, matching FEYNMAN_NOISELESS_THRESHOLD from repro.yaml.
+# --parsimony 0.01 --populations: matches CI worker invocation exactly.
+# Domains: 11 Feynman sub-domains derived from experiment_protocol_benchmark_v2.py
+#   _build_domain_map() — same list as CI FEYNMAN_DOMAIN_IDS.
+# FIX-DOMAINS: removed feynman_astronomy + feynman_fluid_dynamics (don't exist in
+# BenchmarkProtocol._build_domain_map()); added feynman_magnetism + feynman_probability
+# (present in protocol). Matches CI FEYNMAN_DOMAINS authoritative list exactly.
+# NOTE: FEYNMAN_DOMAINS is defined once at the top of the script (line ~152) and
+# must not be re-assigned here — doing so produces two sources of truth that can
+# silently diverge.  The hoisted definition is used by all steps that reference it.
 run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab 16-18)" bash -c "
+  # FIX-exp2_feynman-1: cd REPO_ROOT and invoke by full path (doubled-path fix).
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2'
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
@@ -1017,6 +2045,34 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   done
 "
 
+# ── STEP 5b: exp2_feynman_pca_4060 ───────────────────────────────────────────
+# FIX-C3: Corrected Feynman benchmark rerun using the PCA-directed 40/60
+# split — the same protocol used for all DeFi benchmarks (§10.2–10.4) and
+# described in §6.4.  The original exp2_feynman used train_test_split
+# (random 80/20), which is materially easier and was NOT disclosed in §10.7.
+#
+# FIX-C3-SCRIPT: This step invokes run_comparative_suite_benchmark_pca.py —
+# the dedicated PCA-split variant of the benchmark runner.  Unlike
+# run_comparative_suite_benchmark_v2.py (which requires --extrap flags to
+# activate build_extrap_split at the CLI level), the PCA script hard-wires
+# pca_directed_split(test_size=0.6) inside ImprovedNN.run() at the method
+# level, making the split identical to the DeFi benchmark by construction.
+#
+# This step:
+#   1. Locks the legacy 9/30 baseline in fixc3_baseline.json (once, idempotent).
+#   2. Reruns every Feynman domain via run_comparative_suite_benchmark_pca.py
+#      (PCA split is method-level, no --extrap flags needed).
+#   3. Writes results to exp2_pca_4060/ (never overwrites the legacy exp2/).
+#   4. Emits split_protocol_disclosure.json in exp2_pca_4060/ so Gates A/B/C
+#      in ci_runner_disclosure.yml can confirm protocol parity with DeFi.
+#
+# Output directory: comparison_results/feynman-tests/exp2_pca_4060/
+# Key result file:  exp2_pca_4060_summary.json  (corrected solve rate, replaces 9/30)
+# Disclosure file:  exp2_pca_4060/split_protocol_disclosure.json
+#
+# CLI example (run standalone):
+#   bash run_all.sh --step exp2_feynman_pca_4060
+# ─────────────────────────────────────────────────────────────────────────────
 run exp2_feynman_pca_4060 "FIX-C3: Feynman rerun with PCA 40/60 split — corrected §10.7 result" bash -c "
   cd '${REPO_ROOT}'
 
@@ -1026,6 +2082,13 @@ run exp2_feynman_pca_4060 "FIX-C3: Feynman rerun with PCA 40/60 split — correc
 
   mkdir -p \"\${_PCA_DIR}\"
 
+  # ── 1. Lock the legacy 9/30 baseline BEFORE any corrected run can overwrite ──
+  # FIX-RUN-ALL-SELF-HEAL: previously this was a bare 'if file exists: skip,
+  # else: compute' with no null-check, so a baseline locked before exp2/ was
+  # populated (solve_rate=null) stayed null forever under run_all.sh even
+  # after real results existed on disk — while ci_runner_repro.yml's Gate C
+  # would self-heal the same file. Ported that logic here verbatim so both
+  # entry points agree regardless of which one locks/re-checks the baseline.
   echo '[FIX-C3] Checking legacy 9/30 baseline (self-healing, mirrors ci_runner_repro.yml Gate C)...'
   python3 - <<'PYEOF'
 import glob, json, pathlib, sys
@@ -1051,6 +2114,14 @@ def _r2(row):
 
 def _rows(data):
     if isinstance(data, dict):
+        # FIX-C3-SCHEMA: protocol_core_noiseless_*.json (the raw _save()
+        # output of run_comparative_suite_benchmark_v2.py) nests real
+        # per-method results under top-level 'tests' -> [i] -> 'results' ->
+        # {method_name: {..., 'r2': ...}}. None of ('results','equation_results',
+        # 'data','rows') exist at the TOP level of this shape, so without this
+        # branch the generic case below falls through to \`yield data\`, handing
+        # back one useless pseudo-row per file with no r2 field — silently
+        # contributing 0/0 for every raw result file. Handle it explicitly.
         if isinstance(data.get('tests'), list):
             for test in data['tests']:
                 if not isinstance(test, dict):
@@ -1076,6 +2147,7 @@ def _rows(data):
 for fp in sorted(LEG_DIR.glob('*.json')) if LEG_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint','disclosure','baseline')):
         continue
+    # FIX-GATEC-PCA: exclude stray _pca files from the legacy baseline.
     if '_pca' in fp.name:
         stray_pca_files.append(fp.name)
         continue
@@ -1104,6 +2176,7 @@ baseline = {
     'n_total':         n_total,
     'solve_rate':      (n_pass / n_total) if n_total > 0 else None,
     'paper_claim':     '9/30 = 0.300',
+    # FIX-MANIFEST-TRUNCATION: list every source file, not source_files[:5].
     'source_files':    source_files,
 }
 
@@ -1116,6 +2189,7 @@ else:
     existing = json.loads(BASELINE.read_text())
     existing_rate = existing.get('solve_rate')
     if existing_rate is None:
+        # Self-heal: baseline was written before exp2/ results existed.
         if n_total > 0:
             BASELINE.write_text(json.dumps(baseline, indent=2))
             print(
@@ -1163,6 +2237,13 @@ if stray_pca_files:
     print(f'          Move them: mv {LEG_DIR}/*_pca_*.json {LEG_DIR.parent}/exp2_pca_4060/  (verify timestamps first)')
 PYEOF
 
+  # ── 2. Run corrected Feynman benchmark per domain (PCA 40/60 split) ──────────
+  # FIX-C3-SCRIPT: use run_comparative_suite_benchmark_pca.py — the dedicated
+  # PCA-split variant. The PCA script applies pca_directed_split(test_size=0.6)
+  # at the OUTER LOOP before method dispatch, so ALL methods receive pre-split
+  # data (40% train / 60% test), matching the DeFi benchmark split (§6.4).
+  # --resume is NOT passed: stale domain checkpoints from the old method-level
+  # split must not be replayed — each domain runs fresh under the corrected split.
   echo '[FIX-C3] Starting corrected Feynman run: run_comparative_suite_benchmark_pca.py'
   echo '         PCA-directed 40/60 split (pca_directed_split, test_size=0.6 — outer-loop)'
   echo '         --force-fresh ensures fresh results even on direct script invocation'
@@ -1195,6 +2276,15 @@ PYEOF
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
     || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
 
+    # FIX-C3-E2 (mirrors exp2_feynman_extrap's E2-guard at FIX-E2 above):
+    # protocol_core_noiseless_pca_*.json is written by
+    # run_comparative_suite_benchmark_pca.py's _save() into _PCA_DIR, one file
+    # per domain iteration of this loop. Nothing was hard-linking these out of
+    # harm's way, so CI's prune_old could delete them out from under this step
+    # exactly as it once did to protocol_core_extrap_*.json (see FIX-E2).
+    # Run INSIDE the loop (not just after it, unlike the extrap step) so a
+    # prune_old sweep between domains can't destroy an earlier domain's only
+    # copy before this guard ever sees it.
     mkdir -p \"\${_PCA_DIR}/_saved\"
     while IFS= read -r _pf; do
       _pfn=\$(basename \"\${_pf}\")
@@ -1214,6 +2304,7 @@ PYEOF
     echo 'WARNING: exp2_feynman_pca_4060 produced no protocol_core_noiseless_pca_*.json — exp2_pca_4060_summary.json will be empty/incomplete'
   fi
 
+  # ── 3. Compute corrected summary (new solve rate) ─────────────────────────────
   echo '[FIX-C3] Computing corrected solve rate from exp2_pca_4060/ results...'
   python3 - <<'PYEOF'
 import glob, json, pathlib, sys
@@ -1238,6 +2329,14 @@ def _r2(row):
 
 def _rows(data):
     if isinstance(data, dict):
+        # FIX-C3-SCHEMA: protocol_core_noiseless_pca_*.json (the raw _save()
+        # output of run_comparative_suite_benchmark_pca.py) nests real
+        # per-method results under top-level \"tests\" -> [i] -> \"results\" ->
+        # {method_name: {..., \"r2\": ...}}. None of ('results','equation_results',
+        # 'data','rows') exist at the TOP level of this shape, so without this
+        # branch the generic case below falls through to \`yield data\`, handing
+        # back one useless pseudo-row per file with no r2 field — silently
+        # contributing 0/0 for every raw result file. Handle it explicitly.
         if isinstance(data.get('tests'), list):
             for test in data['tests']:
                 if not isinstance(test, dict):
@@ -1263,9 +2362,24 @@ def _rows(data):
 
 n_pass = n_total = 0
 source_files = []
+# FIX-PER-METHOD (Recommendation 1 of the exp2_feynman_pca_4060 verification
+# report, July 18 2026): n_pass/n_total above pools three structurally
+# different methods (EnhancedHybridSystemDeFi, HybridSystemLLMNN all-domains,
+# HybridDiscoverySystem v50_2) into one number. That pooled figure is kept
+# unchanged for backward compatibility, but per-method counts are now tracked
+# alongside it so a reader isn't left assuming the pooled rate reflects one
+# evaluated system.
 per_method = {}  # raw method name -> {'n_pass': int, 'n_total': int}
 
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
+    # FIX-C3-DEDUPE: benchmark_results_pca_4060.json and benchmark_results_
+    # extrap.json are flattened re-exports of the exact same per-test,
+    # per-method rows already present in protocol_core_noiseless_pca_*.json
+    # (confirmed: per-domain record counts in exp2_pca_4060_run.log match
+    # exactly between the two exports, every domain). Now that _rows() above
+    # can read the raw files directly, counting these too would double- (or
+    # with both exports present, triple-) count every row. Exclude them —
+    # protocol_core_noiseless_pca_*.json is the single source of truth.
     if any(x in fp.name for x in ('checkpoint','disclosure','summary','baseline','benchmark_results')):
         continue
     try:
@@ -1297,6 +2411,16 @@ per_method_out = {
     for m, v in sorted(per_method.items())
 }
 
+# FIX-DECISION-ROUTING (Recommendation 2 of the exp2_feynman_pca_4060
+# verification report): 'HybridSystemLLMNN all-domains (core)' routed to
+# decision=\"llm\" on every test in the run this report examined, which reads
+# as suspicious until traced to source. run_comparative_suite_benchmark_pca.py
+# (HybridAllDomainsMethod.run, \"FIX — domain routing guard\") explicitly forces
+# force_llm=True for five Feynman domains (mechanics, electromagnetism,
+# quantum, thermodynamics, optics) as a deliberate, documented fix for a prior
+# regression (Newton's gravity scoring R²=0.66 without the guard). That
+# accounts for the domains below marked forced=true; llm routing outside
+# those domains reflects the method's own decision logic, not the guard.
 FORCED_LLM_DOMAINS = {
     'feynman_mechanics', 'feynman_electromagnetism', 'feynman_quantum',
     'feynman_thermodynamics', 'feynman_optics',
@@ -1358,6 +2482,17 @@ summary = {
     'per_method':      per_method_out,
     'hybrid_llm_routing': hybrid_llm_routing,
     'paper_legacy_claim': '9/30 = 0.300 (random_80_20)',
+    # FIX-MANIFEST-TRUNCATION-2 (verification report Revision 21): was
+    # source_files[:10], the same bug already fixed for the legacy exp2/
+    # baseline (see FIX-MANIFEST-TRUNCATION above) but never actually
+    # applied here despite the report describing this occurrence as fixed.
+    # Files are named protocol_core_noiseless_pca_{ts}.json and sorted()
+    # puts them in ascending timestamp order (domain-completion order).
+    # With 11 Feynman domains, [:10] silently dropped whichever domain
+    # ran last (feynman_thermodynamics) from the manifest, even though
+    # that domain's rows were still counted correctly in n_pass/n_total
+    # above. List every source file so the manifest matches what was
+    # actually counted.
     'source_files':    source_files,
 }
 assert len(summary['source_files']) == len(source_files), (
@@ -1367,6 +2502,11 @@ assert len(summary['source_files']) == len(source_files), (
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
 print(f'  [FIX-C3] Corrected solve rate: {rate_str} (pca_40_60) → exp2_pca_4060_summary.json')
+# FIX-LOG-SOURCE-FILES (verification report Revision 21, item 5): neither
+# this step's nor Gate C's console output previously echoed source_files,
+# so no live CI log could ever confirm the manifest-truncation fix by
+# direct inspection — only by the absence of an assertion failure. Print
+# it explicitly so the next live run settles this directly.
 print(f\"  [FIX-C3] source_files ({len(summary['source_files'])}): {summary['source_files']}\")
 for m, v in per_method_out.items():
     print(f\"  [FIX-C3]   per-method: {m}: {v['n_pass']}/{v['n_total']}\")
@@ -1375,6 +2515,7 @@ if n_total == 0:
     print('  [WARN]  No results found in exp2_pca_4060/ — rerun after domains complete.')
 PYEOF
 
+  # ── 4. Write split_protocol_disclosure.json (required by Gate B) ─────────────
   python3 - <<'PYEOF'
 import json, pathlib, datetime
 
@@ -1402,6 +2543,14 @@ DISC_FILE.write_text(json.dumps(disclosure, indent=2))
 print(f'  [FIX-C3] split_protocol_disclosure.json written → {DISC_FILE}')
 PYEOF
 
+  # FIX-NN-FINGERPRINT: extend the exp1_pca/exp1b_pca NN feature-count-mismatch
+  # scan to exp2_feynman_pca_4060. Schema differs from the DeFi script's flat
+  # per-case list: raw output here is {'tests': [...]}, each test's per-method
+  # results are keyed by 'ImprovedNN (core)' (not 'neural_network'), and the
+  # R² field is named 'r2' (not 'test_r2') — see MethodResult.to_dict() in
+  # run_comparative_suite_benchmark_pca.py. A verbatim copy of the DeFi check
+  # would silently match zero records against this schema, so this block uses
+  # the correct key/field names for this script instead.
   echo '[exp2_feynman_pca_4060] Scanning for NN feature-count-mismatch fingerprint...'
   python3 - <<'PYEOF_FINGERPRINT_2'
 import json, math, pathlib
@@ -1436,6 +2585,7 @@ if hits:
     print(\"  WARNING: exp2_feynman_pca_4060 NN feature-count-mismatch fingerprint detected in 'ImprovedNN (core)' results.\")
 PYEOF_FINGERPRINT_2
 
+  # ── 5. Verification summary ───────────────────────────────────────────────────
   echo ''
   echo '=== exp2_feynman_pca_4060 verification ==='
   echo 'Output dir:' \"\${_PCA_DIR}\"
@@ -1460,12 +2610,81 @@ PYEOF_FINGERPRINT_2
 "
 
 
+# FIX NO-TABLES-FIGURES: STEP 5c (PCA comparison table generation, inlined
+# after exp2_feynman_pca_4060) has been removed entirely — this block used to
+# call generate_exp2_pca_comparison_table.py to write .tex/.csv/.md tables.
+# Table generation is fully disabled; no replacement logic runs here.
 
 
+# Generates extrap_r2_far for every Feynman equation by re-running
+# run_comparative_suite_benchmark_v2.py with --extrap on the same domain set
+# as exp2_feynman.
+#
+# WHY THIS STEP EXISTS
+# The main exp2_feynman run (STEP 5) trains each method on the full 200-sample
+# dataset and records r2 / rmse (in-distribution).  run_analysis.py (ablation
+# mode) additionally requires hypatia.extrap_r2_far / pysr_only.extrap_r2_far
+# for every equation to run the Mann-Whitney test that is the paper's primary
+# ablation claim (Table 14).  Without this step the field is never computed, the
+# pairing fails, and the test exits with 0 pairs — this was the root cause of
+# the "not a Mann-Whitney issue" diagnosis in the project log.
+#
+# WHAT --extrap DOES (run_comparative_suite_benchmark_v2.py, BUG 3 FIX)
+#   1. Sorts each equation's samples by X[:,0] (first variable).
+#   2. Trains every method on the first --extrap-train-frac (80%) of rows
+#      — the "near" region.
+#   3. After each method returns a formula string, re-evaluates that formula on
+#      the remaining 20% of rows (the "far" region, beyond training max).
+#   4. Records R² on the far region as extrap_r2_far in the result record and
+#      in the flat benchmark_results.json (alongside the normal r2 field).
+#
+# OUTPUT SCHEMA (protocol_core_extrap_<TS>.json + benchmark_results.json)
+#   Per record: { ..., "extrap_r2_far": { "method_name": float_or_null, ... } }
+#   Per flat row: { ..., "extrap_r2_far": float_or_null }
+#
+# merge_extrap_into_benchmark.py (called by CI YAML exp2_feynman extrap step)
+# reads these outputs alongside the noiseless benchmark_results.json and produces
+# ablation_paired.json — the input schema run_analysis.py (ablation mode) needs.
+#
+# DATA CONDITIONS: --noiseless matches the main exp2_feynman run so r2 values
+# are directly comparable.  --noiseless and --extrap are independent argparse
+# flags (confirmed in BUG 3 FIX section of the script) and do not conflict.
+#
+# DOMAIN FILTER: DOMAIN_FILTER env var is set by CI to the shard's pending domain
+# IDs (e.g. "feynman_biology feynman_chemistry").  ACTIVE_DOMAINS falls back to
+# the full FEYNMAN_DOMAINS list when called locally without DOMAIN_FILTER.
 run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
+  # INTERNAL extrap_r2_far MODULE MODE
+  #
+  # extrap_r2_far is now treated as an INTERNAL helper implemented directly
+  # inside run_comparative_suite_benchmark_v2.py (fallback-safe import).
+  #
+  # Therefore:
+  #   - no external extrap_r2_far.py verification is required
+  #   - no sys.path patching is required
+  #   - missing-module warnings are non-fatal
+  #   - extrap metrics are always computed via internal fallback
+  #
+  # Expected runtime behavior:
+  #
+  #   ⚠️ extrap_r2_far.py not found — using internal fallback metrics
+  #
+  # This is VALID and SHOULD NOT fail the pipeline.
+  # --------------------------------------------------------------------------
 
+  # FIX-E6: benchmark_results_extrap.json overwrite-on-push guard.
+  # Each shard pushes benchmark_results_extrap.json with no timestamp/shard suffix,
+  # so every push silently overwrites the previous shard's file (E6).
+  # Fix: after the domain loop, copy benchmark_results_extrap.json to a shard-suffixed
+  # name alongside the original.  merge_extrap_into_benchmark.py reads the canonical
+  # benchmark_results_extrap.json (unchanged); the suffixed copy is the pushable artefact
+  # that will not collide with other shards on the same branch.
+  # OUTPUT FILE: run_comparative_suite_benchmark_v2.py v2.2+ writes
+  # benchmark_results_extrap.json (not benchmark_results.json) into --output-dir
+  # when --extrap is active.  This name is mandatory: merge_extrap_into_benchmark.py
+  # reads it via --extrap-benchmark-dir.  Do NOT rename or purge this file.
   _EXT_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
   _EXT_SHARD=\${SHARD_INDEX:-0}
   ACTIVE_DOMAINS=\"\${DOMAIN_FILTER:-${FEYNMAN_DOMAINS}}\"
@@ -1497,9 +2716,13 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     || echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
   done
 
+  # FIX-E2: hard-link protocol_core_extrap_*.json into _saved/ immediately after
+  # the domain loop so CI's prune_old cannot destroy the only copy.
+  # Hard-links are atomic and zero-cost; they survive rm on the original path.
   mkdir -p \"\${_EXT_DIR}/_saved\"
   while IFS= read -r _pf; do
     _pfn=\$(basename \"\${_pf}\")
+    # ln -f overwrites an existing _saved copy (idempotent on retry).
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
       || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" \
       || true
@@ -1507,6 +2730,12 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
+  # FIX-E6 (updated): run_comparative_suite_benchmark_v2.py now writes
+  # benchmark_results_extrap.json directly into --output-dir (_EXT_DIR) —
+  # see that script's FIX-EXTRAP-OUTPUT-DIR change. This copy step now just
+  # renames it to a shard-suffixed name so parallel shard pushes do not
+  # collide on master. Fallback to the old parent comparison_results/
+  # location is kept in case an unpatched/older script version is deployed.
   _BENCH_EXT_SRC=\"\${_EXT_DIR}/benchmark_results_extrap.json\"
   if [ ! -f \"\${_BENCH_EXT_SRC}\" ]; then
     _BENCH_EXT_SRC=\"\${RESULTS_DIR}/comparison_results/benchmark_results_extrap.json\"
@@ -1547,6 +2776,12 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   fi
 "
 
+# LOCAL EQUIVALENT of ci_analysis.yml 'Merge extrap into benchmark' step.
+# FIX-MERGE-QUOTING: extracted from bash -c "" into a standalone ( ) subshell block
+# to eliminate quoting-nesting bugs (3-backslash+quote produced literal backslashes
+# in paths; 3-backslash+dollar suppressed command substitution for _NR).
+# Pattern mirrors exp2_feynman_pca_comparison_table and exp3_symbolic_equivalence.
+# Output: exp2_extrap/ablation_paired.json  (same path ci_analysis.yml writes).
 (
   set -euo pipefail
   _SCRIPT_MERGE="${REPO_ROOT}/.github/scripts/merge_extrap_into_benchmark.py"
@@ -1554,12 +2789,20 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _BENCHMARK_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2"
   _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
 
+  # FIX: ensure exp2_extrap exists before this merge subshell touches it —
+  # this block runs standalone (outside the \`run exp2_feynman_extrap\` step's
+  # own mkdir -p), so on a workflow-dispatch that targets only this step,
+  # or any job where exp2_feynman_extrap hasn't run yet, _EXTRAP_DIR may not
+  # exist yet and \`find\` fails with "No such file or directory".
   mkdir -p "${_EXTRAP_DIR}"
 
   if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
     echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
     echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
   else
+    # FIX: -maxdepth 1 scopes the search; 2>/dev/null + \`|| true\` keep this
+    # safe under \`set -o pipefail\` (find|head can SIGPIPE if >1 match exists,
+    # which would otherwise trip -e and kill this subshell).
     _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
     if [[ -z "${_BENCH_EXT}" ]]; then
       echo "[SKIP] benchmark_results_extrap*.json not found — run exp2_feynman_extrap first."
@@ -1578,6 +2821,10 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     fi
   fi
 
+  # exp2_extrap_summary.json — small machine-readable rollup of this step's
+  # outputs, written into exp2_extrap/ alongside the raw benchmark/protocol
+  # files. Intended for qualify/audit steps (and humans) to get step status
+  # at a glance without re-scanning the whole directory.
   _SUMMARY="${_EXTRAP_DIR}/exp2_extrap_summary.json"
   python3 - "${_EXTRAP_DIR}" "${_PAIRED}" "${_SUMMARY}" <<'PYEOF'
 import json, sys
@@ -1623,7 +2870,34 @@ PYEOF
 )
 
 
+# FIX-EXP2-PROTOCOL: --benchmark both never routed to ExperimentProtocolAll —
+#      confirmed by reading run_comparative_suite_benchmark_v2.py's own argparse
+#      help text and protocol-selection code directly. --benchmark only ever
+#      selects BenchmarkProtocol's Feynman/SRBench sub-benchmark and is ignored
+#      unless --protocol benchmark (the default) is active; it never switches
+#      protocol classes. The prior "FIX: --protocol all30 does not exist ...
+#      replaced with --benchmark both" fix (below, kept for history) was itself
+#      based on a false assumption — it silently ran BenchmarkProtocol's
+#      Feynman+SRBench domains (21 raw, unmapped domain keys: feynman_biology,
+#      feynman_chemistry, ..., agriculture, energy, ..., synthetic) instead of
+#      ExperimentProtocolAll's canonical 10-domain set, which is what
+#      EXP2_DOMAINS below actually names. --protocol all_domains is the real,
+#      already-implemented switch (see that script's own "NOTE ON ROOT CAUSE"
+#      comment above its protocol-loading branch) — use it instead.
+# ORIGINAL (now-incorrect) note, kept for history:
+#   --protocol all30 does not exist in run_comparative_suite_benchmark_v2.py
+#   argparse — it caused SystemExit(2) on every worker (confirmed in CI BUG 2 fix).
+#   Replaced with --benchmark both which runs both Feynman + SRBench protocols
+#   (ExperimentProtocolAll, 30 multi-domain equations, Tab 19).
+# FIX: mkdir -p ensures tee target directory exists when this step runs
+#      standalone (--step exp2) without a prior env_check.
+# All 6 methods active; METHOD_TIMEOUT (900s) gives methods 5+6 (SymbolicEngine, HybridV50_2)
+# adequate PySR budget.
 run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c "
+  # FIX-exp2-1: cd REPO_ROOT and invoke by full path (doubled-path fix).
+  # FIX-exp2-2: per-domain loop matching CI YAML lines 1002-1031 exactly.
+  #   Previous monolithic --benchmark both call ran ALL domains in one invocation;
+  #   CI workers loop per-domain so each domain gets its own checkpoint + output.
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi'
   EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
@@ -1654,6 +2928,23 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
 "
 
 
+# ── STEP 6b: exp2_five ──────────────────────────────────────────────────────────
+# Five-System Comparison (§10.1), straightforward variant: identical to exp2
+# above (same domains, same --protocol all_domains, same script) except
+# --methods 1 2 4 5 6 restricts the run to the five methods matching the
+# paper's five system rows, excluding method 3 (HybridDeFiMethod — DeFi-
+# domain-scoped, not one of the five row names; same exclusion documented in
+# generate_tables.py's _EXP2_METHOD_TO_ROW comment).
+#
+# This is the "straightforward run_comparative_suite_benchmark_v2.py" path —
+# no new Python source, just the existing script with a narrower --methods
+# filter and its own output directory so it never collides with exp2's full
+# 6-method run.
+#
+# Output directory: ${RESULTS_DIR}/five_systems/exp2_five/
+# CLI example (run standalone):
+#   bash run_all.sh --step exp2_five
+# ─────────────────────────────────────────────────────────────────────────────
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
@@ -1685,16 +2976,23 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
   done
 "
 
+# ── STEP 7: exp3 ──────────────────────────────────────────────────────────────
+# FIX: mkdir -p ensures results/extrapolation exists when running standalone.
 run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
+  # FIX-exp3-1: cd REPO_ROOT and invoke by full path (doubled-path fix).
   cd '"${REPO_ROOT}"'
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "=== exp3 seed 1/1: seed=42 | equations: N1-N12 (12 total) ==="
   RESULTS_DIR='${RESULTS_DIR}' \
-    python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
+    python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_hybrid50v_03.py \
     --seed 42 \
     --temperature 0.25 \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || echo "WARNING: seed=42 exited non-zero — continuing"
+  # FIX-4: CI RESULT_SUBDIR=extrapolation — move outputs to extrapolation/,
+  # not to ${RESULTS_DIR}/ root.
+  # FIX-OUTDIR-4: add CI-matching globs (full_run_*, report_hybrid_*, hybrid_defi_*)
+  # CI Move step exp3 moves all four patterns; run_all.sh only moved *nguyen*.json.
   find '"${RESULTS_DIR}"' -maxdepth 1 \
     \( -name '"'"'*nguyen*seed42*.json'"'"' -o -name '"'"'*nguyen12*42*.json'"'"' \
        -o -name '"'"'full_run_*seed42*.json'"'"' -o -name '"'"'report_hybrid_*seed42*.json'"'"' \
@@ -1702,6 +3000,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
     -exec mv -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
   find '"${RESULTS_DIR}"' -maxdepth 1 -name '"'"'experiment_registry.json'"'"' \
     -exec cp -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
+  # -- Partial results summary after seed=42 ----------------------------------
   echo "--- exp3 partial results after seed=42 (1/1) ---"
   RESULT_DIR='"${RESULTS_DIR}"'/extrapolation python3 - <<'"'"'PYEOF'"'"'
 import glob, json, os
@@ -1735,10 +3034,34 @@ PYEOF
   echo "--- end partial results seed=42 ---"
 '
 
+# ── STEP 8: exp3b ─────────────────────────────────────────────────────────────
+# BUG 2 FIX: exp3b now uses extrapolation/multi_seed/ as its RESULT_SUBDIR.
+# Previously both exp3 and exp3b wrote to extrapolation/, causing the second
+# run's git commit to overwrite the first's merged files.
+# Mirrors ci_experiment.yml (exp3b RESULT_SUBDIR="extrapolation/multi_seed")
+# and ci_consolidate_experiment.yml (exp3b → extrapolation/multi_seed case).
 run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" bash -c "
+  # FIX-exp3b-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug as exp1b/exp1/suppA.
+  # exp3_nguyen12_hybrid50v_03.py writes relative to os.getcwd(); cd EXPERIMENTS_DIR
+  # produced .../benchmarks/hypatiax/data/results/... → outputs never found.
+  # Mirrors the exp3 fix (cd REPO_ROOT + full path invocation).
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/extrapolation/multi_seed'
 
+  # FIX-exp3b-SEED-SHARD: previously this loop was hardcoded to all 4 seeds
+  # on every shard (unlike exp1b/suppB/suppB_sc, which are all shard-aware),
+  # AND never overrode PYSR_SEED/EXPERIMENT_SEED per-iteration to match
+  # --seed \$seed. Since exp3_nguyen12_hybrid50v_03.py's _resolve_seed()
+  # checks PYSR_SEED/EXPERIMENT_SEED/NN_SEED BEFORE the --seed CLI flag, the
+  # ambient PYSR_SEED=42 (exported globally at the top of this script, and
+  # inherited by every subprocess for the rest of the run) always won,
+  # silently pinning every exp3b invocation to seed=42 regardless of which
+  # seed was requested — which already has output from the exp3 step, so
+  # the script's skip-if-exists guard made every iteration a no-op.
+  # Mirrors the exp1b SHARD_IDS/TASK_IDS extraction pattern: pull this
+  # shard's seed(s) out of SHARD_IDS/TASK_IDS (ci_runner.yml also now passes
+  # them directly via SHARD_SEEDS — prefer that when set), falling back to
+  # the full 4-seed list for local/standalone runs.
   _SHARD_SEEDS=\"\${SHARD_SEEDS:-}\"
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
@@ -1758,11 +3081,28 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     EXPERIMENT_SEED=\"\$seed\" \
     NN_SEED=\"\$seed\" \
     RESULTS_DIR='${RESULTS_DIR}' \
-      python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
+      python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_hybrid50v_03.py' \
       --seed \$seed \
       --temperature 0.25 \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log
   done
+  # BUG 2 FIX: target is extrapolation/multi_seed/ (not extrapolation/).
+  # Prevents overwriting the exp3 seed=42 outputs that live in extrapolation/.
+  # FIX-DIR: script writes to RESULTS_DIR root — search RESULTS_DIR, not EXPERIMENTS_DIR.
+  # FIX-GLOB: exclude seed42 explicitly so exp3 output is never swept here.
+  # FIX-OUTDIR-3: add CI-matching globs for exp3b (full_run_*, report_hybrid_*, hybrid_defi_*)
+  # CI Move step moves all four patterns; run_all.sh was only moving *nguyen*.json.
+  #
+  # FEATURE-NSHARDS-SUFFIX (exp3b) — mirrors STEP 10/10b's suppB/suppB_sc
+  # isolation pattern. exp3b runs as EXP_SHARD_TABLE[\"exp3b\"]=4 parallel CI
+  # matrix shards. Previously this move step moved matched files into
+  # extrapolation/multi_seed/ with their ORIGINAL names, with no per-shard
+  # tag — if two shards ever produced same-named outputs (e.g. a re-run, or
+  # any future change that lets two shards share a seed), the second push
+  # would silently overwrite the first on disk. Tag every moved filename
+  # with a zero-padded, 1-based SHARD_INDEX suffix (same convention as
+  # suppB/suppB_sc's HYPATIAX_NSHARDS_SUFFIX) so each shard's outputs are
+  # independently distinguishable on disk, the same guarantee suppB relies on.
   printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
   echo \"  [exp3b] SHARD_INDEX=\${SHARD_INDEX:-0} -> isolation suffix _nshards\${_SHARD_TAG}\"
   _DEST_MS='${RESULTS_DIR}/extrapolation/multi_seed'
@@ -1781,7 +3121,25 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
 "
 
 
+# ── STEP 8b (inlined into exp3b): symbolic equivalence ───────────────────────
+# exp3_symbolic_equivalence is NOT a separate registered step.
+# Its logic runs unconditionally after exp3b completes.
+# Mirrors the "Check symbolic equivalence (exp3/exp3b)" step in ci_analysis.yml.
 (
+  # FIX-EXP3SYM-DIR-MISMATCH: previously _SEED_DIR was hardcoded to
+  # extrapolation/multi_seed (exp3b's own RESULT_SUBDIR). The _SEED_FILES
+  # discovery below has always searched the broader extrapolation/ tree
+  # (maxdepth 2), correctly matching exp3's seed42 file (which lives directly
+  # in extrapolation/) as well as exp3b's files (in extrapolation/multi_seed/).
+  # So a \`--step exp3\` run (exp3b's \`run\` call is a no-op under ONLY_STEP,
+  # meaning extrapolation/multi_seed/ is never even created) would find
+  # exp3's file in the broader search, skip the "no files" SKIP branch, then
+  # hand the checker a --results-dir that doesn't contain it — 0 files found,
+  # hard failure. check_symbolic_equivalence.py's own glob checks
+  # results_dir/*.json AND results_dir/*/*.json, so pointing it at
+  # extrapolation/ (one level up) covers exp3's flat file and exp3b's
+  # multi_seed/ subfolder in a single pass, matching the discovery search
+  # exactly regardless of which of exp3/exp3b (or both) has actually run.
   set -uo pipefail
   _SCRIPT="${REPO_ROOT}/.github/scripts/check_symbolic_equivalence.py"
   _SEED_DIR="${RESULTS_DIR}/extrapolation"
@@ -1797,6 +3155,10 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   else
     echo "[exp3_sym] Running check_symbolic_equivalence.py ..."
     mkdir -p "${_SEED_DIR}"
+    # FIX-EXP3SYM-NONFATAL: this is a best-effort report (mirrors a separate,
+    # analysis-only step in ci_analysis.yml) — it must never fail an
+    # otherwise-successful exp3/exp3b run. Explicitly continue past a
+    # non-zero exit instead of relying on \`set -e\` to abort the block.
     python3 "${_SCRIPT}" \
       --results-dir "${_SEED_DIR}" \
       --output-dir  "${_SEED_DIR}" \
@@ -1811,10 +3173,33 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   fi
 ) || echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing (non-fatal reporting step)"
 
+# ── STEP 9: suppA ─────────────────────────────────────────────────────────────
+# FIX-suppA-1: cd to REPO_ROOT (not EXPERIMENTS_DIR) so all repo-relative paths
+#   (hypatiax/core/..., hypatiax/experiments/..., hypatiax/analysis/...) resolve
+#   correctly.  Previously cd '${EXPERIMENTS_DIR}' caused a doubled path prefix,
+#   e.g. hypatiax/experiments/benchmarks/hypatiax/core/generation/... → ENOENT.
+# FIX-suppA-2: mkdir -p the results dir here so tee never fails with ENOENT.
+#   env_check creates the dirs, but suppA can be run standalone (--step suppA).
+# FIX-suppA-3: use tee -a on the two subsequent Python calls so all output goes
+#   to the same log file without truncating it.
 run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routing)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/hybrid_pysr/defi' '${RESULTS_DIR}/figures' '${RESULTS_DIR}/tables'
 
+  # ── FIX-ISSUE10B-REGRESSION-GATE ────────────────────────────────────────
+  # Dependency-free regression test for the outer-timeout -> _ProcBox ->
+  # _kill_process_group wiring fixed in run_comparative_suite_benchmark_v2_
+  # FIXED.py this session (item 10b). It doesn't touch torch/pysr/juliacall,
+  # so it's cheap to run every time and catches a regression in the wiring
+  # itself (e.g. someone drops proc_box.clear() or the outer handler's
+  # getattr call) before the far more expensive DeFi benchmark below runs.
+  #
+  # Result is written to regression_tests/, NOT hybrid_pysr/defi/ — the
+  # latter is suppA's canonical source_dir for figure/table generation
+  # (config/experiments.yml), and a test-result JSON in that schema would
+  # break generate_tables.py/generate_figures.py's suppA parser. Keeping it
+  # in its own subdir means ci_postprocess.yml's suppA push-trigger glob
+  # (hybrid_pysr/**/*.json) never sees it.
   mkdir -p '${RESULTS_DIR}/regression_tests'
   _WIRING_TEST='${EXPERIMENTS_DIR}/../tests/test_proc_box_wiring.py'
   [ -f \"\${_WIRING_TEST}\" ] || _WIRING_TEST='hypatiax/experiments/tests/test_proc_box_wiring.py'
@@ -1855,6 +3240,17 @@ PYEOF
   python3 hypatiax/analysis/analyze_hybrid_performance.py \
     --results-dir '${RESULTS_DIR}' \
     2>&1 | tee -a '${RESULTS_DIR}'/suppA_run.log
+  # FIX-suppA-2 (move block): search both REPO_ROOT and EXPERIMENTS_DIR.
+  #   After cd REPO_ROOT, run_hybrid_system_benchmark.py writes relative to
+  #   REPO_ROOT (or RESULTS_DIR if it honours that env var).  The original
+  #   single-root find '${EXPERIMENTS_DIR}' missed all files after the cd fix.
+  # FIX-suppA-glob: align with CI YAML move_matching calls (lines 1455-1458):
+  #   CI matches: consolidated_hybrid_*.json → hybrid_pysr/defi
+  #               hybrid_llm_nn_all_domains_*.json → hybrid_llm_nn/all_domains
+  #               ablation_exp1_*.json             → RESULTS_DIR root
+  #               hypatiax_defi_benchmark_v3_results* → RESULTS_DIR root
+  #   run_all.sh previously matched hybrid_system*.json (wrong glob — that
+  #   pattern was not in the CI move step and produced false moves).
   for _sroot in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_sroot}\" -maxdepth 1 -name 'consolidated_hybrid_*.json' \
       ! -path '${RESULTS_DIR}/hybrid_pysr/defi/*' \
@@ -1871,17 +3267,96 @@ PYEOF
   done
 "
 
+# ── STEP 10: suppB — noise sweep ─────────────────────────────────────────────
+# FIX CRITICAL 2: noise sweep now its own step; sample-complexity in suppB_sc
+#
+# FIX-suppB-ALL-METHODS: run_dual_sweep_benchmarks.py (the orchestrator that
+# wraps both run_noise_sweep_benchmark.py and run_sample_complexity_benchmark.py)
+# defaults --methods to [3, 4] for BOTH sweeps. run_sample_complexity_benchmark.py
+# confirms this is its own --methods default too (docstring: "top two methods").
+# run_noise_sweep_benchmark.py's source was not directly inspected here, but
+# ci_postprocess.yml's own comments group suppB and suppB_sc together as both
+# producing only "EnhancedHybridSystemDeFi (core)" + "HybridSystemLLMNN
+# all-domains (core)" — i.e. the same 2-method scope — so this is treated as
+# the same default and patched the same way as suppB_sc's FIX-suppB_sc-ALL-
+# METHODS fix. fig_runtime_comparison and fig_comparative_table in
+# generate_figures.py read EXCLUSIVELY from noise_sweep_*.json /
+# sample_complexity_*.json — there is no code path pulling method coverage
+# from exp2, suppA, or hybrid_all_domains for these two figures, so the
+# cross-experiment ALLEXP_FIGDIR regeneration pass in ci_postprocess.yml
+# cannot fill the gap no matter how complete those other experiments are.
+#
+# COST/RISK + MITIGATION: this is why EXP_SHARD_TABLE["suppB"] was bumped
+# from 1 to 5 shards (one per noise level — see that table's comment in
+# ci_runner.yml for why 4 shards would silently mis-pin NOISE_LEVEL). Each
+# shard now only needs to cover 1 noise level x 11 domains x 6 methods
+# instead of 5 noise levels x 11 domains x 2 methods on a single shard, so
+# total wall-clock per shard should stay comparable to (or lower than) the
+# pre-fix single-shard 2-method run. Methods 5/6 remain PySR-backed with
+# their own --pysr-timeout/--method-timeout per fit; if a shard still hits
+# its job timeout, verify run_noise_sweep_benchmark.py actually has a
+# --methods flag (the assumption above) before assuming the timeout is
+# purely a workload-size problem.
 run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Supplement B)" bash -c "
+  # FIX-suppB-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug as all other steps.
   cd '${REPO_ROOT}'
+  # FIX-NOISE_LEVEL: extract the sigma from the CI shard task ID and export NOISE_LEVEL
+  # (singular) so run_noise_sweep_benchmark.py runs exactly one sigma per shard.
+  #
+  # Background: the script reads os.environ.get('NOISE_LEVEL','') at line 755.
+  # When set, it pins args.noise_levels=[sigma] (single-level run).  Without it the
+  # script runs its full _DEFAULT_NOISE_LEVELS=[0.0,0.005,0.01,0.05,0.10] sequentially,
+  # which takes ~5× longer and hits the 30-min CI job timeout after completing only
+  # sigma=0.0 — producing noise_levels:[0.0] in every output file.
+  #
+  # CI task ID format: noise{NL}__{domain}  e.g. noise0.5__feynman_biology
+  # SHARD_IDS / TASK_IDS contain the task IDs for this shard (space-separated).
+  # All tasks in one shard share the same noise level (plan groups by NL × domain,
+  # and EXP_SHARD_TABLE[\"suppB\"]=5 guarantees one noise level per shard — see
+  # FIX-suppB-ALL-METHODS comment above and ci_runner.yml's EXP_SHARD_TABLE comment).
+  # Extract sigma from the first task ID in this shard.
+  # Task format: noise{PCT}__{domain}  e.g. noise0.5__feynman_biology
+  # PCT values are percentages of signal std (0.0, 0.5, 1.0, 5.0, 10.0).
+  # The script (run_noise_sweep_benchmark.py) always does _ci_sigma = _raw / 100.0
+  # (line ~781). So NOISE_LEVEL must be passed in PERCENT (e.g. \"0.5\" = 0.5%),
+  # NOT as a pre-divided fraction. Pass _NL_PCT directly — do NOT divide by 100 here.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)
   if echo \"\${_FIRST_TASK}\" | grep -qE '^noise[0-9]'; then
     _NL_PCT=\$(echo \"\${_FIRST_TASK}\" | sed 's/^noise\([0-9][0-9.]*\)__.*/\1/')
+    # FIX-DOUBLE-DIVIDE: pass NOISE_LEVEL in PERCENT (not fraction).
+    # run_noise_sweep_benchmark.py line ~781 already divides by 100 (_ci_sigma = _raw / 100.0).
+    # Previously run_all.sh pre-divided by 100 here, causing a double-divide:
+    #   task noise0.5__ → _NL_PCT=0.5 → _NL_FRAC=0.005 → script: 0.005/100=0.00005 (WRONG)
+    # Fix: export _NL_PCT directly as NOISE_LEVEL so the script gets 0.5 → 0.5/100=0.005 (CORRECT)
     export NOISE_LEVEL=\"\${_NL_PCT}\"
     echo \"  [suppB] NOISE_LEVEL=\${NOISE_LEVEL}% → script will compute sigma=\$(python3 -c \"print(float('\${_NL_PCT}')/100)\") (task \${_FIRST_TASK})\"
   else
     echo \"  [suppB] WARNING: no noise{NL}__ task ID found in SHARD_IDS — full sweep will run\"
   fi
+  # FIX-suppB-3 (revised): --output-dir, --populations, --parsimony are NOT in
+  # run_noise_sweep_benchmark.py's argparse (confirmed from CI log: unrecognized arguments).
+  # Removed all three. Output location controlled by OUT_BASE env var set below.
+  # PYSR_POPULATIONS already in env; script reads it directly.
+  # FIX-RESUME: explicitly set RESUME=false so the script ignores any stale
+  # _checkpoint_shard0.json committed from a prior failed run. Without this,
+  # RESUME=true (set globally by CI) causes the script to read the committed
+  # checkpoint, conclude all tasks are done, and exit silently with 0 outputs.
+  # FEATURE-NSHARDS-SUFFIX — CORRECTED 2026-06-23:
+  # Originally derived this suffix from N_SHARDS (the constant TOTAL shard
+  # count, e.g. 5 for suppB) — that gave every one of the 5 concurrently-
+  # running matrix shards the IDENTICAL suffix (_nshards05 on all of them),
+  # which defeats the purpose: shards run in parallel
+  # (strategy.matrix/fail-fast:false in ci_runner.yml) and write
+  # second-granularity timestamped filenames, so same-second saves from
+  # different shards would collide/overwrite on the SAME suffix.
+  #
+  # Fixed to use SHARD_INDEX instead (the per-shard 0-based index from
+  # ci_runner.yml's matrix: \"shard\": j for j in range(N_SHARDS) — see that
+  # file's plan job). +1 converts to the 1-based numbering requested
+  # (shard 0 -> _nshards01, shard 1 -> _nshards02, ... shard 4 -> _nshards05
+  # for suppB's 5-shard run), so every shard's output is independently
+  # distinguishable, not just every separate CI run.
   printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
   export HYPATIAX_NSHARDS_SUFFIX=\"\${_SHARD_TAG}\"
   echo \"  [suppB] SHARD_INDEX=\${SHARD_INDEX:-0} -> HYPATIAX_NSHARDS_SUFFIX=_nshards\${HYPATIAX_NSHARDS_SUFFIX}\"
@@ -1897,11 +3372,108 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
     --method-timeout ${METHOD_TIMEOUT} \\
     2>&1 | tee '${RESULTS_DIR}'/suppB_run.log
 
+  # FIX-suppB-DOUBLED-PATH — CONFIRMED ROOT CAUSE 2026-06-23 (read
+  # run_noise_sweep_benchmark.py source directly; no more guessing):
+  #
+  #   _RESULTS_DIR = _OUT_BASE / 'comparison_results/feynman-tests/noise-sweep'
+  #   (that file, line 106) — single level, no further nesting anywhere in
+  #   that script or in run_comparative_suite_benchmark_v2.py (the subprocess
+  #   it calls via --output-dir=_RESULTS_DIR; that script own _OUTPUT_DIR =
+  #   Path(args.output_dir).resolve(), unmodified). So with OUT_BASE set to
+  #   the plain results root (as it is below, and at the job-level env:
+  #   OUT_BASE: hypatiax/data/results), the script real, single-level
+  #   output directory is:
+  #     \${RESULTS_DIR}/comparison_results/feynman-tests/noise-sweep/
+  #   This is correct and requires no OUT_BASE change here.
+  #
+  #   The doubled path observed in one run (.../noise-sweep/noise-sweep/) did
+  #   NOT come from this script. It came from ci_runner.yml Move-results-to-
+  #   RESULTS_DIR step, which computes TARGET equal to RESULTS_DIR joined with
+  #   RESULT_SUBDIR, and moves any matching result files it finds under the
+  #   workspace into TARGET. When RESULT_SUBDIR for suppB was (mistakenly, at
+  #   one point) set to the doubled value, that move step relocated this
+  #   script correctly-written single-level output one level deeper —
+  #   manufacturing the doubled structure AFTER the script had already run
+  #   correctly.
+  #
+  #   Fix landed in ci_runner.yml (suppB RESULT_SUBDIR), ci_postprocess.yml
+  #   (SUPPB_SUBDIR plus its MAPPING fallback), and ci_analysis.yml (MAPPING
+  #   fallback) — all three now use the single-level path to match this
+  #   script real, confirmed behavior. No change needed here in run_all.sh;
+  #   OUT_BASE='\${RESULTS_DIR}' (no suffix) was already correct.
 "
 
 
+# ── STEP 10b: suppB_sc — sample-complexity sweep ─────────────────────────────
+# FIX CRITICAL 2: new dedicated step, previously missing from CI and run_all.sh
+# Produces: Tab 29 sample-complexity columns · Supplement B §6
+# Task format: sc_n{n}__{feynman_id}  →  n ∈ {50,100,200,500,750,1000}, 30 equations
+# Output dir: comparison_results/feynman-tests/sample-complexity/
+#
+# FIX-suppB_sc-ALL-METHODS: run_sample_complexity_benchmark.py defaults to
+# --methods 3 4 (its own documented "top two methods" scope — see the
+# script's docstring / _DEFAULT_METHODS). That default is correct for the
+# script's own stated purpose, but it silently starves two downstream
+# figures: fig_runtime_comparison and fig_comparative_table in
+# generate_figures.py read EXCLUSIVELY from noise_sweep_*.json /
+# sample_complexity_*.json (the suppB / suppB_sc outputs) — there is no
+# code path that pulls method coverage from exp2, suppA, or
+# hybrid_all_domains for these two figures, so ci_postprocess.yml's
+# cross-experiment ALLEXP_FIGDIR regeneration pass cannot fill the gap no
+# matter how complete those other experiments are. Passing --methods
+# explicitly here is therefore the only way to get all 6 methods into
+# those two figures.
+#
+# FIX-suppB_sc-SHARD-6: this step now runs as 6 CI shards (ci_runner.yml
+# EXP_SHARD_TABLE["suppB_sc"] = 6), one per sample size n, mirroring suppB's
+# one-noise-level-per-shard design (STEP 10 above). Each shard covers
+# 1 sample size x 11 feynman domains x 6 methods instead of 6 sample sizes
+# x 11 domains x 6 methods on a single shard — this is what makes running
+# all 6 methods (instead of the 2-method default) tractable within a single
+# job timeout; see COST/RISK below for the per-shard budget this assumes.
+# SC_SAMPLE_COUNTS is pinned to the single n extracted from this shard's
+# first task ID (sc_n{n}__{domain}) below, the same way STEP 10 pins
+# NOISE_LEVEL from its shard's first task ID.
+#
+# FIX-suppB_sc-METHOD-ASSERT: after the run, this step now hard-fails if the
+# resulting sample_complexity_*.json for this shard's n does not contain all
+# 6 methods in method_summary. Without this check, a shard that times out or
+# is invoked without --methods (e.g. a future manual re-run, or a stale cached
+# checkpoint with RESUME=true) silently writes a partial 2-method JSON that
+# passes ci_pipeline_analysis.yml's content-based completion check (which
+# only verifies sample_sizes coverage, not method coverage — see that file's
+# "suppB / suppB_sc: content-based check (FIX 6)" comment) and produces
+# degraded fig_runtime_comparison / fig_comparative_table downstream with no
+# CI signal. This assertion turns that into a loud, immediate job failure.
+#
+# COST/RISK: each of the 6 shards covers 11 domains x 6 methods at one fixed
+# n. Methods 5 and 6 are PySR-backed (see run_sample_complexity_benchmark.py
+# --skip-pysr) with their own --pysr-timeout (1100s) and --method-timeout
+# (900s) per fit. Per-task cost is NOT uniform across n — larger n means
+# slower fits — so the n=1000 shard is expected to be the long pole among
+# the 6. Those per-method/per-PySR-fit timeouts bound worst-case time per
+# (equation, method) — they do NOT bound the job's TOTAL wall-clock, which
+# is gated only by the 330-minute job timeout and JOB_DEADLINE (19800s)
+# above it. If the largest-n shard starts hitting the job timeout, the
+# first things to try are: (a) sharding suppB_sc further by splitting the
+# n=1000 block across two shards (EXP_SHARD_TABLE bump from 6 to 7, with a
+# matching split in SUPPB_SC_IDS/ci_runner.yml's domain partition for that
+# one n), or (b) dropping back to --methods 3 4 5 6 (skip the two cheapest/
+# least informative methods instead of the two PySR ones) for the n=1000
+# shard only, via a per-shard SC_METHODS override mirroring SC_SAMPLE_COUNTS.
 run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6)" bash -c "
+  # FIX-suppB_sc-1: cd REPO_ROOT (not EXPERIMENTS_DIR) — same doubled-path bug.
   cd '${REPO_ROOT}'
+  # FIX-suppB_sc-2: --output-dir, --populations, --parsimony are NOT in argparse — removed.
+  # FIX-suppB_sc-3: bare \\ → \\\\ (line-continuations inside double-quoted bash -c string).
+  # FIX-RESUME: RESUME=false so stale committed checkpoint doesn't skip all work silently.
+  #
+  # FIX-suppB_sc-SHARD-6: pin SC_SAMPLE_COUNTS to the single n carried by this
+  # shard's task IDs, the same way STEP 10 pins NOISE_LEVEL from SHARD_IDS.
+  # Task format: sc_n{n}__{domain}  e.g. sc_n500__feynman_biology
+  # EXP_SHARD_TABLE[\"suppB_sc\"]=6 + SUPPB_SC_IDS' n-outer/domain-inner layout
+  # (see ci_runner.yml) guarantees every task in a shard shares one n — see
+  # FIX-suppB_sc-SHARD-6 comment above for why 6 shards keeps that property.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)
   if echo \"\${_FIRST_TASK}\" | grep -qE '^sc_n[0-9]'; then
@@ -1912,9 +3484,25 @@ run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6
     export SC_SAMPLE_COUNTS='50,100,200,500,750,1000'
     echo \"  [suppB_sc] WARNING: no sc_n{N}__ task ID found in SHARD_IDS — full sweep will run\"
   fi
+  # FEATURE-NSHARDS-SUFFIX: per-shard suffix (1-based, zero-padded), mirrors
+  # run_all.sh STEP 10's suppB block. SUPPB_SC_IDS is n-outer/domain-inner
+  # (see ci_runner.yml) so with the locked 6-shard count each shard already
+  # gets a distinct n -- this suffix is therefore NOT replacing _shard_tag()
+  # (which exists for a different, currently-dormant concern: multiple
+  # shards sharing one n, which the n-outer layout + EXP_SHARD_TABLE=6
+  # together prevent) -- it is an independent, simpler distinguisher applied
+  # to THIS script's filenames the same way it is for suppB's.
   printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
   export HYPATIAX_NSHARDS_SUFFIX=\"\${_SHARD_TAG}\"
   echo \"  [suppB_sc] SHARD_INDEX=\${SHARD_INDEX:-0} -> HYPATIAX_NSHARDS_SUFFIX=_nshards\${HYPATIAX_NSHARDS_SUFFIX}\"
+  # FIX-suppB_sc-NOISE0: suppB_sc must be run at noise=0% (noiseless mode),
+  # not the noisy default. run_sample_complexity_benchmark.py's dedicated
+  # --noiseless flag is the documented way to get sigma=0 (\"directly
+  # comparable to published SR figures\") -- it also switches the R^2
+  # recovery threshold to the noiseless value. NOISE_LEVEL is only honoured
+  # when --noiseless is NOT passed (see script: \"if _ci_noise_env and not
+  # args.noiseless\"), so the previous NOISE_LEVEL='5.0' with no --noiseless
+  # flag silently ran the whole sweep at sigma=0.05 instead of sigma=0.
   OUT_BASE='${RESULTS_DIR}' \\
   RESULTS_DIR='${RESULTS_DIR}' \\
   RESUME='false' \\
@@ -1927,9 +3515,28 @@ run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6
     --method-timeout ${METHOD_TIMEOUT} \\
     2>&1 | tee '${RESULTS_DIR}'/suppB_sc_run.log
 
+  # FIX-suppB_sc-DOUBLED-PATH (root-caused, mirrors FIX-suppB-DOUBLED-PATH in STEP 10):
+  # run_sample_complexity_benchmark.py joins OUT_BASE with its own fixed suffix
+  # 'comparison_results/feynman-tests/sample-complexity' (see that script's
+  # _RESULTS_DIR construction). OUT_BASE must therefore be the plain results root,
+  # NOT a path that already contains that suffix. The previous value here
+  #   OUT_BASE='\${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
+  # pre-appended the suffix, so the script appended it AGAIN on top, producing:
+  #   \${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity/comparison_results/feynman-tests/sample-complexity/
+  # Setting OUT_BASE='\${RESULTS_DIR}' (no suffix) makes the script land outputs at
+  # the canonical single-level path:
+  #   \${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity/
+  # No rescue/move-based workaround is needed once the source path is correct.
   _SC_CANON='${RESULTS_DIR}/comparison_results/feynman-tests/sample-complexity'
   mkdir -p \"\${_SC_CANON}\"
 
+  # FIX-suppB_sc-METHOD-ASSERT: hard-fail this shard if its output JSON does
+  # not contain all 6 methods. ci_pipeline_analysis.yml's content-based
+  # completion check only verifies sample_sizes coverage (see its
+  # \"suppB / suppB_sc: content-based check (FIX 6)\" comment) — it cannot
+  # see method coverage, so a partial-method shard would otherwise pass
+  # completion checks silently and degrade fig_runtime_comparison /
+  # fig_comparative_table downstream with no CI signal at all.
   python3 -c \"
 import glob, json, os, sys
 
@@ -1955,6 +3562,10 @@ print('[suppB_sc-METHOD-ASSERT] OK -- all 6 methods present')
 \"
 "
 
+# ── STEP 13: validate ────────────────────────────────────────────────────────
+# FIX-validate: run() dispatches via "$@" which cannot forward a here-doc on stdin.
+# Wrapping the inline Python in bash -c '...' with a single-quoted heredoc ensures
+# the script body is passed as an argument (not stdin) and executes correctly.
 run validate "Cross-check all results against paper-reported values" bash -c '
 python3 - <<'"'"'PYEOF'"'"'
 import json, os, glob, sys
@@ -1971,8 +3582,9 @@ def check(label, got, expected, tol=TOLERANCE):
     print(f"  [{_tag}] {label}: got={got:.6f}, expected={expected:.6f}")
     return ok
 
-print("\n=== Validating key numerical results against JMLR v4.0 ===\n")
+print("\n=== Validating key numerical results against JMLR v3.0 ===\n")
 
+# --- exp1 noiseless ---
 noiseless_files = (
     sorted(glob.glob(f"{RESULTS}/comparison_results/noise-noiseless/noiseless/defi/hypatiax_defi_benchmark_*results*.json")) +
     sorted(glob.glob(f"{RESULTS}/comparison_results/noise-noiseless/noiseless/defi/protocol_core_noiseless_*.json"))
@@ -1989,6 +3601,7 @@ if noiseless_files:
 else:
     print("  [SKIP] exp1 noiseless results not found")
 
+# --- exp2_feynman ---
 exp2_files = sorted(glob.glob(f"{RESULTS}/comparison_results/feynman-tests/exp2/protocol_core_noisy_*.json"))
 if exp2_files:
     with open(exp2_files[-1]) as f: data = json.load(f)
@@ -1998,6 +3611,7 @@ if exp2_files:
 else:
     print("  [SKIP] exp2_feynman results not found")
 
+# --- Mann-Whitney (Tab 14) ---
 mw_files = sorted(glob.glob(f"{RESULTS}/exp1_rf01_mannwhitney*.json"))
 if mw_files:
     with open(mw_files[-1]) as f: data = json.load(f)
@@ -2012,17 +3626,24 @@ if mw_files:
 else:
     print("  [SKIP] Mann-Whitney results not found")
 
+# --- FIX CRITICAL 1/3: hybrid_all_domains output in correct subdir ---
 had = glob.glob(f"{RESULTS}/hybrid_llm_nn/all_domains/*.json")
 ok = bool(had)
 checks.append(("hybrid_all_domains output present (all_domains/)", 1.0 if ok else 0.0, 1.0, ok))
 _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] hybrid_llm_nn/all_domains/: {len(had)} JSON file(s)")
 
+# --- STEP 4a: instability outputs present ---
 inst_csv = os.path.isfile(f"{RESULTS}/figures/instability_analysis.csv")
 checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
 _tag = "OK" if inst_csv else "FAIL"
 print(f"  [{_tag}] instability_analysis.csv")
+# FIX NO-TABLES-FIGURES: figure-presence check removed — figures are no
+# longer generated anywhere in this pipeline (purged immediately after
+# run_instability_suite.py runs).
 
+# --- FIX CRITICAL 2: suppB_sc output present ---
+# Output path: comparison_results/feynman-tests/sample-complexity/
 sc = (glob.glob(f"{RESULTS}/comparison_results/feynman-tests/sample-complexity/*.json") +
       glob.glob(f"{RESULTS}/comparison_results/feynman-tests/sample-complexity/**/*.json"))
 ok = bool(sc)
@@ -2030,6 +3651,10 @@ checks.append(("suppB_sc output present (sample-complexity/)", 1.0 if ok else 0.
 _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] sample-complexity outputs: {len(sc)} file(s)")
 
+# --- CRITICAL 4: suppB noise_sweep_*.json glob match ---
+# tables-generator uses glob 'noise_sweep_*.json' to find suppB results.
+# If run_noise_sweep_benchmark.py writes files under a different prefix,
+# all suppB tables will contain placeholder text.
 noise_sweep_matched = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/noise_sweep_*.json")
 noise_sweep_all     = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/*.json")
 if noise_sweep_all:
@@ -2044,6 +3669,7 @@ if noise_sweep_all:
 else:
     print(f"  [SKIP] noise-sweep/: no JSON files found (suppB not yet run)")
 
+# --- BUG 2 FIX: exp3b outputs must be in extrapolation/multi_seed/, not extrapolation/ ---
 exp3b_files = glob.glob(f"{RESULTS}/extrapolation/multi_seed/*nguyen*.json")
 ok_exp3b = bool(exp3b_files)
 checks.append(("exp3b outputs in extrapolation/multi_seed/ (BUG 2)", 1.0 if ok_exp3b else 0.0, 1.0, ok_exp3b))
@@ -2054,24 +3680,31 @@ print(
     f"{len(exp3b_files)} nguyen JSON(s){suffix_exp3b}"
 )
 
+# FIX NO-TABLES-FIGURES: tables/.tex and figures/.pdf existence checks removed
+# — no table or figure generation occurs anywhere in this pipeline any more.
 
+# --- exp1_pca: PCA-directed DeFi noiseless outputs (FIX-C3-ESCAPE) ---
+# Tracer [validate] warning: exp1_pca outputs not covered by validate step.
+# Guard: SKIP when exp1_pca has not run (no defi_pca dir at all).
 pca_defi_dir = f"{RESULTS}/comparison_results/noise-noiseless/noiseless/defi_pca"
 if os.path.isdir(pca_defi_dir):
     pca_disc = os.path.isfile(f"{pca_defi_dir}/split_protocol_disclosure.json")
     checks.append(("exp1_pca split_protocol_disclosure.json present", 1.0 if pca_disc else 0.0, 1.0, pca_disc))
     _tag = "OK" if pca_disc else "FAIL"
     print(f"  [{_tag}] exp1_pca: split_protocol_disclosure.json")
-    pca_jsons = glob.glob(f"{pca_defi_dir}/defi_pca_v4_*.json")
+    pca_jsons = glob.glob(f"{pca_defi_dir}/defi_pca_v3_*.json")
     ok_pca = bool(pca_jsons)
-    checks.append(("exp1_pca defi_pca_v4_*.json present", 1.0 if ok_pca else 0.0, 1.0, ok_pca))
+    checks.append(("exp1_pca defi_pca_v3_*.json present", 1.0 if ok_pca else 0.0, 1.0, ok_pca))
     _tag = "OK" if ok_pca else "FAIL"
-    print(f"  [{_tag}] exp1_pca: {len(pca_jsons)} defi_pca_v4_*.json file(s)")
+    print(f"  [{_tag}] exp1_pca: {len(pca_jsons)} defi_pca_v3_*.json file(s)")
 else:
     print("  [SKIP] exp1_pca: defi_pca dir not found (exp1_pca not yet run)")
 
+# --- exp1b_pca: PCA-directed DeFi noise=15 outputs (FIX-C3-ESCAPE) ---
+# Tracer [validate] warning: exp1b_pca outputs not covered by validate step.
 pca15_dir = f"{RESULTS}/comparison_results/noise-noiseless/15_pca"
 if os.path.isdir(pca15_dir):
-    pca15_jsons = (glob.glob(f"{pca15_dir}/defi_pca_v4_*.json") +
+    pca15_jsons = (glob.glob(f"{pca15_dir}/defi_pca_v3_*.json") +
                    glob.glob(f"{pca15_dir}/*portfolio*variance*pca*.json"))
     ok_pca15 = bool(pca15_jsons)
     checks.append(("exp1b_pca outputs present in 15_pca/", 1.0 if ok_pca15 else 0.0, 1.0, ok_pca15))
@@ -2080,6 +3713,8 @@ if os.path.isdir(pca15_dir):
 else:
     print("  [SKIP] exp1b_pca: 15_pca dir not found (exp1b_pca not yet run)")
 
+# --- exp2_feynman_pca_4060: PCA 40/60 split Feynman outputs (FIX-C3) ---
+# Tracer [validate] warning: exp2_feynman_pca_4060 outputs not covered by validate step.
 pca4060_dir = f"{RESULTS}/comparison_results/feynman-tests/exp2_pca_4060"
 if os.path.isdir(pca4060_dir):
     pca4060_summary = os.path.isfile(f"{pca4060_dir}/exp2_pca_4060_summary.json")
@@ -2098,6 +3733,31 @@ if os.path.isdir(pca4060_dir):
 else:
     print("  [SKIP] exp2_feynman_pca_4060: exp2_pca_4060 dir not found (step not yet run)")
 
+# --- exp1c: v4 validation-selected hybrid DeFi seed sweep (ADD-exp1c) ---
+# Separate arm from exp1b/v3c -- checked for output presence only (no fixed
+# paper-reported numeric target exists for this new comparison arm; its
+# scientific claim is established via the paired v3c-vs-v4 comparison
+# described in the v4 report, not a single hardcoded R^2).
+exp1c_dir = f"{RESULTS}/comparison_results/noise-noiseless/exp1c_v4"
+if os.path.isdir(exp1c_dir):
+    exp1c_jsons = (glob.glob(f"{exp1c_dir}/hypatiax_defi_benchmark_v4*results*.json") +
+                   glob.glob(f"{exp1c_dir}/defi_v4_*.json"))
+    ok_exp1c = bool(exp1c_jsons)
+    checks.append(("exp1c (v4) outputs present in exp1c_v4/", 1.0 if ok_exp1c else 0.0, 1.0, ok_exp1c))
+    _tag = "OK" if ok_exp1c else "FAIL"
+    print(f"  [{_tag}] exp1c: {len(exp1c_jsons)} JSON file(s) in exp1c_v4/")
+    # Pooled seed report is informational only, not a pass/fail check: it is
+    # only produced when all five seeds were run in a single invocation, so
+    # its absence on a sharded CI run (one seed per shard) is expected, not
+    # a failure -- see the exp1c step verification note in run_all.sh.
+    pooled_ok = os.path.isfile(f"{exp1c_dir}/hypatiax_defi_benchmark_v4_pooled_seed_report.json")
+    _tag = "OK" if pooled_ok else "INFO"
+    _msg = "present" if pooled_ok else "not present yet (expected until all five seeds have been run/merged)"
+    print(f"  [{_tag}] exp1c: pooled_seed_report.json {_msg}")
+else:
+    print("  [SKIP] exp1c: exp1c_v4 dir not found (exp1c not yet run)")
+
+# --- Summary ---
 total = len(checks); passed = sum(1 for item in checks if item[-1])
 print(f"\n=== Result: {passed}/{total} checks passed ===")
 if passed < total:
@@ -2110,6 +3770,17 @@ else:
 PYEOF
 '
 
+# ── STEP 14: qualify ─────────────────────────────────────────────────────────
+# Per-experiment qualification gate — fully self-contained (no run_all_checkpoint.py).
+# Checks 5 dimensions for each of the 12 qualifiable experiments (FIX
+# NO-TABLES-FIGURES: figures/tables dimensions (6)/(7) removed — no table or
+# figure generation occurs anywhere in this pipeline any more):
+#   (1) checkpoint file present  (2) result files present  (3) _merged.json present
+#   (4) _merged.csv present      (5) committed to git
+# Also performs numerical spot-check inline:
+#   DeFi 89.2 %, 74 cases, Feynman 9/30, Core-15 MW, Instability 70 tasks.
+# Writes logs/verify_report.json  +  ${RESULTS_DIR}/qualify_run.log.
+# Exits non-zero on any FAIL (WARN is non-fatal).
 run qualify "Qualify all experiments + numerical spot-check (Phase 5 gate)" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -2135,8 +3806,10 @@ def record(name, ok, detail="", status=None):
         all_ok = False
     return ok
 
+# ── 1. Numerical spot-checks ─────────────────────────────────────────────────
 print("\n=== Phase 5a: Numerical spot-check ===\n")
 
+# DeFi accuracy/counts
 noiseless_files = sorted(_glob.glob(str(
     RESULTS / "comparison_results/noise-noiseless/noiseless/defi/hypatiax_defi_benchmark_*results*.json"
 ))) + sorted(_glob.glob(str(
@@ -2145,6 +3818,7 @@ noiseless_files = sorted(_glob.glob(str(
 if noiseless_files:
     try:
         raw  = json.loads(Path(noiseless_files[-1]).read_text())
+        # JSON root may be a list of result dicts OR a dict with a "results" key
         if isinstance(raw, list):
             results = raw
         else:
@@ -2161,8 +3835,10 @@ if noiseless_files:
                 ok = abs(mean_r2 - 0.931) <= 0.01
                 record("DeFi Hybrid v40 mean R2 approx 0.931", ok,
                        "got={:.4f}".format(mean_r2))
+        # count cases
         n_cases = len(results)
         ok_cases = (n_cases >= 70)
+        # Partial pipeline runs may have fewer rows — WARN not FAIL
         record("DeFi case count >=70", ok_cases, "found {} cases".format(n_cases),
                status="PASS" if ok_cases else "WARN")
     except Exception as e:
@@ -2170,6 +3846,7 @@ if noiseless_files:
 else:
     record("DeFi noiseless results", True, "not yet run — skipped", status="SKIP")
 
+# Feynman recovery rate
 exp2_files = sorted(_glob.glob(str(
     RESULTS / "comparison_results/feynman-tests/exp2/protocol_core_noisy_*.json"
 ))) + sorted(_glob.glob(str(
@@ -2178,6 +3855,7 @@ exp2_files = sorted(_glob.glob(str(
 if exp2_files:
     try:
         raw = json.loads(Path(exp2_files[-1]).read_text())
+        # Search multiple possible key names, both at root and nested one level
         _RECOVERY_KEYS = (
             "hybrid_deFi_recovery", "recovery_rate", "defi_recovery",
             "hybrid_recovery", "success_rate", "deFi_recovery_rate",
@@ -2187,6 +3865,7 @@ if exp2_files:
             if isinstance(raw, dict):
                 rec = raw.get(_k)
                 if rec is None:
+                    # one level deep
                     for _v in raw.values():
                         if isinstance(_v, dict):
                             rec = _v.get(_k)
@@ -2199,6 +3878,7 @@ if exp2_files:
             record("Feynman DeFi recovery rate approx 1.0", ok,
                    "got={:.4f}".format(float(rec)))
         else:
+            # Key not found — WARN only; the exp2 JSON schema varies by run
             record("Feynman recovery_rate key", True,
                    "key not found in {} — check JSON schema".format(
                        Path(exp2_files[-1]).name),
@@ -2208,6 +3888,7 @@ if exp2_files:
 else:
     record("Feynman exp2 results", True, "not yet run — skipped", status="SKIP")
 
+# Mann-Whitney (Tab 14)
 mw_files = sorted(_glob.glob(str(RESULTS / "exp1_rf01_mannwhitney*.json")))
 if mw_files:
     try:
@@ -2225,6 +3906,7 @@ if mw_files:
 else:
     record("Mann-Whitney results", True, "not yet run — skipped", status="SKIP")
 
+# Instability rows (pipeline may be partial — WARN not FAIL when count is low)
 inst_csv = RESULTS / "figures/instability_analysis.csv"
 if inst_csv.exists():
     lines = [l for l in inst_csv.read_text().splitlines()
@@ -2237,17 +3919,25 @@ if inst_csv.exists():
 else:
     record("instability_analysis.csv", True, "not yet produced — skipped", status="SKIP")
 
+# ── 2. Per-experiment 5-dimension gate ───────────────────────────────────────
 print("\n=== Phase 5b: 5-dimension per-experiment gate ===\n")
 
 EXPERIMENTS = {
     "exp1":                   RESULTS / "comparison_results/noise-noiseless/noiseless/defi",
     "exp1b":                  RESULTS / "comparison_results/noise-noiseless/15",
+    # ADD-exp1c: v4 validation-selected hybrid, separate arm from exp1b/v3c —
+    # own results dir so the 5-dimension gate checks it independently and
+    # never conflates its files with the frozen v3c baseline.
+    "exp1c":                  RESULTS / "comparison_results/noise-noiseless/exp1c_v4",
+    # FIX-C3-QUALIFY: PCA-corrected DeFi runs added so the 5-dimension gate checks
+    # the corrected split results, not just the legacy dirs.
     "exp1_pca":               RESULTS / "comparison_results/noise-noiseless/noiseless/defi_pca",
     "exp1b_pca":              RESULTS / "comparison_results/noise-noiseless/15_pca",
     "extrap":                 RESULTS / "comparison_results/extrapolation",
     "hybrid_all_domains":     RESULTS / "hybrid_llm_nn/all_domains",
     "instability":            RESULTS / "figures",
     "exp2_feynman":           RESULTS / "comparison_results/feynman-tests/exp2",
+    # FIX-C3-QUALIFY: PCA-corrected Feynman run — replaces the legacy 9/30 result.
     "exp2_feynman_pca_4060":  RESULTS / "comparison_results/feynman-tests/exp2_pca_4060",
     "exp2":                   RESULTS / "comparison_results/feynman-tests/exp2_multi",
     "exp3":                   RESULTS / "extrapolation",
@@ -2261,12 +3951,14 @@ def dim_check(exp, rdir):
     ok_all = True
     rdir = Path(rdir)
 
+    # (1) checkpoint file
     ckpt_glob = list(_glob.glob(str(REPO / f"logs/checkpoint_{exp}_*.json"))) + \
                 list(_glob.glob(str(REPO / f"logs/{exp}_checkpoint*.json")))
     d1 = f"{len(ckpt_glob)} checkpoint file(s)" if ckpt_glob else "MISSING"
     record(f"{exp} · (1) checkpoint", bool(ckpt_glob), d1,
            status="WARN" if not ckpt_glob else "PASS")  # warn not fail — CI may not write these
 
+    # (2) result files
     jsons = list(rdir.glob("*.json")) if rdir.exists() else []
     ok2 = bool(jsons)
     record(f"{exp} · (2) result files", ok2,
@@ -2274,18 +3966,21 @@ def dim_check(exp, rdir):
     if not ok2:
         ok_all = False
 
+    # (3) _merged.json
     merged = list(rdir.glob("*_merged.json")) if rdir.exists() else []
     ok3 = bool(merged)
     record(f"{exp} · (3) _merged.json", ok3,
            f"{len(merged)} file(s)" if ok3 else "MISSING",
            status="WARN" if not ok3 else "PASS")
 
+    # (4) _merged.csv
     mcsv = list(rdir.glob("*_merged.csv")) if rdir.exists() else []
     ok4 = bool(mcsv)
     record(f"{exp} · (4) _merged.csv", ok4,
            f"{len(mcsv)} file(s)" if ok4 else "MISSING",
            status="WARN" if not ok4 else "PASS")
 
+    # (5) committed to git (any tracked file in rdir)
     try:
         import subprocess
         rel = str(rdir.relative_to(REPO)) if rdir.is_relative_to(REPO) else str(rdir)
@@ -2300,6 +3995,8 @@ def dim_check(exp, rdir):
            "tracked" if ok5 else "not tracked / no files",
            status="WARN" if not ok5 else "PASS")
 
+    # FIX NO-TABLES-FIGURES: (6) figures and (7) tables checks removed — no
+    # table or figure generation occurs anywhere in this pipeline any more.
 
     return ok_all
 
@@ -2310,12 +4007,14 @@ gate_results = {}
 for exp, rdir in EXPERIMENTS.items():
     gate_results[exp] = dim_check(exp, rdir)
 
+# ── Summary ───────────────────────────────────────────────────────────────────
 print()
 n_ok   = sum(1 for f in findings if f["status"] in ("PASS", "WARN", "SKIP"))
 n_fail = sum(1 for f in findings if f["status"] == "FAIL")
 
 print(f"\n=== qualify summary: {len(findings)} checks, {n_fail} FAIL ===")
 
+# Write verify_report.json (same schema consumed by print-audit-summary in CI)
 out = REPO / "logs/verify_report.json"
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({"all_ok": all_ok, "checks": findings}, indent=2))
@@ -2332,6 +4031,15 @@ else:
 PYEOF
 '
 
+# ── STEP 15: audit_paper ─────────────────────────────────────────────────────
+# Final paper audit — fully self-contained (no run_all_checkpoint.py).
+# Loads scripts/patches/paper_targets.json and cross-checks every reported
+# number against the corresponding _merged.json / result file.
+# Emits PASS / WARN / FAIL / MISSING per claim.
+# Includes Nguyen-12 dual-threshold check (tab:nguyen12: 58.3% H / 66.7% P
+# under the R2>=0.9999, 4-decimal convention).
+# Writes logs/paper_audit_findings.json.
+# Exits non-zero on any FAIL or MISSING (not on WARN).
 run audit_paper "Audit all paper claims against results (paper_targets.json)" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -2349,6 +4057,7 @@ FAIL_ON_WARN = os.environ.get("FAIL_ON_WARN", "false").lower() == "true"
 
 print("\n=== Phase 5c: paper audit (paper_targets.json) ===\n")
 
+# ── Load targets ──────────────────────────────────────────────────────────────
 if not TARGETS_F.exists():
     print(f"ERROR: {TARGETS_F} not found — commit scripts/patches/paper_targets.json first.")
     sys.exit(1)
@@ -2356,6 +4065,7 @@ if not TARGETS_F.exists():
 targets = json.loads(TARGETS_F.read_text())
 print(f"  {len(targets)} claim(s) loaded from {TARGETS_F.name}")
 
+# ── Result file index — build a flat map of all JSON files under RESULTS_DIR ──
 all_jsons = {}
 for p in RESULTS.rglob("*.json"):
     try:
@@ -2363,6 +4073,7 @@ for p in RESULTS.rglob("*.json"):
     except Exception:
         pass  # skip unparseable files
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def _find_metric(data, *keys):
     """Walk nested dicts/lists looking for any of the given keys; return first match."""
     if isinstance(data, dict):
@@ -2411,9 +4122,11 @@ def _iter_rows(data):
     Never raises — skips non-dict leaves silently.
     """
     if isinstance(data, dict):
+        # Try well-known row-container keys first
         for key in (
             "results", "equation_results", "domain_results",
             "equations", "records", "data", "rows",
+            # FIX: additional container key aliases
             "items", "entries", "output", "outputs",
             "benchmark_results", "eval_results", "test_results",
             "experiments", "cases", "metrics",
@@ -2424,6 +4137,7 @@ def _iter_rows(data):
                 for r in _iter_rows(v):
                     yield r
                 return
+        # Leaf dict — yield it as a row candidate
         yield data
     elif isinstance(data, list):
         for item in data:
@@ -2432,6 +4146,7 @@ def _iter_rows(data):
             elif isinstance(item, list):
                 for sub in _iter_rows(item):
                     yield sub
+            # scalars in a list are ignored
 
 def _r2_from_row(row):
     """Extract a float R² value from a result row dict, or return None.
@@ -2441,8 +4156,10 @@ def _r2_from_row(row):
     (could be RMSE, count, accuracy, etc.) and caused false negatives when
     the sanity-check f<=1.0001 rejected non-R² numeric fields."""
     for key in (
+        # original keys
         "r2", "r2_test", "r2_train", "best_r2", "r2_score",
         "R2", "R2_test", "R2_train",
+        # additional variants (FIX)
         "test_r2", "train_r2",
         "test_R2", "train_R2",
         "R2_score", "R2_val", "r2_val",
@@ -2456,6 +4173,8 @@ def _r2_from_row(row):
         if v is not None:
             try:
                 f = float(v)
+                # R² is mathematically ≤ 1; values above 1.01 are not R².
+                # Allow slightly above 1.0 for floating-point noise.
                 if f <= 1.01:
                     return f
             except (TypeError, ValueError):
@@ -2481,6 +4200,7 @@ def _load_json_files(patterns):
             results.append((p, data))
     return results
 
+# ── Computed metric: Nguyen-12 solve rate ─────────────────────────────────────
 def _compute_nguyen12(results_dir, want_4dec):
     patterns = [
         str(results_dir / "extrapolation" / "**" / "*nguyen*seed42*.json"),
@@ -2488,20 +4208,25 @@ def _compute_nguyen12(results_dir, want_4dec):
         str(results_dir / "extrapolation" / "*.json"),
         str(results_dir / "**" / "*nguyen*.json"),
         str(results_dir / "exp3*.json"),
+        # FIX: also scan the flat results root and multi_seed subdir
         str(results_dir / "extrapolation" / "multi_seed" / "**" / "*.json"),
         str(results_dir / "*.json"),
     ]
     pairs = _load_json_files(patterns)
     if not pairs:
         return None, "no Nguyen-12 result JSONs found under RESULTS_DIR"
+    # Prefer seed=42 file
     seed42 = [(p, d) for p, d in pairs if "seed42" in p.name or "seed_42" in p.name]
     chosen_p, chosen_d = (seed42[-1] if seed42 else pairs[-1])
+    # Try pre-computed key first — FIX: expanded alias list
     key4  = (
         "nguyen12_solve_rate_4dec", "success_rate_4dec", "solve_rate_4dec",
         "rate_4dec", "nguyen_4dec",
+        # FIX additions
         "solve_rate", "success_rate", "pass_rate",
         "nguyen12_pass_rate", "nguyen_pass_rate",
         "nguyen12_4dec", "nguyen_4decimal",
+        # FIX-NGUYEN-2: _analysis.json stores solve rate as h_rate
         "h_rate", "hypatiax_rate", "hypatia_rate", "hx_rate",
         "hypatiax_solve_rate", "hypatia_solve_rate",
         "rate", "solved_rate", "solved_fraction",
@@ -2509,14 +4234,17 @@ def _compute_nguyen12(results_dir, want_4dec):
     keys  = (
         "nguyen12_solve_rate_strict", "success_rate_strict", "solve_rate_strict",
         "rate_strict", "nguyen_strict",
+        # FIX additions
         "nguyen12_strict", "strict_pass_rate", "strict_solve_rate",
     )
     pre = _find_metric(chosen_d, *(key4 if want_4dec else keys))
     if pre is not None:
         return float(pre), "pre-computed key from " + chosen_p.name
+    # Compute from per-equation rows
     rows = list(_iter_rows(chosen_d))
     rows = [r for r in rows if _r2_from_row(r) is not None]
 
+    # FIX-NGUYEN-1: handle method-keyed top-level dict {"hypatiax":{eq:r2},"pysr":{eq:r2}}
     def _unpack_method_keyed(d):
         _KNOWN = {"results","equation_results","domain_results","equations","records",
                   "data","rows","items","entries","output","outputs","benchmark_results",
@@ -2534,6 +4262,7 @@ def _compute_nguyen12(results_dir, want_4dec):
     if not rows: rows = _unpack_method_keyed(chosen_d)
 
     if not rows:
+        # FIX: if no R2 rows in the seed-42 file, try every candidate file
         for p, d in pairs:
             candidate_rows = [r for r in _iter_rows(d) if _r2_from_row(r) is not None]
             if not candidate_rows: candidate_rows = _unpack_method_keyed(d)
@@ -2542,6 +4271,8 @@ def _compute_nguyen12(results_dir, want_4dec):
                 chosen_p = p
                 break
     if not rows:
+        # Diagnostic: dump all keys seen in the chosen file so the CI log
+        # shows exactly which field name the experiment is using.
         all_keys = set()
         for r in _iter_rows(chosen_d):
             if isinstance(r, dict):
@@ -2559,7 +4290,11 @@ def _compute_nguyen12(results_dir, want_4dec):
     label = "4dec" if want_4dec else "strict"
     return rate, "computed " + str(n_pass) + "/" + str(n_total) + " " + label + " from " + chosen_p.name
 
+# ── Computed metric: Feynman-30 solve rate ────────────────────────────────────
 def _compute_feynman30(results_dir, threshold):
+    # FIX-C3-AUDIT: prefer exp2_pca_4060/ (PCA-corrected 40/60 split) over the
+    # legacy exp2/ directory (random 80/20 split, 9/30 baseline).
+    # If exp2_pca_4060_summary.json exists, return its solve_rate directly.
     pca_summary = results_dir / "comparison_results" / "feynman-tests" / "exp2_pca_4060" / "exp2_pca_4060_summary.json"
     if pca_summary.exists():
         try:
@@ -2573,16 +4308,20 @@ def _compute_feynman30(results_dir, threshold):
         except Exception:
             pass  # fall through to full scan
     patterns = [
+        # FIX-C3-AUDIT: scan pca_4060 first so corrected results take priority
         str(results_dir / "comparison_results" / "feynman-tests" / "exp2_pca_4060" / "**" / "*.json"),
         str(results_dir / "comparison_results" / "feynman-tests" / "exp2" / "**" / "*.json"),
         str(results_dir / "comparison_results" / "feynman-tests" / "**" / "*.json"),
         str(results_dir / "comparison_results" / "**" / "*.json"),
+        # FIX: also check exp2_multi and feynman root
         str(results_dir / "comparison_results" / "feynman-tests" / "exp2_multi" / "**" / "*.json"),
         str(results_dir / "**" / "*feynman*.json"),
     ]
+    # FIX: expanded PREFERRED set to cover versioned names, spacing variants, etc.
     PREFERRED = {
         "hypatiax", "hybridv50", "hybrid50", "hybridsymbolic", "hybriddefi", "hypatia",
-        "hypatiaxv2", "hypatiaxv4", "hypatiaxv4", "hypatiaxv5",
+        # FIX additions
+        "hypatiaxv2", "hypatiaxv3", "hypatiaxv4", "hypatiaxv5",
         "hybrid", "hybridllm", "hybridnn", "hybridllmnn",
         "hybridsystem", "hybridmodel",
         "hypatiaxsystem", "hypatiaxmodel",
@@ -2595,8 +4334,10 @@ def _compute_feynman30(results_dir, threshold):
     n_total = n_pass = 0
     for _, data in pairs:
         for row in _iter_rows(data):
+            # FIX: check both 'method' and 'model' fields for the model name
             raw_method = row.get("method") or row.get("model") or row.get("system") or row.get("algorithm") or ""
             method = str(raw_method).lower().replace("-", "").replace("_", "").replace(" ", "")
+            # Accept row if method is empty (i.e. single-model result files) OR matches PREFERRED
             if method and not any(p in method for p in PREFERRED):
                 continue
             r2 = _r2_from_row(row)
@@ -2609,11 +4350,13 @@ def _compute_feynman30(results_dir, threshold):
         return None, "no HypatiaX R2 rows found in feynman exp2 result files"
     return n_pass / n_total, "computed " + str(n_pass) + "/" + str(n_total) + " at threshold=" + str(threshold)
 
+# ── Computed metric: EHD noise robustness ─────────────────────────────────────
 def _get_noise_level(row):
     """FIX: centralised noise-level extractor covering all known field names.
     Returns float or None. Handles both fractional (0.25) and percentage (25) values."""
     for key in (
         "noise_level", "noise", "sigma",
+        # FIX additions
         "noise_pct", "noise_percent", "noise_percentage",
         "noise_fraction", "noise_factor",
         "noise_std", "noise_sigma",
@@ -2625,6 +4368,8 @@ def _get_noise_level(row):
         if v is not None:
             try:
                 f = float(v)
+                # Convert percentage representation (>1 and plausible pct) to fraction
+                # only for explicitly-percentage keys to avoid misinterpreting sigma=5.0
                 if key in ("noise_pct", "noise_percent", "noise_percentage") and f > 1.0:
                     f = f / 100.0
                 return f
@@ -2637,12 +4382,14 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         str(results_dir / "comparison_results" / "feynman-tests" / "noise-sweep" / "**" / "*.json"),
         str(results_dir / "comparison_results" / "feynman-tests" / "**" / "*.json"),
         str(results_dir / "comparison_results" / "**" / "*.json"),
+        # FIX: also check suppB outputs
         str(results_dir / "**" / "*noise*sweep*.json"),
         str(results_dir / "**" / "*noise*.json"),
     ]
     PREFERRED = {
         "hypatiax", "hybridv50", "hybrid50", "hybridsymbolic", "hybriddefi", "hypatia",
-        "hypatiaxv2", "hypatiaxv4", "hypatiaxv4", "hypatiaxv5",
+        # FIX: mirrors Feynman PREFERRED expansion
+        "hypatiaxv2", "hypatiaxv3", "hypatiaxv4", "hypatiaxv5",
         "hybrid", "hybridllm", "hybridnn", "hybridllmnn",
         "hybridsystem", "hybridmodel", "hypatiaxsystem",
         "ours", "proposed",
@@ -2652,6 +4399,11 @@ def _compute_ehd_noise_robust(results_dir, threshold):
     if not pairs:
         return None, "no result JSONs found under comparison_results/feynman-tests/noise-sweep"
 
+    # FIX-NOISE-SCHEMA: flatten per_noise dict into rows with explicit noise_level.
+    # Schema A: {"method":"hypatiax","r2":0.9,"per_noise":{"1.0":{"r2":0.85,"rmse":0.1}}}
+    # Schema B: {"per_noise":{"1.0":{"hypatiax":{"r2":0.85},"pysr":{...}}}}
+    # Key insight: file-level "method" and "r2" must be propagated into per_noise rows
+    # because the per_noise entry often only carries the noise-specific delta metrics.
     flattened_rows = []
     for _, data in pairs:
         if not isinstance(data, dict):
@@ -2659,7 +4411,9 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         per_noise = data.get("per_noise")
         if not isinstance(per_noise, dict):
             continue
+        # Inherit file-level fields as defaults for every flattened row.
         _file_method = data.get("method") or data.get("model") or data.get("system") or ""
+        # FIX-FALSY-R2: use explicit None check — 'or' treats r2=0.0 as missing.
         _file_r2 = None
         for _r2k in ("r2", "r2_test", "r2_train", "r2_mean", "r2_median",
                      "mean_r2", "median_r2", "best_r2", "final_r2"):
@@ -2673,6 +4427,8 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         for _nk, _nv in per_noise.items():
             try: nl = float(_nk)
             except (TypeError, ValueError): continue
+            # Helper: emit one row with noise_level FORCE-ASSIGNED from the per_noise key.
+            # Never use setdefault for noise_level — an inner dict may carry a stale value.
             def _emit(d, _nl=nl, _fm=_file_method, _fr=_file_r2):
                 row = dict(d)
                 row["noise_level"] = _nl          # FORCE-ASSIGN — overrides any inner value
@@ -2685,6 +4441,17 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 _has_r2 = any(k in _nv for k in ("r2","rmse","R2","r2_test","r2_train","success_rate","solve_rate",
                                                     "success","r2_mean","r2_median","mean_r2","median_r2"))
                 if not _has_r2 and any(isinstance(v, dict) for v in _nv.values()):
+                    # FIX-METHOD-SUMMARY-SCHEMA (2026-06-01):
+                    # Actual suppB schema: per_noise["1.0000"] = {
+                    #   "method_summary": {
+                    #     "EnhancedHybridSystemDeFi (core)": {"mean_r2": 0.999, ...},
+                    #     "HybridSystemLLMNN all-domains (core)": {"mean_r2": 0.999, ...}
+                    #   },
+                    #   "catastrophic_failures": [...],  "per_equation": {...}
+                    # }
+                    # _iter_rows never reaches mean_r2/median_r2 inside method_summary
+                    # because _r2_from_row only checks "r2" keys, not "mean_r2".
+                    # Handle this schema explicitly before the _iter_rows fallback.
                     _ms_top = _nv.get("method_summary")
                     if isinstance(_ms_top, dict):
                         for _mname, _mval in _ms_top.items():
@@ -2697,16 +4464,32 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                                             try: _row["r2"] = float(_mval[_rk]); break
                                             except (TypeError, ValueError): pass
                                 _emit(_row)
+                    # Nested dict: equation-keyed OR method-keyed.
+                    # Recurse _iter_rows to collect all R²-bearing leaves at any depth,
+                    # then inject noise_level. Handles:
+                    #   method → {r2: ...}
+                    #   equation_name → {method_summary: ..., per_equation: {r2: ...}}
+                    # Walk the nested dict collecting every R²-bearing leaf.
+                    # Strategy: try _iter_rows first; if that finds nothing, do a
+                    # two-level targeted walk for the known per_equation/method_summary
+                    # schema: per_noise[nl][eq_name][per_equation][r2].
                     _nested = [r for r in _iter_rows(_nv) if _r2_from_row(r) is not None]
                     if not _nested:
+                        # Try one level deeper: treat each value as an equation entry
+                        # and recurse into it.
+                        # FIX-EHD-SCHEMA: also try the equation-keyed value directly as
+                        # a metric row (suppB schema: per_noise[nl][eq_name] = {r2:...}).
                         for _eq_key, _eq_val in _nv.items():
                             if isinstance(_eq_val, dict):
+                                # Direct metric row (suppB equation-keyed schema)
                                 if _r2_from_row(_eq_val) is not None:
                                     _nested.append(dict(_eq_val))
                                     continue
+                                # Check per_equation sub-key directly
                                 _pe = _eq_val.get("per_equation") or _eq_val.get("per_eq") or {}
                                 if isinstance(_pe, dict) and _r2_from_row(_pe) is not None:
                                     _nested.append(dict(_pe))
+                                # Also check method_summary for scalar r2 values
                                 _ms = _eq_val.get("method_summary") or {}
                                 if isinstance(_ms, dict):
                                     for _mname, _mval in _ms.items():
@@ -2714,12 +4497,20 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                                             _nested.append({"r2": float(_mval), "method": _mname})
                                         elif isinstance(_mval, dict) and _r2_from_row(_mval) is not None:
                                             _nested.append(dict(_mval))
+                                # Recurse one more level if still nothing
                                 if not _nested:
                                     _nested += [r for r in _iter_rows(_eq_val) if _r2_from_row(r) is not None]
                     if _nested:
                         for _nr in _nested:
                             _emit(_nr)
                     else:
+                        # Last resort: flatten each sub-dict.
+                        # FIX-EHD-SCHEMA: suppB files use equation-name-keyed dicts at the
+                        # per_noise[noise_level] level:
+                        #   per_noise["1.0"]["Allometric scaling law"] = {"r2": 0.87, ...}
+                        # The sub-dict IS the metric row; yield it directly.
+                        # If the sub-dict itself has no r2, recurse one level deeper
+                        # (handles nested per_equation / method_summary variants).
                         for _mn, _md in _nv.items():
                             if isinstance(_md, dict):
                                 if _r2_from_row(_md) is not None:
@@ -2733,12 +4524,14 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 else:
                     _emit(_nv)
             elif isinstance(_nv, (int, float)):
+                # Scalar value: treat as r2 directly
                 flattened_rows.append({"noise_level": nl, "r2": float(_nv), "method": _file_method})
             elif isinstance(_nv, list):
                 for item in _nv:
                     if isinstance(item, dict):
                         _emit(item)
 
+    # FIX-SCHEMA-C: handle single-equation/single-noise-level files with NO per_noise dict.
     import re as _re2
     _schemaC_skipped = []
     for _p, data in pairs:
@@ -2747,6 +4540,7 @@ def _compute_ehd_noise_robust(results_dir, threshold):
             continue
         if isinstance(data.get("per_noise"), dict):
             continue
+        # Extract file-level R²
         _fr2 = None
         for _k in ("r2", "r2_test", "r2_train", "r2_mean", "r2_median",
                    "mean_r2", "median_r2", "best_r2", "final_r2"):
@@ -2755,6 +4549,7 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 try: _fr2 = float(_v); break
                 except (TypeError, ValueError): pass
         if _fr2 is None:
+            # Try one level deeper in known container keys
             for _ck in ("results", "summary", "metrics", "output", "data"):
                 _sub = data.get(_ck)
                 if isinstance(_sub, dict):
@@ -2779,12 +4574,27 @@ def _compute_ehd_noise_robust(results_dir, threshold):
             continue
         _fm = data.get("method") or data.get("model") or data.get("system") or ""
         _fm_norm = _fm.lower().replace(" ", "").replace("-", "")
+        # Determine the noise level for this file.
+        # FIX-SCHEMA-C-NOISE: suppB files are one-file-per-equation-per-noise-level.
+        # The "noise_levels" key stores the FULL schedule (e.g. [0.0,0.05,0.1,0.5,1.0])
+        # as config metadata — NOT the noise level this specific file was run at.
+        # Taking max(noise_levels) assigned noise=1.0 to EVERY file, causing all rows
+        # to cluster at max_noise while the actual per-file noise level was unrecorded.
+        #
+        # Correct priority:
+        #   1. Scalar "noise_level" / "sigma" / "noise" field in the JSON body
+        #   2. Noise level extracted from the filename
+        #   3. "noise_levels" list ONLY when it has exactly one element (truly single-level)
+        #      OR cross_noise_summary keys (those are per-noise aggregates, not schedule)
+        # Never use max(noise_levels_list) when the list has >1 element.
         _file_nls = []
 
+        # Priority 1: scalar noise_level in JSON body
         _nl_scalar = _get_noise_level(data)
         if _nl_scalar is not None:
             _file_nls.append(_nl_scalar)
 
+        # Priority 2: filename-encoded noise level
         if not _file_nls:
             _m2 = _re2.search(
                 r"(?:noise|sigma|pct|level)[_-]?(\d+(?:[p.]\d+)?)(?:pct|percent)?",
@@ -2799,6 +4609,7 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 except ValueError:
                     pass
 
+        # Priority 3a: single-element noise_levels list (unambiguous — file IS that level)
         if not _file_nls:
             _nlv = data.get("noise_levels") or data.get("noise_schedule") or data.get("sigma_levels")
             if isinstance(_nlv, list) and len(_nlv) == 1:
@@ -2808,6 +4619,7 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 try: _file_nls.append(float(_nlv))
                 except (TypeError, ValueError): pass
 
+        # Priority 3b: cross_noise_summary keys (per-noise aggregate entries)
         if not _file_nls:
             _cns = data.get("cross_noise_summary")
             if isinstance(_cns, dict):
@@ -2831,10 +4643,16 @@ def _compute_ehd_noise_robust(results_dir, threshold):
 
     all_rows = flattened_rows + generic_rows
 
+    # Auto-detect max noise level using centralised extractor.
+    # FIX-NOISE-LEVELS-KEY: suppB files store the noise schedule as a top-level
+    # "noise_levels" list (e.g. [0.0, 0.5, 1.0, 5.0, 10.0]) and as keys of the
+    # "per_noise" dict — NOT as a per-row "noise_level" scalar field.
+    # Seed noise_vals from those file-level sources first so we never miss them.
     noise_vals = set()
     for _, data in pairs:
         if not isinstance(data, dict):
             continue
+        # Source 1: top-level "noise_levels" list / scalar
         for _nlkey in ("noise_levels", "noise_level", "noise_schedule",
                        "sigma_levels", "sigma_list", "sigmas",
                        "noise_fractions", "noise_values", "levels"):
@@ -2848,32 +4666,42 @@ def _compute_ehd_noise_robust(results_dir, threshold):
             else:
                 try: noise_vals.add(float(_nlv))
                 except (TypeError, ValueError): pass
+        # Source 2: keys of the "per_noise" dict are noise-level strings
         _pn = data.get("per_noise")
         if isinstance(_pn, dict):
             for _k in _pn:
                 try: noise_vals.add(float(_k))
                 except (TypeError, ValueError): pass
+    # Source 3: row-level noise_level fields (original logic)
     for row in all_rows:
         nl = _get_noise_level(row)
         if nl is not None:
             noise_vals.add(nl)
     if not noise_vals:
+        # FIX: try extracting noise level from filenames (e.g. noise_sweep_0.25.json,
+        # noise_0p5.json, sigma_10pct.json) — a common pattern when the noise level
+        # is baked into the filename rather than stored in the JSON body.
         import re as _re
         for p, data in pairs:
+            # Match patterns like: _0.25_, _0p25_, _25pct_, _noise25_, _sigma0.5_
             m = _re.search("(?:noise|sigma|pct|level)[_\\-]?(\\d+(?:[p\\.]\\d+)?)(?:pct|percent)?", p.stem, _re.IGNORECASE)
             if m:
                 raw = m.group(1).replace("p", ".")
                 try:
                     nl = float(raw)
+                    # If looks like a percentage (> 1 and stem has 'pct'/'percent'), convert
                     if nl > 1 and ("pct" in p.stem.lower() or "percent" in p.stem.lower()):
                         nl = nl / 100.0
                     noise_vals.add(nl)
+                    # Tag all rows in this file with the filename-derived noise level
                     for row in all_rows:
+                        # Only tag rows that came from this file (approximate — tag all if single file)
                         if "_noise_level_from_filename" not in row:
                             row["_noise_level_from_filename"] = nl
                 except ValueError:
                     pass
     if not noise_vals:
+        # Diagnostic: dump keys seen in the noise-sweep files
         all_keys_seen = set()
         for _, d in pairs[:5]:
             for row in _iter_rows(d):
@@ -2884,7 +4712,8 @@ def _compute_ehd_noise_robust(results_dir, threshold):
     max_noise = max(noise_vals)
     n_total = n_robust = 0
     for row in all_rows:
-        nl = _get_noise_level(row)
+        nl = _get_noise_level(row)       # FIX: use helper (was inline triple-or — missed extra keys)
+        # FIX: also accept the filename-derived noise level tag added above
         if nl is None:
             nl = row.get("_noise_level_from_filename")
         if nl is None:
@@ -2905,6 +4734,8 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         if r2 >= threshold:
             n_robust += 1
     if n_total == 0:
+        # FIX-DIAGNOSTIC: use explicit None check so noise_level=0.0 rows are not hidden.
+        # Also report flattened row count and all noise values seen in rows for CI debugging.
         def _nl_matches_max(r, mx=max_noise):
             _v = r.get("noise_level")
             if _v is None: return False
@@ -2923,12 +4754,14 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         return None, "no rows at max noise=" + str(max_noise) + " found" + sample_info
     return n_robust / n_total, "computed " + str(n_robust) + "/" + str(n_total) + " at max_noise=" + str(max_noise)
 
+# ── Computed metric: hybrid all-domains coverage ──────────────────────────────
 def _compute_all_domains_coverage(results_dir, n_expected):
     patterns = [
         str(results_dir / "hybrid_llm_nn" / "all_domains" / "**" / "*.json"),
         str(results_dir / "hybrid_llm_nn" / "**" / "*.json"),
         str(results_dir / "**" / "hybrid_llm_nn*.json"),
         str(results_dir / "**" / "hybrid*all*domain*.json"),
+        # FIX: also scan the hybrid_pysr and llm_guided trees, plus consolidated files
         str(results_dir / "hybrid_pysr" / "all_domains" / "**" / "*.json"),
         str(results_dir / "llm_guided" / "all_domains" / "**" / "*.json"),
         str(results_dir / "**" / "consolidated_hybrid*.json"),
@@ -2942,9 +4775,11 @@ def _compute_all_domains_coverage(results_dir, n_expected):
     covered = set()
     for _, data in pairs:
         for row in _iter_rows(data):
+            # FIX: expanded domain field alias list
             domain = (
                 row.get("domain") or row.get("domain_id") or
                 row.get("benchmark_domain") or row.get("domain_name") or
+                # FIX additions
                 row.get("experiment_domain") or row.get("category") or
                 row.get("physics_domain") or row.get("subject") or
                 row.get("field") or row.get("task_domain") or
@@ -2952,6 +4787,8 @@ def _compute_all_domains_coverage(results_dir, n_expected):
                 row.get("discipline") or row.get("area") or ""
             )
             r2 = _r2_from_row(row)
+            # FIX: count a domain as covered if R², status, or decision present.
+            # FIX-HYBRID-DECISION: hybrid_all_domains uses "decision" field.
             status = str(row.get("status", "")).lower()
             completed = row.get("completed") or row.get("success") or row.get("done")
             decision = row.get("decision") or row.get("decision_reason") or ""
@@ -2963,6 +4800,7 @@ def _compute_all_domains_coverage(results_dir, n_expected):
             )
             if domain and has_result:
                 covered.add(str(domain).lower().strip())
+        # FIX: scan top-level dict for domain+decision (hybrid_all_domains schema).
         if isinstance(data, dict):
             top_domain = (
                 data.get("domain") or data.get("domain_id") or
@@ -2981,6 +4819,7 @@ def _compute_all_domains_coverage(results_dir, n_expected):
                 )
                 if has_any_result:
                     covered.add(str(top_domain).lower().strip())
+    # FIX: also check for a top-level "domains_completed" / "completed_domains" list
     for _, data in pairs:
         if isinstance(data, dict):
             for key in ("domains_completed", "completed_domains", "covered_domains",
@@ -2991,6 +4830,7 @@ def _compute_all_domains_coverage(results_dir, n_expected):
                         if isinstance(d, str) and d.strip():
                             covered.add(d.lower().strip())
                 elif isinstance(v, dict):
+                    # {"physics": true, "chemistry": false, ...}
                     for d, done in v.items():
                         if done and isinstance(d, str) and d.strip():
                             covered.add(d.lower().strip())
@@ -2998,6 +4838,8 @@ def _compute_all_domains_coverage(results_dir, n_expected):
     denom = n_expected if n_expected > 0 else 10
     rate = n_covered / denom
     if n_covered == 0 and pairs:
+        # Diagnostic: show a sample of actual keys seen in the first file so
+        # the CI log reveals which field name to add to the domain alias list.
         sample_keys = set()
         for _, d in pairs[:3]:
             for row in _iter_rows(d):
@@ -3008,6 +4850,7 @@ def _compute_all_domains_coverage(results_dir, n_expected):
         key_hint = ""
     return rate, "computed " + str(n_covered) + "/" + str(denom) + " domains: " + str(sorted(covered)) + key_hint
 
+# ── Audit loop ────────────────────────────────────────────────────────────────
 findings = []
 
 TOLERANCE         = 0.01
@@ -3031,6 +4874,7 @@ for claim in targets:
                          "detail": "no 'paper_value' field in paper_targets.json entry"})
         continue
 
+    # ── Dispatch to computed-metric handlers ──────────────────────────────────
     if exp in ("exp3", "exp3b") and metric in (
             "nguyen12_solve_rate_4dec", "nguyen12_solve_rate_strict",
             "success_rate_4dec",        "success_rate_strict"):
@@ -3047,6 +4891,7 @@ for claim in targets:
         got, src_desc = _compute_all_domains_coverage(RESULTS, HYBRID_N_DOMAINS)
 
     else:
+        # General key-lookup path
         got_val, src_path = _scan_result(exp, metric, subdir)
         if got_val is None:
             findings.append({"exp": exp, "metric": metric, "status": "MISSING",
@@ -3062,6 +4907,7 @@ for claim in targets:
         findings.append({"exp": exp, "metric": metric, "status": st, "detail": detail})
         continue
 
+    # ── Evaluate computed result ───────────────────────────────────────────────
     if got is None:
         findings.append({"exp": exp, "metric": metric, "status": "MISSING",
                          "detail": src_desc})
@@ -3069,6 +4915,11 @@ for claim in targets:
         expected = float(paper)
         compare_mode = claim.get("compare", "exact")  # "exact" | "gte" | "lte"
 
+        # FIX: auto-infer compare mode for metrics whose paper_value is a lower bound.
+        # feynman30_solve_rate: paper says "≥9/30 solved" = lower bound → gte
+        # all_domains_coverage: paper says "10 domains must all complete" → exact count
+        # ehd_noise_robust_100pct: paper_value is a minimum robustness threshold → gte
+        # nguyen12 rates: exact comparison (paper states the measured rate)
         if compare_mode == "exact":
             lower_bound_metrics = {
                 "feynman30_solve_rate",
@@ -3077,12 +4928,15 @@ for claim in targets:
             if metric in lower_bound_metrics:
                 compare_mode = "gte"
 
+        # all_domains_coverage: paper_value is a raw count (10), got is a rate (0.0-1.0).
+        # FIX: normalise paper_value to a rate when it is > 1 for this metric.
         if metric == "all_domains_coverage" and expected > 1.0:
             expected_rate = expected / max(HYBRID_N_DOMAINS, 1)
         else:
             expected_rate = expected
 
         if compare_mode == "gte":
+            # PASS when got >= paper_value (paper states a lower bound, not exact target)
             ok = got >= expected_rate - max(tol * max(abs(expected_rate), 1e-9), 1e-9)
         elif compare_mode == "lte":
             ok = got <= expected_rate + max(tol * max(abs(expected_rate), 1e-9), 1e-9)
@@ -3095,6 +4949,7 @@ for claim in targets:
             detail += f" | {note}"
         findings.append({"exp": exp, "metric": metric, "status": st, "detail": detail})
 
+# ── Print summary ─────────────────────────────────────────────────────────────
 n_pass = sum(1 for f in findings if f["status"] == "PASS")
 n_warn = sum(1 for f in findings if f["status"] == "WARN")
 n_fail = sum(1 for f in findings if f["status"] == "FAIL")
@@ -3116,6 +4971,7 @@ if bad:
         print("    [" + f["status"] + "]  exp=" + str(f["exp"]) + "  metric=" + str(f["metric"]))
         print("             " + str(f["detail"]))
 
+# Nguyen-12 caveat — always print
 if any(f["exp"] in ("exp3", "exp3b") for f in findings):
     print()
     print("  ⚠  Nguyen-12 dual-threshold caveat:")
@@ -3123,10 +4979,12 @@ if any(f["exp"] in ("exp3", "exp3b") for f in findings):
     print("       The earlier 4/12 (33.3%) strict-threshold figure was retracted in the")
     print("       caption as having no basis in the current data — do not reintroduce it.")
 
+# ── Write findings JSON ───────────────────────────────────────────────────────
 FINDINGS_F.parent.mkdir(parents=True, exist_ok=True)
 FINDINGS_F.write_text(json.dumps(findings, indent=2))
 print(f"\n  Findings → {FINDINGS_F}")
 
+# ── Exit code ─────────────────────────────────────────────────────────────────
 fatal_statuses = {"FAIL", "MISSING"}
 if FAIL_ON_WARN:
     fatal_statuses.add("WARN")
@@ -3143,6 +5001,11 @@ else:
 PYEOF
 '
 
+# ── STEP 16: audit_setup ─────────────────────────────────────────────────────
+# Copies main paper .tex and supplement files into notebooks/ so all
+# subsequent notebook steps can read them from a single known location.
+# Mirrors the audit-setup step (Phase 4-B) exactly.
+# Sources searched: paper/, repo root, paper/tables/, logs/
 run audit_setup "Copy .tex source files into notebooks/ for audit notebooks" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3163,6 +5026,7 @@ search_dirs = [
 copied  = []
 missing = []
 
+# Main paper .tex
 main = next(
     (f for d in search_dirs
        for pat in ("jmlr-hypatiax*.tex", "jmlr_paper*.tex")
@@ -3176,6 +5040,7 @@ if main:
 else:
     print("  [WARN] main paper .tex not found — notebooks may not locate paper content")
 
+# Supplement files
 for name in ("supp_routing_improvements.tex", "supp_benchmark_report.tex"):
     src = next((d / name for d in search_dirs if (d / name).is_file()), None)
     if src:
@@ -3192,6 +5057,11 @@ if missing:
 PYEOF
 '
 
+# ── STEP 17: audit_nb01 ───────────────────────────────────────────────────────
+# NB-01 · Citation & Bibliography Audit
+# Catches: koza1994genetic missing from bibliography (lines 327, 1888);
+#          cranmer2023pysr/cranmer2023interp alias collision (same arXiv);
+#          4 uncited bibitems.
 run audit_nb01 "NB-01: Citation & Bibliography Audit" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3203,6 +5073,12 @@ run audit_nb01 "NB-01: Citation & Bibliography Audit" bash -c '
   echo "=== NB-01 done ==="
 '
 
+# ── STEP 18: audit_nb02 ───────────────────────────────────────────────────────
+# NB-02 · Cross-Reference & Label Integrity
+# Catches: \label inside \item (sec:r2_bugfix, thm:five_system_hierarchy) →
+#          garbled \ref output; duplicate section labels
+#          sec:llm_limitations/sec:llm_domain; Supp A references Section 7.3
+#          but main paper has Component 3 at Section 7.4.
 run audit_nb02 "NB-02: Cross-Reference & Label Integrity" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3214,6 +5090,9 @@ run audit_nb02 "NB-02: Cross-Reference & Label Integrity" bash -c '
   echo "=== NB-02 done ==="
 '
 
+# ── STEP 19: audit_nb03 ───────────────────────────────────────────────────────
+# NB-03 · Section Structure & Numbering
+# Catches: section structure and numbering consistency issues across .tex files.
 run audit_nb03 "NB-03: Section Structure & Numbering" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3225,6 +5104,13 @@ run audit_nb03 "NB-03: Section Structure & Numbering" bash -c '
   echo "=== NB-03 done ==="
 '
 
+# ── STEP 20: audit_nb04 ───────────────────────────────────────────────────────
+# NB-04 · Numerical Consistency & Abstract Claims
+# Catches: abstract claim presence (89.2%, 62.2%, +27pp, +83.8pp, 1.73×,
+#          68/74, 11/12, 9/30, +38.1pp); 70 vs 71 task discrepancy (body
+#          says "71 cases", table caption says "70 tasks"); "five-stage routing"
+#          vs "Five-Layer Architecture" terminology inconsistency; timing
+#          arithmetic cross-check (6.8s, 1.7s, 3.0s, 2.7s, 1.73×, 11.4s).
 run audit_nb04 "NB-04: Numerical Consistency & Abstract Claims" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3236,6 +5122,13 @@ run audit_nb04 "NB-04: Numerical Consistency & Abstract Claims" bash -c '
   echo "=== NB-04 done ==="
 '
 
+# ── STEP 21: audit_nb05 ───────────────────────────────────────────────────────
+# NB-05 · Figure Files & Image Dependencies
+# Catches: all 5 \includegraphics targets checked on disk — 4 MISSING
+#          (hypatiaX_three_systems, fig18_r2_heatmap_improved,
+#           fig09_r2_heatmap_regimes, fig1_seed_sweep);
+#          \fbox placeholder in Section 7.1 (fig:architecture);
+#          figure environment label/caption completeness.
 run audit_nb05 "NB-05: Figure Files & Image Dependencies" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3247,6 +5140,32 @@ run audit_nb05 "NB-05: Figure Files & Image Dependencies" bash -c '
   echo "=== NB-05 done ==="
 '
 
+# ── STEP 22a: audit_nb06_fixc3_disclosure (FIX-C3 Action A) ─────────────────
+# NB-06 · Feynman Split Protocol Disclosure (FIX-C3 §6.4 / §10.7)
+#
+# WHY THIS STEP EXISTS
+# The Feynman benchmark (§10.7) calls run_comparative_suite_benchmark_v2.py
+# without --extrap, so the NN method's run() invokes:
+#
+#   X_train, X_test, y_train, y_test = train_test_split(
+#       X, y, test_size=0.2, random_state=42          ← random 80/20
+#   )
+#
+# All DeFi benchmarks (§10.2–10.4) use the PCA-directed 40/60 extrapolation
+# split (build_extrap_split, extrap_train_frac=0.6, extrap_multiplier=2.0).
+# These are different, *easier* vs harder splits; claiming Feynman results are
+# directly comparable to DeFi results is the substantive scientific issue
+# flagged as FIX-C3 in the audit (NB-06).
+#
+# ACTION A (this step): write a machine-readable disclosure record into
+#   ${RESULTS_DIR}/fixc3_split_disclosure.json
+# that documents the mismatch and passes only when:
+#   (1) the disclosure JSON exists (confirming this step ran), and
+#   (2) the split protocol difference is correctly recorded in §10.7 result files.
+#
+# The downstream paper-audit (audit_paper) should reference
+# fixc3_split_disclosure.json to assert the disclosure is present before
+# publishing the 9/30 result.
 run audit_nb06_fixc3_disclosure \
     "NB-06 FIX-C3 Action A: Disclose Feynman random-80/20 vs DeFi PCA-40/60 split mismatch (§10.7)" \
     bash -c '
@@ -3261,6 +5180,7 @@ from pathlib import Path
 RESULTS = Path(os.environ.get("RESULTS_DIR", "hypatiax/data/results"))
 REPO    = Path(os.environ.get("REPO_ROOT",   "."))
 
+# ── Verify the split difference is documented in code ────────────────────────
 SCRIPT = REPO / "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
 findings = []
 all_ok   = True
@@ -3273,6 +5193,7 @@ def record(label, ok, detail=""):
     if not ok:
         all_ok = False
 
+# (1) Confirm train_test_split(test_size=0.2) exists in the script (baseline check)
 if SCRIPT.exists():
     src = SCRIPT.read_text(errors="replace")
     has_random_split = "train_test_split" in src and "test_size=0.2" in src
@@ -3281,15 +5202,20 @@ if SCRIPT.exists():
         has_random_split,
         f"file: {SCRIPT.name}"
     )
+    # (2) Confirm build_extrap_split (PCA 40/60 path) also exists in the script
     has_pca_split = "build_extrap_split" in src
     record(
         "run_comparative_suite_benchmark_v2.py contains build_extrap_split (PCA 40/60 path)",
         has_pca_split,
         "PCA-directed split used by DeFi benchmarks"
     )
+    # (3) Confirm the random split is inside the NN method (not the Feynman outer loop)
+    # The NN .run() method should be the site of the random split — verify by checking
+    # proximity of "test_size=0.2" to the class or def run pattern.
     lines = src.splitlines()
     split_lines = [i+1 for i, l in enumerate(lines) if "test_size=0.2" in l]
     run_method_lines = [i+1 for i, l in enumerate(lines) if "def run(" in l]
+    # test_size=0.2 should appear within 200 lines of a "def run(" definition
     proximate = any(
         any(abs(sl - rl) <= 200 for rl in run_method_lines)
         for sl in split_lines
@@ -3302,6 +5228,8 @@ if SCRIPT.exists():
 else:
     record("run_comparative_suite_benchmark_v2.py found", False, str(SCRIPT))
 
+# (4) Confirm exp2_feynman result files do NOT carry extrap_multiplier metadata
+#     (which would indicate the PCA split was accidentally applied).
 exp2_files = sorted(glob.glob(
     str(RESULTS / "comparison_results/feynman-tests/exp2/**/*.json"), recursive=True
 ))
@@ -3309,6 +5237,7 @@ feynman_extrap_contamination = 0
 for fp in exp2_files:
     try:
         data = json.loads(Path(fp).read_text())
+        # extrap_multiplier in the result means the extrap/PCA path ran — unexpected for exp2
         if isinstance(data, dict) and data.get("extrap_multiplier") is not None:
             feynman_extrap_contamination += 1
     except Exception:
@@ -3326,6 +5255,7 @@ else:
         "no files in comparison_results/feynman-tests/exp2/ — run exp2_feynman first"
     )
 
+# ── Write disclosure record ───────────────────────────────────────────────────
 disclosure = {
     "fixc3_action": "A",
     "fixc3_note": (
@@ -3373,6 +5303,35 @@ PYEOF
   echo "=== NB-06 FIX-C3 Action A done ==="
 '
 
+# ── STEP 22b: audit_nb06_fixc3_rerun (FIX-C3 Action B) ──────────────────────
+# NB-06 · Feynman Rerun with PCA 40/60 Split (FIX-C3 §10.7 corrected result)
+#
+# WHY THIS STEP EXISTS
+# FIX-C3 Action B requires rerunning the Feynman benchmark (§10.7) with the
+# same PCA-directed 40/60 extrapolation split used by all DeFi benchmarks
+# (§10.2–10.4, §6.4), so the 9/30 result can be revised to a number that is
+# scientifically comparable.
+#
+# HOW IT WORKS
+# Invokes run_comparative_suite_benchmark_v2.py with:
+#   --extrap                      activate build_extrap_split (PCA path)
+#   --extrap-train-frac 0.6       40% held-out far region (matches §6.4 "40/60")
+#   --extrap-multiplier 2.0       OOD multiplier (paper value, same as DeFi)
+# per domain (same domain loop as exp2_feynman), writing to:
+#   comparison_results/feynman-tests/exp2_fixc3/
+#
+# The solve-rate computed from these outputs is the corrected §10.7 figure that
+# replaces "9/30" in a revised paper submission.
+#
+# OUTPUT FILES
+#   ${RESULTS_DIR}/comparison_results/feynman-tests/exp2_fixc3/
+#       protocol_core_fixc3_<domain>_<TS>.json      ← per-domain results
+#   ${RESULTS_DIR}/fixc3_rerun_summary.json         ← solve-rate summary
+#
+# RELATIONSHIP TO audit_nb06_fixc3_disclosure (Action A)
+#   Action A must run first (creates fixc3_split_disclosure.json).
+#   Action B reads that disclosure to confirm the mismatch was logged before
+#   writing the corrected result.  Both must PASS for FIX-C3 to be resolved.
 run audit_nb06_fixc3_rerun \
     "NB-06 FIX-C3 Action B: Rerun Feynman with PCA 40/60 split and report revised 9/30 result (§10.7)" \
     bash -c '
@@ -3380,6 +5339,7 @@ run audit_nb06_fixc3_rerun \
   cd "'"${REPO_ROOT}"'"
   echo "=== NB-06 FIX-C3 Action B: Feynman PCA 40/60 Rerun ==="
 
+  # ── Prerequisite: Action A disclosure must exist ──────────────────────────
   DISCLOSURE="'"${RESULTS_DIR}"'"/fixc3_split_disclosure.json
   if [[ ! -f "${DISCLOSURE}" ]]; then
     echo "ERROR: fixc3_split_disclosure.json not found — run audit_nb06_fixc3_disclosure first."
@@ -3389,6 +5349,10 @@ run audit_nb06_fixc3_rerun \
 
   mkdir -p "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3
 
+  # ── Per-domain rerun with PCA 40/60 split ────────────────────────────────
+  # Same domain list as exp2_feynman; same hyperparameters; only split differs.
+  # --extrap-train-frac 0.6 → 60% train, 40% far-region (the §6.4 DeFi protocol)
+  # --extrap-multiplier 2.0 → matches DeFi benchmark and paper value
   for DOMAIN_ID in '"${FEYNMAN_DOMAINS}"'; do
     echo "=== fixc3_rerun: domain=${DOMAIN_ID} (PCA 40/60 split) ==="
     FEYNMAN_SAMPLES='"${FEYNMAN_SAMPLES}"' \
@@ -3417,6 +5381,7 @@ run audit_nb06_fixc3_rerun \
     || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
   done
 
+  # ── Compute and report the corrected solve rate ───────────────────────────
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log
 import glob, json, os, sys
 from pathlib import Path
@@ -3437,6 +5402,7 @@ if not result_files:
     print(f"\n  WARNING: No fixc3 result files found in {FIXC3_DIR}")
     print("  The rerun may not have produced output yet (Julia/PySR timeout or crash).")
     print("  Re-run this step after confirming experiment scripts are functional.")
+    # Write a stub summary so Action A disclosure is not blocked
     summary = {
         "fixc3_action": "B",
         "status": "INCOMPLETE",
@@ -3548,6 +5514,7 @@ PYEOF
   echo "=== NB-06 FIX-C3 Action B done ==="
 '
 
+# ── STEP 22: audit_guard ──────────────────────────────────────────────────────
 run audit_guard "Guard: evaluate trigger conditions (slot=12, run_full, success)" bash -c '
   set -euo pipefail
   python3 - <<'"'"'PYEOF'"'"'
@@ -3584,6 +5551,7 @@ open(gh_out, "a").write("should_run=true\n")
 PYEOF
 '
 
+# ── STEP 23: audit_print_verify ───────────────────────────────────────────────
 run audit_print_verify "Print verify summary from logs/verify_report.json" bash -c '
   set -euo pipefail
   if [[ ! -f logs/verify_report.json ]]; then
@@ -3610,6 +5578,7 @@ if n_fail:
 PYEOF
 '
 
+# ── STEP 24: audit_print_findings ─────────────────────────────────────────────
 run audit_print_findings "Print audit summary from logs/paper_audit_findings.json" bash -c '
   set -euo pipefail
   if [[ ! -f logs/paper_audit_findings.json ]]; then
@@ -3638,6 +5607,11 @@ if bad:
 PYEOF
 '
 
+# ── STEP 25: audit_figures_tables ─────────────────────────────────────────────
+# FIX NO-TABLES-FIGURES: this step is now a no-op passthrough. Table/figure
+# generation has been removed from the pipeline entirely, so there is nothing
+# to validate presence of; it always reports all_ok=true so downstream steps
+# (audit_final_gate) that read figures_tables_report.json keep working.
 run audit_figures_tables "No-op: table/figure generation disabled pipeline-wide" bash -c '
   set -euo pipefail
   mkdir -p logs
@@ -3657,6 +5631,7 @@ print("  Report -> " + str(out))
 PYEOF
 '
 
+# ── STEP 26: audit_final_gate ─────────────────────────────────────────────────
 run audit_final_gate "Final gate: aggregate all audit job outcomes" bash -c '
   set -euo pipefail
   python3 - <<'"'"'PYEOF'"'"'
@@ -3687,6 +5662,7 @@ sys.exit(0 if overall_ok else 1)
 PYEOF
 '
 
+# ── Final summary ─────────────────────────────────────────────────────────────
 echo ""
 log "============================================================"
 log " HypatiaX reproduction pipeline COMPLETE"
@@ -3701,6 +5677,7 @@ echo ""
 echo "  Cross-reference with paper:"
 echo "    Table 9          <- exp1              (core extrapolation)"
 echo "    Table 11         <- exp1b             (DeFi routing)"
+echo "    (n/a, new)       <- exp1c             (v4 validation-selected hybrid -- paired vs exp1b/v3c baseline, ADD-exp1c)"
 echo "    Table 17         <- exp2_feynman      (Feynman noisy)"
 echo "    Table 19         <- exp2              (five-system comparison)"
 echo "    Table 28         <- suppB             (noise sweep)"
@@ -3713,6 +5690,11 @@ echo ""
 echo "  Instability outputs (STEP 4a, numerical only — figure generation disabled):"
 echo "    ${RESULTS_DIR}/figures/instability_analysis.csv"
 echo "    ${RESULTS_DIR}/figures/instability_extrapolation.csv  (Stage 2, if benchmark JSON found)"
+echo ""
+echo "  exp1c / v4 outputs (ADD-exp1c, paired comparison vs frozen exp1b/v3c baseline):"
+echo "    ${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4/"
+echo "    ${RESULTS_DIR}/comparison_results/noise-noiseless/exp1c_v4/hypatiax_defi_benchmark_v4_pooled_seed_report.json"
+echo "        (pooled report present only when all five seeds ran in one invocation)"
 echo ""
 echo "  Paper audit outputs (STEPs 14-21):"
 echo "    ${RESULTS_DIR}/qualify_run.log          (numerical spot-check + 5-dim gate)"
