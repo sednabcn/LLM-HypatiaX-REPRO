@@ -2609,6 +2609,29 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
           else
+            # ISOLATION GUARD (exp1b_pca): mirrors the guard already present
+            # for exp1b/exp1_ablation/exp3b/suppB/suppB_sc in the shared
+            # shard-runner job. exp1b_pca is sharded the same way exp1b is
+            # (one portfolio_seedNN slice per shard, writing into a shared
+            # destination — 15_pca/ here instead of 15/) but this job never
+            # checked for a silently overwritten committed file before
+            # pushing. Fail loudly instead of pushing over prior results.
+            OVERWRITTEN=$(git diff --cached --name-status \
+              | grep '^M' \
+              | awk '{print $2}' \
+              | grep -v '_checkpoint_shard[0-9].*\.json$' \
+              || true)
+            if [[ -n "$OVERWRITTEN" ]]; then
+              echo "::error::ISOLATION GUARD FAILED — exp1b_pca is overwriting "
+              echo "  committed result file(s); the per-shard isolation suffix should have "
+              echo "  prevented this:"
+              echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+              echo "  Check that SHARD_INDEX is actually set and non-empty for this shard,"
+              echo "  and that the rename/rescan step in run_all.sh's exp1b_pca block ran"
+              echo "  before this commit step."
+              exit 1
+            fi
+
             git stash --include-untracked --quiet || true
             PUSHED=false
             for i in 1 2 3; do
@@ -2624,6 +2647,21 @@ jobs:
                 echo "Results already present upstream."
                 PUSHED=true
                 break
+              fi
+
+              # Re-check after the pull-rebase retry too — the collision may
+              # only appear once this shard's result lands next to what a
+              # concurrently-finishing shard just pushed.
+              OVERWRITTEN=$(git diff --cached --name-status \
+                | grep '^M' \
+                | awk '{print $2}' \
+                | grep -v '_checkpoint_shard[0-9].*\.json$' \
+                || true)
+              if [[ -n "$OVERWRITTEN" ]]; then
+                echo "::error::ISOLATION GUARD FAILED — exp1b_pca is overwriting "
+                echo "  committed result file(s) after retry $i:"
+                echo "$OVERWRITTEN" | while read -r f; do echo "    $f"; done
+                exit 1
               fi
 
               git commit -m "ci: exp1b_pca results (DeFi portfolio seed sweep, PCA 40/60) [skip ci]" || true
