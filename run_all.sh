@@ -2,22 +2,11 @@
 
 set -euo pipefail
 
-# ── Configuration ─────────────────────────────────────────────────────────────
 REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 _RESULTS_RAW="${RESULTS_DIR:-${REPO_ROOT}/hypatiax/data/results}"
 RESULTS_DIR="$(cd "$(dirname "${_RESULTS_RAW}")" 2>/dev/null && pwd)/$(basename "${_RESULTS_RAW}")" \
   || RESULTS_DIR="${REPO_ROOT}/hypatiax/data/results"
 export RESULTS_DIR
-
-# FIX-OUT_BASE-UNDEFINED: some downstream scripts/steps (e.g. the CI
-# workflow's diagnostic solve-rate report) read OUT_BASE directly from the
-# environment rather than RESULTS_DIR. Default it to RESULTS_DIR here so it
-# is always defined and consistent with RESULTS_DIR, rather than silently
-# expanding to an empty string under `set -u` and producing paths like
-# /comparison_results/... instead of a path rooted inside the repo checkout.
-OUT_BASE="${OUT_BASE:-${RESULTS_DIR}}"
-export OUT_BASE
-mkdir -p "${OUT_BASE}"
 EXPERIMENTS_DIR="${EXPERIMENTS_DIR:-${REPO_ROOT}/hypatiax/experiments/benchmarks}"
 GENERATION_DIR="${GENERATION_DIR:-${REPO_ROOT}/hypatiax/core/generation}"
 CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
@@ -36,9 +25,6 @@ export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
 export LLM_METHOD_TIMEOUT="${LLM_METHOD_TIMEOUT:-120}"
-# PYSR_FIT_WALL_TIMEOUT: hard per-fit wall-clock cap passed to DiscoveryConfig.
-# PYSR_FIT_GRACE_SECS:   extra grace seconds before forceful kill after timeout.
-# Both must be exported so worker sub-processes and Python scripts inherit them.
 export PYSR_FIT_WALL_TIMEOUT="${PYSR_FIT_WALL_TIMEOUT:-1200}"
 export PYSR_FIT_GRACE_SECS="${PYSR_FIT_GRACE_SECS:-120}"
 
@@ -59,7 +45,6 @@ HYBRID_ALL_DOMAINS_EXPECTED="biology,chemistry,economics,electromagnetism,fluid_
 
 FEYNMAN_DOMAINS="feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
 
-# ── CLI parsing ───────────────────────────────────────────────────────────────
 ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
@@ -71,8 +56,6 @@ while [[ $# -gt 0 ]]; do
     --step)    ONLY_STEP="$2"; shift 2 ;;
     --from)    FROM_STEP="$2"; shift 2 ;;
     --dry-run) DRY_RUN=true; shift ;;
-    # Bare step name: "bash run_all.sh audit_paper" treated as "--step audit_paper".
-    # Validated against _STEP_ORDER so typos still produce a clear error.
     *)
       BARE="$1"; shift
       if [[ " $_STEP_ORDER " == *" ${BARE} "* ]]; then
@@ -87,7 +70,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[run_all]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
@@ -97,9 +79,6 @@ run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
   if [[ -n "$FROM_STEP" ]]; then
-    # Scan the ordered step list; once FROM_STEP is reached flip skip→false.
-    # Break as soon as we hit the current step.  If skip is still true at that
-    # point the current step precedes FROM_STEP → skip it.
     local skip=true
     for s in $_STEP_ORDER; do
       [[ "$s" == "$FROM_STEP" ]] && skip=false
@@ -118,7 +97,6 @@ run() {
 }
 
 
-# ── STEP 0: env_check ─────────────────────────────────────────────────────────
 run env_check "Verify environment (Python, Julia/PySR, API key, directories)" bash -c '
   set -e
   echo "Python: $(python3 --version)"
@@ -166,15 +144,6 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
     echo "WARNING: repro.yaml not found at ${REPRO_CFG} -- using env defaults"
   fi
   echo "Results dir: '"${RESULTS_DIR}"'"
-  # --------------------------------------------------------------------------
-  # extrap_r2_far INTERNAL MODE	
-  #
-  # compute_extrap_r2_far and all extrapolation helpers are now inlined
-  # directly inside run_comparative_suite_benchmark_v2.py.
-  #
-  # No external extrap_r2_far.py module is required.
-  # No sys.path manipulation or auto-install logic is needed.
-  # --------------------------------------------------------------------------
   
   echo "extrap_r2_far: internal inlined implementation enabled"
   _EXTRAP_DEST="${EXPERIMENTS_DIR}/extrap_r2_far.py"
@@ -205,15 +174,14 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
   echo "Directory structure: ok"
 '
 
-# ── STEP 0b: gt_leak_guard ──────────────────────────────────────────────────
 run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" bash -c "
   cd '${REPO_ROOT}'
   _FAIL=0
 
-  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py'
+  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4c.py'
   if [[ -f \"\${_T1}\" ]]; then
     if grep -n \"Ground truth:.*metadata\.get(.ground_truth\" \"\${_T1}\" | grep -v '^[0-9]*:# ' ; then
-      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v3c.py _generate_llm_formula prompt.'
+      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v4c.py _generate_llm_formula prompt.'
       echo '         See Fix 14 changelog entry in that file.'
       _FAIL=1
     fi
@@ -251,7 +219,6 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
   echo '  [OK]  gt_leak_guard — no ground-truth leak pattern found in any of the 3 hybrid prompt paths.'
 "
 
-# ── STEP 1: exp1 ──────────────────────────────────────────────────────────────
 run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   cd '${REPO_ROOT}'
   _DEFI_TARGET='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
@@ -280,7 +247,6 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   echo '=== end exp1 verification ==='
 "
 
-# ── STEP 2: exp1b ─────────────────────────────────────────────────────────────
 run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c "
   cd '${REPO_ROOT}'
 
@@ -300,16 +266,16 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
   _BENCH_JSON=\$(ls -t '${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON}\" ]]; then
-    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in ${RESULTS_DIR}.'
+    echo 'WARNING: portfolio_variance_v4c2.py skipped — benchmark JSON not found in ${RESULTS_DIR}.'
     echo '         This is expected on the first shard run when hypatiax_defi_benchmark_v4.py'
     echo '         writes its output to the doubled path or has not yet produced results.'
     echo '         Re-run exp1b after confirming the benchmark JSON is present.'
   else
-    echo '[exp1b] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON}\"
+    echo '[exp1b] Running portfolio_variance_v4c2.py against: '\"\${_BENCH_JSON}\"
     RESULTS_DIR='${RESULTS_DIR}' \
-      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
+      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v4c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log \
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || echo 'WARNING: portfolio_variance_v4c2.py exited non-zero — primary benchmark results already saved, continuing'
   fi
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
@@ -326,7 +292,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
         -o -name 'hypatiax_defi_benchmark_*results*.json' \
     \) | while IFS= read -r src; do
 
-        # Skip if already inside dest15 (avoid self-move loop)
         [[ \"\$src\" == \"\${dest15}\"* ]] && continue
 
         fname=\$(basename \"\$src\")
@@ -341,7 +306,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     done
   done
 
-  # move comparison files
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \
     \( \
@@ -363,7 +327,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     done
   done
 
-  # verification
   echo '=== exp1b verification ==='
 
   find \"\${dest15}\" -type f 2>/dev/null | sort
@@ -381,9 +344,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
 
 
-# ── STEP 2a: exp1_ablation ────────────────────────────────────────────────────
-# Output directory: ${RESULTS_DIR}/ablation/exp1_ablation/
-# CLI example (run standalone):
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" bash -c "
   cd '${REPO_ROOT}'
   _ABL_DIR='${RESULTS_DIR}/ablation/exp1_ablation'
@@ -421,9 +381,6 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" 
 "
 
 
-# ── STEP 2a2: exp1_five ────────────────────────────────────────────────────────
-# Output directory: ${RESULTS_DIR}/five_systems/exp1_five/
-# CLI example (run standalone):
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
@@ -458,23 +415,17 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
 "
 
 
-# ── STEP 2b: exp1_pca ─────────────────────────────────────────────────────────
-# Output directory: comparison_results/noise-noiseless/noiseless/defi_pca/
-# CLI example (run standalone): bash run_all.sh --step exp1_pca
 run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 with PCA split)" bash -c "
   cd '${REPO_ROOT}'
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
-  # --force-fresh is passed to the script itself — guarantees fresh results
-  # even when the script is invoked directly, bypassing this shell wrapper.
   echo '[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split)'
   python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
     --output-dir \"\${_PCA_DEFI_DIR}\" \\
     --force-fresh \\
     2>&1 | tee '${RESULTS_DIR}/exp1_pca_run.log'
 
-  # Write split_protocol_disclosure.json (required by Gate B)
   python3 - <<'PYEOF'
 import json, pathlib, datetime
 PCA_DIR   = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
@@ -593,7 +544,6 @@ if hits:
           'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
 PYEOF_FINGERPRINT_1
 
-  # Verification
   echo '=== exp1_pca verification ==='
   find \"\${_PCA_DEFI_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _NRESULT=\$(find \"\${_PCA_DEFI_DIR}\" -name '*.json' \\
@@ -616,9 +566,6 @@ PYEOF_FINGERPRINT_1
   echo '=== end exp1_pca ==='
 "
 
-# ── STEP 2c: exp1b_pca ────────────────────────────────────────────────────────
-# Output directory: comparison_results/noise-noiseless/15_pca/
-# CLI example (run standalone):
 run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with PCA split)" bash -c "
   cd '${REPO_ROOT}'
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
@@ -633,8 +580,6 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
-  # --force-fresh is passed to the script itself — guarantees fresh results
-  # even when the script is invoked directly, bypassing this shell wrapper.
   echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
@@ -642,13 +587,12 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
       --force-fresh \\
       2>&1 | tee '${RESULTS_DIR}/exp1b_pca_run.log'
 
-  # Move any loose outputs (same pattern as exp1b move block)
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \\
     \\( \\
-        -name 'defi_pca_v3_*.json' \\
+        -name 'defi_pca_v4_*.json' \\
         -o -name '*portfolio*variance*pca*.json' \\
     \\) | while IFS= read -r src; do
         [[ \"\$src\" == \"\${_PCA15_DIR}\"* ]] && continue
@@ -810,7 +754,6 @@ if hits:
           'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
 PYEOF_FINGERPRINT_1B
 
-  # Verification
   echo '=== exp1b_pca verification ==='
   find \"\${_PCA15_DIR}\" -type f 2>/dev/null | sort || echo '  (empty)'
   _COUNT=\$(find \"\${_PCA15_DIR}\" -type f 2>/dev/null | wc -l)
@@ -831,7 +774,6 @@ PYEOF_FINGERPRINT_1B
   echo '=== end exp1b_pca ==='
 "
 
-# ── STEP 3: extrap ────────────────────────────────────────────────────────────
 run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/extrapolation'
@@ -867,7 +809,6 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
 "
 
-# ── STEP 4: hybrid_all_domains ────────────────────────────────────────────────
 run hybrid_all_domains "Hybrid LLM+NN all-domains run -- 10 domains (SS10.9 hybrid)" bash -c "
   set -euo pipefail
   ACTUAL_DOMAINS=\$(python3 - << 'PYEOF'
@@ -910,7 +851,6 @@ PYEOF
   python3 hybrid_system_llm_nn_all_domains.py \
     --samples '${FEYNMAN_SAMPLES}' \
     2>&1 | tee '${RESULTS_DIR}'/hybrid_all_domains_run.log
-  # ── Move script's hardcoded-path output → RESULTS_DIR ──────────────────────
   _HYBRID_OUT_SRC='hypatiax/data/results'
   if [[ -d \"\${_HYBRID_OUT_SRC}\" ]]; then
     find \"\${_HYBRID_OUT_SRC}\" -maxdepth 1 -name 'hybrid_llm_nn_all_domains_*.json' \
@@ -924,10 +864,8 @@ PYEOF
   fi
 "
 
-# ── STEP 4a: instability ──────────────────────────────────────────────────────
 run instability "Instability Index analysis (numerical only, no figures) -- SS10.9 (Regime A/B/C)" bash -c "
   mkdir -p '${RESULTS_DIR}/figures'
-  # Purge only instability-specific files; preserve exp1 benchmark JSONs.
   rm -f \
     '${RESULTS_DIR}/figures/instability_analysis.csv' \
     '${RESULTS_DIR}/figures/instability_extrapolation.csv' \
@@ -980,7 +918,6 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 "
 
 
-# ── STEP 5: exp2_feynman ──────────────────────────────────────────────────────
 run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab 16-18)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2'
@@ -1010,9 +947,6 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   done
 "
 
-# ── STEP 5b: exp2_feynman_pca_4060 ───────────────────────────────────────────
-# Output directory: comparison_results/feynman-tests/exp2_pca_4060/
-# CLI example (run standalone):
 run exp2_feynman_pca_4060 "FIX-C3: Feynman rerun with PCA 40/60 split — corrected §10.7 result" bash -c "
   cd '${REPO_ROOT}'
 
@@ -1112,7 +1046,6 @@ else:
     existing = json.loads(BASELINE.read_text())
     existing_rate = existing.get('solve_rate')
     if existing_rate is None:
-        # Self-heal: baseline was written before exp2/ results existed.
         if n_total > 0:
             BASELINE.write_text(json.dumps(baseline, indent=2))
             print(
@@ -1211,7 +1144,6 @@ PYEOF
     echo 'WARNING: exp2_feynman_pca_4060 produced no protocol_core_noiseless_pca_*.json — exp2_pca_4060_summary.json will be empty/incomplete'
   fi
 
-  # ── 3. Compute corrected summary (new solve rate) ─────────────────────────────
   echo '[FIX-C3] Computing corrected solve rate from exp2_pca_4060/ results...'
   python3 - <<'PYEOF'
 import glob, json, pathlib, sys
@@ -1373,7 +1305,6 @@ if n_total == 0:
     print('  [WARN]  No results found in exp2_pca_4060/ — rerun after domains complete.')
 PYEOF
 
-  # ── 4. Write split_protocol_disclosure.json (required by Gate B) ─────────────
   python3 - <<'PYEOF'
 import json, pathlib, datetime
 
@@ -1435,7 +1366,6 @@ if hits:
     print(\"  WARNING: exp2_feynman_pca_4060 NN feature-count-mismatch fingerprint detected in 'ImprovedNN (core)' results.\")
 PYEOF_FINGERPRINT_2
 
-  # ── 5. Verification summary ───────────────────────────────────────────────────
   echo ''
   echo '=== exp2_feynman_pca_4060 verification ==='
   echo 'Output dir:' \"\${_PCA_DIR}\"
@@ -1465,23 +1395,6 @@ PYEOF_FINGERPRINT_2
 run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
-  # INTERNAL extrap_r2_far MODULE MODE
-  #
-  # extrap_r2_far is now treated as an INTERNAL helper implemented directly
-  # inside run_comparative_suite_benchmark_v2.py (fallback-safe import).
-  #
-  # Therefore:
-  #   - no external extrap_r2_far.py verification is required
-  #   - no sys.path patching is required
-  #   - missing-module warnings are non-fatal
-  #   - extrap metrics are always computed via internal fallback
-  #
-  # Expected runtime behavior:
-  #
-  #   ⚠️ extrap_r2_far.py not found — using internal fallback metrics
-  #
-  # This is VALID and SHOULD NOT fail the pipeline.
-  # --------------------------------------------------------------------------
 
   _EXT_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
   _EXT_SHARD=\${SHARD_INDEX:-0}
@@ -1517,7 +1430,6 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   mkdir -p \"\${_EXT_DIR}/_saved\"
   while IFS= read -r _pf; do
     _pfn=\$(basename \"\${_pf}\")
-    # ln -f overwrites an existing _saved copy (idempotent on retry).
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
       || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" \
       || true
@@ -1596,10 +1508,6 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     fi
   fi
 
-  # exp2_extrap_summary.json — small machine-readable rollup of this step's
-  # outputs, written into exp2_extrap/ alongside the raw benchmark/protocol
-  # files. Intended for qualify/audit steps (and humans) to get step status
-  # at a glance without re-scanning the whole directory.
   _SUMMARY="${_EXTRAP_DIR}/exp2_extrap_summary.json"
   python3 - "${_EXTRAP_DIR}" "${_PAIRED}" "${_SUMMARY}" <<'PYEOF'
 import json, sys
@@ -1676,23 +1584,6 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
 "
 
 
-# ── STEP 6b: exp2_five ──────────────────────────────────────────────────────────
-# Five-System Comparison (§10.1), straightforward variant: identical to exp2
-# above (same domains, same --protocol all_domains, same script) except
-# --methods 1 2 4 5 6 restricts the run to the five methods matching the
-# paper's five system rows, excluding method 3 (HybridDeFiMethod — DeFi-
-# domain-scoped, not one of the five row names; same exclusion documented in
-# generate_tables.py's _EXP2_METHOD_TO_ROW comment).
-#
-# This is the "straightforward run_comparative_suite_benchmark_v2.py" path —
-# no new Python source, just the existing script with a narrower --methods
-# filter and its own output directory so it never collides with exp2's full
-# 6-method run.
-#
-# Output directory: ${RESULTS_DIR}/five_systems/exp2_five/
-# CLI example (run standalone):
-#   bash run_all.sh --step exp2_five
-# ─────────────────────────────────────────────────────────────────────────────
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
@@ -1724,7 +1615,6 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
   done
 "
 
-# ── STEP 7: exp3 ──────────────────────────────────────────────────────────────
 run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   cd '"${REPO_ROOT}"'
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
@@ -1742,7 +1632,6 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
     -exec mv -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
   find '"${RESULTS_DIR}"' -maxdepth 1 -name '"'"'experiment_registry.json'"'"' \
     -exec cp -v {} '"${RESULTS_DIR}"'/extrapolation/ \; 2>/dev/null || true
-  # -- Partial results summary after seed=42 ----------------------------------
   echo "--- exp3 partial results after seed=42 (1/1) ---"
   RESULT_DIR='"${RESULTS_DIR}"'/extrapolation python3 - <<'"'"'PYEOF'"'"'
 import glob, json, os
@@ -1776,7 +1665,6 @@ PYEOF
   echo "--- end partial results seed=42 ---"
 '
 
-# ── STEP 8: exp3b ─────────────────────────────────────────────────────────────
 run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/extrapolation/multi_seed'
@@ -1823,7 +1711,6 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
 "
 
 
-# ── STEP 8b (inlined into exp3b): symbolic equivalence ───────────────────────
 (
   set -uo pipefail
   _SCRIPT="${REPO_ROOT}/.github/scripts/check_symbolic_equivalence.py"
@@ -1854,7 +1741,6 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   fi
 ) || echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing (non-fatal reporting step)"
 
-# ── STEP 9: suppA ─────────────────────────────────────────────────────────────
 run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routing)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/hybrid_pysr/defi' '${RESULTS_DIR}/figures' '${RESULTS_DIR}/tables'
@@ -1915,7 +1801,6 @@ PYEOF
   done
 "
 
-# ── STEP 10: suppB — noise sweep ─────────────────────────────────────────────
 run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Supplement B)" bash -c "
   cd '${REPO_ROOT}'
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
@@ -1942,11 +1827,9 @@ run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Suppleme
     --method-timeout ${METHOD_TIMEOUT} \\
     2>&1 | tee '${RESULTS_DIR}'/suppB_run.log
 
-  #   output directory is:
 "
 
 
-# ── STEP 10b: suppB_sc — sample-complexity sweep ─────────────────────────────
 run suppB_sc "Sample-complexity sweep n in {50..1000} (Tab 29 - Supplement B SS6)" bash -c "
   cd '${REPO_ROOT}'
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
@@ -2002,7 +1885,6 @@ print('[suppB_sc-METHOD-ASSERT] OK -- all 6 methods present')
 \"
 "
 
-# ── STEP 13: validate ────────────────────────────────────────────────────────
 run validate "Cross-check all results against paper-reported values" bash -c '
 python3 - <<'"'"'PYEOF'"'"'
 import json, os, glob, sys
@@ -2019,9 +1901,8 @@ def check(label, got, expected, tol=TOLERANCE):
     print(f"  [{_tag}] {label}: got={got:.6f}, expected={expected:.6f}")
     return ok
 
-print("\n=== Validating key numerical results against JMLR v3.0 ===\n")
+print("\n=== Validating key numerical results against JMLR v4.0 ===\n")
 
-# --- exp1 noiseless ---
 noiseless_files = (
     sorted(glob.glob(f"{RESULTS}/comparison_results/noise-noiseless/noiseless/defi/hypatiax_defi_benchmark_*results*.json")) +
     sorted(glob.glob(f"{RESULTS}/comparison_results/noise-noiseless/noiseless/defi/protocol_core_noiseless_*.json"))
@@ -2038,7 +1919,6 @@ if noiseless_files:
 else:
     print("  [SKIP] exp1 noiseless results not found")
 
-# --- exp2_feynman ---
 exp2_files = sorted(glob.glob(f"{RESULTS}/comparison_results/feynman-tests/exp2/protocol_core_noisy_*.json"))
 if exp2_files:
     with open(exp2_files[-1]) as f: data = json.load(f)
@@ -2048,7 +1928,6 @@ if exp2_files:
 else:
     print("  [SKIP] exp2_feynman results not found")
 
-# --- Mann-Whitney (Tab 14) ---
 mw_files = sorted(glob.glob(f"{RESULTS}/exp1_rf01_mannwhitney*.json"))
 if mw_files:
     with open(mw_files[-1]) as f: data = json.load(f)
@@ -2069,7 +1948,6 @@ checks.append(("hybrid_all_domains output present (all_domains/)", 1.0 if ok els
 _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] hybrid_llm_nn/all_domains/: {len(had)} JSON file(s)")
 
-# --- STEP 4a: instability outputs present ---
 inst_csv = os.path.isfile(f"{RESULTS}/figures/instability_analysis.csv")
 checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
 _tag = "OK" if inst_csv else "FAIL"
@@ -2082,10 +1960,6 @@ checks.append(("suppB_sc output present (sample-complexity/)", 1.0 if ok else 0.
 _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] sample-complexity outputs: {len(sc)} file(s)")
 
-# --- CRITICAL 4: suppB noise_sweep_*.json glob match ---
-# tables-generator uses glob 'noise_sweep_*.json' to find suppB results.
-# If run_noise_sweep_benchmark.py writes files under a different prefix,
-# all suppB tables will contain placeholder text.
 noise_sweep_matched = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/noise_sweep_*.json")
 noise_sweep_all     = glob.glob(f"{RESULTS}/comparison_results/feynman-tests/noise-sweep/*.json")
 if noise_sweep_all:
@@ -2117,17 +1991,17 @@ if os.path.isdir(pca_defi_dir):
     checks.append(("exp1_pca split_protocol_disclosure.json present", 1.0 if pca_disc else 0.0, 1.0, pca_disc))
     _tag = "OK" if pca_disc else "FAIL"
     print(f"  [{_tag}] exp1_pca: split_protocol_disclosure.json")
-    pca_jsons = glob.glob(f"{pca_defi_dir}/defi_pca_v3_*.json")
+    pca_jsons = glob.glob(f"{pca_defi_dir}/defi_pca_v4_*.json")
     ok_pca = bool(pca_jsons)
-    checks.append(("exp1_pca defi_pca_v3_*.json present", 1.0 if ok_pca else 0.0, 1.0, ok_pca))
+    checks.append(("exp1_pca defi_pca_v4_*.json present", 1.0 if ok_pca else 0.0, 1.0, ok_pca))
     _tag = "OK" if ok_pca else "FAIL"
-    print(f"  [{_tag}] exp1_pca: {len(pca_jsons)} defi_pca_v3_*.json file(s)")
+    print(f"  [{_tag}] exp1_pca: {len(pca_jsons)} defi_pca_v4_*.json file(s)")
 else:
     print("  [SKIP] exp1_pca: defi_pca dir not found (exp1_pca not yet run)")
 
 pca15_dir = f"{RESULTS}/comparison_results/noise-noiseless/15_pca"
 if os.path.isdir(pca15_dir):
-    pca15_jsons = (glob.glob(f"{pca15_dir}/defi_pca_v3_*.json") +
+    pca15_jsons = (glob.glob(f"{pca15_dir}/defi_pca_v4_*.json") +
                    glob.glob(f"{pca15_dir}/*portfolio*variance*pca*.json"))
     ok_pca15 = bool(pca15_jsons)
     checks.append(("exp1b_pca outputs present in 15_pca/", 1.0 if ok_pca15 else 0.0, 1.0, ok_pca15))
@@ -2154,7 +2028,6 @@ if os.path.isdir(pca4060_dir):
 else:
     print("  [SKIP] exp2_feynman_pca_4060: exp2_pca_4060 dir not found (step not yet run)")
 
-# --- Summary ---
 total = len(checks); passed = sum(1 for item in checks if item[-1])
 print(f"\n=== Result: {passed}/{total} checks passed ===")
 if passed < total:
@@ -2167,7 +2040,6 @@ else:
 PYEOF
 '
 
-# ── STEP 14: qualify ─────────────────────────────────────────────────────────
 run qualify "Qualify all experiments + numerical spot-check (Phase 5 gate)" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -2193,10 +2065,8 @@ def record(name, ok, detail="", status=None):
         all_ok = False
     return ok
 
-# ── 1. Numerical spot-checks ─────────────────────────────────────────────────
 print("\n=== Phase 5a: Numerical spot-check ===\n")
 
-# DeFi accuracy/counts
 noiseless_files = sorted(_glob.glob(str(
     RESULTS / "comparison_results/noise-noiseless/noiseless/defi/hypatiax_defi_benchmark_*results*.json"
 ))) + sorted(_glob.glob(str(
@@ -2205,7 +2075,6 @@ noiseless_files = sorted(_glob.glob(str(
 if noiseless_files:
     try:
         raw  = json.loads(Path(noiseless_files[-1]).read_text())
-        # JSON root may be a list of result dicts OR a dict with a "results" key
         if isinstance(raw, list):
             results = raw
         else:
@@ -2222,10 +2091,8 @@ if noiseless_files:
                 ok = abs(mean_r2 - 0.931) <= 0.01
                 record("DeFi Hybrid v40 mean R2 approx 0.931", ok,
                        "got={:.4f}".format(mean_r2))
-        # count cases
         n_cases = len(results)
         ok_cases = (n_cases >= 70)
-        # Partial pipeline runs may have fewer rows — WARN not FAIL
         record("DeFi case count >=70", ok_cases, "found {} cases".format(n_cases),
                status="PASS" if ok_cases else "WARN")
     except Exception as e:
@@ -2233,7 +2100,6 @@ if noiseless_files:
 else:
     record("DeFi noiseless results", True, "not yet run — skipped", status="SKIP")
 
-# Feynman recovery rate
 exp2_files = sorted(_glob.glob(str(
     RESULTS / "comparison_results/feynman-tests/exp2/protocol_core_noisy_*.json"
 ))) + sorted(_glob.glob(str(
@@ -2242,7 +2108,6 @@ exp2_files = sorted(_glob.glob(str(
 if exp2_files:
     try:
         raw = json.loads(Path(exp2_files[-1]).read_text())
-        # Search multiple possible key names, both at root and nested one level
         _RECOVERY_KEYS = (
             "hybrid_deFi_recovery", "recovery_rate", "defi_recovery",
             "hybrid_recovery", "success_rate", "deFi_recovery_rate",
@@ -2252,7 +2117,6 @@ if exp2_files:
             if isinstance(raw, dict):
                 rec = raw.get(_k)
                 if rec is None:
-                    # one level deep
                     for _v in raw.values():
                         if isinstance(_v, dict):
                             rec = _v.get(_k)
@@ -2265,7 +2129,6 @@ if exp2_files:
             record("Feynman DeFi recovery rate approx 1.0", ok,
                    "got={:.4f}".format(float(rec)))
         else:
-            # Key not found — WARN only; the exp2 JSON schema varies by run
             record("Feynman recovery_rate key", True,
                    "key not found in {} — check JSON schema".format(
                        Path(exp2_files[-1]).name),
@@ -2275,7 +2138,6 @@ if exp2_files:
 else:
     record("Feynman exp2 results", True, "not yet run — skipped", status="SKIP")
 
-# Mann-Whitney (Tab 14)
 mw_files = sorted(_glob.glob(str(RESULTS / "exp1_rf01_mannwhitney*.json")))
 if mw_files:
     try:
@@ -2293,7 +2155,6 @@ if mw_files:
 else:
     record("Mann-Whitney results", True, "not yet run — skipped", status="SKIP")
 
-# Instability rows (pipeline may be partial — WARN not FAIL when count is low)
 inst_csv = RESULTS / "figures/instability_analysis.csv"
 if inst_csv.exists():
     lines = [l for l in inst_csv.read_text().splitlines()
@@ -2306,7 +2167,6 @@ if inst_csv.exists():
 else:
     record("instability_analysis.csv", True, "not yet produced — skipped", status="SKIP")
 
-# ── 2. Per-experiment 5-dimension gate ───────────────────────────────────────
 print("\n=== Phase 5b: 5-dimension per-experiment gate ===\n")
 
 EXPERIMENTS = {
@@ -2331,14 +2191,12 @@ def dim_check(exp, rdir):
     ok_all = True
     rdir = Path(rdir)
 
-    # (1) checkpoint file
     ckpt_glob = list(_glob.glob(str(REPO / f"logs/checkpoint_{exp}_*.json"))) + \
                 list(_glob.glob(str(REPO / f"logs/{exp}_checkpoint*.json")))
     d1 = f"{len(ckpt_glob)} checkpoint file(s)" if ckpt_glob else "MISSING"
     record(f"{exp} · (1) checkpoint", bool(ckpt_glob), d1,
            status="WARN" if not ckpt_glob else "PASS")  # warn not fail — CI may not write these
 
-    # (2) result files
     jsons = list(rdir.glob("*.json")) if rdir.exists() else []
     ok2 = bool(jsons)
     record(f"{exp} · (2) result files", ok2,
@@ -2346,21 +2204,18 @@ def dim_check(exp, rdir):
     if not ok2:
         ok_all = False
 
-    # (3) _merged.json
     merged = list(rdir.glob("*_merged.json")) if rdir.exists() else []
     ok3 = bool(merged)
     record(f"{exp} · (3) _merged.json", ok3,
            f"{len(merged)} file(s)" if ok3 else "MISSING",
            status="WARN" if not ok3 else "PASS")
 
-    # (4) _merged.csv
     mcsv = list(rdir.glob("*_merged.csv")) if rdir.exists() else []
     ok4 = bool(mcsv)
     record(f"{exp} · (4) _merged.csv", ok4,
            f"{len(mcsv)} file(s)" if ok4 else "MISSING",
            status="WARN" if not ok4 else "PASS")
 
-    # (5) committed to git (any tracked file in rdir)
     try:
         import subprocess
         rel = str(rdir.relative_to(REPO)) if rdir.is_relative_to(REPO) else str(rdir)
@@ -2385,14 +2240,12 @@ gate_results = {}
 for exp, rdir in EXPERIMENTS.items():
     gate_results[exp] = dim_check(exp, rdir)
 
-# ── Summary ───────────────────────────────────────────────────────────────────
 print()
 n_ok   = sum(1 for f in findings if f["status"] in ("PASS", "WARN", "SKIP"))
 n_fail = sum(1 for f in findings if f["status"] == "FAIL")
 
 print(f"\n=== qualify summary: {len(findings)} checks, {n_fail} FAIL ===")
 
-# Write verify_report.json (same schema consumed by print-audit-summary in CI)
 out = REPO / "logs/verify_report.json"
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({"all_ok": all_ok, "checks": findings}, indent=2))
@@ -2409,15 +2262,6 @@ else:
 PYEOF
 '
 
-# ── STEP 15: audit_paper ─────────────────────────────────────────────────────
-# Final paper audit — fully self-contained (no run_all_checkpoint.py).
-# Loads scripts/patches/paper_targets.json and cross-checks every reported
-# number against the corresponding _merged.json / result file.
-# Emits PASS / WARN / FAIL / MISSING per claim.
-# Includes Nguyen-12 dual-threshold check (tab:nguyen12: 58.3% H / 66.7% P
-# under the R2>=0.9999, 4-decimal convention).
-# Writes logs/paper_audit_findings.json.
-# Exits non-zero on any FAIL or MISSING (not on WARN).
 run audit_paper "Audit all paper claims against results (paper_targets.json)" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -2435,7 +2279,6 @@ FAIL_ON_WARN = os.environ.get("FAIL_ON_WARN", "false").lower() == "true"
 
 print("\n=== Phase 5c: paper audit (paper_targets.json) ===\n")
 
-# ── Load targets ──────────────────────────────────────────────────────────────
 if not TARGETS_F.exists():
     print(f"ERROR: {TARGETS_F} not found — commit scripts/patches/paper_targets.json first.")
     sys.exit(1)
@@ -2443,7 +2286,6 @@ if not TARGETS_F.exists():
 targets = json.loads(TARGETS_F.read_text())
 print(f"  {len(targets)} claim(s) loaded from {TARGETS_F.name}")
 
-# ── Result file index — build a flat map of all JSON files under RESULTS_DIR ──
 all_jsons = {}
 for p in RESULTS.rglob("*.json"):
     try:
@@ -2451,7 +2293,6 @@ for p in RESULTS.rglob("*.json"):
     except Exception:
         pass  # skip unparseable files
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 def _find_metric(data, *keys):
     """Walk nested dicts/lists looking for any of the given keys; return first match."""
     if isinstance(data, dict):
@@ -2500,7 +2341,6 @@ def _iter_rows(data):
     Never raises — skips non-dict leaves silently.
     """
     if isinstance(data, dict):
-        # Try well-known row-container keys first
         for key in (
             "results", "equation_results", "domain_results",
             "equations", "records", "data", "rows",
@@ -2514,7 +2354,6 @@ def _iter_rows(data):
                 for r in _iter_rows(v):
                     yield r
                 return
-        # Leaf dict — yield it as a row candidate
         yield data
     elif isinstance(data, list):
         for item in data:
@@ -2523,7 +2362,6 @@ def _iter_rows(data):
             elif isinstance(item, list):
                 for sub in _iter_rows(item):
                     yield sub
-            # scalars in a list are ignored
 
 def _r2_from_row(row):
     """Extract a float R² value from a result row dict, or return None.
@@ -2533,7 +2371,6 @@ def _r2_from_row(row):
     (could be RMSE, count, accuracy, etc.) and caused false negatives when
     the sanity-check f<=1.0001 rejected non-R² numeric fields."""
     for key in (
-        # original keys
         "r2", "r2_test", "r2_train", "best_r2", "r2_score",
         "R2", "R2_test", "R2_train",
         "test_r2", "train_r2",
@@ -2549,8 +2386,6 @@ def _r2_from_row(row):
         if v is not None:
             try:
                 f = float(v)
-                # R² is mathematically ≤ 1; values above 1.01 are not R².
-                # Allow slightly above 1.0 for floating-point noise.
                 if f <= 1.01:
                     return f
             except (TypeError, ValueError):
@@ -2576,7 +2411,6 @@ def _load_json_files(patterns):
             results.append((p, data))
     return results
 
-# ── Computed metric: Nguyen-12 solve rate ─────────────────────────────────────
 def _compute_nguyen12(results_dir, want_4dec):
     patterns = [
         str(results_dir / "extrapolation" / "**" / "*nguyen*seed42*.json"),
@@ -2590,7 +2424,6 @@ def _compute_nguyen12(results_dir, want_4dec):
     pairs = _load_json_files(patterns)
     if not pairs:
         return None, "no Nguyen-12 result JSONs found under RESULTS_DIR"
-    # Prefer seed=42 file
     seed42 = [(p, d) for p, d in pairs if "seed42" in p.name or "seed_42" in p.name]
     chosen_p, chosen_d = (seed42[-1] if seed42 else pairs[-1])
     key4  = (
@@ -2611,7 +2444,6 @@ def _compute_nguyen12(results_dir, want_4dec):
     pre = _find_metric(chosen_d, *(key4 if want_4dec else keys))
     if pre is not None:
         return float(pre), "pre-computed key from " + chosen_p.name
-    # Compute from per-equation rows
     rows = list(_iter_rows(chosen_d))
     rows = [r for r in rows if _r2_from_row(r) is not None]
 
@@ -2640,8 +2472,6 @@ def _compute_nguyen12(results_dir, want_4dec):
                 chosen_p = p
                 break
     if not rows:
-        # Diagnostic: dump all keys seen in the chosen file so the CI log
-        # shows exactly which field name the experiment is using.
         all_keys = set()
         for r in _iter_rows(chosen_d):
             if isinstance(r, dict):
@@ -2659,7 +2489,6 @@ def _compute_nguyen12(results_dir, want_4dec):
     label = "4dec" if want_4dec else "strict"
     return rate, "computed " + str(n_pass) + "/" + str(n_total) + " " + label + " from " + chosen_p.name
 
-# ── Computed metric: Feynman-30 solve rate ────────────────────────────────────
 def _compute_feynman30(results_dir, threshold):
     pca_summary = results_dir / "comparison_results" / "feynman-tests" / "exp2_pca_4060" / "exp2_pca_4060_summary.json"
     if pca_summary.exists():
@@ -2683,7 +2512,7 @@ def _compute_feynman30(results_dir, threshold):
     ]
     PREFERRED = {
         "hypatiax", "hybridv50", "hybrid50", "hybridsymbolic", "hybriddefi", "hypatia",
-        "hypatiaxv2", "hypatiaxv3", "hypatiaxv4", "hypatiaxv5",
+        "hypatiaxv2", "hypatiaxv4", "hypatiaxv4", "hypatiaxv5",
         "hybrid", "hybridllm", "hybridnn", "hybridllmnn",
         "hybridsystem", "hybridmodel",
         "hypatiaxsystem", "hypatiaxmodel",
@@ -2698,7 +2527,6 @@ def _compute_feynman30(results_dir, threshold):
         for row in _iter_rows(data):
             raw_method = row.get("method") or row.get("model") or row.get("system") or row.get("algorithm") or ""
             method = str(raw_method).lower().replace("-", "").replace("_", "").replace(" ", "")
-            # Accept row if method is empty (i.e. single-model result files) OR matches PREFERRED
             if method and not any(p in method for p in PREFERRED):
                 continue
             r2 = _r2_from_row(row)
@@ -2711,7 +2539,6 @@ def _compute_feynman30(results_dir, threshold):
         return None, "no HypatiaX R2 rows found in feynman exp2 result files"
     return n_pass / n_total, "computed " + str(n_pass) + "/" + str(n_total) + " at threshold=" + str(threshold)
 
-# ── Computed metric: EHD noise robustness ─────────────────────────────────────
 def _get_noise_level(row):
     """FIX: centralised noise-level extractor covering all known field names.
     Returns float or None. Handles both fractional (0.25) and percentage (25) values."""
@@ -2728,8 +2555,6 @@ def _get_noise_level(row):
         if v is not None:
             try:
                 f = float(v)
-                # Convert percentage representation (>1 and plausible pct) to fraction
-                # only for explicitly-percentage keys to avoid misinterpreting sigma=5.0
                 if key in ("noise_pct", "noise_percent", "noise_percentage") and f > 1.0:
                     f = f / 100.0
                 return f
@@ -2747,7 +2572,7 @@ def _compute_ehd_noise_robust(results_dir, threshold):
     ]
     PREFERRED = {
         "hypatiax", "hybridv50", "hybrid50", "hybridsymbolic", "hybriddefi", "hypatia",
-        "hypatiaxv2", "hypatiaxv3", "hypatiaxv4", "hypatiaxv5",
+        "hypatiaxv2", "hypatiaxv4", "hypatiaxv4", "hypatiaxv5",
         "hybrid", "hybridllm", "hybridnn", "hybridllmnn",
         "hybridsystem", "hybridmodel", "hypatiaxsystem",
         "ours", "proposed",
@@ -2764,7 +2589,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         per_noise = data.get("per_noise")
         if not isinstance(per_noise, dict):
             continue
-        # Inherit file-level fields as defaults for every flattened row.
         _file_method = data.get("method") or data.get("model") or data.get("system") or ""
         _file_r2 = None
         for _r2k in ("r2", "r2_test", "r2_train", "r2_mean", "r2_median",
@@ -2779,8 +2603,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         for _nk, _nv in per_noise.items():
             try: nl = float(_nk)
             except (TypeError, ValueError): continue
-            # Helper: emit one row with noise_level FORCE-ASSIGNED from the per_noise key.
-            # Never use setdefault for noise_level — an inner dict may carry a stale value.
             def _emit(d, _nl=nl, _fm=_file_method, _fr=_file_r2):
                 row = dict(d)
                 row["noise_level"] = _nl          # FORCE-ASSIGN — overrides any inner value
@@ -2805,28 +2627,16 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                                             try: _row["r2"] = float(_mval[_rk]); break
                                             except (TypeError, ValueError): pass
                                 _emit(_row)
-                    # Nested dict: equation-keyed OR method-keyed.
-                    # Recurse _iter_rows to collect all R²-bearing leaves at any depth,
-                    # then inject noise_level. Handles:
-                    #   method → {r2: ...}
-                    #   equation_name → {method_summary: ..., per_equation: {r2: ...}}
-                    # Walk the nested dict collecting every R²-bearing leaf.
-                    # Strategy: try _iter_rows first; if that finds nothing, do a
-                    # two-level targeted walk for the known per_equation/method_summary
-                    # schema: per_noise[nl][eq_name][per_equation][r2].
                     _nested = [r for r in _iter_rows(_nv) if _r2_from_row(r) is not None]
                     if not _nested:
                         for _eq_key, _eq_val in _nv.items():
                             if isinstance(_eq_val, dict):
-                                # Direct metric row (suppB equation-keyed schema)
                                 if _r2_from_row(_eq_val) is not None:
                                     _nested.append(dict(_eq_val))
                                     continue
-                                # Check per_equation sub-key directly
                                 _pe = _eq_val.get("per_equation") or _eq_val.get("per_eq") or {}
                                 if isinstance(_pe, dict) and _r2_from_row(_pe) is not None:
                                     _nested.append(dict(_pe))
-                                # Also check method_summary for scalar r2 values
                                 _ms = _eq_val.get("method_summary") or {}
                                 if isinstance(_ms, dict):
                                     for _mname, _mval in _ms.items():
@@ -2834,7 +2644,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                                             _nested.append({"r2": float(_mval), "method": _mname})
                                         elif isinstance(_mval, dict) and _r2_from_row(_mval) is not None:
                                             _nested.append(dict(_mval))
-                                # Recurse one more level if still nothing
                                 if not _nested:
                                     _nested += [r for r in _iter_rows(_eq_val) if _r2_from_row(r) is not None]
                     if _nested:
@@ -2854,7 +2663,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 else:
                     _emit(_nv)
             elif isinstance(_nv, (int, float)):
-                # Scalar value: treat as r2 directly
                 flattened_rows.append({"noise_level": nl, "r2": float(_nv), "method": _file_method})
             elif isinstance(_nv, list):
                 for item in _nv:
@@ -2869,7 +2677,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
             continue
         if isinstance(data.get("per_noise"), dict):
             continue
-        # Extract file-level R²
         _fr2 = None
         for _k in ("r2", "r2_test", "r2_train", "r2_mean", "r2_median",
                    "mean_r2", "median_r2", "best_r2", "final_r2"):
@@ -2878,7 +2685,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 try: _fr2 = float(_v); break
                 except (TypeError, ValueError): pass
         if _fr2 is None:
-            # Try one level deeper in known container keys
             for _ck in ("results", "summary", "metrics", "output", "data"):
                 _sub = data.get(_ck)
                 if isinstance(_sub, dict):
@@ -2905,12 +2711,10 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         _fm_norm = _fm.lower().replace(" ", "").replace("-", "")
         _file_nls = []
 
-        # Priority 1: scalar noise_level in JSON body
         _nl_scalar = _get_noise_level(data)
         if _nl_scalar is not None:
             _file_nls.append(_nl_scalar)
 
-        # Priority 2: filename-encoded noise level
         if not _file_nls:
             _m2 = _re2.search(
                 r"(?:noise|sigma|pct|level)[_-]?(\d+(?:[p.]\d+)?)(?:pct|percent)?",
@@ -2925,7 +2729,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 except ValueError:
                     pass
 
-        # Priority 3a: single-element noise_levels list (unambiguous — file IS that level)
         if not _file_nls:
             _nlv = data.get("noise_levels") or data.get("noise_schedule") or data.get("sigma_levels")
             if isinstance(_nlv, list) and len(_nlv) == 1:
@@ -2935,7 +2738,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
                 try: _file_nls.append(float(_nlv))
                 except (TypeError, ValueError): pass
 
-        # Priority 3b: cross_noise_summary keys (per-noise aggregate entries)
         if not _file_nls:
             _cns = data.get("cross_noise_summary")
             if isinstance(_cns, dict):
@@ -2963,7 +2765,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
     for _, data in pairs:
         if not isinstance(data, dict):
             continue
-        # Source 1: top-level "noise_levels" list / scalar
         for _nlkey in ("noise_levels", "noise_level", "noise_schedule",
                        "sigma_levels", "sigma_list", "sigmas",
                        "noise_fractions", "noise_values", "levels"):
@@ -2977,13 +2778,11 @@ def _compute_ehd_noise_robust(results_dir, threshold):
             else:
                 try: noise_vals.add(float(_nlv))
                 except (TypeError, ValueError): pass
-        # Source 2: keys of the "per_noise" dict are noise-level strings
         _pn = data.get("per_noise")
         if isinstance(_pn, dict):
             for _k in _pn:
                 try: noise_vals.add(float(_k))
                 except (TypeError, ValueError): pass
-    # Source 3: row-level noise_level fields (original logic)
     for row in all_rows:
         nl = _get_noise_level(row)
         if nl is not None:
@@ -2991,25 +2790,20 @@ def _compute_ehd_noise_robust(results_dir, threshold):
     if not noise_vals:
         import re as _re
         for p, data in pairs:
-            # Match patterns like: _0.25_, _0p25_, _25pct_, _noise25_, _sigma0.5_
             m = _re.search("(?:noise|sigma|pct|level)[_\\-]?(\\d+(?:[p\\.]\\d+)?)(?:pct|percent)?", p.stem, _re.IGNORECASE)
             if m:
                 raw = m.group(1).replace("p", ".")
                 try:
                     nl = float(raw)
-                    # If looks like a percentage (> 1 and stem has 'pct'/'percent'), convert
                     if nl > 1 and ("pct" in p.stem.lower() or "percent" in p.stem.lower()):
                         nl = nl / 100.0
                     noise_vals.add(nl)
-                    # Tag all rows in this file with the filename-derived noise level
                     for row in all_rows:
-                        # Only tag rows that came from this file (approximate — tag all if single file)
                         if "_noise_level_from_filename" not in row:
                             row["_noise_level_from_filename"] = nl
                 except ValueError:
                     pass
     if not noise_vals:
-        # Diagnostic: dump keys seen in the noise-sweep files
         all_keys_seen = set()
         for _, d in pairs[:5]:
             for row in _iter_rows(d):
@@ -3059,7 +2853,6 @@ def _compute_ehd_noise_robust(results_dir, threshold):
         return None, "no rows at max noise=" + str(max_noise) + " found" + sample_info
     return n_robust / n_total, "computed " + str(n_robust) + "/" + str(n_total) + " at max_noise=" + str(max_noise)
 
-# ── Computed metric: hybrid all-domains coverage ──────────────────────────────
 def _compute_all_domains_coverage(results_dir, n_expected):
     patterns = [
         str(results_dir / "hybrid_llm_nn" / "all_domains" / "**" / "*.json"),
@@ -3128,7 +2921,6 @@ def _compute_all_domains_coverage(results_dir, n_expected):
                         if isinstance(d, str) and d.strip():
                             covered.add(d.lower().strip())
                 elif isinstance(v, dict):
-                    # {"physics": true, "chemistry": false, ...}
                     for d, done in v.items():
                         if done and isinstance(d, str) and d.strip():
                             covered.add(d.lower().strip())
@@ -3146,7 +2938,6 @@ def _compute_all_domains_coverage(results_dir, n_expected):
         key_hint = ""
     return rate, "computed " + str(n_covered) + "/" + str(denom) + " domains: " + str(sorted(covered)) + key_hint
 
-# ── Audit loop ────────────────────────────────────────────────────────────────
 findings = []
 
 TOLERANCE         = 0.01
@@ -3170,7 +2961,6 @@ for claim in targets:
                          "detail": "no 'paper_value' field in paper_targets.json entry"})
         continue
 
-    # ── Dispatch to computed-metric handlers ──────────────────────────────────
     if exp in ("exp3", "exp3b") and metric in (
             "nguyen12_solve_rate_4dec", "nguyen12_solve_rate_strict",
             "success_rate_4dec",        "success_rate_strict"):
@@ -3187,7 +2977,6 @@ for claim in targets:
         got, src_desc = _compute_all_domains_coverage(RESULTS, HYBRID_N_DOMAINS)
 
     else:
-        # General key-lookup path
         got_val, src_path = _scan_result(exp, metric, subdir)
         if got_val is None:
             findings.append({"exp": exp, "metric": metric, "status": "MISSING",
@@ -3203,7 +2992,6 @@ for claim in targets:
         findings.append({"exp": exp, "metric": metric, "status": st, "detail": detail})
         continue
 
-    # ── Evaluate computed result ───────────────────────────────────────────────
     if got is None:
         findings.append({"exp": exp, "metric": metric, "status": "MISSING",
                          "detail": src_desc})
@@ -3225,7 +3013,6 @@ for claim in targets:
             expected_rate = expected
 
         if compare_mode == "gte":
-            # PASS when got >= paper_value (paper states a lower bound, not exact target)
             ok = got >= expected_rate - max(tol * max(abs(expected_rate), 1e-9), 1e-9)
         elif compare_mode == "lte":
             ok = got <= expected_rate + max(tol * max(abs(expected_rate), 1e-9), 1e-9)
@@ -3238,7 +3025,6 @@ for claim in targets:
             detail += f" | {note}"
         findings.append({"exp": exp, "metric": metric, "status": st, "detail": detail})
 
-# ── Print summary ─────────────────────────────────────────────────────────────
 n_pass = sum(1 for f in findings if f["status"] == "PASS")
 n_warn = sum(1 for f in findings if f["status"] == "WARN")
 n_fail = sum(1 for f in findings if f["status"] == "FAIL")
@@ -3260,7 +3046,6 @@ if bad:
         print("    [" + f["status"] + "]  exp=" + str(f["exp"]) + "  metric=" + str(f["metric"]))
         print("             " + str(f["detail"]))
 
-# Nguyen-12 caveat — always print
 if any(f["exp"] in ("exp3", "exp3b") for f in findings):
     print()
     print("  ⚠  Nguyen-12 dual-threshold caveat:")
@@ -3268,12 +3053,10 @@ if any(f["exp"] in ("exp3", "exp3b") for f in findings):
     print("       The earlier 4/12 (33.3%) strict-threshold figure was retracted in the")
     print("       caption as having no basis in the current data — do not reintroduce it.")
 
-# ── Write findings JSON ───────────────────────────────────────────────────────
 FINDINGS_F.parent.mkdir(parents=True, exist_ok=True)
 FINDINGS_F.write_text(json.dumps(findings, indent=2))
 print(f"\n  Findings → {FINDINGS_F}")
 
-# ── Exit code ─────────────────────────────────────────────────────────────────
 fatal_statuses = {"FAIL", "MISSING"}
 if FAIL_ON_WARN:
     fatal_statuses.add("WARN")
@@ -3290,7 +3073,6 @@ else:
 PYEOF
 '
 
-# ── STEP 16: audit_setup ─────────────────────────────────────────────────────
 run audit_setup "Copy .tex source files into notebooks/ for audit notebooks" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3311,7 +3093,6 @@ search_dirs = [
 copied  = []
 missing = []
 
-# Main paper .tex
 main = next(
     (f for d in search_dirs
        for pat in ("jmlr-hypatiax*.tex", "jmlr_paper*.tex")
@@ -3325,7 +3106,6 @@ if main:
 else:
     print("  [WARN] main paper .tex not found — notebooks may not locate paper content")
 
-# Supplement files
 for name in ("supp_routing_improvements.tex", "supp_benchmark_report.tex"):
     src = next((d / name for d in search_dirs if (d / name).is_file()), None)
     if src:
@@ -3342,11 +3122,6 @@ if missing:
 PYEOF
 '
 
-# ── STEP 17: audit_nb01 ───────────────────────────────────────────────────────
-# NB-01 · Citation & Bibliography Audit
-# Catches: koza1994genetic missing from bibliography (lines 327, 1888);
-#          cranmer2023pysr/cranmer2023interp alias collision (same arXiv);
-#          4 uncited bibitems.
 run audit_nb01 "NB-01: Citation & Bibliography Audit" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3358,12 +3133,6 @@ run audit_nb01 "NB-01: Citation & Bibliography Audit" bash -c '
   echo "=== NB-01 done ==="
 '
 
-# ── STEP 18: audit_nb02 ───────────────────────────────────────────────────────
-# NB-02 · Cross-Reference & Label Integrity
-# Catches: \label inside \item (sec:r2_bugfix, thm:five_system_hierarchy) →
-#          garbled \ref output; duplicate section labels
-#          sec:llm_limitations/sec:llm_domain; Supp A references Section 7.3
-#          but main paper has Component 3 at Section 7.4.
 run audit_nb02 "NB-02: Cross-Reference & Label Integrity" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3375,9 +3144,6 @@ run audit_nb02 "NB-02: Cross-Reference & Label Integrity" bash -c '
   echo "=== NB-02 done ==="
 '
 
-# ── STEP 19: audit_nb03 ───────────────────────────────────────────────────────
-# NB-03 · Section Structure & Numbering
-# Catches: section structure and numbering consistency issues across .tex files.
 run audit_nb03 "NB-03: Section Structure & Numbering" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3389,13 +3155,6 @@ run audit_nb03 "NB-03: Section Structure & Numbering" bash -c '
   echo "=== NB-03 done ==="
 '
 
-# ── STEP 20: audit_nb04 ───────────────────────────────────────────────────────
-# NB-04 · Numerical Consistency & Abstract Claims
-# Catches: abstract claim presence (89.2%, 62.2%, +27pp, +83.8pp, 1.73×,
-#          68/74, 11/12, 9/30, +38.1pp); 70 vs 71 task discrepancy (body
-#          says "71 cases", table caption says "70 tasks"); "five-stage routing"
-#          vs "Five-Layer Architecture" terminology inconsistency; timing
-#          arithmetic cross-check (6.8s, 1.7s, 3.0s, 2.7s, 1.73×, 11.4s).
 run audit_nb04 "NB-04: Numerical Consistency & Abstract Claims" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3407,13 +3166,6 @@ run audit_nb04 "NB-04: Numerical Consistency & Abstract Claims" bash -c '
   echo "=== NB-04 done ==="
 '
 
-# ── STEP 21: audit_nb05 ───────────────────────────────────────────────────────
-# NB-05 · Figure Files & Image Dependencies
-# Catches: all 5 \includegraphics targets checked on disk — 4 MISSING
-#          (hypatiaX_three_systems, fig18_r2_heatmap_improved,
-#           fig09_r2_heatmap_regimes, fig1_seed_sweep);
-#          \fbox placeholder in Section 7.1 (fig:architecture);
-#          figure environment label/caption completeness.
 run audit_nb05 "NB-05: Figure Files & Image Dependencies" bash -c '
   set -euo pipefail
   cd "'"${REPO_ROOT}"'"
@@ -3425,7 +3177,6 @@ run audit_nb05 "NB-05: Figure Files & Image Dependencies" bash -c '
   echo "=== NB-05 done ==="
 '
 
-# ── STEP 22a: audit_nb06_fixc3_disclosure (FIX-C3 Action A) ─────────────────
 run audit_nb06_fixc3_disclosure \
     "NB-06 FIX-C3 Action A: Disclose Feynman random-80/20 vs DeFi PCA-40/60 split mismatch (§10.7)" \
     bash -c '
@@ -3440,7 +3191,6 @@ from pathlib import Path
 RESULTS = Path(os.environ.get("RESULTS_DIR", "hypatiax/data/results"))
 REPO    = Path(os.environ.get("REPO_ROOT",   "."))
 
-# ── Verify the split difference is documented in code ────────────────────────
 SCRIPT = REPO / "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
 findings = []
 all_ok   = True
@@ -3453,7 +3203,6 @@ def record(label, ok, detail=""):
     if not ok:
         all_ok = False
 
-# (1) Confirm train_test_split(test_size=0.2) exists in the script (baseline check)
 if SCRIPT.exists():
     src = SCRIPT.read_text(errors="replace")
     has_random_split = "train_test_split" in src and "test_size=0.2" in src
@@ -3462,20 +3211,15 @@ if SCRIPT.exists():
         has_random_split,
         f"file: {SCRIPT.name}"
     )
-    # (2) Confirm build_extrap_split (PCA 40/60 path) also exists in the script
     has_pca_split = "build_extrap_split" in src
     record(
         "run_comparative_suite_benchmark_v2.py contains build_extrap_split (PCA 40/60 path)",
         has_pca_split,
         "PCA-directed split used by DeFi benchmarks"
     )
-    # (3) Confirm the random split is inside the NN method (not the Feynman outer loop)
-    # The NN .run() method should be the site of the random split — verify by checking
-    # proximity of "test_size=0.2" to the class or def run pattern.
     lines = src.splitlines()
     split_lines = [i+1 for i, l in enumerate(lines) if "test_size=0.2" in l]
     run_method_lines = [i+1 for i, l in enumerate(lines) if "def run(" in l]
-    # test_size=0.2 should appear within 200 lines of a "def run(" definition
     proximate = any(
         any(abs(sl - rl) <= 200 for rl in run_method_lines)
         for sl in split_lines
@@ -3488,8 +3232,6 @@ if SCRIPT.exists():
 else:
     record("run_comparative_suite_benchmark_v2.py found", False, str(SCRIPT))
 
-# (4) Confirm exp2_feynman result files do NOT carry extrap_multiplier metadata
-#     (which would indicate the PCA split was accidentally applied).
 exp2_files = sorted(glob.glob(
     str(RESULTS / "comparison_results/feynman-tests/exp2/**/*.json"), recursive=True
 ))
@@ -3497,7 +3239,6 @@ feynman_extrap_contamination = 0
 for fp in exp2_files:
     try:
         data = json.loads(Path(fp).read_text())
-        # extrap_multiplier in the result means the extrap/PCA path ran — unexpected for exp2
         if isinstance(data, dict) and data.get("extrap_multiplier") is not None:
             feynman_extrap_contamination += 1
     except Exception:
@@ -3515,7 +3256,6 @@ else:
         "no files in comparison_results/feynman-tests/exp2/ — run exp2_feynman first"
     )
 
-# ── Write disclosure record ───────────────────────────────────────────────────
 disclosure = {
     "fixc3_action": "A",
     "fixc3_note": (
@@ -3563,7 +3303,6 @@ PYEOF
   echo "=== NB-06 FIX-C3 Action A done ==="
 '
 
-# ── STEP 22b: audit_nb06_fixc3_rerun (FIX-C3 Action B) ──────────────────────
 run audit_nb06_fixc3_rerun \
     "NB-06 FIX-C3 Action B: Rerun Feynman with PCA 40/60 split and report revised 9/30 result (§10.7)" \
     bash -c '
@@ -3571,7 +3310,6 @@ run audit_nb06_fixc3_rerun \
   cd "'"${REPO_ROOT}"'"
   echo "=== NB-06 FIX-C3 Action B: Feynman PCA 40/60 Rerun ==="
 
-  # ── Prerequisite: Action A disclosure must exist ──────────────────────────
   DISCLOSURE="'"${RESULTS_DIR}"'"/fixc3_split_disclosure.json
   if [[ ! -f "${DISCLOSURE}" ]]; then
     echo "ERROR: fixc3_split_disclosure.json not found — run audit_nb06_fixc3_disclosure first."
@@ -3581,10 +3319,6 @@ run audit_nb06_fixc3_rerun \
 
   mkdir -p "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3
 
-  # ── Per-domain rerun with PCA 40/60 split ────────────────────────────────
-  # Same domain list as exp2_feynman; same hyperparameters; only split differs.
-  # --extrap-train-frac 0.6 → 60% train, 40% far-region (the §6.4 DeFi protocol)
-  # --extrap-multiplier 2.0 → matches DeFi benchmark and paper value
   for DOMAIN_ID in '"${FEYNMAN_DOMAINS}"'; do
     echo "=== fixc3_rerun: domain=${DOMAIN_ID} (PCA 40/60 split) ==="
     FEYNMAN_SAMPLES='"${FEYNMAN_SAMPLES}"' \
@@ -3613,7 +3347,6 @@ run audit_nb06_fixc3_rerun \
     || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
   done
 
-  # ── Compute and report the corrected solve rate ───────────────────────────
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log
 import glob, json, os, sys
 from pathlib import Path
@@ -3634,7 +3367,6 @@ if not result_files:
     print(f"\n  WARNING: No fixc3 result files found in {FIXC3_DIR}")
     print("  The rerun may not have produced output yet (Julia/PySR timeout or crash).")
     print("  Re-run this step after confirming experiment scripts are functional.")
-    # Write a stub summary so Action A disclosure is not blocked
     summary = {
         "fixc3_action": "B",
         "status": "INCOMPLETE",
@@ -3746,7 +3478,6 @@ PYEOF
   echo "=== NB-06 FIX-C3 Action B done ==="
 '
 
-# ── STEP 22: audit_guard ──────────────────────────────────────────────────────
 run audit_guard "Guard: evaluate trigger conditions (slot=12, run_full, success)" bash -c '
   set -euo pipefail
   python3 - <<'"'"'PYEOF'"'"'
@@ -3783,7 +3514,6 @@ open(gh_out, "a").write("should_run=true\n")
 PYEOF
 '
 
-# ── STEP 23: audit_print_verify ───────────────────────────────────────────────
 run audit_print_verify "Print verify summary from logs/verify_report.json" bash -c '
   set -euo pipefail
   if [[ ! -f logs/verify_report.json ]]; then
@@ -3810,7 +3540,6 @@ if n_fail:
 PYEOF
 '
 
-# ── STEP 24: audit_print_findings ─────────────────────────────────────────────
 run audit_print_findings "Print audit summary from logs/paper_audit_findings.json" bash -c '
   set -euo pipefail
   if [[ ! -f logs/paper_audit_findings.json ]]; then
@@ -3839,7 +3568,6 @@ if bad:
 PYEOF
 '
 
-# ── STEP 25: audit_figures_tables ─────────────────────────────────────────────
 run audit_figures_tables "No-op: table/figure generation disabled pipeline-wide" bash -c '
   set -euo pipefail
   mkdir -p logs
@@ -3859,7 +3587,6 @@ print("  Report -> " + str(out))
 PYEOF
 '
 
-# ── STEP 26: audit_final_gate ─────────────────────────────────────────────────
 run audit_final_gate "Final gate: aggregate all audit job outcomes" bash -c '
   set -euo pipefail
   python3 - <<'"'"'PYEOF'"'"'
@@ -3890,7 +3617,6 @@ sys.exit(0 if overall_ok else 1)
 PYEOF
 '
 
-# ── Final summary ─────────────────────────────────────────────────────────────
 echo ""
 log "============================================================"
 log " HypatiaX reproduction pipeline COMPLETE"
