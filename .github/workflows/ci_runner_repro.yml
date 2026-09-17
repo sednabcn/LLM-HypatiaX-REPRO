@@ -429,6 +429,19 @@ jobs:
     if: ${{ needs.pca_runner.outputs.skip_plan == 'false' && needs.plan.outputs.shard_matrix != '[]' && needs.plan.outputs.shard_matrix != '' }}
 
     env:
+      # FIX-OUT_BASE-UNDEFINED: later steps in this job (e.g. "Verify result
+      # files", "Store results in canonical RESULT_SUBDIR") already reference
+      # ${{ env.OUT_BASE }} / ${OUT_BASE}, but nothing at this job-level env
+      # block ever defined it. Under `set -u` this produced
+      # "OUT_BASE: unbound variable" (and KeyError: 'OUT_BASE' in the Python
+      # steps), and let RESULT_SUBDIR-based paths resolve to bare absolute
+      # paths like /comparison_results/... instead of a path inside the
+      # checkout, which cascaded into empty artifact dirs and failed
+      # checkpoint copies. Keep this RELATIVE -- steps below construct
+      # "${{ github.workspace }}/${OUT_BASE}", so an absolute value here
+      # would duplicate the workspace path.
+      OUT_BASE:       hypatiax/data/results
+
       EXP:            ${{ needs.plan.outputs.exp_id }}
       SCRIPT_PATH:    ${{ needs.plan.outputs.script_path }}
       NEEDS_JULIA:    ${{ needs.plan.outputs.needs_julia }}
@@ -446,6 +459,28 @@ jobs:
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
+
+      # FIX-OUT_BASE-UNDEFINED: fail fast and loudly here instead of letting
+      # OUT_BASE/RESULT_SUBDIR silently resolve empty several steps (and many
+      # minutes) later. Also pre-creates the target dir so the checkpoint
+      # restore/copy and artifact upload steps always have somewhere to land.
+      - name: Validate result paths
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          : "${OUT_BASE:?OUT_BASE is not set}"
+          : "${RESULT_SUBDIR:?RESULT_SUBDIR is not set}"
+
+          RESULTS_DIR="${GITHUB_WORKSPACE}/${OUT_BASE}"
+          TARGET="${RESULTS_DIR}/${RESULT_SUBDIR}"
+
+          mkdir -p "$TARGET"
+
+          echo "OUT_BASE:       $OUT_BASE"
+          echo "RESULTS_DIR:    $RESULTS_DIR"
+          echo "RESULT_SUBDIR:  $RESULT_SUBDIR"
+          echo "TARGET:         $TARGET"
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5.3.0

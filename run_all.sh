@@ -8,6 +8,16 @@ _RESULTS_RAW="${RESULTS_DIR:-${REPO_ROOT}/hypatiax/data/results}"
 RESULTS_DIR="$(cd "$(dirname "${_RESULTS_RAW}")" 2>/dev/null && pwd)/$(basename "${_RESULTS_RAW}")" \
   || RESULTS_DIR="${REPO_ROOT}/hypatiax/data/results"
 export RESULTS_DIR
+
+# FIX-OUT_BASE-UNDEFINED: some downstream scripts/steps (e.g. the CI
+# workflow's diagnostic solve-rate report) read OUT_BASE directly from the
+# environment rather than RESULTS_DIR. Default it to RESULTS_DIR here so it
+# is always defined and consistent with RESULTS_DIR, rather than silently
+# expanding to an empty string under `set -u` and producing paths like
+# /comparison_results/... instead of a path rooted inside the repo checkout.
+OUT_BASE="${OUT_BASE:-${RESULTS_DIR}}"
+export OUT_BASE
+mkdir -p "${OUT_BASE}"
 EXPERIMENTS_DIR="${EXPERIMENTS_DIR:-${REPO_ROOT}/hypatiax/experiments/benchmarks}"
 GENERATION_DIR="${GENERATION_DIR:-${REPO_ROOT}/hypatiax/core/generation}"
 CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
