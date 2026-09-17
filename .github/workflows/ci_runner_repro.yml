@@ -13,12 +13,10 @@ on:
         options:
           - exp1
           - exp1b
-          - exp1c
           - exp1_ablation
           - exp1_five
           - exp1_pca
           - exp1b_pca
-          - exp1c_pca
           - exp2_feynman_pca
           - exp2_feynman
           - exp2_feynman_extrap
@@ -40,7 +38,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -90,7 +88,7 @@ on:
         default: "false"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
+  group: hypatiax-results-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -149,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca \
+          VALID_IDS="exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -208,7 +206,7 @@ jobs:
           EXP: ${{ github.event.inputs.experiment }}
         run: |
           set -euo pipefail
-          if [[ "$EXP" == "exp1_pca" || "$EXP" == "exp1b_pca" || "$EXP" == "exp1c_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
+          if [[ "$EXP" == "exp1_pca" || "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
@@ -259,25 +257,19 @@ jobs:
           case "$EXP" in
 
             exp1)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
               ;;
 
             exp1b)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
-            exp1c)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
-              NEEDS_JULIA=false
-              RESULT_SUBDIR="comparison_results/noise-noiseless/exp1c_v4"
-              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
-              ;;
 
             exp1_ablation)
               SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
@@ -420,7 +412,6 @@ jobs:
           EXP_SHARD_TABLE = {
               "exp1":               1,
               "exp1b":              5,
-              "exp1c":              5,
               "exp1_ablation":      4,
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
@@ -502,7 +493,6 @@ jobs:
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
-              "exp1c":             [f"v4_seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp2_feynman":       FEYNMAN_DOMAINS,
@@ -1078,7 +1068,7 @@ jobs:
 
               rescued = 0
               EXP = os.environ.get("EXP", "")
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
               shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
 
               if EXP in COMBINED_OUTPUT_EXPS:
@@ -1133,24 +1123,6 @@ jobs:
                                             f"{PVA_DIR}/*.csv",
                                             f"{PVA_DIR}/**/*.json",
                                             f"{PVA_DIR}/**/*.csv"]
-                  elif EXP == "exp1c":
-                      shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
-                      seeds_this_shard = [
-                          tid[len("v4_seed"):] for tid in shard_ids_local
-                      ]
-                      combined_globs = [
-                          "hypatiax_defi_benchmark_v4_pooled_seed_report.json",
-                      ]
-                      for s in seeds_this_shard:
-                          combined_globs += [
-                              f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
-                              f"*defi_v4_*seed{s}*.json",
-                          ]
-                      if not seeds_this_shard:
-                          combined_globs += [
-                              "*hypatiax_defi_benchmark_v4*results*.json",
-                              "*defi_v4_*.json",
-                          ]
                   else:
                       combined_globs = [
                           "*hypatiax_defi_benchmark*results*.json",
@@ -1382,37 +1354,6 @@ jobs:
             exit 1
           fi
           echo "  OK exp1b output files present in canonical path."
-
-      - name: Verify exp1c output files exist
-        if: ${{ needs.plan.outputs.exp_id == 'exp1c' && steps.resolve_ids.outputs.has_work == 'true' }}
-        env:
-          RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
-        run: |
-          set -euo pipefail
-          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/exp1c_v4"
-          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | wc -l)
-          COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
-          COUNT_POOLED=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4_pooled_seed_report.json" 2>/dev/null | wc -l)
-          COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_DEFI + COUNT_POOLED ))
-          echo "=== exp1c output verification ==="
-          echo "  Target dir                                        : ${TARGET}"
-          echo "  hypatiax_defi_benchmark_v4*results*.json          : ${COUNT_BENCHMARK}"
-          echo "  defi_v4_*.json                                    : ${COUNT_DEFI}"
-          echo "  hypatiax_defi_benchmark_v4_pooled_seed_report.json: ${COUNT_POOLED}"
-          echo "  Total                                             : ${COUNT_TOTAL}"
-          echo "--- Directory listing ---"
-          find "${TARGET}" -type f 2>/dev/null | sort || true
-          if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
-            echo "::error::exp1c produced NO output files in '${TARGET}'."
-            echo "  Expected: hypatiax_defi_benchmark_v4*results*.json, defi_v4_*.json,"
-            echo "            or hypatiax_defi_benchmark_v4_pooled_seed_report.json"
-            echo "  The script may have written to a different path.  Check:"
-            echo "    1. 'exp1c post-run file scan' in the Run experiment tasks log"
-            echo "    2. 'Move results to RESULTS_DIR' step log for exp1c"
-            echo "  Also confirm RESULTS_DIR env was set to $(pwd)/${OUT_BASE} (absolute)."
-            exit 1
-          fi
-          echo "  OK exp1c output files present in canonical path."
 
       - name: Verify exp1_five output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1_five' && steps.resolve_ids.outputs.has_work == 'true' }}
@@ -1797,7 +1738,7 @@ jobs:
           done_set = set(completed)
 
           EXP = os.environ.get("EXP", "")
-          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
+          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "suppB", "suppB_sc"}
           search_dirs = [result_dir, "."]
 
           if EXP in COMBINED_OUTPUT_EXPS:
@@ -1840,19 +1781,6 @@ jobs:
                                         f"{PVA_DIR}/*.csv",
                                         f"{PVA_DIR}/**/*.json",
                                         f"{PVA_DIR}/**/*.csv"]
-              elif EXP == "exp1c":
-                  seeds_this_shard = [tid[len("v4_seed"):] for tid in shard_ids]
-                  combined_globs = ["hypatiax_defi_benchmark_v4_pooled_seed_report.json"]
-                  for s in seeds_this_shard:
-                      combined_globs += [
-                          f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
-                          f"*defi_v4_*seed{s}*.json",
-                      ]
-                  if not seeds_this_shard:
-                      combined_globs += [
-                          "*hypatiax_defi_benchmark_v4*results*.json",
-                          "*defi_v4_*.json",
-                      ]
               else:
                   combined_globs = [
                       "*hypatiax_defi_benchmark*results*.json",
@@ -2092,7 +2020,7 @@ jobs:
                 || true)
               if [[ -n "$OVERWRITTEN" ]]; then
                 case "${EXP}" in
-                  exp1b|exp1c|exp1_ablation|exp3b|suppB|suppB_sc)
+                  exp1b|exp1_ablation|exp3b|suppB|suppB_sc)
                     echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
                     echo "  committed result file(s); the per-shard isolation suffix should have "
                     echo "  prevented this:"
@@ -2329,18 +2257,33 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
           else
-            git commit -m "ci: exp2_feynman_pca results (PCA 40/60) [skip ci]"
+            git stash --include-untracked --quiet || true
             PUSHED=false
             for i in 1 2 3; do
-              git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
-                 git push origin HEAD:"${{ github.ref_name }}"; then
-                git stash pop --quiet 2>/dev/null || true
+              git rebase --abort 2>/dev/null || true
+              git merge --abort 2>/dev/null || true
+              git fetch origin "${{ github.ref_name }}"
+              git reset --hard "origin/${{ github.ref_name }}"
+
+              git stash pop --quiet 2>/dev/null || true
+              git add "${PCA_DIR}"/ 2>/dev/null || true
+              git add "${BASELINE}"  2>/dev/null || true
+
+              if git diff --cached --quiet; then
+                echo "Results already present upstream."
                 PUSHED=true
                 break
               fi
-              git stash pop --quiet 2>/dev/null || true
-              sleep 5
+
+              git commit -m "ci: exp2_feynman_pca results (PCA 40/60) [skip ci]" || true
+
+              if git push origin "HEAD:${{ github.ref_name }}"; then
+                PUSHED=true
+                break
+              fi
+
+              git stash --include-untracked --quiet || true
+              sleep $((i * 5))
             done
             if [[ "${PUSHED}" == "true" ]]; then
               echo "Results committed and pushed."
@@ -2487,18 +2430,32 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
           else
-            git commit -m "ci: exp1_pca results (DeFi all-74, PCA 40/60) [skip ci]"
+            git stash --include-untracked --quiet || true
             PUSHED=false
             for i in 1 2 3; do
-              git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
-                 git push origin HEAD:"${{ github.ref_name }}"; then
-                git stash pop --quiet 2>/dev/null || true
+              git rebase --abort 2>/dev/null || true
+              git merge --abort 2>/dev/null || true
+              git fetch origin "${{ github.ref_name }}"
+              git reset --hard "origin/${{ github.ref_name }}"
+
+              git stash pop --quiet 2>/dev/null || true
+              git add "${PCA_DEFI_DIR}"/ 2>/dev/null || true
+
+              if git diff --cached --quiet; then
+                echo "Results already present upstream."
                 PUSHED=true
                 break
               fi
-              git stash pop --quiet 2>/dev/null || true
-              sleep 5
+
+              git commit -m "ci: exp1_pca results (DeFi all-74, PCA 40/60) [skip ci]" || true
+
+              if git push origin "HEAD:${{ github.ref_name }}"; then
+                PUSHED=true
+                break
+              fi
+
+              git stash --include-untracked --quiet || true
+              sleep $((i * 5))
             done
             if [[ "${PUSHED}" == "true" ]]; then
               echo "Results committed and pushed."
@@ -2645,18 +2602,32 @@ jobs:
           if git diff --cached --quiet; then
             echo "Nothing new to commit."
           else
-            git commit -m "ci: exp1b_pca results (DeFi portfolio seed sweep, PCA 40/60) [skip ci]"
+            git stash --include-untracked --quiet || true
             PUSHED=false
             for i in 1 2 3; do
-              git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
-                 git push origin HEAD:"${{ github.ref_name }}"; then
-                git stash pop --quiet 2>/dev/null || true
+              git rebase --abort 2>/dev/null || true
+              git merge --abort 2>/dev/null || true
+              git fetch origin "${{ github.ref_name }}"
+              git reset --hard "origin/${{ github.ref_name }}"
+
+              git stash pop --quiet 2>/dev/null || true
+              git add "${PCA15_DIR}"/ 2>/dev/null || true
+
+              if git diff --cached --quiet; then
+                echo "Results already present upstream."
                 PUSHED=true
                 break
               fi
-              git stash pop --quiet 2>/dev/null || true
-              sleep 5
+
+              git commit -m "ci: exp1b_pca results (DeFi portfolio seed sweep, PCA 40/60) [skip ci]" || true
+
+              if git push origin "HEAD:${{ github.ref_name }}"; then
+                PUSHED=true
+                break
+              fi
+
+              git stash --include-untracked --quiet || true
+              sleep $((i * 5))
             done
             if [[ "${PUSHED}" == "true" ]]; then
               echo "Results committed and pushed."
@@ -2893,7 +2864,7 @@ jobs:
               "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
           )
           DEFI_SCRIPT = pathlib.Path(
-              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4_pca.py"
           )
 
           failures = []
