@@ -228,6 +228,32 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
     --output-dir \"\${_DEFI_TARGET}\" \
     2>&1 | tee '${RESULTS_DIR}/exp1_run.log'
 
+  # RESCUE: hypatiax_defi_benchmark_v4.py may not fully honor --output-dir
+  # (same failure class documented for the PCA variant under exp1_pca, and
+  # for the v3c script under exp1b/FIX-exp1b-1) and can write results to
+  # REPO_ROOT, its own hardcoded RESULTS_DIR-relative path, or
+  # EXPERIMENTS_DIR instead of _DEFI_TARGET. Search the common root
+  # locations and move anything matching into _DEFI_TARGET before running
+  # statistical_analysis.py / verification.
+  echo '[exp1] Scanning for stray output files outside _DEFI_TARGET...'
+  for _search_root in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 -type f \
+    \( \
+        -name 'defi_v4_*.json' \
+        -o -name 'hypatiax_defi_benchmark_*results*.json' \
+        -o -name 'hypatiax_defi_benchmark_*checkpoint*.json' \
+    \) 2>/dev/null | while IFS= read -r _src; do
+        [[ \"\${_src}\" == \"\${_DEFI_TARGET}\"* ]] && continue
+        _fname=\$(basename \"\${_src}\")
+        _dst=\"\${_DEFI_TARGET}/\${_fname}\"
+        if [[ -e \"\${_dst}\" ]]; then
+          echo \"  [exp1] rescue target already exists, skipping: \${_dst}\"
+          continue
+        fi
+        mv -v \"\${_src}\" \"\${_dst}\"
+    done
+  done
+
   python3 -c 'import seaborn' 2>/dev/null || \
     python3 -m pip install --quiet seaborn || \
     { echo 'ERROR: seaborn install failed — statistical_analysis.py will crash'; exit 1; }
@@ -279,52 +305,68 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   fi
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
+  _SUFFIX=\"_shard\${_SHARD}_seed\${_SEED_TAG}\"
 
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
 
   mkdir -p \"\${dest15}\"
 
+  rename_exp1b_file() {
+    local src=\"\$1\"
+    local fname stem ext dst
+
+    [[ -f \"\$src\" ]] || return 0
+
+    fname=\$(basename \"\$src\")
+
+    # Already isolated (e.g. a previous shard already suffixed it) — skip.
+    if [[ \"\$fname\" == *\"_shard\"* || \"\$fname\" == *\"_nshards\"* ]]; then
+      return 0
+    fi
+
+    stem=\"\${fname%.*}\"
+    ext=\"\${fname##*.}\"
+    dst=\"\${dest15}/\${stem}\${_SUFFIX}.\${ext}\"
+
+    if [[ \"\$src\" == \"\$dst\" ]]; then
+      return 0
+    fi
+
+    if [[ -e \"\$dst\" ]]; then
+      echo \"::error::exp1b shard destination already exists: \$dst\"
+      return 1
+    fi
+
+    mv -v \"\$src\" \"\$dst\"
+  }
+
+  # Files written by the benchmark in common root locations.
   for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 \
+    find \"\${_search_root}\" -maxdepth 1 -type f \
     \( \
         -name 'defi_v4_*.json' \
         -o -name '*portfolio*variance*.json' \
         -o -name 'hypatiax_defi_benchmark_*results*.json' \
+        -o -name 'comparison_FIXED_*.json' \
+        -o -name 'comparison_FIXED_*.txt' \
     \) | while IFS= read -r src; do
-
         [[ \"\$src\" == \"\${dest15}\"* ]] && continue
-
-        fname=\$(basename \"\$src\")
-        stem=\"\${fname%.*}\"
-        ext=\"\${fname##*.}\"
-
-        dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
-
-        if [ -f \"\$src\" ]; then
-            mv -v \"\$src\" \"\$dst\" || true
-        fi
+        rename_exp1b_file \"\$src\"
     done
   done
 
-  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
-    find \"\${_search_root}\" -maxdepth 1 \
+  # Important: the benchmark may write directly into dest15 with an
+  # unsuffixed filename (this is what triggers the isolation guard).
+  # Normalize any such files there too.
+  find \"\${dest15}\" -maxdepth 1 -type f \
     \( \
-        -name 'comparison_FIXED_*.json' \
+        -name 'defi_v4_*.json' \
+        -o -name '*portfolio*variance*.json' \
+        -o -name 'hypatiax_defi_benchmark_*results*.json' \
+        -o -name 'comparison_FIXED_*.json' \
         -o -name 'comparison_FIXED_*.txt' \
-    \) | while IFS= read -r src; do
-
-        [[ \"\$src\" == \"\${dest15}\"* ]] && continue
-
-        fname=\$(basename \"\$src\")
-        stem=\"\${fname%.*}\"
-        ext=\"\${fname##*.}\"
-
-        dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
-
-        if [ -f \"\$src\" ]; then
-            mv -v \"\$src\" \"\$dst\" || true
-        fi
-    done
+    \) ! -name '*_shard*' ! -name '*_nshards*' | while IFS= read -r src; do
+      rename_exp1b_file \"\$src\"
   done
 
   echo '=== exp1b verification ==='
@@ -425,6 +467,34 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
     --output-dir \"\${_PCA_DEFI_DIR}\" \\
     --force-fresh \\
     2>&1 | tee '${RESULTS_DIR}/exp1_pca_run.log'
+
+  # RESCUE: hypatiax_defi_benchmark_pca.py may not fully honor --output-dir
+  # (same failure class already documented for the v3c/v4 script under
+  # exp1b -- see FIX-exp1b-1) and can write results to REPO_ROOT, its
+  # hardcoded RESULTS_DIR-relative path, or EXPERIMENTS_DIR instead of
+  # _PCA_DEFI_DIR. exp1b_pca already guards against this for the same
+  # underlying script; exp1_pca was missing the equivalent rescue, which is
+  # why verification below was seeing zero result JSONs even on a
+  # successful run. Search the common root locations and move anything
+  # matching into _PCA_DEFI_DIR before checking for results.
+  echo '[exp1_pca] Scanning for stray output files outside _PCA_DEFI_DIR...'
+  for _search_root in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+    find \"\${_search_root}\" -maxdepth 1 -type f \\
+    \\( \\
+        -name 'defi_pca_v4_*.json' \\
+        -o -name 'hypatiax_defi_benchmark_pca*results*.json' \\
+        -o -name 'hypatiax_defi_benchmark_pca*checkpoint*.json' \\
+    \\) 2>/dev/null | while IFS= read -r _src; do
+        [[ \"\${_src}\" == \"\${_PCA_DEFI_DIR}\"* ]] && continue
+        _fname=\$(basename \"\${_src}\")
+        _dst=\"\${_PCA_DEFI_DIR}/\${_fname}\"
+        if [[ -e \"\${_dst}\" ]]; then
+          echo \"  [exp1_pca] rescue target already exists, skipping: \${_dst}\"
+          continue
+        fi
+        mv -v \"\${_src}\" \"\${_dst}\"
+    done
+  done
 
   python3 - <<'PYEOF'
 import json, pathlib, datetime
