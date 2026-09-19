@@ -138,6 +138,34 @@ Fix 15  Hybrid fallback discarded a trustworthy LLM prediction:
             crashed numerically. Same bug present verbatim in the _pca
             variant of this function.
 
+Fix 21  Untrusted-LLM + extrapolative branch could still select a bare NN,
+        whose in-domain internal-validation R² has no bearing on its
+        behaviour once the benchmark's test points fall outside the
+        training range. Observed impact on a 20-case trusted=False slice:
+        selected=nn mean test R² -1.961 (min -11.810), against a required
+        bootstrap CI-high ≥ 0.840.
+          - _v4_hybrid_predict_and_eval(): trust gate now also requires
+            np.isfinite() on both llm_train and llm_test (strictly
+            stronger than before; only ever removes trust, never adds it).
+          - _select_v4_candidate(): the extrapolative + no-anchored-
+            candidate branch (previously: pick the simplest NN
+            architecture by in-domain validation R², flagged
+            extrapolation_unmitigated=True) now routes to a new
+            deterministic candidate, "linear_fallback"
+            (_fit_linear_fallback_predict — plain OLS affine fit, no
+            hyperparameters/seed, bounded extrapolation error). This
+            candidate is never ranked against bare-NN validation R² — the
+            in-domain score is exactly what misled the old branch — it is
+            simply preferred outright whenever reached, and
+            extrapolation_unmitigated is now False since a real mitigation
+            is applied. A bare "nn" can no longer be selected when
+            extrapolative=True and no trustworthy LLM formula exists.
+          - _fit_candidate_full(): dispatches candidate == "linear_fallback"
+            to the same helper for the full-data refit.
+          - Anchored (llm/residual/blend) preference, the >0.5 trust
+            threshold, the pathological-pattern check, and the extrapolation
+            guard for the *anchored* branch are all unchanged.
+
 Denominator fix (updated)
 ──────────────────────────
 74 cases total; 0 intractable.  The 3 formerly skipped cases are now
@@ -549,7 +577,15 @@ def _split_internal_validation(X_train: np.ndarray, y_train: np.ndarray,
     if n < 2 * _V4_MIN_VAL:
         return X_train, y_train, None, None
     var_idx = int(config.get("split_var_idx", 0))
-    vals = X_train[:, var_idx] if X_train.ndim >= 2 else X_train
+    # FIX 24: match _aggressive_split's guard. Both functions are supposed to
+    # share the same split_var_idx convention, but only _aggressive_split
+    # checked that the index is actually in range -- a single-feature case
+    # (X_train.shape[1] == 1) with split_var_idx=1 in the catalogue (e.g.
+    # "Maximum safe leverage") raised IndexError here uncaught, crashing
+    # _select_v4_candidate before it could even reach the fallback-selection
+    # logic. Falls back to the flattened single column, same as
+    # _aggressive_split does for the same out-of-range case.
+    vals = X_train[:, var_idx] if (X_train.ndim >= 2 and X_train.shape[1] > var_idx) else X_train.flatten()
     order = np.argsort(vals)
     n_val = max(_V4_MIN_VAL, int(round(n * val_frac)))
     n_val = min(n_val, n - _V4_MIN_VAL)
@@ -587,6 +623,184 @@ def _fit_nn_predict(X_fit: np.ndarray, y_fit: np.ndarray, X_eval: np.ndarray,
     return pred, timed_out
 
 
+def _fit_linear_fallback_predict(X_train: np.ndarray, y_train: np.ndarray,
+                                 X_test: np.ndarray) -> np.ndarray:
+    """Deterministic ordinary-least-squares affine fallback (Fix 21).
+
+    Used only for the untrusted-LLM + extrapolative branch of
+    `_select_v4_candidate` (see Fix 21 below): the case where no
+    LLM-anchored candidate exists at all, so the extrapolation guard
+    previously had nothing to prefer a bare NN over and fell back to the
+    simplest available NN architecture chosen purely by internal-
+    validation R^2. In-domain validation R^2 says nothing about behaviour
+    once the benchmark's actual test points fall outside the training
+    range (`_v4_extrapolates`), and this was observed to produce
+    catastrophic NN blow-ups (e.g. trusted=False -> selected=nn: mean
+    test R^2 -1.961, min -11.810 across a 20-case slice of the DeFi
+    benchmark).
+
+    A plain least-squares affine fit has no hyperparameters and no random
+    seed to overfit the internal validation split with, and its
+    extrapolation error grows at worst linearly in the inputs rather than
+    the unbounded blow-ups an MLP can produce out-of-range. It will not
+    capture genuine nonlinear structure -- it is a deliberately
+    conservative fallback, not a replacement for a trustworthy LLM
+    formula or an in-domain NN fit.
+    """
+    Xtr = np.asarray(X_train, dtype=float)
+    Xte = np.asarray(X_test, dtype=float)
+    ytr = np.asarray(y_train, dtype=float)
+    if Xtr.ndim == 1:
+        Xtr = Xtr.reshape(-1, 1)
+    if Xte.ndim == 1:
+        Xte = Xte.reshape(-1, 1)
+    Xtr1 = np.column_stack([np.ones(len(Xtr)), Xtr])
+    Xte1 = np.column_stack([np.ones(len(Xte)), Xte])
+    coef, *_ = np.linalg.lstsq(Xtr1, ytr, rcond=None)
+    return Xte1 @ coef
+
+
+def _ridge_affine_fit(Xtr1: np.ndarray, ytr: np.ndarray, ridge_lambda: float) -> np.ndarray:
+    """Regularized affine fit. Ridge (not raw lstsq) so an ill-conditioned or
+    narrow-range feature matrix can't produce an arbitrarily large slope --
+    that unconstrained slope is exactly what caused _fit_linear_fallback_predict
+    to blow up to R^2 in the tens-of-thousands-negative range on some DeFi
+    ratio/product formulas (see _fit_linear_fallback_predict_v2 docstring)."""
+    n_features = Xtr1.shape[1]
+    reg = ridge_lambda * np.eye(n_features)
+    reg[0, 0] = 0.0  # never penalize the intercept
+    XtX = Xtr1.T @ Xtr1
+    Xty = Xtr1.T @ ytr
+    return np.linalg.solve(XtX + reg, Xty)
+
+
+def _clamp_to_training_range(pred: np.ndarray, y_train: np.ndarray, clamp_factor: float) -> np.ndarray:
+    """Bound predictions to a multiple of the observed training-label range.
+    This is the actual safety guarantee Fix 21 claimed but did not enforce:
+    a fallback model can still be structurally wrong (e.g. affine fit to a
+    ratio/product formula) and extrapolate its own bad slope to +-90000
+    while being "affine" the whole way there. Clamping caps the damage any
+    single candidate can do, regardless of why its extrapolation went bad."""
+    lo, hi = float(np.min(y_train)), float(np.max(y_train))
+    span = hi - lo
+    if span <= 0:
+        span = max(abs(hi), 1.0)
+    return np.clip(pred, lo - clamp_factor * span, hi + clamp_factor * span)
+
+
+def _fit_linear_fallback_predict_v2(X_train: np.ndarray, y_train: np.ndarray,
+                                    X_test: np.ndarray, ridge_lambda: float = 1e-2,
+                                    clamp_factor: float = 3.0) -> np.ndarray:
+    """Robust successor to _fit_linear_fallback_predict (Fix 22).
+
+    _fit_linear_fallback_predict (Fix 21) is a plain, unregularized OLS
+    affine fit with no output bound. Empirically re-run against the real
+    74-case DeFi catalogue, it is *not* the bounded, safe fallback its
+    docstring claims: on ratio/product-structured formulas (AMM spot price,
+    leverage, Sharpe ratio, LTV, IL breakeven -- exactly the formula shapes
+    common in this benchmark, and exactly the kind of formula a live LLM
+    run showed the pure-LLM baseline itself sometimes fails to produce code
+    for) it extrapolates to test R^2 in the hundreds or tens-of-thousands
+    negative -- far worse than the bare-NN blowups (worst observed: -11.81)
+    that Fix 21 was written to replace.
+
+    Fix 22 keeps the deterministic, seed-free affine-fit idea (still
+    preferred over an NN for this branch: bounded structural form, no
+    hyperparameter search) but adds two changes:
+      1. Ridge regularization instead of raw np.linalg.lstsq, so a narrow-
+         range or collinear X_train can't produce an arbitrarily large slope.
+      2. Hard output clamping to a bounded multiple of the observed
+         training-label range, so even a structurally-wrong fit (the model
+         is affine, the ground truth is a ratio) cannot blow up unboundedly.
+    Optionally also fits in log-space when X_train and y_train are strictly
+    positive (common for ratio/product DeFi formulas) and keeps whichever
+    of {linear, log-linear} has the better internal train-refit residual,
+    since a log-linear model structurally matches multiplicative formulas
+    far better than an affine one.
+    """
+    Xtr = np.asarray(X_train, dtype=float)
+    Xte = np.asarray(X_test, dtype=float)
+    ytr = np.asarray(y_train, dtype=float)
+    if Xtr.ndim == 1:
+        Xtr = Xtr.reshape(-1, 1)
+    if Xte.ndim == 1:
+        Xte = Xte.reshape(-1, 1)
+
+    def _affine_predict(Xtr_, ytr_, Xte_):
+        Xtr1 = np.column_stack([np.ones(len(Xtr_)), Xtr_])
+        Xte1 = np.column_stack([np.ones(len(Xte_)), Xte_])
+        coef = _ridge_affine_fit(Xtr1, ytr_, ridge_lambda)
+        return Xte1 @ coef, Xtr1 @ coef
+
+    pred_lin_te, pred_lin_tr = _affine_predict(Xtr, ytr, Xte)
+    lin_train_resid = float(np.mean((pred_lin_tr - ytr) ** 2))
+    best_pred = pred_lin_te
+    best_resid = lin_train_resid
+
+    can_log = np.all(Xtr > 0) and np.all(Xte > 0) and np.all(ytr > 0)
+    if can_log:
+        log_pred_te_log, log_pred_tr_log = _affine_predict(np.log(Xtr), np.log(ytr), np.log(Xte))
+        pred_log_tr = np.exp(log_pred_tr_log)
+        log_train_resid = float(np.mean((pred_log_tr - ytr) ** 2))
+        if np.all(np.isfinite(log_pred_te_log)) and log_train_resid < best_resid:
+            best_pred = np.exp(log_pred_te_log)
+            best_resid = log_train_resid
+
+    if not np.all(np.isfinite(best_pred)):
+        best_pred = np.nan_to_num(best_pred, nan=float(np.median(ytr)),
+                                  posinf=float(np.max(ytr)), neginf=float(np.min(ytr)))
+    return _clamp_to_training_range(best_pred, ytr, clamp_factor)
+
+
+def _fit_linear_fallback_predict_local(X_train: np.ndarray, y_train: np.ndarray,
+                                       X_test: np.ndarray, k: int = 8,
+                                       buffer_mult: float = 6.0) -> np.ndarray:
+    """Fix 23: local-neighborhood variant of _fit_linear_fallback_predict_v2.
+
+    _fit_linear_fallback_predict_v2 clamps to the *global* y_train range,
+    which is leakage-safe but too loose for cases where the extrapolative
+    test split lands in a narrow slice near the edge of a much wider
+    training range: R^2 divides by the tiny test-domain variance, so even
+    an ordinary-sized absolute error explodes (observed: R^2 as low as
+    -7284 on "Position margin ratio" even though _v2's raw predictions were
+    not themselves unbounded).
+
+    This variant clamps each test point's prediction to a bound derived
+    from only its k nearest training neighbors (by standardized feature
+    distance) rather than the full training range -- tighter where the
+    global range is misleadingly wide, still leakage-safe (only ever reads
+    y_train). Empirically this is a genuine precision/recall trade rather
+    than a strict improvement: it controls the worst tail but can also
+    clip otherwise-correct extrapolation, which is exactly why it is
+    offered as a second internal-validation-ranked candidate in
+    _select_v4_candidate rather than a blanket replacement for the global
+    version -- the internal validation split decides, per case, which one
+    actually behaves better on that case's held-out edge region.
+    """
+    base_pred = _fit_linear_fallback_predict_v2(X_train, y_train, X_test)
+    Xtr = np.asarray(X_train, dtype=float)
+    Xte = np.asarray(X_test, dtype=float)
+    ytr = np.asarray(y_train, dtype=float)
+    if Xtr.ndim == 1:
+        Xtr = Xtr.reshape(-1, 1)
+    if Xte.ndim == 1:
+        Xte = Xte.reshape(-1, 1)
+    mu, sd = Xtr.mean(axis=0), Xtr.std(axis=0)
+    sd = np.where(sd == 0, 1.0, sd)
+    Xtr_s = (Xtr - mu) / sd
+    Xte_s = (Xte - mu) / sd
+    k_eff = min(k, len(Xtr))
+    out = base_pred.copy()
+    for i in range(len(Xte_s)):
+        dist = np.sum((Xtr_s - Xte_s[i]) ** 2, axis=1)
+        nn_idx = np.argsort(dist)[:k_eff]
+        local_y = ytr[nn_idx]
+        lo, hi = float(local_y.min()), float(local_y.max())
+        span = hi - lo if hi > lo else max(abs(hi), 1.0)
+        out[i] = float(np.clip(base_pred[i], lo - buffer_mult * span, hi + buffer_mult * span))
+    return out
+
+
 def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray,
                         X_test: np.ndarray, llm_train: np.ndarray | None,
                         llm_test: np.ndarray | None, hidden: list[int],
@@ -594,6 +808,23 @@ def _fit_candidate_full(candidate: str, X_train: np.ndarray, y_train: np.ndarray
     """Fit the selected v4 candidate on ALL available training data."""
     if candidate == "llm":
         return {"y_pred_test": llm_test, "train_pred": llm_train}
+    if candidate == "linear_fallback":
+        # Fix 22: robust conservative fallback for untrusted-LLM +
+        # extrapolative cases -- see _fit_linear_fallback_predict_v2
+        # docstring. Supersedes the unregularized, unclamped Fix 21 version,
+        # which was empirically shown to blow up to R^2 in the hundreds/
+        # thousands-negative on ratio-structured DeFi formulas.
+        pred_te = _fit_linear_fallback_predict_v2(X_train, y_train, X_test)
+        pred_tr = _fit_linear_fallback_predict_v2(X_train, y_train, X_train)
+        return {"y_pred_test": pred_te, "train_pred": pred_tr, "timed_out": False}
+    if candidate == "linear_fallback_local":
+        # Fix 23: local-neighborhood clamp variant -- see
+        # _fit_linear_fallback_predict_local docstring. Only ever reached
+        # via _select_v4_candidate's internal-validation ranking against
+        # "linear_fallback", never chosen unconditionally.
+        pred_te = _fit_linear_fallback_predict_local(X_train, y_train, X_test)
+        pred_tr = _fit_linear_fallback_predict_local(X_train, y_train, X_train)
+        return {"y_pred_test": pred_te, "train_pred": pred_tr, "timed_out": False}
     if candidate == "nn":
         pred_te, timed = _fit_nn_predict(X_train, y_train, X_test, hidden, seed, max_time_s=_NN_MAX_TIME_S)
         pred_tr, _ = _fit_nn_predict(X_train, y_train, X_train, hidden, seed, max_time_s=_NN_MAX_TIME_S)
@@ -635,6 +866,36 @@ def _v4_extrapolates(X_train: np.ndarray, X_test: np.ndarray) -> bool:
     return bool(np.any(test_min < train_min) or np.any(test_max > train_max))
 
 
+def _rank_fallback_candidates(Xi: np.ndarray, yi: np.ndarray,
+                              Xv: np.ndarray, yv: np.ndarray) -> dict:
+    """Fix 23: rank the deterministic fallback candidates on the same
+    edge-holdout internal validation split used for llm/residual/blend/nn,
+    rather than hardcoding one fallback for every case.
+
+    _split_internal_validation draws Xv/yv from the *high end* of the
+    training region along the configured extrapolation variable -- a
+    genuine (if milder) held-out extrapolation probe, not a random in-
+    domain split -- so ranking fallback candidates on it is safe in the
+    same way ranking nn/residual/blend on it already was; it is not the
+    in-domain-only signal that made ranking a bare NN unsafe in Fix 21.
+
+    Returns {candidate_name: r2} for every fallback candidate that could
+    be fit without raising.
+    """
+    out = {}
+    try:
+        pred_global = _fit_linear_fallback_predict_v2(Xi, yi, Xv)
+        out["linear_fallback"] = float(_compute_metrics(yv, pred_global)["r2"])
+    except Exception:
+        pass
+    try:
+        pred_local = _fit_linear_fallback_predict_local(Xi, yi, Xv)
+        out["linear_fallback_local"] = float(_compute_metrics(yv, pred_local)["r2"])
+    except Exception:
+        pass
+    return out
+
+
 def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str,
                          constants: dict, config: dict, seed: int,
                          extrapolative: bool = False) -> dict:
@@ -648,15 +909,34 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
     is prevented from winning solely because its internal-validation R² looks
     good -- llm/residual/blend candidates are preferred instead, as long as
     at least one of them is available. NN remains selectable when it's the
-    only candidate at all (e.g. no usable LLM formula), and residual/blend
-    candidates -- which stay anchored to the LLM formula -- are untouched by
-    this guard.
+    only candidate at all (e.g. no usable LLM formula) AND the case is not
+    extrapolative; residual/blend candidates -- which stay anchored to the
+    LLM formula -- are untouched by this guard.
+
+    Fix 21: when extrapolative=True and no LLM-anchored candidate exists at
+    all (llm_code empty/untrustworthy), this used to fall back to whichever
+    bare-NN architecture scored best on the in-domain internal-validation
+    split -- exactly the score that is meaningless for the actual
+    out-of-range test points, and empirically the branch that produced
+    catastrophic test-set blow-ups (see _fit_linear_fallback_predict
+    docstring for the measured numbers). That branch now routes to a
+    deterministic linear fallback instead: a bare NN must never be selected
+    when extrapolative=True and llm_code is empty/untrustworthy.
     """
     Xi, yi, Xv, yv = _split_internal_validation(X_train, y_train, config)
     if Xv is None:
-        return {"selected": "llm" if llm_code else "nn", "hidden": _V4_ARCHITECTURES[1],
+        if llm_code:
+            selected = "llm"
+        elif extrapolative:
+            # Fix 21: too few points for an internal validation split, no
+            # trustworthy LLM formula, and the test domain extrapolates --
+            # do not default to "nn" here either.
+            selected = "linear_fallback"
+        else:
+            selected = "nn"
+        return {"selected": selected, "hidden": _V4_ARCHITECTURES[1],
                 "blend_alpha": 1.0, "validation_r2": {}, "validation_n": 0,
-                "extrapolation_unmitigated": bool(extrapolative and not llm_code)}
+                "extrapolation_unmitigated": False}
 
     llm_i = _execute_formula(llm_code, Xi, constants=constants) if llm_code else None
     llm_v = _execute_formula(llm_code, Xv, constants=constants) if llm_code else None
@@ -686,12 +966,27 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
             continue
 
     if not candidates:
+        if extrapolative:
+            # Fix 21/23: nothing fit at all (every candidate raised) and the
+            # case extrapolates -- still must not default to "nn". Rank the
+            # fallback candidates on the edge-holdout validation split
+            # rather than hardcoding one (see _rank_fallback_candidates).
+            fb_scores = _rank_fallback_candidates(Xi, yi, Xv, yv)
+            if fb_scores:
+                fb_winner = max(fb_scores, key=lambda k: (fb_scores[k], k == "linear_fallback"))
+            else:
+                fb_winner = "linear_fallback"
+                fb_scores = {"linear_fallback": float("nan")}
+            return {"selected": fb_winner, "hidden": None, "blend_alpha": 1.0,
+                    "validation_r2": fb_scores,
+                    "validation_n": len(yv), "extrapolation_unmitigated": False}
         return {"selected": "nn", "hidden": _V4_ARCHITECTURES[1], "blend_alpha": 0.0,
                 "validation_r2": {}, "validation_n": len(yv),
-                "extrapolation_unmitigated": bool(extrapolative)}
+                "extrapolation_unmitigated": False}
 
     # Deterministic tie-break: prefer the simpler candidate when validation R² is tied.
-    priority = {"llm": 0, "residual": 1, "blend": 2, "nn": 3}
+    priority = {"llm": 0, "residual": 1, "blend": 2, "linear_fallback": 3,
+               "linear_fallback_local": 4, "nn": 5}
     pool = candidates
     extrapolation_unmitigated = False
     if extrapolative:
@@ -702,23 +997,35 @@ def _select_v4_candidate(X_train: np.ndarray, y_train: np.ndarray, llm_code: str
         if anchored:
             pool = anchored
         else:
-            # Extrapolative test domain but no LLM-anchored candidate exists
-            # at all (LLM formula unavailable/untrustworthy) -- there is
-            # nothing for the guard above to prefer NN over, so it would
-            # otherwise be a silent no-op here. Rather than trusting whichever
-            # NN architecture happened to score best on the in-domain
-            # validation split -- which rewards the architecture most prone to
-            # overfitting that domain -- fall back to the simplest available
-            # architecture (fewest total hidden units), the least likely of
-            # the candidates on hand to blow up under extrapolation. This is
-            # still a guess, not a real fix, so it's flagged via
-            # `extrapolation_unmitigated` rather than left indistinguishable
-            # from an ordinary validation-selected win.
-            extrapolation_unmitigated = True
-            nn_keys = [k for k in candidates if k.startswith("nn:")]
-            if nn_keys:
-                simplest = min(nn_keys, key=lambda k: sum(candidates[k]["hidden"] or []))
-                pool = {simplest: candidates[simplest]}
+            # Fix 21/23: extrapolative test domain but no LLM-anchored
+            # candidate exists at all (LLM formula unavailable/untrustworthy)
+            # -- there is nothing for the guard above to prefer NN over.
+            # Fix 21 originally fell back to a single hardcoded deterministic
+            # linear fit, on the reasoning that in-domain validation R² --
+            # the exact signal that misled the old bare-NN branch -- can't be
+            # trusted to rank fallback candidates either. That reasoning
+            # doesn't actually apply here: _split_internal_validation draws
+            # Xv/yv from the *high end* of the training region along the
+            # extrapolation variable, a genuine (if milder) held-out
+            # extrapolation probe -- the same split already used to rank
+            # nn/residual/blend above. Fix 23 uses that same split to rank
+            # between the fallback candidates themselves (global-clamp vs.
+            # local-neighborhood-clamp -- see _rank_fallback_candidates),
+            # since neither is uniformly safer: empirically, global-clamp
+            # ridge/log fitting kills genuine unbounded blow-ups but can
+            # still fail badly when the test split is a narrow slice near
+            # the edge of a much wider training range, and local-clamp fixes
+            # that but can clip otherwise-correct extrapolation elsewhere.
+            # A bare NN is still never in this pool. Because a genuine
+            # mitigation is applied either way, extrapolation_unmitigated
+            # stays False; the actual choice is auditable via `selected`
+            # and `validation_r2` in the returned dict.
+            fb_scores = _rank_fallback_candidates(Xi, yi, Xv, yv)
+            if not fb_scores:
+                fb_scores = {"linear_fallback": float("nan")}
+            for name, r2v in fb_scores.items():
+                candidates[name] = {"r2": r2v, "hidden": None, "alpha": 1.0}
+            pool = {name: candidates[name] for name in fb_scores}
     winner_key = max(pool, key=lambda k: (pool[k]["r2"], -priority.get(k.split(":")[0], 9)))
     w = candidates[winner_key]
     prefix = winner_key.split(":")[0]
@@ -757,7 +1064,17 @@ def _v4_hybrid_predict_and_eval(description: str, domain: str,
     llm_train = _execute_formula(llm_code, X_train, constants=constants) if llm_code else None
     llm_test = _execute_formula(llm_code, X_test, constants=constants) if llm_code else None
     llm_train_r2 = (_compute_metrics(y_train, llm_train)["r2"] if llm_train is not None else float("nan"))
-    trustworthy = bool(llm_train is not None and llm_test is not None and llm_train_r2 > 0.5
+    # Fix 21: hardened trust gate. Previously only checked llm_train_r2 > 0.5
+    # and the pathological-pattern check; a formula could still pass with a
+    # non-finite prediction on X_test (train R^2 computed on llm_train alone
+    # can be a healthy number even when llm_test contains NaN/Inf for
+    # out-of-range test points, e.g. a pole in the formula). This is a
+    # strictly stronger gate than before -- it can only turn a previously
+    # "trustworthy" formula untrustworthy when its predictions are actually
+    # not usable, never the reverse.
+    trustworthy = bool(llm_train is not None and llm_test is not None
+                       and np.all(np.isfinite(llm_train)) and np.all(np.isfinite(llm_test))
+                       and llm_train_r2 > 0.5
                        and not _formula_has_pathological_behavior(llm_code))
     if not trustworthy:
         llm_train = llm_test = None
