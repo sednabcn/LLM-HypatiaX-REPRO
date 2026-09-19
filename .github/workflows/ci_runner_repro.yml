@@ -13,12 +13,12 @@ on:
         options:
           - exp1
           - exp1b
-          - exp1c
+#         - exp1c
           - exp1_ablation
           - exp1_five
           - exp1_pca
           - exp1b_pca
-          - exp1c_pca
+#         - exp1c_pca
           - exp2_feynman_pca
           - exp2_feynman
           - exp2_feynman_extrap
