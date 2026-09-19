@@ -2332,13 +2332,15 @@ jobs:
             git commit -m "ci: exp2_feynman_pca results (PCA 40/60) [skip ci]"
             PUSHED=false
             for i in 1 2 3; do
+              git rebase --abort 2>/dev/null || true
               git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
+              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
                  git push origin HEAD:"${{ github.ref_name }}"; then
                 git stash pop --quiet 2>/dev/null || true
                 PUSHED=true
                 break
               fi
+              git rebase --abort 2>/dev/null || true
               git stash pop --quiet 2>/dev/null || true
               sleep 5
             done
@@ -2490,13 +2492,15 @@ jobs:
             git commit -m "ci: exp1_pca results (DeFi all-74, PCA 40/60) [skip ci]"
             PUSHED=false
             for i in 1 2 3; do
+              git rebase --abort 2>/dev/null || true
               git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
+              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
                  git push origin HEAD:"${{ github.ref_name }}"; then
                 git stash pop --quiet 2>/dev/null || true
                 PUSHED=true
                 break
               fi
+              git rebase --abort 2>/dev/null || true
               git stash pop --quiet 2>/dev/null || true
               sleep 5
             done
@@ -2648,13 +2652,15 @@ jobs:
             git commit -m "ci: exp1b_pca results (DeFi portfolio seed sweep, PCA 40/60) [skip ci]"
             PUSHED=false
             for i in 1 2 3; do
+              git rebase --abort 2>/dev/null || true
               git stash --include-untracked --quiet || true
-              if git pull --rebase origin "${{ github.ref_name }}" && \
+              if git pull --rebase -X ours origin "${{ github.ref_name }}" && \
                  git push origin HEAD:"${{ github.ref_name }}"; then
                 git stash pop --quiet 2>/dev/null || true
                 PUSHED=true
                 break
               fi
+              git rebase --abort 2>/dev/null || true
               git stash pop --quiet 2>/dev/null || true
               sleep 5
             done
