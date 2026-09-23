@@ -198,11 +198,7 @@ def _apply_case_range(seq):
         return seq[start:end]
     except Exception:
         return seq
-<<<<<<< HEAD
-# ──────────────────────────────────────────────────────────────── [...]
-=======
-# ────────────────────────────────────────────────────────────────[...]
->>>>>>> 4130ce0 (Re-run exp3)
+# ────────────────────────────────────────────────────────────────
 
 # ── TASK_IDS / SHARD_IDS / SEED injection ───────────────────────────────────
 def _apply_task_ids_nguyen(seq):
@@ -282,11 +278,7 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
     if env_dir:
         return pathlib.Path(env_dir)
     return repo_results_dir
-<<<<<<< HEAD
-# ──────────────────────────────────────────────────────────────── [...]
-=======
-# ────────────────────────────────────────────────────────────────[...]
->>>>>>> 4130ce0 (Re-run exp3)
+# ────────────────────────────────────────────────────────────────
 
 # ── 1. Resolve repo root & set sys.path ───────────────────────────────────
 # Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_consolidated.py
@@ -1631,11 +1623,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     return result
 
 
-<<<<<<< HEAD
-# ── 9. Entry point ──────────────────────────────────────────────────────── [...]
-=======
-# ── 9. Entry point ────────────────────────────────────────────────────────[...]
->>>>>>> 4130ce0 (Re-run exp3)
+# ── 9. Entry point ────────────────────────────────────────────────────────
 if __name__ == "__main__":
     run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index,
         n_candidates=_args.n_candidates)
