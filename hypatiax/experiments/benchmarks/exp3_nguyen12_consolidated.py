@@ -40,11 +40,11 @@ unfixed, in ALL four prior scripts:
                       (see _llm_exprs_to_pysr_guesses /
                       _sympy_pow_to_pysr_str) and actually passed into
                       model_h.fit(..., guesses=...) for the "H" run only
-                      [FIX-LLM-WARMSTART-GATE: a subsequent pass caught
-                      that `guesses` is a fit()-level parameter in this
-                      pysr build, not a PySRRegressor constructor
-                      argument as an intermediate revision assumed; the
-                      guard and call site below check/pass it accordingly]
+                      [FIX-LLM-WARMSTART-GATE-v2: a subsequent pass corrected an intermediate
+                      revision's mistaken assumption that `guesses` belonged
+                      on fit(); in pysr 2.0.0a1 it is a PySRRegressor
+                      constructor parameter, so the guard checks __init__
+                      and the H call site passes guesses= there]
                       — "P" still fits unseeded, so H and P are now a
                       genuine hybrid-vs-baseline comparison instead of the
                       same PySR fit run twice. This was an explicit,
@@ -198,7 +198,11 @@ def _apply_case_range(seq):
         return seq[start:end]
     except Exception:
         return seq
+<<<<<<< HEAD
 # ──────────────────────────────────────────────────────────────── [...]
+=======
+# ────────────────────────────────────────────────────────────────[...]
+>>>>>>> 4130ce0 (Re-run exp3)
 
 # ── TASK_IDS / SHARD_IDS / SEED injection ───────────────────────────────────
 def _apply_task_ids_nguyen(seq):
@@ -278,7 +282,11 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
     if env_dir:
         return pathlib.Path(env_dir)
     return repo_results_dir
+<<<<<<< HEAD
 # ──────────────────────────────────────────────────────────────── [...]
+=======
+# ────────────────────────────────────────────────────────────────[...]
+>>>>>>> 4130ce0 (Re-run exp3)
 
 # ── 1. Resolve repo root & set sys.path ───────────────────────────────────
 # Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_consolidated.py
@@ -917,11 +925,14 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
     different reads -- and even then, both still come from the same
     `model` object's own post-fit state, not from a stale trajectory poll.
 
-    `fit_kwargs`, if given, is forwarded verbatim into model.fit(). The H
-    run uses this to pass `guesses` (the converted LLM warm-start
-    candidates) -- [FIX-LLM-WARMSTART-GATE] `guesses` is a fit()-level
-    parameter in this pysr build (2.0.0a1), not a constructor argument;
-    see the module-level guard and the H-run call site.
+    `fit_kwargs`, if given, is forwarded verbatim into model.fit(). It is
+    intentionally NOT used to pass `guesses`: in pysr 2.0.0a1, `guesses` is
+    a PySRRegressor constructor-level parameter, not a fit() argument. The
+    converted LLM warm-start candidates are therefore supplied at the H-run
+    constructor call site (`PySRRegressor(..., guesses=...)`) and never
+    threaded through `fit_kwargs`. See the module-level guard for the full
+    history of this fix.
+
     """
     # [FIX-SINGULARITY-BUFFER] `model.fit(X, y, ...)` below fits on whatever
     # X/y the caller passes in -- which may now be the boundary-buffer-
@@ -963,11 +974,13 @@ def _fit_with_pysr_trajectory(model, X, y, variable_names, label,
         poller.start()
 
         try:
-            # [FIX-LLM-WARMSTART-GATE] `guesses` (when present) is threaded
-            # through fit_kwargs into fit() itself -- see the H-run call
-            # site, which only sets fit_kwargs={"guesses": ...} when there's
-            # at least one converted LLM candidate. P (baseline) is called
-            # with fit_kwargs=None so it stays unseeded.
+            # [FIX-LLM-WARMSTART-GATE-v2] `guesses` (when present) is set on
+            # `model` via the PySRRegressor constructor before this
+            # function is ever called -- see the H-run call site. This
+            # `fit_kwargs` is now always None for both H and P; it remains
+            # a parameter here only so a future fit()-level override
+            # (unrelated to `guesses`) can still be threaded through
+            # without another call-site change.
             model.fit(X, y, variable_names=variable_names, **(fit_kwargs or {}))
         finally:
             stop_event.set()
@@ -1207,35 +1220,38 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     from pysr import PySRRegressor
     from sklearn.metrics import r2_score
 
-    # [FIX-LLM-WARMSTART-GATE] Fail fast, once, before burning any LLM API
-    # budget or PySR search time: if this pysr build's PySRRegressor.fit()
-    # has no `guesses` parameter, the hybrid seeding this script depends on
-    # cannot happen. Silently falling back to an unseeded H run here would
-    # reproduce audit #1's exact failure mode (H and P identical) in a new
-    # place -- so this refuses to run at all rather than degrade quietly.
-    # Only enforced when USE_LLM is actually on; a pure-PySR-only run (no
-    # API key / USE_LLM False) never needs `guesses` and shouldn't be
-    # blocked by this check.
+    # [FIX-LLM-WARMSTART-GATE-v2] Fail fast, once, before burning any LLM API
+    # budget or PySR search time: if this pysr build's PySRRegressor
+    # constructor has no `guesses` parameter, the hybrid seeding this script
+    # depends on cannot happen. Silently falling back to an unseeded H run
+    # here would reproduce audit #1's exact failure mode (H and P identical)
+    # in a new place -- so this refuses to run at all rather than degrade
+    # quietly. Only enforced when USE_LLM is actually on; a pure-PySR-only
+    # run (no API key / USE_LLM False) never needs `guesses` and shouldn't
+    # be blocked by this check.
     #
-    # NOTE: an earlier revision of this check (and the H-run call site)
-    # looked for `guesses` on PySRRegressor.__init__ and passed it into the
-    # constructor, on the mistaken premise that pysr==2.0.0a1 moved
-    # `guesses` there. It didn't: per the pysr v2.0.0a1 release notes,
-    # `guesses` is, and always was in this build, a `fit()`-level parameter
-    # ("pass initial equation guesses to guide the search using the
-    # `guesses` parameter to fit") -- there is no `guesses` on __init__ at
-    # all. Checking __init__ made this guard raise unconditionally whenever
-    # USE_LLM was on (a real installed pysr 2.0.0a1 never has `guesses` in
-    # __init__'s signature), and the constructor call at the old H-run call
-    # site would have raised TypeError on any build that actually enforces
-    # its __init__ signature. Checking fit() is what actually reflects
-    # whether this pysr build can accept guesses; see the matching change
-    # at the H-run call site below (guesses now flows into model_h.fit(),
-    # not into PySRRegressor(...)).
-    if USE_LLM and "guesses" not in inspect.signature(PySRRegressor.fit).parameters:
+    # NOTE: the prior revision of this check (v1) looked for `guesses` on
+    # PySRRegressor.fit() instead, on the premise -- taken from a
+    # misreading of the pysr v2.0.0a1 release notes -- that `guesses` had
+    # moved from the constructor to fit(). It hadn't. Direct inspection of
+    # the installed pysr==2.0.0a1 package (hypatiax/experiments/benchmarks
+    # verified this against pysr/sr.py directly, not just the changelog)
+    # shows `guesses` is, and always was in this build, a
+    # PySRRegressor.__init__ parameter (stored as self.guesses, consumed
+    # internally during fit()) -- it is NOT among fit()'s own keyword
+    # parameters (X, y, Xresampled, weights, variable_names,
+    # complexity_of_variables, X_units, y_units, category). Because v1
+    # checked the wrong callable, "guesses" was never found on fit() and
+    # this gate raised unconditionally whenever USE_LLM was on, even though
+    # the installed pysr build fully supports `guesses` via the
+    # constructor. Checking __init__ (this revision) is what actually
+    # reflects whether this pysr build can accept guesses; see the matching
+    # change at the H-run call site below (guesses now flows into
+    # PySRRegressor(..., guesses=...), not into model_h.fit()).
+    if USE_LLM and "guesses" not in inspect.signature(PySRRegressor.__init__).parameters:
         raise RuntimeError(
-            "[FIX-LLM-WARMSTART-GATE] Installed pysr version's "
-            "PySRRegressor.fit() has no 'guesses' parameter, so LLM "
+            "[FIX-LLM-WARMSTART-GATE-v2] Installed pysr version's "
+            "PySRRegressor.__init__() has no 'guesses' parameter, so LLM "
             "warm-start candidates cannot be wired into the PySR search. "
             "Upgrade pysr, or set USE_LLM=False / unset the API key to run "
             "PySR-only intentionally. Refusing to start rather than silently "
@@ -1397,27 +1413,29 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                     "(set LLM_REQUIRE_VALID_GUESS=0 only for an explicitly "
                     "non-strict fallback run)"
                 )
-            # [FIX-LLM-WARMSTART-GATE] `guesses` is a PySRRegressor.fit()
-            # parameter in this pysr build (2.0.0a1), not a constructor
-            # argument -- see the module-level guard above, and the real
-            # pysr v2.0.0a1 release notes ("pass initial equation guesses
-            # to guide the search using the `guesses` parameter to fit").
-            # Passing it into PySRRegressor(...) instead (the prior
-            # revision of this code) raised TypeError on construction for
-            # any build that enforces its __init__ signature, which would
-            # have defeated the hybrid-vs-baseline comparison entirely.
-            # `guesses` is only included in fit_kwargs when there's at
-            # least one converted candidate, so a no-candidates H run still
-            # calls fit() exactly as before (no guesses kwarg at all,
-            # rather than an explicit guesses=None).
+            # [FIX-LLM-WARMSTART-GATE-v2] `guesses` is a PySRRegressor
+            # constructor parameter in this pysr build (2.0.0a1), not a
+            # fit()-level argument -- see the module-level guard above for
+            # the full history of this fix and how it was verified against
+            # the actual installed pysr source (not just the changelog).
+            # The prior revision (v1) instead put `guesses` into
+            # fit_kwargs and threaded it through model.fit(**fit_kwargs)
+            # below, which would have raised
+            # "TypeError: fit() got an unexpected keyword argument
+            # 'guesses'" on this pysr build had the (also-wrong) v1 gate
+            # not aborted the run first. `guesses` is only passed to the
+            # constructor when there's at least one converted candidate,
+            # so a no-candidates H run still constructs the model exactly
+            # as before (guesses=None, matching an unseeded P run).
             model_h = PySRRegressor(
                 **_pysr_kwargs,
                 warm_start=False,
+                guesses=(pysr_guesses if pysr_guesses else None),
             )
             r2_h, best_expr_h, trajectory_h = _fit_with_pysr_trajectory(
                 model_h, X_fit, y_fit, var_names, label="H",
                 X_score=X, y_score=y,
-                fit_kwargs=({"guesses": pysr_guesses} if pysr_guesses else None),
+                fit_kwargs=None,
             )
         except Exception as _e:
             print(f"    ✗ HypatiaX run failed: {_e}")
@@ -1613,7 +1631,11 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     return result
 
 
+<<<<<<< HEAD
 # ── 9. Entry point ──────────────────────────────────────────────────────── [...]
+=======
+# ── 9. Entry point ────────────────────────────────────────────────────────[...]
+>>>>>>> 4130ce0 (Re-run exp3)
 if __name__ == "__main__":
     run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index,
         n_candidates=_args.n_candidates)
