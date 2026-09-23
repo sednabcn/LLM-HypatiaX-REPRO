@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 exp3_nguyen12_hybrid50v_consolidated.py  —  Exp 3 · Nguyen-12 SR suite (§10.8 primary)
-==============================================================================
+================================================================================
 Standalone Python script version — safe to run with `python3` directly.
 
 CONSOLIDATION NOTE (this file)
@@ -149,7 +149,7 @@ Usage
     python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 123 --temperature 0 --run-index 3   # 3rd of N repeats
 
 CI shard usage (set by ci_runner.yml worker dispatch):
-    TASK_IDS="N1 N3 N7" PYSR_SEED=42 EXPERIMENT_SEED=42 \\
+    TASK_IDS="N1 N3 N7" PYSR_SEED=42 EXPERIMENT_SEED=42 \
         python3 exp3_nguyen12_hybrid50v_consolidated.py --seed 42 --temperature 0.25
 
 Trajectory-monitor env vars (read by _fit_with_pysr_trajectory / the poller):
@@ -198,7 +198,7 @@ def _apply_case_range(seq):
         return seq[start:end]
     except Exception:
         return seq
-# ────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────── [...]
 
 # ── TASK_IDS / SHARD_IDS / SEED injection ───────────────────────────────────
 def _apply_task_ids_nguyen(seq):
@@ -278,7 +278,7 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
     if env_dir:
         return pathlib.Path(env_dir)
     return repo_results_dir
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────── [...]
 
 # ── 1. Resolve repo root & set sys.path ───────────────────────────────────
 # Script lives at:  <repo>/hypatiax/experiments/benchmarks/exp3_nguyen12_hybrid50v_consolidated.py
@@ -1132,6 +1132,21 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
         os.replace(_tmp, _target)  # atomic — never leaves a truncated file if killed mid-write
         return payload
 
+    def _write_canonical_seed_alias(payload):
+        """Write the canonical exp3 filename expected by the CI validator.
+
+        The workflow checks for `exp3_nguyen12_seed*.json` under the result dir.
+        This script historically wrote only the run-indexed temp file name, which
+        does not match the CI filename contract. Emitting the canonical alias keeps
+        both the detailed run metadata and the expected exp3 filename in sync.
+        """
+        canonical_path = _results_dir / f"exp3_nguyen12_seed{seed}.json"
+        tmp_path = canonical_path.with_suffix(".json.tmp")
+        with open(tmp_path, "w") as _f:
+            json.dump(payload, _f, indent=2, default=str)
+        os.replace(tmp_path, canonical_path)
+        return canonical_path
+
     # ── Config from env vars (smoke-test / paper-quality modes) ──────────
     _n_tasks        = int(os.environ.get("N_NGUYEN_TASKS", 12))
     _niter          = int(os.environ.get("N_ITERATIONS",   1000))
@@ -1569,10 +1584,12 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     # [FIX-4] _results_dir already resolved above via _resolve_results_dir().
     # [FIX-CHECKPOINT-CALL] Use _save() for final output too (complete=True).
     result = _save(results_hypatia, results_pysr, len(all_cases), complete=True)
+    canonical_output = _write_canonical_seed_alias(result)
 
     OUTPUT_JSON = str(_out_path)
     print("\n  Protocol returned: success")
     print(f"  JSON: {OUTPUT_JSON}")
+    print(f"  Canonical exp3 seed alias: {canonical_output}")
 
     # Notebook download link (Colab/Jupyter only — skipped in CLI)
     try:
@@ -1596,7 +1613,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     return result
 
 
-# ── 9. Entry point ─────────────────────────────────────────────────────────
+# ── 9. Entry point ──────────────────────────────────────────────────────── [...]
 if __name__ == "__main__":
     run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index,
         n_candidates=_args.n_candidates)
