@@ -925,6 +925,66 @@ jobs:
           python3 "${SCRIPT}" --samples 200 --pysr-timeout 1100 --method-timeout 900 --help > /dev/null
           echo "  OK — all suppB_sc CLI flags accepted."
 
+      - name: Preflight - experiment script must be valid Python (no NUL bytes / syntax errors)
+        if: ${{ steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          SCRIPT_PATH: ${{ needs.plan.outputs.script_path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import ast, os, subprocess, sys
+
+          script = os.environ["SCRIPT_PATH"]
+          problems = []
+
+          def check(path, syntax=True):
+              try:
+                  data = open(path, "rb").read()
+              except OSError as e:
+                  return f"cannot read: {e}"
+              n = data.count(b"\x00")
+              if n:
+                  i = data.find(b"\x00")
+                  bom = data[:2] in (b"\xff\xfe", b"\xfe\xff")
+                  hint = ("looks like UTF-16 (BOM present)" if bom
+                          else "not UTF-16; likely truncated/overwritten file")
+                  line = data[:i].count(b"\n") + 1
+                  return f"{n} NUL byte(s), first near line {line} ({hint})"
+              if not syntax:
+                  return None
+              try:
+                  ast.parse(data, filename=path)
+              except SyntaxError as e:
+                  return f"SyntaxError line {e.lineno}: {e.msg}"
+              return None
+
+          # 1) the script this experiment is about to run
+          if not os.path.isfile(script):
+              problems.append((script, "file not found"))
+          else:
+              r = check(script)
+              if r:
+                  problems.append((script, r))
+
+          # 2) every other tracked .py file: NUL bytes only (a syntax problem in an
+          #    unrelated file must not block this experiment)
+          tracked = subprocess.run(["git", "ls-files", "*.py"], capture_output=True,
+                                   text=True, check=True).stdout.split()
+          for f in tracked:
+              if f == script:
+                  continue
+              r = check(f, syntax=False)
+              if r:
+                  problems.append((f, r))
+
+          if problems:
+              for f, r in problems:
+                  print(f"::error file={f}::{r}")
+              print(f"Preflight FAILED: {len(problems)} corrupted/invalid Python file(s).")
+              sys.exit(1)
+          print(f"Preflight OK: {script} parses cleanly; {len(tracked)} tracked .py file(s) free of NUL bytes.")
+          PYEOF
+
       - name: Run experiment tasks
         if: ${{ steps.resolve_ids.outputs.has_work == 'true' }}
         env:
@@ -1008,7 +1068,19 @@ jobs:
           EXPERIMENT_SEED="${SHARD_SEEDS}" \
           DOMAIN_FILTER="${TASK_IDS}" \
           NUMERICAL_ONLY="true" \
-            bash run_all.sh --step "${EXP}"
+            bash run_all.sh --step "${EXP}" 2>&1 | tee /tmp/run_all_step.log
+
+          # run_all.sh has been observed to swallow a failing python invocation
+          # (SyntaxError -> "DONE" -> exit 0). For exp3/exp3b, treat compile-level
+          # errors in the log as fatal so the real cause is on this step, not a
+          # downstream gate.
+          if [[ "${EXP}" == "exp3" || "${EXP}" == "exp3b" ]]; then
+            if grep -E -q '^(SyntaxError|IndentationError|TabError):' /tmp/run_all_step.log; then
+              echo "::error::${EXP}: run_all.sh logged a Python compile error (see above) but exited 0. Failing here."
+              grep -E -B3 '^(SyntaxError|IndentationError|TabError):' /tmp/run_all_step.log | tail -20
+              exit 1
+            fi
+          fi
 
       - name: Preserve shard-specific exp1_ablation output
         if: always() && env.EXP == 'exp1_ablation'

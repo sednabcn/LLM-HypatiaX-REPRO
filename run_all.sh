@@ -1620,12 +1620,17 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   cd '"${REPO_ROOT}"'
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "=== exp3 seed 1/1: seed=42 | equations: N1-N12 (12 total) ==="
+  set -o pipefail
+  _EXP3_RC=0
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
     --temperature 0.25 \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
-  || echo "WARNING: seed=42 exited non-zero — continuing"
+  || _EXP3_RC=$?
+  if [ "$_EXP3_RC" -ne 0 ]; then
+    echo "ERROR: exp3 seed=42 python exited with status $_EXP3_RC -- collecting any partial outputs, then failing"
+  fi
   find '"${RESULTS_DIR}"' -maxdepth 1 \
     \( -name '"'"'*nguyen*seed42*.json'"'"' -o -name '"'"'*nguyen12*42*.json'"'"' \
        -o -name '"'"'full_run_*seed42*.json'"'"' -o -name '"'"'report_hybrid_*seed42*.json'"'"' \
@@ -1664,6 +1669,14 @@ for f in run_files[-1:]:
         print(f"  (could not parse {os.path.basename(f)}: {e})")
 PYEOF
   echo "--- end partial results seed=42 ---"
+  if [ "$_EXP3_RC" -ne 0 ]; then
+    echo "ERROR: exp3 failed (python exit status $_EXP3_RC); see traceback above" >&2
+    exit "$_EXP3_RC"
+  fi
+  if ! find '"${RESULTS_DIR}"'/extrapolation -maxdepth 1 -name "exp3_nguyen12_seed*.json" | grep -q .; then
+    echo "ERROR: exp3 exited 0 but produced no exp3_nguyen12_seed*.json in '"${RESULTS_DIR}"'/extrapolation" >&2
+    exit 1
+  fi
 '
 
 run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" bash -c "
@@ -1682,6 +1695,8 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     echo \"  [exp3b] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
+  set -o pipefail
+  _FAIL_SEEDS=\"\"
   IFS=',' read -ra _SEED_ARR <<< \"\${_SHARD_SEEDS}\"
   for seed in \"\${_SEED_ARR[@]}\"; do
     echo '--- exp3b seed='\$seed' ---'
@@ -1692,7 +1707,8 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
       --temperature 0.25 \
-      2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log
+      2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
+      || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done
   printf -v _SHARD_TAG '%02d' \"\$((\${SHARD_INDEX:-0} + 1))\"
   echo \"  [exp3b] SHARD_INDEX=\${SHARD_INDEX:-0} -> isolation suffix _nshards\${_SHARD_TAG}\"
@@ -1709,6 +1725,14 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   done
   find '${RESULTS_DIR}' -maxdepth 1 -name 'experiment_registry.json' \
     -exec cp -v {} '${RESULTS_DIR}/extrapolation/multi_seed/' \; 2>/dev/null || true
+  if [[ -n \"\${_FAIL_SEEDS}\" ]]; then
+    echo \"ERROR: exp3b failed for seed(s):\${_FAIL_SEEDS} (partial outputs were collected above)\" >&2
+    exit 1
+  fi
+  if ! find '${RESULTS_DIR}/extrapolation/multi_seed' -maxdepth 1 -name 'exp3_nguyen12_seed*.json' | grep -q .; then
+    echo \"ERROR: exp3b exited 0 but produced no exp3_nguyen12_seed*.json in ${RESULTS_DIR}/extrapolation/multi_seed\" >&2
+    exit 1
+  fi
 "
 
 
