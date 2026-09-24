@@ -680,8 +680,38 @@ def _sympy_pow_to_pysr_str(expr, variable_names):
     if expr.is_Pow:
         base, exponent = expr.args
         base_str = _sympy_pow_to_pysr_str(base, variable_names)
-        if base_str is None or not exponent.is_Integer:
-            return None  # fractional/symbolic power -- unrepresentable here
+        if base_str is None:
+            return None
+        # [FIX-SQRT-POW] x**0.5 / x**(1/2) (and their reciprocals) are the
+        # single most natural way for an LLM to write "sqrt" in Python/numpy
+        # style -- e.g. for Nguyen-8 (sqrt(x)) every warm-start candidate
+        # came back as a fractional power. Previously this whole branch only
+        # accepted exponent.is_Integer, so ALL such candidates were silently
+        # dropped here (llm_candidates_parsed==0) before they ever reached
+        # the numerical R^2 gate -- not because they were numerically bad,
+        # but because this renderer couldn't express them under the "no ^"
+        # operator set even though "sqrt" is literally in
+        # _PYSR_ALLOWED_UNARY_FUNCS. Special-case the half-integer exponents
+        # so they route through sqrt() instead of being rejected outright.
+        #
+        # IMPORTANT: sympify("x**0.5") produces a *Float* exponent
+        # (0.5000000000000000), not an exact Rational(1, 2) -- is_Rational
+        # is False for sympy Floats, so checking exponent.is_Rational alone
+        # missed exactly the plain-float form an LLM is most likely to
+        # write (confirmed: "x**0.5" fell through to None even with the
+        # is_Rational check; only "x**(1/2)" and literal "sqrt(x)" worked).
+        # Compare the numeric value instead, for both Rational and Float
+        # exponents, so every spelling of "square root" is caught.
+        if not exponent.is_Integer:
+            try:
+                exp_val = float(exponent)
+            except (TypeError, ValueError):
+                return None  # symbolic/non-numeric exponent -- unrepresentable
+            if abs(exp_val - 0.5) < 1e-9:
+                return f"sqrt({base_str})"
+            if abs(exp_val + 0.5) < 1e-9:
+                return f"(1.0 / sqrt({base_str}))"
+            return None  # other fractional powers still unrepresentable
         n = int(exponent)
         if n == 0:
             return "1.0"
