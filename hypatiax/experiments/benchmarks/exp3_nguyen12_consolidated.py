@@ -1148,6 +1148,9 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                 "llm_min_r2": _llm_min_r2,
                 "llm_max_abs_pred": _llm_max_abs_pred,
                 "llm_require_valid_guess": _llm_require_valid_guess,
+                # [FIX-LLM-K-RUNS] now actually wired up -- see the
+                # get_llm_prior() call site below.
+                "llm_k_runs": _llm_k_runs,
                 "run_index": run_index,
             },
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
@@ -1202,6 +1205,21 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     _llm_min_r2 = float(os.environ.get("LLM_MIN_R2", "0.95"))
     _llm_max_abs_pred = float(os.environ.get("LLM_MAX_ABS_PRED", "1e12"))
     _llm_require_valid_guess = os.environ.get("LLM_REQUIRE_VALID_GUESS", "1").lower() not in {"0", "false", "no"}
+    # [FIX-LLM-K-RUNS] LLM_K_RUNS has been set as an env var default since
+    # [PATCH E] (see "6. Environment variables" above) but was never read
+    # anywhere in this file or in hypatia.py's get_llm_prior() -- confirmed
+    # by grepping both files. A single get_llm_prior() call asks one LLM
+    # completion for `n_candidates` *ranked* guesses, which in practice
+    # come back as variations on one idea (e.g. N9/seed42/temp0.25/run1:
+    # all 8 guesses were products/sums of the bare sin(x), sin(y), cos(y)
+    # terms; none tried squaring y, even though sin(x)+sin(y**2) is the
+    # ground truth) rather than genuinely independent hypotheses. Calling
+    # get_llm_prior() K separate times -- K independent completions -- and
+    # pooling all of their candidates before the numerical gate gives the
+    # gate more genuinely-different structural hypotheses to choose from,
+    # not just more copies of the same idea. K=1 reproduces the previous
+    # (single-call) behavior exactly.
+    _llm_k_runs = max(1, int(os.environ.get("LLM_K_RUNS", "1")))
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
@@ -1219,7 +1237,8 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
           "10/12 P train-r2 · MW U=113, p=0.0097")
     print(f"  Config  : n_tasks={_n_tasks}  niterations={_niter}  populations={_pops}"
           f"  pysr_timeout={_timeout}s  method_timeout={_method_timeout}s"
-          f"  temperature={temperature}  n_candidates={_n_candidates}")
+          f"  temperature={temperature}  n_candidates={_n_candidates}"
+          f"  llm_k_runs={_llm_k_runs}")
     print(f"{'='*68}\n")
 
     # ── Import protocol data layer ────────────────────────────────────────
@@ -1335,21 +1354,59 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
         }
 
         # ── LLM warm-start candidates ─────────────────────────────────────
+        # [FIX-LLM-K-RUNS] Make K independent get_llm_prior() calls instead
+        # of one, and pool every candidate they return before the gate.
+        # Each call is its own completion, so this yields K genuinely
+        # separate sets of hypotheses rather than one larger ranked list
+        # from a single completion (which tends to be variations on one
+        # idea -- see the [FIX-LLM-K-RUNS] note above _llm_k_runs). A call
+        # failing (timeout, API error, etc.) does not abort the others --
+        # every per-call error is collected and joined into llm_error so
+        # nothing is silently swallowed, matching this script's existing
+        # "never crash a whole equation over one bad LLM call" behavior.
+        # K=1 (the default, matching every prior run before this fix)
+        # reproduces the old single-call code path exactly.
         llm_exprs = []
-        llm_error = None
+        llm_call_errors = []
+        llm_calls_ok = 0
         if USE_LLM:
-            try:
-                llm_exprs = get_llm_prior(
-                    eq_dict, X, y,
-                    n_candidates=_n_candidates,
-                    verbose=False,
-                    model=os.environ["LLM_MODEL"],
-                    temperature=temperature,
-                ) or []
-                print(f"    LLM candidates: {llm_exprs[:3]} ...")
-            except Exception as _e:
-                llm_error = f"{type(_e).__name__}: {_e}"
-                print(f"    ✗ LLM warm-start failed: {_e}")
+            _seen_llm_exprs = set()
+            for _k in range(_llm_k_runs):
+                try:
+                    _one_call_exprs = get_llm_prior(
+                        eq_dict, X, y,
+                        n_candidates=_n_candidates,
+                        verbose=False,
+                        model=os.environ["LLM_MODEL"],
+                        temperature=temperature,
+                    ) or []
+                    llm_calls_ok += 1
+                    for _expr in _one_call_exprs:
+                        # dedupe identical raw strings across calls; the
+                        # gate (_validate_llm_pysr_guesses) also dedupes on
+                        # the *converted* PySR string, so this is just to
+                        # keep llm_candidates_total from double-counting
+                        # verbatim repeats across independent calls.
+                        if _expr not in _seen_llm_exprs:
+                            _seen_llm_exprs.add(_expr)
+                            llm_exprs.append(_expr)
+                    if _llm_k_runs > 1:
+                        print(f"    LLM call {_k+1}/{_llm_k_runs}: "
+                              f"{len(_one_call_exprs)} candidate(s) "
+                              f"({len(llm_exprs)} unique so far)")
+                except Exception as _e:
+                    llm_call_errors.append(f"call {_k+1}/{_llm_k_runs}: "
+                                            f"{type(_e).__name__}: {_e}")
+                    print(f"    ✗ LLM warm-start call {_k+1}/{_llm_k_runs} "
+                          f"failed: {_e}")
+            print(f"    LLM candidates ({llm_calls_ok}/{_llm_k_runs} calls "
+                  f"ok, {len(llm_exprs)} unique): {llm_exprs[:3]} ...")
+        # llm_error stays None only if every call succeeded (or LLM was
+        # off); a partial success (some calls ok, some failed) still
+        # records the failures here even though llm_exprs may be non-empty,
+        # so a partially-degraded run is never indistinguishable from a
+        # fully clean one in the output JSON.
+        llm_error = "; ".join(llm_call_errors) if llm_call_errors else None
 
         # ── Shared PySR config ────────────────────────────────────────────
         _pysr_kwargs = dict(
@@ -1561,6 +1618,11 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
             "llm_gate_min_r2":        _llm_min_r2,
             "llm_gate_audit":         llm_gate_audit,
             "llm_error":              llm_error,
+            # [FIX-LLM-K-RUNS] per-task record of how many independent LLM
+            # calls were made and how many succeeded, so K>1 pooling is
+            # auditable per-equation, not just from the console log.
+            "llm_k_runs":             _llm_k_runs,
+            "llm_calls_ok":           llm_calls_ok,
         })
         results_pysr.append({
             "system":     "pysr",
