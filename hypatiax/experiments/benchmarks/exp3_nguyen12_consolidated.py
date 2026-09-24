@@ -706,12 +706,38 @@ def _sympy_pow_to_pysr_str(expr, variable_names):
             try:
                 exp_val = float(exponent)
             except (TypeError, ValueError):
-                return None  # symbolic/non-numeric exponent -- unrepresentable
-            if abs(exp_val - 0.5) < 1e-9:
-                return f"sqrt({base_str})"
-            if abs(exp_val + 0.5) < 1e-9:
-                return f"(1.0 / sqrt({base_str}))"
-            return None  # other fractional powers still unrepresentable
+                exp_val = None
+            if exp_val is not None:
+                if abs(exp_val - 0.5) < 1e-9:
+                    return f"sqrt({base_str})"
+                if abs(exp_val + 0.5) < 1e-9:
+                    return f"(1.0 / sqrt({base_str}))"
+                return None  # other numeric fractional powers still unrepresentable
+            # [FIX-VARIABLE-EXPONENT] float(exponent) raising TypeError means
+            # the exponent is symbolic -- it contains a variable, e.g.
+            # x**y, x**(y+1), x**(2*y) (Nguyen-11's ground truth is exactly
+            # x**y). There is no general "^" operator in this set (removed
+            # by [FIX-SAFE-POW]), so these were previously always dropped
+            # here -- not because they were wrong, but unrepresentable as
+            # written. In one real run, 7 of the LLM's 8 candidates for
+            # N11 were exactly this shape and were all silently skipped;
+            # only the 8th candidate (independently phrased as an
+            # exp(y*log(x))-style expression) happened to parse, so H's
+            # warm start worked only because the LLM got lucky with
+            # phrasing on that one call. base**exponent == exp(exponent *
+            # log(base)) for base > 0, and both exp and log are already in
+            # _PYSR_ALLOWED_UNARY_FUNCS -- render both sides recursively
+            # (the exponent may itself be an arbitrary expression, e.g.
+            # "y + 1" or "2 * y") and rewrite through that identity instead
+            # of dropping the candidate. This can produce a nonsense
+            # expression for base <= 0 in-domain; that is caught the same
+            # way every other candidate's domain issues already are, by
+            # the numerical R^2 gate against real sampled data downstream
+            # (_validate_llm_pysr_guesses), not by this renderer.
+            exponent_str = _sympy_pow_to_pysr_str(exponent, variable_names)
+            if exponent_str is None:
+                return None
+            return f"exp(({exponent_str}) * log({base_str}))"
         n = int(exponent)
         if n == 0:
             return "1.0"
