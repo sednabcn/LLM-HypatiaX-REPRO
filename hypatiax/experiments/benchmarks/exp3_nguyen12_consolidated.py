@@ -201,6 +201,20 @@ def _apply_case_range(seq):
 # ────────────────────────────────────────────────────────────────
 
 # ── TASK_IDS / SHARD_IDS / SEED injection ───────────────────────────────────
+_ALL_NGUYEN_IDS = frozenset(f"N{_i}" for _i in range(1, 13))
+
+
+def _requested_task_ids():
+    """Return the set of nguyen_ids requested via TASK_IDS (priority) or
+    SHARD_IDS, or an empty set when neither is set.  Single source of truth
+    for both the case filter and the cache logic in run()."""
+    for var in ("TASK_IDS", "SHARD_IDS"):
+        raw = os.environ.get(var, "").replace(",", " ").strip()
+        if raw:
+            return set(raw.split())
+    return set()
+
+
 def _apply_task_ids_nguyen(seq):
     """Filter Nguyen case list to those whose nguyen_id appears in TASK_IDS.
 
@@ -217,16 +231,11 @@ def _apply_task_ids_nguyen(seq):
     would corrupt checkpoint deduplication across shards.
     """
     # Priority: TASK_IDS > SHARD_IDS  (mirrors hybrid_system_llm_nn_all_domains.py)
-    raw = ""
-    for var in ("TASK_IDS", "SHARD_IDS"):
-        raw = os.environ.get(var, "").replace(",", " ").strip()
-        if raw:
-            break
+    allowed = _requested_task_ids()
 
-    if not raw:
+    if not allowed:
         return seq  # local run — no filter
 
-    allowed  = set(raw.split())
     filtered = [t for t in seq if t[4].get("nguyen_id") in allowed]
 
     if not filtered:
@@ -1295,18 +1304,56 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     # (missing key, older/unversioned file, mismatched value) is treated as
     # absent and re-run from scratch rather than trusted.
     _SCHEMA_VERSION = "consolidated-extrap-r2-v2"  # v2: [FIX-BUFFER-NO-BOUNDARY-DUP] buffer changed; v1 caches are stale
+
+    # [FIX-TARGETED-RERUN] The cache is per-FILE but TASK_IDS/SHARD_IDS select
+    # per-CASE.  A "targeted" re-run means the request selects a STRICT SUBSET
+    # of N1..N12: those cases are re-run and merged into the cached file, and
+    # every other cached case is preserved.
+    #
+    # NOTE: the CI workflow (ci_runner_repro.yml) ALWAYS exports TASK_IDS/
+    # SHARD_IDS, even for a normal full run (exp3: all 12 ids; exp3b: all 12
+    # ids per seed-shard).  So "env var is set" must NOT mean "targeted" --
+    # only a strict subset does; a full-set request keeps the original
+    # cache-skip behaviour.
+    _requested = _requested_task_ids()
+    _targeted_rerun = bool(_requested) and not (_ALL_NGUYEN_IDS <= _requested)
+
+    # [FIX-CACHE-SPARSE-MODE] The cache path does not encode SPARSE_SEED, so a
+    # file written with SPARSE_SEED=off would otherwise be returned as-is for
+    # a SPARSE_SEED=fallback/always request (and vice-versa).  Treat a
+    # differing mode as stale for full-set requests.  Files that predate the
+    # key are treated as "off", which is what they were.
+    _cur_sparse_mode = os.environ.get("SPARSE_SEED", "off").strip().lower()
+    if _cur_sparse_mode not in {"off", "fallback", "always"}:
+        _cur_sparse_mode = "off"
+
+    _existing_cache = None
     if _out_path.exists():
         try:
             with open(_out_path) as _f:
                 _cached = json.load(_f)
-            if _cached.get("config", {}).get("schema_version") == _SCHEMA_VERSION:
-                print(f"  ✓ Results already exist for seed={seed} temp={temperature} "
-                      f"run={run_index} (schema={_SCHEMA_VERSION}), skipping re-run.")
-                return _cached
-            else:
+            _cfg = _cached.get("config", {})
+            _cached_sparse_mode = _cfg.get("sparse_seed_mode", "off")
+            if _cfg.get("schema_version") != _SCHEMA_VERSION:
                 print(f"  ⚠ Cache at {_out_path} has no/mismatched schema_version "
                       f"(expected {_SCHEMA_VERSION}) — treating as stale and re-running "
                       f"rather than trusting a possibly differently-defined 'r2' field.")
+            elif _targeted_rerun:
+                _existing_cache = _cached
+                print(f"  ℹ Cache at {_out_path} matches schema={_SCHEMA_VERSION}; "
+                      f"TASK_IDS/SHARD_IDS={sorted(_requested)} is a subset of the "
+                      f"12 cases -- re-running only those and keeping cached "
+                      f"records for the rest.")
+            elif _cached_sparse_mode != _cur_sparse_mode:
+                print(f"  ⚠ Cache at {_out_path} was written with "
+                      f"SPARSE_SEED={_cached_sparse_mode!r} but this run uses "
+                      f"{_cur_sparse_mode!r} — treating as stale and re-running "
+                      f"(use TASK_IDS to re-run only specific cases and keep the rest).")
+            else:
+                print(f"  ✓ Results already exist for seed={seed} temp={temperature} "
+                      f"run={run_index} (schema={_SCHEMA_VERSION}, "
+                      f"sparse_seed={_cached_sparse_mode}), skipping re-run.")
+                return _cached
         except (json.JSONDecodeError, OSError):
             print(f"  ⚠ Cache at {_out_path} unreadable — re-running.")
 
@@ -1332,6 +1379,9 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     def _save(results_hypatia, results_pysr, n_total, complete):
         h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= 0.9999)
         p_recovered = sum(1 for r in results_pysr    if r["evaluation"]["r2"] >= 0.9999)
+        _modes = {r.get("sparse_seed_mode", "off") for r in results_hypatia}
+        _cfg_sparse_mode = (next(iter(_modes)) if len(_modes) == 1
+                            else ("mixed" if _modes else _sparse_seed_mode))
         payload = {
             "config": {
                 "name": "nguyen12_exp3", "seed": seed, "n_tasks": n_total,
@@ -1351,7 +1401,10 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                 # [FIX-LLM-K-RUNS] now actually wired up -- see the
                 # get_llm_prior() call site below.
                 "llm_k_runs": _llm_k_runs,
-                "sparse_seed_mode": _sparse_seed_mode,
+                # [FIX-CACHE-SPARSE-MODE] derived from the per-case records so a
+                # merged (targeted re-run) file is labelled "mixed" rather than
+                # attributing older cases to the current run's setting.
+                "sparse_seed_mode": _cfg_sparse_mode,
                 "run_index": run_index,
             },
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
@@ -1909,10 +1962,42 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
               "per-equation conversion warnings above.")
     print(f"{'='*68}\n")
 
+    # [FIX-TARGETED-RERUN] Splice this run's fresh case(s) into the cached
+    # records for every case that was NOT selected this run.  Without this the
+    # save below would write ONLY the selected case(s), collapsing a 12-case
+    # file to e.g. 1 case after TASK_IDS="N12".
+    #
+    # Cached records are keyed against the SELECTED ids (not "ids that happen
+    # to have a fresh result"): if the JOB_DEADLINE break stopped the loop
+    # before a selected case ran, its stale cached record is NOT resurrected
+    # as if it were fresh -- it is dropped and reported instead.
+    if _existing_cache is not None:
+        _selected = {m[4]["nguyen_id"] for m in all_cases}
+        _n_fresh  = len(results_hypatia)
+        _kept = 0
+        for _r in _existing_cache.get("results", {}).get("hypatiax", []):
+            if _r["metadata"]["nguyen_id"] not in _selected:
+                results_hypatia.append(_r); _kept += 1
+        for _r in _existing_cache.get("results", {}).get("pysr", []):
+            if _r["metadata"]["nguyen_id"] not in _selected:
+                results_pysr.append(_r)
+        _nid_order = {f"N{_i}": _i for _i in range(1, 13)}
+        results_hypatia.sort(key=lambda r: _nid_order.get(r["metadata"]["nguyen_id"], 999))
+        results_pysr.sort(key=lambda r: _nid_order.get(r["metadata"]["nguyen_id"], 999))
+        print(f"  ℹ Merged {_n_fresh} freshly re-run case(s) with {_kept} cached "
+              f"case(s) from {_out_path.name} — writing {len(results_hypatia)} total.")
+        if _n_fresh < len(all_cases):
+            print(f"  ⚠ Only {_n_fresh}/{len(all_cases)} selected case(s) finished "
+                  f"before the deadline; the rest are absent from the output "
+                  f"(their older cached records were intentionally not reused).")
+
     # ── Save JSON output (final) ──────────────────────────────────────────
     # [FIX-4] _results_dir already resolved above via _resolve_results_dir().
     # [FIX-CHECKPOINT-CALL] Use _save() for final output too (complete=True).
-    result = _save(results_hypatia, results_pysr, len(all_cases), complete=True)
+    # n_total now reflects the merged set (12, in the normal case), not just
+    # the count of cases this particular invocation actually re-ran, so
+    # h_rate/p_rate in the summary stay meaningful for a targeted re-run.
+    result = _save(results_hypatia, results_pysr, len(results_hypatia), complete=True)
     canonical_output = _write_canonical_seed_alias(result)
 
     OUTPUT_JSON = str(_out_path)
