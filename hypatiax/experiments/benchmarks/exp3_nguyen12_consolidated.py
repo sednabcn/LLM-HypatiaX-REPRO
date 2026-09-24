@@ -293,7 +293,11 @@ def _resolve_results_dir(repo_results_dir: pathlib.Path) -> pathlib.Path:
 # IndexError on a flat/local checkout, and a silently-wrong _REPRO_ROOT
 # (missing hypatiax/) on CI's nested runner/work/<repo>/<repo>/ checkout.
 _SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT  = _SCRIPT_DIR.parents[2]   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
+_parents_   = _SCRIPT_DIR.parents
+# [FIX-SHALLOW-LAYOUT] Same result as before in the real repo layout; in a
+# flat/shallow location (e.g. /home/claude/) fall back to the script's own
+# directory instead of raising IndexError at import time.
+_REPO_ROOT  = _parents_[2] if len(_parents_) > 2 else _SCRIPT_DIR   # benchmarks/ -> experiments/ -> hypatiax/ -> repo root
 
 # Support override via environment variable (set by pipeline or notebook)
 _REPRO_ROOT = pathlib.Path(os.environ.get("REPRO_ROOT", str(_REPO_ROOT)))
@@ -836,9 +840,36 @@ def _validate_llm_pysr_guesses(guesses, X, y, X_buffer, y_buffer,
             return float("nan")
         return float(1.0 - np.sum((yv - pred) ** 2) / ss_tot)
 
+    def _affine_fit(pred_train, yv_train):
+        """[FIX-GATE-AFFINE-RESCALE] Least-squares (a, b) so that
+        a*pred + b best matches yv_train. Fit ONLY on the training split
+        (never on the buffer) so the buffer R^2 below still measures
+        genuine generalisation, not an in-sample fit.
+
+        Rationale: PySR's `guesses` are seeds, not literal final constants
+        -- PySR always runs its own BFGS constant optimizer on top of
+        whatever shape a guess proposes. A candidate like
+        "cos(y) * sin(x)" for ground truth "2 * sin(x) * cos(y)" is
+        *exactly* the right functional form and would be trivially
+        corrected by that optimizer, but the un-rescaled gate above
+        scores it at r2_train=-0.06 and drops it before PySR ever sees
+        it. Fitting a single global (scale, intercept) here checks "is
+        this candidate's SHAPE right", which is what the gate is meant
+        to test -- the literal constants are PySR's job, not the LLM's.
+        Degenerate zero-variance predictions (e.g. a constant guess) are
+        left alone; there's nothing to rescale.
+        """
+        if np.std(pred_train) < 1e-12:
+            return 1.0, 0.0
+        a, b = np.polyfit(pred_train, yv_train, 1)
+        return float(a), float(b)
+
     for expr in guesses:
         row = {"expression": expr, "accepted": False, "r2_train": None,
-               "r2_buffer": None, "reason": None}
+               "r2_buffer": None, "reason": None,
+               "accepted_via": None, "affine_coef": None,
+               "affine_intercept": None, "r2_train_affine": None,
+               "r2_buffer_affine": None}
         if expr in seen:
             row["reason"] = "duplicate"
             audit.append(row)
@@ -858,16 +889,140 @@ def _validate_llm_pysr_guesses(guesses, X, y, X_buffer, y_buffer,
                 if (not np.isfinite(row["r2_train"]) or
                     not np.isfinite(row["r2_buffer"])):
                     row["reason"] = "non_finite_r2"
-                elif min(row["r2_train"], row["r2_buffer"]) < min_r2:
-                    row["reason"] = f"r2_below_threshold_{min_r2:g}"
-                else:
+                elif min(row["r2_train"], row["r2_buffer"]) >= min_r2:
                     row["accepted"] = True
+                    row["accepted_via"] = "literal"
                     accepted.append(expr)
+                else:
+                    # Literal form missed the threshold -- retry allowing a
+                    # single global (scale, intercept) correction, fit on
+                    # the training split only and validated on the buffer,
+                    # before giving up on this candidate.
+                    a, b = _affine_fit(pred, y)
+                    pred_aff = a * pred + b
+                    pred_buf_aff = a * pred_buf + b
+                    if np.all(np.isfinite(pred_aff)) and np.all(np.isfinite(pred_buf_aff)):
+                        r2_train_aff = _r2(y, pred_aff)
+                        r2_buf_aff = _r2(y_buffer, pred_buf_aff)
+                        row["affine_coef"] = a
+                        row["affine_intercept"] = b
+                        row["r2_train_affine"] = r2_train_aff
+                        row["r2_buffer_affine"] = r2_buf_aff
+                        if (np.isfinite(r2_train_aff) and np.isfinite(r2_buf_aff)
+                                and min(r2_train_aff, r2_buf_aff) >= min_r2):
+                            row["accepted"] = True
+                            row["accepted_via"] = "affine_rescale"
+                            row["reason"] = f"accepted_via_affine_rescale (literal r2_below_threshold_{min_r2:g})"
+                            accepted.append(expr)
+                        else:
+                            row["reason"] = f"r2_below_threshold_{min_r2:g}_even_with_affine_rescale"
+                    else:
+                        row["reason"] = f"r2_below_threshold_{min_r2:g}"
         except Exception as exc:
             row["reason"] = f"evaluation_error:{type(exc).__name__}"
         audit.append(row)
 
     return accepted, audit
+
+
+def _sparse_basis_seed_guesses(X, y, variable_names, max_degree=4,
+                                rel_thresholds=(0.005, 0.02, 0.05, 0.1),
+                                min_r2=0.9999, max_terms=6, max_contrib=5.0,
+                                max_guesses=4):
+    """[FIX-SPARSE-SEED] Deterministic, LLM-free warm-start candidates from
+    sequentially-thresholded least squares (STLSQ) over a small term library.
+
+    Why: N12 (x**4 - x**3 + y**2/2 - y) needs an asymmetric mix of integer
+    powers of each variable. The LLM tends to propose symmetric / trig-heavy
+    shapes, so the numerical gate has nothing right to accept. A sparse
+    linear fit over monomials recovers this family directly.
+
+    Deliberately "exact sparse recovery or nothing": a candidate is only
+    emitted if it has <= max_terms terms, R^2 >= min_r2, and no term's
+    contribution exceeds max_contrib x the output's std. Without those
+    limits, near-collinear monomial/trig terms fit non-polynomial targets
+    (N9/N10/N11 in testing) with huge cancelling coefficients that pass a
+    train-R^2 gate and then extrapolate badly.
+
+    Tiered so a polynomial target isn't blurred by near-collinear trig
+    terms (sin(x) ~ x - x**3/6 on [0,1]): tier 1 = monomials to max_degree
+    per variable + constant + pairwise products; tier 2 adds sin/cos per
+    variable. A tier that fits essentially exactly (R^2 >= 1 - 1e-6) stops
+    the search. Output strings use only this script's operator set
+    (+,-,*,/, square, cube, sin, cos) and go through the SAME gate as LLM
+    guesses. Returns [] on any failure -- never raises.
+    """
+    try:
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        n, d = X.shape
+        if n < 10 or not np.all(np.isfinite(y)) or np.std(y) < 1e-12:
+            return []
+
+        def _mono_str(v, k):
+            return {1: v, 2: f"square({v})", 3: f"cube({v})"}.get(
+                k, "(" + " * ".join([v] * k) + ")")
+
+        def _library(tier):
+            cols, names = [np.ones(n)], ["1"]
+            for i, v in enumerate(variable_names):
+                for k in range(1, max_degree + 1):
+                    cols.append(X[:, i] ** k); names.append(_mono_str(v, k))
+            for i in range(d):
+                for j in range(i + 1, d):
+                    cols.append(X[:, i] * X[:, j])
+                    names.append(f"({variable_names[i]} * {variable_names[j]})")
+            if tier >= 2:
+                for i, v in enumerate(variable_names):
+                    cols.append(np.sin(X[:, i])); names.append(f"sin({v})")
+                    cols.append(np.cos(X[:, i])); names.append(f"cos({v})")
+            return np.column_stack(cols), names
+
+        def _stlsq(A, thr_rel):
+            ystd = np.std(y)
+            cstd = np.std(A, axis=0)
+            active = np.ones(A.shape[1], dtype=bool)
+            w = np.zeros(A.shape[1])
+            for _ in range(12):
+                w[:] = 0.0
+                w[active] = np.linalg.lstsq(A[:, active], y, rcond=None)[0]
+                # relative contribution of each term to the output scale
+                contrib = np.abs(w) * np.where(cstd > 0, cstd, 0.0) / ystd
+                new_active = active & (contrib >= thr_rel)
+                new_active[0] = active[0] and (np.abs(w[0]) / ystd >= thr_rel)
+                if not new_active.any() or np.array_equal(new_active, active):
+                    break
+                active = new_active
+            return w
+
+        found = {}
+        for tier in (1, 2):
+            A, names = _library(tier)
+            best_r2 = -np.inf
+            for thr in rel_thresholds:
+                w = _stlsq(A, thr)
+                supp = tuple(np.flatnonzero(np.abs(w) > 0))
+                if not supp or supp in found:
+                    continue
+                pred = A @ w
+                r2 = 1.0 - np.sum((y - pred) ** 2) / np.sum((y - np.mean(y)) ** 2)
+                best_r2 = max(best_r2, r2)
+                if r2 < min_r2 or len(supp) > max_terms:
+                    continue
+                _contrib = np.abs(w) * np.std(A, axis=0) / np.std(y)
+                if np.max(_contrib) > max_contrib:
+                    continue
+                parts = []
+                for j in supp:
+                    c = float(np.round(w[j], 6))
+                    parts.append(repr(c) if names[j] == "1" else f"({c!r} * {names[j]})")
+                found[supp] = (r2, len(supp), "(" + " + ".join(parts) + ")")
+            if best_r2 >= 1.0 - 1e-6:
+                break
+        ranked = sorted(found.values(), key=lambda t: (-round(t[0], 6), t[1]))
+        return [t[2] for t in ranked[:max_guesses]]
+    except Exception:
+        return []
 
 
 def _build_boundary_buffer(X, y, meta, variable_names,
@@ -936,11 +1091,30 @@ def _build_boundary_buffer(X, y, meta, variable_names,
                 # no extrap_ranges in metadata -- fall back to the original
                 # training-width-based sizing rather than skip the buffer
                 pad_lo = pad_hi = buffer_frac * width
-            lo_band = rng.uniform(lo - pad_lo, lo, size=n_buffer // 2) \
-                if pad_lo > 0 else np.full(n_buffer // 2, lo)
-            hi_band = rng.uniform(hi, hi + pad_hi, size=n_buffer - n_buffer // 2) \
-                if pad_hi > 0 else np.full(n_buffer - n_buffer // 2, hi)
-            buf_cols.append(np.concatenate([lo_band, hi_band]))
+            # [FIX-BUFFER-NO-BOUNDARY-DUP] Previously a side with zero pad was
+            # filled with the boundary value itself (np.full(..., lo)), and
+            # the same rows were used for every variable, so a domain like
+            # x,y in [0,1] with extrapolation only above produced 20 exact
+            # (0, 0) rows. exp(y*log(x)) -- the only way to write N11's x**y
+            # under this operator set -- evaluates 0*log(0) = NaN there, so
+            # the gate rejected the CORRECT candidate as non_finite_prediction
+            # while the ground truth (0**0 = 1) stayed finite and the buffer
+            # was kept. Sample only from sides that actually have a pad; if
+            # neither does, sample inside the training range. Never
+            # duplicate the boundary.
+            sides = []
+            if pad_lo > 0:
+                sides.append((lo - pad_lo, lo))
+            if pad_hi > 0:
+                sides.append((hi, hi + pad_hi))
+            if not sides:
+                sides = [(lo, hi)]
+            picks = rng.randint(0, len(sides), size=n_buffer)
+            col = np.empty(n_buffer)
+            for _si, (_a, _b) in enumerate(sides):
+                _m = picks == _si
+                col[_m] = rng.uniform(_a, _b, size=int(_m.sum()))
+            buf_cols.append(col)
         X_buf = np.column_stack(buf_cols)
         ns = {v: X_buf[:, i] for i, v in enumerate(variable_names)}
         ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
@@ -1120,7 +1294,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     # by a script of this same schema (schema_version below); anything else
     # (missing key, older/unversioned file, mismatched value) is treated as
     # absent and re-run from scratch rather than trusted.
-    _SCHEMA_VERSION = "consolidated-extrap-r2-v1"
+    _SCHEMA_VERSION = "consolidated-extrap-r2-v2"  # v2: [FIX-BUFFER-NO-BOUNDARY-DUP] buffer changed; v1 caches are stale
     if _out_path.exists():
         try:
             with open(_out_path) as _f:
@@ -1177,6 +1351,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                 # [FIX-LLM-K-RUNS] now actually wired up -- see the
                 # get_llm_prior() call site below.
                 "llm_k_runs": _llm_k_runs,
+                "sparse_seed_mode": _sparse_seed_mode,
                 "run_index": run_index,
             },
             "results": {"hypatiax": results_hypatia, "pysr": results_pysr},
@@ -1246,6 +1421,15 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     # not just more copies of the same idea. K=1 reproduces the previous
     # (single-call) behavior exactly.
     _llm_k_runs = max(1, int(os.environ.get("LLM_K_RUNS", "1")))
+    # [FIX-SPARSE-SEED] Non-LLM warm-start source (see
+    # _sparse_basis_seed_guesses). off (default) = behaviour unchanged;
+    # fallback = only when no LLM candidate passed the gate; always = add to
+    # whatever the LLM contributed. Any non-"off" mode changes what "H"
+    # means (it is no longer purely LLM-seeded), so it is recorded per
+    # equation and in the run config -- report it wherever H is reported.
+    _sparse_seed_mode = os.environ.get("SPARSE_SEED", "off").strip().lower()
+    if _sparse_seed_mode not in {"off", "fallback", "always"}:
+        _sparse_seed_mode = "off"
 
     print(f"\n{'='*68}")
     print(f"  Exp 3 · Nguyen-12 SR suite  (§10.8)  SEED={seed}  TEMP={temperature}  RUN={run_index}")
@@ -1507,12 +1691,25 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                 print(f"    ✗ [FIX-LLM-GATE] LLM unavailable; no hybrid seed is valid.")
             else:
                 print(f"    ✗ [FIX-LLM-GATE] LLM returned no candidates; no hybrid seed is valid.")
+        # [FIX-SPARSE-SEED] Optional non-LLM seeds, gated identically.
+        # Kept in their own list so llm_guesses_used still counts LLM
+        # guesses only.
+        sparse_guesses, sparse_gate_audit = [], []
+        if _sparse_seed_mode == "always" or (_sparse_seed_mode == "fallback" and not pysr_guesses):
+            _sparse_cands = _sparse_basis_seed_guesses(X, y, var_names)
+            sparse_guesses, sparse_gate_audit = _validate_llm_pysr_guesses(
+                _sparse_cands, X, y, X_fit, y_fit, var_names,
+                min_r2=_llm_min_r2, max_abs_pred=_llm_max_abs_pred)
+            sparse_guesses = [g for g in sparse_guesses if g not in pysr_guesses]
+            print(f"    [FIX-SPARSE-SEED] mode={_sparse_seed_mode}: "
+                  f"{len(sparse_guesses)}/{len(_sparse_cands)} sparse-basis seed(s) accepted.")
+        _h_guesses = list(pysr_guesses) + list(sparse_guesses)
         t0 = time.time()
         try:
             # [FIX-LLM-GATE] In strict mode, USE_LLM means H must actually be
             # a hybrid run. Do not silently relabel an LLM outage, parse failure,
             # or numerically invalid candidate as "H = unseeded PySR".
-            if USE_LLM and llm_gate_failed and _llm_require_valid_guess:
+            if USE_LLM and llm_gate_failed and _llm_require_valid_guess and not sparse_guesses:
                 raise RuntimeError(
                     "LLM warm-start gate failed; no validated LLM guess available "
                     "(set LLM_REQUIRE_VALID_GUESS=0 only for an explicitly "
@@ -1535,7 +1732,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
             model_h = PySRRegressor(
                 **_pysr_kwargs,
                 warm_start=False,
-                guesses=(pysr_guesses if pysr_guesses else None),
+                guesses=(_h_guesses if _h_guesses else None),
             )
             r2_h, best_expr_h, trajectory_h = _fit_with_pysr_trajectory(
                 model_h, X_fit, y_fit, var_names, label="H",
@@ -1649,6 +1846,10 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
             # auditable per-equation, not just from the console log.
             "llm_k_runs":             _llm_k_runs,
             "llm_calls_ok":           llm_calls_ok,
+            # [FIX-SPARSE-SEED] non-LLM seeds actually passed to H
+            "sparse_seed_mode":       _sparse_seed_mode,
+            "sparse_seed_guesses":    sparse_guesses,
+            "sparse_seed_gate_audit": sparse_gate_audit,
         })
         results_pysr.append({
             "system":     "pysr",
