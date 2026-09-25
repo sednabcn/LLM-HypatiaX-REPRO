@@ -1,0 +1,304 @@
+# ==============================================================================
+#  ci_smoke_test_exp3.yml - fast wiring check for
+#                            hypatiax/experiments/tests/test_llm_gate_fallback.py
+#                            against exp3_nguyen12_consolidated.py.
+#
+#  This answers one question quickly (minutes, not hours): "with
+#  LLM_REQUIRE_VALID_GUESS=0, does N5 actually recover, and do the
+#  previously-passing canary tasks (N1/N2/N6/N8/N10/N11) still pass?" It
+#  runs a SINGLE seed by default (workflow_dispatch input, default 42) so
+#  it stays a wiring/regression check, not a full 5-seed validation run.
+#  For the full 5-seed sweep (--seeds 42 99 123 777 2024, optionally
+#  --full-regression), trigger this workflow manually with those seeds, or
+#  run test_llm_gate_fallback.py locally / in a longer-lived job - do not
+#  widen this smoke test's default scope, or it stops being a smoke test.
+#
+#  test_llm_gate_fallback.py lives under hypatiax/experiments/tests/
+#  (alongside the rest of the experiment test suite) - see HARNESS_SCRIPT
+#  below if it moves.
+#
+#  Script CLI surface (asserted at runtime, not assumed):
+#    - test_llm_gate_fallback.py      : --script, --baseline-dir,
+#                                        --results-dir, --seeds,
+#                                        --full-regression, --run-index,
+#                                        --timeout, --dry-run. Exits 1 if
+#                                        any REGRESSION is detected, or if
+#                                        no baseline files are found for
+#                                        the requested seeds.
+#    - exp3_nguyen12_consolidated.py  : driven as a subprocess by the test
+#                                        harness itself, not directly by
+#                                        this workflow. See TASK_IDS /
+#                                        LLM_REQUIRE_VALID_GUESS / RESULTS_DIR
+#                                        handling inside test_llm_gate_fallback.py.
+#
+#  HARDENING NOTES (mirrors ci_smoke_test_v4.yml's conventions):
+#    1. Every `run:` block sets `set -euo pipefail` (or -uo for always()
+#       diagnostic steps) so a script that dies on argparse / import /
+#       API-auth errors is a hard CI failure, not a silently-green log.
+#    2. --script/--baseline-dir/--results-dir/--seeds/--full-regression are
+#       PROBED via --help before use; a missing flag is a hard failure
+#       rather than the harness silently falling back to its own defaults.
+#    3. BASELINE_DIR's 5 seed JSONs are checked to exist BEFORE launching
+#       the harness - the harness itself only warns and then hard-exits
+#       deep inside a (possibly slow) run if baseline files are missing,
+#       so we fail fast here instead.
+#    4. A sentinel file timestamps the start of the harness run, so the
+#       JSON count only sees files THIS run produced under RESULTS_DIR -
+#       stale files from a prior run/cache cannot create a false pass.
+#    5. The harness's own exit code (1 on any REGRESSION, or on baseline
+#       load failure) is what gates the job - we do not re-derive
+#       pass/fail from log-scraping.
+#    6. Workflow inputs are passed through `env:` rather than interpolated
+#       into the shell with ${{ }}. Direct interpolation lets a crafted
+#       input string execute arbitrary commands in the runner.
+# ==============================================================================
+
+name: "HypatiaX - Exp3 LLM gate fallback smoke test"
+run-name: "Exp3 gate-fallback smoke test · seed(s) ${{ inputs.seeds }} · full_regression=${{ inputs.full_regression }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "Space-separated seed(s) to test (must have a matching baseline JSON in BASELINE_DIR)"
+        required: false
+        default: "42"
+      full_regression:
+        description: "Check all 12 tasks instead of just the 6-task canary subset (slower)"
+        required: false
+        type: boolean
+        default: false
+      run_index:
+        description: "run-index for the harness's output files (must differ from any cached baseline run-index)"
+        required: false
+        default: "2"
+      per_call_timeout_seconds:
+        description: "Per-subprocess timeout passed to the harness's --timeout"
+        required: false
+        default: "900"
+  pull_request:
+    paths:
+      - "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py"
+      - "hypatiax/experiments/tests/test_llm_gate_fallback.py"
+      - ".github/workflows/ci_smoke_test_exp3.yml"
+
+concurrency:
+  group: ci-smoke-test-exp3-${{ github.ref }}
+  # NOTE: deliberately false, same rationale as ci_smoke_test_v4.yml - a
+  # second push cancelling this job before its `if: always()` upload step
+  # runs would present as "the artifacts vanished".
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  OUT_BASE: "hypatiax/data/results"
+  SMOKE_DIR: "hypatiax/data/results/_smoke_test_exp3_gate_fallback"
+  # Where the existing seed42/99/123/777/2024 STRICT-gate result JSONs are
+  # committed. The harness diffs against these - adjust if your repo keeps
+  # them elsewhere. Missing files here are a fail-fast CI error, not a
+  # silent skip (see "Verify baseline files exist" step below).
+  BASELINE_DIR: "hypatiax/data/results/exp3_baseline_strict_gate"
+  HARNESS_SCRIPT: "hypatiax/experiments/tests/test_llm_gate_fallback.py"
+  EXP3_SCRIPT: "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py"
+  # Small, fast hyperparameters - this job is a wiring/regression check,
+  # not a paper-quality run. Do not compare these numbers to the paper.
+  # (Read by exp3_nguyen12_consolidated.py itself; the harness inherits
+  # them via subprocess env passthrough, it does not set them.)
+  N_ITERATIONS: "200"
+  POPULATIONS: "4"
+  PYSR_TIMEOUT: "90"
+  METHOD_TIMEOUT: "100"
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  JULIA_NUM_THREADS: "2"
+  JULIA_EXCLUSIVE: "0"
+
+jobs:
+  smoke_test:
+    name: "Smoke test: LLM gate fallback (N5 + canary regression)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Julia 1.11
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            julia-depot-${{ runner.os }}-
+
+      - name: Install Python dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            anthropic \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pmlb \
+            pint \
+            psutil
+          python3 -c "import pysr; pysr.install()"
+
+      - name: Create scratch results directory
+        run: |
+          set -euo pipefail
+          mkdir -p "${SMOKE_DIR}"
+
+      - name: Validate ANTHROPIC_API_KEY
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "::error::ANTHROPIC_API_KEY secret is empty or unset."; exit 1; }
+          echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
+
+      - name: Verify scripts exist
+        run: |
+          set -euo pipefail
+          [[ -f "${HARNESS_SCRIPT}" ]] || { echo "::error::${HARNESS_SCRIPT} not found - update HARNESS_SCRIPT if it lives elsewhere"; exit 1; }
+          [[ -f "${EXP3_SCRIPT}" ]]    || { echo "::error::${EXP3_SCRIPT} not found"; exit 1; }
+
+      - name: Verify baseline files exist
+        env:
+          SEEDS: "${{ inputs.seeds || '42' }}"
+        run: |
+          set -euo pipefail
+          [[ -d "${BASELINE_DIR}" ]] || { echo "::error::BASELINE_DIR ${BASELINE_DIR} does not exist - commit the strict-gate baseline result JSONs there, or point BASELINE_DIR at where they live"; exit 1; }
+          MISSING=0
+          for SEED in ${SEEDS}; do
+            FOUND=$(find "${BASELINE_DIR}" -iname "*seed${SEED}*.json" -print -quit)
+            if [[ -z "${FOUND}" ]]; then
+              echo "::error::no baseline JSON for seed ${SEED} found under ${BASELINE_DIR}"
+              MISSING=1
+            else
+              echo "seed ${SEED} baseline: ${FOUND}"
+            fi
+          done
+          [[ "${MISSING}" -eq 0 ]] || exit 1
+
+      - name: Probe test_llm_gate_fallback.py CLI surface
+        run: |
+          set -euo pipefail
+          if ! HELP="$(python3 "${HARNESS_SCRIPT}" --help 2>&1)"; then
+            echo "::error::${HARNESS_SCRIPT} --help failed (import-time error?). Output follows:"
+            echo "${HELP}"
+            exit 1
+          fi
+          for FLAG in --script --baseline-dir --results-dir --seeds --full-regression --run-index --timeout; do
+            grep -q -- "${FLAG}" <<<"${HELP}" \
+              || { echo "::error::${HARNESS_SCRIPT} has no ${FLAG} flag; this workflow's invocation would silently fall back to a harness default"; exit 1; }
+          done
+
+      # ── The actual smoke test ────────────────────────────────────────────
+      - name: "Run LLM gate fallback harness (N5 + canary regression)"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SEEDS: "${{ inputs.seeds || '42' }}"
+          RUN_INDEX: "${{ inputs.run_index || '2' }}"
+          PER_CALL_TIMEOUT: "${{ inputs.per_call_timeout_seconds || '900' }}"
+          FULL_REGRESSION: "${{ inputs.full_regression }}"
+        run: |
+          set -euo pipefail
+
+          RESULTS_DIR="${SMOKE_DIR}/gate_fallback_results"
+          mkdir -p "${RESULTS_DIR}"
+
+          ARGS=(
+            --script "${EXP3_SCRIPT}"
+            --baseline-dir "${BASELINE_DIR}"
+            --results-dir "${RESULTS_DIR}"
+            --run-index "${RUN_INDEX}"
+            --timeout "${PER_CALL_TIMEOUT}"
+            --seeds ${SEEDS}
+          )
+          if [[ "${FULL_REGRESSION}" == "true" ]]; then
+            ARGS+=(--full-regression)
+          fi
+
+          echo "[exp3-gate-fallback] seeds=${SEEDS} run_index=${RUN_INDEX} full_regression=${FULL_REGRESSION}"
+          echo "[exp3-gate-fallback] RESULTS_DIR=${RESULTS_DIR}"
+
+          # Sentinel: only JSON newer than this counts as produced by THIS run.
+          touch "${RUNNER_TEMP}/exp3_gate_fallback.stamp"
+
+          # Harness itself exits 1 on any detected REGRESSION or missing
+          # baseline - that exit code is what gates this step (pipefail
+          # ensures `tee` doesn't swallow it).
+          python3 "${HARNESS_SCRIPT}" "${ARGS[@]}" 2>&1 | tee "${SMOKE_DIR}/run.log"
+
+          COUNT=$(find "${RESULTS_DIR}" -name '*.json' -newer "${RUNNER_TEMP}/exp3_gate_fallback.stamp" 2>/dev/null | wc -l)
+          echo "exp3 gate-fallback result JSON files (this run): ${COUNT}"
+          [[ "${COUNT}" -gt 0 ]] || { echo "::error::test_llm_gate_fallback.py produced no result JSON in ${RESULTS_DIR}"; exit 1; }
+
+      # ── Diagnostics ─────────────────────────────────────────────────────────
+      - name: Locate stray result JSON
+        if: always()
+        run: |
+          set -uo pipefail
+          echo "=== JSON written anywhere in the workspace in the last 60 min ==="
+          echo "(anything under ${OUT_BASE} but OUTSIDE ${SMOKE_DIR} means the"
+          echo " --results-dir override is being ignored, or a cached strict-gate"
+          echo " run was reused instead of a fresh fallback run)"
+          find "${GITHUB_WORKSPACE}" -name '*.json' -mmin -60 \
+            -not -path '*/node_modules/*' \
+            -not -path '*/.git/*' \
+            -not -path '*/site-packages/*' \
+            -printf '%TY-%Tm-%Td %TH:%TM  %p\n' 2>/dev/null \
+            | sort -r || true
+          echo "================================================================"
+
+      - name: Print summary
+        if: always()
+        run: |
+          set -uo pipefail
+          echo "=== Smoke test summary ==="
+          find "${SMOKE_DIR}" -type f -name '*.json' 2>/dev/null | sort || true
+          echo "==========================="
+          echo "--- tail of run.log (harness stdout, incl. REGRESSION/FIXED verdicts) ---"
+          if [[ -f "${SMOKE_DIR}/run.log" ]]; then
+            tail -n 80 "${SMOKE_DIR}/run.log"
+          else
+            echo "(no run.log found)"
+          fi
+
+      - name: Upload smoke-test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-exp3-gate-fallback-results
+          # OUT_BASE is included deliberately: if RESULTS_DIR is ignored by
+          # the underlying exp3 script, results are still captured instead
+          # of being lost with the runner.
+          path: |
+            ${{ env.SMOKE_DIR }}
+            ${{ env.OUT_BASE }}
+          if-no-files-found: warn
+          retention-days: 5
