@@ -189,8 +189,19 @@ def run_case(
 
     t0 = time.time()
     try:
+        # No cwd override here: `script` (and RESULTS_DIR) are relative
+        # paths resolved against the caller's own working directory (repo
+        # root in CI). Setting cwd=script.parent while still passing a
+        # relative script path double-joins the parent directory onto
+        # itself -- e.g. ".../benchmarks/hypatiax/.../benchmarks/exp3_...py"
+        # -- and the subprocess fails with "No such file or directory"
+        # before any actual SR search runs (this was caught by a live CI
+        # run: both STRICT and FALLBACK calls failed identically at 0s
+        # elapsed with that exact doubled path in stderr). If the target
+        # script ever needs a specific cwd, resolve `script` to an
+        # absolute path first so the two can't compound.
         proc = subprocess.run(
-            cmd, env=env, cwd=str(script.parent),
+            cmd, env=env,
             capture_output=True, text=True, timeout=timeout_s,
         )
     except subprocess.TimeoutExpired:
