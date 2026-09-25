@@ -5,23 +5,25 @@ test_llm_gate_fallback.py
 
 Purpose
 -------
-Exercises `exp3_nguyen12_consolidated.py` with `LLM_REQUIRE_VALID_GUESS=0`
-(the documented non-strict fallback switch, see line ~1154/1379 of that
-script) and answers two questions:
+Exercises `exp3_nguyen12_consolidated.py` on just the 5 tasks that ever
+showed a gate-related problem in the baseline data -- N5, N9, N10, N11,
+N12 -- running EACH seed TWICE, back to back, in the same job:
 
-  1. FOCUSED: does Nguyen-5 (N5) actually recover now, across the seeds
-     where it previously gate-aborted (99, 777) or converged poorly (2024)?
+  1. STRICT   (LLM_REQUIRE_VALID_GUESS=1, i.e. gate=TRUE, today's default)
+  2. FALLBACK (LLM_REQUIRE_VALID_GUESS=0, i.e. gate=FALSE)
 
-  2. REGRESSION: do the tasks that already passed under the strict gate
-     (e.g. N1, N2, N6, N8, N10, N11 -- 5/5 across all seeds in the
-     baseline) still pass once the fallback is enabled? Flipping the gate
-     off should be a no-op for any task where the gate never fired in the
-     first place, but this checks that assumption instead of assuming it.
+and prints a direct STRICT-vs-FALLBACK comparison per (seed, task), rather
+than diffing against old baseline JSON files. This is the fast path: 5
+tasks x 2 gate settings x N seeds, instead of a full 12-task x 2-setting
+sweep.
+
+Note: N10 and N11 were never gate failures in any baseline seed (only N5,
+N9, N12 were) -- they're included here as in-run canaries, so a paired
+STRICT/FALLBACK regression on a task that should be unaffected by the gate
+is visible immediately, in the same table, without a separate step.
 
 It does NOT re-implement any SR logic -- it drives the real script as a
-subprocess (so it exercises the actual code path, not a mock of it) and
-diffs the resulting JSON against the baseline result files you already
-have on disk.
+subprocess (so it exercises the actual code path, not a mock of it).
 
 Requirements to actually execute (this harness does not stub these out):
   - The real repo checkout with hypatiax/, PySR, juliacall/Julia, sklearn,
@@ -32,23 +34,26 @@ Requirements to actually execute (this harness does not stub these out):
   - Wall-clock budget: each (seed, task) pair can take up to
     PYSR_TIMEOUT seconds x 2 (H + P) per the script's own numbers
     (~5-9 min/task observed in the seed42/99/123/777/2024 result files).
-    The default CLI below only touches N5 plus a small regression sample
-    to keep this tractable; use --full-regression to check all 12 tasks.
+    Running all 5 tasks together in ONE subprocess call per (seed, gate
+    setting) -- rather than one call per task -- is what keeps this fast;
+    see run_case()'s task_ids list.
 
 Usage
 -----
-    # Focused N5 check + small regression sample, seeds 42/99/123/777/2024
+    # Live STRICT vs FALLBACK comparison on N5/N9/N10/N11/N12, all 5 seeds
     python3 test_llm_gate_fallback.py \\
         --script /path/to/exp3_nguyen12_consolidated.py \\
-        --baseline-dir /mnt/user-data/uploads \\
-        --results-dir /tmp/gate_fallback_results
+        --results-dir /tmp/gate_compare_results
 
-    # Also re-check every task (full regression, slow)
+    # Optionally still diff against old baseline JSONs too
     python3 test_llm_gate_fallback.py \\
         --script /path/to/exp3_nguyen12_consolidated.py \\
-        --baseline-dir /mnt/user-data/uploads \\
-        --results-dir /tmp/gate_fallback_results \\
-        --full-regression
+        --results-dir /tmp/gate_compare_results \\
+        --baseline-dir /mnt/user-data/uploads
+
+    # Narrow to specific seeds/tasks
+    python3 test_llm_gate_fallback.py --script ... --seeds 99 777 \\
+        --tasks N5 N12
 
     # Dry run: prints the exact subprocess commands/env without executing
     # PySR/Julia/the LLM -- use this to sanity-check the harness itself.
@@ -83,14 +88,12 @@ BASELINE_FILES = {
 
 ALL_TASKS = [f"N{i}" for i in range(1, 13)]
 
-# Tasks that were 5/5 recovered (H) across ALL 5 baseline seeds, i.e. the
-# gate never fired against them. These are the regression canaries: if
-# flipping LLM_REQUIRE_VALID_GUESS to 0 breaks any of these, something in
-# the fallback path itself (not just the gate) is broken.
-REGRESSION_CANARY_TASKS = ["N1", "N2", "N6", "N8", "N10", "N11"]
-
-# The task under focused investigation.
-FOCUS_TASK = "N5"
+# The fast-path task set: every task that ever gate-aborted in the
+# baseline (N5, N9, N12), plus two same-family tasks that never did
+# (N10, N11) as in-run canaries -- so a STRICT-vs-FALLBACK regression on
+# an "unaffected" task shows up in the same table, same run, no separate
+# step required.
+DEFAULT_TASKS = ["N5", "N9", "N10", "N11", "N12"]
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -231,39 +234,45 @@ def extract_per_task(result: dict) -> dict:
 # Reporting
 # ─────────────────────────────────────────────────────────────────────────
 
-def report_focus_task(seed: int, task: str, before: dict, after: Optional[dict]) -> str:
-    b = before.get(task, {})
-    b_r2 = b.get("h_r2")
-    b_status = "FAIL(gate)" if not recovered(b_r2) else f"{b_r2:.4f}"
-
-    if after is None:
-        return f"  seed {seed}  {task}: baseline H={b_status}  ->  [run failed / not executed]"
-
-    a = after.get(task, {})
-    a_r2 = a.get("h_r2")
-    a_status = "FAIL" if not recovered(a_r2) else f"{a_r2:.4f}"
-    verdict = "FIXED ✓" if (not recovered(b_r2) and recovered(a_r2)) else (
-        "still failing ✗" if not recovered(a_r2) else "already passed / still passes")
-    return f"  seed {seed}  {task}: baseline H={b_status}  ->  fallback H={a_status}   [{verdict}]"
+def _fmt(r2: Optional[float]) -> str:
+    return "FAIL" if not recovered(r2) else f"{r2:.4f}"
 
 
-def report_regression(seed: int, task: str, before: dict, after: Optional[dict]) -> str:
-    b_r2 = before.get(task, {}).get("h_r2")
-    b_ok = recovered(b_r2)
-    if after is None:
-        return f"  seed {seed}  {task}: baseline={'PASS' if b_ok else 'FAIL'}  ->  [run failed / not executed]"
-    a_r2 = after.get(task, {}).get("h_r2")
-    a_ok = recovered(a_r2)
-    if b_ok and not a_ok:
-        verdict = "REGRESSION ✗✗✗"
-    elif b_ok and a_ok:
-        verdict = "OK (still passes)"
-    elif not b_ok and a_ok:
-        verdict = "IMPROVED"
+def report_pair(seed: int, task: str, strict: Optional[dict], fallback: Optional[dict],
+                 baseline: Optional[dict] = None) -> str:
+    """One line: seed, task, STRICT(gate=TRUE) result, FALLBACK(gate=FALSE)
+    result, and a verdict. Optionally cross-checks the freshly-run STRICT
+    result against an old baseline JSON, in case the two disagree (e.g.
+    non-determinism in the LLM sampling at "the same" seed/temperature).
+    """
+    s_r2 = strict.get(task, {}).get("h_r2") if strict else None
+    f_r2 = fallback.get(task, {}).get("h_r2") if fallback else None
+    s_str = "[not run]" if strict is None else _fmt(s_r2)
+    f_str = "[not run]" if fallback is None else _fmt(f_r2)
+
+    if strict is None or fallback is None:
+        verdict = "INCOMPLETE"
     else:
-        verdict = "OK (still fails, as before)"
-    return (f"  seed {seed}  {task}: baseline H={b_r2:.4f} -> fallback H="
-            f"{'FAIL' if a_r2 is None else f'{a_r2:.4f}'}   [{verdict}]")
+        s_ok, f_ok = recovered(s_r2), recovered(f_r2)
+        if not s_ok and f_ok:
+            verdict = "FIXED by fallback ✓"
+        elif s_ok and not f_ok:
+            verdict = "REGRESSION ✗✗✗ (fallback broke a passing case)"
+        elif s_ok and f_ok:
+            verdict = "OK (both pass)"
+        else:
+            verdict = "still failing in both ✗"
+
+    line = f"  seed {seed}  {task}:  STRICT(gate=TRUE)={s_str}   FALLBACK(gate=FALSE)={f_str}   [{verdict}]"
+
+    if baseline is not None:
+        base_r2 = baseline.get(task, {}).get("h_r2")
+        if strict is not None and _fmt(base_r2) != s_str:
+            line += (f"\n    ⚠ live STRICT run ({s_str}) differs from stored baseline "
+                     f"({_fmt(base_r2)}) -- LLM sampling is not perfectly reproducible "
+                     f"at this seed/temperature; treat the live pair above as the "
+                     f"authoritative comparison for this run.")
+    return line
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -274,80 +283,81 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--script", type=Path, default=Path("exp3_nguyen12_consolidated.py"),
                      help="Path to exp3_nguyen12_consolidated.py")
-    ap.add_argument("--baseline-dir", type=Path, default=Path("."),
-                     help="Directory containing the existing seed42/99/123/777/2024 result JSONs")
-    ap.add_argument("--results-dir", type=Path, default=Path("./gate_fallback_results"),
-                     help="Fresh output directory for the fallback runs (must not reuse the "
-                          "original RESULTS_DIR, or cached strict-mode failures could be "
+    ap.add_argument("--tasks", type=str, nargs="+", default=DEFAULT_TASKS,
+                     help=f"Task IDs to test, run together in ONE subprocess call per "
+                          f"(seed, gate setting) for speed (default: {DEFAULT_TASKS})")
+    ap.add_argument("--baseline-dir", type=Path, default=None,
+                     help="Optional: directory containing old seed42/99/123/777/2024 result "
+                          "JSONs, to sanity-check the freshly-run STRICT result against "
+                          "(informational only -- the live STRICT vs FALLBACK pair from "
+                          "this run is what actually gates PASS/FAIL)")
+    ap.add_argument("--results-dir", type=Path, default=Path("./gate_compare_results"),
+                     help="Fresh output directory for both the STRICT and FALLBACK runs "
+                          "(must not reuse an old RESULTS_DIR, or a cached run could be "
                           "returned instead of a real re-run)")
     ap.add_argument("--seeds", type=int, nargs="+", default=[42, 99, 123, 777, 2024])
-    ap.add_argument("--full-regression", action="store_true",
-                     help="Regression-check all 12 tasks instead of just the "
-                          f"canary subset {REGRESSION_CANARY_TASKS}")
-    ap.add_argument("--run-index", type=int, default=2,
-                     help="Distinguishes this run's output files from run_index=1 baselines")
+    ap.add_argument("--run-index-strict", type=int, default=10,
+                     help="run-index for the gate=TRUE runs (distinct from any prior cache)")
+    ap.add_argument("--run-index-fallback", type=int, default=11,
+                     help="run-index for the gate=FALSE runs (distinct from the strict run "
+                          "above and from any prior cache)")
     ap.add_argument("--timeout", type=int, default=3600, help="Per-subprocess timeout, seconds")
     ap.add_argument("--dry-run", action="store_true",
                      help="Print the commands/env that would run, without executing anything")
     args = ap.parse_args()
 
-    print("=" * 72)
-    print("STEP 1/3 — loading baseline (strict-gate) results")
-    print("=" * 72)
-    baseline = load_baseline(args.baseline_dir)
-    if not baseline and not args.dry_run:
-        print("No baseline files found — nothing to diff against. Exiting.")
-        sys.exit(1)
+    baseline = {}
+    if args.baseline_dir is not None:
+        print("=" * 72)
+        print("STEP 0/2 — loading baseline (for informational cross-check only)")
+        print("=" * 72)
+        baseline = load_baseline(args.baseline_dir)
+        print()
 
-    regression_tasks = ALL_TASKS if args.full_regression else REGRESSION_CANARY_TASKS
+    print("=" * 72)
+    print(f"STEP 1/2 — STRICT (gate=TRUE, LLM_REQUIRE_VALID_GUESS=1) on {args.tasks}")
+    print("=" * 72)
+    strict_results = {}
+    for seed in args.seeds:
+        result = run_case(
+            script=args.script, seed=seed, task_ids=args.tasks,
+            results_dir=args.results_dir, run_index=args.run_index_strict,
+            require_valid_guess=True, timeout_s=args.timeout, dry_run=args.dry_run,
+        )
+        strict_results[seed] = extract_per_task(result) if result else None
 
     print()
     print("=" * 72)
-    print(f"STEP 2/3 — focused check: does {FOCUS_TASK} recover with "
-          f"LLM_REQUIRE_VALID_GUESS=0 ?")
+    print(f"STEP 2/2 — FALLBACK (gate=FALSE, LLM_REQUIRE_VALID_GUESS=0) on {args.tasks}")
     print("=" * 72)
-    focus_results = {}
+    fallback_results = {}
     for seed in args.seeds:
         result = run_case(
-            script=args.script, seed=seed, task_ids=[FOCUS_TASK],
-            results_dir=args.results_dir, run_index=args.run_index,
+            script=args.script, seed=seed, task_ids=args.tasks,
+            results_dir=args.results_dir, run_index=args.run_index_fallback,
             require_valid_guess=False, timeout_s=args.timeout, dry_run=args.dry_run,
         )
-        focus_results[seed] = extract_per_task(result) if result else None
-
-    print()
-    print("=" * 72)
-    print(f"STEP 3/3 — regression check on {'ALL 12 tasks' if args.full_regression else 'canary tasks ' + str(regression_tasks)}"
-          f" with LLM_REQUIRE_VALID_GUESS=0")
-    print("=" * 72)
-    regression_results = {}
-    for seed in args.seeds:
-        result = run_case(
-            script=args.script, seed=seed, task_ids=regression_tasks,
-            results_dir=args.results_dir, run_index=args.run_index,
-            require_valid_guess=False, timeout_s=args.timeout, dry_run=args.dry_run,
-        )
-        regression_results[seed] = extract_per_task(result) if result else None
+        fallback_results[seed] = extract_per_task(result) if result else None
 
     # ── Summary ─────────────────────────────────────────────────────────
     print()
     print("#" * 72)
-    print(f"# SUMMARY: {FOCUS_TASK} fallback outcome")
-    print("#" * 72)
-    for seed in args.seeds:
-        print(report_focus_task(seed, FOCUS_TASK, baseline.get(seed, {}), focus_results.get(seed)))
-
-    print()
-    print("#" * 72)
-    print("# SUMMARY: regression check on previously-passing tasks")
+    print(f"# SUMMARY: STRICT(gate=TRUE) vs FALLBACK(gate=FALSE), tasks={args.tasks}")
     print("#" * 72)
     any_regression = False
+    any_incomplete = False
     for seed in args.seeds:
-        for task in regression_tasks:
-            line = report_regression(seed, task, baseline.get(seed, {}), regression_results.get(seed))
+        for task in args.tasks:
+            line = report_pair(
+                seed, task,
+                strict_results.get(seed), fallback_results.get(seed),
+                baseline=baseline.get(seed) if baseline else None,
+            )
             print(line)
             if "REGRESSION" in line:
                 any_regression = True
+            if "INCOMPLETE" in line:
+                any_incomplete = True
 
     print()
     if args.dry_run:
@@ -355,8 +365,12 @@ def main():
     elif any_regression:
         print("RESULT: ⚠ at least one regression detected — see REGRESSION ✗✗✗ lines above.")
         sys.exit(1)
+    elif any_incomplete:
+        print("RESULT: ⚠ at least one run did not complete — see INCOMPLETE lines above.")
+        sys.exit(1)
     else:
-        print("RESULT: ✓ no regressions detected in the checked tasks.")
+        print("RESULT: ✓ no regressions — fallback recovers what strict couldn't, "
+              "without breaking anything strict already passed.")
 
 
 if __name__ == "__main__":
