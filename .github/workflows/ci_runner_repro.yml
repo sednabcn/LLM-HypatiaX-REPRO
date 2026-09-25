@@ -259,14 +259,14 @@ jobs:
           case "$EXP" in
 
             exp1)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
               ;;
 
             exp1b)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
@@ -2971,7 +2971,7 @@ jobs:
               "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
           )
           DEFI_SCRIPT = pathlib.Path(
-              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4c.py"
+              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
           )
 
           failures = []
