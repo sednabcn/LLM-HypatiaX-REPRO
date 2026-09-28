@@ -259,23 +259,23 @@ jobs:
           case "$EXP" in
 
             exp1)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
               ;;
 
             exp1b)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
             exp1c)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
               NEEDS_JULIA=false
-              RESULT_SUBDIR="comparison_results/noise-noiseless/exp1c_v4"
+              RESULT_SUBDIR="comparison_results/noise-noiseless/exp1c"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
@@ -502,7 +502,7 @@ jobs:
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
-              "exp1c":             [f"v4_seed{s}" for s in SEEDS],
+              "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp2_feynman":       FEYNMAN_DOMAINS,
@@ -1116,8 +1116,8 @@ jobs:
             ! -path "*/.git/*" \
             ! -path "*/node_modules/*" \
             2>/dev/null | sort | head -60 || echo "(none)"
-          echo "=== ALL hypatiax_defi_benchmark_v4*results*.json in workspace ==="
-          find "${GITHUB_WORKSPACE}" -maxdepth 12 -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | sort || echo "(none)"
+          echo "=== ALL hypatiax_defi_benchmark*results*.json in workspace ==="
+          find "${GITHUB_WORKSPACE}" -maxdepth 12 -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | sort || echo "(none)"
           echo "=== ALL protocol_core_noiseless_*.json in workspace ==="
           find "${GITHUB_WORKSPACE}" -maxdepth 12 -name "protocol_core_noiseless_*.json" 2>/dev/null | sort || echo "(none)"
           echo "=== OUT_BASE full tree ==="
@@ -1178,8 +1178,8 @@ jobs:
                       ]
                       PVA_DIR = "hypatiax/data/results/portfolio_variance_audit"
                       REAL_NAMES = [
-                          "hypatiax_defi_benchmark_v4*results*.json",
-                          "hypatiax_defi_benchmark_v4*checkpoint*.json",
+                          "hypatiax_defi_benchmark*results*.json",
+                          "hypatiax_defi_benchmark*checkpoint*.json",
                       ]
                       combined_globs = []
                       for s in seeds_this_shard:
@@ -1208,19 +1208,19 @@ jobs:
                   elif EXP == "exp1c":
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
                       seeds_this_shard = [
-                          tid[len("v4_seed"):] for tid in shard_ids_local
+                          tid[len("seed"):] for tid in shard_ids_local
                       ]
                       combined_globs = [
-                          "hypatiax_defi_benchmark_v4_pooled_seed_report.json",
+                          "hypatiax_defi_benchmark*_pooled_seed_report.json",
                       ]
                       for s in seeds_this_shard:
                           combined_globs += [
-                              f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
+                              f"*hypatiax_defi_benchmark*seed{s}*results*.json",
                               f"*defi_v4_*seed{s}*.json",
                           ]
                       if not seeds_this_shard:
                           combined_globs += [
-                              "*hypatiax_defi_benchmark_v4*results*.json",
+                              "*hypatiax_defi_benchmark*results*.json",
                               "*defi_v4_*.json",
                           ]
                   else:
@@ -1402,7 +1402,7 @@ jobs:
             exit 1
           fi
 
-          COUNT_PRIMARY=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | wc -l)
+          COUNT_PRIMARY=$(find "${TARGET}" -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | wc -l)
           COUNT_LEGACY=$(find  "${TARGET}" -name "protocol_core_noiseless_*.json" 2>/dev/null | wc -l)
           COUNT_TOTAL=$((COUNT_PRIMARY + COUNT_LEGACY))
 
@@ -1414,7 +1414,7 @@ jobs:
 
           if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
             echo "::error::exp1 produced NO output files in '${TARGET}'."
-            echo "  Expected: hypatiax_defi_benchmark_v4*results*.json or protocol_core_noiseless_*.json"
+            echo "  Expected: hypatiax_defi_benchmark*results*.json or protocol_core_noiseless_*.json"
             echo "  The experiment script may have written files under a different name."
             echo "  Check the 'Run experiment tasks' log for errors and actual output filenames."
             exit 1
@@ -1429,14 +1429,14 @@ jobs:
         run: |
           set -euo pipefail
           TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/15"
-          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | wc -l)
+          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | wc -l)
           COUNT_FIXED=$(find "${TARGET}" -name "comparison_FIXED_*.json" 2>/dev/null | wc -l)
           COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
           COUNT_PORT=$(find  "${TARGET}" -name "*portfolio*variance*.json" 2>/dev/null | wc -l)
           COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_FIXED + COUNT_DEFI + COUNT_PORT ))
           echo "=== exp1b output verification ==="
           echo "  Target dir                              : ${TARGET}"
-          echo "  hypatiax_defi_benchmark_v4*results*.json: ${COUNT_BENCHMARK}"
+          echo "  hypatiax_defi_benchmark*results*.json: ${COUNT_BENCHMARK}"
           echo "  comparison_FIXED_*.json                 : ${COUNT_FIXED}"
           echo "  defi_v4_*.json                          : ${COUNT_DEFI}"
           echo "  *portfolio*variance*.json               : ${COUNT_PORT}"
@@ -1445,7 +1445,7 @@ jobs:
           find "${TARGET}" -type f 2>/dev/null | sort || true
           if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
             echo "::error::exp1b produced NO output files in '${TARGET}'."
-            echo "  Expected: hypatiax_defi_benchmark_v4*results*.json, comparison_FIXED_*.json,"
+            echo "  Expected: hypatiax_defi_benchmark*results*.json, comparison_FIXED_*.json,"
             echo "            defi_v4_*.json, or *portfolio*variance*.json"
             echo "  The script may have written to a different path.  Check:"
             echo "    1. 'exp1b post-run file scan' in the Run experiment tasks log"
@@ -1461,23 +1461,23 @@ jobs:
           RESULTS_ROOT: ${{ github.workspace }}/hypatiax/data/results
         run: |
           set -euo pipefail
-          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/exp1c_v4"
-          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4*results*.json" 2>/dev/null | wc -l)
+          TARGET="${RESULTS_ROOT}/comparison_results/noise-noiseless/exp1c"
+          COUNT_BENCHMARK=$(find "${TARGET}" -name "hypatiax_defi_benchmark*results*.json" 2>/dev/null | wc -l)
           COUNT_DEFI=$(find  "${TARGET}" -name "defi_v4_*.json"          2>/dev/null | wc -l)
-          COUNT_POOLED=$(find "${TARGET}" -name "hypatiax_defi_benchmark_v4_pooled_seed_report.json" 2>/dev/null | wc -l)
+          COUNT_POOLED=$(find "${TARGET}" -name "hypatiax_defi_benchmark*_pooled_seed_report.json" 2>/dev/null | wc -l)
           COUNT_TOTAL=$(( COUNT_BENCHMARK + COUNT_DEFI + COUNT_POOLED ))
           echo "=== exp1c output verification ==="
           echo "  Target dir                                        : ${TARGET}"
-          echo "  hypatiax_defi_benchmark_v4*results*.json          : ${COUNT_BENCHMARK}"
+          echo "  hypatiax_defi_benchmark*results*.json          : ${COUNT_BENCHMARK}"
           echo "  defi_v4_*.json                                    : ${COUNT_DEFI}"
-          echo "  hypatiax_defi_benchmark_v4_pooled_seed_report.json: ${COUNT_POOLED}"
+          echo "  hypatiax_defi_benchmark*_pooled_seed_report.json: ${COUNT_POOLED}"
           echo "  Total                                             : ${COUNT_TOTAL}"
           echo "--- Directory listing ---"
           find "${TARGET}" -type f 2>/dev/null | sort || true
           if [[ "${COUNT_TOTAL}" -eq 0 ]]; then
             echo "::error::exp1c produced NO output files in '${TARGET}'."
-            echo "  Expected: hypatiax_defi_benchmark_v4*results*.json, defi_v4_*.json,"
-            echo "            or hypatiax_defi_benchmark_v4_pooled_seed_report.json"
+            echo "  Expected: hypatiax_defi_benchmark*results*.json, defi_v4_*.json,"
+            echo "            or hypatiax_defi_benchmark*_pooled_seed_report.json"
             echo "  The script may have written to a different path.  Check:"
             echo "    1. 'exp1c post-run file scan' in the Run experiment tasks log"
             echo "    2. 'Move results to RESULTS_DIR' step log for exp1c"
@@ -1896,7 +1896,7 @@ jobs:
                   combined_globs = []
                   for s in seeds_this_shard:
                       combined_globs += [
-                          f"*hypatiax_defi_benchmark_v4_results_seed{s}*.json",
+                          f"*hypatiax_defi_benchmark*_results_seed{s}*.json",
                           f"*_results_seed{s}*.json",
                           f"*comparison_FIXED_*seed{s}*.json",
                           f"*comparison_FIXED_*seed{s}*.csv",
@@ -1913,16 +1913,16 @@ jobs:
                                         f"{PVA_DIR}/**/*.json",
                                         f"{PVA_DIR}/**/*.csv"]
               elif EXP == "exp1c":
-                  seeds_this_shard = [tid[len("v4_seed"):] for tid in shard_ids]
-                  combined_globs = ["hypatiax_defi_benchmark_v4_pooled_seed_report.json"]
+                  seeds_this_shard = [tid[len("seed"):] for tid in shard_ids]
+                  combined_globs = ["hypatiax_defi_benchmark*_pooled_seed_report.json"]
                   for s in seeds_this_shard:
                       combined_globs += [
-                          f"*hypatiax_defi_benchmark_v4*seed{s}*results*.json",
+                          f"*hypatiax_defi_benchmark*seed{s}*results*.json",
                           f"*defi_v4_*seed{s}*.json",
                       ]
                   if not seeds_this_shard:
                       combined_globs += [
-                          "*hypatiax_defi_benchmark_v4*results*.json",
+                          "*hypatiax_defi_benchmark*results*.json",
                           "*defi_v4_*.json",
                       ]
               else:
@@ -2052,10 +2052,14 @@ jobs:
               [[ "${_sid}" == "portfolio_seed42" ]] && OWNS_SEED42=true
             done < <(python3 -c "import json,os; print('\n'.join(json.loads(os.environ.get('SHARD_IDS') or '[]')))")
 
-            SEED42_FILE="${TARGET}/hypatiax_defi_benchmark_v4_results_seed42.json"
-            if [[ "${OWNS_SEED42}" == "false" && -f "${SEED42_FILE}" ]]; then
-              echo "Shard ${SHARD} was not assigned seed42 — removing its redundant local copy of ${SEED42_FILE} before staging (the shard actually assigned seed42 will commit the real one)."
-              rm -f "${SEED42_FILE}"
+            # Un-versioned glob (no v3/v4 segment); never touch the PCA variant's files.
+            if [[ "${OWNS_SEED42}" == "false" ]]; then
+              for SEED42_FILE in "${TARGET}"/hypatiax_defi_benchmark*_results_seed42.json; do
+                [[ -f "${SEED42_FILE}" ]] || continue
+                [[ "${SEED42_FILE}" == *_pca_* ]] && continue
+                echo "Shard ${SHARD} was not assigned seed42 — removing its redundant local copy of ${SEED42_FILE} before staging (the shard actually assigned seed42 will commit the real one)."
+                rm -f "${SEED42_FILE}"
+              done
             fi
           fi
 
@@ -2971,7 +2975,7 @@ jobs:
               "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
           )
           DEFI_SCRIPT = pathlib.Path(
-              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v4.py"
+              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
           )
 
           failures = []

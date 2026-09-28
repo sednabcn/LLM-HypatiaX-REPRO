@@ -178,10 +178,10 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
   cd '${REPO_ROOT}'
   _FAIL=0
 
-  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py'
+  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark.py'
   if [[ -f \"\${_T1}\" ]]; then
     if grep -n \"Ground truth:.*metadata\.get(.ground_truth\" \"\${_T1}\" | grep -v '^[0-9]*:# ' ; then
-      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v4.py _generate_llm_formula prompt.'
+      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark.py _generate_llm_formula prompt.'
       echo '         See Fix 14 changelog entry in that file.'
       _FAIL=1
     fi
@@ -224,7 +224,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   _DEFI_TARGET='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
   mkdir -p \"\${_DEFI_TARGET}\"
 
-  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark.py' \
     --output-dir \"\${_DEFI_TARGET}\" \
     2>&1 | tee '${RESULTS_DIR}/exp1_run.log'
 
@@ -261,14 +261,14 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
   # FIX-exp1b-OUTPUT-DIR: write straight into the exp1b/portfolio result dir
   # (comparison_results/noise-noiseless/15), not into exp1's own
-  # noiseless/defi dir. hypatiax_defi_benchmark_v4.py supports --output-dir,
+  # noiseless/defi dir. hypatiax_defi_benchmark.py supports --output-dir,
   # so pointing it at dest15 directly means the primary results never need a
   # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
   mkdir -p \"\${dest15}\"
 
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
-    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4.py' \
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark.py' \
       --output-dir \"\${dest15}\" \
       --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
@@ -276,7 +276,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   _BENCH_JSON=\$(ls -t \"\${dest15}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON}\" ]]; then
     echo 'WARNING: portfolio_variance_v4c2.py skipped — benchmark JSON not found in '\"\${dest15}\"'.'
-    echo '         hypatiax_defi_benchmark_v4.py did not produce a results file at the'
+    echo '         hypatiax_defi_benchmark.py did not produce a results file at the'
     echo '         expected --output-dir. Check exp1b_run.log above for the actual failure.'
   else
     echo '[exp1b] Running portfolio_variance_v4c2.py against: '\"\${_BENCH_JSON}\"
@@ -411,8 +411,8 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
-  echo '[exp1_pca] Running hypatiax_defi_benchmark_v4_pca.py (all 74 DeFi cases, PCA 40/60 split)'
-  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4_pca.py' \\
+  echo '[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split)'
+  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
     --output-dir \"\${_PCA_DEFI_DIR}\" \\
     --force-fresh \\
     2>&1 | tee '${RESULTS_DIR}/exp1_pca_run.log'
@@ -571,9 +571,9 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
 
-  echo '[exp1b_pca] Running hypatiax_defi_benchmark_v4_pca.py (portfolio seed sweep, PCA 40/60 split)'
+  echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
-    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v4_pca.py' \\
+    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
       --output-dir \"\${_PCA15_DIR}\" \\
       --force-fresh \\
       2>&1 | tee '${RESULTS_DIR}/exp1b_pca_run.log'
@@ -591,7 +591,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
     echo 'WARNING: portfolio_variance_v4c2.py skipped — benchmark JSON not found in '\"\${_PCA15_DIR}\"'.'
-    echo '         hypatiax_defi_benchmark_v4_pca.py did not produce a results file at the'
+    echo '         hypatiax_defi_benchmark_pca.py did not produce a results file at the'
     echo '         expected --output-dir; portfolio-variance table/figure inputs will be missing.'
   else
     echo '[exp1b_pca] Running portfolio_variance_v4c2.py against: '\"\${_BENCH_JSON_PCA}\"
