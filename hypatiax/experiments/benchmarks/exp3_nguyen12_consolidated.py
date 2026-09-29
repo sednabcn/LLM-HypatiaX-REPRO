@@ -392,6 +392,13 @@ except ImportError:
     pass
 print(f"✅ All seeds set to {SEED}")
 
+# [SPARSE-SEED-DEFAULT] Activate the fallback mode by default. Set BEFORE any
+# reader (cache check ~L1326, run ~L1483) so both see the same value.
+# Override with SPARSE_SEED=off|always in the environment. NOTE: any non-"off"
+# mode changes what "H" means (recorded in the run config) -- report it.
+os.environ.setdefault("SPARSE_SEED", "fallback")
+print(f"✅ SPARSE_SEED={os.environ['SPARSE_SEED']!r}")
+
 # ── 4. Dependency check (no !pip magic — deps managed by pipeline) ─────────
 _REQUIRED = ["pysr", "anthropic", "sklearn", "scipy", "sympy", "numpy", "pandas", "matplotlib"]
 _MISSING  = []
