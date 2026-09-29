@@ -1140,19 +1140,50 @@ jobs:
             RUN_STEP="exp1"
           fi
 
-          TASK_IDS="${TASK_IDS}" \
-          SHARD_IDS="${TASK_IDS}" \
-          SHARD="${SHARD_INDEX}" \
-          RESULTS_DIR="${RESULTS_DIR}" \
-          OUT_BASE="${RESULTS_DIR}" \
-          REPO_ROOT="${{ github.workspace }}" \
-          DEFI_SEEDS="${DEFI_SEEDS_RUN}" \
-          SHARD_SEEDS="${SHARD_SEEDS}" \
-          PYSR_SEED="${SHARD_SEEDS}" \
-          EXPERIMENT_SEED="${SHARD_SEEDS}" \
-          DOMAIN_FILTER="${TASK_IDS}" \
-          NUMERICAL_ONLY="true" \
-            bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
+          if [[ "${EXP}" == "exp1b_seeds" ]]; then
+            # FIX: run_all.sh's exp1 step hard-codes seed 42 and --output-dir .../defi
+            # (log: "🎲 SEED=42", "Output dir overridden ... /noiseless/defi"), so the seed
+            # env vars were ignored and nothing landed in multi-seeds/. Call the patched
+            # DeFi script directly with this shard's seed and the multi-seeds output dir.
+            # It tags outputs *_seed<N>.json and stamps every record with the seed.
+            _EXTRA=()
+            [[ "${RESUME}" == "true" ]] && _EXTRA+=(--resume)
+            TASK_IDS="${TASK_IDS}" \
+            SHARD_IDS="${TASK_IDS}" \
+            SHARD="${SHARD_INDEX}" \
+            RESULTS_DIR="${RESULTS_DIR}" \
+            OUT_BASE="${RESULTS_DIR}" \
+            REPO_ROOT="${{ github.workspace }}" \
+            DEFI_SEEDS="${SHARD_SEEDS}" \
+            SHARD_SEEDS="${SHARD_SEEDS}" \
+            PYSR_SEED="${SHARD_SEEDS}" \
+            EXPERIMENT_SEED="${SHARD_SEEDS}" \
+            NN_SEED="${SHARD_SEEDS}" \
+            DOMAIN_FILTER="${TASK_IDS}" \
+            NUMERICAL_ONLY="true" \
+              python3 "${SCRIPT_PATH}" \
+                --output-dir "${RESULTS_DIR}/${RESULT_SUBDIR}" \
+                "${_EXTRA[@]}" 2>&1 | tee /tmp/run_all_step.log
+            if ! grep -q "SEED=${SHARD_SEEDS}" /tmp/run_all_step.log; then
+              echo "::error::exp1b_seeds: script did not report SEED=${SHARD_SEEDS} — seed not applied."
+              grep -m3 "SEED=" /tmp/run_all_step.log || true
+              exit 1
+            fi
+          else
+            TASK_IDS="${TASK_IDS}" \
+            SHARD_IDS="${TASK_IDS}" \
+            SHARD="${SHARD_INDEX}" \
+            RESULTS_DIR="${RESULTS_DIR}" \
+            OUT_BASE="${RESULTS_DIR}" \
+            REPO_ROOT="${{ github.workspace }}" \
+            DEFI_SEEDS="${DEFI_SEEDS_RUN}" \
+            SHARD_SEEDS="${SHARD_SEEDS}" \
+            PYSR_SEED="${SHARD_SEEDS}" \
+            EXPERIMENT_SEED="${SHARD_SEEDS}" \
+            DOMAIN_FILTER="${TASK_IDS}" \
+            NUMERICAL_ONLY="true" \
+              bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
+          fi
 
           # run_all.sh has been observed to swallow a failing python invocation
           # (SyntaxError -> "DONE" -> exit 0). For exp3/exp3b, treat compile-level
