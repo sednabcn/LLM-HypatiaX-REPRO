@@ -392,11 +392,13 @@ except ImportError:
     pass
 print(f"✅ All seeds set to {SEED}")
 
-# [SPARSE-SEED-DEFAULT] Activate the fallback mode by default. Set BEFORE any
-# reader (cache check ~L1326, run ~L1483) so both see the same value.
-# Override with SPARSE_SEED=off|always in the environment. NOTE: any non-"off"
-# mode changes what "H" means (recorded in the run config) -- report it.
-os.environ.setdefault("SPARSE_SEED", "fallback")
+# [SPARSE-SEED-DEFAULT] Default is "off": every number in the paper's Nguyen tables
+# comes from runs with sparse_seed_mode == "off", so the submission run must match.
+# Set BEFORE any reader (cache check ~L1326, run ~L1483) so both see the same value.
+# Opt in with SPARSE_SEED=fallback|always (post-submission, full budget, separate
+# results directory). Any non-"off" mode changes what "H" means; it is recorded in
+# the run config (sparse_seed_mode) and the cache treats a mode change as stale.
+os.environ.setdefault("SPARSE_SEED", "off")
 print(f"✅ SPARSE_SEED={os.environ['SPARSE_SEED']!r}")
 
 # ── 4. Dependency check (no !pip magic — deps managed by pipeline) ─────────

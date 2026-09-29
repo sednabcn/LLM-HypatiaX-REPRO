@@ -246,6 +246,19 @@ def _resolve_seed():
     return None  # sentinel → caller keeps its own default
 # ─────────────────────────────────────────────────────────────────────────────
 
+# [FIX-SEED-HONOURED] SEED used to be hard-wired to 42: PYSR_SEED / EXPERIMENT_SEED /
+# DEFI_SEEDS were parsed in run_benchmark() and printed but never applied, so a
+# "seed 99" run silently reproduced seed 42. Resolve the env seed BEFORE the RNGs
+# are seeded. Unset/non-integer (e.g. a comma list) -> SEED stays 42, so every
+# existing seed-42 run is unchanged.
+_import_seed = _resolve_seed()
+if _import_seed is not None:
+    SEED = _import_seed
+# Non-42 runs tag their output/checkpoint filenames so parallel shards (one seed
+# each) never collide on the same path. Seed 42 keeps the original filenames.
+_SEED_TAG = "" if SEED == 42 else f"_seed{SEED}"
+print(f"🎲 SEED={SEED}" + ("" if SEED == 42 else f"  (output tag {_SEED_TAG!r})"))
+
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -275,8 +288,8 @@ if _OUT_BASE:
 else:
     RESULTS_DIR = Path("hypatiax/data/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_v3_checkpoint.json"
-FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_v3_results.json"
+CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_checkpoint{_SEED_TAG}.json"
+FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_results{_SEED_TAG}.json"
 
 
 def _configure_output_dir(output_dir: str | None) -> None:
@@ -290,8 +303,8 @@ def _configure_output_dir(output_dir: str | None) -> None:
     global RESULTS_DIR, CHECKPOINT_FILE, FINAL_OUTPUT
     RESULTS_DIR     = Path(output_dir)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_v3_checkpoint.json"
-    FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_v3_results.json"
+    CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_checkpoint{_SEED_TAG}.json"
+    FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_v3_results{_SEED_TAG}.json"
     print(f"📁 Output dir overridden via --output-dir: {RESULTS_DIR}")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -314,7 +327,11 @@ class _MLP(nn.Module):
         return self.net(x)
 
 
-_NN_SEED = 2024   # fixed seed → deterministic NN scores across resume sessions
+# [FIX-SEED-HONOURED] fixed per seed → deterministic NN scores across resume sessions.
+# _train_and_eval_nn() re-seeds the GLOBAL numpy/torch RNGs from this value for every
+# case, so it must vary with SEED or the data draws would be identical across seeds.
+# SEED=42 -> 2024 (unchanged); 99 -> 2081; 123 -> 2105; 777 -> 2759; 2024 -> 4006.
+_NN_SEED = 2024 + (SEED - 42)
 
 
 _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
@@ -1301,6 +1318,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     print("=" * 80)
     print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
           f"Cases: {total} | Fresh run")
+    print(f"Seed      : {SEED}  (NN seed {_NN_SEED})")
     print(f"Checkpoint: {CHECKPOINT_FILE}")
     print(f"Output    : {FINAL_OUTPUT}")
     print("=" * 80)
@@ -1444,6 +1462,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 "formula_type":         tc["formula_type"],
                 "extrapolation_intractable": is_intractable,
                 "results":              case_results,
+                "seed":                 SEED,   # [FIX-SEED-HONOURED] proves which seed produced the record
             }
             all_results.append(record)
             _save_checkpoint(all_results)

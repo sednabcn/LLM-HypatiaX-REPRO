@@ -13,6 +13,7 @@ on:
         options:
           - exp1
           - exp1b
+          - exp1b_seeds
 #         - exp1c
           - exp1_ablation
           - exp1_five
@@ -40,7 +41,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -88,6 +89,16 @@ on:
         description: "exp2_feynman_pca only: clear stale exp2_pca_4060/*.json before running, bypassing the already-done skip-guard (true/false). Use after pipeline/aggregation fixes to force a clean regeneration."
         required: false
         default: "false"
+
+      sparse_seed:
+        description: "exp3/exp3b ONLY (ignored by every other experiment): SPARSE_SEED mode. fallback = sparse-basis seed only when no LLM candidate passes the gate (matches the script default). off = pure LLM-seeded H. always = sparse seed added on top of the LLM candidates. fallback keeps the normal exp3/exp3b results folders; off and always write to their own *_sparse_<mode> folders so they never overwrite each other."
+        required: false
+        type: choice
+        options:
+          - fallback
+          - "off"
+          - always
+        default: "fallback"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
@@ -146,10 +157,11 @@ jobs:
           RESUME:             ${{ github.event.inputs.resume }}
           DRY_RUN:            ${{ github.event.inputs.dry_run }}
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
+          SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca \
+          VALID_IDS="exp1 exp1b exp1b_seeds exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1c_pca \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -188,7 +200,8 @@ jobs:
               -f task_ids_override="$TASK_IDS_OVERRIDE" \
               -f resume="$RESUME" \
               -f dry_run="$DRY_RUN" \
-              -f force_rerun="$FORCE_RERUN"
+              -f force_rerun="$FORCE_RERUN" \
+              -f sparse_seed="${SPARSE_SEED_IN:-fallback}"
           done
 
   pca_runner:
@@ -270,6 +283,15 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
+              ;;
+
+            exp1b_seeds)
+              # exp1's 74-task DeFi benchmark re-run for the OTHER seeds (exp1 = seed 42),
+              # exactly as exp3b is exp3 for the other seeds. One seed per shard/runner.
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/multi-seeds"
+              DEFAULT_SEEDS="${SEEDS_IN:-99,123,777,2024}"
               ;;
 
             exp1c)
@@ -394,6 +416,25 @@ jobs:
               echo "ERROR: unknown experiment '$EXP'"; exit 1 ;;
           esac
 
+          # exp3/exp3b only: fallback (script default) keeps the normal folders; off/always are
+          # isolated. RESULT_SUBDIR drives checkpoint seeding, store, verify, commit and upload.
+          if [[ "$EXP" == "exp3" || "$EXP" == "exp3b" ]]; then
+            _SPARSE_MODE="$(echo "${{ github.event.inputs.sparse_seed }}" | tr '[:upper:]' '[:lower:]' | xargs)"
+            [[ -z "$_SPARSE_MODE" ]] && _SPARSE_MODE="fallback"
+            case "$_SPARSE_MODE" in
+              fallback) ;;
+              off|always)
+                RESULT_SUBDIR="${RESULT_SUBDIR}_sparse_${_SPARSE_MODE}"
+                echo "::warning::SPARSE_SEED=${_SPARSE_MODE} — results isolated in '${RESULT_SUBDIR}'."
+                ;;
+              *)
+                echo "::error::Invalid sparse_seed='${_SPARSE_MODE}' — must be fallback, off or always."
+                exit 1
+                ;;
+            esac
+            echo "::notice::${EXP}: SPARSE_SEED=${_SPARSE_MODE}"
+          fi
+
           EFFECTIVE_SEEDS="${SEEDS_IN:-$DEFAULT_SEEDS}"
 
           echo "exp_id=$EXP"                        >> "$GITHUB_OUTPUT"
@@ -420,6 +461,7 @@ jobs:
           EXP_SHARD_TABLE = {
               "exp1":               1,
               "exp1b":              5,
+              "exp1b_seeds":        4,   # documented default; enforced below as one shard per seed
               "exp1c":              5,
               "exp1_ablation":      4,
               "exp2_feynman":        1,
@@ -458,6 +500,20 @@ jobs:
           OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
+
+          if EXP == "exp1b_seeds":
+              # One shard == one runner == one seed (each runs all 74 tasks for that seed).
+              # Anything else means several seeds share one 330-min job.
+              if N_SHARDS_RAW != len(SEEDS):
+                  print(f"::notice::exp1b_seeds: n_shards={N_SHARDS_RAW} input ignored — "
+                        f"using one shard per seed ({len(SEEDS)}).")
+              N_SHARDS = max(1, len(SEEDS))
+              if "42" in SEEDS:
+                  print("::warning::exp1b_seeds: seed 42 belongs to exp1 (defi/). Including it here "
+                        "writes a duplicate seed-42 run into defi/multi-seeds/.")
+              if N_SHARDS != 4:
+                  print(f"::notice::exp1b_seeds is normally 4 seeds (99,123,777,2024) -> 4 shards; "
+                        f"this dispatch has {N_SHARDS}.")
 
           FEYNMAN_DOMAINS = [
               "feynman_biology",
@@ -502,6 +558,8 @@ jobs:
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
+              # seed-major order so the block partition gives exactly one seed per shard
+              "exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
@@ -997,6 +1055,7 @@ jobs:
           RESUME:            ${{ github.event.inputs.resume || 'true' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
+          SPARSE_SEED_INPUT: ${{ github.event.inputs.sparse_seed || 'fallback' }}
         run: |
           set -euo pipefail
 
@@ -1034,6 +1093,22 @@ jobs:
               SHARD_SEEDS="${PYSR_SEED}"
             fi
             echo "  [exp3/exp3b] SHARD_INDEX=${SHARD_INDEX} -> SHARD_SEEDS=${SHARD_SEEDS}"
+            # exp3/exp3b only: no other experiment ever sees SPARSE_SEED from CI.
+            export SPARSE_SEED="${SPARSE_SEED_INPUT:-fallback}"
+            echo "  [exp3/exp3b] SPARSE_SEED=${SPARSE_SEED}"
+          elif [[ "${EXP}" == "exp1b_seeds" ]]; then
+            # pending IDs are "<domain>_seed<N>"; exp1's benchmark filters on the bare domain keys.
+            TASK_IDS="$(sed -E 's/_seed[0-9]+$//' /tmp/pending_ids.txt | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+            SHARD_SEEDS="$(sed -nE 's/.*_seed([0-9]+)$/\1/p' /tmp/pending_ids.txt | sort -un | paste -sd, -)"
+            if [[ -z "${SHARD_SEEDS}" ]]; then
+              echo "::error::exp1b_seeds shard ${SHARD_INDEX}: no _seedNN suffix on the pending IDs. Refusing to fall back to seed 42 (that would silently duplicate exp1)."
+              exit 1
+            fi
+            if [[ "${SHARD_SEEDS}" == *,* ]]; then
+              echo "::error::exp1b_seeds shard ${SHARD_INDEX} was assigned several seeds (${SHARD_SEEDS}). One seed per shard is required (each shard is a separate 330-min runner); task_ids_override can produce this."
+              exit 1
+            fi
+            echo "  [exp1b_seeds] SHARD_INDEX=${SHARD_INDEX} -> seed ${SHARD_SEEDS}, domains: ${TASK_IDS}"
           else
             TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="${PYSR_SEED}"
@@ -1056,19 +1131,28 @@ jobs:
 
           mkdir -p "${OUT_BASE}"
 
+          # exp1b_seeds = exp1's benchmark for ONE seed per shard. run_all.sh has no
+          # exp1b_seeds step, so run its exp1 step with this shard's seed only.
+          DEFI_SEEDS_RUN="${EFFECTIVE_SEEDS}"
+          RUN_STEP="${EXP}"
+          if [[ "${EXP}" == "exp1b_seeds" ]]; then
+            DEFI_SEEDS_RUN="${SHARD_SEEDS}"
+            RUN_STEP="exp1"
+          fi
+
           TASK_IDS="${TASK_IDS}" \
           SHARD_IDS="${TASK_IDS}" \
           SHARD="${SHARD_INDEX}" \
           RESULTS_DIR="${RESULTS_DIR}" \
           OUT_BASE="${RESULTS_DIR}" \
           REPO_ROOT="${{ github.workspace }}" \
-          DEFI_SEEDS="${EFFECTIVE_SEEDS}" \
+          DEFI_SEEDS="${DEFI_SEEDS_RUN}" \
           SHARD_SEEDS="${SHARD_SEEDS}" \
           PYSR_SEED="${SHARD_SEEDS}" \
           EXPERIMENT_SEED="${SHARD_SEEDS}" \
           DOMAIN_FILTER="${TASK_IDS}" \
           NUMERICAL_ONLY="true" \
-            bash run_all.sh --step "${EXP}" 2>&1 | tee /tmp/run_all_step.log
+            bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
 
           # run_all.sh has been observed to swallow a failing python invocation
           # (SyntaxError -> "DONE" -> exit 0). For exp3/exp3b, treat compile-level
@@ -1150,7 +1234,7 @@ jobs:
 
               rescued = 0
               EXP = os.environ.get("EXP", "")
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1b_seeds", "exp1c", "suppB", "suppB_sc"}
               shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
 
               if EXP in COMBINED_OUTPUT_EXPS:
@@ -1205,6 +1289,20 @@ jobs:
                                             f"{PVA_DIR}/*.csv",
                                             f"{PVA_DIR}/**/*.json",
                                             f"{PVA_DIR}/**/*.csv"]
+                  elif EXP == "exp1b_seeds":
+                      # a shard may only ever rescue ITS OWN seed's files: no seed-less and no
+                      # recursive globs (those would drag seed-42 / other seeds' files in here)
+                      shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
+                      seeds_this_shard = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids_local if "_seed" in t})
+                      combined_globs = []
+                      for s in seeds_this_shard:
+                          combined_globs += [
+                              f"*hypatiax_defi_benchmark*results*seed{s}.json",
+                              f"*hypatiax_defi_benchmark*results*seed{s}_*.json",
+                              f"*hypatiax_defi_benchmark*seed{s}_*results*.json",
+                              f"*defi_v4_*seed{s}.json",
+                              f"*defi_v4_*seed{s}_*.json",
+                          ]
                   elif EXP == "exp1c":
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
                       seeds_this_shard = [
@@ -1265,6 +1363,9 @@ jobs:
           DEST="${RESULTS_DIR}/${RESULT_SUBDIR}"
           mkdir -p "${DEST}"
 
+          # exp1b_seeds: seeds owned by THIS shard (from "<domain>_seed<N>" IDs)
+          _SHARD_SEEDS_LIST="$(echo "${SHARD_IDS:-[]}" | grep -oE '_seed[0-9]+' | sed 's/_seed//' | sort -u | tr '\n' ' ' || true)"
+
           _extrap_dest="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
           if [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
             RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
@@ -1280,6 +1381,18 @@ jobs:
               fname=$(basename "$f")
               [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
               [[ "$fname" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
+              if [[ "${EXP:-}" == "exp1b_seeds" ]]; then
+                # only ever prune THIS shard's own seed: a rerun of one seed must not delete
+                # the other seeds' committed results from multi-seeds/
+                _mine=false
+                for _s in ${_SHARD_SEEDS_LIST}; do
+                  [[ "$fname" == *seed${_s}[!0-9]* ]] && _mine=true
+                done
+                if [[ "${_mine}" != "true" ]]; then
+                  echo "  store prune: SKIP (exp1b_seeds: not this shard's seed): $f"
+                  continue
+                fi
+              fi
               f_mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null || echo 0)
               if [[ "$f_mtime" -ge "$RUN_START_EPOCH" ]]; then
                 echo "  store prune: SKIP (written this run, mtime >= run-start marker): $f"
@@ -1368,6 +1481,21 @@ jobs:
             fi
           fi
 
+          if [[ "${EXP:-}" == "exp1b_seeds" ]]; then
+            # run_all.sh's exp1 step may write into exp1's own dir instead of RESULT_SUBDIR.
+            # Pull across ONLY this shard's seed-tagged, untracked files (seed-42 files carry
+            # no seed tag and are never matched).
+            _EXP1_DIR="${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi"
+            for _s in ${_SHARD_SEEDS_LIST}; do
+              while IFS= read -r f; do
+                [[ -f "$f" ]] || continue
+                if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then continue; fi
+                [[ -e "${DEST}/$(basename "$f")" ]] && continue
+                mv -v "$f" "${DEST}/"
+              done < <(find "${_EXP1_DIR}" -maxdepth 1 -type f -name "*seed${_s}[!0-9]*" \( -name "*.json" -o -name "*.csv" \) 2>/dev/null)
+            done
+          fi
+
           if [[ "${EXP:-}" == "exp2_feynman" ]]; then
             FLAT_BENCH="${RESULTS_DIR}/comparison_results/benchmark_results.json"
             if [[ -f "${FLAT_BENCH}" ]]; then
@@ -1454,6 +1582,68 @@ jobs:
             exit 1
           fi
           echo "  OK exp1b output files present in canonical path."
+
+      - name: Verify exp1b_seeds output (this shard's seed file exists, is stamped with that seed)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1b_seeds' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          python3 - "${TARGET}" <<'PYEOF'
+          import glob, json, os, re, sys
+
+          target    = sys.argv[1]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds     = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+          domains   = {t.rsplit("_seed", 1)[0] for t in shard_ids}
+          if len(seeds) != 1:
+              print(f"::error::exp1b_seeds shard must own exactly one seed, got {seeds}")
+              sys.exit(1)
+          seed = seeds[0]
+
+          files = [
+              f for f in glob.glob(os.path.join(target, "*.json"))
+              if re.search(rf"seed{seed}(?!\d)", os.path.basename(f))
+              and "checkpoint" not in os.path.basename(f)
+              and not os.path.basename(f).startswith("_")
+          ]
+          print(f"=== exp1b_seeds verification: seed {seed}, dir {target} ===")
+          for f in sorted(glob.glob(os.path.join(target, "*"))):
+              print("  ", os.path.basename(f))
+          if not files:
+              print(f"::error::exp1b_seeds seed {seed}: no result file named '*seed{seed}*.json' in {target}.")
+              print("  If run_all.sh wrote an un-tagged file, the seed was NOT applied (the DeFi script must be the")
+              print("  patched one that tags non-42 outputs with _seed<N>).")
+              sys.exit(1)
+
+          bad = False
+          for f in files:
+              try:
+                  data = json.load(open(f))
+              except Exception as e:
+                  print(f"::error::{os.path.basename(f)} is not valid JSON: {e}")
+                  bad = True
+                  continue
+              recs = data if isinstance(data, list) else data.get("results", [])
+              n = len(recs)
+              stamped = [r.get("seed") for r in recs if isinstance(r, dict) and "seed" in r]
+              print(f"  {os.path.basename(f)}: {n} record(s)")
+              if n == 0:
+                  print(f"::error::{os.path.basename(f)} has no records.")
+                  bad = True
+              if not stamped:
+                  print(f"::warning::{os.path.basename(f)}: records carry no 'seed' field — cannot prove the seed was applied (is the patched DeFi script running?).")
+              elif any(str(x) != seed for x in stamped):
+                  print(f"::error::{os.path.basename(f)}: records stamped with seeds {sorted(set(map(str, stamped)))}, expected only {seed}.")
+                  bad = True
+              if len(domains) == 10 and n < 74:
+                  print(f"::error::{os.path.basename(f)}: only {n}/74 records for a full 10-domain shard — truncated/incomplete run; the timing tables need all 74.")
+                  bad = True
+          if bad:
+              sys.exit(1)
+          print(f"  OK exp1b_seeds seed {seed} verified.")
+          PYEOF
 
       - name: Verify exp1c output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1c' && steps.resolve_ids.outputs.has_work == 'true' }}
@@ -1869,7 +2059,7 @@ jobs:
           done_set = set(completed)
 
           EXP = os.environ.get("EXP", "")
-          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1c", "suppB", "suppB_sc"}
+          COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "exp1b_seeds", "exp1c", "suppB", "suppB_sc"}
           search_dirs = [result_dir, "."]
 
           if EXP in COMBINED_OUTPUT_EXPS:
@@ -1912,6 +2102,17 @@ jobs:
                                         f"{PVA_DIR}/*.csv",
                                         f"{PVA_DIR}/**/*.json",
                                         f"{PVA_DIR}/**/*.csv"]
+              elif EXP == "exp1b_seeds":
+                  seeds_this_shard = sorted({t.rsplit("_seed", 1)[1] for t in shard_ids if "_seed" in t})
+                  combined_globs = []
+                  for s in seeds_this_shard:
+                      combined_globs += [
+                          f"*hypatiax_defi_benchmark*results*seed{s}.json",
+                          f"*hypatiax_defi_benchmark*results*seed{s}_*.json",
+                          f"*hypatiax_defi_benchmark*seed{s}_*results*.json",
+                          f"*defi_v4_*seed{s}.json",
+                          f"*defi_v4_*seed{s}_*.json",
+                      ]
               elif EXP == "exp1c":
                   seeds_this_shard = [tid[len("seed"):] for tid in shard_ids]
                   combined_globs = ["hypatiax_defi_benchmark*_pooled_seed_report.json"]
@@ -2168,7 +2369,7 @@ jobs:
                 || true)
               if [[ -n "$OVERWRITTEN" ]]; then
                 case "${EXP}" in
-                  exp1b|exp1c|exp1_ablation|exp3b|suppB|suppB_sc)
+                  exp1b|exp1b_seeds|exp1c|exp1_ablation|exp3b|suppB|suppB_sc)
                     echo "::error::ISOLATION GUARD FAILED — shard ${SHARD} (${EXP}) is overwriting "
                     echo "  committed result file(s); the per-shard isolation suffix should have "
                     echo "  prevented this:"
