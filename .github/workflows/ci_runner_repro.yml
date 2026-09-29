@@ -272,14 +272,14 @@ jobs:
           case "$EXP" in
 
             exp1)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
               ;;
 
             exp1b)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
@@ -288,14 +288,14 @@ jobs:
             exp1b_seeds)
               # exp1's 74-task DeFi benchmark re-run for the OTHER seeds (exp1 = seed 42),
               # exactly as exp3b is exp3 for the other seeds. One seed per shard/runner.
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/multi-seeds"
               DEFAULT_SEEDS="${SEEDS_IN:-99,123,777,2024}"
               ;;
 
             exp1c)
-              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/exp1c"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
@@ -1018,7 +1018,7 @@ jobs:
 
           # 1) the script this experiment is about to run
           if not os.path.isfile(script):
-              problems.append((script, "file not found"))
+              problems.append((script, f"file not found (cwd={os.getcwd()}, SCRIPT_PATH={script!r})"))
           else:
               r = check(script)
               if r:
@@ -3176,7 +3176,7 @@ jobs:
               "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
           )
           DEFI_SCRIPT = pathlib.Path(
-              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark.py"
+              "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py"
           )
 
           failures = []
