@@ -222,7 +222,9 @@ jobs:
           EXP: ${{ github.event.inputs.experiment }}
         run: |
           set -euo pipefail
-          if [[ "$EXP" == "exp1_pca" || "$EXP" == "exp1b_pca" || "$EXP" == "exp1c_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
+          # exp1_pca is intentionally NOT listed: it now goes through plan/worker as a
+          # multi-seed matrix (one worker per seed), see the exp1_pca case in plan/meta.
+          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp1c_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
@@ -304,6 +306,18 @@ jobs:
               NEEDS_JULIA=true
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi_pca/multi-seeds"
               DEFAULT_SEEDS="${SEEDS_IN:-77,99,123,2024}"
+              ;;
+
+            exp1_pca)
+              # exp1_pca = the 74-task PCA 40/60 DeFi benchmark over the FULL seed set, one
+              # worker (runner) per seed, all in parallel. Runs through the same plan/worker
+              # path as exp1_pca_seeds (exp_id is aliased below), but writes seed-tagged
+              # results into the canonical defi_pca/ dir so run_all.sh summary/qualify/audit
+              # keep reading them from there. Override the seed list with the 'seeds' input.
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi_pca"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,77,99,123,2024}"
               ;;
 
             exp1c)
@@ -449,7 +463,9 @@ jobs:
 
           EFFECTIVE_SEEDS="${SEEDS_IN:-$DEFAULT_SEEDS}"
 
-          echo "exp_id=$EXP"                        >> "$GITHUB_OUTPUT"
+          EXP_ID="$EXP"
+          [[ "$EXP" == "exp1_pca" ]] && EXP_ID="exp1_pca_seeds"
+          echo "exp_id=$EXP_ID"                     >> "$GITHUB_OUTPUT"
           echo "script_path=$SCRIPT"                >> "$GITHUB_OUTPUT"
           echo "needs_julia=$NEEDS_JULIA"           >> "$GITHUB_OUTPUT"
           echo "result_subdir=$RESULT_SUBDIR"       >> "$GITHUB_OUTPUT"
@@ -463,6 +479,7 @@ jobs:
           NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}"
           EFFECTIVE_SEEDS: ${{ steps.meta.outputs.effective_seeds }}
           EXP:            ${{ steps.meta.outputs.exp_id }}
+          ORIG_EXP:       ${{ github.event.inputs.experiment }}
         run: |
           python3 - <<'PYEOF'
           import json, os, sys
@@ -524,7 +541,7 @@ jobs:
                   print(f"::notice::{EXP}: n_shards={N_SHARDS_RAW} input ignored — "
                         f"using one shard per seed ({len(SEEDS)}).")
               N_SHARDS = max(1, len(SEEDS))
-              if "42" in SEEDS:
+              if "42" in SEEDS and os.environ.get("ORIG_EXP") != "exp1_pca":
                   print(f"::warning::{EXP}: seed 42 belongs to {_base_exp} ({_base_dir}/). Including it here "
                         f"writes a duplicate seed-42 run into {_base_dir}/multi-seeds/.")
               if N_SHARDS != 4:

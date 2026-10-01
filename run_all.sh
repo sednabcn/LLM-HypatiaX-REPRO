@@ -411,11 +411,61 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
-  echo '[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split)'
-  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
-    --output-dir \"\${_PCA_DEFI_DIR}\" \\
-    --force-fresh \\
-    2>&1 | tee '${RESULTS_DIR}/exp1_pca_run.log'
+  # Multi-seed, multi-worker: one background worker per seed (override with
+  # EXP1_PCA_SEEDS=42,77,99,123,2024 / EXP1_PCA_MAX_PARALLEL). Each worker writes to its own
+  # scratch dir so --force-fresh cannot clear a sibling seed's output; results are then
+  # copied into defi_pca/ (seed 42 keeps its original filename, other seeds get a _seed<N> tag).
+  _SEEDS_CSV=\"\${EXP1_PCA_SEEDS:-42,77,99,123,2024}\"
+  IFS=',' read -ra _SEED_ARR <<< \"\${_SEEDS_CSV}\"
+  _MAXPAR=\"\${EXP1_PCA_MAX_PARALLEL:-\${#_SEED_ARR[@]}}\"
+  _SCRATCH_ROOT=\"\${RUNNER_TEMP:-/tmp}/exp1_pca_workers\"
+  rm -rf \"\${_SCRATCH_ROOT}\"
+  mkdir -p \"\${_SCRATCH_ROOT}\"
+  : > '${RESULTS_DIR}/exp1_pca_run.log'
+  echo \"[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split) — \${#_SEED_ARR[@]} seed worker(s): \${_SEEDS_CSV} (max parallel \${_MAXPAR})\"
+
+  _PIDS=()
+  _PID_SEED=()
+  for _s in \"\${_SEED_ARR[@]}\"; do
+    while [[ \$(jobs -rp | wc -l) -ge \"\${_MAXPAR}\" ]]; do sleep 5; done
+    mkdir -p \"\${_SCRATCH_ROOT}/seed\${_s}\"
+    (
+      DEFI_SEEDS=\"\${_s}\" PYSR_SEED=\"\${_s}\" EXPERIMENT_SEED=\"\${_s}\" NN_SEED=\"\${_s}\" \\
+        python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
+          --output-dir \"\${_SCRATCH_ROOT}/seed\${_s}\" \\
+          --force-fresh \\
+          > \"\${_SCRATCH_ROOT}/seed\${_s}.log\" 2>&1
+    ) &
+    _PIDS+=(\$!)
+    _PID_SEED+=(\"\${_s}\")
+    echo \"  [exp1_pca] launched worker for seed \${_s} (pid \$!)\"
+  done
+
+  _FAILED_SEEDS=\"\"
+  for _i in \"\${!_PIDS[@]}\"; do
+    _sd=\"\${_PID_SEED[\$_i]}\"
+    if wait \"\${_PIDS[\$_i]}\"; then
+      echo \"  [exp1_pca] seed \${_sd}: worker finished OK\"
+    else
+      echo \"  [exp1_pca] seed \${_sd}: worker FAILED\"
+      _FAILED_SEEDS=\"\${_FAILED_SEEDS} \${_sd}\"
+    fi
+    { echo \"===== exp1_pca seed \${_sd} =====\"; cat \"\${_SCRATCH_ROOT}/seed\${_sd}.log\"; } 2>&1 | tee -a '${RESULTS_DIR}/exp1_pca_run.log' > /dev/null
+  done
+
+  for _s in \"\${_SEED_ARR[@]}\"; do
+    while IFS= read -r _f; do
+      _bn=\$(basename \"\${_f}\")
+      case \"\${_bn}\" in *checkpoint*|*disclosure*|*summary*) continue ;; esac
+      if [[ \"\${_s}\" != '42' && ! \"\${_bn}\" =~ seed\${_s}([^0-9]|\\\$) ]]; then
+        _bn=\"\${_bn%.json}_seed\${_s}.json\"
+      fi
+      cp -v \"\${_f}\" \"\${_PCA_DEFI_DIR}/\${_bn}\"
+    done < <(find \"\${_SCRATCH_ROOT}/seed\${_s}\" -maxdepth 1 -type f -name '*.json' | sort)
+  done
+  if [[ -n \"\${_FAILED_SEEDS}\" ]]; then
+    echo \"WARNING: exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
+  fi
 
   python3 - <<'PYEOF'
 import json, pathlib, datetime
@@ -600,7 +650,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
-    _SHARD_SEEDS='42,99,123,777,2024'
+    _SHARD_SEEDS='42,77,99,123,2024'
   else
     echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
