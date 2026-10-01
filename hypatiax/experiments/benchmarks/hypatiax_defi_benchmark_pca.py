@@ -153,6 +153,19 @@ def _resolve_seed():
     return None  # sentinel → caller keeps its own default
 # ─────────────────────────────────────────────────────────────────────────────
 
+# [MULTI-SEED] SEED used to be hard-wired to 42.  The seed is now resolved from
+# PYSR_SEED / EXPERIMENT_SEED / NN_SEED BEFORE the RNGs are seeded, so one process
+# == one seed (same mechanism as hypatiax_defi_benchmark_v3c.py FIX-SEED-HONOURED).
+# The caller (CI shard / run_all.sh) sets the seed, e.g. PYSR_SEED=77.
+# Unset -> SEED stays 42 and every existing seed-42 run (filenames included) is
+# unchanged.
+_import_seed = _resolve_seed()
+if _import_seed is not None:
+    SEED = _import_seed
+# Non-42 runs tag their output/checkpoint filenames so seeds never collide.
+_SEED_TAG = "" if SEED == 42 else f"_seed{SEED}"
+print(f"🎲 SEED={SEED}" + ("" if SEED == 42 else f"  (output tag {_SEED_TAG!r})"))
+
 random.seed(SEED)
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -182,8 +195,8 @@ if _OUT_BASE:
 else:
     RESULTS_DIR = Path("hypatiax/data/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_pca_checkpoint.json"
-FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_pca_results.json"
+CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_checkpoint{_SEED_TAG}.json"
+FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_results{_SEED_TAG}.json"
 
 
 def _configure_output_dir(output_dir: str | None) -> None:
@@ -197,8 +210,8 @@ def _configure_output_dir(output_dir: str | None) -> None:
     global RESULTS_DIR, CHECKPOINT_FILE, FINAL_OUTPUT
     RESULTS_DIR     = Path(output_dir)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    CHECKPOINT_FILE = RESULTS_DIR / "hypatiax_defi_benchmark_pca_checkpoint.json"
-    FINAL_OUTPUT    = RESULTS_DIR / "hypatiax_defi_benchmark_pca_results.json"
+    CHECKPOINT_FILE = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_checkpoint{_SEED_TAG}.json"
+    FINAL_OUTPUT    = RESULTS_DIR / f"hypatiax_defi_benchmark_pca_results{_SEED_TAG}.json"
     print(f"📁 Output dir overridden via --output-dir: {RESULTS_DIR}")
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -221,7 +234,10 @@ class _MLP(nn.Module):
         return self.net(x)
 
 
-_NN_SEED = 2024   # fixed seed → deterministic NN scores across resume sessions
+# Fixed per seed → deterministic NN scores across resume sessions, but must vary
+# with SEED or every seed would train the NN identically.
+# SEED=42 -> 2024 (unchanged); 77 -> 2059; 99 -> 2081; 123 -> 2105; 2024 -> 4006.
+_NN_SEED = 2024 + (SEED - 42)
 
 
 _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
@@ -1184,6 +1200,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     print("=" * 80)
     print(f"Cases: {total} | Resuming from: {n_done + 1}" if resume else
           f"Cases: {total} | Fresh run")
+    print(f"Seed      : {SEED}  (NN seed {_NN_SEED})")
     print(f"Checkpoint: {CHECKPOINT_FILE}")
     print(f"Output    : {FINAL_OUTPUT}")
     print("=" * 80)
@@ -1331,6 +1348,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
 
             record = {
                 "equation_id":            tc["name"],
+                "seed":                   SEED,
                 "difficulty":           tc["difficulty"],
                 "formula_type":         tc["formula_type"],
                 "extrapolation_intractable": is_intractable,
@@ -1354,6 +1372,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
     import datetime as _dt
     _disclosure = {
         "split_protocol":   "pca_40_60",
+        "seed":             SEED,
         "script":           Path(__file__).name,
         "test_size":        0.6,
         "train_size":       0.4,
@@ -1456,6 +1475,11 @@ Examples:
             for _pat in ["hypatiax_defi_benchmark_pca_checkpoint*.json",
                          "hypatiax_defi_benchmark_pca_results*.json"]:
                 for _f in CHECKPOINT_FILE.parent.glob(_pat):
+                    # [MULTI-SEED] only purge files belonging to THIS seed
+                    if _SEED_TAG == "" and "_seed" in _f.name:
+                        continue
+                    if _SEED_TAG and _SEED_TAG not in _f.name:
+                        continue
                     _f.unlink()
                     print(f"  [--force-fresh] Removed stale file: {_f}")
             args.resume = False

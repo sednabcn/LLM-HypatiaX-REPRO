@@ -597,6 +597,11 @@ class PureLLMBaseline:
         Variable names and formula signs are taken DIRECTLY from
         experiment_protocol_benchmark.py — no heuristics, no guessing.
         """
+        # Clean-baseline switch: set HYPATIAX_DISABLE_HARDCODED=1 to bypass every
+        # hardcoded / OLS-fitted branch below so each equation goes to the LLM.
+        if os.environ.get("HYPATIAX_DISABLE_HARDCODED", "").strip().lower() in ("1", "true", "yes"):
+            return None
+
         vset = set(variable_names)
 
         # ── I.6.20 — Gaussian PDF ────────────────────────────────────────────
@@ -1601,7 +1606,7 @@ CRITICAL REQUIREMENTS:
             exec(python_code, _exec_globals, local_vars)
 
             # Find the function
-            func = next(
+            func = local_vars.get("formula") if callable(local_vars.get("formula")) else next(
                 (
                     v
                     for v in local_vars.values()

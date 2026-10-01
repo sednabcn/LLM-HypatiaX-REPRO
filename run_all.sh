@@ -18,7 +18,7 @@ export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
 export PYSR_PARETO_PRESSURE=0.001
-export PYSR_SEED=42
+export PYSR_SEED="${PYSR_SEED:-42}"
 export PYSR_POPULATIONS="${PYSR_POPULATIONS:-30}"
 
 export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
@@ -49,7 +49,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -169,7 +169,7 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
-  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},noise-noiseless/{noiseless/defi,15},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
+  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
@@ -260,11 +260,11 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   fi
 
   # FIX-exp1b-OUTPUT-DIR: write straight into the exp1b/portfolio result dir
-  # (comparison_results/noise-noiseless/15), not into exp1's own
+  # (comparison_results/noise-noiseless/defi), not into exp1's own
   # noiseless/defi dir. hypatiax_defi_benchmark_v3c.py supports --output-dir,
   # so pointing it at dest15 directly means the primary results never need a
   # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
-  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
+  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/defi'
   mkdir -p \"\${dest15}\"
 
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
@@ -443,13 +443,15 @@ PYEOF
   echo '[exp1_pca] Computing exp1_pca_summary.json...'
   python3 - <<'PYEOF_SUMMARY'
 import json, pathlib, datetime
+from collections import defaultdict
 
 PCA_DIR   = pathlib.Path('${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca')
 SUMMARY   = PCA_DIR / 'exp1_pca_summary.json'
 THRESHOLD = 0.999999
 
-n_pass = n_total = 0
+per_seed = defaultdict(lambda: {'n_pass': 0, 'n_total': 0})
 source_files = []
+seen = set()   # one record per (equation_id, seed)
 for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
     if any(x in fp.name for x in ('checkpoint', 'disclosure', 'summary', 'baseline')):
         continue
@@ -462,6 +464,14 @@ for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
     for case in cases:
         if not isinstance(case, dict):
             continue
+        seed = case.get('seed')
+        if seed is None:
+            seed = 42   # pre-multi-seed records
+        if case.get('equation_id') is not None:
+            key = (case['equation_id'], seed)
+            if key in seen:
+                continue
+            seen.add(key)
         hybrid = case.get('results', {}).get('hybrid', {})
         r2 = hybrid.get('test_r2')
         if r2 is None:
@@ -478,9 +488,19 @@ for fp in sorted(PCA_DIR.glob('*.json')) if PCA_DIR.exists() else []:
             continue
         if r2 > 1.01:
             continue
-        n_total += 1
+        per_seed[seed]['n_total'] += 1
         if r2 >= THRESHOLD:
-            n_pass += 1
+            per_seed[seed]['n_pass'] += 1
+
+seeds_observed = sorted(per_seed)
+# Top-level n_pass / n_total / solve_rate stay single-run (canonical seed 42,
+# else the lowest seed seen) so qualify/audit keep reading the same quantity.
+canon = 42 if 42 in per_seed else (seeds_observed[0] if seeds_observed else None)
+n_pass  = per_seed[canon]['n_pass']  if canon is not None else 0
+n_total = per_seed[canon]['n_total'] if canon is not None else 0
+pool_pass  = sum(v['n_pass']  for v in per_seed.values())
+pool_total = sum(v['n_total'] for v in per_seed.values())
+rates = [v['n_pass'] / v['n_total'] for v in per_seed.values() if v['n_total'] > 0]
 
 summary = {
     'fixc3_step':     'exp1_pca',
@@ -488,17 +508,31 @@ summary = {
     'split_protocol': 'pca_40_60',
     'test_size':      0.6,
     'train_size':     0.4,
+    'canonical_seed': canon,
     'n_pass':         n_pass,
     'n_total':        n_total,
     'solve_rate':     (n_pass / n_total) if n_total > 0 else None,
-    'source_files':   source_files[:10],
+    'seeds_observed': seeds_observed,
+    'n_seeds_observed': len(seeds_observed),
+    'per_seed': {
+        str(sd): {'n_pass': v['n_pass'], 'n_total': v['n_total'],
+                  'solve_rate': (v['n_pass'] / v['n_total']) if v['n_total'] > 0 else None}
+        for sd, v in sorted(per_seed.items())
+    },
+    'pooled_n_pass':  pool_pass,
+    'pooled_n_total': pool_total,
+    'mean_solve_rate_across_seeds': (sum(rates) / len(rates)) if rates else None,
+    'source_files':   source_files[:20],
     'timestamp':      datetime.datetime.now(datetime.timezone.utc).isoformat(),
 }
 SUMMARY.write_text(json.dumps(summary, indent=2))
 rate_str = f'{n_pass}/{n_total}' if n_total > 0 else '?/?'
-print(f'  [exp1_pca] DeFi PCA solve rate: {rate_str} → exp1_pca_summary.json')
+print(f'  [exp1_pca] DeFi PCA solve rate (seed {canon}): {rate_str} → exp1_pca_summary.json')
+print(f'  [exp1_pca] Seeds observed: {seeds_observed}')
 if n_total == 0:
     print('  [WARN]  No results in defi_pca/ yet — rerun after benchmark completes.')
+if len(seeds_observed) < 2:
+    print(f'  [WARN]  Only {len(seeds_observed)} distinct seed(s) observed in defi_pca/ — expected the full seed sweep.')
 PYEOF_SUMMARY
 
   echo '[exp1_pca] Scanning for NN feature-count-mismatch fingerprint...'
@@ -981,6 +1015,10 @@ BASELINE   = pathlib.Path('${RESULTS_DIR}/fixc3_baseline.json')
 THRESHOLD  = 0.999999
 PREFERRED  = {'hypatiax','hybridv50','hybrid50','hybridsymbolic',
               'hybriddefi','hypatia','hybrid','ours','proposed'}
+
+n_pass = n_total = 0
+source_files = []
+stray_pca_files = []
 
 def _r2(row):
     for k in ('r2','r2_test','r2_train','best_r2','R2'):
@@ -2030,7 +2068,8 @@ if os.path.isdir(pca_defi_dir):
     checks.append(("exp1_pca split_protocol_disclosure.json present", 1.0 if pca_disc else 0.0, 1.0, pca_disc))
     _tag = "OK" if pca_disc else "FAIL"
     print(f"  [{_tag}] exp1_pca: split_protocol_disclosure.json")
-    pca_jsons = glob.glob(f"{pca_defi_dir}/defi_pca_v4_*.json")
+    pca_jsons = (glob.glob(f"{pca_defi_dir}/hypatiax_defi_benchmark_pca_results*.json") +
+                 glob.glob(f"{pca_defi_dir}/defi_pca_v4_*.json"))
     ok_pca = bool(pca_jsons)
     checks.append(("exp1_pca defi_pca_v4_*.json present", 1.0 if ok_pca else 0.0, 1.0, ok_pca))
     _tag = "OK" if ok_pca else "FAIL"
@@ -2040,7 +2079,8 @@ else:
 
 pca15_dir = f"{RESULTS}/comparison_results/noise-noiseless/15_pca"
 if os.path.isdir(pca15_dir):
-    pca15_jsons = (glob.glob(f"{pca15_dir}/defi_pca_v4_*.json") +
+    pca15_jsons = (glob.glob(f"{pca15_dir}/hypatiax_defi_benchmark_pca_results*.json") +
+                   glob.glob(f"{pca15_dir}/defi_pca_v4_*.json") +
                    glob.glob(f"{pca15_dir}/*portfolio*variance*pca*.json"))
     ok_pca15 = bool(pca15_jsons)
     checks.append(("exp1b_pca outputs present in 15_pca/", 1.0 if ok_pca15 else 0.0, 1.0, ok_pca15))
@@ -2210,7 +2250,7 @@ print("\n=== Phase 5b: 5-dimension per-experiment gate ===\n")
 
 EXPERIMENTS = {
     "exp1":                   RESULTS / "comparison_results/noise-noiseless/noiseless/defi",
-    "exp1b":                  RESULTS / "comparison_results/noise-noiseless/15",
+    "exp1b":                  RESULTS / "comparison_results/noise-noiseless/defi",
     "exp1_pca":               RESULTS / "comparison_results/noise-noiseless/noiseless/defi_pca",
     "exp1b_pca":              RESULTS / "comparison_results/noise-noiseless/15_pca",
     "extrap":                 RESULTS / "comparison_results/extrapolation",

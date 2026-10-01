@@ -288,6 +288,33 @@ def build_extrap_split(
 #     Source: BaseMethod._runner_eval_formula(), lines ~776-887
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _select_formula_fn(exec_ns, safe_globals):
+    """
+    Pick the function a ``def`` snippet defined.
+
+    FIX (first-callable bug): the old selection took the first callable in
+    exec_ns. exec_ns starts as a copy of safe_globals, whose first callable
+    entries are the bare-name ufuncs (``exp`` is a clipping lambda), so every
+    ``def formula(...)`` snippet was silently scored as ``exp(first_arg)`` (one
+    variable) or raised (several variables) -> -inf / null far scores.
+
+    Order: (1) a callable literally named ``formula``; (2) the LAST callable
+    the snippet itself defined, i.e. whose value is not the same object as the
+    safe_globals entry of that name.
+    """
+    fn = exec_ns.get("formula")
+    if callable(fn) and safe_globals.get("formula") is not fn:
+        return fn
+    user_defined = [
+        v for k, v in exec_ns.items()
+        if callable(v)
+        and k != "__builtins__"
+        and not k.startswith("_")
+        and safe_globals.get(k) is not v
+    ]
+    return user_defined[-1] if user_defined else None
+
+
 def _runner_eval_formula(
     python_code: str,
     X: np.ndarray,
@@ -413,10 +440,7 @@ def _runner_eval_formula(
         try:
             exec_ns: Dict[str, Any] = dict(safe_globals)
             exec(code, exec_ns)  # noqa: S102
-            fn = next(
-                (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                None,
-            )
+            fn = _select_formula_fn(exec_ns, safe_globals)
             if fn is not None:
                 fn_args = [local_ns[vn] for vn in var_names]
                 y_pred  = fn(*fn_args)
@@ -1168,10 +1192,7 @@ class BaseMethod:
             try:
                 exec_ns: Dict[str, Any] = dict(safe_globals)
                 exec(code, exec_ns)  # noqa: S102
-                fn = next(
-                    (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                    None,
-                )
+                fn = _select_formula_fn(exec_ns, safe_globals)
                 if fn is not None:
                     args = [local_ns[vn] for vn in var_names]
                     y_pred = fn(*args)
@@ -1514,10 +1535,7 @@ class PureLLMBaselineMethod(BaseMethod):
             try:
                 exec_ns: Dict[str, Any] = dict(safe_globals)
                 exec(code, exec_ns)  # noqa: S102
-                fn = next(
-                    (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                    None,
-                )
+                fn = _select_formula_fn(exec_ns, safe_globals)
                 if fn is not None:
                     args = [local_ns[vn] for vn in var_names]
                     y_pred = fn(*args)
@@ -1615,7 +1633,8 @@ class PureLLMBaselineMethod(BaseMethod):
                             r2=r2_fb, rmse=rmse_fb,
                             formula=python_code[:500], formula_hash=BaseMethod._make_formula_result(python_code)[1], formula_full=python_code,
                             metadata={"fallback_eval": True,
-                                      "truncated_formula": False},
+                                      "truncated_formula": False,
+                                      "is_hardcoded": result.get("method") == "pure_llm_hardcoded"},
                         )
 
             return self._unavailable(metrics.get("error", "Formula evaluation failed"))
