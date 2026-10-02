@@ -42,7 +42,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 77,99,123,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1c: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -305,7 +305,7 @@ jobs:
               SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py"
               NEEDS_JULIA=true
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi_pca/multi-seeds"
-              DEFAULT_SEEDS="${SEEDS_IN:-77,99,123,2024}"
+              DEFAULT_SEEDS="${SEEDS_IN:-99,123,777,2024}"
               ;;
 
             exp1_pca)
@@ -317,7 +317,7 @@ jobs:
               SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py"
               NEEDS_JULIA=true
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi_pca"
-              DEFAULT_SEEDS="${SEEDS_IN:-42,77,99,123,2024}"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
             exp1c)
@@ -536,7 +536,7 @@ jobs:
               # Anything else means several seeds share one 330-min job.
               _is_pca = EXP == "exp1_pca_seeds"
               _base_exp, _base_dir = ("exp1_pca", "defi_pca") if _is_pca else ("exp1", "defi")
-              _normal = "77,99,123,2024" if _is_pca else "99,123,777,2024"
+              _normal = "99,123,777,2024"
               if N_SHARDS_RAW != len(SEEDS):
                   print(f"::notice::{EXP}: n_shards={N_SHARDS_RAW} input ignored — "
                         f"using one shard per seed ({len(SEEDS)}).")

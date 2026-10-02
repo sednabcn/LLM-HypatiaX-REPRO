@@ -412,10 +412,10 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
   mkdir -p \"\${_PCA_DEFI_DIR}\"
 
   # Multi-seed, multi-worker: one background worker per seed (override with
-  # EXP1_PCA_SEEDS=42,77,99,123,2024 / EXP1_PCA_MAX_PARALLEL). Each worker writes to its own
+  # EXP1_PCA_SEEDS=42,99,123,777,2024 / EXP1_PCA_MAX_PARALLEL). Each worker writes to its own
   # scratch dir so --force-fresh cannot clear a sibling seed's output; results are then
   # copied into defi_pca/ (seed 42 keeps its original filename, other seeds get a _seed<N> tag).
-  _SEEDS_CSV=\"\${EXP1_PCA_SEEDS:-42,77,99,123,2024}\"
+  _SEEDS_CSV=\"\${EXP1_PCA_SEEDS:-42,99,123,777,2024}\"
   IFS=',' read -ra _SEED_ARR <<< \"\${_SEEDS_CSV}\"
   _MAXPAR=\"\${EXP1_PCA_MAX_PARALLEL:-\${#_SEED_ARR[@]}}\"
   _SCRATCH_ROOT=\"\${RUNNER_TEMP:-/tmp}/exp1_pca_workers\"
@@ -650,7 +650,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
-    _SHARD_SEEDS='42,77,99,123,2024'
+    _SHARD_SEEDS='42,99,123,777,2024'
   else
     echo \"  [exp1b_pca] SHARD_INDEX=\${SHARD_INDEX:-0} -> seeds for this shard: \${_SHARD_SEEDS}\"
   fi
