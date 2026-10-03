@@ -57,9 +57,9 @@ on:
         default: "200"
 
       noise_levels:
-        description: "Comma-separated noise levels for suppB (e.g. 0.0,0.5,1.0,5.0,10.0)"
+        description: "Comma-separated noise levels for suppB, in PERCENT (sigma = value/100). Default 0.0,0.05,0.1,0.5,1.0 = sigma 0, 0.0005, 0.001, 0.005, 0.01 (the paper levels). One shard per level."
         required: false
-        default: "0.0,0.5,1.0,5.0,10.0"
+        default: "0.0,0.05,0.1,0.5,1.0"
 
       pysr_generations:
         description: "PySR generations (PYSR_GENERATIONS)"
@@ -476,7 +476,7 @@ jobs:
         env:
           N_SHARDS:       "${{ github.event.inputs.n_shards || '1' }}"
           OVERRIDE:       "${{ github.event.inputs.task_ids_override }}"
-          NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}"
+          NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}"
           EFFECTIVE_SEEDS: ${{ steps.meta.outputs.effective_seeds }}
           EXP:            ${{ steps.meta.outputs.exp_id }}
           ORIG_EXP:       ${{ github.event.inputs.experiment }}
@@ -724,7 +724,7 @@ jobs:
       SHARD_RUN_IDS:  ${{ matrix.run_ids }}
       EFFECTIVE_SEEDS: ${{ needs.plan.outputs.effective_seeds }}
       N_SHARDS:       ${{ needs.plan.outputs.n_shards }}
-      NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}"
+      NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}"
 
     steps:
       - name: Checkout
@@ -1364,6 +1364,8 @@ jobs:
                           f"noise_sweep_noise{nl_safe}_*.csv",
                           f"noise_sweep_noise{nl_raw}_*.json",
                           f"noise_sweep_noise{nl_raw}_*.csv",
+                          "noise_sweep_[0-9]*_nshards*.json",
+                          "noise_sweep_[0-9]*_nshards*.csv",
                       ]
                   elif EXP == "suppB_sc":
                       first_id = shard_ids[0] if shard_ids else ""
@@ -1371,6 +1373,8 @@ jobs:
                       combined_globs = [
                           f"sample_complexity_n{n_val}_*.json",
                           f"sample_complexity_n{n_val}_*.csv",
+                          "sample_complexity_[0-9]*_nshards*.json",
+                          "sample_complexity_[0-9]*_nshards*.csv",
                       ]
                   elif EXP == "exp1b":
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
@@ -2289,6 +2293,10 @@ jobs:
                       f"noise_sweep_noise{nl_safe}_*.csv",
                       f"noise_sweep_noise{nl_raw}_*.json",  # raw dot variant
                       f"noise_sweep_noise{nl_raw}_*.csv",
+                      # FEATURE-NSHARDS-SUFFIX names: noise_sweep_<TS>_nshardsNN.{json,csv}
+                      # (timestamp starts with a digit, so checkpoint files noise_sweep_sig*_checkpoint* are excluded)
+                      "noise_sweep_[0-9]*_nshards*.json",
+                      "noise_sweep_[0-9]*_nshards*.csv",
                   ]
               elif EXP == "suppB_sc":
                   first_id = shard_ids[0]   # "sc_n{N}__{domain}"
@@ -2296,6 +2304,8 @@ jobs:
                   combined_globs = [
                       f"sample_complexity_n{n_val}_*.json",
                       f"sample_complexity_n{n_val}_*.csv",
+                      "sample_complexity_[0-9]*_nshards*.json",
+                      "sample_complexity_[0-9]*_nshards*.csv",
                   ]
               elif EXP == "exp1b":
                   seeds_this_shard = [tid[len("portfolio_seed"):] for tid in shard_ids]

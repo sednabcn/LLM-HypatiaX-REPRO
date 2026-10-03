@@ -1928,7 +1928,7 @@ PYEOF
   done
 "
 
-run suppB "Noise sweep benchmark sigma in {0,0.5,1,5,10}% (Tab 28, 29 - Supplement B)" bash -c "
+run suppB "Noise sweep benchmark sigma in {0,0.05,0.1,0.5,1}% (Tab 28, 29 - Supplement B)" bash -c "
   cd '${REPO_ROOT}'
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
   _FIRST_TASK=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -v '^\$' | head -1)

@@ -229,14 +229,18 @@ def _build_runner_cmd(
       0.050 -> sig0050
       0.100 -> sig0100
     """
-    sigma_label = f"sig{int(round(noise_level * 1000)):04d}"
+    # FIX SIGMA-LABEL-COLLISION: thousandths gave sigma=0 and sigma=0.0005 the same
+    # label (sig0000).  Ten-thousandths, 5 digits, keeps all CI levels distinct.
+    sigma_label = f"sig{int(round(noise_level * 10000)):05d}"
     cmd = [sys.executable, str(runner)]
 
     # Per-sigma threshold — use the fine-grained map when available so each
     # noise level gets the right R2 floor (0.999999 for sigma=0, 0.995 for
     # sigma=0.5%, ..., 0.90 for sigma=10%).
     _PER_SIGMA_DEFAULTS: dict = {
-        0.0:   args.threshold_noiseless,      # 0.999999
+        0.0:    args.threshold_noiseless,     # 0.999999
+        0.0005: 0.995,                        # FIX: was missing -> fell back to threshold_noisy (0.95)
+        0.001:  0.995,                        # FIX: was missing -> fell back to threshold_noisy (0.95)
         0.005: 0.995,
         0.01:  0.990,
         0.05:  args.threshold_noisy,          # 0.950
@@ -954,6 +958,7 @@ def main() -> None:
             print(f"  WARNING: bad --threshold-per-sigma token: {token!r}")
     agg = _aggregate_results(all_sigmas, result_paths, args_thresholds)
     _print_noise_sweep_table(agg)
+    agg["n_samples"] = args.samples   # FIX: record n so table captions need no hard-coded n=200
     _save_sweep_json(agg, ts)
     _save_sweep_csv(agg, ts)
 
