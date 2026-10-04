@@ -419,6 +419,7 @@ if df_pysr is not None and df_hypatia is not None:
 
 # ── 3a: Import HypatiaX infrastructure ───────────────────────────────────────
 HYPATIA_AVAILABLE = False
+_run_case_full = None
 defi_sweep_results = []
 
 if RERUN_STRATEGY in ('A', 'B'):
@@ -435,9 +436,14 @@ if RERUN_STRATEGY in ('A', 'B'):
                 print(f'{_modname} not importable ({_e_mod})')
         if _bench is None:
             raise ImportError('no benchmark module importable (tried hypatiax_defi_benchmark_v3c)')
-        # Strategy A needs only these two. CHECKPOINT_FILE / FINAL_OUTPUT are Strategy B only.
+        # The seed sweep (3d) needs only _hybrid_predict_and_eval. _run_case_full is used
+        # only by the single-case rerun (3c) and may be absent from the benchmark module.
+        # CHECKPOINT_FILE / FINAL_OUTPUT are Strategy B only.
         _hybrid_predict_and_eval = _bench._hybrid_predict_and_eval
-        _run_case_full = _bench._run_case_full
+        _run_case_full = getattr(_bench, '_run_case_full', None)
+        if _run_case_full is None:
+            print(f'NOTE: {_bench.__name__} has no _run_case_full; '
+                  'single-case rerun (3c) will be skipped, seed sweep (3d) unaffected.')
         CHECKPOINT_FILE = getattr(_bench, 'CHECKPOINT_FILE', None)
         FINAL_OUTPUT = getattr(_bench, 'FINAL_OUTPUT', None)
 
@@ -475,7 +481,10 @@ print('Helper functions defined')
 # ── 3c: Strategy A — single-case rerun at SEED=42 ────────────────────────────
 strategy_a_result = None
 
-if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
+if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and _run_case_full is None:
+    print('Strategy A single-case rerun (3c) skipped — _run_case_full unavailable.')
+
+elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
     print('Running Strategy A: Portfolio Variance at SEED=42 ...')
     set_all_seeds(BENCHMARK_SEED)
     proto = DeFiExperimentProtocol()
