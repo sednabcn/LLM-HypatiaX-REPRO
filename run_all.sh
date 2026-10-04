@@ -49,7 +49,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -273,17 +273,35 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
       --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
 
-  _BENCH_JSON=\$(ls -t \"\${dest15}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
-  if [[ -z \"\${_BENCH_JSON}\" ]]; then
-    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in '\"\${dest15}\"'.'
-    echo '         hypatiax_defi_benchmark_v3c.py did not produce a results file at the'
-    echo '         expected --output-dir. Check exp1b_run.log above for the actual failure.'
-  else
-    echo '[exp1b] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON}\"
-    RESULTS_DIR=\"\${dest15}\" \
+  # FIX-exp1b-PORTFOLIO-RUN: run the portfolio sweep for THIS shard's seed(s) only.
+  #  Before: gated on the benchmark JSON existing; passed RESULTS_DIR (the script ignores
+  #  it and reads HYPATIAX_RESULTS_DIR); left RERUN_STRATEGY at its hardcoded skip, so it
+  #  only re-analysed old JSONs and never produced a sweep. Failures were invisible too:
+  #  this bash -c has no pipefail, so the tee exit status hid the python exit status.
+  #  Strategy A (one Portfolio Variance case per seed) does not need the benchmark JSON.
+  #  PV_SWEEP_ONLY=1 writes one seed-tagged JSON per shard (no cross-shard filename clash).
+  #  Tables and paper numbers need all seeds at once, so they come from the portfolio step.
+  _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
+  mkdir -p \"\${_PVA_DIR}\"
+  _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
+  _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
+  echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
+  (
+    set -o pipefail
+    MPLBACKEND=Agg \
+    RERUN_STRATEGY=A \
+    PV_SWEEP_ONLY=1 \
+    DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
+    HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
-        2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log \
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+        2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
+  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
+  if [[ -s \"\${_PV_FILE}\" ]]; then
+    echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
+  else
+    echo \"::warning::exp1b: expected portfolio sweep file was not produced: \${_PV_FILE}\"
+    echo '         Strategy A needs torch, hypatiax, ANTHROPIC_API_KEY and an importable'
+    echo '         _hybrid_predict_and_eval; the import error is in the output above.'
   fi
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
@@ -334,6 +352,66 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 "
 
 
+
+run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
+  cd '${REPO_ROOT}'
+  _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
+  mkdir -p \"\${_PVA_DIR}\"
+
+  # CI shard mode (workflow experiment=portfolio): task IDs are portfolio_seed<N>, one seed per
+  # shard. Run Strategy A sweep-only for THAT seed and fail loudly if no file appears. Tables and
+  # paper numbers need all seeds at once, so they are built afterwards by generate_tables.py.
+  _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  if [[ -n \"\${_SHARD_SEEDS}\" ]]; then
+    _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
+    _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
+    echo \"[portfolio] CI shard \${SHARD_INDEX:-0}: sweep-only for seed(s) \${_SHARD_SEEDS}  out=\${_PVA_DIR}\"
+    (
+      set -o pipefail
+      MPLBACKEND=Agg \\
+      RERUN_STRATEGY=A \\
+      PV_SWEEP_ONLY=1 \\
+      DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \\
+      HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \\
+        python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
+          2>&1 | tee '${RESULTS_DIR}'/portfolio_run.log
+    ) || { echo 'ERROR: portfolio_variance_v3c2.py failed — see output above'; exit 1; }
+    if [[ ! -s \"\${_PV_FILE}\" ]]; then
+      echo \"::error::portfolio: expected sweep file was not produced: \${_PV_FILE}\"
+      exit 1
+    fi
+    echo \"[portfolio] OK shard sweep written: \${_PV_FILE}\"
+    exit 0
+  fi
+  echo '[portfolio] No portfolio_seedNN task IDs in SHARD_IDS/TASK_IDS — local full run (sweep + tables).'
+
+  _PV_SEEDS=\"\${PORTFOLIO_SEEDS:-42,99,123,777,2024}\"
+  _PV_MODE=\"\${PORTFOLIO_RERUN:-A}\"
+  echo \"[portfolio] RERUN_STRATEGY=\${_PV_MODE}  seeds=\${_PV_SEEDS}  out=\${_PVA_DIR}\"
+  echo '[portfolio] PORTFOLIO_RERUN=skip re-runs the offline analysis only (no LLM calls).'
+  (
+    set -o pipefail
+    MPLBACKEND=Agg \
+    RERUN_STRATEGY=\"\${_PV_MODE}\" \
+    DEFI_SEEDS=\"\${_PV_SEEDS}\" \
+    HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
+      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
+        2>&1 | tee '${RESULTS_DIR}'/portfolio_run.log
+  ) || { echo 'ERROR: portfolio_variance_v3c2.py failed — see portfolio_run.log'; exit 1; }
+
+  echo '=== portfolio verification ==='
+  find \"\${_PVA_DIR}\" -maxdepth 1 -type f | sort
+  if [[ \"\${_PV_MODE}\" == 'A' && ! -s \"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep.json\" ]]; then
+    echo 'ERROR: Strategy A produced no portfolio_variance_defi_seed_sweep.json'
+    echo '       (needs torch, hypatiax, ANTHROPIC_API_KEY and an importable _hybrid_predict_and_eval)'
+    exit 1
+  fi
+  for _f in appendix_table_portfolio_variance.tex paper_numbers_v3c3.json; do
+    [[ -s \"\${_PVA_DIR}/\${_f}\" ]] || echo \"WARNING: \${_f} not produced — the ablation input portfolio_variance_seed_sweep.json is probably missing\"
+  done
+  echo '=== end portfolio ==='
+"
 
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" bash -c "
   cd '${REPO_ROOT}'
@@ -679,6 +757,10 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     echo '         expected --output-dir; portfolio-variance table/figure inputs will be missing.'
   else
     echo '[exp1b_pca] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON_PCA}\"
+    # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
+    # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
+    # would not be one. Offline analysis only.
+    RERUN_STRATEGY=skip PV_SWEEP_ONLY= \\
     RESULTS_DIR=\"\${_PCA15_DIR}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
@@ -3760,6 +3842,7 @@ echo ""
 echo "  Cross-reference with paper:"
 echo "    Table 9          <- exp1              (core extrapolation)"
 echo "    Table 11         <- exp1b             (DeFi routing)"
+echo "    tab:portfolio    <- portfolio         (Tab 5 + Fig G; also run per-seed by exp1b)"
 echo "    Table 17         <- exp2_feynman      (Feynman noisy)"
 echo "    Table 19         <- exp2              (five-system comparison)"
 echo "    Table 28         <- suppB             (noise sweep)"

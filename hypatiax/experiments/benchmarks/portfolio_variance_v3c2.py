@@ -148,7 +148,18 @@ SEEDS = (
 #  'A'    = run Portfolio Variance only at seed 42 (~2 min)
 #  'B'    = run full 74-case benchmark              (~2-4 hrs)
 #  'skip' = offline analysis only
-RERUN_STRATEGY = 'skip'   # <- CHANGE ME
+# Env-driven so run_all.sh can opt in without editing this file. Default 'skip'.
+RERUN_STRATEGY = (os.environ.get('RERUN_STRATEGY', '') or 'skip').strip()
+if RERUN_STRATEGY not in ('A', 'B', 'skip'):
+    raise SystemExit(f"RERUN_STRATEGY must be 'A', 'B' or 'skip', got {RERUN_STRATEGY!r}")
+
+# PV_SWEEP_ONLY=1 (CI shard mode): run Strategy A for the seeds in DEFI_SEEDS, write ONE
+# seed-tagged JSON (no filename collisions across shards) and exit. The derived tables /
+# paper numbers need all seeds, so they are NOT computed per shard.
+PV_SWEEP_ONLY = os.environ.get('PV_SWEEP_ONLY', '').strip().lower() in ('1', 'true', 'yes')
+if PV_SWEEP_ONLY:
+    SWEEP_JSON_DEFI = RESULTS_DIR / (
+        'portfolio_variance_defi_seed_sweep_seed' + '_'.join(str(x) for x in SEEDS) + '.json')
 
 print('Environment ready')
 print(f'   PROJECT_ROOT   : {PROJECT_ROOT}')
@@ -160,7 +171,7 @@ print(f'   METHOD_TIMEOUT      : {os.environ["METHOD_TIMEOUT"]}s')
 print(f'   EQUATION_WALL_CLOCK : {os.environ["EQUATION_WALL_CLOCK"]}s')
 
 # ── API Key ──────────────────────────────────────────────────────────────────
-# Load from Kaggle config_secrets / Colab config_secrets / .env / environment — all handled by config_secrets.py
+# Load from config_secrets / .env / environment (GitHub Actions: repository secret) — all handled by config_secrets.py
 try:
     import config_secrets as _config_secrets_mod  # noqa: F401  (side-effect: sets ANTHROPIC_API_KEY)
 except ImportError:
@@ -325,8 +336,9 @@ if sweep_data:
             .sort_values(['method','seed'])
             .style.format({'train_r2':'{:.4f}','far_r2':'{:.3f}'})
             .background_gradient(subset=['far_r2'], cmap='RdYlGn', vmin=-100, vmax=1)
-            .applymap(lambda v: 'color:green;font-weight:bold' if v else 'color:red',
-                      subset=['success']))
+            .pipe(lambda st: (st.map if hasattr(st, 'map') else st.applymap)(
+                lambda v: 'color:green;font-weight:bold' if v else 'color:red',
+                subset=['success'])))
 
     h42 = df_hypatia[df_hypatia.seed == 42].iloc[0]
     p42 = df_pysr[df_pysr.seed == 42].iloc[0]
@@ -372,20 +384,23 @@ if sweep_data and df_pysr is not None:
     plt.show()
     print('Figure saved to RESULTS_DIR')
 
-if 'success' not in df_pysr.columns:
-    df_pysr['success'] = df_pysr['far_r2'] > 0.99
+# Guarded: df_* are None when portfolio_variance_seed_sweep.json is absent (e.g. a CI shard
+# that only runs Strategy A) -- unguarded, this crashed before §3 was ever reached.
+if df_pysr is not None and df_hypatia is not None:
+    if 'success' not in df_pysr.columns:
+        df_pysr['success'] = df_pysr['far_r2'] > 0.99
 
-if 'success' not in df_hypatia.columns:
-    df_hypatia['success'] = df_hypatia['far_r2'] > 0.99
+    if 'success' not in df_hypatia.columns:
+        df_hypatia['success'] = df_hypatia['far_r2'] > 0.99
 
-print("df_pysr with 'success' column:")
-display(df_pysr.head())
+    print("df_pysr with 'success' column:")
+    display(df_pysr.head())
 
-print("\ndf_hypatia with 'success' column:")
-display(df_hypatia.head())
+    print("\ndf_hypatia with 'success' column:")
+    display(df_hypatia.head())
 
-print('Summary statistics for df_all:')
-display(df_all.describe())
+    print('Summary statistics for df_all:')
+    display(df_all.describe())
 
 """---
 ## §3 — Rerun Strategy & Execution
@@ -409,18 +424,28 @@ defi_sweep_results = []
 if RERUN_STRATEGY in ('A', 'B'):
     try:
         import torch
-        from hypatiax_defi_benchmark_kaggle_v3c3_2_fixed import (
-            CHECKPOINT_FILE,
-            FINAL_OUTPUT,
-            _hybrid_predict_and_eval,
-            _run_case_full,
-        )
+        import importlib
+        _bench = None
+        for _modname in ('hypatiax_defi_benchmark_v3c',):
+            try:
+                _bench = importlib.import_module(_modname)
+                print(f'Strategy A benchmark module: {_modname}')
+                break
+            except ImportError as _e_mod:
+                print(f'{_modname} not importable ({_e_mod})')
+        if _bench is None:
+            raise ImportError('no benchmark module importable (tried hypatiax_defi_benchmark_v3c)')
+        # Strategy A needs only these two. CHECKPOINT_FILE / FINAL_OUTPUT are Strategy B only.
+        _hybrid_predict_and_eval = _bench._hybrid_predict_and_eval
+        _run_case_full = _bench._run_case_full
+        CHECKPOINT_FILE = getattr(_bench, 'CHECKPOINT_FILE', None)
+        FINAL_OUTPUT = getattr(_bench, 'FINAL_OUTPUT', None)
 
         from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
         HYPATIA_AVAILABLE = True
         print('HypatiaX infrastructure imported successfully')
-    except ImportError as e:
-        print(f'HypatiaX not available: {e}')
+    except (ImportError, AttributeError) as e:
+        print(f'HypatiaX not available: {e!r}')
         print('Set RERUN_STRATEGY = \'skip\' to proceed offline.')
 else:
     print(f'Import skipped (RERUN_STRATEGY = {RERUN_STRATEGY!r})')
@@ -499,17 +524,25 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
     print(f'\nDeFi-protocol success rate: {n_ok}/{len(SEEDS)} ({100*n_ok/len(SEEDS):.0f}%)')
 
     with open(SWEEP_JSON_DEFI, 'w') as f:
-        json.dump({'case': case_cfg['name'], 'benchmark_version': 'v3c3', 'seeds': SEEDS,
+        json.dump({'case': case_cfg['name'], 'benchmark_version': 'v3c3', 'seeds_run': SEEDS,
                    'results': defi_sweep_results,
                    'summary': {'n_seeds': len(SEEDS), 'n_success': n_ok,
                                'success_rate': n_ok/len(SEEDS)}}, f, indent=2, default=str)
     print(f'DeFi-protocol sweep saved: {SWEEP_JSON_DEFI}')
 
+if PV_SWEEP_ONLY:
+    if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and defi_sweep_results and SWEEP_JSON_DEFI.exists():
+        print(f'PV_SWEEP_ONLY: wrote {SWEEP_JSON_DEFI.name} (seeds {SEEDS}); skipping analysis.')
+        sys.exit(0)
+    print('PV_SWEEP_ONLY set but no sweep was produced '
+          f'(RERUN_STRATEGY={RERUN_STRATEGY!r}, HYPATIA_AVAILABLE={HYPATIA_AVAILABLE}).')
+    sys.exit(2)
+
 # ── 3e: Strategy B — full 74-case benchmark ──────────────────────────────────
 if RERUN_STRATEGY == 'B' and HYPATIA_AVAILABLE:
     import argparse
 
-    from hypatiax_defi_benchmark_kaggle_v3c3_2_fixed import run_benchmark
+    run_benchmark = _bench.run_benchmark  # Strategy B only; not used by run_all.sh / CI
 
     RESUME = False   # <- Set True to resume from checkpoint
 
@@ -525,8 +558,8 @@ if RERUN_STRATEGY == 'B' and HYPATIA_AVAILABLE:
 elif RERUN_STRATEGY == 'B' and not HYPATIA_AVAILABLE:
     print('Strategy B skipped — HypatiaX not available.')
     print('CLI alternative:')
-    print('  python hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_kaggle_v3c3_2_fixed.py')
-    print('  python hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_kaggle_v3c3_2_fixed.py --resume')
+    print('  python hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py')
+    print('  python hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py --resume')
 
 """---
 ## §4 — Trace R²=1.000 Origin
@@ -725,8 +758,8 @@ if _h_rows is not None and sweep_data:
     Yp = 100 * Xp / Np
     worst_h    = min(r[_key] for r in _h_rows)
     worst_p    = min(r['far_r2'] for r in sweep_data['pysr_only'])
-    best_seed  = next(r['seed'] for r in _h_rows if r[_key] > 0.99)
-    worst_seed = next(r['seed'] for r in _h_rows if r[_key] == worst_h)
+    best_seed  = next((r['seed'] for r in _h_rows if r[_key] > 0.99), None)
+    worst_seed = next((r['seed'] for r in _h_rows if r[_key] == worst_h), None)
 
     paper_nums = {
         'hypatia_N': N, 'hypatia_X': X, 'hypatia_Y_pct': round(Y,1),
@@ -769,7 +802,7 @@ if sweep_data and paper_nums and df_pysr is not None:
     Np=paper_nums['pysr_N']; Xp=paper_nums['pysr_X']; Yp=paper_nums['pysr_Y_pct']
 
     rows_tex = []
-    for seed in SEEDS:
+    for seed in [s_ for s_ in SEEDS if (df_pysr.seed==s_).any() and (df_hypatia.seed==s_).any()]:
         p = df_pysr[df_pysr.seed==seed].iloc[0]
         h = df_hypatia[df_hypatia.seed==seed].iloc[0]
         pe = p['expr'][:35].replace('**','^').replace('_',r'\_')
@@ -969,10 +1002,8 @@ saved_files = [
 ]
 
 # ── Results summary ───────────────────────────────────────────────────────────
-# On Colab: files are already in RESULTS_DIR; use the Colab file browser or
-#   from google.colab import files; files.download(str(RESULTS_DIR / fname))
-# On Kaggle: files appear in the output tab automatically.
-# Locally:   all outputs are written to RESULTS_DIR (printed above).
+# All outputs are written to RESULTS_DIR (printed below). On GitHub Actions the
+# workflow's "Store results" step collects them from there.
 
 print('📁 Output files written to:', RESULTS_DIR)
 _cases = _apply_case_range(saved_files)
