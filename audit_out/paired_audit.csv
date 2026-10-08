@@ -1,0 +1,75 @@
+task,difficulty,constants,A_ok,A_r2,A_error,B0_ok,B0_r2,B1_ok,B1_r2,verdict
+Value at Risk at 95%,easy,z_score_95,True,1.0,,True,1.0,True,1.0,a_ok
+Value at Risk at 99%,easy,z_score_99,True,1.0,,True,1.0,True,1.0,a_ok
+Partial liquidation amount,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Constant product formula,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Simple Staking APY,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Loan-to-Value,easy,,True,-141444.4561861864,,True,-141444.4561861864,True,-141444.4561861864,a_ok
+Spot price from AMM,easy,,True,-519.5690418230597,,True,-519.5690418230597,True,-519.5690418230597,a_ok
+LP share percentage,easy,,True,-1.8677934144404706,,True,-1.8677934144404706,True,-1.8677934144404706,a_ok
+Long position unrealized PnL,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Short position unrealized PnL,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Funding rate cost,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Validator commission adjusted,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Slashing penalty,easy,,True,-4.708752291752536,,True,-4.708752291752536,True,-4.708752291752536,a_ok
+Protocol reserve accumulation,easy,reserve_factor,True,1.0,,True,1.0,True,1.0,a_ok
+Leveraged position notional,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Cross-margin available balance,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Realized PnL for long,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+LP fee earnings,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Multi-day Value at Risk,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+ES scaling for multi-day,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Annualised Portfolio tracking error,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Incremental VaR,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Reserve ratio,easy,,True,1.0,,True,1.0,True,1.0,a_ok
+Impermanent loss breakeven fee rate,easy,,True,0.9999999999986611,,True,0.9999999999986611,True,0.9999999999986611,a_ok
+Liquidation Price Long,medium,,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Liquidation Price Short,medium,,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Constant Product Price Impact,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Effective Leverage,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Borrowing Interest,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Compounding Staking Returns,medium,,True,-0.22056253219763455,,True,-0.22056253219763455,True,-0.22056253219763455,a_ok
+Portfolio Sharpe Ratio,medium,risk_free_rate,True,0.9999999999999999,,True,0.9999999999999999,True,0.9999999999999999,a_ok
+APY calculation,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Capital efficiency,medium,,False,,No code,False,nan,False,nan,formula_fails_everywhere
+AMM output amount,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Price slippage percentage,medium,,True,-2.783771380269757,,True,-2.783771380269757,True,-2.783771380269757,a_ok
+Information ratio,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Utilization rate of DeFi,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Borrow APY from utilization,medium,"base_rate,slope",True,1.0,,True,1.0,True,1.0,a_ok
+Supply APY from borrow,medium,reserve_factor,True,1.0,,True,1.0,True,1.0,a_ok
+Health factor,medium,liq_threshold,True,1.0,,True,1.0,True,1.0,a_ok
+Impermanent loss percentage,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Options Delta,medium,,False,,"Evaluation failed: All evaluation strategies failed. Function has 4 params: ['moneyness', 'implied_volatility', 'T', 'option_type'], Data has 2 features, var_names: ['moneyness', 'implied_volatility']",False,nan,False,nan,formula_fails_everywhere
+Collateral ratio,medium,,True,-28166.479766160257,,True,-28166.479766160257,True,-28166.479766160257,a_ok
+Funding rate cost (extended),medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Staking reward for fixed lock-up,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Expected Shortfall at 95%,medium,es_multiplier_95,True,1.0,,True,1.0,True,1.0,a_ok
+Expected Shortfall at 99%,medium,es_multiplier_99,True,1.0,,True,1.0,True,1.0,a_ok
+Optimal LP Position (Kelly),medium,risk_aversion,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Concentrated liquidity position width,medium,,True,-1606.427506329587,,True,-1606.427506329587,True,-1606.427506329587,a_ok
+Portfolio VaR for two correlated,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Position margin ratio,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Concentrated liquidity position width (v2),medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Spot price from AMM reserve,medium,,True,1.0,,True,1.0,True,1.0,a_ok
+Black-Scholes Call Price,hard,,True,0.24643584365944837,,True,0.24643584365944837,True,0.24643584365944837,a_ok
+Black-Scholes Put Price,hard,,True,-1.3605589180426816,,False,nan,False,nan,a_ok
+Component ES,hard,,False,,"Evaluation failed: All evaluation strategies failed. Function has 3 params: ['weights', 'individual_es', 'correlations_with_portfolio'], Data has 3 features, var_names: ['weight', 'individual_es', 'co",False,nan,False,nan,formula_fails_everywhere
+Gamma of option,hard,,True,-4.396415988671525,,False,nan,False,nan,a_ok
+Vega of option,hard,,True,-18.592898183257567,,False,nan,False,nan,a_ok
+Multi-Collateral LTV,hard,"ltv_factor_a,ltv_factor_b",True,-4032.9398314273853,,True,-4032.9398314273853,True,-4032.9398314273853,a_ok
+Correlated Portfolio VaR,hard,,True,1.0,,True,1.0,True,1.0,a_ok
+Impermanent loss in constant product,hard,,True,1.0,,True,1.0,True,1.0,a_ok
+Constant product formula (multivariate),hard,,True,1.0,,True,1.0,True,1.0,a_ok
+Convexity Adjustment,hard,,True,0.9999999893410754,,True,0.9999999893410754,True,0.9999999893410754,a_ok
+Liquidation price for leveraged long,hard,maintenance_margin,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Liquidation price for leveraged short,hard,maintenance_margin,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Maximum safe leverage,hard,maintenance_margin,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Required collateral,hard,,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Forward price for derivative,hard,,True,1.0,,True,1.0,True,1.0,a_ok
+Portfolio Expected Shortfall for correlated,hard,,False,,No code,False,nan,False,nan,formula_fails_everywhere
+Call option intrinsic,hard,,True,-3.5798187174420173,,True,-3.5798187174420173,True,-3.5798187174420173,a_ok
+Put-call parity,hard,"K,r",True,1.0,,True,1.0,True,1.0,a_ok
+Simple options moneyness,hard,K,True,1.0,,True,1.0,True,1.0,a_ok
+Uniswap V3 virtual,hard,,True,1.0,,False,nan,False,nan,a_ok
+Theta of option,hard,,True,-15.930366475400998,,True,-15.930366475400998,True,-15.930366475400998,a_ok
