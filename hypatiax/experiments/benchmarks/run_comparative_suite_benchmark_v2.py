@@ -470,32 +470,22 @@ def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
     or fewer than 2 samples).
     Returns float("-inf") when R² < -100 (pathological divergence).
     """
-    y_pred = np.asarray(y_pred, dtype=float)
-    if np.any(~np.isfinite(y_pred)) or np.any(np.abs(y_pred) > 1e100):
-        return None
-    if np.std(y_pred) < 1e-30:
-        return None
-    if len(y_true) < 2:
-        return None
-
-    ss_res = np.sum((y_true - y_pred) ** 2)
-    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-    _scale = float(np.max(np.abs(y_true)) ** 2) * len(y_true)
-    _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-
-    if ss_tot < _tol:
-        return 1.0 if ss_res < _tol else float("-inf")
-
-    r2 = float(1 - ss_res / ss_tot)
-
-    # Sign-flip correction: if negating the prediction improves R², use that.
-    if r2 < 0:
-        ss_flip  = np.sum((y_true - (-y_pred)) ** 2)
-        r2_flip  = float(1 - ss_flip / ss_tot)
-        if r2_flip > r2:
-            r2 = r2_flip
-
-    return r2 if r2 >= -100 else float("-inf")
+    # R2-CANONICAL: single scoring policy, see hypatiax/core/r2_canonical.py.
+    # Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.
+    # NOTE: any docstring above describes the pre-canonical contract.
+    try:
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    except ImportError:  # run as a bare script, package not on sys.path
+        import pathlib as _pl, sys as _sys
+        for _up in _pl.Path(__file__).resolve().parents:
+            if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():
+                _sys.path.insert(0, str(_up))
+                break
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    _val, _status = _r2_scored(y_true, y_pred)
+    if _status == "catastrophic":
+        return float("-inf")
+    return _val if _status == "ok" else None
 
 
 def _far_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
@@ -949,6 +939,21 @@ HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_sys
 #  can be merged / compared directly)
 # ============================================================================
 
+def _provenance(d) -> dict:
+    """B2: pull llm_called / bypass_kind from a method's raw result dict
+    (top level, then nested llm_result / provenance). None == unknown, which
+    verify_blockers treats as missing -- never silently assumed live."""
+    out = {"llm_called": None, "bypass_kind": None}
+    if not isinstance(d, dict):
+        return out
+    for src in (d, d.get("llm_result"), d.get("provenance"), d.get("discovery")):
+        if isinstance(src, dict):
+            for k in out:
+                if out[k] is None and src.get(k) is not None:
+                    out[k] = src[k]
+    return out
+
+
 @dataclass
 class MethodResult:
     method:        str
@@ -976,7 +981,21 @@ class MethodResult:
             "error":        self.error,
             "time":         float(self.time),
             "metadata":     self.metadata or {},
+            # B2: top-level provenance. Non-LLM methods are explicit
+            # (llm_called=False, bypass_kind="none"); LLM-involving methods
+            # report what the wrapper recorded (None == unknown -> flagged).
+            "llm_called":   self._prov("llm_called"),
+            "bypass_kind":  self._prov("bypass_kind"),
         }
+
+    def _prov(self, key: str):
+        v = (self.metadata or {}).get(key)
+        if v is not None:
+            return v
+        n = (self.method or "").lower()
+        if "llm" in n or "hybrid" in n or "ensemble" in n:
+            return None
+        return False if key == "llm_called" else "none"
 
 
 # ============================================================================
@@ -1001,45 +1020,20 @@ class BaseMethod:
         raise NotImplementedError
 
     def _safe_r2(self, y_true, y_pred) -> float:
-        y_pred = np.asarray(y_pred, dtype=float)
-        # Guard: reject non-finite or astronomically large predictions before
-        # any arithmetic — these produce the R² = -7e12 class of results seen
-        # in PureLLM logs when the model returns garbage numerical output.
-        if np.any(~np.isfinite(y_pred)):
-            return float("-inf")
-        if np.any(np.abs(y_pred) > 1e100):
-            return float("-inf")
-        if np.std(y_pred) < 1e-30:
-            return float("-inf")
-        if len(y_true) < 2:
-            return float("nan")
-        ss_res = np.sum((y_true - y_pred) ** 2)
-        ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-        # Relative threshold: scale with max(|y|)^2 * n so tiny-scale
-        # physics equations (Photon y~1e-19, Zeeman y~1e-23, Newton y~1e-11)
-        # are NOT misclassified as constant targets just because ss_tot
-        # is below the old hardcoded 1e-10 absolute floor.
-        _scale = float(np.max(np.abs(y_true)) ** 2) * len(y_true)
-        _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-        if ss_tot < _tol:
-            return 1.0 if ss_res < _tol else float("-inf")
-        r2 = float(1 - ss_res / ss_tot)
-        # FIX 1 — sign ambiguity correction (Zeeman energy and similar physics
-        # equations where the LLM generates the correct magnitude but wrong sign
-        # convention, e.g. E = g*mu_B*ms*B instead of E = -g*mu_B*ms*B).
-        # A pure sign flip makes y_pred = -y_true → R² strongly negative.
-        # If flipping the sign improves R², accept the flipped result so the
-        # method is scored on the physics it got right, not a sign convention.
-        if r2 < 0:
-            ss_res_flip = np.sum((y_true - (-y_pred)) ** 2)
-            r2_flip = float(1 - ss_res_flip / ss_tot)
-            if r2_flip > r2:
-                r2 = r2_flip
-        # Clamp catastrophic values that slip through (e.g. numerical overflow
-        # in ss_res when predictions are very large but still finite).
-        if r2 < -100:
-            r2 = float("-inf")
-        return r2
+        # R2-CANONICAL: single scoring policy, see hypatiax/core/r2_canonical.py.
+        # Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.
+        # NOTE: any docstring above describes the pre-canonical contract.
+        try:
+            from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+        except ImportError:  # run as a bare script, package not on sys.path
+            import pathlib as _pl, sys as _sys
+            for _up in _pl.Path(__file__).resolve().parents:
+                if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():
+                    _sys.path.insert(0, str(_up))
+                    break
+            from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+        _val, _status = _r2_scored(y_true, y_pred)
+        return _val
 
     def _safe_rmse(self, y_true, y_pred) -> float:
         if not np.all(np.isfinite(y_pred)):
@@ -1598,7 +1592,7 @@ class PureLLMBaselineMethod(BaseMethod):
                     r2=float("nan"), rmse=float("inf"),
                     formula=python_code[:500], formula_hash=BaseMethod._make_formula_result(python_code)[1], formula_full=python_code,
                     error="truncated_formula: no valid return statement",
-                    metadata={"truncated_formula": True,
+                    metadata={**_provenance(result), "truncated_formula": True,
                               "formula_preview": python_code[:120]},
                 )
 
@@ -1612,7 +1606,7 @@ class PureLLMBaselineMethod(BaseMethod):
                     r2=float(metrics.get("r2", 0.0)),
                     rmse=float(metrics.get("rmse", float("inf"))),
                     formula=python_code[:500], formula_hash=BaseMethod._make_formula_result(python_code)[1], formula_full=python_code,
-                    metadata={"truncated_formula": False,
+                    metadata={**_provenance(result), "truncated_formula": False,
                               "is_hardcoded": _is_hardcoded},
                 )
 
@@ -1632,7 +1626,7 @@ class PureLLMBaselineMethod(BaseMethod):
                             method=self.name, success=True,
                             r2=r2_fb, rmse=rmse_fb,
                             formula=python_code[:500], formula_hash=BaseMethod._make_formula_result(python_code)[1], formula_full=python_code,
-                            metadata={"fallback_eval": True,
+                            metadata={**_provenance(result), "fallback_eval": True,
                                       "truncated_formula": False,
                                       "is_hardcoded": result.get("method") == "pure_llm_hardcoded"},
                         )
@@ -2206,7 +2200,7 @@ class HybridDeFiMethod(BaseMethod):
                         method=self.name, success=True,
                         r2=r2_val, rmse=rmse_val,
                         formula=str(_formula)[:500], formula_hash=BaseMethod._make_formula_result(str(_formula))[1], formula_full=str(_formula),
-                        metadata={"decision": decision, "eval_source": "y_pred_recompute"},
+                        metadata={**_provenance(result), "decision": decision, "eval_source": "y_pred_recompute"},
                     )
                 self._log(
                     f"hybrid_predict returned no usable evaluation "
@@ -2299,7 +2293,7 @@ class HybridDeFiMethod(BaseMethod):
                 method=self.name, success=True,
                 r2=r2_val, rmse=rmse_val,
                 formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
-                metadata={"decision": decision, "nn_applied": _nn_applied_defi},
+                metadata={**_provenance(result), "decision": decision, "nn_applied": _nn_applied_defi},
             )
 
         except Exception as exc:
@@ -2802,6 +2796,7 @@ class HybridAllDomainsMethod(BaseMethod):
                 rmse=rmse,
                 formula=_fstr_2534[:500], formula_hash=BaseMethod._make_formula_result(_fstr_2534)[1], formula_full=_fstr_2534,
                 metadata={
+                    **_provenance(result),
                     "decision":   result.get("decision", "unknown"),
                     "nn_applied": nn_applied,
                 },
@@ -3523,6 +3518,7 @@ class HybridSystemV50_2Method(BaseMethod):
                 rmse=float(result.get("rmse", float("nan"))),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={
+                    **_provenance(result),
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                 },
@@ -4335,7 +4331,7 @@ class ProtocolBenchmarkSuite:
 
         self._save(
             noiseless=getattr(self, "_noiseless", False),
-            threshold=getattr(self, "_threshold", 0.995),
+            threshold=getattr(self, "_threshold", 0.99),
             extrap=getattr(self, "_extrap", False),
         )
 
@@ -4361,6 +4357,8 @@ class ProtocolBenchmarkSuite:
                         "rmse":           _mres.get("rmse"),
                         "runtime":        _mres.get("time"),
                         "success":        _mres.get("success", False),
+                        "llm_called":     _mres.get("llm_called"),    # B2
+                        "bypass_kind":    _mres.get("bypass_kind"),   # B2
                     }
                     # Only write extrap fields when this record has them
                     # (i.e. when the run used --extrap).  Absent means the column
@@ -4438,6 +4436,8 @@ class ProtocolBenchmarkSuite:
                         "rmse":              _mres.get("rmse"),
                         "runtime":           _mres.get("time"),
                         "success":           _mres.get("success", False),
+                        "llm_called":        _mres.get("llm_called"),   # B2
+                        "bypass_kind":       _mres.get("bypass_kind"),  # B2
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
                         "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation
@@ -4482,7 +4482,7 @@ class ProtocolBenchmarkSuite:
         except Exception as _eje:
             print(f"\n⚠️  Could not export benchmark_results_extrap.json: {_eje}")
 
-    def _save(self, noiseless: bool = False, threshold: float = 0.995, extrap: bool = False):
+    def _save(self, noiseless: bool = False, threshold: float = 0.99, extrap: bool = False):
         ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
         if extrap:
             mode = "extrap"
@@ -4518,13 +4518,25 @@ class ProtocolBenchmarkSuite:
             "protocol": {
                 "mode":        mode,
                 "noise_level": 0.0 if noiseless else _HYPATIAX_NOISE_LEVEL,
+                "noise_definition": "gaussian, sd = noise_level * std(y), added to ALL targets before the train/test split",
+                "scored_on": "noisy targets (train and test)" if (not noiseless and _HYPATIAX_NOISE_LEVEL > 0.0) else "clean targets",
+                "r2_ceiling": (
+                    None if (noiseless or _HYPATIAX_NOISE_LEVEL <= 0.0) else
+                    1.0 - _HYPATIAX_NOISE_LEVEL ** 2 / (1.0 + _HYPATIAX_NOISE_LEVEL ** 2)
+                ),
+                "n_samples":   getattr(self, "_n_samples_requested", None),
+                "noise_injected_equations": getattr(self, "_noise_injected_n", None),
+                "noise_seed":  getattr(self, "_noise_seed", None),
                 "threshold":   threshold,
                 "note": (
                     "Noiseless run — directly comparable to published SR literature: "
                     "NeSymReS (59.4%), AI Feynman (79.3%), TPSR (56.0%), DSR (32.0%)"
                     if noiseless else
-                    "Noisy 200-sample run. R² ceiling ~0.9982. NOT directly comparable "
-                    "to published noiseless figures. Re-run with --noiseless --threshold 0.9999."
+                    f"Noisy run, n_samples={getattr(self, '_n_samples_requested', '?')}, "
+                    f"sigma={_HYPATIAX_NOISE_LEVEL:g}*std(y); R2 ceiling vs noisy targets = "
+                    f"{1.0 - _HYPATIAX_NOISE_LEVEL ** 2 / (1.0 + _HYPATIAX_NOISE_LEVEL ** 2):.6f}. "
+                    "NOT directly comparable to published noiseless figures. "
+                    "Re-run with --noiseless --threshold 0.999999."
                 ),
             },
             "purelm_truncation_audit": {
@@ -4686,15 +4698,15 @@ Examples
         help=(
             "Run with noise_level=0.0 — directly comparable to published SR "
             "systems (NeSymReS 59.4%%, AI Feynman 79.3%%, TPSR 56.0%%, DSR 32.0%%). "
-            "Use with --threshold 0.9999. Output saved as "
+            "Use with --threshold 0.999999. Output saved as "
             "protocol_core_noiseless_TIMESTAMP.json."
         ),
     )
     parser.add_argument(
         "--threshold", type=float, default=None, metavar="R2",
         help=(
-            "R² recovery threshold (default: 0.995 noisy, 0.9999 noiseless). "
-            "Example: --noiseless --threshold 0.9999"
+            "R² recovery threshold (default: 0.99 noisy, 0.999999 noiseless). "
+            "Example: --noiseless --threshold 0.999999"
         ),
     )
     parser.add_argument(
@@ -4810,7 +4822,7 @@ Examples
         help=(
             "Inject atomic Julia operators asin_of_sin, acos_of_cos, atan_of_tan "
             "into PySR, bypassing the SymPy simplifier that collapses these to x. "
-            "Required to recover equations like Snell's law at R2>0.9999."
+            "Required to recover equations like Snell's law at R2>0.999999."
         ),
     )
 
@@ -5006,7 +5018,7 @@ Examples
     _noiseless = getattr(args, "noiseless", False)
     _threshold = getattr(args, "threshold", None)
     if _threshold is None:
-        _threshold = 0.9999 if _noiseless else 0.995
+        _threshold = 0.999999 if _noiseless else 0.99
 
     if args.protocol == "all_domains":
         try:
@@ -5068,9 +5080,10 @@ Examples
                 print("=" * 70)
                 print(f"  NOISY MODE  —  noise_level = {_HYPATIAX_NOISE_LEVEL:.4f}  (HYPATIAX_NOISE_LEVEL)")
                 print(f"  R² threshold    :  {_threshold}  (practical)")
-                print("  R² ceiling      :  ~0.9982  (noise floor)")
+                print(f"  R² ceiling      :  {1.0 - _HYPATIAX_NOISE_LEVEL**2/(1.0 + _HYPATIAX_NOISE_LEVEL**2):.6f}  "
+                      f"(1 - s^2/(1+s^2); noise floor vs noisy targets)")
                 print("  NOT comparable to published noiseless figures.")
-                print("  Use --noiseless --threshold 0.9999 for literature comparison.")
+                print("  Use --noiseless --threshold 0.999999 for literature comparison.")
                 print("=" * 70)
             print()
         except ImportError:
@@ -5197,8 +5210,16 @@ Examples
     # where sigma = _HYPATIAX_NOISE_LEVEL (fraction of signal std, e.g. 0.01=1%).
     # A per-equation RNG seeded from the description hash ensures reproducibility
     # across runs with the same sigma.
+    # B5 fixes: (a) the noise stream now also depends on EXPERIMENT_SEED (exported
+    # by the sweep orchestrator), so different noise seeds really draw different
+    # noise -- previously every seed reused the SAME realisation per equation;
+    # (b) the number of equations actually perturbed is recorded in the output
+    # protocol block so a silent no-op is detectable.  NOTE: with EXPERIMENT_SEED
+    # set, noise realisations differ from runs made before this change.
+    _raw_exp_seed = os.environ.get("EXPERIMENT_SEED", "").strip()
+    _noise_seed_val = int(_raw_exp_seed) if _raw_exp_seed.lstrip("-").isdigit() else None
+    _n_injected = 0
     if _HYPATIAX_NOISE_LEVEL > 0.0 and not _noiseless:
-        _n_injected = 0
         _noisy_tests: List[tuple] = []
         for _tup in all_tests:
             _desc, _X, _y, _vnames, _meta, _dom = _tup
@@ -5209,8 +5230,9 @@ Examples
                 # noise injection was not actually reproducible across runs
                 # with the same sigma despite the comment above claiming it
                 # was -- switched to sha256, same fix as elsewhere in this file.
+                _seed_key = _desc if _noise_seed_val is None else f"{_desc}|noise_seed={_noise_seed_val}"
                 _rng_seed = int(
-                    hashlib.sha256(_desc.encode()).hexdigest(), 16
+                    hashlib.sha256(_seed_key.encode()).hexdigest(), 16
                 ) % (2**31)
                 _rng = np.random.default_rng(seed=_rng_seed)
                 _noise = _rng.normal(0.0, _HYPATIAX_NOISE_LEVEL * _y_std, size=len(_y))
@@ -5220,6 +5242,14 @@ Examples
         all_tests = _noisy_tests
         print(f"INFO  Noise injection: sigma={_HYPATIAX_NOISE_LEVEL*100:.4g}% of std(y) "
               f"applied to {_n_injected}/{len(all_tests)} test case(s).")
+        if _n_injected == 0:
+            print("WARNING  Noise level > 0 but NO equation was perturbed (std(y)==0 everywhere?)")
+    # Expose provenance to _save() (written into the protocol block).
+    suite._n_samples_requested = args.samples
+    suite._noise_injected_n    = _n_injected
+    suite._noise_seed          = _noise_seed_val
+    if _HYPATIAX_NOISE_LEVEL > 0.0 and _noiseless:
+        print("WARNING  HYPATIAX_NOISE_LEVEL is set but --noiseless is on: NO noise is injected.")
 
     # ── --equations: filter to specific 1-based indices ─────────────────────
     if _equation_indices:

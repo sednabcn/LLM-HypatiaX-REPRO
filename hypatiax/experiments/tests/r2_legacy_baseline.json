@@ -7,11 +7,10 @@
     "hypatiax/core/metrics.py",
     "hypatiax/core/training/adaptive_config.py",
     "hypatiax/core/training/baseline_neural_network_defi_improved.py",
-    "hypatiax/experiments/benchmarks/exp1_ablation.py",
     "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
-    "hypatiax/experiments/benchmarks/extrap_r2_far.py",
     "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
     "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+    "hypatiax/tools/symbolic/hybrid_system_v50_2.py",
     "hypatiax/tools/symbolic/symbolic_engine.py"
   ]
 }

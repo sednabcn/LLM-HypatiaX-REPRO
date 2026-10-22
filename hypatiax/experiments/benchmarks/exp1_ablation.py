@@ -459,15 +459,44 @@ def evaluate_formula_ood(eq, X_ood):
 # =============================================================================
 
 def _safe_r2(y_true, y_pred):
-    if not np.all(np.isfinite(y_pred)):
-        return float("-inf")
-    if len(y_true) < 2:
-        return float("nan")
-    ss_res = np.sum((y_true - y_pred) ** 2)
-    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-    if ss_tot < 1e-10:
-        return 1.0 if ss_res < 1e-10 else float("-inf")
-    return float(1 - ss_res / ss_tot)
+    """R² with a RELATIVE constant-target guard (C4).
+
+    The old fixed-epsilon (1e-10) guard on total variance mis-handled legitimately tiny-scale
+    targets (e.g. y ~ 1e-11), reporting 1.0 or -inf instead of a real R².
+    The target is treated as constant only when its variance is negligible
+    relative to its own magnitude.  Non-finite y_true is a data bug and raises.
+    """
+    # R2-CANONICAL: single scoring policy, see hypatiax/core/r2_canonical.py.
+    # Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.
+    # NOTE: any docstring above describes the pre-canonical contract.
+    try:
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    except ImportError:  # run as a bare script, package not on sys.path
+        import pathlib as _pl, sys as _sys
+        for _up in _pl.Path(__file__).resolve().parents:
+            if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():
+                _sys.path.insert(0, str(_up))
+                break
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    _val, _status = _r2_scored(y_true, y_pred)
+    if _status == "nonfinite_target":
+        raise ValueError("non-finite y_true passed to _safe_r2")
+    return _val
+
+
+def _full_math_namespace() -> dict:
+    """Numpy namespace covering every operator PySR/the engine may emit."""
+    def _inv(x):
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return 1.0 / x
+    return {
+        "np": np,
+        "sqrt": np.sqrt, "exp": np.exp, "log": np.log,
+        "sin": np.sin, "cos": np.cos, "tan": np.tan,
+        "abs": np.abs, "Abs": np.abs, "log2": np.log2, "log10": np.log10,
+        "pow": np.power, "sign": np.sign,
+        "square": np.square, "cube": lambda x: x ** 3, "inv": _inv,
+    }
 
 
 def _safe_rmse(y_true, y_pred):
@@ -691,34 +720,42 @@ def run_condition(eq, condition, seed=42, niterations=None,
 
         # Extrapolation: evaluate discovered expression directly.
         # Apply same log-scale transform to OOD X if discover() did so for training.
+        #
+        # C4: build ONE original-space predictor from the exact transform that
+        # discover() recorded (per-column x_log_flags + y_log).  This replaces
+        # the old local re-derivation (a hard-coded >6 OOM rule that disagreed
+        # with discover()'s thresholds and never inverted a log-scaled y).
+        # The formula is in *safe* variable names, so use res["formula"], not
+        # the sanitizer-restored best_expr_raw.
         extrap_r2, extrap_rmse = {}, {}
-        _norm_expr = best_expr_raw.replace("^", "**")
-        _math_ns   = {
-            "sqrt": np.sqrt, "exp": np.exp, "log": np.log,
-            "sin": np.sin, "cos": np.cos, "tan": np.tan,
-            "abs": np.abs, "log2": np.log2, "log10": np.log10,
-            "pow": np.power, "sign": np.sign,
-        }
+        _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
+        _y_log       = bool(res.get("y_log", False))
+        _predict     = None
+        try:
+            import sympy as _sp_ood
+            _formula_safe = res.get("formula", "N/A")
+            _expr_sym = _sp_ood.sympify(
+                HybridDiscoverySystem._normalise_expression_numeric(_formula_safe)
+            )
+            _predict = _hs_mod._make_original_space_predictor(
+                _expr_sym, safe_var_names, safe_var_names,
+                _x_log_flags, _y_log,
+                [HybridDiscoverySystem._TRIG_NUMERIC_FUNCS, "numpy"],
+            )
+            if _predict is None:
+                dbg("OOD predictor unavailable: formula references non-input "
+                    "symbols (engineered features) — extrap metrics = None")
+        except Exception as ee:
+            dbg(f"OOD predictor build failed: {ee}")
+            _predict = None
+
         for regime_name, (X_e, y_e) in extrap_sets.items():
+            if _predict is None:
+                extrap_r2[regime_name]   = None
+                extrap_rmse[regime_name] = None
+                continue
             try:
-                X_e_use = X_e.copy().astype(float)
-                if scale_log:
-                    for ci, _vn in enumerate(safe_var_names):
-                        col  = X_e[:, ci]
-                        _abs = np.abs(col[np.isfinite(col) & (col != 0)])
-                        if len(_abs) >= 2:
-                            _rng = (
-                                np.log10(_abs.max() + 1e-30)
-                                - np.log10(_abs.min() + 1e-30)
-                            )
-                            if _rng > 6:
-                                X_e_use[:, ci] = np.sign(col) * np.log10(np.abs(col) + 1.0)
-                _ns    = {"np": np, **_math_ns,
-                          **{vn: X_e_use[:, ci] for ci, vn in enumerate(safe_var_names)}}
-                y_pred = eval(_norm_expr, {"__builtins__": {}}, _ns)
-                y_pred = np.asarray(y_pred, dtype=float)
-                if y_pred.shape == ():
-                    y_pred = np.full(len(y_e), float(y_pred))
+                y_pred = np.asarray(_predict(X_e), dtype=float)
                 extrap_r2[regime_name]   = _safe_r2(y_e, y_pred)
                 extrap_rmse[regime_name] = _safe_rmse(y_e, y_pred)
             except Exception as ee:
@@ -763,6 +800,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "scale_log":             scale_log,
             "rmse_original_units":   train_rmse,
             "llm_mode_used":         res.get("llm_mode", "none"),
+            "llm_called":            bool(res.get("llm_called", False)),   # B2
+            "bypass_kind":           res.get("bypass_kind", "none"),       # B2
             "validation_score":      res.get("validation_score"),
         }
 
@@ -844,6 +883,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "complexity":            complexity,
         "llm_expression":        None,
         "llm_confidence":        None,
+        "llm_called":            False,    # B2: pysr_only baseline never calls the LLM
+        "bypass_kind":           "none",
     }
 
 
@@ -867,6 +908,8 @@ def _build_timeout_result(condition: str, sr_time: float) -> dict:
         "llm_time_s":           0.0,
         "total_time_s":         sr_time,
         "best_expression":      "TIMED_OUT",
+        "llm_called":           False,
+        "bypass_kind":          "none",
     }
 
 
@@ -889,6 +932,8 @@ def _build_error_result(condition: str, error: str, sr_time: float) -> dict:
         "llm_time_s":           0.0,
         "total_time_s":         sr_time,
         "best_expression":      "ERROR",
+        "llm_called":           False,
+        "bypass_kind":          "none",
     }
 
 print("✅ run_condition ready — hypatia → HybridDiscoverySystem v5.1 | pysr_only → raw PySR")

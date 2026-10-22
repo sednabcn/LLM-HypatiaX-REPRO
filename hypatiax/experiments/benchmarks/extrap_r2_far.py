@@ -297,32 +297,22 @@ def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
     or fewer than 2 samples).
     Returns float("-inf") when R² < -100 (pathological divergence).
     """
-    y_pred = np.asarray(y_pred, dtype=float)
-    if np.any(~np.isfinite(y_pred)) or np.any(np.abs(y_pred) > 1e100):
-        return None
-    if np.std(y_pred) < 1e-30:
-        return None
-    if len(y_true) < 2:
-        return None
-
-    ss_res = np.sum((y_true - y_pred) ** 2)
-    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-    _scale = float(np.max(np.abs(y_true)) ** 2) * len(y_true)
-    _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-
-    if ss_tot < _tol:
-        return 1.0 if ss_res < _tol else float("-inf")
-
-    r2 = float(1 - ss_res / ss_tot)
-
-    # Sign-flip correction: if negating the prediction improves R², use that.
-    if r2 < 0:
-        ss_flip  = np.sum((y_true - (-y_pred)) ** 2)
-        r2_flip  = float(1 - ss_flip / ss_tot)
-        if r2_flip > r2:
-            r2 = r2_flip
-
-    return r2 if r2 >= -100 else float("-inf")
+    # R2-CANONICAL: single scoring policy, see hypatiax/core/r2_canonical.py.
+    # Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.
+    # NOTE: any docstring above describes the pre-canonical contract.
+    try:
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    except ImportError:  # run as a bare script, package not on sys.path
+        import pathlib as _pl, sys as _sys
+        for _up in _pl.Path(__file__).resolve().parents:
+            if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():
+                _sys.path.insert(0, str(_up))
+                break
+        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
+    _val, _status = _r2_scored(y_true, y_pred)
+    if _status == "catastrophic":
+        return float("-inf")
+    return _val if _status == "ok" else None
 
 
 def _far_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
