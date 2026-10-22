@@ -41,6 +41,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from hypatiax.core.r2_canonical import r2_checked, selection_score
+
 # Optional torch — only needed at config *use* time, not at import time.
 try:
     import torch
@@ -526,6 +528,9 @@ def train_with_config(
     Returns:
         (best_model, best_r2, final_train_loss)
 
+    best_r2 is the canonical R² of the selected seed.  If no seed has a defined, finite
+    R² (e.g. a constant target), best_model is None and best_r2 is -inf.
+
     This function intentionally has NO parameter decisions of its own — every
     value comes from cfg.  Adding a new hyper-parameter means adding it to
     CaseProfile.to_config() and reading it here.
@@ -628,14 +633,17 @@ def train_with_config(
         else:
             y_pred = y_pred_w
 
-        ss_res = float(np.sum((y - y_pred) ** 2))
-        ss_tot = float(np.sum((y - np.mean(y)) ** 2))
-        r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else (1.0 if ss_res < 1e-10 else 0.0)
+        # R2-CANONICAL: single scoring policy (hypatiax/core/r2_canonical.py).  The old
+        # absolute 1e-10 guard on ss_tot scored tiny-scale targets (Newton ~1e-11) as 1.0
+        # or 0.0 regardless of the prediction; the canonical guard is RELATIVE.  A degenerate
+        # (constant) target is now NaN and a failed prediction -inf; neither can be selected.
+        r2, r2_status = r2_checked(y, y_pred)
 
         if verbose:
-            print(f"   [seed={seed}] R²={r2:.4f}  train_loss={final_train_loss:.6f}")
+            note = "" if r2_status == "ok" else f"  [{r2_status}]"
+            print(f"   [seed={seed}] R²={r2:.4f}  train_loss={final_train_loss:.6f}{note}")
 
-        if r2 > best_r2:
+        if selection_score(r2) > best_r2:
             best_r2          = r2
             best_train_loss  = final_train_loss
             best_model       = model
