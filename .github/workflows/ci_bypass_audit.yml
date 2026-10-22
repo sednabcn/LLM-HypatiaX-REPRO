@@ -1,0 +1,125 @@
+name: "HypatiaX - bypass audit (offline)"
+run-name: "HypatiaX - bypass audit · ${{ github.ref_name }}"
+
+# Offline audit: which protocol tasks are intercepted by PureLLMBaseline's hardcoded/OLS paths,
+# and does HYPATIAX_DISABLE_HARDCODED=1 restore the LLM path for all of them?
+# No LLM calls, no Julia/PySR, no secrets needed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_new_bypass:
+        description: "Do not fail when a task is newly bypassed vs. the committed bypass_audit.csv (true/false)"
+        required: false
+        default: "false"
+      allow_count_drift:
+        description: "Do not fail when the number of Feynman/DeFi tasks differs from the committed baseline (true/false)"
+        required: false
+        default: "false"
+  pull_request:
+    paths:
+      - "scripts/bypass_audit.py"
+      - "bypass_audit.csv"
+      - "hypatiax/core/base_pure_llm/**"
+      - "hypatiax/protocols/**"
+      - ".github/scripts/check_bypass_audit.py"
+      - ".github/workflows/ci_bypass_audit.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/bypass_audit.py"
+      - "hypatiax/core/base_pure_llm/**"
+      - "hypatiax/protocols/**"
+      - ".github/scripts/check_bypass_audit.py"
+      - ".github/workflows/ci_bypass_audit.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  ANTHROPIC_API_KEY: "dummy-offline"      # client is constructed but never called
+  PYTHONHASHSEED: "0"
+
+jobs:
+  bypass_audit:
+    name: "Bypass audit"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies (no PySR / Julia)
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3" numpy scipy sympy anthropic scikit-learn \
+            pyyaml python-dotenv matplotlib seaborn pint psutil
+
+      - name: Import smoke test
+        run: |
+          python - <<'PYEOF'
+          import os, sys
+          sys.path.insert(0, os.getcwd())
+          from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
+          from hypatiax.protocols.experiment_protocol_benchmark_v2 import _build_feynman_equations
+          from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
+          assert hasattr(PureLLMBaseline, "_try_hardcoded_formula"), "PureLLMBaseline._try_hardcoded_formula missing"
+          print("imports OK")
+          PYEOF
+
+      - name: Save committed baseline
+        id: baseline
+        run: |
+          if [[ -f bypass_audit.csv ]]; then
+            cp bypass_audit.csv "${RUNNER_TEMP}/bypass_audit_baseline.csv"
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No committed bypass_audit.csv - only the switch-restores-LLM invariant will be checked."
+          fi
+
+      - name: Run scripts/bypass_audit.py
+        run: |
+          set -euo pipefail
+          # run from the repo root: the script does sys.path.insert(os.getcwd()) and writes
+          # bypass_audit.csv to the CWD, i.e. the repo root
+          python scripts/bypass_audit.py 2>&1 | tee "${RUNNER_TEMP}/bypass_audit.log"
+          test -s bypass_audit.csv
+
+      - name: Gate - compare against baseline and invariants
+        env:
+          ALLOW_NEW:   ${{ github.event.inputs.allow_new_bypass || 'false' }}
+          ALLOW_DRIFT: ${{ github.event.inputs.allow_count_drift || 'false' }}
+          BASELINE:    ${{ steps.baseline.outputs.found }}
+        run: |
+          ARGS=(bypass_audit.csv)
+          [[ "${BASELINE}" == "true" ]] && ARGS+=("${RUNNER_TEMP}/bypass_audit_baseline.csv")
+          [[ "${ALLOW_NEW}"   == "true" ]] && ARGS+=(--allow-new-bypass)
+          [[ "${ALLOW_DRIFT}" == "true" ]] && ARGS+=(--allow-count-drift)
+          python .github/scripts/check_bypass_audit.py "${ARGS[@]}"
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: bypass-audit
+          path: |
+            bypass_audit.csv
+            ${{ runner.temp }}/bypass_audit.log
+          if-no-files-found: warn
+          retention-days: 30
