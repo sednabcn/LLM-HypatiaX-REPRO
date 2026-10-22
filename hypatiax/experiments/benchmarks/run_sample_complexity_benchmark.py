@@ -13,6 +13,29 @@ reviewer question for symbolic regression papers.
 The existing n=200 run (protocol_core_noisy_20260313_094752.json) can be
 merged via --existing-results to avoid re-running that sample size.
 
+REVISION NOTES (re-runs plan, B5 / sample complexity)
+-----------------------------------------------------
+  * n x sigma grid: one invocation = one sigma (--fixed-noise, or
+    NOISE_LEVEL in PERCENT from CI).  Output/checkpoint names now carry
+    _sig<NNNNN> and _seed<N>, so a grid of invocations never collides.
+    --noiseless is just sigma=0; to run the noisy cells, DROP --noiseless
+    from the run_all.sh suppB_sc step and pass --fixed-noise / NOISE_LEVEL.
+  * NOISE_LEVEL is always PERCENT (/100), same as run_noise_sweep_benchmark.
+    The old ">1 means percent" guard turned NOISE_LEVEL=0.5 into sigma=50%.
+  * ONE recovery threshold (--threshold, default 0.99) for every n and
+    sigma, plus always-reported exact recovery (--exact-threshold,
+    default 0.999999).  The old per-n / per-mode ladder is opt-in via
+    --legacy-thresholds.
+  * --seed exports PYSR_SEED / EXPERIMENT_SEED / NN_SEED to the runner.
+  * NaN / inf R2 rows are counted as failures (n_nonfinite).
+  * Result-file matching: a result JSON is only accepted if its own
+    protocol.noise_level / n_samples match the cell launched (mtime alone is
+    not enough when shards/seeds share a directory).
+  * Noise-ceiling audit: with noise = sigma*std(y), R2 vs noisy targets cannot
+    exceed 1 - sigma^2/(1+sigma^2).  Rows above it (plus 3-s.d. slack) are
+    counted in n_above_noise_ceiling and flagged: they indicate CLEAN-target
+    scoring.  Not applicable with --noiseless.
+
 What it does
 ------------
 1. For each n in [50, 100, 200, 500] it launches
@@ -114,6 +137,37 @@ _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # unchanged from before this feature existed.
 _NSHARDS_SUFFIX = os.environ.get("HYPATIAX_NSHARDS_SUFFIX", "").strip()
 _SHARD_TAG = f"_nshards{_NSHARDS_SUFFIX}" if _NSHARDS_SUFFIX else ""
+_SEED_TAG  = ""    # "_seed<N>"   set in main()
+_SIGMA_TAG = ""    # "_sig<NNNNN>" set in main()
+
+_DEFAULT_THRESHOLD: float = 0.99
+_EXACT_THRESHOLD:   float = 0.999999
+
+
+def _seed_from_env() -> int:
+    for k in ("EXPERIMENT_SEED", "PYSR_SEED"):
+        v = os.environ.get(k, "").strip()
+        if v:
+            try:
+                return int(v)
+            except ValueError:
+                pass
+    return 42
+
+
+def _seed_env(seed: int) -> dict:
+    return {
+        "PYSR_SEED":       str(seed),
+        "EXPERIMENT_SEED": str(seed),
+        "NN_SEED":         str(2024 + (seed - 42)),
+    }
+
+
+def _runner_threshold(args: argparse.Namespace) -> float:
+    """Threshold passed to the inner runner."""
+    if getattr(args, "legacy_thresholds", False):
+        return args.threshold_noiseless if getattr(args, "noiseless", False) else args.threshold_noisy
+    return args.threshold
 
 # Default sample sizes (training points per equation).
 # Tab 29 requires n ∈ {50, 100, 200, 500}.  750 and 1000 are EXCLUDED from
@@ -159,18 +213,64 @@ class _TeeLogger:
 # RESULT HELPERS
 # ============================================================================
 
-def _find_result_written_after(mode: str, t_start: float) -> Path | None:
+def _result_matches(path: Path, noise_level, n_samples=None) -> bool:
+    """
+    True if the result JSON's own protocol block matches the run we launched.
+
+    Guards against (a) parallel shards/seeds writing into the same directory and
+    (b) a crashed run silently picking up a stale file from another (sigma, n).
+    Keys ABSENT from the file are not held against it (no protection then; the
+    noise-ceiling audit is the backstop).  noise_level may be stored as a
+    fraction (0.05) or a percent (5.0); both are accepted.
+    """
+    try:
+        with open(path) as fh:
+            proto = (json.load(fh) or {}).get("protocol", {}) or {}
+    except Exception:
+        return False
+    nl = proto.get("noise_level")
+    if noise_level is not None and nl is not None:
+        try:
+            nlf = float(nl)
+        except (TypeError, ValueError):
+            return False
+        want = float(noise_level)
+        if not (abs(nlf - want) <= 1e-9 or abs(nlf - want * 100.0) <= 1e-7):
+            return False
+    if n_samples is not None:
+        for k in ("n_samples", "samples", "n"):
+            if proto.get(k) is not None:
+                try:
+                    if int(proto[k]) != int(n_samples):
+                        return False
+                except (TypeError, ValueError):
+                    pass
+                break
+    return True
+
+
+def _noise_ceiling(sigma: float) -> float:
+    """Max R2 of the TRUE function vs NOISY targets (noise = sigma*std(y)): 1 - s^2/(1+s^2)."""
+    return 1.0 - (sigma ** 2) / (1.0 + sigma ** 2)
+
+
+def _ceiling_tol(sigma: float, n_test: int) -> float:
+    """Finite-sample slack on the ceiling: ~3 s.d. of the R2 estimate."""
+    return 3.0 * (sigma ** 2) * (2.0 / max(int(n_test), 20)) ** 0.5
+
+
+def _find_result_written_after(mode: str, t_start: float, noise_level=None, n_samples=None) -> Path | None:
     """Return the newest result JSON for mode whose mtime >= t_start."""
     candidates = [
         p for p in _RESULTS_DIR.glob(f"protocol_core_{mode}_*.json")
-        if p.stat().st_mtime >= t_start
+        if p.stat().st_mtime >= t_start and _result_matches(p, noise_level, n_samples)
     ]
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
-def _find_latest_result(mode: str) -> Path | None:
+def _find_latest_result(mode: str, noise_level=None, n_samples=None) -> Path | None:
     """Return the most-recently-modified JSON for protocol_core_{mode}_*.json."""
     pattern    = f"protocol_core_{mode}_*.json"
     candidates = sorted(
@@ -178,6 +278,7 @@ def _find_latest_result(mode: str) -> Path | None:
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
+    candidates = [p for p in candidates if _result_matches(p, noise_level, n_samples)]
     return candidates[0] if candidates else None
 
 
@@ -250,9 +351,7 @@ def _build_runner_cmd(
     noiseless = getattr(args, "noiseless", False)
     if noiseless:
         cmd.append("--noiseless")
-        cmd += ["--threshold", str(args.threshold_noiseless)]
-    else:
-        cmd += ["--threshold", str(args.threshold_noisy)]
+    cmd += ["--threshold", str(_runner_threshold(args))]
 
     # ── Sample count — the variable being swept ───────────────────────────────
     cmd += ["--samples", str(n_samples)]
@@ -294,7 +393,7 @@ def _build_runner_cmd(
     # _shard_tag() — independent distinguishers for two different concerns
     # (domain-subset identity vs. matrix shard index). Empty string when
     # HYPATIAX_NSHARDS_SUFFIX is unset, so this is a no-op outside CI.
-    cmd += ["--checkpoint-name", f"sample_complexity_n{n_samples:04d}_{_shard_tag()}_checkpoint{_SHARD_TAG}"]
+    cmd += ["--checkpoint-name", f"sample_complexity_n{n_samples:04d}{_SIGMA_TAG}{_SEED_TAG}_{_shard_tag()}_checkpoint{_SHARD_TAG}"]
 
     # Direct the inner runner to write protocol_core_*.json into the same
     # directory that _find_result_written_after() globs — without this the
@@ -335,6 +434,7 @@ def _run_sample_size(
     child_env = os.environ.copy()
     noise_val = 0.0 if noiseless else getattr(args, "fixed_noise", 0.05)
     child_env["HYPATIAX_NOISE_LEVEL"] = str(noise_val)
+    child_env.update(_seed_env(args.seed))   # propagate seed to inner runner
     # Remove TASK_ID / TASK_IDS from the child environment.  The CI worker step
     # sets these to compound shard IDs ("sc_n200__feynman_biology"), not equation
     # IDs.  Forwarding them into run_comparative_suite_benchmark_v2.py would
@@ -385,9 +485,11 @@ def _run_sample_size(
             sys.exit(result.returncode)
         print("      Attempting to locate partial results…")
 
-    json_path = _find_result_written_after(mode_file, t0)
+    json_path = _find_result_written_after(mode_file, t0, noise_level=noise_val, n_samples=n_samples)
     if json_path is None:
-        json_path = _find_latest_result(mode_file)   # fallback
+        # Fallback only accepts a file whose own protocol matches (sigma, n);
+        # never a stale file from another cell.
+        json_path = _find_latest_result(mode_file, noise_level=noise_val, n_samples=n_samples)
 
     if json_path is None:
         print(f"\n  ❌ No result JSON found for n={n_samples}.")
@@ -409,6 +511,10 @@ def _aggregate_results(
     result_paths:    dict[int, Path | None],
     noiseless:       bool,
     args_thresholds: dict = {},
+    threshold:       float = _DEFAULT_THRESHOLD,
+    exact_threshold: float = _EXACT_THRESHOLD,
+    legacy:          bool = False,
+    noise_level:     float | None = None,
 ) -> dict:
     """
     Build a unified cross-n comparison object.
@@ -460,26 +566,34 @@ def _aggregate_results(
             all_methods.update(eq_methods.keys())
 
     all_methods_sorted = sorted(all_methods)
-    # Per-n threshold: tighter as sample size grows — more data means
-    # we expect better recovery. Noiseless mode uses higher baselines.
-    if noiseless:
+    # Single threshold policy: the same value for every n (override per n
+    # with --threshold-per-n).  The old ladder is kept under legacy=True.
+    if not legacy:
         _default_thresholds = {
-            50:  args_thresholds.get(50,  0.9990),
-            100: args_thresholds.get(100, 0.9995),
-            200: args_thresholds.get(200, 0.9999),
-            500: args_thresholds.get(500, 0.9999),
+            n: args_thresholds.get(n, threshold) for n in sample_sizes
         }
     else:
-        # Fixed σ=0.05 → flat 0.995 across all n values (Tab 29 range: 50–500)
-        _default_thresholds = {
-            50:   args_thresholds.get(50,   0.995),
-            100:  args_thresholds.get(100,  0.995),
-            200:  args_thresholds.get(200,  0.995),
-            500:  args_thresholds.get(500,  0.995),
-            # Extended sizes supported if passed via --sample-sizes:
-            750:  args_thresholds.get(750,  0.995),
-            1000: args_thresholds.get(1000, 0.995),
-        }
+        # Per-n threshold: tighter as sample size grows — more data means
+        # we expect better recovery. Noiseless mode uses higher baselines.
+        if noiseless:
+            _default_thresholds = {
+                50:  args_thresholds.get(50,  0.9990),
+                100: args_thresholds.get(100, 0.9995),
+                200: args_thresholds.get(200, 0.9999),
+                500: args_thresholds.get(500, 0.9999),
+            }
+        else:
+            # Fixed σ=0.05 → flat 0.995 across all n values (Tab 29 range: 50–500)
+            _default_thresholds = {
+                50:   args_thresholds.get(50,   0.995),
+                100:  args_thresholds.get(100,  0.995),
+                200:  args_thresholds.get(200,  0.995),
+                500:  args_thresholds.get(500,  0.995),
+                # Extended sizes supported if passed via --sample-sizes:
+                750:  args_thresholds.get(750,  0.995),
+                1000: args_thresholds.get(1000, 0.995),
+            }
+
 
     per_n_data: dict[str, dict | None] = {}
     for n in sample_sizes:
@@ -490,10 +604,8 @@ def _aggregate_results(
             continue
 
         # Threshold for this specific n
-        threshold = _default_thresholds.get(
-            n,
-            args_thresholds.get(n, 0.9999 if noiseless else 0.995)
-        )
+        _fallback = (0.9999 if noiseless else 0.995) if legacy else threshold
+        n_threshold = _default_thresholds.get(n, args_thresholds.get(n, _fallback))
 
         per_eq = _extract_per_test(data)
         method_summary: dict[str, dict] = {}
@@ -504,6 +616,14 @@ def _aggregate_results(
             n_success  = 0
             n_total    = 0
             n_recovery = 0
+            n_exact    = 0
+            n_nonfinite = 0
+            n_above_ceiling = 0
+            _sig = noise_level if (noise_level and not noiseless) else 0.0
+            sigma_c = (
+                (_noise_ceiling(_sig), _ceiling_tol(_sig, max(int(n * 0.2), 20)))
+                if _sig > 0 else None
+            )
 
             for eq_results in per_eq.values():
                 n_total += 1
@@ -524,6 +644,18 @@ def _aggregate_results(
                             time_vals.append(tf)
                     except (TypeError, ValueError):
                         pass
+                # NaN / -inf / missing R2 is a FAILURE, not a missing cell.
+                _r2_raw = res.get("r2")
+                try:
+                    _r2_ok = _r2_raw is not None and np.isfinite(float(_r2_raw))
+                except (TypeError, ValueError):
+                    _r2_ok = False
+                if not _r2_ok:
+                    n_nonfinite += 1
+                elif sigma_c is not None and float(_r2_raw) > sigma_c[0] + sigma_c[1]:
+                    # B5: above the ceiling for noisy targets => scored on CLEAN
+                    # targets (or noise not applied).  Every finite R2 is checked.
+                    n_above_ceiling += 1
                 if res.get("success", False):
                     n_success += 1
                     r2 = res.get("r2")
@@ -532,8 +664,10 @@ def _aggregate_results(
                             r2f = float(r2)
                             if np.isfinite(r2f):
                                 r2_vals.append(r2f)
-                                if r2f >= threshold:
+                                if r2f >= n_threshold:
                                     n_recovery += 1
+                                if r2f >= exact_threshold:
+                                    n_exact += 1
                         except (TypeError, ValueError):
                             pass
 
@@ -542,9 +676,14 @@ def _aggregate_results(
                 "mean_r2":       float(np.mean(r2_vals))         if r2_vals             else None,
                 "std_r2":        float(np.std(r2_vals, ddof=1))  if len(r2_vals) > 1   else 0.0,
                 "recovery_rate": n_recovery / n_total             if n_total > 0         else None,
+                "exact_recovery_rate": n_exact / n_total          if n_total > 0         else None,
+                "exact_threshold": exact_threshold,
+                "n_nonfinite":   n_nonfinite,
+                "noise_r2_ceiling": (sigma_c[0] if sigma_c else None),
+                "n_above_noise_ceiling": (n_above_ceiling if sigma_c else None),
                 "n_success":     n_success,
                 "n_total":       n_total,
-                "threshold_used": threshold,
+                "threshold_used": n_threshold,
                 # FIX-TIMING-DROPPED: runtime stats, computed the same way as
                 # the r2 stats above but over all attempts (see comment above
                 # the collection loop).
@@ -562,6 +701,8 @@ def _aggregate_results(
                         "r2":      r.get("r2"),
                         "rmse":    r.get("rmse"),
                         "success": r.get("success", False),
+                        "llm_called":  r.get("llm_called"),     # B2
+                        "bypass_kind": r.get("bypass_kind"),    # B2
                         # FIX-TIMING-DROPPED: the inner protocol_core_*.json
                         # runner already records this per (equation, method);
                         # it was being silently dropped here instead of
@@ -604,7 +745,12 @@ def _aggregate_results(
         "generated":        datetime.now().isoformat(),
         "sample_sizes":     sample_sizes,
         "mode":             "noiseless" if noiseless else "noisy",
-        "threshold":        _default_thresholds,
+        "noise_level":      noise_level,
+        "sigma_definition": "fraction of std(y) (declared; injection lives in the inner runner and is unverified here)",
+        "threshold":        (None if legacy else threshold),
+        "threshold_policy": "legacy_per_n" if legacy else f"fixed_{threshold}",
+        "exact_threshold":  exact_threshold,
+        "thresholds_per_n": _default_thresholds,
         "methods":          all_methods_sorted,
         "per_n":            per_n_data,
         "data_efficiency":  data_efficiency,
@@ -648,7 +794,9 @@ def _print_sample_complexity_table(agg: dict) -> None:
         print(row)
 
     # ── Recovery rate table ────────────────────────────────────────────────────
-    threshold = agg.get("threshold", 0.995)
+    threshold = agg.get("threshold")
+    if threshold is None:
+        threshold = agg.get("thresholds_per_n")
     print(f"\n{'='*100}")
     print(
         f"  SAMPLE COMPLEXITY SUMMARY  —  Recovery Rate  "
@@ -669,6 +817,23 @@ def _print_sample_complexity_table(agg: dict) -> None:
             rec = ms.get("recovery_rate")
             row += f"{(f'{rec*100:.1f}%' if rec is not None else 'N/A'):>{col_w}}"
         print(row)
+
+    # ── Noise-ceiling audit (B5) ──────────────────────────────────────────────
+    _ceil_rows = []
+    for n in sample_sizes:
+        pnd = agg["per_n"].get(str(n))
+        if not pnd:
+            continue
+        for m_, ms_ in pnd["method_summary"].items():
+            if ms_.get("n_above_noise_ceiling"):
+                _ceil_rows.append((n, m_, ms_["n_above_noise_ceiling"], ms_["noise_r2_ceiling"]))
+    if _ceil_rows:
+        print("\n  !! NOISE-CEILING AUDIT: R2 above the theoretical ceiling "
+              "1 - s^2/(1+s^2) for noisy targets:")
+        for n_, m_, k, c in _ceil_rows:
+            print(f"     n={n_:<5} {m_:<44} {k} equation(s) above ceiling {c:.6f}")
+        print("     -> those rows were most likely scored on CLEAN targets, or noise was not "
+              "applied as declared.")
 
     # ── Data-efficiency summary ────────────────────────────────────────────────
     eff_target = list(agg["data_efficiency"].values())[0]["efficiency_target"] \
@@ -698,7 +863,7 @@ def _print_sample_complexity_table(agg: dict) -> None:
 
 
 def _save_complexity_json(agg: dict, ts: str) -> Path:
-    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SHARD_TAG}.json"
+    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SIGMA_TAG}{_SEED_TAG}{_SHARD_TAG}.json"
     with open(path, "w") as f:
         json.dump(agg, f, indent=2, default=str)
     print(f"  💾 Sample complexity JSON → {path}")
@@ -711,7 +876,7 @@ def _save_complexity_csv(agg: dict, ts: str) -> Path:
     Section 1 — per (method, n) aggregate metrics.
     Section 2 — per (method, n, equation) individual R² values.
     """
-    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SHARD_TAG}.csv"
+    path = _RESULTS_DIR / f"sample_complexity_{ts}{_SIGMA_TAG}{_SEED_TAG}{_SHARD_TAG}.csv"
 
     # Unified fieldnames covering both sections.  Aggregate-only columns are
     # empty strings in per-equation rows; equation-level columns are empty in
@@ -720,8 +885,8 @@ def _save_complexity_csv(agg: dict, ts: str) -> Path:
     fieldnames = [
         "section", "method", "n_samples",
         "median_r2", "mean_r2", "std_r2",
-        "recovery_rate", "n_success", "n_total", "threshold_used",
-        "min_n_above_threshold",
+        "recovery_rate", "exact_recovery_rate", "n_success", "n_total",
+        "n_nonfinite", "n_above_noise_ceiling", "threshold_used", "min_n_above_threshold",
         "equation", "r2", "rmse", "success",
     ]
 
@@ -756,6 +921,9 @@ def _save_complexity_csv(agg: dict, ts: str) -> Path:
                     "n_success":             ms.get("n_success"),
                     "n_total":               ms.get("n_total"),
                     "threshold_used":        ms.get("threshold_used"),
+                    "exact_recovery_rate":   ms.get("exact_recovery_rate"),
+                    "n_nonfinite":           ms.get("n_nonfinite"),
+                    "n_above_noise_ceiling": ms.get("n_above_noise_ceiling"),
                     "min_n_above_threshold": min_n,
                     "equation": "", "r2": "", "rmse": "", "success": "",
                 })
@@ -882,16 +1050,32 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--threshold", type=float, default=_DEFAULT_THRESHOLD,
+        help=f"Single R² recovery threshold for every n and sigma (default: {_DEFAULT_THRESHOLD}).",
+    )
+    parser.add_argument(
+        "--exact-threshold", type=float, default=_EXACT_THRESHOLD, dest="exact_threshold",
+        help=f"Strict exact-recovery threshold, always reported (default: {_EXACT_THRESHOLD}).",
+    )
+    parser.add_argument(
+        "--legacy-thresholds", action="store_true", dest="legacy_thresholds",
+        help="Use the old per-n / per-mode threshold ladder (reproduction only).",
+    )
+    parser.add_argument(
+        "--seed", type=int, default=_seed_from_env(),
+        help="Run seed; exported as PYSR_SEED/EXPERIMENT_SEED/NN_SEED (default: env or 42).",
+    )
+    parser.add_argument(
         "--threshold-noisy",
         type=float, default=0.995,
         dest="threshold_noisy",
-        help="R² recovery threshold for noisy passes at fixed σ=0.05 (default: 0.995).",
+        help="DEPRECATED: only used with --legacy-thresholds.",
     )
     parser.add_argument(
         "--threshold-noiseless",
         type=float, default=0.9999,
         dest="threshold_noiseless",
-        help="R² recovery threshold for noiseless passes (default: 0.9999).",
+        help="DEPRECATED: only used with --legacy-thresholds.",
     )
     parser.add_argument(
         "--threshold-per-n", nargs="+", default=[], dest="threshold_per_n",
@@ -1000,12 +1184,25 @@ def main() -> None:
     if _ci_noise_env and not args.noiseless:
         try:
             _nl = float(_ci_noise_env)
-            # Values > 1 are percentages (e.g. "5.0" → 0.05); fractions passed as-is.
-            args.fixed_noise = _nl / 100.0 if _nl > 1 else _nl
+            # NOISE_LEVEL is ALWAYS percent (e.g. "5.0" -> 0.05, "0.5" -> 0.005),
+            # matching run_noise_sweep_benchmark.py.  The old ">1 means percent"
+            # guard read "0.5" as sigma=50%.
+            args.fixed_noise = _nl / 100.0
             print(f"  [CI] NOISE_LEVEL={_ci_noise_env!r} → fixed_noise={args.fixed_noise:.4f}")
         except ValueError:
             print(f"  WARNING: could not parse NOISE_LEVEL={_ci_noise_env!r} "
                   f"— using fixed_noise={args.fixed_noise}")
+
+    # sigma=0 via --fixed-noise 0 is the same as --noiseless
+    if not args.noiseless and args.fixed_noise == 0.0:
+        args.noiseless = True
+
+    global _SEED_TAG, _SIGMA_TAG
+    _eff_sigma = 0.0 if args.noiseless else args.fixed_noise
+    _SIGMA_TAG = f"_sig{int(round(_eff_sigma * 10000)):05d}"
+    _SEED_TAG  = f"_seed{args.seed}"
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     # ── Optional tee logging ──────────────────────────────────────────────────
     if args.log:
@@ -1044,7 +1241,7 @@ def main() -> None:
     sample_sizes = sorted(set(args.sample_sizes))
 
     noiseless   = getattr(args, "noiseless", False)
-    mode_label  = "noiseless (σ=0)" if noiseless else "noisy (σ=0.05)"
+    mode_label  = "noiseless (σ=0)" if noiseless else f"noisy (σ={getattr(args, 'fixed_noise', 0.05):.4g})"
     methods_str = str(args.methods) if args.methods else "all available"
 
     # ── Header ────────────────────────────────────────────────────────────────
@@ -1059,12 +1256,11 @@ def main() -> None:
         print(f"  Sizes MERGED    : n ∈ {sorted(existing_map.keys())}  (pre-existing)")
     fixed_noise_val = 0.0 if noiseless else getattr(args, "fixed_noise", 0.05)
     print(f"  Mode            : {mode_label}  (HYPATIAX_NOISE_LEVEL={fixed_noise_val:.4g})")
-    if noiseless:
-        _thresh_display = {50: 0.9990, 100: 0.9995, 200: 0.9999, 500: 0.9999}
+    if args.legacy_thresholds:
+        _thresh_display = ({50: 0.9990, 100: 0.9995, 200: 0.9999, 500: 0.9999} if noiseless
+                           else {50: 0.995, 100: 0.995, 200: 0.995, 500: 0.995})
     else:
-        _thresh_display = {50: 0.995, 100: 0.995, 200: 0.995, 500: 0.995}
-        # Note: 750 and 1000 removed from default; use --sample-sizes 50 100 200 500 750 1000
-        # with matching --threshold-per-n overrides if extended coverage is needed.
+        _thresh_display = {n: args.threshold for n in sample_sizes}
     for tok in getattr(args, "threshold_per_n", []):
         try:
             _n, _v = tok.split(":")
@@ -1074,6 +1270,7 @@ def main() -> None:
     print(f"  R² threshold    : per-n → {_thresh_display}")
     print(f"  Methods         : {methods_str}  (3=EnhancedHybridDeFi, 4=HybridLLMNN)")
     print(f"  NN seeds        : {args.nn_seeds}")
+    print(f"  Seed            : {args.seed}  (NN_SEED={2024 + (args.seed - 42)})   exact threshold: {args.exact_threshold}")
     print(f"  Method timeout  : {args.method_timeout}s")
     print(f"  PySR timeout    : {args.pysr_timeout}s")
     print(f"  Fail-fast       : {'ON  ⛔' if args.fail_fast else 'OFF (warn and continue)'}")
@@ -1119,7 +1316,12 @@ def main() -> None:
             print(f"  WARNING: bad --threshold-per-n token: {token!r}")
     agg = _aggregate_results(sample_sizes, result_paths,
                              noiseless=noiseless,
-                             args_thresholds=args_thresholds)
+                             args_thresholds=args_thresholds,
+                             threshold=args.threshold,
+                             exact_threshold=args.exact_threshold,
+                             legacy=args.legacy_thresholds,
+                             noise_level=fixed_noise_val)
+    agg["seed"] = args.seed
     _print_sample_complexity_table(agg)
     _save_complexity_json(agg, ts)
     _save_complexity_csv(agg, ts)

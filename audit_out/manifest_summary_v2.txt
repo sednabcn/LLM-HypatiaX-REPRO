@@ -1,0 +1,29 @@
+unique files: 254
+label
+CONTAMINATED      52
+NO_PROVENANCE    196
+UNREADABLE         6
+
+clean-looking unique files inside a contaminated directory: 63
+
+share of flagged entries that are hardcoded, per directory:
+                                                       files  hard  flagged  share
+dir                                                                               
+comparison_results/feynman-tests/exp2_pca_4060             6    11       18   0.61
+comparison_results/feynman-tests/exp2_pca_4060/_saved      6    11       18   0.61
+comparison_results/extrapolation                           6    11       19   0.58
+comparison_results/feynman-tests/exp2                      6    11       19   0.58
+comparison_results/feynman-tests/exp2_extrap/_saved        6    11       19   0.58
+comparison_results/feynman-tests/exp2_multi                3     4        8   0.50
+five_systems/exp2_five                                     3     4        9   0.44
+comparison_results/feynman-tests/sample-complexity         6    66      175   0.38
+comparison_results/feynman-tests/noise-sweep               5    55      148   0.37
+issue2b_experiment/31662432869/phaseA_run2                 1     4       29   0.14
+issue2b_experiment/31662432869/phaseA_run3                 1     4       29   0.14
+issue2b_experiment/31662432869/phaseA_run1                 1     4       30   0.13
+issue2b_experiment/31662432869/phaseB_full                 1     4       30   0.13
+
+extrapolation directories (files whose hash also appears elsewhere):
+  extrapolation: 25 files, 25 have copies
+  extrapolation_sparse_seed_off: 25 files, 25 have copies
+  extrapolation-sparse_seeds_fallback: 25 files, 20 have copies

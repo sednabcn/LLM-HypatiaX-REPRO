@@ -5,9 +5,30 @@ run_noise_sweep_benchmark.py
 
 Noise-level sweep experiment for the HypatiaX benchmark suite.
 
-Runs the top two methods — EnhancedHybridSystemDeFi (method 3) and
-HybridSystemLLMNN all-domains (method 4) — across the remaining noise
-levels sigma in {1%, 5%, 10%}.
+Runs the selected methods (default: EnhancedHybridSystemDeFi = 3 and
+HybridSystemLLMNN all-domains = 4) across noise levels sigma.
+
+REVISION NOTES (re-runs plan, B5)
+---------------------------------
+  * ONE recovery-threshold policy for every sigma: --threshold (default
+    0.99).  Exact recovery (--exact-threshold, default 0.999999) is always
+    reported alongside it.  The old per-sigma ladder (0.95/0.995/0.99/0.90)
+    is only available via --legacy-thresholds.
+  * --seed sets python/numpy seeds and exports PYSR_SEED, EXPERIMENT_SEED
+    and NN_SEED to the inner runner, and tags every output/checkpoint name
+    with _seed<N>, so several noise seeds per sigma never collide.
+  * NaN / inf R2 on a row is counted as a failure (n_nonfinite) instead of
+    silently dropped from the denominator-visible statistics.
+  * Result-file matching: a result JSON is only accepted if its own
+    protocol.noise_level matches the sigma launched (mtime alone is not enough
+    when shards/seeds share a directory).
+  * Noise-ceiling audit: with noise = sigma*std(y), no method can exceed
+    R2 = 1 - sigma^2/(1+sigma^2) against noisy targets.  Rows above that
+    (plus a 3-s.d. finite-sample slack) are counted in n_above_noise_ceiling
+    and flagged in the report: they indicate CLEAN-target scoring.
+  * sigma is declared as a FRACTION of std(y) in the output JSON
+    ("sigma_definition").  The injection itself lives in the inner runner
+    and is NOT verified here -- audit it (clean vs noisy targets) first.
 
 Background
 ----------
@@ -117,6 +138,7 @@ _RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # CI) so filenames are unchanged from before this feature existed.
 _NSHARDS_SUFFIX = os.environ.get("HYPATIAX_NSHARDS_SUFFIX", "").strip()
 _SHARD_TAG = f"_nshards{_NSHARDS_SUFFIX}" if _NSHARDS_SUFFIX else ""
+_SEED_TAG  = ""   # set in main() once --seed is known: "_seed<N>"
 
 # Full 5-level sweep matching CI `noise_levels` default "0.0,0.5,1.0,5.0,10.0"
 # (fractions: 0.0, 0.005, 0.01, 0.05, 0.10).
@@ -131,6 +153,53 @@ _DEFAULT_METHODS: list[int] = [3, 4]
 
 # R2 below this triggers a catastrophic-failure flag in the report
 _CATASTROPHIC_R2_THRESHOLD: float = 0.90
+
+# Single recovery-threshold policy (re-runs plan: fixed 0.99 for cross-
+# condition comparison, strict 0.999999 reported as "exact recovery").
+_DEFAULT_THRESHOLD:   float = 0.99
+_EXACT_THRESHOLD:     float = 0.999999
+
+# Legacy per-sigma ladder, kept ONLY for --legacy-thresholds reproduction of
+# the old tables.  Do not use for new results.
+_LEGACY_THRESHOLDS: dict = {
+    0.0: 0.999999, 0.0005: 0.995, 0.001: 0.995, 0.005: 0.995,
+    0.01: 0.990, 0.05: 0.950, 0.10: 0.900,
+}
+
+# Seed handling (matches the pca/v3c convention: NN seed = 2024 + (seed-42)).
+def _seed_from_env() -> int:
+    for k in ("EXPERIMENT_SEED", "PYSR_SEED"):
+        v = os.environ.get(k, "").strip()
+        if v:
+            try:
+                return int(v)
+            except ValueError:
+                pass
+    return 42
+
+
+def _seed_env(seed: int) -> dict:
+    return {
+        "PYSR_SEED":       str(seed),
+        "EXPERIMENT_SEED": str(seed),
+        "NN_SEED":         str(2024 + (seed - 42)),
+    }
+
+
+def _resolve_threshold(sigma: float, args: argparse.Namespace) -> float:
+    """Single place that decides the recovery threshold for a sigma level."""
+    for tok in getattr(args, "threshold_per_sigma", []) or []:
+        try:
+            s_, v_ = tok.split(":")
+            if abs(float(s_) - sigma) < 1e-12:
+                return float(v_)
+        except ValueError:
+            pass
+    if getattr(args, "legacy_thresholds", False):
+        if sigma == 0.0:
+            return args.threshold_noiseless
+        return _LEGACY_THRESHOLDS.get(sigma, args.threshold_noisy)
+    return args.threshold
 
 
 # ============================================================================
@@ -164,7 +233,56 @@ class _TeeLogger:
 # RESULT HELPERS
 # ============================================================================
 
-def _find_result_written_after(mode: str, t_start: float) -> Path | None:
+def _result_matches(path: Path, noise_level, n_samples=None) -> bool:
+    """
+    True if the result JSON's own protocol block matches the run we launched.
+
+    Guards against (a) parallel shards/seeds writing into the same directory and
+    (b) a crashed run silently picking up a stale file from another sigma.
+    Keys ABSENT from the file are not held against it (no protection then; the
+    noise-ceiling audit below is the backstop).  noise_level may be stored as a
+    fraction (0.01) or a percent (1.0); both are accepted.
+    """
+    try:
+        with open(path) as fh:
+            proto = (json.load(fh) or {}).get("protocol", {}) or {}
+    except Exception:
+        return False
+    nl = proto.get("noise_level")
+    if noise_level is not None and nl is not None:
+        try:
+            nlf = float(nl)
+        except (TypeError, ValueError):
+            return False
+        want = float(noise_level)
+        if not (abs(nlf - want) <= 1e-9 or abs(nlf - want * 100.0) <= 1e-7):
+            return False
+    if n_samples is not None:
+        for k in ("n_samples", "samples", "n"):
+            if proto.get(k) is not None:
+                try:
+                    if int(proto[k]) != int(n_samples):
+                        return False
+                except (TypeError, ValueError):
+                    pass
+                break
+    return True
+
+
+def _noise_ceiling(sigma: float) -> float:
+    """
+    Max achievable R2 of the TRUE function scored against NOISY targets when
+    noise = sigma * std(y):   1 - sigma^2 / (1 + sigma^2)   (~ 1 - sigma^2).
+    """
+    return 1.0 - (sigma ** 2) / (1.0 + sigma ** 2)
+
+
+def _ceiling_tol(sigma: float, n_test: int) -> float:
+    """Finite-sample slack on the ceiling: ~3 s.d. of the R2 estimate."""
+    return 3.0 * (sigma ** 2) * (2.0 / max(int(n_test), 20)) ** 0.5
+
+
+def _find_result_written_after(mode: str, t_start: float, noise_level=None) -> Path | None:
     """
     Return the newest result JSON for *mode* whose mtime is >= t_start.
 
@@ -174,20 +292,21 @@ def _find_result_written_after(mode: str, t_start: float) -> Path | None:
     """
     candidates = [
         p for p in _RESULTS_DIR.glob(f"protocol_core_{mode}_*.json")
-        if p.stat().st_mtime >= t_start
+        if p.stat().st_mtime >= t_start and _result_matches(p, noise_level)
     ]
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
-def _find_latest_result(mode: str) -> Path | None:
+def _find_latest_result(mode: str, noise_level=None) -> Path | None:
     """Return the most-recently-modified JSON for protocol_core_{mode}_*.json."""
     candidates = sorted(
         _RESULTS_DIR.glob(f"protocol_core_{mode}_*.json"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
+    candidates = [p for p in candidates if _result_matches(p, noise_level)]
     return candidates[0] if candidates else None
 
 
@@ -234,26 +353,8 @@ def _build_runner_cmd(
     sigma_label = f"sig{int(round(noise_level * 10000)):05d}"
     cmd = [sys.executable, str(runner)]
 
-    # Per-sigma threshold — use the fine-grained map when available so each
-    # noise level gets the right R2 floor (0.999999 for sigma=0, 0.995 for
-    # sigma=0.5%, ..., 0.90 for sigma=10%).
-    _PER_SIGMA_DEFAULTS: dict = {
-        0.0:    args.threshold_noiseless,     # 0.999999
-        0.0005: 0.995,                        # FIX: was missing -> fell back to threshold_noisy (0.95)
-        0.001:  0.995,                        # FIX: was missing -> fell back to threshold_noisy (0.95)
-        0.005: 0.995,
-        0.01:  0.990,
-        0.05:  args.threshold_noisy,          # 0.950
-        0.10:  0.900,
-    }
-    # Override defaults with any --threshold-per-sigma tokens
-    for _tok in getattr(args, "threshold_per_sigma", []):
-        try:
-            _s, _v = _tok.split(":")
-            _PER_SIGMA_DEFAULTS[float(_s)] = float(_v)
-        except ValueError:
-            pass
-    _sigma_threshold = _PER_SIGMA_DEFAULTS.get(noise_level, args.threshold_noisy)
+    # Single threshold policy (see _resolve_threshold); legacy ladder opt-in.
+    _sigma_threshold = _resolve_threshold(noise_level, args)
 
     if noise_level == 0.0:
         cmd.append("--noiseless")
@@ -317,7 +418,7 @@ def _build_runner_cmd(
     # via NOISE_LEVEL, but all five sharing this same _FLAT_OUTPUT_DIR
     # checkpoint location -- see that script's _checkpoint_path()) never
     # collide with each other, regardless of sigma.
-    cmd += ["--checkpoint-name", f"noise_sweep_{sigma_label}_checkpoint{_SHARD_TAG}"]
+    cmd += ["--checkpoint-name", f"noise_sweep_{sigma_label}_checkpoint{_SEED_TAG}{_SHARD_TAG}"]
 
     # NOTE: The TASK_ID env-var → --test forwarding block that previously lived
     # here has been removed.  The CI suppB dispatch shards by feynman *domain*
@@ -375,6 +476,7 @@ def _run_noise_level(
     cmd, _label = _build_runner_cmd(noise_level, args, runner)
     child_env   = os.environ.copy()
     child_env["HYPATIAX_NOISE_LEVEL"] = str(noise_level)
+    child_env.update(_seed_env(args.seed))   # propagate seed to inner runner
     # Remove TASK_ID / TASK_IDS from the child environment.  These are set by
     # the CI worker step and contain feynman domain keys (e.g. "feynman_biology")
     # or compound shard IDs ("noise0.0__feynman_biology"), not equation IDs.
@@ -397,9 +499,11 @@ def _run_noise_level(
         print("  Attempting to locate partial results...")
 
     mode      = "noiseless" if noise_level == 0.0 else "noisy"
-    json_path = _find_result_written_after(mode, t_start)
+    json_path = _find_result_written_after(mode, t_start, noise_level=noise_level)
     if json_path is None:
-        json_path = _find_latest_result(mode)   # fallback
+        # Fallback only accepts a file whose own protocol.noise_level matches;
+        # never a stale file from another sigma/seed.
+        json_path = _find_latest_result(mode, noise_level=noise_level)
 
     if json_path is None:
         print(f"\n  ERROR: No result JSON found for noise_level={noise_level:.4f}.")
@@ -419,14 +523,17 @@ def _run_noise_level(
 def _aggregate_results(
     noise_levels:    list[float],
     result_paths:    dict[float, Path | None],
-    args_thresholds: dict = {},
+    threshold_fn,
+    exact_threshold: float = _EXACT_THRESHOLD,
+    noise_n_test_hint: int = 40,
 ) -> dict:
     """
     Build a unified cross-noise comparison object.
 
     per_noise schema per sigma level:
       method_summary  : median_r2, mean_r2, std_r2, recovery_rate,
-                        n_success, n_total, threshold_used, n_catastrophic
+                        exact_recovery_rate, n_success, n_total, n_nonfinite,
+                        threshold_used, n_catastrophic
       per_equation    : {eq: {method: {r2, rmse, success, catastrophic}}}
       catastrophic_failures: [{equation, method, r2}]  (R2 < 0.90)
 
@@ -462,15 +569,7 @@ def _aggregate_results(
             continue
 
         per_eq    = _extract_per_test(data)
-        # Per-sigma threshold: tighter for low-noise, looser as noise grows.
-        _sigma_thresholds = {
-            0.0:   args_thresholds.get(0.0,   0.999999),  # noiseless — near-perfect
-            0.005: args_thresholds.get(0.005, 0.995),     # σ=0.5%
-            0.01:  args_thresholds.get(0.01,  0.990),     # σ=1%
-            0.05:  args_thresholds.get(0.05,  0.950),     # σ=5%
-            0.10:  args_thresholds.get(0.10,  0.900),     # σ=10%
-        }
-        threshold = _sigma_thresholds.get(sigma, args_thresholds.get(sigma, 0.995))
+        threshold = threshold_fn(sigma)
         method_summary: dict[str, dict] = {}
         catastrophic_failures: list[dict] = []
 
@@ -478,6 +577,12 @@ def _aggregate_results(
             r2_vals: list[float] = []
             time_vals: list[float] = []
             n_success = n_total = n_recovery = n_catastrophic = 0
+            n_exact = n_nonfinite = 0
+            n_above_ceiling = 0
+            sigma_c = (
+                (_noise_ceiling(sigma), _ceiling_tol(sigma, noise_n_test_hint))
+                if sigma > 0 else None
+            )
 
             for eq_name, eq_results in per_eq.items():
                 n_total += 1
@@ -500,6 +605,17 @@ def _aggregate_results(
                             time_vals.append(tf)
                     except (TypeError, ValueError):
                         pass
+                # NaN / -inf / missing R2 is a FAILURE, not a missing cell.
+                _r2_raw = res.get("r2")
+                try:
+                    _r2_ok = _r2_raw is not None and np.isfinite(float(_r2_raw))
+                except (TypeError, ValueError):
+                    _r2_ok = False
+                if not _r2_ok:
+                    n_nonfinite += 1
+                elif sigma_c is not None and float(_r2_raw) > sigma_c[0] + sigma_c[1]:
+                    # Checked on every finite R2, success-flagged or not.
+                    n_above_ceiling += 1
                 if res.get("success", False):
                     n_success += 1
                     r2 = res.get("r2")
@@ -510,6 +626,8 @@ def _aggregate_results(
                                 r2_vals.append(r2f)
                                 if r2f >= threshold:
                                     n_recovery += 1
+                                if r2f >= exact_threshold:
+                                    n_exact += 1
                                 if r2f < _CATASTROPHIC_R2_THRESHOLD:
                                     n_catastrophic += 1
                                     catastrophic_failures.append(
@@ -523,6 +641,14 @@ def _aggregate_results(
                 "mean_r2":        float(np.mean(r2_vals))           if r2_vals          else None,
                 "std_r2":         float(np.std(r2_vals, ddof=1))    if len(r2_vals) > 1 else 0.0,
                 "recovery_rate":  n_recovery / n_total              if n_total > 0      else None,
+                "exact_recovery_rate": n_exact / n_total            if n_total > 0      else None,
+                "exact_threshold": exact_threshold,
+                "n_nonfinite":    n_nonfinite,
+                # B5 check: R2 above the theoretical ceiling for noisy targets
+                # means the row was scored on CLEAN targets (or noise was not
+                # applied as declared).  None at sigma=0 (no ceiling).
+                "noise_r2_ceiling": (sigma_c[0] if sigma_c else None),
+                "n_above_noise_ceiling": (n_above_ceiling if sigma_c else None),
                 "n_success":      n_success,
                 "n_total":        n_total,
                 "threshold_used": threshold,
@@ -543,6 +669,8 @@ def _aggregate_results(
                         "r2":          eq_res.get("r2"),
                         "rmse":        eq_res.get("rmse"),
                         "success":     eq_res.get("success", False),
+                        "llm_called":  eq_res.get("llm_called"),    # B2
+                        "bypass_kind": eq_res.get("bypass_kind"),   # B2
                         # FIX-TIMING-DROPPED: see comment in the collection
                         # loop above -- this is the root fix for Issue 3's
                         # missing tab:time_noise timing data.
@@ -572,13 +700,18 @@ def _aggregate_results(
             cross_noise[method][sigma_str] = {
                 "median_r2":      ms.get("median_r2"),
                 "recovery_rate":  ms.get("recovery_rate"),
+                "exact_recovery_rate": ms.get("exact_recovery_rate"),
                 "std_r2":         ms.get("std_r2"),
                 "n_catastrophic": ms.get("n_catastrophic", 0),
+                "n_nonfinite":    ms.get("n_nonfinite", 0),
+                "n_above_noise_ceiling": ms.get("n_above_noise_ceiling"),
             }
 
     return {
         "generated":           datetime.now().isoformat(),
         "noise_levels":        noise_levels,
+        "sigma_definition":    "fraction of std(y) (declared; injection lives in the inner runner; see n_above_noise_ceiling for an indirect check)",
+        "exact_threshold":     exact_threshold,
         "methods":             all_methods_sorted,
         "per_noise":           per_noise_data,
         "cross_noise_summary": cross_noise,
@@ -624,7 +757,13 @@ def _print_noise_sweep_table(agg: dict) -> None:
     # Recovery rate table
     print(f"\n{'='*100}")
     print("  NOISE SWEEP  --  Recovery Rate  (R2 >= threshold)".center(100))
-    print("  threshold: sigma=0% -> 0.9999    sigma>0% -> 0.995".center(100))
+    _thr_used = sorted({
+        ms.get("threshold_used")
+        for pnd in agg["per_noise"].values() if pnd
+        for ms in pnd["method_summary"].values()
+        if ms.get("threshold_used") is not None
+    })
+    print(f"  threshold(s) used: {_thr_used}   exact: {agg.get('exact_threshold')}".center(100))
     print(f"{'='*100}")
     print(f"  {'Method':<44}" + headers)
     print("  " + "-" * 98)
@@ -641,6 +780,40 @@ def _print_noise_sweep_table(agg: dict) -> None:
             row += f"{val:>{col_w}}"
         print(row)
     print(f"  (!) = one or more equations with R2 < {_CATASTROPHIC_R2_THRESHOLD} (catastrophic)")
+
+    # Exact-recovery table
+    print(f"\n{'='*100}")
+    print(f"  NOISE SWEEP  --  Exact Recovery  (R2 >= {agg.get('exact_threshold')})".center(100))
+    print(f"{'='*100}")
+    print(f"  {'Method':<44}" + headers)
+    print("  " + "-" * 98)
+    for method in sorted(methods):
+        row = f"  {method:<44}"
+        for sigma in noise_levels:
+            pnd = agg["per_noise"].get(f"{sigma:.4f}")
+            if pnd is None:
+                row += f"{'N/A':>{col_w}}"
+                continue
+            ex = pnd["method_summary"].get(method, {}).get("exact_recovery_rate")
+            row += f"{(f'{ex*100:.1f}%' if ex is not None else 'N/A'):>{col_w}}"
+        print(row)
+
+    # Noise-ceiling audit (B5)
+    _ceil_rows = []
+    for sigma in noise_levels:
+        pnd = agg["per_noise"].get(f"{sigma:.4f}")
+        if not pnd:
+            continue
+        for m_, ms_ in pnd["method_summary"].items():
+            if ms_.get("n_above_noise_ceiling"):
+                _ceil_rows.append((sigma, m_, ms_["n_above_noise_ceiling"], ms_["noise_r2_ceiling"]))
+    if _ceil_rows:
+        print(f"\n  !! NOISE-CEILING AUDIT: R2 above the theoretical ceiling "
+              f"1 - s^2/(1+s^2) for noisy targets:")
+        for sg, m_, k, c in _ceil_rows:
+            print(f"     sigma={sg*100:.4g}%  {m_:<44} {k} equation(s) above ceiling {c:.6f}")
+        print("     -> those rows were most likely scored on CLEAN targets, or noise was not "
+              "applied as declared.")
 
     # Catastrophic failures block
     all_cats = []
@@ -660,10 +833,6 @@ def _print_noise_sweep_table(agg: dict) -> None:
             eq_short = cf["equation"][:38]
             print(f"  {cf['sigma']*100:>7.4g}%  {cf['method']:<44}  {eq_short:<38}  {cf['r2']:>8.4f}")
         print()
-        print("  NOTE: M4 (HybridSystemLLMNN) catastrophically failed on 'Newton's gravitational")
-        print("  force' at sigma=5% in the baseline run (R2=0.643). Verify this is reproducible")
-        print("  across multiple seeds and report it explicitly in the paper -- it is a genuine")
-        print("  failure mode that reviewers will ask about.")
 
     print(f"{'='*100}\n")
 
@@ -696,13 +865,13 @@ def _save_sweep_json(agg: dict, ts: str) -> Path:
             f"FATAL: noise sweep produced 0 equation records across all "
             f"sigma points {sigmas_present} — the inner benchmark run(s) "
             f"failed or timed out for every equation.  The shard file "
-            f"'{_RESULTS_DIR / f'noise_sweep_{ts}{_SHARD_TAG}.json'}' will "
+            f"'{_RESULTS_DIR / f'noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.json'}' will "
             f"NOT be written to prevent poisoning the downstream merge step.  "
             f"Check the run_comparative_suite_benchmark_v2.py output above "
             f"for the underlying failure cause (missing runner, API key "
             f"error, timeout, etc.)."
         )
-    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SHARD_TAG}.json"
+    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.json"
     with open(path, "w") as f:
         json.dump(agg, f, indent=2, default=str)
     print(f"  Saved noise sweep JSON  -> {path}")
@@ -715,11 +884,11 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
       section=aggregate    : one row per (method, sigma) -- summary stats
       section=per_equation : one row per (method, sigma, equation) -- individual R2
     """
-    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SHARD_TAG}.csv"
+    path = _RESULTS_DIR / f"noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.csv"
     fieldnames = [
         "section", "method", "noise_level_fraction", "noise_level_pct", "equation",
-        "median_r2", "mean_r2", "std_r2", "recovery_rate",
-        "n_success", "n_total", "threshold_used", "n_catastrophic",
+        "median_r2", "mean_r2", "std_r2", "recovery_rate", "exact_recovery_rate",
+        "n_success", "n_total", "n_nonfinite", "n_above_noise_ceiling", "threshold_used", "n_catastrophic", "seed",
         "r2", "rmse", "success", "catastrophic",
     ]
     with open(path, "w", newline="") as f:
@@ -740,6 +909,10 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
                     "mean_r2":        ms.get("mean_r2"),
                     "std_r2":         ms.get("std_r2"),
                     "recovery_rate":  ms.get("recovery_rate"),
+                    "exact_recovery_rate": ms.get("exact_recovery_rate"),
+                    "n_nonfinite":    ms.get("n_nonfinite"),
+                    "n_above_noise_ceiling": ms.get("n_above_noise_ceiling"),
+                    "seed":           agg.get("seed"),
                     "n_success":      ms.get("n_success"),
                     "n_total":        ms.get("n_total"),
                     "threshold_used": ms.get("threshold_used"),
@@ -809,17 +982,25 @@ def main() -> None:
             "Default: [3, 4]  (EnhancedHybridDeFi + HybridLLMNN-all-domains)."
         ),
     )
+    parser.add_argument("--threshold", type=float, default=_DEFAULT_THRESHOLD,
+                        help=f"Single R² recovery threshold used at EVERY sigma (default: {_DEFAULT_THRESHOLD}).")
+    parser.add_argument("--exact-threshold", type=float, default=_EXACT_THRESHOLD, dest="exact_threshold",
+                        help=f"Strict 'exact recovery' threshold, always reported (default: {_EXACT_THRESHOLD}).")
+    parser.add_argument("--legacy-thresholds", action="store_true", dest="legacy_thresholds",
+                        help="Use the old per-sigma threshold ladder (reproduction only).")
+    parser.add_argument("--seed", type=int, default=_seed_from_env(),
+                        help="Run seed; exported as PYSR_SEED/EXPERIMENT_SEED/NN_SEED (default: env or 42).")
     parser.add_argument("--threshold-noisy",     type=float, default=0.950,  dest="threshold_noisy",
-                        help="R² threshold for σ=5%% (default: 0.950).")
+                        help="DEPRECATED: only used with --legacy-thresholds.")
     parser.add_argument("--threshold-noiseless", type=float, default=0.999999, dest="threshold_noiseless",
-                        help="R² threshold for σ=0%% (default: 0.999999).")
+                        help="DEPRECATED: only used with --legacy-thresholds.")
     parser.add_argument(
         "--threshold-per-sigma", nargs="+", default=[], dest="threshold_per_sigma",
         metavar="SIGMA:VALUE",
         help=(
             "Per-sigma threshold overrides. "
             "Format: sigma:value  e.g.  0.005:0.999  0.01:0.998  0.10:0.990. "
-            "Defaults: 0.0->0.999999  0.005->0.995  0.01->0.990  0.05->0.950  0.10->0.900"
+            "Overrides --threshold for that sigma only (default: none, single policy)."
         ),
     )
     parser.add_argument("--samples",             type=int,   default=200)
@@ -840,6 +1021,11 @@ def main() -> None:
     parser.add_argument("--runner",              type=str,   default=None)
 
     args = parser.parse_args()
+
+    global _SEED_TAG
+    _SEED_TAG = f"_seed{args.seed}"
+    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     # ── CI per-task noise injection ───────────────────────────────────────────
     # The CI suppB dispatch sets NOISE_LEVEL (the numeric noise-level string
@@ -910,6 +1096,8 @@ def main() -> None:
         print(f"  Sigma MERGED    : {[f'{s*100:.4g}%' for s in sorted(existing_map)]}")
     print(f"  Methods         : {args.methods}  (3=EnhancedHybridDeFi, 4=HybridLLMNN)")
     print(f"  Samples         : {args.samples}")
+    print(f"  Seed            : {args.seed}  (PYSR/EXPERIMENT; NN={2024 + (args.seed - 42)})")
+    print(f"  Threshold       : {'legacy per-sigma' if args.legacy_thresholds else args.threshold}  (exact: {args.exact_threshold})")
     print(f"  NN seeds        : {args.nn_seeds}")
     print(f"  Method timeout  : {args.method_timeout}s")
     print(f"  PySR timeout    : {args.pysr_timeout}s")
@@ -942,21 +1130,14 @@ def main() -> None:
     print("  GENERATING NOISE SWEEP REPORT".center(80))
     print(f"{'='*80}")
 
-    # Build per-sigma threshold map
-    args_thresholds: dict = {
-        0.0:   args.threshold_noiseless,           # 0.999999
-        0.005: getattr(args, "threshold_sig0005", 0.995),
-        0.01:  getattr(args, "threshold_sig001",  0.990),
-        0.05:  args.threshold_noisy,               # 0.950
-        0.10:  getattr(args, "threshold_sig010",  0.900),
-    }
-    for token in getattr(args, "threshold_per_sigma", []):
-        try:
-            s, v = token.split(":")
-            args_thresholds[float(s)] = float(v)
-        except ValueError:
-            print(f"  WARNING: bad --threshold-per-sigma token: {token!r}")
-    agg = _aggregate_results(all_sigmas, result_paths, args_thresholds)
+    agg = _aggregate_results(
+        all_sigmas, result_paths,
+        threshold_fn=lambda sg: _resolve_threshold(sg, args),
+        exact_threshold=args.exact_threshold,
+        noise_n_test_hint=max(int(args.samples * 0.2), 20),
+    )
+    agg["seed"] = args.seed
+    agg["threshold_policy"] = "legacy_per_sigma" if args.legacy_thresholds else f"fixed_{args.threshold}"
     _print_noise_sweep_table(agg)
     agg["n_samples"] = args.samples   # FIX: record n so table captions need no hard-coded n=200
     _save_sweep_json(agg, ts)

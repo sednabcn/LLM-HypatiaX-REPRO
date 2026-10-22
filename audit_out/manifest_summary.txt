@@ -1,0 +1,231 @@
+254 unique files of 406
+
+                                                                                                             path                                                       error
+12             hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard0_rescued_1786497899.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+13             hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard1_rescued_1786493709.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+14             hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard2_rescued_1786493416.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+21  hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard0_rescued_1786497899.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+22  hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard1_rescued_1786493709.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+23  hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard2_rescued_1786493416.json  JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+label                                                                                               CONTAMINATED  NO_PROVENANCE  UNREADABLE
+group                                                                                                                                      
+ablation/exp1_ablation/_checkpoint_shard0.json                                                                 0              1           0
+ablation/exp1_ablation/_checkpoint_shard1.json                                                                 0              1           0
+ablation/exp1_ablation/_checkpoint_shard2.json                                                                 0              1           0
+ablation/exp1_ablation/_checkpoint_shard3.json                                                                 0              1           0
+ablation/exp1_ablation/exp1_ablation_checkpoint_shard0.json                                                    0              1           0
+ablation/exp1_ablation/exp1_ablation_checkpoint_shard1.json                                                    0              1           0
+ablation/exp1_ablation/exp1_ablation_checkpoint_shard2.json                                                    0              1           0
+ablation/exp1_ablation/exp1_ablation_checkpoint_shard3.json                                                    0              1           0
+ablation/exp1_ablation/exp1_ablation_results_shard0.json                                                       0              1           0
+ablation/exp1_ablation/exp1_ablation_results_shard1.json                                                       0              1           0
+ablation/exp1_ablation/exp1_ablation_results_shard2.json                                                       0              1           0
+ablation/exp1_ablation/exp1_ablation_results_shard3.json                                                       0              1           0
+ablation/exp1_ablation/exp1_ablation_run.log__shard0_rescued_1786497899.json                                   0              0           1
+ablation/exp1_ablation/exp1_ablation_run.log__shard1_rescued_1786493709.json                                   0              0           1
+ablation/exp1_ablation/exp1_ablation_run.log__shard2_rescued_1786493416.json                                   0              0           1
+ablation/exp1_ablation/exp1_instability_stats.json                                                             0              1           0
+ablation/exp1_ablation/exp1_instability_stats__shard0_rescued_1786497899.json                                  0              1           0
+ablation/exp1_ablation/exp1_instability_stats__shard1_rescued_1786493709.json                                  0              1           0
+ablation/exp1_ablation/exp1_instability_stats__shard2_rescued_1786493416.json                                  0              1           0
+ablation/exp1_ablation/exp1_rf01_mannwhitney.json                                                              0              1           0
+ablation/exp1_ablation/exp1_rf01_mannwhitney__shard0_rescued_1786497899.json                                   0              1           0
+ablation/exp1_ablation/instability_extrapolation_v2.csv__shard0_rescued_1786497899.json                        0              0           1
+ablation/exp1_ablation/instability_extrapolation_v2.csv__shard1_rescued_1786493709.json                        0              0           1
+ablation/exp1_ablation/instability_extrapolation_v2.csv__shard2_rescued_1786493416.json                        0              0           1
+ablation/exp1_ablation/n_paired_10                                                                             0              1           0
+ablation/exp1_ablation/provenance_map_exp1.json                                                                0              1           0
+ablation/exp1_ablation/provenance_map_exp1__shard0_rescued_1786497899.json                                     0              1           0
+ablation/exp1_ablation/provenance_map_exp1__shard1_rescued_1786493709.json                                     0              1           0
+ablation/exp1_ablation/provenance_map_exp1__shard2_rescued_1786493416.json                                     0              1           0
+ablation/exp1_ablation/wall_clock_flags.json                                                                   0              1           0
+ablation/exp1_ablation/wall_clock_flags__shard0_rescued_1786497899.json                                        0              1           0
+ablation/exp1_ablation/wall_clock_flags__shard1_rescued_1786493709.json                                        0              1           0
+ablation/exp1_ablation/wall_clock_flags__shard2_rescued_1786493416.json                                        0              1           0
+comparison_results/benchmark_results.json                                                                      0              1           0
+comparison_results/extrapolation/_checkpoint_shard0.json                                                       0              1           0
+comparison_results/extrapolation/benchmark_results_extrap.json                                                 0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_210917.json                                     1              0           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_211739.json                                     0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_212227.json                                     1              0           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_214013.json                                     1              0           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_214816.json                                     0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_215107.json                                     0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_220543.json                                     0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_221454.json                                     0              1           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_221750.json                                     1              0           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_223445.json                                     1              0           0
+comparison_results/extrapolation/protocol_core_extrap_20260812_224900.json                                     1              0           0
+comparison_results/feynman-tests/exp2                                                                          6              7           0
+comparison_results/feynman-tests/exp2_extrap                                                                  12             14           0
+comparison_results/feynman-tests/exp2_multi                                                                    3              8           0
+comparison_results/feynman-tests/exp2_pca_4060                                                                18             19           0
+comparison_results/feynman-tests/noise-sweep                                                                   5             10           0
+comparison_results/feynman-tests/sample-complexity                                                             6             12           0
+comparison_results/noise-noiseless/15                                                                          0             40           0
+comparison_results/noise-noiseless/15_pca                                                                      0              8           0
+comparison_results/noise-noiseless/noiseless                                                                   0             48           0
+comparison_results/sample_complexity_n0050_shared_checkpoint.json                                              0              1           0
+extrapolation-sparse_seeds_fallback/_checkpoint_shard0.json                                                    0              1           0
+extrapolation-sparse_seeds_fallback/_exp3_seed42_temp0p25_run1_partial.json                                    0              1           0
+extrapolation-sparse_seeds_fallback/exp3_nguyen12_seed42.json                                                  0              1           0
+extrapolation-sparse_seeds_fallback/exp3_nguyen12_seed42_temp0p25_run1.json                                    0              1           0
+extrapolation-sparse_seeds_fallback/fixc3_baseline.json                                                        0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_checkpoint_shard0.json                                         0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_checkpoint_shard1.json                                         0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_checkpoint_shard2.json                                         0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_checkpoint_shard3.json                                         0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_exp3_seed123_temp0p25_run1_partial.json                        0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_exp3_seed2024_temp0p25_run1_partial.json                       0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_exp3_seed777_temp0p25_run1_partial.json                        0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/_exp3_seed99_temp0p25_run1_partial.json                         0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed123_nshards02.json                            0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed123_temp0p25_run1_nshards02.json              0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed2024_nshards04.json                           0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed2024_temp0p25_run1_nshards04.json             0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed777_nshards03.json                            0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed777_temp0p25_run1_nshards03.json              0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed99_nshards01.json                             0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/exp3_nguyen12_seed99_temp0p25_run1_nshards01.json               0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/fixc3_baseline.json                                             0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/fixc3_baseline__shard0_rescued_1790683514.json                  0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/fixc3_baseline__shard1_rescued_1790684111.json                  0              1           0
+extrapolation-sparse_seeds_fallback/multi_seed/fixc3_baseline__shard2_rescued_1790683175.json                  0              1           0
+extrapolation/_checkpoint_shard0.json                                                                          0              1           0
+extrapolation/_exp3_seed42_temp0p25_run1_partial.json                                                          0              1           0
+extrapolation/exp3_nguyen12_seed42.json                                                                        0              1           0
+extrapolation/exp3_nguyen12_seed42_temp0p25_run1.json                                                          0              1           0
+extrapolation/fixc3_baseline.json                                                                              0              1           0
+extrapolation/multi_seed/_checkpoint_shard0.json                                                               0              1           0
+extrapolation/multi_seed/_checkpoint_shard1.json                                                               0              1           0
+extrapolation/multi_seed/_checkpoint_shard2.json                                                               0              1           0
+extrapolation/multi_seed/_checkpoint_shard3.json                                                               0              1           0
+extrapolation/multi_seed/_exp3_seed123_temp0p25_run1_partial.json                                              0              1           0
+extrapolation/multi_seed/_exp3_seed2024_temp0p25_run1_partial.json                                             0              1           0
+extrapolation/multi_seed/_exp3_seed777_temp0p25_run1_partial.json                                              0              1           0
+extrapolation/multi_seed/_exp3_seed99_temp0p25_run1_partial.json                                               0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json                                                  0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed123_temp0p25_run1_nshards02.json                                    0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json                                                 0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed2024_temp0p25_run1_nshards04.json                                   0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json                                                  0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed777_temp0p25_run1_nshards03.json                                    0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json                                                   0              1           0
+extrapolation/multi_seed/exp3_nguyen12_seed99_temp0p25_run1_nshards01.json                                     0              1           0
+extrapolation/multi_seed/fixc3_baseline.json                                                                   0              1           0
+extrapolation/multi_seed/fixc3_baseline__shard0_rescued_1790287113.json                                        0              1           0
+extrapolation/multi_seed/fixc3_baseline__shard1_rescued_1790284135.json                                        0              1           0
+extrapolation/multi_seed/fixc3_baseline__shard3_rescued_1790285065.json                                        0              1           0
+extrapolation_sparse_seed_off/_checkpoint_shard0.json                                                          0              1           0
+extrapolation_sparse_seed_off/_exp3_seed42_temp0p25_run1_partial.json                                          0              1           0
+extrapolation_sparse_seed_off/exp3_nguyen12_seed42.json                                                        0              1           0
+extrapolation_sparse_seed_off/exp3_nguyen12_seed42_temp0p25_run1.json                                          0              1           0
+extrapolation_sparse_seed_off/fixc3_baseline.json                                                              0              1           0
+extrapolation_sparse_seed_off/multi_seed/_checkpoint_shard0.json                                               0              1           0
+extrapolation_sparse_seed_off/multi_seed/_checkpoint_shard1.json                                               0              1           0
+extrapolation_sparse_seed_off/multi_seed/_checkpoint_shard2.json                                               0              1           0
+extrapolation_sparse_seed_off/multi_seed/_checkpoint_shard3.json                                               0              1           0
+extrapolation_sparse_seed_off/multi_seed/_exp3_seed123_temp0p25_run1_partial.json                              0              1           0
+extrapolation_sparse_seed_off/multi_seed/_exp3_seed2024_temp0p25_run1_partial.json                             0              1           0
+extrapolation_sparse_seed_off/multi_seed/_exp3_seed777_temp0p25_run1_partial.json                              0              1           0
+extrapolation_sparse_seed_off/multi_seed/_exp3_seed99_temp0p25_run1_partial.json                               0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed123_nshards02.json                                  0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed123_temp0p25_run1_nshards02.json                    0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed2024_nshards04.json                                 0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed2024_temp0p25_run1_nshards04.json                   0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed777_nshards03.json                                  0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed777_temp0p25_run1_nshards03.json                    0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed99_nshards01.json                                   0              1           0
+extrapolation_sparse_seed_off/multi_seed/exp3_nguyen12_seed99_temp0p25_run1_nshards01.json                     0              1           0
+extrapolation_sparse_seed_off/multi_seed/fixc3_baseline.json                                                   0              1           0
+extrapolation_sparse_seed_off/multi_seed/fixc3_baseline__shard0_rescued_1790287113.json                        0              1           0
+extrapolation_sparse_seed_off/multi_seed/fixc3_baseline__shard1_rescued_1790284135.json                        0              1           0
+extrapolation_sparse_seed_off/multi_seed/fixc3_baseline__shard3_rescued_1790285065.json                        0              1           0
+figures/_checkpoint_shard0.json                                                                                0              1           0
+five_systems/exp1_five/_checkpoint_shard0.json                                                                 0              1           0
+five_systems/exp1_five/exp1_five_checkpoint.json                                                               0              1           0
+five_systems/exp1_five/exp1_five_extrapolation.json                                                            0              1           0
+five_systems/exp1_five/exp1_five_performance.json                                                              0              1           0
+five_systems/exp1_five/exp1_five_results.json                                                                  0              1           0
+five_systems/exp1_five/provenance_map_exp1_five.json                                                           0              1           0
+five_systems/exp2_five/_checkpoint_shard0.json                                                                 0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_092701.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_093235.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_093946.json                                            1              0           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_095313.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_095921.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_100439.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_101526.json                                            1              0           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_102054.json                                            1              0           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_102817.json                                            0              1           0
+five_systems/exp2_five/protocol_core_noiseless_20260812_103650.json                                            0              1           0
+fixc3_baseline.json                                                                                            0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/_exp3_seed123_temp0p25_run1_partial.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/_exp3_seed123_temp0p25_run2_partial.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/_exp3_seed123_temp0p25_run3_partial.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/_exp3_seed123_temp0p25_run4_partial.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/_exp3_seed123_temp0p25_run5_partial.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/exp3_nguyen12_seed123_temp0p25_run1.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/exp3_nguyen12_seed123_temp0p25_run2.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/exp3_nguyen12_seed123_temp0p25_run3.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/exp3_nguyen12_seed123_temp0p25_run4.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0.25/exp3_nguyen12_seed123_temp0p25_run5.json                                   0              1           0
+fixn3_item_ii/exp3_seed123_temp0/_exp3_seed123_temp0_run1_partial.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/_exp3_seed123_temp0_run2_partial.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/_exp3_seed123_temp0_run3_partial.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/_exp3_seed123_temp0_run4_partial.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/_exp3_seed123_temp0_run5_partial.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/exp3_nguyen12_seed123_temp0_run1.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/exp3_nguyen12_seed123_temp0_run2.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/exp3_nguyen12_seed123_temp0_run3.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/exp3_nguyen12_seed123_temp0_run4.json                                         0              1           0
+fixn3_item_ii/exp3_seed123_temp0/exp3_nguyen12_seed123_temp0_run5.json                                         0              1           0
+hybrid_llm_nn/all_domains/_checkpoint_shard0.json                                                              0              1           0
+hybrid_llm_nn/all_domains/hybrid_llm_nn_all_domains_20260812_204723.json                                       0              1           0
+hybrid_pysr/defi/_checkpoint_shard0.json                                                                       0              1           0
+hybrid_pysr/defi/extrapolation_73cases_enhanced.json                                                           0              1           0
+hybrid_pysr/defi/hybrid_defi_20260812_150129.json                                                              0              1           0
+issue2b_experiment/31662432869/llm_freeze_cache.json                                                           1              0           0
+issue2b_experiment/31662432869/phaseA_run1                                                                     1              0           0
+issue2b_experiment/31662432869/phaseA_run2                                                                     1              0           0
+issue2b_experiment/31662432869/phaseA_run3                                                                     1              0           0
+issue2b_experiment/31662432869/phaseB_full                                                                     1              0           0
+portfolio_variance_audit/_checkpoint_shard0.json                                                               0              1           0
+portfolio_variance_audit/_checkpoint_shard1.json                                                               0              1           0
+portfolio_variance_audit/_checkpoint_shard2.json                                                               0              1           0
+portfolio_variance_audit/_checkpoint_shard3.json                                                               0              1           0
+portfolio_variance_audit/_checkpoint_shard4.json                                                               0              1           0
+portfolio_variance_audit/fixc3_baseline.json                                                                   0              1           0
+portfolio_variance_audit/fixc3_baseline__shard0_rescued_1791099881.json                                        0              1           0
+portfolio_variance_audit/fixc3_baseline__shard1_rescued_1791099893.json                                        0              1           0
+portfolio_variance_audit/fixc3_baseline__shard3_rescued_1791099877.json                                        0              1           0
+portfolio_variance_audit/fixc3_baseline__shard4_rescued_1791099928.json                                        0              1           0
+portfolio_variance_audit/hypatiax_defi_benchmark_v3c2_results.json                                             0              1           0
+portfolio_variance_audit/hypatiax_defi_benchmark_v3c3_results.json                                             0              1           0
+portfolio_variance_audit/portfolio_variance_defi_seed_sweep_seed123.json                                       0              1           0
+portfolio_variance_audit/portfolio_variance_defi_seed_sweep_seed2024.json                                      0              1           0
+portfolio_variance_audit/portfolio_variance_defi_seed_sweep_seed42.json                                        0              1           0
+portfolio_variance_audit/portfolio_variance_defi_seed_sweep_seed777.json                                       0              1           0
+portfolio_variance_audit/portfolio_variance_defi_seed_sweep_seed99.json                                        0              1           0
+portfolio_variance_audit/portfolio_variance_seed_sweep.json                                                    0              1           0
+
+group
+comparison_results/feynman-tests/sample-complexity                            66
+comparison_results/feynman-tests/noise-sweep                                  55
+comparison_results/feynman-tests/exp2_pca_4060                                33
+comparison_results/feynman-tests/exp2_extrap                                  22
+comparison_results/feynman-tests/exp2                                         11
+issue2b_experiment/31662432869/phaseA_run2                                     4
+comparison_results/feynman-tests/exp2_multi                                    4
+issue2b_experiment/31662432869/phaseA_run3                                     4
+issue2b_experiment/31662432869/phaseA_run1                                     4
+issue2b_experiment/31662432869/phaseB_full                                     4
+comparison_results/extrapolation/protocol_core_extrap_20260812_210917.json     3
+comparison_results/extrapolation/protocol_core_extrap_20260812_214013.json     2
+five_systems/exp2_five/protocol_core_noiseless_20260812_102054.json            2
+comparison_results/extrapolation/protocol_core_extrap_20260812_224900.json     2
+comparison_results/extrapolation/protocol_core_extrap_20260812_223445.json     2
+Name: is_hardcoded_true, dtype: int64
+
+46 files record is_hardcoded=false only

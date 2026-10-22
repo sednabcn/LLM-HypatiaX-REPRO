@@ -172,6 +172,26 @@ class DiscoveryMode(Enum):
 
 
 # ---------------------------------------------------------------------------
+# A3: single R² threshold policy — exactly two values used everywhere.
+#   R2_STANDARD : "good fit" (acceptance, standard early-stop)
+#   R2_EXACT    : "exact recovery" (transcendental early-stop, overfit flag)
+# ---------------------------------------------------------------------------
+R2_STANDARD = 0.99
+R2_EXACT = 0.999999
+
+
+def _r2_np(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """Plain numpy R² (B3: no sklearn dependency for scoring)."""
+    y_true = np.asarray(y_true, dtype=np.float64)
+    y_pred = np.asarray(y_pred, dtype=np.float64)
+    ss_res = float(np.sum((y_true - y_pred) ** 2))
+    ss_tot = float(np.sum((y_true - np.mean(y_true)) ** 2))
+    if ss_tot <= 1e-24 * max(float(np.sum(y_true ** 2)), 1e-300):
+        return 1.0 if ss_res <= 1e-24 * max(float(np.sum(y_true ** 2)), 1e-300) else float("-inf")
+    return 1.0 - ss_res / ss_tot
+
+
+# ---------------------------------------------------------------------------
 # PROD-1: Cached quality check (unchanged from v4.1-PROD).
 # ---------------------------------------------------------------------------
 @lru_cache(maxsize=256)
@@ -188,7 +208,7 @@ def _cached_quality(
     is_overfit = False
     warnings: list[str] = []
 
-    if complexity > complexity_threshold and r2_rounded < 0.999:
+    if complexity > complexity_threshold and r2_rounded < R2_EXACT:
         is_overfit = True
         warnings.append(f"High complexity ({complexity}) but R2={r2_rounded:.4f}")
 
@@ -228,6 +248,71 @@ def _to_serialisable(obj: Any) -> Any:
     if isinstance(obj, np.floating):
         return float(obj)
     return obj
+
+
+def _make_original_space_predictor(
+    expr_sym,
+    var_names,
+    safe_names,
+    x_log_flags,
+    y_log,
+    modules,
+):
+    """
+    Build predict(X_raw) -> y_raw for a formula fitted in (possibly) log space.
+
+    FIX-C4: discover() may fit on signed-log10 features and/or a signed-log10
+    target.  Evaluation (RMSE here, OOD R² in exp1_ablation) must therefore
+        1. apply the SAME per-column x transform discover() applied,
+        2. evaluate the formula,
+        3. invert the y transform ONLY if y itself was log-scaled
+           (the old code inverted whenever any X column was scaled).
+    Returns None — so the caller fails loudly — when the formula references
+    symbols that are not input columns (e.g. engineered ratio features).
+
+    Self-contained (module level, imports sympy locally) so it can be unit
+    tested in isolation.
+    """
+    import numpy as _np
+    import sympy as _sp
+
+    names = list(safe_names) if safe_names else list(var_names)
+    syms = [_sp.Symbol(n) for n in names]
+    if set(expr_sym.free_symbols) - set(syms):
+        return None
+
+    def _inv(x):
+        with _np.errstate(divide="ignore", invalid="ignore"):
+            return 1.0 / x
+
+    _extra = {
+        "square": _np.square, "cube": lambda x: x ** 3, "inv": _inv,
+        "pow": _np.power, "Abs": _np.abs,
+    }
+    _mods = [_extra] + list(modules or ["numpy"])
+    _func = _sp.lambdify(syms, expr_sym, modules=_mods)
+    _flags = list(x_log_flags or []) + [False] * max(0, len(names) - len(x_log_flags or []))
+    _y_log = bool(y_log)
+
+    def predict(X):
+        Xr = _np.asarray(X, dtype=float)
+        cols = []
+        for i in range(len(names)):
+            c = Xr[:, i]
+            if _flags[i]:
+                c = _np.sign(c) * _np.log10(_np.abs(c) + 1.0)
+            cols.append(c)
+        with _np.errstate(all="ignore"):
+            out = _np.asarray(_func(*cols), dtype=_np.float64)
+            if out.ndim == 0:
+                out = _np.full(Xr.shape[0], float(out))
+            if _y_log:
+                # clip exponent to float64-safe range (RC-2)
+                e = _np.clip(_np.abs(out), 0.0, 308.0)
+                out = _np.sign(out) * (_np.power(10.0, e) - 1.0)
+        return out
+
+    return predict
 
 
 ENGINE_VERSION = "5.4"
@@ -572,7 +657,6 @@ class HybridDiscoverySystem:
     def _detect_rational_pattern(self, X: np.ndarray, y: np.ndarray) -> bool:
         """Detect if data likely follows a rational/saturation pattern (unchanged)."""
         from sklearn.linear_model import LinearRegression
-        from sklearn.metrics import r2_score as _r2
 
         if X.shape[1] < 1 or np.any(y <= 0):
             return False
@@ -583,7 +667,7 @@ class HybridDiscoverySystem:
                 if np.any(xi <= 0):
                     continue
                 inv_x = 1.0 / xi
-                r2 = _r2(
+                r2 = _r2_np(
                     inv_y,
                     LinearRegression()
                     .fit(inv_x.reshape(-1, 1), inv_y)
@@ -700,9 +784,9 @@ class HybridDiscoverySystem:
                             _inv_injected = True
 
                 _early_stop_r2 = (
-                    0.9999
+                    R2_EXACT
                     if getattr(self.symbolic_engine.config, "use_transcendental_compositions", False)
-                    else 0.95
+                    else R2_STANDARD
                 )
                 if r2 >= _early_stop_r2 and not quality["is_overfit"]:
                     logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
@@ -907,7 +991,7 @@ class HybridDiscoverySystem:
             # search space.  No Julia fork required — constraints are passed as
             # standard PySR kwargs via pysr_kwargs.update(kwargs) (line 1203 of
             # symbolic_engine.py).
-            _WS_THRESHOLD = -1.0   # PIN-3: disabled (set to 0.95 to re-enable)
+            _WS_THRESHOLD = -1.0   # PIN-3: disabled (set to R2_STANDARD to re-enable)
             _p1_r2 = discovery_result.get("r2_score", 0.0)
             _p1_expr = discovery_result.get("expression", "")
 
@@ -1026,7 +1110,7 @@ class HybridDiscoverySystem:
         if self.discovery_mode == DiscoveryMode.STRICT:
             accepted = validation_score >= min_validation_score
         elif self.discovery_mode == DiscoveryMode.CALIBRATED:
-            accepted = r2_score >= 0.99 and validation_score >= 30.0
+            accepted = r2_score >= R2_STANDARD and validation_score >= 30.0
             if accepted:
                 accept_reason = "Calibrated physics acceptance (constants absorbed)"
 
@@ -1111,6 +1195,8 @@ class HybridDiscoverySystem:
         _X_orig = X
         _y_orig = y
         _log_scaled = False
+        _x_log_flags: list[bool] = [False] * X.shape[1]   # FIX-C4: exact per-column record
+        _y_log_flag = False                               # FIX-C4: was y itself log-scaled?
         _LOG_THRESHOLD = 4  # log10 OOM (v5.2: was 6, too strict for gravity/EM)
         _ABS_MAG_THRESHOLD = 1e5  # trigger if X column median abs > this
 
@@ -1149,16 +1235,22 @@ class HybridDiscoverySystem:
                     logger.info("[FIX-D] Target y log10-scaled (extreme output range)")
                 X = X_scaled
                 y = y_fit
+                _x_log_flags = [bool(f) for f in _needs_log]
+                _y_log_flag = bool(_y_needs_log)
                 logger.info("[FIX-D] Extreme-scale log transform applied")
         except Exception as _fd_err:
             logger.warning(f"[FIX-D] Scale detection failed ({_fd_err}) — using raw data")
             X, y = _X_orig, _y_orig
             _log_scaled = False
+            _x_log_flags = [False] * _X_orig.shape[1]
+            _y_log_flag = False
 
         # Store originals so FIX-A can compute RMSE in original (unscaled) units.
         self._discover_X_orig = _X_orig
         self._discover_y_orig = _y_orig
         self._discover_scale_log = _log_scaled
+        self._discover_x_log_flags = _x_log_flags
+        self._discover_y_log = _y_log_flag
 
         # FIX-POW: enable "pow" only when every feature value is non-negative
         # (evaluated on post-scaled X so log-transform is already factored in).
@@ -1324,7 +1416,11 @@ class HybridDiscoverySystem:
                     # original units when the engine operated in log-space.
                     # Clip the exponent to float64-safe range (≤308) BEFORE
                     # np.power to prevent overflow → inf → dropped → NaN RMSE.
-                    if _scale_log:
+                    # FIX-C4: invert ONLY when y itself was log-scaled.  The old
+                    # `if _scale_log:` also fired when only X columns were
+                    # scaled, corrupting predictions that were already in raw
+                    # y units.
+                    if getattr(self, "_discover_y_log", _scale_log):
                         _exp_safe = np.clip(np.abs(_y_pred), 0.0, 308.0)
                         _y_pred = np.sign(_y_pred) * (np.power(10.0, _exp_safe) - 1.0)
 
@@ -1398,10 +1494,22 @@ class HybridDiscoverySystem:
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 "llm_mode": discovery.get("llm_mode", self.llm_mode),
+                # B2: explicit provenance so result checkers can verify the
+                # LLM actually participated, and that no hardcoded-formula
+                # bypass was used (this engine has none: always "none").
+                "llm_called": bool(
+                    self.llm_mode != "none"
+                    and discovery.get("llm_mode") not in (None, "", "none")
+                ),
+                "bypass_kind": "none",
                 "validations": 1 if validation else 0,
                 "validation_score": validation.get("total_score", 0.0),
                 # FIX-D: flag log-space transform
                 "scale_log": _scale_log,
+                # FIX-C4: exact transform record so callers can evaluate OOD
+                # data identically (see _make_original_space_predictor).
+                "x_log_flags": list(getattr(self, "_discover_x_log_flags", [])),
+                "y_log": bool(getattr(self, "_discover_y_log", False)),
                 "error": None,
             }
 
@@ -1423,8 +1531,12 @@ class HybridDiscoverySystem:
                 "variable_names": var_names,
                 "strategy": "error",
                 "llm_mode": "none",
+                "llm_called": False,
+                "bypass_kind": "none",
                 "validations": 0,
                 "scale_log": False,
+                "x_log_flags": [False] * len(var_names),
+                "y_log": False,
                 "error": str(exc)[:200],
             }
 

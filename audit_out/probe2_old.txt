@@ -1,0 +1,117 @@
+11:                 exp1_rf01_significant[_seedN].tex
+47:import signal
+102:RF01_SIGTEX  = OUTPUT_DIR / f"exp1_rf01_significant{_seed_suffix}.tex"
+495:        "pow": np.power, "sign": np.sign,
+518:        _PYSR_VALID_PARAMS = set(inspect.signature(PySRRegressor.__init__).parameters.keys())
+570:        self._ok      = hasattr(signal, "SIGALRM")
+572:    def _handler(self, signum, frame):
+577:            signal.signal(signal.SIGALRM, self._handler)
+578:            signal.alarm(self.seconds)
+583:            signal.alarm(0)
+    y_pred = np.asarray(y_pred, dtype=np.float64)
+    if not np.all(np.isfinite(y_true)):
+        raise ValueError("non-finite y_true passed to _safe_r2")
+    if not np.all(np.isfinite(y_pred)):
+        return float("-inf")
+    if len(y_true) < 2:
+        return float("nan")
+    ss_res = float(np.sum((y_true - y_pred) ** 2))
+    ss_tot = float(np.sum((y_true - np.mean(y_true)) ** 2))
+    scale2 = float(np.mean(y_true ** 2)) * len(y_true)   # sum(y^2) scale
+    if ss_tot <= 1e-24 * max(scale2, 1e-300):            # relative: constant target
+        return 1.0 if ss_res <= 1e-24 * max(scale2, 1e-300) else float("-inf")
+    return float(1 - ss_res / ss_tot)
+
+
+def _full_math_namespace() -> dict:
+    """Numpy namespace covering every operator PySR/the engine may emit."""
+    def _inv(x):
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return 1.0 / x
+    return {
+620:def run_condition(eq, condition, seed=42, niterations=None,
+943:def run_experiment():
+1057:    print("EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)")
+1177:def run_rf01(all_results: dict) -> None:
+1541:def run_instability_stats(all_results: dict) -> None:
+1585:def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
+102:  echo "Python: $(python3 --version)"
+103:  python3 -c "import pysr; print(\"PySR:\", pysr.__version__)" || { echo "ERROR: pysr not installed"; exit 1; }
+104:  python3 -c "import torch; print(\"PyTorch:\", torch.__version__)"
+105:  python3 -c "import anthropic; print(\"anthropic SDK: ok\")"
+106:  python3 - <<'SDKCHECK'
+114:  python3 -c "import sympy; print(\"SymPy:\", sympy.__version__)"
+115:  python3 -c "import scipy; print(\"SciPy:\", scipy.__version__)"
+116:  python3 -c "import sklearn; print(\"scikit-learn:\", sklearn.__version__)" || { echo "ERROR: scikit-learn not installed"; exit 1; }
+117:  python3 -c "import yaml; print(\"PyYAML: ok\")" || { echo "ERROR: pyyaml not installed"; exit 1; }
+118:  python3 -c "import matplotlib; print(\"matplotlib:\", matplotlib.__version__)" || { echo "ERROR: matplotlib not installed"; exit 1; }
+119:  python3 -c "import pmlb; print(\"pmlb: ok\")" || { echo "ERROR: pmlb not installed"; exit 1; }
+120:  python3 -c "import seaborn; print(\"seaborn:\", seaborn.__version__)" 2>/dev/null || {
+121:    echo "WARNING: seaborn not found — installing now (required by statistical_analysis.py)"
+122:    python3 -m pip install --quiet seaborn || { echo "ERROR: seaborn install failed"; exit 1; }
+123:    python3 -c "import seaborn; print(\"seaborn: installed\", seaborn.__version__)"
+138:    python3 -c "
+149:  _EXTRAP_DEST="${EXPERIMENTS_DIR}/extrap_r2_far.py"
+151:    echo "extrap_r2_far.py: OK at ${_EXTRAP_DEST}"
+155:        "${SCRIPTS_DIR}/extrap_r2_far.py" \
+156:        "${REPO_ROOT}/extrap_r2_far.py" \
+157:        "${CORE_DIR}/extrap_r2_far.py" \
+158:        "${ANALYSIS_DIR}/extrap_r2_far.py"; do
+161:          && echo "extrap_r2_far.py: copied ${_src} → ${_EXTRAP_DEST}" \
+167:      echo "ERROR: extrap_r2_far.py not found — exp2_feynman_extrap will produce null extrap_r2_far values."
+169:      echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
+181:  _T1='${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py'
+184:      echo '::error::Ground-truth leak pattern detected in hypatiax_defi_benchmark_v3c.py _generate_llm_formula prompt.'
+192:  _T2='hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py'
+195:      echo '::error::Ground-truth leak pattern detected in hybrid_system_llm_nn_all_domains.py _generate_prompt fallback.'
+203:  _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
+206:      echo '::error::_specialized_prompt call site reintroduced in hybrid_system_nn_defi_domain.py.'
+213:    echo 'WARNING: hybrid_system_nn_defi_domain.py not found — skipping that part of gt_leak_guard.'
+227:  python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
+231:  python3 -c 'import seaborn' 2>/dev/null || \
+232:    python3 -m pip install --quiet seaborn || \
+233:    { echo 'ERROR: seaborn install failed — statistical_analysis.py will crash'; exit 1; }
+235:  python3 statistical_analysis.py \
+237:  || echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'
+264:  # noiseless/defi dir. hypatiax_defi_benchmark_v3c.py supports --output-dir,
+271:    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
+280:  #  this bash -c has no pipefail, so the tee exit status hid the python exit status.
+288:  echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
+296:      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
+298:  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
+311:  # now only rescues portfolio_variance_v3c2.py / comparison_FIXED_* output
+356:run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
+363:  # paper numbers need all seeds at once, so they are built afterwards by generate_tables.py.
+377:        python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
+379:    ) || { echo 'ERROR: portfolio_variance_v3c2.py failed — see output above'; exit 1; }
+399:      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
+401:  ) || { echo 'ERROR: portfolio_variance_v3c2.py failed — see portfolio_run.log'; exit 1; }
+428:    python3 '${EXPERIMENTS_DIR}/exp1_ablation.py' \
+430:  || echo 'WARNING: exp1_ablation.py exited non-zero — check exp1_ablation_run.log'
+466:    python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
+468:  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+503:  echo \"[exp1_pca] Running hypatiax_defi_benchmark_pca.py (all 74 DeFi cases, PCA 40/60 split) — \${#_SEED_ARR[@]} seed worker(s): \${_SEEDS_CS
+512:        python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
+548:  python3 - <<'PYEOF'
+558:    'script':             'hypatiax_defi_benchmark_pca.py',
+564:    'generated_by':       'run_all.sh exp1_pca via hypatiax_defi_benchmark_pca.py',
+572:  python3 - <<'PYEOF_SUMMARY'
+667:  python3 - <<'PYEOF_FINGERPRINT_1'
+697:          'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
+736:  echo '[exp1b_pca] Running hypatiax_defi_benchmark_pca.py (portfolio seed sweep, PCA 40/60 split)'
+738:    python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_pca.py' \\
+747:  # portfolio_variance_v3c2.py exists) — reuse it here against the PCA
+749:  # portfolio_variance_v3c2.py discovers its input benchmark JSON via the
+755:    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in '\"\${_PCA15_DIR}\"'.'
+756:    echo '         hypatiax_defi_benchmark_pca.py did not produce a results file at the'
+759:    echo '[exp1b_pca] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON_PCA}\"
+760:    # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
+765:      python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
+767:      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+788:  python3 - <<'PYEOF_DISC_1B'
+799:    'script':             'hypatiax_defi_benchmark_pca.py',
+805:    'generated_by':       'run_all.sh exp1b_pca via hypatiax_defi_benchmark_pca.py',
+813:  python3 - <<'PYEOF_SUMMARY_1B'
+905:  python3 - <<'PYEOF_FINGERPRINT_1B'
+935:          'see hypatiax_defi_benchmark_pca.py _compute_augment_plan/_apply_augment_plan.')
+969:      python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \

@@ -41,6 +41,23 @@ env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 
+def _flag(name: str) -> bool:
+    """True when env var `name` is set to 1/true/yes.
+
+    B2 switches:
+      HYPATIAX_DISABLE_HARDCODED=1     -> no hardcoded / OLS-fitted formula return
+      HYPATIAX_DISABLE_PROMPT_HINTS=1  -> no ground-truth formula/code embedded in
+                                          prompts, no data-derived parameter hints
+    Set BOTH for a clean live-LLM run.
+    """
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
+# Descriptions of hardcoded branches, used to tag provenance (bypass_kind).
+_GT_BRANCHES = {"gaussian", "planck", "bose", "nernst", "clausius", "lorentz", "fourier", "zeeman"}
+_OLS_BRANCHES = {"logistic", "michaelis", "allometric", "arrhenius"}
+
+
 def _create_message_deterministic(client, **kwargs):
     """Make one direct Anthropic API call.
 
@@ -96,11 +113,11 @@ class PureLLMBaseline:
     """Fixed Pure LLM baseline with liquidation domain corrections."""
 
     # FIX-ITEM1-MODEL-MISMATCH (consolidation report §4 item 1): this
-    # default was "claude-sonnet-5" — a different, unrelated model string
+    # default was an unrelated "sonnet-5" string — a different, unrelated model string
     # from the one the hybrid arm's own inline LLM call uses
     # (_HYBRID_LLM_MODEL_NAME / model="claude-sonnet-4-6" in both
     # hypatiax_defi_benchmark_v4.py and hypatiax_defi_benchmark_v4_pca.py).
-    # When "claude-sonnet-4-5" -> "claude-sonnet-4-6" (Fix 13) was applied,
+    # When the old Sonnet 4.5 id -> the Sonnet 4.6 id (Fix 13) was applied,
     # it only touched the two benchmark scripts' inline hybrid call sites —
     # this module's own default was never part of that change and drifted.
     # An invalid/unavailable model string causes the API to reject the
@@ -336,24 +353,41 @@ class PureLLMBaseline:
         # equations whose functional form is known.  Results go into metadata
         # so _try_hardcoded_formula can embed them without an LLM call.
         metadata = dict(metadata or {})
-        if X is not None and y is not None and X.shape[1] == 1:
+        disable_hc = _flag("HYPATIAX_DISABLE_HARDCODED")
+        disable_hints = _flag("HYPATIAX_DISABLE_PROMPT_HINTS")
+        # B2: strip any pre-existing leaked stats/OLS keys from caller metadata
+        if disable_hints:
+            metadata.pop("_x_stats", None)
+            metadata.pop("_y_stats", None)
+        if disable_hc:
+            for _k in ("_ols_r", "_ols_K", "_ols_Vmax", "_ols_Km",
+                       "_ols_a", "_ols_b", "_ols_A", "_ols_Ea"):
+                metadata.pop(_k, None)
+        # Data-derived stats/OLS are only computed when something may use them.
+        if (X is not None and y is not None and X.shape[1] == 1
+                and not (disable_hc and disable_hints)):
             x_col = X[:, 0]
-            # x/y stats (used by prompt fallback)
-            metadata.setdefault("_x_stats", {
-                (variable_names[0] if variable_names else "x"): {
-                    "min":  float(x_col.min()),
-                    "max":  float(x_col.max()),
-                    "mean": float(x_col.mean()),
-                }
-            })
-            metadata.setdefault("_y_stats", {
-                "mean":  float(abs(y).mean()),
-                "std":   float(y.std()),
-                "max":   float(y.max()),
-                "min":   float(y.min()),
-                "range": float(y.max() - y.min()),
-            })
-            # Equation-specific OLS
+            # x/y stats (used by prompt fallback) -- a data leak into the prompt,
+            # so skipped when prompt hints are disabled.
+            if not disable_hints:
+                metadata.setdefault("_x_stats", {
+                    (variable_names[0] if variable_names else "x"): {
+                        "min":  float(x_col.min()),
+                        "max":  float(x_col.max()),
+                        "mean": float(x_col.mean()),
+                    }
+                })
+                metadata.setdefault("_y_stats", {
+                    "mean":  float(abs(y).mean()),
+                    "std":   float(y.std()),
+                    "max":   float(y.max()),
+                    "min":   float(y.min()),
+                    "range": float(y.max() - y.min()),
+                })
+        if (X is not None and y is not None and X.shape[1] == 1
+                and not disable_hc):
+            x_col = X[:, 0]
+            # Equation-specific OLS (fitted to y -> only for the hardcoded path)
             if ("logistic growth" in desc_lower or
                     ("growth rate" in desc_lower and "logistic" in desc_lower)):
                 try:
@@ -418,6 +452,7 @@ class PureLLMBaseline:
                                 metadata["_ols_A"]  = A_cand
                 except Exception:
                     pass
+        self._current_domain = domain
         hardcoded = self._try_hardcoded_formula(
             description, desc_lower, variable_names or [], metadata or {}
         )
@@ -448,6 +483,11 @@ class PureLLMBaseline:
             or ("arrhenius" in desc_lower and not _is_variant)
             or ("rate constant" in desc_lower and len(variable_names or []) == 1 and not _is_variant)
         )
+        # B2: specialized prompts embed the exact formula AND exact Python code
+        # (liquidation, leverage, collateral, Kelly, capital efficiency, ES) --
+        # that is ground truth in the prompt, so they are disabled together
+        # with the other prompt hints.
+        use_specialized = use_specialized and not disable_hints
 
         if use_specialized:
             prompt = self._generate_specialized_prompt(
@@ -537,6 +577,14 @@ class PureLLMBaseline:
             content = text_blocks[0].text
             parsed = self._parse_response(content)
 
+            # Provenance: did the prompt itself carry the answer?
+            hint_fired = bool(
+                use_specialized
+                or "MANDATORY CODE TEMPLATE" in prompt
+                or "FORMULA HINT" in prompt
+            )
+            _usage = getattr(response, "usage", None)
+
             return {
                 "method": "pure_llm",
                 "model": self.model,
@@ -550,6 +598,19 @@ class PureLLMBaseline:
                 "explanation": parsed.get("explanation", "N/A"),
                 "raw_response": content,
                 "specialized_prompt": use_specialized,
+                # --- B2 provenance ---
+                "llm_called": True,
+                "bypass_kind": "prompt_embedded_gt" if hint_fired else "live",
+                "bypass_flags": {
+                    "disable_hardcoded": disable_hc,
+                    "disable_prompt_hints": disable_hints,
+                },
+                "formula_present": parsed.get("python", "N/A") not in ("N/A", ""),
+                "stop_reason": getattr(response, "stop_reason", None),
+                "usage": {
+                    "in": getattr(_usage, "input_tokens", None),
+                    "out": getattr(_usage, "output_tokens", None),
+                },
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
@@ -564,16 +625,31 @@ class PureLLMBaseline:
                 "error": str(e),
                 "error_type": type(e).__name__,
                 "error_repr": repr(e),
+                # --- B2 provenance: keys always present so rows are auditable ---
+                "formula": "",
+                "python_code": "",
+                "llm_called": True,
+                "bypass_kind": "live",
+                "bypass_flags": {
+                    "disable_hardcoded": disable_hc,
+                    "disable_prompt_hints": disable_hints,
+                },
+                "formula_present": False,
                 "timestamp": datetime.now().isoformat(),
             }
 
     def _make_formula_dict(self, description, domain, formula_str, latex_str, python_code, explanation):
         """Return a result dict in the same shape as generate_formula() output."""
+        # B2: keep the caller's real domain (the branch label would break
+        # per-domain aggregation); keep the label separately for audit.
+        real_domain = getattr(self, "_current_domain", None) or domain
+        bypass_kind = "ols_fit" if "analytically fitted" in explanation else "ground_truth"
         return {
             "method": "pure_llm_hardcoded",
             "model": "hardcoded",
             "description": description,
-            "domain": domain,
+            "domain": real_domain,
+            "branch_domain_label": domain,
             "formula": formula_str,
             "latex": latex_str,
             "python_code": python_code,
@@ -582,6 +658,16 @@ class PureLLMBaseline:
             "explanation": explanation,
             "raw_response": "hardcoded",
             "specialized_prompt": True,
+            # --- B2 provenance ---
+            "llm_called": False,
+            "bypass_kind": bypass_kind,
+            "bypass_flags": {
+                "disable_hardcoded": False,
+                "disable_prompt_hints": _flag("HYPATIAX_DISABLE_PROMPT_HINTS"),
+            },
+            "formula_present": True,
+            "stop_reason": None,
+            "usage": {"in": 0, "out": 0},
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -616,16 +702,11 @@ class PureLLMBaseline:
                     "/ (np.sqrt(2.0 * np.pi) * sigma)\n"
                 )
             else:
-                # Generic fallback for any 2-var (x, sigma) form
-                if len(variable_names) == 2:
-                    v0, v1 = variable_names[0], variable_names[1]
-                    python_code = (
-                        f"def formula({v0}, {v1}):\n"
-                        f"    return np.exp(-{v0}**2 / (2.0 * {v1}**2)) "
-                        f"/ (np.sqrt(2.0 * np.pi) * {v1})\n"
-                    )
-                else:
-                    return None
+                # B2: generic 2-var fallback REMOVED. It matched any 2-variable
+                # description containing "probability density" (e.g. a DeFi VaR
+                # case) and silently hardcoded a Gaussian PDF. Only the exact
+                # protocol variable set {theta, sigma} may bypass the LLM.
+                return None
             return self._make_formula_dict(
                 description, "feynman_probability",
                 "exp(-theta^2/(2*sigma^2)) / (sqrt(2*pi)*sigma)",
@@ -1434,6 +1515,12 @@ Arrhenius: temperature dependence of rate constant. R=8.314 is fixed."""
                 "  The prefactor 1/(sigma*sqrt(2*pi)) is MANDATORY — omitting it gives R²≈-1937."
             )
 
+        # B2: the hints above spell out the target formula -> ground truth in the
+        # prompt. Drop them when HYPATIAX_DISABLE_PROMPT_HINTS is set.
+        # (constants_info is kept: constants are part of the task spec.)
+        if _flag("HYPATIAX_DISABLE_PROMPT_HINTS"):
+            domain_hint = ""
+
         return f"""You are a mathematical formula expert in DeFi and quantitative finance.
 
 Task: {description}
@@ -1564,7 +1651,14 @@ CRITICAL REQUIREMENTS:
                 _erfc = np.vectorize(_math.erfc)
 
             _exec_globals = {
-                "__builtins__": {"__import__": __import__},
+                "__builtins__": {
+                    "__import__": __import__, "float": float, "int": int,
+                    "len": len, "range": range, "max": max, "min": min,
+                    "pow": pow, "round": round, "zip": zip,
+                    "enumerate": enumerate, "isinstance": isinstance,
+                    "tuple": tuple, "list": list, "bool": bool,
+                    "ValueError": ValueError, "ZeroDivisionError": ZeroDivisionError,
+                },
                 "np":      np,
                 "numpy":   np,
                 "math":    _math,
@@ -1602,18 +1696,23 @@ CRITICAL REQUIREMENTS:
                 "erf":     _erf,
                 "erfc":    _erfc,
             }
-            local_vars = {}
-            exec(python_code, _exec_globals, local_vars)
+            # B2: ONE namespace. With separate globals/locals dicts, any
+            # module-level constant or helper the LLM wrote landed in locals,
+            # but formula() resolves names in globals -> spurious NameError.
+            _before = set(_exec_globals)
+            exec(python_code, _exec_globals)
 
             # Find the function
-            func = local_vars.get("formula") if callable(local_vars.get("formula")) else next(
-                (
-                    v
-                    for v in local_vars.values()
-                    if callable(v) and not v.__name__.startswith("_")
-                ),
-                None,
-            )
+            func = _exec_globals.get("formula")
+            if not callable(func):
+                func = next(
+                    (
+                        v
+                        for k, v in _exec_globals.items()
+                        if k not in _before and callable(v) and not k.startswith("_")
+                    ),
+                    None,
+                )
             if not func:
                 return {"error": "No function found", "success": False}
 
@@ -1640,6 +1739,16 @@ CRITICAL REQUIREMENTS:
                     "error": f"Evaluation failed: {str(eval_error)}",
                     "success": False,
                     "code_snippet": python_code[:200],
+                }
+
+            # B2/C4: NaN/inf predictions are failures, not "success with NaN R²".
+            y_pred = np.asarray(y_pred, dtype=float)
+            if not np.all(np.isfinite(y_pred)):
+                n_bad = int((~np.isfinite(y_pred)).sum())
+                return {
+                    "success": False,
+                    "error": f"non-finite predictions ({n_bad}/{len(y_pred)})",
+                    "r2": float("nan"),
                 }
 
             # Calculate metrics
@@ -1716,7 +1825,7 @@ def run_comprehensive_test(
         for i, (desc, X, y_true, var_names, meta) in enumerate(test_cases, 1):
             print(f"\n[{i}/{len(test_cases)}] {desc}")
             print(f"  Variables: {', '.join(var_names)}")
-            print(f"  Ground truth: {meta.get('ground_truth', 'N/A')}")
+            print(f"  Reference formula (console only, never sent to LLM): {meta.get('ground_truth', 'N/A')}")
 
             if meta.get("extrapolation_test"):
                 print("  ⚠️  EXTRAPOLATION TEST")

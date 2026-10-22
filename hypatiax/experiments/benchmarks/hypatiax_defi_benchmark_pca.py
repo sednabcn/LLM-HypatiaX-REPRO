@@ -18,9 +18,9 @@ This mirrors the FIX-C3 split used in the Feynman benchmark
 extrapolation results (§6.4) are produced under the same protocol
 and are directly comparable.
 
-pca_directed_split is inlined here — no local hypatiax package import
-is required.  The function is identical to the reference implementation
-used by Gate A of ci_runner_disclosure.yml.
+pca_directed_split is imported from hypatiax.tools.utils.pca_split_utils,
+the reference implementation used by Gate A of ci_runner_disclosure.yml
+(so this script requires the hypatiax package on sys.path).
 
 Output files:
   hypatiax_defi_benchmark_pca_checkpoint.json
@@ -156,7 +156,7 @@ def _resolve_seed():
 # [MULTI-SEED] SEED used to be hard-wired to 42.  The seed is now resolved from
 # PYSR_SEED / EXPERIMENT_SEED / NN_SEED BEFORE the RNGs are seeded, so one process
 # == one seed (same mechanism as hypatiax_defi_benchmark_v3c.py FIX-SEED-HONOURED).
-# The caller (CI shard / run_all.sh) sets the seed, e.g. PYSR_SEED=77.
+# The caller (CI shard / run_all.sh) sets the seed, e.g. PYSR_SEED=99.
 # Unset -> SEED stays 42 and every existing seed-42 run (filenames included) is
 # unchanged.
 _import_seed = _resolve_seed()
@@ -236,7 +236,7 @@ class _MLP(nn.Module):
 
 # Fixed per seed → deterministic NN scores across resume sessions, but must vary
 # with SEED or every seed would train the NN identically.
-# SEED=42 -> 2024 (unchanged); 77 -> 2059; 99 -> 2081; 123 -> 2105; 2024 -> 4006.
+# SEED=42 -> 2024 (unchanged); 99 -> 2081; 123 -> 2105; 777 -> 2759; 2024 -> 4006.
 _NN_SEED = 2024 + (SEED - 42)
 
 
@@ -529,12 +529,15 @@ def _extrapolation_probe(X_train: np.ndarray, y_train: np.ndarray,
         return 0.0
 
 
+# B4-reviewed: input-range only (no y_test); see docstring note below.
 def _distance_llm_weight(X_test: np.ndarray, X_train: np.ndarray,
                           base_weight: float = 0.3) -> float:
     """
     Fix 4 — LLM blend weight: increases as test points move outside training range.
     Returns scalar in [base_weight, 1.0].
     """
+    # B4-reviewed: uses only the INPUT range of X_test (no y_test, no labels) --
+    # deployable at inference time. Document as an input-dependent blend weight.
     lo, hi  = X_train.min(axis=0), X_train.max(axis=0)
     outside = np.mean(np.any((X_test < lo) | (X_test > hi), axis=1))
     return float(base_weight + (1.0 - base_weight) * outside)
@@ -581,6 +584,7 @@ def _generate_llm_formula(
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
+                "llm_called": False, "bypass_kind": "none",
                 "error": f"API client error: {e}"}
 
     var_list = ", ".join(var_names)
@@ -591,14 +595,16 @@ def _generate_llm_formula(
         for k, v in constants.items():
             constants_block += f"  {k} = {v}\n"
 
+    # [FIX-GT-LEAK] The prompt must NOT contain metadata['ground_truth'] (the
+    # answer key). The LLM is given only description/domain/variables/constants
+    # and must derive the formula itself.
     prompt   = f"""You are an expert in DeFi (decentralised finance) mathematics.
 
 Task: Derive the mathematical formula for the following quantity.
 
 Description : {description}
 Domain      : {domain}
-Variables   : {var_list}
-Ground truth: {metadata.get('ground_truth', 'not provided')}{constants_block}
+Variables   : {var_list}{constants_block}
 Return ONLY a Python function called `formula` that accepts the variables as
 positional numpy-array arguments (in the order listed) and returns a numpy array.
 Use numpy (imported as np) for any mathematical operations.
@@ -612,6 +618,7 @@ def formula({var_list}):
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
+            temperature=0.0,   # C2: same setting as PureLLMBaseline
             messages=[{"role": "user", "content": prompt}],
         )
         code = resp.content[0].text.strip()
@@ -621,10 +628,12 @@ def formula({var_list}):
                      if not ln.strip().startswith("```")]
             code  = "\n".join(lines).strip()
         return {"python_code": code, "formula": code,
-                "success": "def formula" in code, "error": None}
+                "success": "def formula" in code, "error": None,
+                "llm_called": True, "bypass_kind": "live"}
     except Exception as e:
         return {"python_code": None, "formula": None,
-                "success": False, "error": str(e)}
+                "success": False, "error": str(e),
+                "llm_called": False, "bypass_kind": "none"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -750,6 +759,7 @@ def _hybrid_predict_and_eval(
                 test_r2  = nn_m["test_r2"]
                 decision = "nn_fallback"
             else:
+                # B4-reviewed: weight depends on X_test inputs only, never y_test.
                 llm_w         = _distance_llm_weight(X_test, X_train, base_weight=0.3)
                 nn_w          = 1.0 - llm_w
                 ensemble_pred = _ensemble_llm_nn(
@@ -801,6 +811,8 @@ def _hybrid_predict_and_eval(
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
+        "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
+        "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
         "success":        True,
     }
 
@@ -809,9 +821,9 @@ def _hybrid_predict_and_eval(
 # SECTION 6 — Data splitting
 # ─────────────────────────────────────────────────────────────────────────────
 
-# FIX-C3: PCA-directed 40/60 split — inlined, no local package import needed.
-# Identical to the reference implementation verified by Gate A of
-# ci_runner_disclosure.yml.  Replaces _aggressive_split() for every case.
+# FIX-C3: PCA-directed 40/60 split — imported from the reference implementation
+# verified by Gate A of ci_runner_disclosure.yml.  Replaces _aggressive_split()
+# for every case in run_benchmark().
 from hypatiax.tools.utils.pca_split_utils import pca_directed_split
 
 def _aggressive_split(
@@ -826,12 +838,15 @@ def _aggressive_split(
 
     test_size = config.get("test_size", 0.6)
 
-    return pca_directed_split(
+    # pca_directed_split returns (X_tr, X_te, y_tr, y_te); this wrapper keeps
+    # the v3c contract (X_tr, y_tr, X_te, y_te) so any caller is order-safe.
+    X_tr, X_te, y_tr, y_te = pca_directed_split(
         X,
         y,
         test_size=test_size,
         random_state=42,
     )
+    return X_tr, y_tr, X_te, y_te
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1264,11 +1279,14 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2": float(llm_tr_m["r2"]) if llm_tr_m.get("success") else float("nan"),
                     "test_r2":  float(llm_te_m["r2"]) if llm_te_m.get("success") else float("nan"),
                     "success":  llm_te_m.get("success", False),
+                    "llm_called":  llm_res.get("llm_called"),     # B2
+                    "bypass_kind": llm_res.get("bypass_kind"),    # B2
                     "time_s":   round(time.time() - _t0_llm, 3),
                 }
             except Exception as e:
                 case_results["pure_llm"] = {
                     "train_r2": float("nan"), "test_r2": float("nan"),
+                    "llm_called": False, "bypass_kind": "none",
                     "success": False, "time_s": 0.0, "error": str(e),
                 }
 
@@ -1279,7 +1297,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 case_results["neural_network"] = {
                     "train_r2":    nn_m["train_r2"],
                     "test_r2":     nn_m["test_r2"],
-                    "success":     True,
+                    "success":     bool(_math.isfinite(nn_m["train_r2"]) and _math.isfinite(nn_m["test_r2"])),  # C4
                     "timed_out":   nn_m.get("timed_out", False),
                     "time_s":      round(time.time() - _t0_nn, 3),
                     "y_pred_train": nn_m["y_pred_train"].tolist(),
@@ -1314,6 +1332,8 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
                     "decision":        hy_m["decision"],
+                    "llm_called":      hy_m.get("llm_called"),      # B2
+                    "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
@@ -1321,6 +1341,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
             except Exception as e:
                 case_results["hybrid"] = {
                     "train_r2": float("nan"), "test_r2": float("nan"),
+                    "llm_called": False, "bypass_kind": "none",
                     "success": False, "time_s": 0.0, "error": str(e),
                 }
 

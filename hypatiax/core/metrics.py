@@ -14,7 +14,8 @@ compute_rmse(y_true, y_pred)                → float
 compute_mae(y_true, y_pred)                 → float
 compute_max_error(y_true, y_pred)           → float
 compute_near_perfect_rate(scores, thr)      → float   # §10.2: R²>0.99 rate
-compute_catastrophic_rate(scores, thr)      → float   # §10.2: R²<-1 rate
+compute_catastrophic_rate(scores, thr)      → float   # §10.2: R²<-1 rate (NaN counts)
+compute_exact_recovery_rate(scores, thr)    → float   # strict 0.999999 rate
 compute_speedup(t_baseline, t_system)       → float
 evaluate_all(y_true, y_pred)               → dict
 
@@ -35,6 +36,19 @@ import numpy as np
 # Type alias
 # ---------------------------------------------------------------------------
 ArrayLike = Union[Sequence[float], np.ndarray]
+
+# ---------------------------------------------------------------------------
+# Threshold policy (single source of truth -- import these, don't re-hardcode)
+# ---------------------------------------------------------------------------
+NEAR_PERFECT_THRESHOLD = 0.99        # cross-condition comparison threshold
+EXACT_RECOVERY_THRESHOLD = 0.999999  # strict "exact recovery" threshold
+CATASTROPHIC_THRESHOLD = -1.0
+
+# Constant-target detection is RELATIVE to the target's scale. A fixed
+# absolute cutoff on the total sum of squares misclassifies legitimately
+# small-scale targets (e.g. values ~1e-6) as constant and silently scores
+# them 0.0.
+_REL_EPS = 1e-12
 
 
 # ---------------------------------------------------------------------------
@@ -76,8 +90,18 @@ def compute_r2(y_true: ArrayLike, y_pred: ArrayLike) -> float:
     Returns
     -------
     float
-        R² ∈ (-∞, 1].  Returns 0.0 when SS_tot == 0 (constant target),
-        matching sklearn's behaviour.
+        R² ∈ (-∞, 1].
+        * NaN when *y_pred* contains NaN or inf (a failed prediction -- callers
+          must count it as a failure, not as a missing cell).
+        * -inf is possible when SS_res overflows; also a failure.
+        * Constant target (SS_tot ~ 0 *relative to the scale of y_true*):
+          1.0 if the prediction is also exact, otherwise 0.0, matching
+          sklearn's ``force_finite`` behaviour.
+
+    Raises
+    ------
+    ValueError
+        If *y_true* contains NaN or inf (a data bug, never silently scored).
 
     Examples
     --------
@@ -85,12 +109,23 @@ def compute_r2(y_true: ArrayLike, y_pred: ArrayLike) -> float:
     1.0
     >>> round(compute_r2([1, 2, 3], [1, 2, 4]), 4)
     0.5
+    >>> compute_r2([1, 2, 3], [1, float("nan"), 3])
+    nan
+    >>> round(compute_r2([1e-6, 2e-6, 3e-6], [1e-6, 2e-6, 4e-6]), 4)
+    0.5
     """
     yt, yp = _validate_pair(y_true, y_pred)
-    ss_res = float(np.sum((yt - yp) ** 2))
-    ss_tot = float(np.sum((yt - np.mean(yt)) ** 2))
-    if ss_tot == 0.0:
-        return 0.0 if ss_res != 0.0 else 1.0
+    if not np.all(np.isfinite(yt)):
+        raise ValueError("y_true contains NaN or inf")
+    if not np.all(np.isfinite(yp)):
+        return float("nan")
+    with np.errstate(over="ignore", invalid="ignore"):
+        ss_res = float(np.sum((yt - yp) ** 2))
+        ss_tot = float(np.sum((yt - np.mean(yt)) ** 2))
+        scale = float(np.sum(yt ** 2))
+    if ss_tot <= _REL_EPS * scale:
+        # constant target
+        return 1.0 if ss_res <= _REL_EPS * scale else 0.0
     return float(1.0 - ss_res / ss_tot)
 
 
@@ -157,29 +192,22 @@ def compute_max_error(y_true: ArrayLike, y_pred: ArrayLike) -> float:
 
 def compute_near_perfect_rate(
     scores: ArrayLike,
-    threshold: float = 0.99,
+    threshold: float = NEAR_PERFECT_THRESHOLD,
 ) -> float:
     """
     Fraction of tasks whose R² exceeds *threshold*.
 
+    NaN scores (failed predictions) stay in the denominator and never count
+    as passes.
+
     Paper target (§10.2): 89.2 % of DeFi 74-task benchmark at R²>0.99.
-
-    Parameters
-    ----------
-    scores : array-like of float
-        Per-task R² scores.
-    threshold : float
-        Default 0.99.
-
-    Returns
-    -------
-    float
-        Value in [0, 1].
 
     Examples
     --------
     >>> compute_near_perfect_rate([0.995, 0.98, 0.999], threshold=0.99)
     0.6666666666666666
+    >>> compute_near_perfect_rate([0.995, float("nan")], threshold=0.99)
+    0.5
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
@@ -187,36 +215,52 @@ def compute_near_perfect_rate(
     return float(np.mean(arr > threshold))
 
 
+def compute_exact_recovery_rate(
+    scores: ArrayLike,
+    threshold: float = EXACT_RECOVERY_THRESHOLD,
+) -> float:
+    """
+    Fraction of tasks at the strict exact-recovery threshold (default
+    0.999999).  Report this *alongside* the 0.99 rate: at 0.99 nearly every
+    method saturates, so it cannot separate systems on its own.
+
+    Examples
+    --------
+    >>> compute_exact_recovery_rate([1.0, 0.9995, 0.5])
+    0.3333333333333333
+    """
+    return compute_near_perfect_rate(scores, threshold)
+
+
 def compute_catastrophic_rate(
     scores: ArrayLike,
-    threshold: float = -1.0,
+    threshold: float = CATASTROPHIC_THRESHOLD,
+    nan_as_failure: bool = True,
 ) -> float:
     """
     Fraction of tasks whose R² is below *threshold* (catastrophic failures).
 
+    NaN scores (failed / non-finite predictions) count as catastrophic by
+    default (``nan_as_failure=True``); ``-inf`` is below any threshold.
+
     Paper target (§10.2): 0 catastrophic failures (R²<-1).
-
-    Parameters
-    ----------
-    scores : array-like of float
-        Per-task R² scores.
-    threshold : float
-        Default -1.0  (negative infinity of meaningful fit).
-
-    Returns
-    -------
-    float
-        Value in [0, 1].
 
     Examples
     --------
     >>> compute_catastrophic_rate([0.9, -2.0, 0.5])
     0.3333333333333333
+    >>> compute_catastrophic_rate([0.9, float("nan"), float("-inf"), 0.5])
+    0.5
+    >>> compute_catastrophic_rate([0.9, float("nan")], nan_as_failure=False)
+    0.0
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
         return float("nan")
-    return float(np.mean(arr < threshold))
+    fails = arr < threshold
+    if nan_as_failure:
+        fails = fails | np.isnan(arr)
+    return float(np.mean(fails))
 
 
 def compute_speedup(t_baseline: float, t_system: float) -> float:
@@ -257,8 +301,9 @@ def evaluate_all(
     y_true: ArrayLike,
     y_pred: ArrayLike,
     *,
-    near_perfect_threshold: float = 0.99,
-    catastrophic_threshold: float = -1.0,
+    near_perfect_threshold: float = NEAR_PERFECT_THRESHOLD,
+    exact_recovery_threshold: float = EXACT_RECOVERY_THRESHOLD,
+    catastrophic_threshold: float = CATASTROPHIC_THRESHOLD,
 ) -> dict:
     """
     Compute all scalar metrics for a single prediction array and return
@@ -267,26 +312,35 @@ def evaluate_all(
     Returned keys
     -------------
     r2, mse, rmse, mae, max_error,
-    near_perfect  (bool — R² > near_perfect_threshold),
-    catastrophic  (bool — R² < catastrophic_threshold)
+    valid         (bool -- all predictions finite),
+    near_perfect  (bool -- R² > near_perfect_threshold),
+    exact         (bool -- R² > exact_recovery_threshold),
+    catastrophic  (bool -- R² < catastrophic_threshold, or R² is NaN)
+
+    A non-finite prediction gives ``valid=False``, ``near_perfect=False``,
+    ``exact=False``, ``catastrophic=True`` -- never a silent pass.
 
     Examples
     --------
     >>> m = evaluate_all([1, 2, 3], [1, 2, 3])
-    >>> m['r2']
-    1.0
-    >>> m['catastrophic']
-    False
+    >>> m['r2'], m['catastrophic'], m['valid']
+    (1.0, False, True)
+    >>> m = evaluate_all([1, 2, 3], [1, float("nan"), 3])
+    >>> m['valid'], m['near_perfect'], m['catastrophic']
+    (False, False, True)
     """
     r2 = compute_r2(y_true, y_pred)
+    r2_nan = math.isnan(r2)
     return {
         "r2":           r2,
         "mse":          compute_mse(y_true, y_pred),
         "rmse":         compute_rmse(y_true, y_pred),
         "mae":          compute_mae(y_true, y_pred),
         "max_error":    compute_max_error(y_true, y_pred),
-        "near_perfect": bool(r2 > near_perfect_threshold),
-        "catastrophic": bool(r2 < catastrophic_threshold),
+        "valid":        bool(np.all(np.isfinite(_to_array(y_pred, "y_pred")))),
+        "near_perfect": bool((not r2_nan) and r2 > near_perfect_threshold),
+        "exact":        bool((not r2_nan) and r2 > exact_recovery_threshold),
+        "catastrophic": bool(r2_nan or r2 < catastrophic_threshold),
     }
 
 
@@ -315,7 +369,8 @@ if __name__ == "__main__":
 
     # Spot-check against sklearn when available
     try:
-        from sklearn.metrics import r2_score as _skl_r2
+        import sklearn.metrics as _skm  # cross-check only; not an evaluator
+        _skl_r2 = _skm.r2_score
         _yt = np.random.default_rng(42).normal(size=200)
         _yp = _yt + np.random.default_rng(0).normal(scale=0.1, size=200)
         _ours  = compute_r2(_yt, _yp)
@@ -324,5 +379,19 @@ if __name__ == "__main__":
         print(f"✓ R² matches sklearn ({_ours:.6f})")
     except ImportError:
         print("sklearn not installed — skipping cross-check")
+
+    # Regression tests for the evaluator guard / NaN handling
+    assert abs(compute_r2([1e-6, 2e-6, 3e-6], [1e-6, 2e-6, 4e-6]) - 0.5) < 1e-9, \
+        "small-scale target must not be treated as constant"
+    assert math.isnan(compute_r2([1, 2, 3], [1, float("inf"), 3]))
+    assert compute_r2([5, 5, 5], [5, 5, 5]) == 1.0
+    assert compute_r2([5, 5, 5], [5, 5, 6]) == 0.0
+    assert evaluate_all([1, 2, 3], [float("nan")] * 3)["catastrophic"] is True
+    try:
+        compute_r2([1, float("nan")], [1, 2])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("NaN y_true must raise")
 
     print("✓ All metrics self-tests passed")

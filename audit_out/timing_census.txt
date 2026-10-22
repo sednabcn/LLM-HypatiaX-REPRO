@@ -1,0 +1,8 @@
+660 ('EnhancedHybridSystemDeFi (core)', 'slow', None, True)
+600 ('HybridDiscoverySystem v50_2 (tools)', 'slow', None, True)
+690 ('HybridSystemLLMNN all-domains (core)', 'slow', None, True)
+690 ('ImprovedNN (core)', 'slow', None, True)
+211 ('PureLLM Baseline (core)', 'fast', True, True)
+462 ('PureLLM Baseline (core)', 'slow', False, True)
+17 ('PureLLM Baseline (core)', 'slow', None, False)
+600 ('SymbolicEngineWithLLM (tools)', 'slow', None, True)
