@@ -97,7 +97,7 @@ benchmarks:
       catastrophic: 0
   core15:
     enabled: true
-    script: "hypatiax/experiments/benchmarks/run_dual_condition_benchmark.py"
+    script: "hypatiax/experiments/benchmarks/exp1_ablation.py"
     output_subdir: "exp1_ablation"
     expected:
       mw_u: 126.0
@@ -139,7 +139,7 @@ benchmarks:
       fix3_improvement: 0.01
   instability:
     enabled: true
-    script: "hypatiax/experiments/benchmarks/run_dual_sweep_benchmarks.py"
+    script: "hypatiax/experiments/benchmarks/run_instability_suite.py"
     output_subdir: "instability"
     fast_skip: true
     k_runs: 30
