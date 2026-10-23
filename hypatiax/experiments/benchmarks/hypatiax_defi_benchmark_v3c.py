@@ -679,6 +679,7 @@ def _generate_llm_formula(
     except Exception as e:
         return {"python_code": None, "formula": None, "success": False,
                 "llm_called": False, "bypass_kind": "none",
+                "llm_source": "v3c_builtin_failed",
                 "error": f"API client error: {e}"}
 
     var_list = ", ".join(var_names)
@@ -723,11 +724,13 @@ def formula({var_list}):
             code  = "\n".join(lines).strip()
         return {"python_code": code, "formula": code,
                 "success": "def formula" in code, "error": None,
-                "llm_called": True, "bypass_kind": "live"}
+                "llm_called": True, "bypass_kind": "live",
+                "llm_source": "v3c_builtin"}
     except Exception as e:
         return {"python_code": None, "formula": None,
                 "success": False, "error": str(e),
-                "llm_called": False, "bypass_kind": "none"}
+                "llm_called": False, "bypass_kind": "none",
+                "llm_source": "v3c_builtin_failed"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -907,6 +910,7 @@ def _hybrid_predict_and_eval(
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
         "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
+        "llm_source":     llm_result.get("llm_source", "unknown"),
         "success":        True,
     }
 
@@ -1392,6 +1396,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "success":  llm_te_m.get("success", False),
                     "llm_called":  llm_res.get("llm_called"),     # B2
                     "bypass_kind": llm_res.get("bypass_kind"),    # B2
+                    "llm_source":  llm_res.get("llm_source", "pure_llm_baseline"),
                     "time_s":   round(time.time() - _t0_llm, 3),
                 }
             except Exception as e:
@@ -1445,6 +1450,7 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "decision":        hy_m["decision"],
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
+                    "llm_source":      hy_m.get("llm_source"),
                     "success":         not (_nan(_train_r2) or _nan(_test_r2)),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),

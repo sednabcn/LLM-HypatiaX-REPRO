@@ -23,6 +23,17 @@ export PYSR_POPULATIONS="${PYSR_POPULATIONS:-30}"
 
 export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 
+# Clean live-LLM run: the shared PureLLMBaseline reads these two flags.
+# Both default to 1 so no step can silently substitute hardcoded answers or
+# ground-truth prompt hints for a live derivation. Override with =0 only for a
+# deliberate legacy comparison. Exported, so every python3 child and bash -c
+# step inherits them.
+export HYPATIAX_DISABLE_HARDCODED="${HYPATIAX_DISABLE_HARDCODED:-1}"
+export HYPATIAX_DISABLE_PROMPT_HINTS="${HYPATIAX_DISABLE_PROMPT_HINTS:-1}"
+# Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
+# running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
+export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"
+
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
 export LLM_METHOD_TIMEOUT="${LLM_METHOD_TIMEOUT:-120}"
 export PYSR_FIT_WALL_TIMEOUT="${PYSR_FIT_WALL_TIMEOUT:-1200}"
@@ -132,6 +143,11 @@ SDKCHECK
   echo "FEYNMAN_TIMEOUT: ${FEYNMAN_TIMEOUT}"
   echo "FEYNMAN_NOISELESS_THRESHOLD: ${FEYNMAN_NOISELESS_THRESHOLD}"
   echo "JOB_DEADLINE: ${JOB_DEADLINE}s"
+  echo "HYPATIAX_DISABLE_HARDCODED: ${HYPATIAX_DISABLE_HARDCODED}"
+  echo "HYPATIAX_DISABLE_PROMPT_HINTS: ${HYPATIAX_DISABLE_PROMPT_HINTS}"
+  if [[ "${HYPATIAX_DISABLE_HARDCODED}" != "1" || "${HYPATIAX_DISABLE_PROMPT_HINTS}" != "1" ]]; then
+    echo "WARNING: not a clean live-LLM run (a bypass flag is not 1) -- LLM-arm results may use hardcoded answers / prompt hints"
+  fi
   echo "REPRO_CFG: ${REPRO_CFG}"
   if [ -f "${REPRO_CFG}" ]; then
     echo "repro.yaml found -- printing key values:"
@@ -1104,6 +1120,9 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2'
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
     echo '=== exp2_feynman: domain='\${DOMAIN_ID}' ==='
+    if [ -n '${CLEAR_CHECKPOINT}' ]; then
+      find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print -delete
+    fi
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
     METHOD_TIMEOUT=${METHOD_TIMEOUT} \
@@ -1120,6 +1139,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --parsimony 0.01 \
         --noiseless \
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
+        --no-llm-cache \
         --checkpoint-name \"feynman_exp2_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
         --resume \

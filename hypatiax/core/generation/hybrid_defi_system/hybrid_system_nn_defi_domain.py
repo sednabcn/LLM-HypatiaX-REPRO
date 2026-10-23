@@ -35,6 +35,7 @@ import torch.nn as nn
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+from hypatiax.core.r2_canonical import r2_checked
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
 env_path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -164,14 +165,28 @@ def nn_predict(model, scaler_X, scaler_y, X: np.ndarray) -> np.ndarray:
         return scaler_y.inverse_transform(ys.reshape(-1, 1)).flatten()
 
 
-def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+def r2_score_checked(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, str]:
+    """Canonical R2 and its status (hypatiax/core/r2_canonical.py).
+
+    R2-CANONICAL: the old guard here was ABSOLUTE (ss_tot < 1e-30 -> 0.0), which scored
+    legitimately tiny-scale targets (Photon ~1e-19, Zeeman ~1e-23) as 0.0 whatever the
+    prediction.  The canonical guard is RELATIVE.  Status is one of: ok,
+    degenerate_target, nonfinite_target, nonfinite_pred, bad_shape.
+    """
     with np.errstate(over="ignore", invalid="ignore"):
-        ss_res = np.sum((y_true - y_pred) ** 2)
-        ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-        if not np.isfinite(ss_res) or not np.isfinite(ss_tot) or ss_tot < 1e-30:
-            return 0.0
-        r2 = float(1 - ss_res / ss_tot)
-    return r2 if np.isfinite(r2) else 0.0
+        return r2_checked(y_true, y_pred)
+
+
+def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    """R2 for INTERNAL model selection (Stage-2 fitting, NN-vs-formula decision).
+
+    Keeps this module's historical contract: an undefined or failed score (degenerate
+    target, non-finite prediction, overflow) is returned as 0.0 so the decision logic
+    below never has to compare NaN/-inf.  It is never 1.0.  Use r2_score_checked() when
+    the status matters; reported rows carry it as evaluation["r2_status"].
+    """
+    val, status = r2_score_checked(y_true, y_pred)
+    return float(val) if status == "ok" and np.isfinite(val) else 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -705,6 +720,20 @@ class EnhancedHybridSystemDeFi:
         self.formula_cache: dict[str, dict] = {}
         self._no_cache = no_cache   # honoured in generate_llm_formula
 
+        # Clean-rerun guard: the delegate baseline reads these two env flags.
+        # If either is unset, hardcoded answers / prompt hints may leak into
+        # the LLM arm, so say so up front rather than let it pass silently.
+        _unset = [
+            n for n in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS")
+            if os.environ.get(n, "").strip().lower() not in ("1", "true", "yes")
+        ]
+        self.strict_live = not _unset
+        if _unset:
+            print(
+                f"⚠  not a clean live run: {', '.join(_unset)} not set to 1 "
+                f"(hardcoded answers / prompt hints may be active)"
+            )
+
         # FIX-ISSUE2B-LLM-API-NONDETERMINISM: the Anthropic API (like most
         # LLM inference stacks) is not guaranteed to return byte-identical
         # completions for an identical prompt at temperature=0 -- this is a
@@ -736,7 +765,11 @@ class EnhancedHybridSystemDeFi:
                 PureLLMBaseline as _PureLLMBaseline,
             )
             self._llm_baseline = _PureLLMBaseline(model=model)
-        except Exception:
+        except Exception as e:
+            print(
+                f"⚠  PureLLMBaseline delegate unavailable; ALL tasks will use the "
+                f"local fallback prompt: {type(e).__name__}: {str(e)[:120]}"
+            )
             self._llm_baseline = None
 
     # ------------------------------------------------------------------
@@ -813,9 +846,13 @@ class EnhancedHybridSystemDeFi:
         # goal from the intra-run "always call the live API" semantics
         # that --no-llm-cache/_no_cache provides.
         if self._freeze_cache_path and cache_key in self.formula_cache:
-            if verbose:
-                print(f"  [LLM→frozen-cache] hit for: {description[:60]}")
-            return self.formula_cache[cache_key].copy()
+            print(
+                f"⚠  frozen-cache hit (HYPATIAX_LLM_FREEZE_CACHE): not a fresh LLM "
+                f"call for: {description[:50]}"
+            )
+            _hit = self.formula_cache[cache_key].copy()
+            _hit.setdefault("llm_source", "frozen_cache_unknown_origin")
+            return _hit
 
         if not self._no_cache and cache_key in self.formula_cache:
             return self.formula_cache[cache_key].copy()
@@ -836,6 +873,7 @@ class EnhancedHybridSystemDeFi:
                 )
                 code = result.get("python_code", "N/A")
                 if code and code != "N/A" and "return" in code:
+                    result["llm_source"] = "delegate"
                     if not self._no_cache:
                         self.formula_cache[cache_key] = result.copy()
                     if self._freeze_cache_path:
@@ -844,8 +882,18 @@ class EnhancedHybridSystemDeFi:
                     if verbose:
                         print(f"  [LLM→PureLLM] formula: {result.get('formula','')[:80]}")
                     return result
-            except Exception:
-                pass  # fall through to local DeFi implementation
+                _why = result.get("error") or "empty/N/A python_code"
+                print(
+                    f"⚠  local fallback for: {description[:50]} "
+                    f"(delegate returned no usable code: {str(_why)[:100]})"
+                )
+            except Exception as e:
+                print(
+                    f"⚠  local fallback for: {description[:50]} "
+                    f"(delegate raised {type(e).__name__}: {str(e)[:100]})"
+                )
+        else:
+            print(f"⚠  local fallback for: {description[:50]} (no delegate)")
 
         # ── Local DeFi implementation (fallback) ─────────────────────────────
         # FIX GT-LEAK-2 (2026-08-10): _specialized_prompt() used to be called
@@ -910,7 +958,12 @@ class EnhancedHybridSystemDeFi:
                 "latex": parsed.get("latex", "N/A"),
                 "python_code": python_code,
                 "explanation": parsed.get("explanation", "N/A"),
-                "specialized": use_specialized,
+                # BUGFIX: was `use_specialized`, which is undefined since
+                # FIX GT-LEAK-2 stopped calling _specialized_prompt(); it
+                # raised NameError, which the except below swallowed, so
+                # every successful local fallback came back as N/A.
+                "specialized": False,
+                "llm_source": "local_fallback",
                 "raw_response": content,
             }
 
@@ -928,6 +981,7 @@ class EnhancedHybridSystemDeFi:
                 "formula": "N/A", "latex": "N/A",
                 "python_code": "N/A", "explanation": "N/A",
                 "specialized": False, "raw_response": "",
+                "llm_source": "local_fallback",
                 "error": str(e),
             }
 
@@ -1215,6 +1269,7 @@ Expected Shortfall at 95% confidence for normal returns (ES multiplier = 2.063).
 
         if best_preds is not None:
             final_r2  = r2_score(y_train, best_preds)
+            _, final_r2_status = r2_score_checked(y_train, best_preds)
             residuals = y_train - best_preds
             with np.errstate(over="ignore", invalid="ignore"):
                 mse = float(np.mean(residuals ** 2))
@@ -1222,6 +1277,7 @@ Expected Shortfall at 95% confidence for normal returns (ES multiplier = 2.063).
             mae  = float(np.mean(np.abs(residuals)))
         else:
             final_r2 = 0.0
+            final_r2_status = "no_predictions"
             mse  = 0.0
             rmse = 0.0
             mae  = 0.0
@@ -1232,6 +1288,7 @@ Expected Shortfall at 95% confidence for normal returns (ES multiplier = 2.063).
         # =====================================================
         return {
             "llm_result":      llm_result,
+            "llm_source":      llm_result.get("llm_source", "unknown"),
             "llm_train_r2":    float(llm_train_r2),
             "fitted_train_r2": float(fitted_train_r2),
             "fitted_code":     fitted_code,
@@ -1248,7 +1305,9 @@ Expected Shortfall at 95% confidence for normal returns (ES multiplier = 2.063).
             "scaler_y": scaler_y,
 
             "evaluation": {
+                "llm_source": llm_result.get("llm_source", "unknown"),
                 "r2":   float(final_r2),
+                "r2_status": final_r2_status,   # ok | degenerate_target | nonfinite_pred | ...
                 "rmse": rmse,
                 "mse":  mse,
                 "mae":  mae,
@@ -1277,23 +1336,24 @@ Expected Shortfall at 95% confidence for normal returns (ES multiplier = 2.063).
             return {"success": False, "r2": 0.0, "error": "formula evaluation failed"}
 
         r2 = r2_score(y, preds)
+        _, r2_status = r2_score_checked(y, preds)
         mse = float(np.mean((y - preds) ** 2))
         mae = float(np.mean(np.abs(y - preds)))
 
         if verbose:
             print(f"  [eval] R²={r2:.4f}, MSE={mse:.4e}, MAE={mae:.4e}")
 
-        return {"success": True, "r2": r2, "mse": mse, "mae": mae}
+        return {"success": True, "r2": r2, "r2_status": r2_status, "mse": mse, "mae": mae}
 
 
 # ---------------------------------------------------------------------------
 # --batch mode: run full DeFi benchmark suite and save results
 # ---------------------------------------------------------------------------
 
-def run_batch(verbose: bool = False):
+def run_batch(verbose: bool = False, no_cache: bool = False):
     """Run the full DeFi benchmark suite and write hybrid_defi_<timestamp>.json."""
     protocol = DeFiExperimentProtocol()
-    hybrid = EnhancedHybridSystemDeFi()
+    hybrid = EnhancedHybridSystemDeFi(no_cache=no_cache)
 
     domains = ["amm", "lending", "risk", "staking", "trading", "derivatives", "liquidity"]
     all_results = []
@@ -1328,6 +1388,7 @@ def run_batch(verbose: bool = False):
                     "hybrid_train_r2": result["evaluation"]["r2"],
                     "llm_formula": result["llm_result"].get("formula", "N/A"),
                     "llm_python": result["llm_result"].get("python_code", "N/A"),
+                    "llm_source": result.get("llm_source", "unknown"),
                     "success": True,
                 }
                 print(
@@ -1358,6 +1419,8 @@ def run_batch(verbose: bool = False):
         json.dump(
             {
                 "timestamp": timestamp,
+                "strict_live": hybrid.strict_live,
+                "no_llm_cache": no_cache,
                 "total": len(all_results),
                 "successful": sum(1 for r in all_results if r.get("success")),
                 "results": all_results,
@@ -1389,6 +1452,10 @@ def run_batch(verbose: bool = False):
             f"   Decisions: LLM={decisions['llm']}, FittedLLM={decisions['fitted_llm']}, "
             f"NN={decisions['nn']}, Ensemble={decisions['ensemble']}"
         )
+        print("   LLM source breakdown:")
+        for src in sorted({r.get("llm_source", "unknown") for r in successful}):
+            n = sum(1 for r in successful if r.get("llm_source", "unknown") == src)
+            print(f"     {src}: {n}")
 
     return all_results
 
@@ -1401,13 +1468,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hybrid DeFi System")
     parser.add_argument("--batch", action="store_true", help="Run full benchmark suite")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--no-llm-cache", action="store_true",
+        help="Bypass the in-memory formula cache and always call the LLM",
+    )
     args = parser.parse_args()
 
     if args.batch:
-        run_batch(verbose=args.verbose)
+        run_batch(verbose=args.verbose, no_cache=args.no_llm_cache)
     else:
         # Quick smoke test
-        hybrid = EnhancedHybridSystemDeFi()
+        hybrid = EnhancedHybridSystemDeFi(no_cache=args.no_llm_cache)
         out = hybrid.generate_llm_formula(
             "Optimal LP position size using risk-adjusted Kelly criterion",
             "liquidity",

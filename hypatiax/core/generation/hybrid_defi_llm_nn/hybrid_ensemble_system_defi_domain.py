@@ -261,9 +261,13 @@ def main(argv=None):
 
     strict = strict_live_mode()
     print("Strict live mode (both bypass flags off):", strict)
+    if not strict:
+        print("⚠  not a clean live run: set HYPATIAX_DISABLE_HARDCODED=1 and "
+              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled)")
 
     # 1) Generate/obtain LLM formula
     llm_error = None
+    llm_source = "delegate"
     try:
         llm = PureLLMBaseline()
         llm_result = llm.generate_formula(
@@ -275,6 +279,7 @@ def main(argv=None):
     except Exception as e:  # no API key / call failed / constructor raised
         llm_error = f"{type(e).__name__}: {e}"
         llm_result = {"python_code": "N/A", "formula": "N/A"}
+        llm_source = "unavailable"
         print("LLM call failed or unavailable:", llm_error)
 
     # Provenance copied from the shared generator (B2). Older generator
@@ -287,12 +292,15 @@ def main(argv=None):
         "usage":         llm_result.get("usage"),
         "llm_error":     llm_error,
     }
+    prov["llm_source"] = llm_source
 
     no_code = not llm_result.get("python_code") or llm_result.get("python_code") == "N/A"
     if no_code and not strict:
         # The canned Kelly answer is a ground-truth leak: label it.
         llm_result = {"python_code": CANONICAL_KELLY, "formula": "min(mu/(lambda*sigma^2),1.0)"}
-        prov.update(llm_called=False, bypass_kind="canonical_fallback")
+        prov.update(llm_called=False, bypass_kind="canonical_fallback",
+                    llm_source="canonical_fallback")
+        print("⚠  local fallback for: " + desc[:50] + " (no usable LLM code)")
         print("Using canonical fallback (labelled bypass_kind=canonical_fallback).")
     elif no_code and strict:
         print("Strict live mode: no canonical fallback; LLM arm recorded as failed.")

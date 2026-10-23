@@ -92,6 +92,11 @@ on:
         required: false
         default: "false"
 
+      clean_llm_rerun:
+        description: "Clean live-LLM rerun (true/false). Use after the PureLLMBaseline hardcoded-answer / prompt-hint bypass fix. Skips the plan/shard checkpoint cache restore, does NOT seed checkpoints from committed results, forces resume off, deletes stale *checkpoint* files for the experiment's results dirs in the runner, sets CLEAR_CHECKPOINT=1 for run_all.sh, and fails the job unless scripts/bypass_audit.py reports 0 bypassed. Combine with 'experiments' to fan out every affected step, e.g. 'exp2_feynman exp2 exp2_five exp2_feynman_pca exp2_feynman_extrap hybrid_all_domains suppB_sc extrap'."
+        required: false
+        default: "false"
+
       sparse_seed:
         description: "exp3/exp3b ONLY (ignored by every other experiment): SPARSE_SEED mode. fallback = sparse-basis seed only when no LLM candidate passes the gate (matches the script default). off = pure LLM-seeded H. always = sparse seed added on top of the LLM candidates. fallback keeps the normal exp3/exp3b results folders; off and always write to their own *_sparse_<mode> folders so they never overwrite each other."
         required: false
@@ -131,6 +136,9 @@ env:
   OUT_BASE:            "hypatiax/data/results"
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  # Clean live-LLM run: read by PureLLMBaseline. Local shell exports do NOT reach CI.
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
   JULIA_NUM_THREADS:   "4"
   JULIA_EXCLUSIVE:     "0"
 
@@ -159,6 +167,7 @@ jobs:
           RESUME:             ${{ github.event.inputs.resume }}
           DRY_RUN:            ${{ github.event.inputs.dry_run }}
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
+          CLEAN_RERUN:        ${{ github.event.inputs.clean_llm_rerun }}
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
         run: |
           set -euo pipefail
@@ -203,6 +212,7 @@ jobs:
               -f resume="$RESUME" \
               -f dry_run="$DRY_RUN" \
               -f force_rerun="$FORCE_RERUN" \
+              -f clean_llm_rerun="${CLEAN_RERUN:-false}" \
               -f sparse_seed="${SPARSE_SEED_IN:-fallback}"
           done
 
@@ -260,6 +270,7 @@ jobs:
 
       - name: Restore shared checkpoint (plan)
         id: restore_plan
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -830,6 +841,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -901,7 +913,7 @@ jobs:
             "${{ github.workspace }}/logs"
 
       - name: Seed shard checkpoint from committed results (cache miss only)
-        if: steps.restore_worker.outputs.cache-hit != 'true'
+        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' }}
         env:
           SHARD_IDS_JSON: ${{ matrix.ids }}
           RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
@@ -919,6 +931,47 @@ jobs:
             echo '{"completed":[]}' > "$CKPT_PATH"
             echo "No committed checkpoint found - shard ${{ matrix.shard }} starts fresh"
           fi
+
+      - name: Clean live-LLM rerun - discard stale checkpoints
+        if: ${{ github.event.inputs.clean_llm_rerun == 'true' }}
+        run: |
+          set -euo pipefail
+          # Start this shard from an empty checkpoint (no cache restore, no committed seed).
+          echo '{"completed":[]}' > "checkpoint_worker_shard${{ matrix.shard }}.json"
+          rm -f checkpoint_plan.json
+
+          # Best-effort map of experiment -> results dirs that hold --resume checkpoints.
+          # Layout taken from the run logs; adjust if a step writes elsewhere.
+          DIRS=("${OUT_BASE}/${RESULT_SUBDIR}")
+          case "${EXP}" in
+            exp2_feynman|exp2) DIRS+=("${OUT_BASE}/comparison_results/feynman-tests/exp2" "${OUT_BASE}/comparison_results/feynman-tests/exp2_multi") ;;
+            exp2_feynman_extrap|extrap) DIRS+=("${OUT_BASE}/comparison_results/feynman-tests/exp2_extrap" "${OUT_BASE}/extrapolation" "${OUT_BASE}/comparison_results/extrapolation") ;;
+            exp2_five) DIRS+=("${OUT_BASE}/five_systems/exp2_five") ;;
+            hybrid_all_domains) DIRS+=("${OUT_BASE}/hybrid_llm_nn/all_domains") ;;
+            suppB_sc) DIRS+=("${OUT_BASE}/comparison_results/feynman-tests/sample-complexity") ;;
+            suppB) DIRS+=("${OUT_BASE}/comparison_results/feynman-tests/noise-sweep") ;;
+          esac
+          for d in "${DIRS[@]}"; do
+            [[ -d "$d" ]] || continue
+            echo "[clean_llm_rerun] stale checkpoints under $d:"
+            find "$d" -type f -name '*checkpoint*' -print -delete
+          done
+
+      - name: Clean live-LLM rerun - bypass audit gate
+        if: ${{ github.event.inputs.clean_llm_rerun == 'true' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/bypass_audit.py | tee /tmp/bypass_audit.log
+          if grep -Eq 'bypassed: [1-9]' /tmp/bypass_audit.log; then
+            echo "::error::bypass_audit reports bypassed tasks - commit the PureLLMBaseline fix before a clean rerun."
+            exit 1
+          fi
+          grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised - refusing to run unverified."; exit 1; }
+
+      - name: Warn - affected step run without clean_llm_rerun
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && contains(fromJSON('["exp2_feynman","exp2","exp2_five","exp2_feynman_extrap","hybrid_all_domains","suppB_sc","extrap","exp1_five"]'), needs.plan.outputs.exp_id) }}
+        run: |
+          echo "::warning::${EXP} depends on PureLLMBaseline. Without clean_llm_rerun=true it may reuse cached/committed checkpoints produced with hardcoded answers."
 
       - name: Resolve this shard's pending IDs
         id: resolve_ids
@@ -1102,7 +1155,8 @@ jobs:
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
           RESULTS_DIR:       ${{ github.workspace }}/${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ github.event.inputs.clean_llm_rerun == 'true' && 'false' || github.event.inputs.resume || 'true' }}
+          CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
           SPARSE_SEED_INPUT: ${{ github.event.inputs.sparse_seed || 'fallback' }}
@@ -2786,7 +2840,7 @@ jobs:
         env:
           RESULTS_DIR: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
           EXP: ${{ github.event.inputs.experiment }}
-          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
+          FORCE_RERUN: ${{ (github.event.inputs.force_rerun == 'true' || github.event.inputs.clean_llm_rerun == 'true') && 'true' || 'false' }}
         run: |
           if [[ "$EXP" != "exp2_feynman_pca" ]]; then
             echo "already_done=true" >> "$GITHUB_OUTPUT"
@@ -2875,6 +2929,17 @@ jobs:
               print("WARNING: Julia precompile warmup failed (HypatiaX/HDS may be N/A):")
               print(result.stderr[-3000:] if result.stderr else "(no stderr)")
           PYEOF
+
+      - name: Clean live-LLM rerun - bypass audit gate
+        if: ${{ github.event.inputs.clean_llm_rerun == 'true' && steps.check_exp2.outputs.already_done != 'true' }}
+        run: |
+          set -euo pipefail
+          python3 scripts/bypass_audit.py | tee /tmp/bypass_audit.log
+          if grep -Eq 'bypassed: [1-9]' /tmp/bypass_audit.log; then
+            echo "::error::bypass_audit reports bypassed tasks - commit the PureLLMBaseline fix before a clean rerun."
+            exit 1
+          fi
+          grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised - refusing to run unverified."; exit 1; }
 
       - name: Run exp2_feynman_pca via run_all.sh
         if: steps.check_exp2.outputs.already_done != 'true'

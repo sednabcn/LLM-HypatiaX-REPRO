@@ -1,5 +1,5 @@
 suite,id_or_domain,description,bypassed_when_switch_off,switch_on_returns_None,method
-feynman,I.6.20,Gaussian/normal distribution probability density,True,True,pure_llm_hardcoded
+feynman,I.6.20,Gaussian/normal distribution probability density,False,True,
 feynman,I.9.18_1d,"Coulomb force between two point charges (1D, simplified)",False,True,
 feynman,I.12.1,Newton's gravitational force between two masses,False,True,
 feynman,I.12.2,Coulomb's law: electric force between charges,False,True,
@@ -9,23 +9,23 @@ feynman,I.24.6,Total mechanical energy: spring potential + kinetic,False,True,
 feynman,I.26.2,Snell's law: refracted angle from incident angle and refractive indices,False,True,
 feynman,I.34.27,Photon energy: E = h * f (Planck relation),False,True,
 feynman,I.37.4,Double-slit wave interference intensity,False,True,
-feynman,I_41_16_simplified,Planck blackbody spectral radiance (dimensionless: x=hf/kT),True,True,pure_llm_hardcoded
-feynman,II.2.42,Fourier's law of heat conduction: heat flux across material,True,True,pure_llm_hardcoded
-feynman,II.6.15a,Clausius-Mossotti: effective field in dielectric,True,True,pure_llm_hardcoded
+feynman,I_41_16_simplified,Planck blackbody spectral radiance (dimensionless: x=hf/kT),False,True,
+feynman,II.2.42,Fourier's law of heat conduction: heat flux across material,False,True,
+feynman,II.6.15a,Clausius-Mossotti: effective field in dielectric,False,True,
 feynman,II_11_3_simplified,Dielectric polarisation: P = n * alpha * E (dilute limit),False,True,
 feynman,II_11_17_curie,Curie's law for magnetic susceptibility: chi = C/T,False,True,
-feynman,II.34.2,Lorentz force on moving charge in magnetic field: F = qvB,True,True,pure_llm_hardcoded
-feynman,II_36_38,Zeeman energy: electron spin in magnetic field,True,True,pure_llm_hardcoded
-feynman,III.4.33,Bose-Einstein occupation number for bosons,True,True,pure_llm_hardcoded
+feynman,II.34.2,Lorentz force on moving charge in magnetic field: F = qvB,False,True,
+feynman,II_36_38,Zeeman energy: electron spin in magnetic field,False,True,
+feynman,III.4.33,Bose-Einstein occupation number for bosons,False,True,
 feynman,III.4.32,Fermi-Dirac occupation number for fermions,False,True,
 feynman,III.7.38,Rabi frequency of two-level atom in magnetic field,False,True,
 feynman,FEY_CHEM_ARR,Arrhenius rate constant (Feynman variant) — cross-benchmark consistency check,False,True,
-feynman,FEY_CHEM_NERNST,Nernst equation for electrode potential — cross-benchmark consistency check,True,True,pure_llm_hardcoded
-feynman,FEY_BIO_MM,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,True,True,pure_llm_hardcoded
+feynman,FEY_CHEM_NERNST,Nernst equation for electrode potential — cross-benchmark consistency check,False,True,
+feynman,FEY_BIO_MM,Michaelis-Menten enzyme kinetics — cross-benchmark consistency check,False,True,
 feynman,FEY_THERMO_SB,Stefan-Boltzmann law: blackbody radiated power,False,True,
 feynman,FEY_THERMO_IG,"Ideal gas law: pressure from moles, temperature, volume",False,True,
-feynman,FEY_BIO_LOG,Logistic growth rate — cross-benchmark consistency check,True,True,pure_llm_hardcoded
-feynman,FEY_BIO_ALLO,Allometric scaling law (metabolic rate vs mass),True,True,pure_llm_hardcoded
+feynman,FEY_BIO_LOG,Logistic growth rate — cross-benchmark consistency check,False,True,
+feynman,FEY_BIO_ALLO,Allometric scaling law (metabolic rate vs mass),False,True,
 feynman,FEY_CHEM_HH,Henderson-Hasselbalch equation for buffer pH,False,True,
 feynman,II_11_27_ohm,Ohm's law: voltage as product of current and resistance,False,True,
 feynman,II_11_28_capacitor,Energy stored in a capacitor: E = 0.5 * C * V^2,False,True,

@@ -26,6 +26,16 @@ llm_model:     "claude-sonnet-4-20250514"
 llm_retries:   3
 llm_k_runs:    30
 
+# Clean live-LLM run (documentation; enforced via env, not read by Python):
+# run_all.sh and ci_runner_repro.yml export both flags as "1"; PureLLMBaseline
+# reads them. Results carry llm_source (delegate | local_fallback |
+# frozen_cache_unknown_origin | v3c_builtin | canonical_fallback); expect no
+# local_fallback in a clean run.
+llm_provenance:
+  disable_hardcoded:    1
+  disable_prompt_hints: 1
+  no_llm_cache_steps:   [exp2_feynman, exp2_feynman_pca_4060, extrap]
+
 n_tasks_defi:       74
 n_tasks_instability: 70
 pca_train_frac:     0.40

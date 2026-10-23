@@ -943,10 +943,11 @@ def _provenance(d) -> dict:
     """B2: pull llm_called / bypass_kind from a method's raw result dict
     (top level, then nested llm_result / provenance). None == unknown, which
     verify_blockers treats as missing -- never silently assumed live."""
-    out = {"llm_called": None, "bypass_kind": None}
+    out = {"llm_called": None, "bypass_kind": None, "llm_source": None}
     if not isinstance(d, dict):
         return out
-    for src in (d, d.get("llm_result"), d.get("provenance"), d.get("discovery")):
+    for src in (d, d.get("llm_result"), d.get("evaluation"),
+                d.get("provenance"), d.get("discovery")):
         if isinstance(src, dict):
             for k in out:
                 if out[k] is None and src.get(k) is not None:
@@ -986,6 +987,9 @@ class MethodResult:
             # report what the wrapper recorded (None == unknown -> flagged).
             "llm_called":   self._prov("llm_called"),
             "bypass_kind":  self._prov("bypass_kind"),
+            # delegate | local_fallback | frozen_cache_unknown_origin | ...
+            # (None == unknown for LLM methods; "none" for non-LLM methods)
+            "llm_source":   self._prov("llm_source"),
         }
 
     def _prov(self, key: str):
@@ -4359,6 +4363,7 @@ class ProtocolBenchmarkSuite:
                         "success":        _mres.get("success", False),
                         "llm_called":     _mres.get("llm_called"),    # B2
                         "bypass_kind":    _mres.get("bypass_kind"),   # B2
+                        "llm_source":     _mres.get("llm_source"),
                     }
                     # Only write extrap fields when this record has them
                     # (i.e. when the run used --extrap).  Absent means the column
@@ -4438,6 +4443,7 @@ class ProtocolBenchmarkSuite:
                         "success":           _mres.get("success", False),
                         "llm_called":        _mres.get("llm_called"),   # B2
                         "bypass_kind":       _mres.get("bypass_kind"),  # B2
+                        "llm_source":        _mres.get("llm_source"),
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
                         "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation

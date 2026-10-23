@@ -144,7 +144,11 @@ class HybridSystemAllDomains:
                 PureLLMBaseline as _PureLLMBaseline,
             )
             self._llm_baseline = _PureLLMBaseline(model=model)
-        except Exception:
+        except Exception as e:
+            print(
+                f"⚠️  PureLLMBaseline delegate unavailable; ALL hybrid tasks will use "
+                f"the local fallback prompt: {type(e).__name__}: {str(e)[:120]}"
+            )
             self._llm_baseline = None
 
     def generate_llm_formula(
@@ -187,12 +191,21 @@ class HybridSystemAllDomains:
                 # empty result that makes llm_ok=False and forces the NN path.
                 _code = result.get("python_code", "") or result.get("formula_code", "")
                 if _code and _code.strip() and _code.strip() != "N/A":
+                    result["llm_source"] = "delegate"
                     if not self._no_cache:
                         self._formula_cache[_cache_key] = result
                     return result
-                # Empty/N/A — fall through to direct LLM call below
-            except Exception:
-                pass  # fall through to local implementation below
+                # Empty/N/A or error dict — fall through to local fallback below.
+                print(
+                    f"⚠️  delegate returned no code "
+                    f"({str(result.get('error', 'empty/N/A'))[:80]}); "
+                    f"local fallback for: {description[:50]}"
+                )
+            except Exception as e:
+                print(
+                    f"⚠️  delegate raised {type(e).__name__}: {str(e)[:80]}; "
+                    f"local fallback for: {description[:50]}"
+                )
 
         # ── Local fallback implementation ─────────────────────────────────────
         prompt = self._generate_prompt(description, domain, variable_names, metadata)
@@ -201,11 +214,12 @@ class HybridSystemAllDomains:
             # FIX-ISSUE2B-LLM-TEMPERATURE: same fix as PureLLMBaseline's
             # call site (baseline_pure_llm_defi_discovery.py) -- this local
             # fallback previously had no temperature argument, defaulting to
-            # the API's non-zero default. Currently dormant in the Item 2b
-            # test set (the PureLLMBaseline delegate above succeeds for all
-            # 30 equations), but would silently reintroduce run-to-run
-            # sampling variance the moment that delegate fails for any
-            # equation and control falls through to here.
+            # the API's non-zero default. This path runs whenever the
+            # PureLLMBaseline delegate fails, returns an error dict, or
+            # returns empty/N/A code. With the hardcoded formulas removed the
+            # delegate can fail on live-LLM errors, so fallback use is
+            # NOT guaranteed to be zero: each use is logged ("local fallback")
+            # and tagged llm_source="local_fallback" in the result.
             response = _create_message_deterministic(
                 self.client,
                 model=self.model,
@@ -220,9 +234,10 @@ class HybridSystemAllDomains:
                 "latex": parsed.get("latex", "N/A"),
                 "python_code": parsed.get("python", "N/A"),
                 "explanation": parsed.get("explanation", "N/A"),
+                "llm_source": "local_fallback",
             }
         except Exception as e:
-            result = {"error": str(e)}
+            result = {"error": str(e), "llm_source": "local_fallback"}
 
         if not self._no_cache:
             self._formula_cache[_cache_key] = result
@@ -784,6 +799,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "decision_reason": "force_llm override (Feynman physics domain)",
                 "validation_score": "EXCELLENT" if llm_r2 > 0.95 else "GOOD",
                 "observations": "force_llm=True — NN skipped for physics domain",
+                "llm_source": llm_result.get("llm_source", "unknown"),
                 "llm_result": {
                     "formula": llm_result.get("formula", "N/A"),
                     "python_code": llm_result.get("python_code", "N/A"),
@@ -895,6 +911,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             "decision_reason": reason,
             "validation_score": validation_score,
             "observations": ", ".join(observations) if observations else "Normal",
+            "llm_source": llm_result.get("llm_source", "unknown"),
             "llm_result": {
                 "formula": llm_result.get("formula", "N/A"),
                 "python_code": llm_result.get("python_code", "N/A"),
@@ -953,7 +970,8 @@ NO markdown code blocks, individual parameters NOT dict."""
 
 
 def run_hybrid_test_all_domains(
-    domains: list[str] = None, num_samples: int = 100, verbose: bool = False
+    domains: list[str] = None, num_samples: int = 100, verbose: bool = False,
+    no_cache: bool = False,
 ):
     """Run hybrid system test on all scientific domains with results table.
 
@@ -969,7 +987,7 @@ def run_hybrid_test_all_domains(
     """
 
     protocol = ExperimentProtocolAll()
-    hybrid = HybridSystemAllDomains()
+    hybrid = HybridSystemAllDomains(no_cache=no_cache)
 
     if domains is None:
         # Try to pick up shard assignment from CI environment before falling
@@ -1046,6 +1064,15 @@ def run_hybrid_test_all_domains(
                 f"  {dec.upper()}: {count}/{len(all_results)} ({pct:.1f}%) - Mean R² = {mean_r2:.4f}"
             )
 
+    # LLM source breakdown (delegate vs local fallback)
+    print("\n🔌 LLM Source Breakdown:")
+    _src = {}
+    for r in all_results:
+        _k = r.get("llm_source", "unknown")
+        _src[_k] = _src.get(_k, 0) + 1
+    for k, v in sorted(_src.items()):
+        print(f"  {k}: {v}/{len(all_results)}")
+
     # Validation score breakdown
     print("\n📈 Validation Score Breakdown:")
     val_scores = {}
@@ -1086,5 +1113,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_hybrid_test_all_domains(
-        domains=args.domains, num_samples=args.samples, verbose=args.verbose
+        domains=args.domains, num_samples=args.samples, verbose=args.verbose,
+        no_cache=args.no_llm_cache,
     )

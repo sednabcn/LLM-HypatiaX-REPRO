@@ -1,0 +1,86 @@
+--- a/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
++++ b/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+@@ -35,6 +35,7 @@
+ from anthropic import Anthropic
+ from dotenv import load_dotenv
+ 
++from hypatiax.core.r2_canonical import r2_checked
+ from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
+ 
+ env_path = Path(__file__).parent.parent.parent.parent / ".env"
+@@ -164,14 +165,28 @@
+         return scaler_y.inverse_transform(ys.reshape(-1, 1)).flatten()
+ 
+ 
+-def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
++def r2_score_checked(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, str]:
++    """Canonical R2 and its status (hypatiax/core/r2_canonical.py).
++
++    R2-CANONICAL: the old guard here was ABSOLUTE (ss_tot < 1e-30 -> 0.0), which scored
++    legitimately tiny-scale targets (Photon ~1e-19, Zeeman ~1e-23) as 0.0 whatever the
++    prediction.  The canonical guard is RELATIVE.  Status is one of: ok,
++    degenerate_target, nonfinite_target, nonfinite_pred, bad_shape.
++    """
+     with np.errstate(over="ignore", invalid="ignore"):
+-        ss_res = np.sum((y_true - y_pred) ** 2)
+-        ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+-        if not np.isfinite(ss_res) or not np.isfinite(ss_tot) or ss_tot < 1e-30:
+-            return 0.0
+-        r2 = float(1 - ss_res / ss_tot)
+-    return r2 if np.isfinite(r2) else 0.0
++        return r2_checked(y_true, y_pred)
++
++
++def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
++    """R2 for INTERNAL model selection (Stage-2 fitting, NN-vs-formula decision).
++
++    Keeps this module's historical contract: an undefined or failed score (degenerate
++    target, non-finite prediction, overflow) is returned as 0.0 so the decision logic
++    below never has to compare NaN/-inf.  It is never 1.0.  Use r2_score_checked() when
++    the status matters; reported rows carry it as evaluation["r2_status"].
++    """
++    val, status = r2_score_checked(y_true, y_pred)
++    return float(val) if status == "ok" and np.isfinite(val) else 0.0
+ 
+ 
+ # ---------------------------------------------------------------------------
+@@ -1254,6 +1269,7 @@
+ 
+         if best_preds is not None:
+             final_r2  = r2_score(y_train, best_preds)
++            _, final_r2_status = r2_score_checked(y_train, best_preds)
+             residuals = y_train - best_preds
+             with np.errstate(over="ignore", invalid="ignore"):
+                 mse = float(np.mean(residuals ** 2))
+@@ -1261,6 +1277,7 @@
+             mae  = float(np.mean(np.abs(residuals)))
+         else:
+             final_r2 = 0.0
++            final_r2_status = "no_predictions"
+             mse  = 0.0
+             rmse = 0.0
+             mae  = 0.0
+@@ -1290,6 +1307,7 @@
+             "evaluation": {
+                 "llm_source": llm_result.get("llm_source", "unknown"),
+                 "r2":   float(final_r2),
++                "r2_status": final_r2_status,   # ok | degenerate_target | nonfinite_pred | ...
+                 "rmse": rmse,
+                 "mse":  mse,
+                 "mae":  mae,
+@@ -1318,13 +1336,14 @@
+             return {"success": False, "r2": 0.0, "error": "formula evaluation failed"}
+ 
+         r2 = r2_score(y, preds)
++        _, r2_status = r2_score_checked(y, preds)
+         mse = float(np.mean((y - preds) ** 2))
+         mae = float(np.mean(np.abs(y - preds)))
+ 
+         if verbose:
+             print(f"  [eval] R²={r2:.4f}, MSE={mse:.4e}, MAE={mae:.4e}")
+ 
+-        return {"success": True, "r2": r2, "mse": mse, "mae": mae}
++        return {"success": True, "r2": r2, "r2_status": r2_status, "mse": mse, "mae": mae}
+ 
+ 
+ # ---------------------------------------------------------------------------
