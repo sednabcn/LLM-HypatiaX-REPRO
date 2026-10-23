@@ -17,3 +17,8 @@ scan_report.html
 **/_checkpoint_shard*.json
 **/*_checkpoint.json
 **/checkpoint_plan.json
+*.bak
+*.bak
+scan_after*.txt
+triage_out/
+_quarantine/
