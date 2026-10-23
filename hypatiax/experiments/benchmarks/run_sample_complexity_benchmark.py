@@ -963,6 +963,7 @@ def _save_complexity_csv(agg: dict, ts: str) -> Path:
 # ============================================================================
 
 def main() -> None:
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     parser = argparse.ArgumentParser(
         description=(
             "Sample-complexity sweep benchmark  n ∈ {50,100,200,500}  "

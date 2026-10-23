@@ -1534,6 +1534,7 @@ def report_only():
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     parser = argparse.ArgumentParser(
         description="HypatiaX DeFi Extrapolation Benchmark v3.0",
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -1313,6 +1313,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main():
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     parser = build_parser()
     args   = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)

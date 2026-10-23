@@ -1013,6 +1013,7 @@ def run_comprehensive_test(
 
 
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     import sys
 
     verbose = "--verbose" in sys.argv

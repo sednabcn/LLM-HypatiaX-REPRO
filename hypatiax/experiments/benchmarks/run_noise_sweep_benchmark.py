@@ -946,6 +946,7 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
 # ============================================================================
 
 def main() -> None:
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     parser = argparse.ArgumentParser(
         description=(
             "Noise-level sweep  sigma in {1%,5%,10%}  for "

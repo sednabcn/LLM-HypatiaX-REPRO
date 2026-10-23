@@ -429,4 +429,5 @@ def _parse_response(raw: str, var_names: list[str]) -> list[str]:
     return valid_exprs
 
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     pass  # TODO: add entry point

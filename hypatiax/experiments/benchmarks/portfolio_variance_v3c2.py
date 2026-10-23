@@ -1106,4 +1106,5 @@ for fname in _cases:
 print('\n🎉 Done!')
 
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     pass  # TODO: add entry point

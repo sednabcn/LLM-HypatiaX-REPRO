@@ -1767,6 +1767,7 @@ def audit_wall_clock_flags(all_results: dict) -> None:
 # =============================================================================
 
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     import argparse
 
     parser = argparse.ArgumentParser(description="Exp 1: LLM Ablation on Core-15")

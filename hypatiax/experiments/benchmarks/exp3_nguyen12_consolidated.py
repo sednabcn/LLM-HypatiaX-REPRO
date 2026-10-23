@@ -2038,5 +2038,6 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
 
 # ── 9. Entry point ────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     run(seed=SEED, temperature=_args.temperature, run_index=_args.run_index,
         n_candidates=_args.n_candidates)

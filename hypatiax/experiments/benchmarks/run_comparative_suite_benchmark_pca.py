@@ -4365,6 +4365,7 @@ class ProtocolBenchmarkSuite:
 # ============================================================================
 
 def main():
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     import argparse
 
     parser = argparse.ArgumentParser(

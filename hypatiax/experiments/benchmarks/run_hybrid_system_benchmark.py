@@ -248,6 +248,7 @@ def run_command(cmd: str, description: str, verbose: bool = False) -> bool:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def main():
+    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
     start_time   = datetime.now()
     verbose_flag = "--verbose" in sys.argv
     resume_flag  = _resolve_resume_flag()   # [FIX-3] env var + CLI

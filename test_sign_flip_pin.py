@@ -1,4 +1,5 @@
-import pytest, enforce_flags
+import pytest
+from hypatiax.core import enforce_flags
 
 @pytest.mark.parametrize("v", ["1", "true", "yes", "on", "maybe"])
 def test_truthy_or_unknown_aborts(monkeypatch, v):
