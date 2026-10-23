@@ -1,0 +1,16 @@
+equation,P_near,H_near,P_med,H_med,P_far,H_far,P_time,H_time,H_status,source
+Impermanent Loss,0.9083,0.9639,-0.319,-80.4327,-62.9234,-8259.3079,1115.8,225.7,ok,exp1_ablation_run.log
+Price Impact,1.0,1.0,1.0,1.0,1.0,1.0,1101.2,6.7,ok,exp1_ablation_run.log
+Constant Product,0.9996,-173.1819,1.0,-245.8639,0.9996,-44589.5599,1101.1,5.9,ok,exp1_ablation_run.log
+Arrhenius,-0.9845,0.9977,-0.6687,0.9957,-12.5548,0.9028,1115.7,465.9,ok,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Henderson-Hasselbalch,0.7376,,,,-11.9183,,972.0,531.0,FAILED,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Rate Law,1.0,,1.0,,1.0,,1101.2,506.5,FAILED,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Value at Risk,0.9999,1.0,1.0,1.0,0.9999,1.0,1101.3,6.8,ok,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Liquidation Price,1.0,0.9998,1.0,0.9999,1.0,0.9993,1101.3,357.2,ok,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Portfolio Std Dev,1.0,1.0,1.0,1.0,1.0,1.0,1101.2,163.8,ok,exp1_ablation_run.log__shard0_rescued_1786497899.log
+Allometric Scaling,1.0,0.9795,1.0,0.9239,1.0,-0.7001,988.7,462.8,ok,exp1_ablation_run.log__shard1_rescued_1786493709.log
+Michaelis-Menten,-0.2999,,-3.4494,,-807.7235,,980.3,444.6,FAILED,exp1_ablation_run.log__shard1_rescued_1786493709.log
+Logistic Growth,0.9997,,0.9999,,0.9997,,1084.2,407.1,FAILED,exp1_ablation_run.log__shard1_rescued_1786493709.log
+Kinetic Energy,1.0,1.0,1.0,1.0,1.0,1.0,1115.7,4.1,ok,exp1_ablation_run.log__shard2_rescued_1786493416.log
+Gravitational Force,1.0,,1.0,,1.0,,1101.1,505.5,FAILED,exp1_ablation_run.log__shard2_rescued_1786493416.log
+Ideal Gas Law,1.0,0.9988,1.0,0.9999,1.0,0.9993,1101.1,208.4,ok,exp1_ablation_run.log__shard2_rescued_1786493416.log

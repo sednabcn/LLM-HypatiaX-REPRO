@@ -1,0 +1,54 @@
+ERROR [config-path] config/repro.yaml  benchmarks.core15.script not found: hypatiax/experiments/benchmarks/run_dual_condition_benchmark.py
+ERROR [config-path] config/repro.yaml  benchmarks.instability.script not found: hypatiax/experiments/benchmarks/run_dual_sweep_benchmarks.py
+ERROR [evaluator] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3767  absolute ss_tot guard (Supplement A Fix 5 / Listing 8 defect)
+ERROR [import] hypatiax/tools/symbolic/hybrid_system_v50_2.py:615  unresolved import: hypatiax.tools.llm_providers.anthropic_provider
+ERROR [import] hypatiax/tools/symbolic/hybrid_system_v50_2.py:627  unresolved import: hypatiax.tools.llm_providers.google_provider
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [60589 bytes]
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [36208 bytes]
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [31120 bytes]
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [727 bytes]
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [679 bytes]
+ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [684 bytes]
+WARN  [clean-run] .github/workflows/ci_bypass_audit.yml  HYPATIAX_DISABLE_HARDCODED present but not set to 1 [audit workflow: confirm =0 is intentional and its results never feed headline tables]
+WARN  [determinism] hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py  function named *_deterministic but no temperature/seed is sent; run-to-run LLM variance expected
+WARN  [determinism] hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py  function named *_deterministic but no temperature/seed is sent; run-to-run LLM variance expected
+WARN  [json-nan] hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/core/training/baseline_neural_network_defi_improved.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/exp1_ablation.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/tests/test_defi_benchmark_v4_selection.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/tests/test_defi_benchmark_v4_smoke.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/tools/symbolic/hybrid_system_v50_2.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [json-nan] hypatiax/tools/symbolic/symbolic_engine.py  1x emits -inf/nan and json.dump()s them -> non-standard JSON (Infinity/NaN) breaks strict parsers
+WARN  [merge-conflict-like] hypatiax/tools/__init__.py:2  3 conflict-looking line(s) [2, 4, 6], but the file parses -> probably inside a string/comment; open the file and confirm no real merge is pending
+WARN  [missing-dep] hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py  third-party module 'config_secrets' not importable here (1 file(s))
+WARN  [mutable-default] hypatiax/core/training/baseline_neural_network_defi_improved.py:231  1x __init__(): mutable default arg (lines 231)
+WARN  [mutable-default] hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py:509  1x _aggregate_results(): mutable default arg (lines 509)
+WARN  [swallowed-exc] hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py:230  9x `except Exception: pass` hides errors (lines 230,239,253,263,277,287,313,362...)
+WARN  [swallowed-exc] hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:664  3x `except Exception: pass` hides errors (lines 664,715,725)
+WARN  [swallowed-exc] hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py:656  3x `except Exception: pass` hides errors (lines 656,794,823)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/extrap_r2_far.py:259  2x `except Exception: pass` hides errors (lines 259,274)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py:174  2x `except Exception: pass` hides errors (lines 174,733)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py:267  2x `except Exception: pass` hides errors (lines 267,830)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py:467  1x `except Exception: pass` hides errors (lines 467)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:427  12x `except Exception: pass` hides errors (lines 427,442,1133,1472,1149,1164,1488,1503...)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3055  13x `except Exception: pass` hides errors (lines 3055,3059,436,448,1170,1513,1186,1198...)
+WARN  [swallowed-exc] hypatiax/experiments/benchmarks/run_instability_suite.py:938  5x `except Exception: pass` hides errors (lines 938,969,1002,457,472)
+WARN  [swallowed-exc] hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py:824  1x `except Exception: pass` hides errors (lines 824)
+WARN  [swallowed-exc] hypatiax/experiments/tests/test_proc_box_wiring.py:68  2x `except Exception: pass` hides errors (lines 68,72)
+WARN  [swallowed-exc] hypatiax/tools/symbolic/physics_aware_regressor.py:1388  4x `except Exception: pass` hides errors (lines 1388,1865,1934,1818)
+WARN  [swallowed-exc] hypatiax/tools/symbolic/symbolic_engine.py:779  5x `except Exception: pass` hides errors (lines 779,1845,1125,1727,1778)
+WARN  [swallowed-exc] hypatiax/tools/validation/dimensional_validator.py:121  1x `except Exception: pass` hides errors (lines 121)
+WARN  [swallowed-exc] hypatiax/tools/validation/ensemble_validator.py:187  2x `except Exception: pass` hides errors (lines 187,192)
+WARN  [swallowed-exc] hypatiax/tools/validation/symbolic_validator.py:137  1x `except Exception: pass` hides errors (lines 137)
+WARN  [tests] hypatiax/experiments/tests/test_baseline_regressions.py  duplicate test file test_baseline_regressions.py in 2 places (hypatiax/core/base_pure_llm, hypatiax/experiments/tests) -> keep one
+WARN  [todo] -  3 TODO/FIXME/XXX markers in 3 files (top: hybrid_system_v50_2.py=1, portfolio_variance_v3c2.py=1, hypatia.py=1)
+== 11 error(s), 42 warning(s) in hypatiax/ ==

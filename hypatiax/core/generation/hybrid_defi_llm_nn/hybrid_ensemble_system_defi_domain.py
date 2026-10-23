@@ -60,13 +60,31 @@ from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 # ---------------------------------------------------------------------------
 # Flags
 # ---------------------------------------------------------------------------
+_TRUTHY = ("1", "true", "yes")
+_FAIL_CLOSED = ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS")
+
+
 def _flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+    """True when `name` is on.  The two DISABLE_* switches are FAIL-CLOSED: unset/empty
+    counts as ON (clean run) unless HYPATIAX_ALLOW_LEGACY=1 is set explicitly, and an
+    explicit 0 counts as OFF -- the same contract the baseline module tests
+    (test_flags_fail_closed).  Every other name is a plain opt-in flag."""
+    raw = (os.environ.get(name) or "").strip().lower()
+    if name in _FAIL_CLOSED and not raw:
+        return (os.environ.get("HYPATIAX_ALLOW_LEGACY") or "").strip().lower() not in _TRUTHY
+    return raw in _TRUTHY
 
 
 def strict_live_mode() -> bool:
     """True when BOTH bypass switches are off -> a clean, live-LLM-only run."""
     return _flag("HYPATIAX_DISABLE_HARDCODED") and _flag("HYPATIAX_DISABLE_PROMPT_HINTS")
+
+
+def canonical_fallback_allowed() -> bool:
+    """The canned Kelly answer is a ground-truth leak.  Fail-closed: it is used only when
+    a human explicitly opts in (HYPATIAX_ALLOW_CANONICAL_FALLBACK=1) AND the run is not
+    strict-live.  An unset variable therefore never enables the bypass."""
+    return _flag("HYPATIAX_ALLOW_CANONICAL_FALLBACK") and not strict_live_mode()
 
 
 def _score(x) -> float:
@@ -263,7 +281,8 @@ def main(argv=None):
     print("Strict live mode (both bypass flags off):", strict)
     if not strict:
         print("⚠  not a clean live run: set HYPATIAX_DISABLE_HARDCODED=1 and "
-              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled)")
+              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled only if "
+              "HYPATIAX_ALLOW_CANONICAL_FALLBACK=1)")
 
     # 1) Generate/obtain LLM formula
     llm_error = None
@@ -295,15 +314,15 @@ def main(argv=None):
     prov["llm_source"] = llm_source
 
     no_code = not llm_result.get("python_code") or llm_result.get("python_code") == "N/A"
-    if no_code and not strict:
+    if no_code and canonical_fallback_allowed():
         # The canned Kelly answer is a ground-truth leak: label it.
         llm_result = {"python_code": CANONICAL_KELLY, "formula": "min(mu/(lambda*sigma^2),1.0)"}
         prov.update(llm_called=False, bypass_kind="canonical_fallback",
                     llm_source="canonical_fallback")
         print("⚠  local fallback for: " + desc[:50] + " (no usable LLM code)")
         print("Using canonical fallback (labelled bypass_kind=canonical_fallback).")
-    elif no_code and strict:
-        print("Strict live mode: no canonical fallback; LLM arm recorded as failed.")
+    elif no_code:
+        print("No usable LLM code and canonical fallback not enabled; LLM arm recorded as failed.")
 
     # 2) Evaluate LLM formula on train and test with the shared evaluator
     llm_pred_tr = llm_pred_te = None

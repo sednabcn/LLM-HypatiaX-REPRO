@@ -1,0 +1,44 @@
+name: R2 policy gate
+
+on:
+  push:
+    paths:
+      - "hypatiax/core/**"
+      - "hypatiax/experiments/tests/**"
+      - "hypatiax/experiments/benchmarks/**"
+      - "scripts/migrate_r2_repro.py"
+      - ".github/workflows/ci_r2_policy.yml"
+  pull_request:
+    paths:
+      - "hypatiax/core/**"
+      - "hypatiax/experiments/tests/**"
+      - "hypatiax/experiments/benchmarks/**"
+      - "scripts/migrate_r2_repro.py"
+      - ".github/workflows/ci_r2_policy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  r2-policy:
+    name: "R2 policy + metrics API + recovery evaluator"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install numpy pytest
+      - name: Run R2 policy tests
+        run: |
+          python -m pytest -q \
+            hypatiax/experiments/tests/test_r2_policy.py \
+            hypatiax/experiments/tests/test_core_metrics_compat.py \
+            hypatiax/experiments/tests/test_recovery_evaluator.py

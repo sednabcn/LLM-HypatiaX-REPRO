@@ -1,0 +1,78 @@
+From 3c07f3c6a8213805d9e5161bed387b99668d2e71 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 23 Oct 2026 10:25:47 +0100
+Subject: [PATCH] Migrate adaptive_config.train_with_config to the canonical
+ R^2 scorer
+
+The inline score used an absolute 1e-10 floor on ss_tot, so tiny-scale targets
+(Newton ~1e-11) scored 1.0 or 0.0 regardless of the model, and best-of-seeds
+selection ranked on that. It now uses r2_scored (relative tolerance) and ranks
+seeds with selection_score so nan/-inf lose; a model is always kept.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SNnTsRvsPgkf6Ni6hTP14m
+---
+ hypatiax/core/training/adaptive_config.py    | 15 +++++++++++----
+ hypatiax/experiments/tests/test_r2_policy.py | 11 +++++++++++
+ 2 files changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/hypatiax/core/training/adaptive_config.py b/hypatiax/core/training/adaptive_config.py
+index a343167..9990876 100644
+--- a/hypatiax/core/training/adaptive_config.py
++++ b/hypatiax/core/training/adaptive_config.py
+@@ -535,7 +535,9 @@ def train_with_config(
+     from sklearn.model_selection import train_test_split
+     from sklearn.preprocessing import StandardScaler
+ 
++    from hypatiax.core.r2_canonical import r2_scored, selection_score
+     best_model, best_r2, best_train_loss = None, float("-inf"), float("inf")
++    best_score = float("-inf")
+ 
+     for seed in range(cfg.n_seeds):
+         torch.manual_seed(seed)
+@@ -628,14 +630,19 @@ def train_with_config(
+         else:
+             y_pred = y_pred_w
+ 
+-        ss_res = float(np.sum((y - y_pred) ** 2))
+-        ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+-        r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else (1.0 if ss_res < 1e-10 else 0.0)
++        # R2-CANONICAL: relative tolerance (tiny-scale targets are scored, not
++        # collapsed to 0.0/1.0 by an absolute 1e-10 floor); nan = degenerate
++        # target, -inf = failed prediction. See hypatiax/core/r2_canonical.py.
++        r2, _r2_status = r2_scored(y, y_pred)
+ 
+         if verbose:
+             print(f"   [seed={seed}] R²={r2:.4f}  train_loss={final_train_loss:.6f}")
+ 
+-        if r2 > best_r2:
++        # rank with selection_score so nan/-inf lose instead of poisoning the
++        # comparison; always keep a model (the first seed seeds the incumbent).
++        _score = selection_score(r2)
++        if best_model is None or _score > best_score:
++            best_score       = _score
+             best_r2          = r2
+             best_train_loss  = final_train_loss
+             best_model       = model
+diff --git a/hypatiax/experiments/tests/test_r2_policy.py b/hypatiax/experiments/tests/test_r2_policy.py
+index c9057a7..09883b1 100644
+--- a/hypatiax/experiments/tests/test_r2_policy.py
++++ b/hypatiax/experiments/tests/test_r2_policy.py
+@@ -249,3 +249,14 @@ def test_no_new_r2_reimplementations():
+     if gone:
+         warnings.warn("legacy R^2 copies migrated; shrink the baseline "
+                       "(migrate_r2_repro.py --write-baseline): " + ", ".join(gone))
++
++
++# ------------------------------------------------ adaptive_config (hand-migrated)
++def test_adaptive_config_uses_canonical_scorer_and_nan_safe_selection():
++    src = (ROOT / "hypatiax/core/training/adaptive_config.py").read_text()
++    assert "ss_tot" not in src and "r2_scored" in src
++    assert "selection_score" in src          # nan/-inf must lose the best-of-seeds comparison
++    # the old absolute floor scored a tiny-scale target as 0.0/1.0 whatever the model did:
++    y = np.linspace(1.0, 2.0, 50) * 1e-11
++    old = 1.0 if np.sum((y - 0.0) ** 2) < 1e-10 else 0.0       # what the 1e-10 guard returned
++    assert old == 1.0 and not is_recovered(r2(y, y * 1.5))     # canonical: a wrong model is not "1.0"
+-- 
+2.43.0
+

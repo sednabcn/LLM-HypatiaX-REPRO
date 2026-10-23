@@ -1,0 +1,233 @@
+Binary files a/hypatiax/core/generation/hybrid_defi_llm_nn/__pycache__/hybrid_ensemble_system_defi_domain.cpython-312.pyc and b/hypatiax/core/generation/hybrid_defi_llm_nn/__pycache__/hybrid_ensemble_system_defi_domain.cpython-312.pyc differ
+diff -ruN a/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py b/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
+--- a/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py	2026-10-23 07:55:23.795655119 +0000
++++ b/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py	2026-10-23 07:55:23.797554463 +0000
+@@ -69,6 +69,13 @@
+     return _flag("HYPATIAX_DISABLE_HARDCODED") and _flag("HYPATIAX_DISABLE_PROMPT_HINTS")
+ 
+ 
++def canonical_fallback_allowed() -> bool:
++    """The canned Kelly answer is a ground-truth leak.  Fail-closed: it is used only when
++    a human explicitly opts in (HYPATIAX_ALLOW_CANONICAL_FALLBACK=1) AND the run is not
++    strict-live.  An unset variable therefore never enables the bypass."""
++    return _flag("HYPATIAX_ALLOW_CANONICAL_FALLBACK") and not strict_live_mode()
++
++
+ def _score(x) -> float:
+     """Sortable score: None/NaN -> -inf so failures never win a comparison."""
+     return -math.inf if x is None or (isinstance(x, float) and math.isnan(x)) else float(x)
+@@ -263,7 +270,8 @@
+     print("Strict live mode (both bypass flags off):", strict)
+     if not strict:
+         print("⚠  not a clean live run: set HYPATIAX_DISABLE_HARDCODED=1 and "
+-              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled)")
++              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled only if "
++              "HYPATIAX_ALLOW_CANONICAL_FALLBACK=1)")
+ 
+     # 1) Generate/obtain LLM formula
+     llm_error = None
+@@ -295,15 +303,15 @@
+     prov["llm_source"] = llm_source
+ 
+     no_code = not llm_result.get("python_code") or llm_result.get("python_code") == "N/A"
+-    if no_code and not strict:
++    if no_code and canonical_fallback_allowed():
+         # The canned Kelly answer is a ground-truth leak: label it.
+         llm_result = {"python_code": CANONICAL_KELLY, "formula": "min(mu/(lambda*sigma^2),1.0)"}
+         prov.update(llm_called=False, bypass_kind="canonical_fallback",
+                     llm_source="canonical_fallback")
+         print("⚠  local fallback for: " + desc[:50] + " (no usable LLM code)")
+         print("Using canonical fallback (labelled bypass_kind=canonical_fallback).")
+-    elif no_code and strict:
+-        print("Strict live mode: no canonical fallback; LLM arm recorded as failed.")
++    elif no_code:
++        print("No usable LLM code and canonical fallback not enabled; LLM arm recorded as failed.")
+ 
+     # 2) Evaluate LLM formula on train and test with the shared evaluator
+     llm_pred_tr = llm_pred_te = None
+Binary files a/hypatiax/experiments/tests/__pycache__/test_enhanced_defi_extrapolation.cpython-312.pyc and b/hypatiax/experiments/tests/__pycache__/test_enhanced_defi_extrapolation.cpython-312.pyc differ
+diff -ruN a/hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py b/hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py
+--- a/hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py	2026-10-23 07:55:23.795401540 +0000
++++ b/hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py	2026-10-23 07:55:23.797276723 +0000
+@@ -54,6 +54,25 @@
+ _RESULTS_DIR = Path(os.environ.get("RESULTS_DIR", project_root / "hypatiax" / "data" / "results"))
+ 
+ from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
++from hypatiax.core.r2_canonical import r2_checked as _r2_checked
++
++
++def _r2_reported(y_true, y_pred):
++    """Canonical R2 for REPORTED rows.  Rule A: a degenerate (constant / near-constant)
++    target, a non-finite value or a bad shape is UNDEFINED -> (nan, status), never
++    recovered, whatever the prediction.  Replaces the old absolute guard
++    ``ss_tot > 1e-10 ... else 0.0``, which scored tiny-scale targets as 0.0."""
++    with np.errstate(over="ignore", invalid="ignore"):
++        val, status = _r2_checked(np.asarray(y_true, float), np.asarray(y_pred, float))
++    ok = status == "ok" and val is not None and np.isfinite(val)
++    return (float(val) if ok else float("nan")), status
++
++
++def _r2_internal(y_true, y_pred):
++    """R2 for INTERNAL routing decisions only (never reported): undefined -> 0.0, so
++    comparisons never see NaN.  Same contract as hybrid_system_nn_defi_domain.r2_score."""
++    val, _ = _r2_reported(y_true, y_pred)
++    return val if np.isfinite(val) else 0.0
+ 
+ 
+ class EnhancedExtrapolationTest:
+@@ -143,9 +162,9 @@
+             y_pred = execute_python_code_get_predictions(llm_code, X)
+             if y_pred is None or np.any(np.isnan(y_pred)) or np.any(np.isinf(y_pred)):
+                 return float("nan"), False
+-            ss_res = np.sum((y_true - y_pred) ** 2)
+-            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+-            r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0
++            # Rule A: formula ran fine but R2 may be undefined (degenerate target)
++            # -> (nan, True).  Execution failure stays (nan, False).
++            r2, _status = _r2_reported(y_true, y_pred)
+             return r2, True
+         except Exception:
+             return float("nan"), False
+@@ -194,10 +213,7 @@
+         for _ in range(200):
+             opt.zero_grad(); loss = crit(model(Xt), yt); loss.backward(); opt.step()
+ 
+-        def _r2(y_true, y_pred):
+-            ss_res = np.sum((y_true - y_pred) ** 2)
+-            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+-            return float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0
++        _r2 = _r2_internal   # routing decision only; undefined -> 0.0
+ 
+         model.eval()
+         with torch.no_grad():
+@@ -290,9 +306,7 @@
+             ).flatten()
+ 
+         def _r2(y_true, y_pred):
+-            ss_res = np.sum((y_true - y_pred) ** 2)
+-            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
+-            return float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0
++            return _r2_reported(y_true, y_pred)[0]   # rule A: nan when undefined
+ 
+         model.eval()
+         with torch.no_grad():
+@@ -784,11 +798,10 @@
+             # Extract hybrid's own LLM train R² to guard routing overrides.
+             # If the LLM formula was bad at training time (R² ≤ 0), forcing
+             # the test path to use it produces catastrophic scores (cases 31, 40).
+-            _llm_train_r2 = float(
+-                train_result.get("llm_result", {})
+-                .get("metrics", {})
+-                .get("r2", 0.0) or 0.0
+-            )
++            # FIX: hybrid_predict returns it at the TOP level ("llm_train_r2").
++            # The old llm_result["metrics"]["r2"] key is never set, so this was
++            # always 0.0 and Fixes 1-3 never fired.
++            _llm_train_r2 = float(train_result.get("llm_train_r2", 0.0) or 0.0)
+             _llm_formula_trustworthy = has_formula and (_llm_train_r2 > 0.0)
+ 
+             if _llm_formula_trustworthy and decision in ("nn", "ensemble"):
+@@ -824,12 +837,14 @@
+                 # on quadratic / matrix formulas (e.g. Correlated Portfolio VaR).
+                 test_r2, _ok = self._eval_formula_r2(llm_code, X_test, y_test, var_names)
+                 # Safety net: if unified evaluator also fails, try evaluate_llm_formula
+-                if not _ok or np.isnan(test_r2):
++                if not _ok:   # (nan, True) = undefined R2 on a degenerate target: keep nan
+                     _fallback = hybrid.evaluate_llm_formula(
+                         {"python_code": llm_code},
+                         X_test, y_test, var_names, verbose=False,
+                     )
+-                    test_r2 = float(_fallback["r2"]) if _fallback.get("success") else float("nan")
++                    test_r2 = (float(_fallback["r2"])
++                               if _fallback.get("success") and _fallback.get("r2_status", "ok") == "ok"
++                               else float("nan"))
+ 
+             elif decision == "ensemble" and has_formula:
+                 # Hybrid blended LLM + NN → blend predictions on test set too,
+@@ -845,40 +860,30 @@
+                 nn_m = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
+ 
+                 if llm_test_ok:
+-                    # Reconstruct LLM test predictions from the r2 score is not
+-                    # possible, so re-run the formula to get actual y_pred values.
+-                    try:
+-                        from hypatiax.experiments.tests.hybrid_ensemble_system_defi_domain import (
+-                            ensemble_llm_nn,
+-                            execute_python_code_get_predictions,
+-                        )
+-                        llm_pred = execute_python_code_get_predictions(llm_code, X_test)
+-                        nn_pred  = nn_m["y_pred_test"]
+-                        llm_train_r2 = float(
+-                            train_result.get("llm_result", {})
+-                            .get("metrics", {})
+-                            .get("r2", 0.0) or 0.0
+-                        )
+-                        # Fix 4: distance-gated blend weight.
+-                        # When test points lie outside training range (always
+-                        # true in extrapolation), shift weight toward LLM.
+-                        llm_w = self._distance_llm_weight(X_test, X_train,
+-                                                          base_weight=0.3)
+-                        nn_w  = 1.0 - llm_w
+-                        ensemble_pred, _ = ensemble_llm_nn(
+-                            llm_pred, nn_pred, y_test,
+-                            llm_r2=llm_train_r2 * llm_w,
+-                            nn_r2=nn_m["train_r2"] * nn_w,
+-                        )
+-                        ss_res  = np.sum((y_test - ensemble_pred) ** 2)
+-                        ss_tot  = np.sum((y_test - np.mean(y_test)) ** 2)
+-                        test_r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0
+-                    except Exception:
+-                        # Fallback: take the better of LLM and NN on test
+-                        test_r2 = max(
+-                            float(test_m_llm.get("r2", float("nan"))),
+-                            nn_m["test_r2"],
+-                        )
++                    # Re-run the formula to get actual test predictions.
++                    # FIX: correct module path (the old hypatiax.experiments.tests.* import
++                    # always failed) and NO fallback that picks the winner on test labels.
++                    from hypatiax.core.generation.hybrid_defi_llm_nn.hybrid_ensemble_system_defi_domain import (
++                        ensemble_llm_nn,
++                        execute_python_code_get_predictions,
++                    )
++                    llm_pred = execute_python_code_get_predictions(llm_code, X_test)
++                    nn_pred  = nn_m["y_pred_test"]
++                    llm_pred_tr = execute_python_code_get_predictions(llm_code, X_train)
++                    llm_train_r2 = _llm_train_r2   # top-level hybrid_predict value
++                    # Fix 4: distance-gated blend weight.
++                    llm_w = self._distance_llm_weight(X_test, X_train,
++                                                      base_weight=0.3)
++                    nn_w  = 1.0 - llm_w
++                    _nz = lambda v: float(v) if np.isfinite(v) else 0.0   # undefined -> no weight
++                    # B4: weights are fitted on the TRAIN split only (weight_data), never on y_test.
++                    ensemble_pred, _ = ensemble_llm_nn(
++                        llm_pred, nn_pred, y_test,
++                        llm_r2=_nz(llm_train_r2) * llm_w,
++                        nn_r2=_nz(nn_m["train_r2"]) * nn_w,
++                        weight_data=(llm_pred_tr, nn_m["y_pred_train"], y_train),
++                    )
++                    test_r2, _ = _r2_reported(y_test, ensemble_pred)
+                 else:
+                     # LLM failed on test set → fall back to NN test result
+                     test_r2 = nn_m["test_r2"]
+@@ -891,7 +896,7 @@
+                 # (bad formula would poison the NN input).
+                 if _llm_formula_trustworthy:
+                     try:
+-                        from hypatiax.experiments.tests.hybrid_ensemble_system_defi_domain import (
++                        from hypatiax.core.generation.hybrid_defi_llm_nn.hybrid_ensemble_system_defi_domain import (
+                             execute_python_code_get_predictions,
+                         )
+                         llm_pred_train = execute_python_code_get_predictions(llm_code, X_train)
+@@ -911,8 +916,11 @@
+                     nn_m    = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
+                 test_r2 = nn_m["test_r2"]
+ 
++            _tr_ok = train_result["evaluation"].get("r2_status", "ok") == "ok"
+             return {
+-                "train_r2": float(train_result["evaluation"]["r2"]),
++                # rule A: an undefined train R2 is nan, not the internal 0.0 placeholder
++                "train_r2": float(train_result["evaluation"]["r2"]) if _tr_ok else float("nan"),
++                "train_r2_status": train_result["evaluation"].get("r2_status", "ok"),
+                 "test_r2":  float(test_r2),
+                 "decision": decision,
+                 "success":  True,

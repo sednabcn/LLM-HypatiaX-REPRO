@@ -1,0 +1,361 @@
+{
+  "git": {
+    "timestamp_utc": "2026-10-23T14:08:31+00:00",
+    "python": "3.12.2",
+    "root": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO",
+    "sha": "9923dd5b774e2bd33b767ea6b7f7a785af2ee6cc",
+    "branch": "audit/option3",
+    "dirty": true,
+    "dirty_files": [
+      "M hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py",
+      " M hypatiax/data/results/extrapolation_73cases_enhanced.json",
+      "?? .github/workflows/ci_r2_policy.yml",
+      "?? all_domains_and_recovery_tests.patch",
+      "?? enforce_flags.py",
+      "?? fix_missing_names.py",
+      "?? followup_fixes.patch",
+      "?? hybrid-ingest-test.patch",
+      "?? hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py.orig",
+      "?? hypatiax/core/base_pure_llm/test_baseline_regressions.py",
+      "?? hypatiax/core/recovery_eval.py",
+      "?? hypatiax/data/results/ablation/exp1_ablation/exp1_arms_merged.csv",
+      "?? hypatiax/data/results/figures/radar_comparison_73cases.png",
+      "?? hypatiax/data/results/figures/train_vs_test_73cases.png",
+      "?? hypatiax/data/results/statistical_summary_73cases.tex",
+      "?? hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py.bak",
+      "?? hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py.bak",
+      "?? hypatiax/experiments/tests/conftest.py",
+      "?? hypatiax/experiments/tests/test_baseline_regressions.py",
+      "?? hypatiax/experiments/tests/test_no_bypass.py",
+      "?? hypatiax/experiments/tests/test_rule_a.py",
+      "?? llm_model_probe.py",
+      "?? merge_instability_shards.py",
+      "?? repro-adaptive-config.patch",
+      "?? repro-metrics-api.patch",
+      "?? rule_a_fixes.patch",
+      "?? scan_after.txt",
+      "?? scan_after2.txt",
+      "?? scan_after3.txt",
+      "?? scan_hypatiax.py",
+      "?? scan_repo.py",
+      "?? scan_report.json",
+      "?? scan_report.txt",
+      "?? step1_freeze_and_triage.py",
+      "?? summarize_exp1_logs.py"
+    ],
+    "dirty_file_count": 35
+  },
+  "checksums": {
+    ".github/scripts/check_bypass_audit.py": "5a055d80edebfb60673bb7acba7b8ae9ef2808e1262624186d2ddd16a05b964a",
+    ".github/scripts/check_sweep_coverage.py": "8e04fe000c0baa465cc9de803648b5624ff5ea5f381df6b761aee10ce49d354e",
+    ".github/scripts/clean_figures_dir.py": "aff44de863bdf519b6b21faef4da9d5b0a8175c8d2df200802fbf33546470eac",
+    ".github/scripts/compute_solve_rate.py": "49a56d047844fb5c0cb44d7637c3da2c1959edd462b6230d8e4ce92543f54464",
+    ".github/scripts/print_repro.py": "d9664a94d59fc0ceca2dd3ac4d8c722d11ba6441494eb6587eb8a6fce3fd9c1e",
+    ".github/scripts/purge_figures_dest.py": "30edc6cf4fed9d76db99956f9a9c74c547075ee24098eeddad5bc1b9a6b94651",
+    ".github/scripts/result_subdir_map.py": "42d91a1e280965ed566182fdb0ad7ad1d5f1e1ac7bf0f74263dc949fbd47467f",
+    ".github/workflows/ci_bypass_audit.yml": "16fdbce9c937b70523dbb964a7e8df9fefb3f2787249dc31a95daeacfcbf2dc5",
+    ".github/workflows/ci_pipeline_check.yml": "cdb9c49f6860e0f50569d43d8e4aed7a3d759cb3a2975982bb52afa60d7eb358",
+    ".github/workflows/ci_pipeline_public.yml": "cd766e6ef0cb85a6f2263f492d0c188ec07d30a34e586c5559d70cf181029686",
+    ".github/workflows/ci_pipeline_repro.yml": "b853d786ab5aa391bdd40ed7e45cbf5879f9aff1f34c769bee92a1f0e573fcd5",
+    ".github/workflows/ci_pipeline_validate.yml": "9cdd6c7b8a0951799c1fbe3a374f7e5d61fc879a17f59e6094a946b52ade41a1",
+    ".github/workflows/ci_r2_policy.yml": "ca2174d3371d45a132dc119adfba09c9511c2c76cf2b63c33fb10a7f8dd6a90a",
+    ".github/workflows/ci_runner_repro.yml": "5117041fccd3c95afe6acc160cdd18a18908b50664bc3a552dfe4ca9f636086f",
+    ".github/workflows/ci_smoke_test_exp3.yml": "8204e3844f37d9b1f4b950105a1cf3792c4d2e3eff912bbe8a1fc326ccd686e3",
+    ".github/workflows/clean-old-workflows.yml": "a05472b8d148dd730d78ab0502e4be9edf79f0639b7a8588efc2278cb70247a2",
+    ".github/workflows/cleanup-cache-actions.yml": "bfda2c31d5190ca4209ae24aa98cef7277393d26a2060ab7d7e059a09f33b9d9",
+    ".pytest_cache/README.md": "73fd6fccdd802c419a6b2d983d6c3173b7da97558ac4b589edec2dfe443db9ad",
+    "MANIFEST.md": "f8f3609599526fa6d573b5f70d341ba254713f97ea512564518a1f48919fa70c",
+    "README.md": "00ed8698bf2b8bf602c14096936745375a6eb4c683b2cdfab65695d184e83187",
+    "activate_hypatiax.sh": "e0b6ab8701fe2daaa1e977b33c894ccb931be8ffd288ce7a16833ac83d95453f",
+    "all_domains_and_recovery_tests.patch": "2aabe3ac17309c6f003a3a0906b480d14fa614a4717c552f3b4acc29ab80f0cf",
+    "apply_adaptive_config_r2.py": "a11be8311c5c43192a345a938f2c5be789a71dd761fe12915f7ae51bfbabd57a",
+    "audit/option3/repro-adaptive-config-r2.patch": "3c0d8f48e0897e5201d17a83bbea6f6448766f57bd8297b13ceb2f9309f3c5ed",
+    "audit/option3/repro-dependabot-bumps.patch": "1c7fefa1181ffb49247b27e095ecfca95e6ac3ed35b3b033b2d13f911b0facae",
+    "audit/patches/nn-r2-canonical.patch": "e76f7059953950245be1f45c01261c03c52670e6bb504b53e0bab1d8137f4e08",
+    "audit/patches/repro-r2-canonical.patch": "bba1d5ab7bf10ba86049ca86d709c27e8fa33c0533a1bc1436576e9051653c42",
+    "audit_and_fix.py": "c046182607f9b1326d131e7348c9b11bafc546dd7b8cf0821369d1e39c0eeff3",
+    "audit_out/manifest_summary.txt": "cfb4a18fe592ca5ddf0442ba14f48673542de7458b6b0ea0dce7ec22d500a998",
+    "audit_out/manifest_summary_v2.txt": "7dd6f14ba0cb57437e5fcd86f67146176467999e14d2c36ed848ca8b27ea8a81",
+    "audit_out/probe2_old.txt": "2c6e3609d7c7c0dd398afe8dbdcfa10189ee11e8926a1bd8aeee4ddb0794043b",
+    "audit_out/probe_old.txt": "389f78c0a4fb937ff2c666aee46e8c6d48e0478706b77fa196a987237e386b8b",
+    "audit_out/timing_census.txt": "99c1ec13afe03f5add07882d32443a27f8b1fb1a4d5f9356c2367ce6926a424c",
+    "audit_results_manifest.py": "a874e59d1de2ac3075d5a00137d293fa42ed866b81866dd534aeace303ef10cb",
+    "config/repro.yaml": "dd9aa19fe6f1be98eff3270c15e55c52d7d7d03d0f25a726891e300ca18e3faf",
+    "config/test_key_status.py": "6c2072bf85e409ed2c71437f9be75ada9de6e75f46a9df08fe4da285c2197b19",
+    "enforce_flags.py": "f00dd8749defc54b58c9ad9ee5faba8443ee55242de1a268c0ec88da5317d42d",
+    "fix_missing_names.py": "53b5514df20873c4d23eea8d96712a7d9cbb091a6f31675248cc61cf98092a98",
+    "followup_fixes.patch": "fd5aaf72da9687351781a24533bd2bcb9c26c04acacbdfeabed3419f58d96936",
+    "hybrid-ingest-test.patch": "7fcf51e1bb0c92a12b271991b780a01022dd3276461708cfc48cdc9cfb2e0fee",
+    "hypatiax/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hypatiax/core/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/base_pure_llm/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py": "4bb133a1a13650fec483f49ad7658d6880f4a50ff35b9401f6522c8f0a229beb",
+    "hypatiax/core/base_pure_llm/test_baseline_regressions.py": "77ae1049511cb49b738e4be1518dc7d0e54946809fdee6a87c01400e00e9a3e6",
+    "hypatiax/core/generation/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/generation/hybrid_all_domains_llm_nn/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py": "2a8c3a1df91ef62dc7cd5af3ef42199a4ea164cc784a6f4d221271ffe9144ce6",
+    "hypatiax/core/generation/hybrid_defi_llm_nn/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py": "d8351858e1ba6f122fcb99dd53f0248740694d3ae9cb9a0092285097ddb4db95",
+    "hypatiax/core/generation/hybrid_defi_system/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py": "286054c4d769e6d5bccfd821ff5155806f724fb8ab100a8e91b6ce3ed2448922",
+    "hypatiax/core/metrics.py": "0c9413c02d308ff05d8a15747a3f0793e51479c7a1854f4118840a6a9727af4e",
+    "hypatiax/core/r2_canonical.py": "7d5395ed728323d8db8b0a5e9e6804a2b142a401c8d7fe4d19d54b32973b7971",
+    "hypatiax/core/recovery_eval.py": "cbde33dfc2decab67b70499173aae9a8ddcb9bd11ae1a2db5ead7cf4975557bb",
+    "hypatiax/core/training/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/core/training/adaptive_config.py": "deedf3303cd85f899bdc963fdd67ca7399bc2705844f07d3563f1fbd14429de1",
+    "hypatiax/core/training/baseline_neural_network_defi_improved.py": "1eb82cd35e72f358fce0c9b5939cf7d48c94daeb455f02067f33adf33b5d470a",
+    "hypatiax/data/checksums.txt": "ac8f60f6d32da7b89e6969fa6db6708c693167a6f95d0f70803381d2b447acde",
+    "hypatiax/experiments/__init__.py": "7d6925671f2bb8a49f3458d455dfbba3a543bb53a20682766ec6c04084afc748",
+    "hypatiax/experiments/benchmarks/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hypatiax/experiments/benchmarks/exp1_ablation.py": "c4ea24504b5aa3447dae7c4a85f919dc9414c6df34c13fe1ea04a7032f894b9d",
+    "hypatiax/experiments/benchmarks/exp1_five_system.py": "6aef25724bc85bfdf88806ab7706af9a36a1ea32b19b76bd90add297cce7e0a2",
+    "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py": "7fbf61462b3ffa4dc82a5d518670b0ecc21d22b7fd71a17997eb46ffe8532421",
+    "hypatiax/experiments/benchmarks/extrap_r2_far.py": "351ba6f919a7d89e914762cbc436a5061ec4ae8d79ea122522c7b0141472005b",
+    "hypatiax/experiments/benchmarks/hypatia.py": "f00f4347b396f1147f7e85b937d56e6595e85aa07800d71d41659142b7e1ae33",
+    "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py": "753e7c48e2a9b3f0890b7555b035a5d630b550feb368738e36647df81ca3df8a",
+    "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py": "2b163ebf13e3bee127b7f568e7819fae105805cdbd5d16cbed6ee00157a61747",
+    "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py": "7c842a28deac8dc19d3b273dc089b28b5b3caa1c527bd330eae37033cb90761a",
+    "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py": "94c236353582fa673f539cfeb8b367bc173a97cb55d3bd90018dc36250d3e35e",
+    "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py": "35a9ed45cab95b4018ef23f21548df3ab89ffcae64624ec0dff02acf79ccbc74",
+    "hypatiax/experiments/benchmarks/run_hybrid_system_benchmark.py": "9ff0b6e25f63111fe6bbdb562181fdc43b413990cf35a6f9a8c50271b87a2e2c",
+    "hypatiax/experiments/benchmarks/run_instability_suite.py": "b344d5c1d1214dcaf4b2e84f6c4b8c1438315ab7be3d0c1cfe611c15e90f6d57",
+    "hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py": "3efb2be1e7c6863b83655880fece762307f15def99e1cab09a7c241fe70844d2",
+    "hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py": "30e15479cc232ebc1472cb0f3ec74966082ac953d845c1d99fc8e2770cc716ef",
+    "hypatiax/experiments/tests/conftest.py": "19e025df954f63a9a4cab5f4e4dba360e081d5679aa664f2bf6a3da0d4574cae",
+    "hypatiax/experiments/tests/test_baseline_regressions.py": "77ae1049511cb49b738e4be1518dc7d0e54946809fdee6a87c01400e00e9a3e6",
+    "hypatiax/experiments/tests/test_core_metrics_compat.py": "3249209debb9c8e03102813e9baa80d8bcebc4e08f73d5e96aa22bdc44955b09",
+    "hypatiax/experiments/tests/test_defi_benchmark_v4_selection.py": "daa7c4bd60276b804af933c6fabc9fcf66c23ceee62f3bc2862787dc052d3d74",
+    "hypatiax/experiments/tests/test_defi_benchmark_v4_smoke.py": "fc4536adc3e00e574bd24aa0dc55328ac7efd496917f67ce11dcfdf61f402aaa",
+    "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py": "c157604a535e6d2e3f50fc9ba89032a51758b21f0b3280fc04fcf696c7463469",
+    "hypatiax/experiments/tests/test_extrapolation_helpers.py": "3b628ed3398b1861553cd16742bdb8d5d483ab30674d303d59169d2c264149c3",
+    "hypatiax/experiments/tests/test_llm_gate_fallback.py": "6ea428823e37441112268302ad59e5c2557c93d8d2a26a4270d665d16955c4e1",
+    "hypatiax/experiments/tests/test_no_bypass.py": "e5e3b27769886bdd2c55512819264a45b43a1ffdd7172593abdf57a84e2f1708",
+    "hypatiax/experiments/tests/test_proc_box_wiring.py": "8134994dfc945028b3ca722f1cafed00b443ce9c0f5b4cb810e2d1915f1b398a",
+    "hypatiax/experiments/tests/test_r2_policy.py": "c5da74416f2b933559478fdb45921db99f541b26a8056d603cc7da9becc4d369",
+    "hypatiax/experiments/tests/test_recovery_evaluator.py": "575db54c01493b07b4f52481ef9b5a3d671bde433b2626885814864a3ef87170",
+    "hypatiax/experiments/tests/test_rule_a.py": "9eeb83ed6cda2810187d56d3420a3b2e38b885fea2a1929c39f3cdc354a0a58b",
+    "hypatiax/path.py": "9bfa223f5c2eaf91ddf6c728141667c5cabe9f40d1cdd8720ed4443688ef8e4c",
+    "hypatiax/protocols/__init__.py": "75ad4f4c2943325f88064ad2beae890b59674be2bf0404b30afc5584dc4de4bb",
+    "hypatiax/protocols/experiment_protocol_all_30.py": "26530949fc2a5a6dd15904e82e9e396b15f009f769532c40bf4a4f360012ca7f",
+    "hypatiax/protocols/experiment_protocol_benchmark_v2.py": "09a173670b4a2291a1febbc2c65c9a8c0265689bc1fbd700aede4ff8d03632a0",
+    "hypatiax/protocols/experiment_protocol_defi.py": "ea75a1c7ae76a46a0d6ceedf5ecc0b66e563f07638528bf59d4e7a8f7d1a5ae7",
+    "hypatiax/protocols/experiment_protocol_nguyen12.py": "111a4b9e003fac92d0ef7252e007f4f6a6f6cec214f6149bce177947c5309223",
+    "hypatiax/tools/__init__.py": "4c6ed44b3484a4b92bc73ca5c3c13c394287d2d065a2455fa0adcc3ca918b2d4",
+    "hypatiax/tools/symbolic/__init__.py": "5acd891d183639da157286374467fdc79fb9af5a07fdee961e4c3d258fb745ec",
+    "hypatiax/tools/symbolic/hybrid_system_v50_2.py": "f6c16ff8addad01ce496ef536c97ca5bd5226b526d8de9f92a8594e6f1be1fe1",
+    "hypatiax/tools/symbolic/physics_aware_regressor.py": "ad349e5a6bce122647c0b53e7529775f26f1b7a762e1a9c273a42b1a9a8448f4",
+    "hypatiax/tools/symbolic/smart_structure_detector.py": "9f0b2eddc71b4a5744c8624c0303e6afb3ca65f7488134282ddc34e772356bc9",
+    "hypatiax/tools/symbolic/symbolic_engine.py": "0fa3dc19911d416dde4acad0ff405da0d0f2e45760909c4c725914982bc1055d",
+    "hypatiax/tools/utils/__init__.py": "1b4c7f111fb7220f0052774a1c5c285d32675515be92115547e819944b5fb067",
+    "hypatiax/tools/utils/pca_split_utils.py": "3ef4f0d12aacc86b4950cc62cda9c936ee483ed7499ba27ab9896ab126cfa1f8",
+    "hypatiax/tools/validation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hypatiax/tools/validation/dimensional_validator.py": "fe1e9748ff0776b36bdd69f541ebf71247aabddcd6a730956ff5ab504d3b2def",
+    "hypatiax/tools/validation/domain_validator.py": "087daeed017becd730b51266f85e41f847b5a8c9961111a03e029bfa67a7b810",
+    "hypatiax/tools/validation/ensemble_validator.py": "8fdae7cfd324898a2d0cacfc2470d8c43e973c06cb633a6bd22b3d7d388a7d20",
+    "hypatiax/tools/validation/symbolic_validator.py": "29550cfcbc8a413738a3603f3a46ea3750d1d189b9ff151555b05a2ccb14bdcf",
+    "hypatiax/version.py": "27e8febb48ada44153ea2add9969a2c50a9831a74d9755fdd53c549a888b1cc2",
+    "llm_model_probe.py": "af9716e88c42aaa5e895020ebd0e261c8f361c29f1305c825400e2326f7efdca",
+    "merge_instability_shards.py": "d604d1edffefcc58b320762ee58d01b5b8231f674c014a3c18d7dcbe8fd56a53",
+    "paired_checker_audit.py": "bae9347e76aa3efec096e6c7742a75a5839de32c28a510361affa04fc581b946",
+    "probe_old.sh": "fe0d0d817464d59bccf47ef1c08fde2d978090b3815d8a22b02c69b50466111e",
+    "pyproject.toml": "562b801e494e33a781d6c9a4da4ed36bf86af3426c37fdb4785e42736cb5a49c",
+    "reanalyze_excluding_bypass.py": "ca554a82292639d6afa8bd6a49e4e7794a6d9738a9158755cb35c160f174fbd4",
+    "repro-adaptive-config.patch": "2868464220485e629386a291e663718ac7a89aa4061f079d22b3409a1425df3a",
+    "repro-metrics-api.patch": "6b4ba3c70af626370dc4770e93bf228a3f3795264bef219ecd6f2a79ba8a056f",
+    "requirements.txt": "0c9e5c315f70a5d5d7fded466e672f46c7053ea5e33227b995c534461cab304e",
+    "rule_a_fixes.patch": "646028563480492a45541693910296804dbd4f34e039e80ddb219c9aade5e804",
+    "run_all.sh": "9353515e33bd9881d8dac6cc1c5fb3edb007a8b51dfbc483fd19041f921d48dc",
+    "scan_after.txt": "39f3444c96767482911fac033f4cd5e9c94b36711aa1ee5f79a29d28fcd9a16b",
+    "scan_after2.txt": "574c0198b22931baa1e076081bbf6c7f962b6ec0d472d4955b5e6de5df73150a",
+    "scan_after3.txt": "dd08d5929f8e0d65f0bc5c8834edf7f6f7deb3c67ee8f5c010c409f41dd10b2f",
+    "scan_hypatiax.py": "1e1461059991781196efd07bd020b67cd9db4c41cfb3991bb86164846d096cc4",
+    "scan_repo.py": "c5e14bcf59183e2b9f976b70d6f9785589b7c008293dc96eb4031fb0fa60fda7",
+    "scan_report.txt": "e9db6a4f08c599d9b23e61407eb381b40c9f70ed106e43c09400a361df672edb",
+    "scripts/bypass_audit.py": "1eab163145b2e52f6ed938b9290c36e7c3cf370c5086956bc158b8663e1a09cc",
+    "scripts/migrate_r2_repro.py": "a3853158ca330a370214bcc32354bc2df46fe882e2d7733a500764c5561fe95e",
+    "scripts/option3/patch_runner_for_ablation.py": "c128b1e93e41200f24ce1d2f62ec578fb7dcada3ae9e337ea9385c9a5c2d91c3",
+    "scripts/option3/static_audit.py": "5e29e5a90d839a37b6e4da6818fd8d48b0aee04ad22bdfd35aff430bcde561f4",
+    "scripts/option3/summarize_recovery.py": "70a5a51f00a78d7bcae4f39741ff2222bf1e2b94894e7c3e037f36b26955670c",
+    "setup.py": "d9f12d6b87149e406aff0999e62ae499bfc0c42a87f04166b1b835a6564db30a",
+    "setup_environment.sh": "7612ed6e28eb3f7fcc0b057086263d2fa8e3c76246b89a88ac56b845ae6f5123",
+    "step1_freeze_and_triage.py": "33655261bf553b2a89e1f5328f11b8d2a91cdf0c307d16c2c2389b0364b8262e",
+    "summarize_exp1_logs.py": "4498fb6adbae7ea1f2ccd61fad54cb0f0efd1e22f37b0d962f47e751e8648a54"
+  },
+  "stray_files": [],
+  "conflict_markers": [
+    {
+      "path": "hypatiax/tools/__init__.py",
+      "lines": [
+        2,
+        4,
+        6
+      ],
+      "verdict": "markers present but file parses: probably inside a string/docstring; verify",
+      "blocking": false
+    }
+  ],
+  "patches": [
+    {
+      "patch": "all_domains_and_recovery_tests.patch",
+      "targets": [
+        "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py",
+        "hypatiax/experiments/tests/test_recovery_evaluator.py"
+      ],
+      "issues": [],
+      "dry_run": "ALREADY APPLIED (reverse applies cleanly)"
+    },
+    {
+      "patch": "followup_fixes.patch",
+      "targets": [
+        "hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py",
+        "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+        "scan_repo.py"
+      ],
+      "issues": [],
+      "dry_run": "does not apply: 1 out of 1 hunk FAILED"
+    },
+    {
+      "patch": "hybrid-ingest-test.patch",
+      "targets": [
+        "rsc/experiments/tests/test_stats_ingest.py"
+      ],
+      "issues": [
+        "suspicious target prefix: rsc/experiments/tests/test_stats_ingest.py (typo for hypatiax/ ?)",
+        "target file missing in this tree: rsc/experiments/tests/test_stats_ingest.py"
+      ],
+      "dry_run": "not testable (target files absent or `patch` unavailable)"
+    },
+    {
+      "patch": "repro-adaptive-config.patch",
+      "targets": [
+        "hypatiax/core/training/adaptive_config.py",
+        "hypatiax/experiments/tests/test_r2_policy.py"
+      ],
+      "issues": [],
+      "dry_run": "does not apply: 1 out of 2 hunks FAILED"
+    },
+    {
+      "patch": "repro-metrics-api.patch",
+      "targets": [
+        "hypatiax/core/metrics.py",
+        "hypatiax/experiments/tests/test_core_metrics_compat.py"
+      ],
+      "issues": [],
+      "dry_run": "ALREADY APPLIED (reverse applies cleanly)"
+    },
+    {
+      "patch": "rule_a_fixes.patch",
+      "targets": [
+        "hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py",
+        "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py"
+      ],
+      "issues": [],
+      "dry_run": "does not apply: 9 out of 9 hunks FAILED"
+    }
+  ],
+  "scan": {
+    "file": "scan_after3.txt",
+    "errors": [
+      {
+        "rule": "clean-run",
+        "detail": ".github/workflows/ci_bypass_audit.yml  HYPATIAX_DISABLE_HARDCODED present but not set to 1",
+        "suggested_action": "set HYPATIAX_DISABLE_HARDCODED=1 or document that outputs never feed headline tables"
+      },
+      {
+        "rule": "config-path",
+        "detail": "config/repro.yaml  benchmarks.core15.script not found: hypatiax/experiments/benchmarks/run_dual_condition_benchmark.py",
+        "suggested_action": "fix the script path in config/repro.yaml or restore the script"
+      },
+      {
+        "rule": "config-path",
+        "detail": "config/repro.yaml  benchmarks.instability.script not found: hypatiax/experiments/benchmarks/run_dual_sweep_benchmarks.py",
+        "suggested_action": "fix the script path in config/repro.yaml or restore the script"
+      },
+      {
+        "rule": "evaluator",
+        "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3748  absolute ss_tot guard (Supplement A Fix 5 / Listing 8 defect)",
+        "suggested_action": "replace absolute ss_tot guard with core.r2_canonical.r2_checked (Rule A)"
+      },
+      {
+        "rule": "import",
+        "detail": "hypatiax/tools/symbolic/hybrid_system_v50_2.py:615  unresolved import: hypatiax.tools.llm_providers.anthropic_provider",
+        "suggested_action": "create/restore the missing module or remove the dead import"
+      },
+      {
+        "rule": "import",
+        "detail": "hypatiax/tools/symbolic/hybrid_system_v50_2.py:627  unresolved import: hypatiax.tools.llm_providers.google_provider",
+        "suggested_action": "create/restore the missing module or remove the dead import"
+      },
+      {
+        "rule": "merge-conflict",
+        "detail": "hypatiax/tools/__init__.py:2  conflict marker",
+        "suggested_action": "open the file; if markers are real resolve them, if inside a string ignore"
+      },
+      {
+        "rule": "merge-conflict",
+        "detail": "hypatiax/tools/__init__.py:4  conflict marker",
+        "suggested_action": "open the file; if markers are real resolve them, if inside a string ignore"
+      },
+      {
+        "rule": "merge-conflict",
+        "detail": "hypatiax/tools/__init__.py:6  conflict marker",
+        "suggested_action": "open the file; if markers are real resolve them, if inside a string ignore"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "parse",
+        "detail": "hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0)",
+        "suggested_action": "recover the original JSON from the shard/log or mark file corrupt (do not cite)"
+      },
+      {
+        "rule": "undefined-name",
+        "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3478  undefined name '_kill_thread'",
+        "suggested_action": "add the missing import/definition (e.g. `import subprocess`, define _kill_thread)"
+      },
+      {
+        "rule": "undefined-name",
+        "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3025  undefined name 'subprocess'",
+        "suggested_action": "add the missing import/definition (e.g. `import subprocess`, define _kill_thread)"
+      }
+    ]
+  },
+  "blocking": [
+    "git working tree is dirty (35 files): commit or stash before any confirmatory run",
+    "followup_fixes.patch does not apply cleanly",
+    "hybrid-ingest-test.patch has a suspicious target path",
+    "repro-adaptive-config.patch does not apply cleanly",
+    "rule_a_fixes.patch does not apply cleanly",
+    "17 unresolved scan error(s) in scan_after3.txt"
+  ],
+  "fixes_after": "2026-10-23T07:55:00",
+  "results_summary": {
+    "candidate_clean": 0,
+    "exploratory": 260,
+    "superseded": 172,
+    "corrupt": 0
+  }
+}

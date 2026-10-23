@@ -1,0 +1,34 @@
+From 187cdcabd6f6925650e829b40bf60f610019ca33 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 23 Oct 2026 10:26:36 +0100
+Subject: [PATCH] test: cover ingest is_catastrophic on raw -inf/NaN/missing
+ values
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01SNnTsRvsPgkf6Ni6hTP14m
+---
+ rsc/experiments/tests/test_stats_ingest.py | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/rsc/experiments/tests/test_stats_ingest.py b/rsc/experiments/tests/test_stats_ingest.py
+index 1c430d0..ada5dd2 100644
+--- a/rsc/experiments/tests/test_stats_ingest.py
++++ b/rsc/experiments/tests/test_stats_ingest.py
+@@ -53,3 +53,14 @@ def test_sweep_ingest_guards(tmp_path):
+     p = run(); assert "skipped_synthetic" in p.stdout                                         # real mode refuses synthetic
+     write([["ablation", "V7", "c", 42, "bogus", "", 0.9, 0.9, "v5.4", 0]])
+     assert run("--dryrun").returncode != 0                                                     # unknown mode is a hard error
++
++
++def test_is_catastrophic_judges_raw_value_not_fnum_output():
++    import importlib.util
++    spec = importlib.util.spec_from_file_location("ingest_results", ROOT / "scripts" / "ingest_results.py")
++    mod = importlib.util.module_from_spec(spec); sys.path.insert(0, str(ROOT / "rsc" / "db")); spec.loader.exec_module(mod)
++    f = mod.is_catastrophic
++    assert f(float("-inf")) and f(float("nan")) and f(-1.5) and f("-3")      # failures count
++    assert not f(None) and not f("junk") and not f(-1.0) and not f(0.2)       # missing/ok do not
++    assert not f(float("inf"))                                                # +inf is not a failure
++    assert mod.fnum(float("-inf")) is None                                    # why the raw check is needed
+-- 
+2.43.0
+
