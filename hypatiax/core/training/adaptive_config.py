@@ -636,7 +636,7 @@ def train_with_config(
             y_pred = y_pred_w
 
         # R2-CANONICAL: single scoring policy (hypatiax/core/r2_canonical.py).  The old
-        # absolute 1e-10 guard on ss_tot scored tiny-scale targets (Newton ~1e-11) as 1.0
+        # absolute 1e-10 guard on the total sum of squares scored tiny-scale targets (Newton ~1e-11) as 1.0
         # or 0.0 regardless of the prediction; the canonical guard is RELATIVE.  A degenerate
         # (constant) target is now NaN and a failed prediction -inf; neither can be selected.
         r2, r2_status = r2_checked(y, y_pred)
