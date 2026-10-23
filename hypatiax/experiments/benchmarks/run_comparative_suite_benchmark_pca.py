@@ -425,9 +425,9 @@ def _runner_eval_formula(
                     y_pred = exec_ns[candidate]
                     break
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     # Strategy 3: def form — find the first callable and call it
     if y_pred is None and "def " in code:
@@ -442,9 +442,9 @@ def _runner_eval_formula(
                 fn_args = [local_ns[vn] for vn in var_names]
                 y_pred  = fn(*fn_args)
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     if y_pred is None:
         return None
@@ -1135,9 +1135,9 @@ class BaseMethod:
         except SyntaxError:
             pass
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 2: assignment form — execute and grab last assigned var
         if y_pred is None:
@@ -1153,9 +1153,9 @@ class BaseMethod:
                         y_pred = exec_ns[candidate]
                         break
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 3: def form — find the first def and call it
         if y_pred is None and "def " in code:
@@ -1170,9 +1170,9 @@ class BaseMethod:
                     args = [local_ns[vn] for vn in var_names]
                     y_pred = fn(*args)
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         if y_pred is None:
             return None
@@ -1294,9 +1294,9 @@ class BaseMethod:
                             if r2_log > best_r2:
                                 best_r2, best_y_hybrid = r2_log, y_hybrid_log
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             # ── Strategy B: linear-space NN (standard residual correction) ──
             resid_lin  = y - y_pred_llm
@@ -1482,9 +1482,9 @@ class PureLLMBaselineMethod(BaseMethod):
         except SyntaxError:
             pass
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 2: assignment form — execute and grab last assigned var
         if y_pred is None:
@@ -1500,9 +1500,9 @@ class PureLLMBaselineMethod(BaseMethod):
                         y_pred = exec_ns[candidate]
                         break
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 3: def form — find the first def and call it
         if y_pred is None and "def " in code:
@@ -1517,9 +1517,9 @@ class PureLLMBaselineMethod(BaseMethod):
                     args = [local_ns[vn] for vn in var_names]
                     y_pred = fn(*args)
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         if y_pred is None:
             return None
@@ -2435,9 +2435,9 @@ class HybridAllDomainsMethod(BaseMethod):
                             if r2_log > best_r2:
                                 best_r2, best_result = r2_log, y_log_corrected
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             # Strategy B — linear-space correction (standard residuals)
             try:
@@ -2451,9 +2451,9 @@ class HybridAllDomainsMethod(BaseMethod):
                         if r2_lin > best_r2:
                             best_r2, best_result = r2_lin, y_lin_corrected
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             return best_result
         except Exception:
@@ -3523,9 +3523,9 @@ class ProtocolBenchmarkSuite:
                                     end="", flush=True
                                 )
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
             finally:
                 # FIXED: drop cancel_futures=True — it caused blocking on Python < 3.12.
                 # wait=False alone is safe: the thread is a daemon and will not

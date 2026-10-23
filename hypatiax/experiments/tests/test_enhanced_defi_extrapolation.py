@@ -822,9 +822,9 @@ class EnhancedExtrapolationTest:
                     if degradation >= 0.15:
                         decision = "llm"
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             # FIX 3: evaluate the test split using whichever component the hybrid
             # *actually chose at training time*.  The old code always used the LLM

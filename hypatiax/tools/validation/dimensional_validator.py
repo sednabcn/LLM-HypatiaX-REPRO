@@ -119,9 +119,9 @@ def safe_sympify(
     try:
         return sp.sympify(expression_str, locals=local_dict, evaluate=False)
     except Exception as _e:
-        import logging, os
-        logging.getLogger(__name__).warning('swallowed: %r', _e)
-        if os.environ.get('HYPATIAX_STRICT') == '1': raise
+        import logging as _lg, os as _os
+        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     # Second attempt: evaluate=True for expressions SymPy auto-simplifies.
     try:

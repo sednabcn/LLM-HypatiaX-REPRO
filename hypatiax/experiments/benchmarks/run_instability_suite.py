@@ -455,9 +455,9 @@ def build_extrapolation_df(benchmark_data) -> pd.DataFrame:
                 extrap_r2 = float(_r2(y_true.ravel(), y_pred.ravel()))
                 eval_mode = "sympy_ood"
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Mode B: pre-stored arrays
         if eval_mode == "precomputed":
@@ -472,9 +472,9 @@ def build_extrapolation_df(benchmark_data) -> pd.DataFrame:
                     ))
                     eval_mode = "stored_arrays"
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         success = (not np.isnan(extrap_r2)) and extrap_r2 >= 0.99
         failure = (not np.isnan(extrap_r2)) and extrap_r2 < 0.99
@@ -940,9 +940,9 @@ def plot_C1_complexity_ii(df: pd.DataFrame, out_dir: Path, fmt: List[str],
     try:
         ax.get_legend().remove()
     except Exception as _e:
-        import logging, os
-        logging.getLogger(__name__).warning('swallowed: %r', _e)
-        if os.environ.get('HYPATIAX_STRICT') == '1': raise
+        import logging as _lg, os as _os
+        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
     fig.legend(handles=handles, fontsize=7.5, framealpha=0.9, edgecolor="#cccccc",
                loc="upper left", bbox_to_anchor=(0.12, 0.88))
     fig.tight_layout()
@@ -973,9 +973,9 @@ def plot_C2_complexity_pi(df: pd.DataFrame, out_dir: Path, fmt: List[str]):
     try:
         ax.get_legend().remove()
     except Exception as _e:
-        import logging, os
-        logging.getLogger(__name__).warning('swallowed: %r', _e)
-        if os.environ.get('HYPATIAX_STRICT') == '1': raise
+        import logging as _lg, os as _os
+        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
     fig.legend(handles=_legend_handles(df), fontsize=7.5, framealpha=0.9,
                edgecolor="#cccccc", loc="upper right", bbox_to_anchor=(0.92, 0.88))
     fig.tight_layout()
@@ -1008,9 +1008,9 @@ def plot_C3_mean_ii(df: pd.DataFrame, out_dir: Path, fmt: List[str]):
     try:
         ax.get_legend().remove()
     except Exception as _e:
-        import logging, os
-        logging.getLogger(__name__).warning('swallowed: %r', _e)
-        if os.environ.get('HYPATIAX_STRICT') == '1': raise
+        import logging as _lg, os as _os
+        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
     fig.legend(handles=_legend_handles(df), fontsize=7.5, framealpha=0.9,
                edgecolor="#cccccc", loc="upper right", bbox_to_anchor=(0.92, 0.88))
     fig.tight_layout()

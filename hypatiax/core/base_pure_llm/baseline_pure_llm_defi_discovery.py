@@ -219,9 +219,9 @@ class PureLLMBaseline:
                 if y.shape[0] == n_samples:
                     return y.flatten()
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row
@@ -230,9 +230,9 @@ class PureLLMBaseline:
                     y[i] = func(*[X[i, j] for j in range(n_features)])
                 return y
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 2: Single dict parameter
@@ -246,9 +246,9 @@ class PureLLMBaseline:
                 if y.shape[0] == n_samples:
                     return y.flatten()
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row dict
@@ -258,9 +258,9 @@ class PureLLMBaseline:
                     y[i] = func(params)
                 return y
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 3: Named parameters matching var_names
@@ -274,9 +274,9 @@ class PureLLMBaseline:
                 if y.shape[0] == n_samples:
                     return y.flatten()
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row with **kwargs
@@ -286,9 +286,9 @@ class PureLLMBaseline:
                     y[i] = func(**kwargs)
                 return y
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 4: Try to match param names to var_names
@@ -314,9 +314,9 @@ class PureLLMBaseline:
                     if y.shape[0] == n_samples:
                         return y.flatten()
             except Exception as _e:
-                import logging, os
-                logging.getLogger(__name__).warning('swallowed: %r', _e)
-                if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 5: Match param names to var_names, allowing extra
@@ -365,9 +365,9 @@ class PureLLMBaseline:
                     if y.shape[0] == n_samples:
                         return y.flatten()
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
                 try:
                     # Row-by-row fallback with the same matching/placeholder
@@ -385,9 +385,9 @@ class PureLLMBaseline:
                         y[i] = func(**kwargs)
                     return y
                 except Exception as _e:
-                    import logging, os
-                    logging.getLogger(__name__).warning('swallowed: %r', _e)
-                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    import logging as _lg, os as _os
+                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # All strategies failed

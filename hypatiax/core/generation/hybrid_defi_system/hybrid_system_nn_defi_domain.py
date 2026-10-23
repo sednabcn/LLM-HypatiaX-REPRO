@@ -654,9 +654,9 @@ def fit_formula_params(
                 )
             _record(res.x)
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     if verbose:
         print(f"  [Stage2] best R²={best_r2:.4f}")
@@ -794,9 +794,9 @@ class EnhancedHybridSystemDeFi:
                 if isinstance(data, dict):
                     self.formula_cache.update(data)
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     def _save_to_frozen_cache(self, cache_key: str, result: dict) -> None:
         """Persist one entry to the shared frozen-cache file (atomic write).
@@ -825,9 +825,9 @@ class EnhancedHybridSystemDeFi:
                     json.dump(existing, f)
                 os.replace(tmp, p)   # atomic on POSIX
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     # ------------------------------------------------------------------
     # LLM formula generation

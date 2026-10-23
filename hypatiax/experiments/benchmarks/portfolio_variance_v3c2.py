@@ -465,9 +465,9 @@ def set_all_seeds(seed):
         try:
             torch.use_deterministic_algorithms(True)
         except Exception as _e:
-            import logging, os
-            logging.getLogger(__name__).warning('swallowed: %r', _e)
-            if os.environ.get('HYPATIAX_STRICT') == '1': raise
+            import logging as _lg, os as _os
+            _lg.getLogger(__name__).warning('swallowed: %r', _e)
+            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
 
 def _iter_protocol_cases(proto):
