@@ -2655,7 +2655,8 @@ jobs:
                   done
 
                   if [[ "${IS_COLLIDING}" == "true" ]]; then
-                    RESCUE_PATH="${STASHED_PATH%.json}__shard${SHARD}_rescued_$(date -u +%s).json"
+                    _b="${STASHED_PATH##*/}"; if [[ "$_b" == *.* ]]; then _ext="${_b##*.}"; else _ext="json"; fi
+                    RESCUE_PATH="${STASHED_PATH%.json}__shard${SHARD}_rescued_$(date -u +%s).${_ext}"
                     mkdir -p "$(dirname "${RESCUE_PATH}")"
                     if git show "stash@{0}^3:${STASHED_PATH}" > "${RESCUE_PATH}" 2>/dev/null; then
                       echo "  Rescued (colliding) ${STASHED_PATH} -> ${RESCUE_PATH} (from stash@{0}^3, untracked)"
