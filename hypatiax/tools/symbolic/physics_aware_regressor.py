@@ -1389,8 +1389,10 @@ class PhysicsAwareRegressor:
                     )
                     return a / (b + S)
                 return 1.0 / (np.random.uniform(1, 10) + S)
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Fallback to simple rational (NO EPSILON)
         S = symbols[varying[0]]
@@ -1820,8 +1822,10 @@ class PhysicsAwareRegressor:
 
             try:
                 offspring = sp.simplify(offspring)
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             new_pop.append(offspring)
 
@@ -1867,8 +1871,10 @@ class PhysicsAwareRegressor:
                         c, float(c) * np.random.uniform(0.85, 1.15)
                     )
                 return new_expr
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
         return expr
 
     # ========================================================================
@@ -1936,8 +1942,10 @@ class PhysicsAwareRegressor:
                 for old, new_val in zip(coeffs, result.x):
                     optimized = optimized.subs(old, float(new_val))
                 return optimized
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
         return None
 
     # ========================================================================

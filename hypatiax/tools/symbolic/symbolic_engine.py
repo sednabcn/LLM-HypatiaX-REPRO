@@ -776,8 +776,10 @@ class DataPatternAnalyzer:
                 )
                 if r2 > 0.90:
                     patterns["structure_hints"].append(f"{var}_quadratic")
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         return patterns
 
@@ -1123,8 +1125,10 @@ class SymbolicEngine:
                                 f"— injecting exp/log (exponential relationship detected)",
                                 flush=True,
                             )
-                except Exception:
-                    pass  # heuristic is best-effort; never block PySR
+                except Exception as _e:
+                    import logging, os
+                    logging.getLogger(__name__).warning('swallowed: %r', _e)
+                    if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             _needs_exp_log = (
                 (self.domain in _EXP_DOMAINS or _data_needs_exp)
@@ -1725,8 +1729,10 @@ class SymbolicEngine:
                         if r2_i > best_r2:
                             best_r2 = r2_i
                             best_idx = idx
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        import logging, os
+                        logging.getLogger(__name__).warning('swallowed: %r', _e)
+                        if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
                 # FIX (indentation bug): these three lines were erroneously
                 # INSIDE the for-loop above, causing best_eq_raw / best_eq /
@@ -1776,8 +1782,10 @@ class SymbolicEngine:
                     for _pi, _pr2 in _cached_r2.items():
                         try:
                             _pareto_r2s.append((_pi, str(eqs.iloc[_pi]["equation"]), round(_pr2, 4)))
-                        except Exception:
-                            pass
+                        except Exception as _e:
+                            import logging, os
+                            logging.getLogger(__name__).warning('swallowed: %r', _e)
+                            if os.environ.get('HYPATIAX_STRICT') == '1': raise
                     _top5 = sorted(_pareto_r2s, key=lambda x: x[2], reverse=True)[:5]
                     _trace.append(f"pareto_top5={_top5}")
                     _trace.append(f"best_r2={best_r2:.4f}")
@@ -1843,8 +1851,10 @@ class SymbolicEngine:
             try:
                 if _os2.path.exists(_equation_file_path):
                     _os2.unlink(_equation_file_path)
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
             return _result
 
         except Exception as e:

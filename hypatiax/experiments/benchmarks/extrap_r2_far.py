@@ -256,8 +256,10 @@ def _runner_eval_formula(
                 ):
                     y_pred = exec_ns[candidate]
                     break
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     # Strategy 3: def form — find the first callable and call it
     if y_pred is None and "def " in code:
@@ -271,8 +273,10 @@ def _runner_eval_formula(
             if fn is not None:
                 fn_args = [local_ns[vn] for vn in var_names]
                 y_pred  = fn(*fn_args)
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     if y_pred is None:
         return None

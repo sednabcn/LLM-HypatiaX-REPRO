@@ -661,8 +661,10 @@ NO markdown code blocks, individual parameters NOT dict."""
             try:
                 y = func(*[X[:, i] for i in range(n_features)])
                 return np.asarray(y).flatten()
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 2: Keyword matching by variable name
         # Maps each function parameter to the column whose var_name best matches it.
@@ -712,8 +714,10 @@ NO markdown code blocks, individual parameters NOT dict."""
                     }
                     y = func(**kwargs)
                     return np.asarray(y).flatten()
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # Strategy 3: Row-by-row positional (exact match only — no silent truncation)
         if n_params == n_features:
@@ -722,8 +726,10 @@ NO markdown code blocks, individual parameters NOT dict."""
                 for i in range(X.shape[0]):
                     y[i] = func(*X[i, :])
                 return y
-            except Exception:
-                pass
+            except Exception as _e:
+                import logging, os
+                logging.getLogger(__name__).warning('swallowed: %r', _e)
+                if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         raise RuntimeError(
             f"All evaluation strategies failed "

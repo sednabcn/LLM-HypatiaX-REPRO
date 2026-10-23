@@ -264,8 +264,10 @@ np.random.seed(SEED)
 torch.manual_seed(SEED)
 try:
     torch.use_deterministic_algorithms(True)
-except Exception:
-    pass
+except Exception as _e:
+    import logging, os
+    logging.getLogger(__name__).warning('swallowed: %r', _e)
+    if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
 # ── protocol import ───────────────────────────────────────────────────────────
 try:
@@ -827,8 +829,10 @@ def _hybrid_predict_and_eval(
             degradation = _extrapolation_probe(X_train, y_train)
             if degradation >= 0.15:
                 decision = "llm"
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging, os
+            logging.getLogger(__name__).warning('swallowed: %r', _e)
+            if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback

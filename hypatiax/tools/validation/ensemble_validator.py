@@ -184,13 +184,17 @@ def safe_sympify(
 
     try:
         return sp.sympify(expression_str, locals=local_dict, evaluate=False)
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging, os
+        logging.getLogger(__name__).warning('swallowed: %r', _e)
+        if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     try:
         return sp.sympify(expression_str, locals=local_dict, evaluate=True)
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging, os
+        logging.getLogger(__name__).warning('swallowed: %r', _e)
+        if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
     try:
         from sympy.parsing.sympy_parser import (

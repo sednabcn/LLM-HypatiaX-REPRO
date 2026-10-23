@@ -65,12 +65,16 @@ def _kill_process_group(proc: "subprocess.Popen") -> None:
                 child.kill()
             except psutil.NoSuchProcess:
                 pass
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging, os
+        logging.getLogger(__name__).warning('swallowed: %r', _e)
+        if os.environ.get('HYPATIAX_STRICT') == '1': raise
     try:
         proc.kill()
-    except Exception:
-        pass
+    except Exception as _e:
+        import logging, os
+        logging.getLogger(__name__).warning('swallowed: %r', _e)
+        if os.environ.get('HYPATIAX_STRICT') == '1': raise
 
 
 # ============================================================================
