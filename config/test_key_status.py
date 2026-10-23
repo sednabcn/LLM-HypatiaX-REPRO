@@ -53,7 +53,7 @@ for attempt in range(1, MAX_RETRIES + 1):
         print(f"\nValidation attempt {attempt}/{MAX_RETRIES}...")
 
         response = client.messages.create(
-            model="claude-haiku-4-5",
+            model="claude-sonnet-4-6",
             max_tokens=10,
             messages=[{"role": "user", "content": "Hi"}],
         )

@@ -50,7 +50,63 @@ def _flag(name: str) -> bool:
                                           prompts, no data-derived parameter hints
     Set BOTH for a clean live-LLM run.
     """
-    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+    # FAIL-CLOSED: an unset variable means "clean run" (flag ON). The old
+    # behaviour (unset -> False) silently re-enabled prompt hints whenever this
+    # module ran outside run_all.sh. Legacy behaviour needs an explicit opt-in:
+    #   HYPATIAX_ALLOW_LEGACY=1  and  <flag>=0
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return os.environ.get("HYPATIAX_ALLOW_LEGACY", "0") != "1"
+    return raw.strip().lower() in ("1", "true", "yes")
+
+
+_DEFAULT_MODEL = "claude-sonnet-4-6"
+
+
+def resolve_model(explicit: str | None = None) -> tuple[str, str]:
+    """Single source of truth for the model id. Returns (model, source).
+
+    Precedence: explicit ctor arg > env HYPATIAX_LLM_MODEL >
+    config/repro.yaml `llm_model` (path from env REPRO_CFG, else searched
+    upward from this file) > _DEFAULT_MODEL. The source is stored in every
+    result row so drift between arms is auditable.
+    """
+    if explicit:
+        return explicit, "ctor_arg"
+    env = os.environ.get("HYPATIAX_LLM_MODEL", "").strip()
+    if env:
+        return env, "env:HYPATIAX_LLM_MODEL"
+    cfg = os.environ.get("REPRO_CFG", "").strip()
+    cands = [Path(cfg)] if cfg else [d / "config" / "repro.yaml" for d in Path(__file__).resolve().parents]
+    for c in cands:
+        try:
+            if c.is_file():
+                import yaml
+                m = (yaml.safe_load(c.read_text()) or {}).get("llm_model")
+                if m:
+                    return str(m), f"repro.yaml:{c}"
+        except Exception:
+            continue
+    return _DEFAULT_MODEL, "code_default"
+
+
+def _json_safe(o):
+    """Replace non-finite floats with None so json.dump(allow_nan=False) emits
+    strict JSON. Rows keep an explicit status field (e.g. r2_status), so the
+    information is not lost."""
+    if isinstance(o, float):
+        return o if np.isfinite(o) else None
+    if isinstance(o, (np.floating,)):
+        return _json_safe(float(o))
+    if isinstance(o, np.integer):
+        return int(o)
+    if isinstance(o, np.ndarray):
+        return _json_safe(o.tolist())
+    if isinstance(o, dict):
+        return {str(k): _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    return o
 
 
 # Descriptions of hardcoded branches, used to tag provenance (bypass_kind).
@@ -58,8 +114,14 @@ _GT_BRANCHES = {"gaussian", "planck", "bose", "nernst", "clausius", "lorentz", "
 _OLS_BRANCHES = {"logistic", "michaelis", "allometric", "arrhenius"}
 
 
-def _create_message_deterministic(client, **kwargs):
-    """Make one direct Anthropic API call.
+def _create_message(client, **kwargs):
+    """Make one direct Anthropic API call (single attempt, no retry/cache).
+
+    NOTE: despite the legacy alias name `_create_message_deterministic`, this is
+    NOT deterministic: the Anthropic SDK >= 1.0 no longer accepts `temperature`,
+    so no sampling control is sent. Results carry `temperature_sent: False`;
+    use llm_k_runs (repro.yaml) to quantify run-to-run variance.
+
 
     Diagnostic/JMLR reproducibility mode: pass through whatever kwargs the
     caller supplies (including ``temperature`` when the caller sets it —
@@ -109,6 +171,9 @@ def _create_message_deterministic(client, **kwargs):
     return response
 
 
+_create_message_deterministic = _create_message  # backward-compatible alias
+
+
 class PureLLMBaseline:
     """Fixed Pure LLM baseline with liquidation domain corrections."""
 
@@ -130,12 +195,12 @@ class PureLLMBaseline:
     # universal pure_llm near-instant failure (100% of non-PCA calls,
     # 4/5 seeds of PCA calls). Aligning the default here with the model the
     # working hybrid path actually uses closes the gap.
-    def __init__(self, model: str = "claude-sonnet-4-6"):
+    def __init__(self, model: str | None = None):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
             raise ValueError("ANTHROPIC_API_KEY environment variable not set")
         self.client = Anthropic(api_key=api_key)
-        self.model = model
+        self.model, self.model_source = resolve_model(model)
         self.results = []
         # No per-instance cache: each benchmark case owns a fresh baseline.
 
@@ -365,7 +430,7 @@ class PureLLMBaseline:
             x_col = X[:, 0]
             # x/y stats (used by prompt fallback) -- a data leak into the prompt,
             # so skipped when prompt hints are disabled.
-            if not disable_hints:
+            if True:  # guarded by the enclosing `not disable_hints`
                 metadata.setdefault("_x_stats", {
                     (variable_names[0] if variable_names else "x"): {
                         "min":  float(x_col.min()),
@@ -424,6 +489,29 @@ class PureLLMBaseline:
                 description, domain, variable_names, metadata
             )
 
+        # Provenance is computed BEFORE the API call so error rows are as
+        # auditable as success rows (previously error rows were always "live").
+        hint_fired = bool(
+            use_specialized
+            or "MANDATORY CODE TEMPLATE" in prompt
+            or "FORMULA HINT" in prompt
+        )
+        _prov = {
+            "bypass_kind": "prompt_embedded_gt" if hint_fired else "live",
+            "bypass_flags": {
+                "disable_hardcoded": disable_hc,
+                "disable_prompt_hints": disable_hints,
+                "hardcoded_bypass_present": False,  # _try_hardcoded_formula is a no-op here
+            },
+            # constants are sent verbatim ("task spec"); record exactly which
+            "prompt_constants": dict(metadata.get("constants") or {}),
+            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+            "temperature_sent": False,
+            "model_source": self.model_source,
+        }
+        _llm_attempted = False
+        _response_received = False
+
         try:
             # FIX-ISSUE2B-LLM-TEMPERATURE: this call previously had no
             # `temperature` argument, so it silently used the Anthropic API
@@ -443,7 +531,7 @@ class PureLLMBaseline:
             #
             # FIX-ISSUE2B-LLM-TEMPERATURE (applied): the comment above
             # described this mitigation but `temperature` was never
-            # actually passed to _create_message_deterministic() below,
+            # actually passed to _create_message() below,
             # so the API default (non-zero) was silently used the whole
             # time. Confirmed via a live smoke test that this model
             # (self.model, default "claude-sonnet-4-6") accepts
@@ -456,7 +544,7 @@ class PureLLMBaseline:
                 f"domain={domain!r} "
                 f"description_hash={hashlib.sha256(description.encode()).hexdigest()[:12]} "
                 f"generate_formula_source={inspect.getsourcefile(self.generate_formula)!r} "
-                f"api_helper_source={inspect.getsourcefile(_create_message_deterministic)!r} "
+                f"api_helper_source={inspect.getsourcefile(_create_message)!r} "
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
             # [FIX-SDK1.0-TEMPERATURE] Superseding FIX-ISSUE2B-LLM-TEMPERATURE
@@ -471,12 +559,14 @@ class PureLLMBaseline:
             # described in FIX-ISSUE2B-LLM-TEMPERATURE's comment above no
             # longer exists as an option -- run-to-run sampling variance
             # should be expected again.
-            response = _create_message_deterministic(
+            _llm_attempted = True
+            response = _create_message(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
+            _response_received = True
             print(
                 "GENERATE_API_RETURN "
                 f"dt={time.perf_counter() - _gen_t0:.6f}s "
@@ -498,12 +588,6 @@ class PureLLMBaseline:
             content = text_blocks[0].text
             parsed = self._parse_response(content)
 
-            # Provenance: did the prompt itself carry the answer?
-            hint_fired = bool(
-                use_specialized
-                or "MANDATORY CODE TEMPLATE" in prompt
-                or "FORMULA HINT" in prompt
-            )
             _usage = getattr(response, "usage", None)
 
             return {
@@ -521,11 +605,8 @@ class PureLLMBaseline:
                 "specialized_prompt": use_specialized,
                 # --- B2 provenance ---
                 "llm_called": True,
-                "bypass_kind": "prompt_embedded_gt" if hint_fired else "live",
-                "bypass_flags": {
-                    "disable_hardcoded": disable_hc,
-                    "disable_prompt_hints": disable_hints,
-                },
+                "llm_attempted": True,
+                **_prov,
                 "formula_present": parsed.get("python", "N/A") not in ("N/A", ""),
                 "stop_reason": getattr(response, "stop_reason", None),
                 "usage": {
@@ -549,12 +630,12 @@ class PureLLMBaseline:
                 # --- B2 provenance: keys always present so rows are auditable ---
                 "formula": "",
                 "python_code": "",
-                "llm_called": True,
-                "bypass_kind": "live",
-                "bypass_flags": {
-                    "disable_hardcoded": disable_hc,
-                    "disable_prompt_hints": disable_hints,
-                },
+                # llm_called = a response actually came back; a rejected/failed
+                # request is NOT a successful LLM call.
+                "llm_called": _response_received,
+                "llm_attempted": _llm_attempted,
+                "error_stage": "post_response" if _response_received else "api_request",
+                **_prov,
                 "formula_present": False,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -1052,8 +1133,16 @@ Arrhenius: temperature dependence of rate constant. R=8.314 is fixed."""
         # B2: the hints above spell out the target formula -> ground truth in the
         # prompt. Drop them when HYPATIAX_DISABLE_PROMPT_HINTS is set.
         # (constants_info is kept: constants are part of the task spec.)
+        # The closing "CRITICAL REQUIREMENTS" block used to carry the Gaussian
+        # normalisation constant unconditionally -> ground truth leaked even
+        # with the flag set. Now gated like the other hints.
+        _norm_hint = (
+            "\n- If the task involves a probability density or distribution, "
+            "include the FULL normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)"
+        )
         if _flag("HYPATIAX_DISABLE_PROMPT_HINTS"):
             domain_hint = ""
+            _norm_hint = ""
 
         return f"""You are a mathematical formula expert in DeFi and quantitative finance.
 
@@ -1091,8 +1180,7 @@ CRITICAL REQUIREMENTS:
 - Use EXACT constant values if specified
 - NO scipy imports (use only numpy)
 - NO markdown code blocks
-- Ensure operations work element-wise on numpy arrays
-- If the task involves a probability density or distribution, include the FULL normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)"""
+- Ensure operations work element-wise on numpy arrays{_norm_hint}"""
 
     # Canonical section headers this parser understands, in the order the
     # prompt asks the model to emit them. A single regex finds every header
@@ -1283,6 +1371,7 @@ CRITICAL REQUIREMENTS:
                     "success": False,
                     "error": f"non-finite predictions ({n_bad}/{len(y_pred)})",
                     "r2": float("nan"),
+                    "r2_status": "nonfinite_prediction",
                 }
 
             # Calculate metrics
@@ -1296,19 +1385,28 @@ CRITICAL REQUIREMENTS:
             # Relative threshold — scales with the data so tiny-y equations
             # (Photon y~1e-19, Zeeman y~1e-23, Newton y~1e-11, Lorentz y~1e-11)
             # are not misclassified as constant targets by an absolute 1e-10 floor.
-            _scale = float(np.max(np.abs(y_true)) ** 2) * len(y_true)
-            _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-            if ss_tot > _tol:
+            # FIX-EVAL-NEARCONST: the previous tolerance (1e-10 * max|y|^2 * n)
+            # is relative to the OFFSET, not the spread, so y = 1e6 + N(0,1)
+            # was classed "constant" and any prediction within ~10 of it scored
+            # R^2 = 1.0 (true R^2 was -27). A target is constant only if its
+            # peak-to-peak spread is at float-roundoff level of its magnitude.
+            _mag = float(np.max(np.abs(y_true)))
+            _is_const = float(np.ptp(y_true)) <= 1e-12 * _mag if _mag > 0 else True
+            if not _is_const and ss_tot > 0:
                 r2 = float(1.0 - ss_res / ss_tot)
+                _r2_status = "ok"
             else:
-                # Genuinely constant target — perfect if residuals are also tiny
-                r2 = 1.0 if ss_res < _tol else float("-inf")
+                # Genuinely constant target: perfect only if predictions match it
+                _match = np.allclose(y_pred, y_true, rtol=1e-9, atol=1e-30)
+                r2 = 1.0 if _match else float("-inf")
+                _r2_status = "constant_target_match" if _match else "constant_target_mismatch"
 
             return {
                 "mse": float(mse),
                 "mae": float(mae),
                 "rmse": float(rmse),
                 "r2": float(r2),
+                "r2_status": _r2_status,
                 "success": True,
             }
 
@@ -1325,7 +1423,7 @@ CRITICAL REQUIREMENTS:
         """Save results to JSON."""
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, "w") as f:
-            json.dump(self.results, f, indent=2)
+            json.dump(_json_safe(self.results), f, indent=2, allow_nan=False)
         print(f"\n✅ Results saved: {filepath}")
 
 
@@ -1410,7 +1508,7 @@ def run_comprehensive_test(
     baseline.save_results(f"results/baseline_llm_FIXED_{ts}.json")
 
     with open(f"results/report_llm_FIXED_{ts}.json", "w") as f:
-        json.dump(report, f, indent=2)
+        json.dump(_json_safe(report), f, indent=2, allow_nan=False)
 
     print("\n" + "=" * 80)
     print("SUMMARY".center(80))

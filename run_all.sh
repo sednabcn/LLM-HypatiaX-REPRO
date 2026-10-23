@@ -28,8 +28,23 @@ export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 # ground-truth prompt hints for a live derivation. Override with =0 only for a
 # deliberate legacy comparison. Exported, so every python3 child and bash -c
 # step inherits them.
-export HYPATIAX_DISABLE_HARDCODED="${HYPATIAX_DISABLE_HARDCODED:-1}"
-export HYPATIAX_DISABLE_PROMPT_HINTS="${HYPATIAX_DISABLE_PROMPT_HINTS:-1}"
+# HARD-ENFORCED: the flags are forced to 1 regardless of the caller's environment
+# (a stale `export ...=0` or an un-exported shell var can no longer leak through).
+# Deliberate legacy comparison only: HYPATIAX_ALLOW_LEGACY=1 ./run_all.sh
+if [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]]; then
+  export HYPATIAX_DISABLE_HARDCODED="${HYPATIAX_DISABLE_HARDCODED:-1}"
+  export HYPATIAX_DISABLE_PROMPT_HINTS="${HYPATIAX_DISABLE_PROMPT_HINTS:-1}"
+  echo "WARNING: HYPATIAX_ALLOW_LEGACY=1 -- clean-run enforcement disabled" >&2
+else
+  for _f in HYPATIAX_DISABLE_HARDCODED HYPATIAX_DISABLE_PROMPT_HINTS; do
+    if [[ -n "${!_f:-}" && "${!_f}" != "1" ]]; then
+      echo "NOTICE: ${_f}=${!_f} in caller env overridden -> 1 (clean live-LLM run)" >&2
+    fi
+  done
+  unset _f
+  export HYPATIAX_DISABLE_HARDCODED=1
+  export HYPATIAX_DISABLE_PROMPT_HINTS=1
+fi
 # Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
 # running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
 export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"
@@ -146,7 +161,8 @@ SDKCHECK
   echo "HYPATIAX_DISABLE_HARDCODED: ${HYPATIAX_DISABLE_HARDCODED}"
   echo "HYPATIAX_DISABLE_PROMPT_HINTS: ${HYPATIAX_DISABLE_PROMPT_HINTS}"
   if [[ "${HYPATIAX_DISABLE_HARDCODED}" != "1" || "${HYPATIAX_DISABLE_PROMPT_HINTS}" != "1" ]]; then
-    echo "WARNING: not a clean live-LLM run (a bypass flag is not 1) -- LLM-arm results may use hardcoded answers / prompt hints"
+    echo "FATAL: not a clean live-LLM run (a bypass flag is not 1)" >&2
+    [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]] || exit 1
   fi
   echo "REPRO_CFG: ${REPRO_CFG}"
   if [ -f "${REPRO_CFG}" ]; then
