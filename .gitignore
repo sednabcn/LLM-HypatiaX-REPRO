@@ -28,3 +28,10 @@ audit_out/*.json
 triage_out/
 _quarantine/
 audit_out/*.log
+*.bak
+audit_out/*.json
+outputs/
+triage_out/
+_quarantine/
+*.rej
+*.orig
