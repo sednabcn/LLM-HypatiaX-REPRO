@@ -3,8 +3,9 @@
 Point RECOVERY_EVAL at the real R^2 / recovery function as  module:function
 (signature assumed: fn(y_true, y_pred) -> float).  Find it with:
     grep -rn "ss_tot" hypatiax/ scripts/ --include=*.py
-These tests encode a PROPOSED spec for degenerate targets. Confirm it, then
-write the final rule into the paper's recovery definition.
+Degenerate-target rule (DECIDED, rule A): a constant or near-constant target has an
+UNDEFINED R^2 (NaN) and is NEVER counted as recovered, even for an exact prediction.
+Write this rule into the paper's recovery definition (and Supplement A).
 """
 import importlib, math, os
 import numpy as np
@@ -44,7 +45,7 @@ def test_mean_predictor_is_not_recovered():
 
 @pytest.mark.parametrize("scale", [1e-12, 1e-9, 1e-6, 1.0, 1e6])
 def test_scale_invariance_of_exact_fit(scale):
-    # an absolute `ss_tot > 1e-10` guard fails this for small scales
+    # an absolute fixed-threshold variance guard fails this for small scales
     assert rec(_r2(Y * scale, Y * scale), STRICT), f"exact fit not recovered at scale {scale}"
 
 
@@ -54,9 +55,10 @@ def test_scale_invariance_of_bad_fit(scale):
     assert not rec(_r2(Y * scale, bad), PRIMARY), f"bad fit counted as recovered at scale {scale}"
 
 
-def test_near_constant_target_exact_fit():
+def test_near_constant_target_exact_fit_is_undefined_not_recovered():
+    # rule A: spread is negligible relative to magnitude -> degenerate -> never recovered
     y = 5.0 + 1e-12 * rng.normal(size=200)
-    assert rec(_r2(y, y), STRICT), "near-constant target with exact prediction must not read as failure"
+    assert not rec(_r2(y, y), PRIMARY), "degenerate target must never count as recovered"
 
 
 def test_near_constant_target_wrong_fit():
@@ -64,11 +66,11 @@ def test_near_constant_target_wrong_fit():
     assert not rec(_r2(y, y + 1.0), PRIMARY)
 
 
-def test_constant_target_exact_fit_is_defined():
+def test_constant_target_exact_fit_is_undefined_not_recovered():
     y = np.full(50, 3.0)
     r = _r2(y, y)
-    assert not math.isnan(r), "degenerate exact fit returned NaN: define the rule explicitly"
-    assert rec(r, STRICT)
+    assert math.isnan(r), "rule A: R^2 on a constant target is undefined (NaN)"
+    assert not rec(r, PRIMARY)
 
 
 def test_constant_target_wrong_fit_not_recovered():
