@@ -1634,8 +1634,10 @@ def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
 # =============================================================================
 
 def write_provenance(all_results: dict) -> None:
+    from hypatiax.core.flags import flag_state
     provenance = {
         "family":                "ablation_exp1",
+        "flags":                 flag_state(),
         "engine":                "hybrid_system_v50_2.py",
         "engine_version":        HybridDiscoverySystem.VERSION,
         "seed":                  SEED,

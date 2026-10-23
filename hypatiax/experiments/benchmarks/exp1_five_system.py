@@ -460,8 +460,10 @@ def build_extrapolation_table(all_results: dict, method_names: list[str]) -> dic
 # =============================================================================
 
 def write_provenance(all_results: dict) -> None:
+    from hypatiax.core.flags import flag_state
     provenance = {
         "family":         "five_systems_exp1_five",
+        "flags":          flag_state(),
         "engine":         "exp1_five_system.py",
         "reused_from": {
             "equation_suite_and_data_generators": "exp1_ablation.py (CORE_15, generate_data, generate_extrap_data)",
