@@ -87,6 +87,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+def _kill_thread(thread_id) -> bool:
+    """Best-effort hard stop of a Python thread by injecting SystemExit.
+
+    Returns True if the exception was scheduled, False if the thread already
+    exited or the id is invalid (a harmless race). LIMITS: the exception is only
+    delivered when the thread next executes Python bytecode, so it cannot
+    interrupt a blocking C/Julia call (e.g. PySR inside juliacall) -- an
+    orphaned Julia subprocess must still be terminated via its Popen handle.
+    """
+    if not thread_id:
+        return False
+    n = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_ulong(thread_id), ctypes.py_object(SystemExit))
+    if n > 1:  # affected more than one thread state: undo, never leave it armed
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_ulong(thread_id), None)
+        return False
+    return n == 1
+
+
 
 os.environ.setdefault(
     "PYTHON_JULIACALL_HANDLE_SIGNALS",

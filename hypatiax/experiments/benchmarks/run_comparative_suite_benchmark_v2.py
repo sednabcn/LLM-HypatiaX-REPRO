@@ -79,6 +79,7 @@ import re
 import sys
 import time
 import warnings
+import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
