@@ -645,7 +645,9 @@ def train_with_config(
             note = "" if r2_status == "ok" else f"  [{r2_status}]"
             print(f"   [seed={seed}] R²={r2:.4f}  train_loss={final_train_loss:.6f}{note}")
 
-        if selection_score(r2) > best_r2:
+        _score = selection_score(r2)
+        if best_model is None or _score > best_score:
+            best_score       = _score
             best_r2          = r2
             best_train_loss  = final_train_loss
             best_model       = model
