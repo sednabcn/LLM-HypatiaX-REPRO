@@ -25,6 +25,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from anthropic import Anthropic
+from sklearn.preprocessing import StandardScaler  # FIX: was imported only inside train_nn(); _train_nn_inner() raised NameError on every call
 from dotenv import load_dotenv
 
 # Load environment - try multiple locations
@@ -64,6 +65,44 @@ except ImportError:
     except ImportError:
         print("❌ Error: experiment_protocol_all_30.py not found")
         sys.exit(1)
+
+from hypatiax.core.r2_canonical import r2_checked as _r2_checked
+
+
+def _r2_rule_a(y_true, y_pred):
+    """Canonical R2 for every score this module reports.  Rule A: a degenerate target,
+    non-finite value or bad shape is UNDEFINED -> (nan, status), never recovered.
+    Replaces three local guards of the form ss_tot > max(1e-10*max|y|^2*n, 1e-300)
+    that returned 0.0 for undefined cases (offset-relative, not spread-relative)."""
+    with np.errstate(over="ignore", invalid="ignore"):
+        val, status = _r2_checked(np.asarray(y_true, float), np.asarray(y_pred, float))
+    ok = status == "ok" and val is not None and np.isfinite(val)
+    return (float(val) if ok else float("nan")), status
+
+
+def _switch_on(name: str) -> bool:
+    """Fail-closed read of a HYPATIAX_DISABLE_* switch: unset/empty counts as ON (clean run);
+    only an explicit HYPATIAX_ALLOW_LEGACY=1 or an explicit 0 turns it off."""
+    legacy = os.environ.get("HYPATIAX_ALLOW_LEGACY", "0").strip().lower() in ("1", "true", "yes")
+    raw = os.environ.get(name, "0" if legacy else "1").strip().lower() or ("0" if legacy else "1")
+    return raw in ("1", "true", "yes")
+
+
+def _hints_disabled() -> bool:
+    return _switch_on("HYPATIAX_DISABLE_PROMPT_HINTS")
+
+
+def _hardcoded_disabled() -> bool:
+    return _switch_on("HYPATIAX_DISABLE_HARDCODED")
+
+
+_PROV_KEYS = ("llm_called", "bypass_kind", "bypass_flags", "stop_reason", "usage",
+              "prompt_sha256", "temperature_sent", "error_stage")
+
+
+def _prov(llm_result: dict) -> dict:
+    """Provenance copied from the generator so every row says whether the LLM ran."""
+    return {k: llm_result.get(k) for k in _PROV_KEYS}
 
 
 def _resolve_domains_from_env() -> list[str] | None:
@@ -190,6 +229,12 @@ class HybridSystemAllDomains:
                 # for equations with no hardcoded entry — silently giving an
                 # empty result that makes llm_ok=False and forces the NN path.
                 _code = result.get("python_code", "") or result.get("formula_code", "")
+                _bk = result.get("bypass_kind")
+                if _hardcoded_disabled() and _hints_disabled() and _bk not in (None, "live"):
+                    # Clean run requested but the delegate reports a bypass: never accept it.
+                    print(f"⚠️  delegate returned bypass_kind={_bk!r} under a clean-run request; "
+                          f"rejected, using live local fallback for: {description[:50]}")
+                    _code = ""
                 if _code and _code.strip() and _code.strip() != "N/A":
                     result["llm_source"] = "delegate"
                     if not self._no_cache:
@@ -235,9 +280,12 @@ class HybridSystemAllDomains:
                 "python_code": parsed.get("python", "N/A"),
                 "explanation": parsed.get("explanation", "N/A"),
                 "llm_source": "local_fallback",
+                "llm_called": True,
+                "bypass_kind": "local_fallback",
             }
         except Exception as e:
-            result = {"error": str(e), "llm_source": "local_fallback"}
+            result = {"error": str(e), "llm_source": "local_fallback",
+                      "llm_called": False, "bypass_kind": "local_fallback"}
 
         if not self._no_cache:
             self._formula_cache[_cache_key] = result
@@ -275,6 +323,11 @@ class HybridSystemAllDomains:
         # where a ground-truth hint would inflate scores the most.
         hint_info = ""
 
+        # FIX prompt-leak: this closed-form example handed the model the Gaussian
+        # normalisation constant; it is a hint, so it is dropped when hints are disabled.
+        _norm_hint = "" if _hints_disabled() else (
+            "6. If the task involves a probability density or distribution, include the FULL "
+            "normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)")
         return f"""[HYBRID-SYSTEM: LLM+NN symbolic discovery — independent from pure-LLM baseline]
 You are a mathematical formula expert specialising in {domain}.
 Your role is symbolic discovery: identify the most parsimonious closed-form
@@ -289,7 +342,7 @@ Domain: {domain}{var_info}{constants_info}{hint_info}
 3. Use EXACT constants shown above
 4. Function named 'formula'
 5. Use numpy: np.sqrt, np.log, np.exp, etc.
-6. If the task involves a probability density or distribution, include the FULL normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)
+{_norm_hint}
 
 Format:
 
@@ -360,8 +413,6 @@ NO markdown code blocks, individual parameters NOT dict."""
         r2 -- but a latent gap for any equation where the NN path is
         chosen instead.
         """
-        from sklearn.preprocessing import StandardScaler
-
         if seed is not None:
             torch.manual_seed(seed)
 
@@ -384,11 +435,14 @@ NO markdown code blocks, individual parameters NOT dict."""
         try:
             return self._train_nn_inner(X, y, epochs, seed)
         except Exception as e:
+            print(f"⚠️  NN training FAILED ({type(e).__name__}: {str(e)[:100]}); "
+                  f"this row has no NN arm")
             return None, {
                 "r2": 0.0,
                 "rmse": float("inf"),
                 "mae": float("inf"),
                 "error": f"{type(e).__name__}: {e}",
+                "nn_failed": True,
             }
 
     def _train_nn_inner(
@@ -507,16 +561,11 @@ NO markdown code blocks, individual parameters NOT dict."""
         if not np.all(np.isfinite(y_pred)):
             raise ValueError("Non-finite predictions after inverse-transform")
 
-        ss_res = np.sum((y - y_pred) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
-        # Use relative threshold so tiny-scale physics equations
-        # (Newton gravity ~1e-21 ss_tot) are not misclassified as constant.
-        _tol1  = 1e-10 * float(np.max(np.abs(y))**2) * len(y)
-        r2     = float(1 - ss_res / ss_tot) if ss_tot > max(_tol1, 1e-300) else 0.0
+        r2, r2_status = _r2_rule_a(y, y_pred)   # rule A: nan when undefined
         rmse   = float(np.sqrt(np.mean((y - y_pred) ** 2)))
         mae    = float(np.mean(np.abs(y - y_pred)))
 
-        metrics = {"r2": r2, "rmse": rmse, "mae": mae}
+        metrics = {"r2": r2, "r2_status": r2_status, "rmse": rmse, "mae": mae}
         return model, metrics
 
     def evaluate_llm_formula(
@@ -588,15 +637,11 @@ NO markdown code blocks, individual parameters NOT dict."""
                 return {"error": "Non-finite predictions", "success": False, "r2": 0.0}
 
             mse = np.mean((y_pred - y_true) ** 2)
-            ss_res = np.sum((y_true - y_pred) ** 2)
-            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-            # Relative threshold — avoids returning r2=0 for tiny-scale
-            # physics equations where ss_tot << 1e-10 (e.g. Newton gravity).
-            _tol2 = 1e-10 * float(np.max(np.abs(y_true))**2) * len(y_true)
-            r2 = 1 - (ss_res / ss_tot) if ss_tot > max(_tol2, 1e-300) else 0
+            r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
 
             return {
                 "r2": float(r2),
+                "r2_status": r2_status,
                 "rmse": float(np.sqrt(mse)),
                 "mae": float(np.mean(np.abs(y_pred - y_true))),
                 "success": True,
@@ -800,6 +845,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "validation_score": "EXCELLENT" if llm_r2 > 0.95 else "GOOD",
                 "observations": "force_llm=True — NN skipped for physics domain",
                 "llm_source": llm_result.get("llm_source", "unknown"),
+                "provenance": _prov(llm_result),
                 "llm_result": {
                     "formula": llm_result.get("formula", "N/A"),
                     "python_code": llm_result.get("python_code", "N/A"),
@@ -857,10 +903,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                     w_nn  = max(nn_r2,  0)
                     total = w_llm + w_nn if (w_llm + w_nn) > 0 else 1.0
                     blend = (w_llm * llm_pred + w_nn * nn_pred) / total
-                    ss_res = np.sum((y_true - blend) ** 2)
-                    ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-                    _tol3      = 1e-10 * float(np.max(np.abs(y_true))**2) * len(y_true)
-                    blend_r2   = float(1 - ss_res / ss_tot) if ss_tot > max(_tol3, 1e-300) else 0.0
+                    blend_r2, _ = _r2_rule_a(y_true, blend)
                     blend_rmse = float(np.sqrt(np.mean((y_true - blend) ** 2)))
                     decision = "ensemble"
                     final_r2   = blend_r2
@@ -912,6 +955,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             "validation_score": validation_score,
             "observations": ", ".join(observations) if observations else "Normal",
             "llm_source": llm_result.get("llm_source", "unknown"),
+            "provenance": _prov(llm_result),
             "llm_result": {
                 "formula": llm_result.get("formula", "N/A"),
                 "python_code": llm_result.get("python_code", "N/A"),
