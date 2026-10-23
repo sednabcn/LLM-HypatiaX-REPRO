@@ -22,3 +22,8 @@ scan_report.html
 scan_after*.txt
 triage_out/
 _quarantine/
+*~
+*.bak
+audit_out/*.json
+triage_out/
+_quarantine/
