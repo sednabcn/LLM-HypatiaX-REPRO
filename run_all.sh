@@ -45,6 +45,17 @@ else
   export HYPATIAX_DISABLE_HARDCODED=1
   export HYPATIAX_DISABLE_PROMPT_HINTS=1
 fi
+# Swallowed exceptions raise instead of logging (see fix_swallow.py).
+export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
+
+# R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
+# (HYPATIAX_ALLOW_LEGACY=1); otherwise any truthy value aborts and the flag is forced to 0.
+case "${HYPATIAX_R2_SIGN_FLIP:-0},${HYPATIAX_ALLOW_LEGACY:-0}" in
+  0,*|,*|false,*|no,*|off,*) export HYPATIAX_R2_SIGN_FLIP=0 ;;
+  *,1) echo "WARNING: HYPATIAX_R2_SIGN_FLIP=${HYPATIAX_R2_SIGN_FLIP} (legacy sensitivity run)" >&2 ;;
+  *) echo "ABORT: HYPATIAX_R2_SIGN_FLIP=${HYPATIAX_R2_SIGN_FLIP} needs HYPATIAX_ALLOW_LEGACY=1" >&2; exit 1 ;;
+esac
+
 # Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
 # running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
 export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"

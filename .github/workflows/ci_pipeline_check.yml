@@ -160,6 +160,10 @@ permissions:
   actions:  read
 
 env:
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   OUT_BASE: "hypatiax/data/results"
   # Default seeds / noise levels — overridden by workflow_dispatch inputs.

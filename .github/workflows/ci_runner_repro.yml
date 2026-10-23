@@ -116,6 +116,8 @@ permissions:
   actions:  write
 
 env:
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"

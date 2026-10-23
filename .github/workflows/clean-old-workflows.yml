@@ -10,6 +10,12 @@ on:
         default: '72'
         type: string
 
+env:
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
