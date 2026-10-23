@@ -1738,6 +1738,24 @@ class SymbolicEngine:
                 # INSIDE the for-loop above, causing best_eq_raw / best_eq /
                 # expression to be recomputed on every iteration (using the
                 # intermediate best_idx) instead of once after the loop completes.
+                # SELECTION PARITY with pysr_only: PySR's own model_selection (get_best),
+                # not max training R2 over the Pareto front (which favours the most complex).
+                _sel_rule = "max_train_r2_fallback"
+                if hasattr(self.model, "get_best"):
+                    try:
+                        _def_eq = str(self.model.get_best()["equation"])
+                    except Exception:
+                        _def_eq = None
+                    if _def_eq is not None:
+                        for _i in range(len(eqs)):
+                            _row = eqs.iloc[_i] if hasattr(eqs, "iloc") else eqs[_i]
+                            _row_eq = str(_row.equation) if hasattr(_row, "equation") else str(_row["equation"])
+                            if _row_eq == _def_eq and _i in _cached_r2:
+                                best_idx, best_r2 = _i, _cached_r2[_i]
+                                _sel_rule = "pysr_default"
+                                break
+                if _sel_rule != "pysr_default":
+                    print("   WARNING: PySR default selection unavailable; fell back to max training R2", flush=True)
                 best_eq_raw = eqs.iloc[best_idx] if hasattr(eqs, "iloc") else eqs[best_idx]
                 if hasattr(best_eq_raw, "equation"):
                     # SimpleNamespace (mock) — attribute access
@@ -1789,6 +1807,7 @@ class SymbolicEngine:
                     _top5 = sorted(_pareto_r2s, key=lambda x: x[2], reverse=True)[:5]
                     _trace.append(f"pareto_top5={_top5}")
                     _trace.append(f"best_r2={best_r2:.4f}")
+                    _trace.append(f"selection={_sel_rule}")
                     _trace.append(f"best_expr={expression[:80]}")
 
                     # If y was scaled, fold the scale factor into the expression so
@@ -1814,7 +1833,7 @@ class SymbolicEngine:
                     r2 = best_r2
 
                     print(f"   ✅ Found: {expression}")
-                    print(f"   R²: {r2:.4f}  (selected index {best_idx}/{len(eqs)-1} by R²)")
+                    print(f"   R²: {r2:.4f}  (selected index {best_idx}/{len(eqs)-1} by {_sel_rule})")
 
                     _result = {
                         "expression": expression,

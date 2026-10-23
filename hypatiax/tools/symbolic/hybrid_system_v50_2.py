@@ -204,7 +204,9 @@ def _cached_quality(
     Pure-function quality check used as the LRU target.
     Returns (is_overfit, complexity, warnings_tuple) — fully hashable.
     """
-    complexity = len(expression)
+    # node count (variables, constants, operators), not string length, which
+    # penalised long variable names such as N_A * k_B.
+    complexity = len(re.findall(r"[A-Za-z_]\w*|\d+\.?\d*(?:[eE][-+]?\d+)?|\*\*|[-+*/^]", expression))
     is_overfit = False
     warnings: list[str] = []
 
@@ -765,7 +767,10 @@ class HybridDiscoverySystem:
                 else:
                     quality = {"is_overfit": False, "complexity": 0, "warnings": []}
 
-                if r2 > best_r2:
+                # R2 gaps below the noise floor are ties: keep the earlier result.
+                # 1e-3 is about 0.4 x the 0.0025 gap implied by 5% noise (R2 ceiling ~0.9975).
+                _SEL_TOL = 1e-3
+                if best_result is None or r2 > best_r2 + _SEL_TOL:
                     best_r2 = r2
                     best_result = result
                     best_result["discovery_engine"] = "symbolic"
