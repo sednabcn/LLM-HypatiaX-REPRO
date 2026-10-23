@@ -38,8 +38,7 @@ def clean_run() -> bool:
 def flag_state() -> dict:
     """Record this in every result row / provenance map."""
     return {
-        "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
-        "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
+        **{n: os.environ.get(n) for n in FLAG_NAMES},   # raw values, recorded as-is
         "HYPATIAX_ALLOW_LEGACY": os.environ.get("HYPATIAX_ALLOW_LEGACY"),
         "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
         "r2_sign_flip": __import__("hypatiax.core.r2_canonical", fromlist=["x"]).sign_flip_enabled(),
