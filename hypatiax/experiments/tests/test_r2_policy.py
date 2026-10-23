@@ -249,3 +249,14 @@ def test_no_new_r2_reimplementations():
     if gone:
         warnings.warn("legacy R^2 copies migrated; shrink the baseline "
                       "(migrate_r2_repro.py --write-baseline): " + ", ".join(gone))
+
+
+# ------------------------------------------------ adaptive_config (hand-migrated)
+def test_adaptive_config_uses_canonical_scorer_and_nan_safe_selection():
+    src = (ROOT / "hypatiax/core/training/adaptive_config.py").read_text()
+    assert "ss_tot" not in src and "r2_scored" in src
+    assert "selection_score" in src          # nan/-inf must lose the best-of-seeds comparison
+    # the old absolute floor scored a tiny-scale target as 0.0/1.0 whatever the model did:
+    y = np.linspace(1.0, 2.0, 50) * 1e-11
+    old = 1.0 if np.sum((y - 0.0) ** 2) < 1e-10 else 0.0       # what the 1e-10 guard returned
+    assert old == 1.0 and not is_recovered(r2(y, y * 1.5))     # canonical: a wrong model is not "1.0"

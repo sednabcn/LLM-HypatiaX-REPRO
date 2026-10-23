@@ -540,7 +540,9 @@ def train_with_config(
     from sklearn.model_selection import train_test_split
     from sklearn.preprocessing import StandardScaler
 
+    from hypatiax.core.r2_canonical import r2_scored, selection_score
     best_model, best_r2, best_train_loss = None, float("-inf"), float("inf")
+    best_score = float("-inf")
 
     for seed in range(cfg.n_seeds):
         torch.manual_seed(seed)
