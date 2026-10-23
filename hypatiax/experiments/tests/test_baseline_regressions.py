@@ -71,14 +71,37 @@ class _Boom:
             raise RuntimeError("api rejected")
 
 
-def test_error_row_is_not_counted_as_llm_call_and_keeps_hint_status(mod, monkeypatch):
-    monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")  # hints ON -> specialized prompt
-    b = mod.PureLLMBaseline(); b.client = _Boom()
-    r = b.generate_formula("Liquidation price for leveraged long", "defi", ["entry_price", "leverage"], {})
+class _Capture:
+    """Stub client that records the prompt it is asked to send, then fails."""
+    def __init__(self):
+        self.prompts = []
+        outer = self
+
+        class messages:  # noqa: N801
+            @staticmethod
+            def create(**kw):
+                outer.prompts.append(str(kw.get("messages")))
+                raise RuntimeError("api rejected")
+
+        self.messages = messages
+
+
+FORBIDDEN = ("MANDATORY", "CODE TEMPLATE", "NEVER use", "FORMULA HINT",
+             "E0 - (R*T", "np.log(c_ox", "n_elec=2", "sqrt(2*pi)")
+
+
+def test_error_row_is_not_counted_as_llm_call_even_in_legacy_mode(mod, monkeypatch):
+    # Legacy mode can no longer embed ground truth: the hint code was deleted.
+    monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")
+    b = mod.PureLLMBaseline(); b.client = _Capture()
+    r = b.generate_formula("Liquidation price for leveraged long", "defi",
+                           ["entry_price", "leverage"], {})
     assert r["llm_attempted"] is True and r["llm_called"] is False
     assert r["error_stage"] == "api_request"
-    assert r["bypass_kind"] == "prompt_embedded_gt"      # no longer mislabelled "live"
+    assert r["bypass_kind"] == "live"
     assert r["prompt_sha256"] and r["temperature_sent"] is False
+    assert b.client.prompts, "prompt was never built"
+    assert not any(s in b.client.prompts[0] for s in FORBIDDEN)
 
 
 def test_clean_run_error_row_is_live(mod):
