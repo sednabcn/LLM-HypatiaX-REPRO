@@ -10,10 +10,10 @@ Claude-Session: https://claude.ai/code/session_01SNnTsRvsPgkf6Ni6hTP14m
  rsc/experiments/tests/test_stats_ingest.py | 11 +++++++++++
  1 file changed, 11 insertions(+)
 
-diff --git a/rsc/experiments/tests/test_stats_ingest.py b/rsc/experiments/tests/test_stats_ingest.py
+diff --git a/hypatiax/experiments/tests/test_stats_ingest.py b/rsc/experiments/tests/test_stats_ingest.py
 index 1c430d0..ada5dd2 100644
---- a/rsc/experiments/tests/test_stats_ingest.py
-+++ b/rsc/experiments/tests/test_stats_ingest.py
+--- a/hypatiax/experiments/tests/test_stats_ingest.py
++++ b/hypatiax/experiments/tests/test_stats_ingest.py
 @@ -53,3 +53,14 @@ def test_sweep_ingest_guards(tmp_path):
      p = run(); assert "skipped_synthetic" in p.stdout                                         # real mode refuses synthetic
      write([["ablation", "V7", "c", 42, "bogus", "", 0.9, 0.9, "v5.4", 0]])

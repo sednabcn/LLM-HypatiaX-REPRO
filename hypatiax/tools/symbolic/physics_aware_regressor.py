@@ -499,6 +499,10 @@ class PhysicsAwareRegressor:
         general (fallback), rational, additive_energy
         """
         d = self.domain.lower() if self.domain else "general"
+        # [clean-run patch] no equation-specific seeds in a clean run
+        from hypatiax.core.flags import clean_run
+        if clean_run():
+            return self._init_general_population(variable_names, var_stats)
 
         # ── Feynman electromagnetism / electrostatics / magnetism ─────────
         if d in ("electromagnetism", "electrostatics", "magnetism",
@@ -1455,7 +1459,8 @@ class PhysicsAwareRegressor:
             symbols = {v: sp.Symbol(v) for v in variable_names}
             varying = [v for v in variable_names if not var_stats[v]["is_constant"]]
             const   = [v for v in variable_names if var_stats[v]["is_constant"]]
-            d       = self.domain.lower() if self.domain else "general"
+            from hypatiax.core.flags import clean_run as _clean_run  # [clean-run patch]
+            d       = "general" if _clean_run() else (self.domain.lower() if self.domain else "general")
 
             # 30 % chance to blend with rational for biology
             if d == "biology" and np.random.random() < 0.3:

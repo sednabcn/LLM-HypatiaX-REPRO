@@ -3,12 +3,6 @@ ERROR [config-path] config/repro.yaml  benchmarks.instability.script not found: 
 ERROR [evaluator] hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3767  absolute ss_tot guard (Supplement A Fix 5 / Listing 8 defect)
 ERROR [import] hypatiax/tools/symbolic/hybrid_system_v50_2.py:615  unresolved import: hypatiax.tools.llm_providers.anthropic_provider
 ERROR [import] hypatiax/tools/symbolic/hybrid_system_v50_2.py:627  unresolved import: hypatiax.tools.llm_providers.google_provider
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [60589 bytes]
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [36208 bytes]
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_run.log__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [31120 bytes]
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard0_rescued_1786497899.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [727 bytes]
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard1_rescued_1786493709.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [679 bytes]
-ERROR [parse] hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv__shard2_rescued_1786493416.json:1  JSONDecodeError: Expecting value: line 1 column 1 (char 0) [684 bytes]
 WARN  [clean-run] .github/workflows/ci_bypass_audit.yml  HYPATIAX_DISABLE_HARDCODED present but not set to 1 [audit workflow: confirm =0 is intentional and its results never feed headline tables]
 WARN  [determinism] hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py  function named *_deterministic but no temperature/seed is sent; run-to-run LLM variance expected
 WARN  [determinism] hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py  function named *_deterministic but no temperature/seed is sent; run-to-run LLM variance expected
@@ -49,6 +43,5 @@ WARN  [swallowed-exc] hypatiax/tools/symbolic/symbolic_engine.py:779  5x `except
 WARN  [swallowed-exc] hypatiax/tools/validation/dimensional_validator.py:121  1x `except Exception: pass` hides errors (lines 121)
 WARN  [swallowed-exc] hypatiax/tools/validation/ensemble_validator.py:187  2x `except Exception: pass` hides errors (lines 187,192)
 WARN  [swallowed-exc] hypatiax/tools/validation/symbolic_validator.py:137  1x `except Exception: pass` hides errors (lines 137)
-WARN  [tests] hypatiax/experiments/tests/test_baseline_regressions.py  duplicate test file test_baseline_regressions.py in 2 places (hypatiax/core/base_pure_llm, hypatiax/experiments/tests) -> keep one
 WARN  [todo] -  3 TODO/FIXME/XXX markers in 3 files (top: hybrid_system_v50_2.py=1, portfolio_variance_v3c2.py=1, hypatia.py=1)
-== 11 error(s), 42 warning(s) in hypatiax/ ==
+== 5 error(s), 41 warning(s) in hypatiax/ ==

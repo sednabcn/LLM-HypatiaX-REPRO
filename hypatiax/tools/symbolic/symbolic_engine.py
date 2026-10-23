@@ -1024,9 +1024,10 @@ class SymbolicEngine:
                 and not self.config.use_transcendental_compositions
             )
             _eq_hint = (equation_name or "").lower()
-            _needs_inv_trig = _needs_basic_trig and any(
-                kw in _eq_hint
-                for kw in ("snell", "arcsin", "asin", "refract", "26.2", "i.26")
+            from hypatiax.core.flags import clean_run as _clean_run  # [clean-run patch]
+            _needs_inv_trig = _needs_basic_trig and (
+                _clean_run()  # clean run: generic inverse-trig for the whole trig domain, no name matching
+                or any(kw in _eq_hint for kw in ("snell", "arcsin", "asin", "refract", "26.2", "i.26"))
             )
 
             if _needs_basic_trig:

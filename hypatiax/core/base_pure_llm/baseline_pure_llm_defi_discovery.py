@@ -1,20 +1,16 @@
 """
-COMPLETE FIXED VERSION: baseline_pure_llm_defi_discovery.py
-All liquidation domain fixes + FIXED evaluation logic + FIXED dict handling.
+Pure LLM baseline for the DeFi / Feynman formula-discovery benchmark.
 
-BUG FIXES vs previous version:
-  FIX 1 — Nernst standard-prompt hint sign corrected from + to − (matches
-           ground_truth and hardcoded formula). Previous hint said
-           "NEVER use a minus sign" which caused wrong formula for variants.
-  FIX 2 — Clausius-Mossotti standard-prompt hint corrected from
-           E_ext * (eps+2)/3  →  (epsilon-1)/(epsilon+2) * E_external,
-           matching protocol II.6.15a ground truth and hardcoded formula.
-  FIX 3 — Fourier heat conduction standard-prompt hint removes spurious
-           area A factor. Ground truth and hardcoded formula are
-           kappa*(T2-T1)/d (no A). Prompt previously said kappa*A*delta_T/d.
-  FIX 4 — _generate_specialized_prompt() now warns when a use_specialized
-           case reaches the final return "" without matching any branch,
-           preventing silent degradation to the standard prompt.
+INPUT-PARITY POLICY (release version)
+  The prompt contains only: the task description, domain, variable names and
+  the protocol's physical constants (task spec). It contains NO target
+  formula, NO code template, NO per-equation sign/form corrections and NO
+  statistics derived from the data. All former equation-specific hint blocks
+  (Nernst, Clausius-Mossotti, Fourier, Gaussian, the specialized
+  liquidation/Kelly/leverage/collateral/ES/logistic/Michaelis-Menten/
+  allometric/Arrhenius prompts, and the generic normalisation hint) were
+  DELETED, not gated, so no flag value can re-enable them. Earlier
+  exploratory runs contained them; see the audit notes.
 """
 
 import inspect
@@ -107,11 +103,6 @@ def _json_safe(o):
     if isinstance(o, (list, tuple)):
         return [_json_safe(v) for v in o]
     return o
-
-
-# Descriptions of hardcoded branches, used to tag provenance (bypass_kind).
-_GT_BRANCHES = {"gaussian", "planck", "bose", "nernst", "clausius", "lorentz", "fourier", "zeeman"}
-_OLS_BRANCHES = {"logistic", "michaelis", "allometric", "arrhenius"}
 
 
 def _create_message(client, **kwargs):
@@ -399,105 +390,36 @@ class PureLLMBaseline:
         X: "np.ndarray | None" = None,
         y: "np.ndarray | None" = None,
     ) -> dict:
-        """Generate formula with specialized handling.
+        """Generate a formula with a single, equation-agnostic prompt.
 
         Args:
             description: Human-readable equation description.
             domain: Domain string (e.g. "feynman_biology").
             variable_names: Input variable names.
             metadata: Protocol metadata dict (constants, ground_truth, etc.).
-            X: Optional feature matrix (n_samples, n_features).  When provided
-               for biology/chemistry equations, analytical OLS parameters are
-               computed and embedded in the returned formula — no LLM call.
-            y: Optional target vector (n_samples,).  Required when X is given.
+            X, y: accepted for call compatibility only; NOT used. No data
+               statistics are placed in the prompt and nothing is fitted.
         """
-        desc_lower = description.lower()
-
-        # NOTE: the former "analytical OLS enrichment" (logistic / Michaelis-
-        # Menten / allometric / Arrhenius fits of y on X) and the hardcoded-
-        # formula short-circuit were removed: nothing here fits to the data or
-        # returns a formula before the LLM is called.
         metadata = dict(metadata or {})
         disable_hc = _flag("HYPATIAX_DISABLE_HARDCODED")
         disable_hints = _flag("HYPATIAX_DISABLE_PROMPT_HINTS")
-        # B2: strip any pre-existing leaked stats/OLS keys from caller metadata
-        if disable_hints:
-            metadata.pop("_x_stats", None)
-            metadata.pop("_y_stats", None)
-        # Data-derived stats/OLS are only computed when something may use them.
-        if (X is not None and y is not None and X.shape[1] == 1
-                and not disable_hints):
-            x_col = X[:, 0]
-            # x/y stats (used by prompt fallback) -- a data leak into the prompt,
-            # so skipped when prompt hints are disabled.
-            if True:  # guarded by the enclosing `not disable_hints`
-                metadata.setdefault("_x_stats", {
-                    (variable_names[0] if variable_names else "x"): {
-                        "min":  float(x_col.min()),
-                        "max":  float(x_col.max()),
-                        "mean": float(x_col.mean()),
-                    }
-                })
-                metadata.setdefault("_y_stats", {
-                    "mean":  float(abs(y).mean()),
-                    "std":   float(y.std()),
-                    "max":   float(y.max()),
-                    "min":   float(y.min()),
-                    "range": float(y.max() - y.min()),
-                })
-        # Check if needs specialized handling.
-        # NOTE: "variant" descriptions (e.g. "Feynman variant") are excluded from
-        # Arrhenius specialized handling — they may use a modified functional form
-        # (e.g. T^n pre-exponential) that the template-forced prompt gets wrong.
-        # They fall through to the standard prompt which is form-agnostic.
-        _is_variant = "variant" in desc_lower
-        use_specialized = (
-            ("optimal" in desc_lower and "kelly" in desc_lower)
-            or ("capital efficiency" in desc_lower and "concentrated" in desc_lower)
-            or (
-                "portfolio expected shortfall" in desc_lower
-                and "correlated" in desc_lower
-            )
-            or ("liquidation" in desc_lower)
-            or ("maximum" in desc_lower and "leverage" in desc_lower)
-            or ("required collateral" in desc_lower)
-            or ("logistic growth" in desc_lower)
-            or ("growth rate" in desc_lower and "logistic" in desc_lower)
-            or ("michaelis" in desc_lower or "menten" in desc_lower)
-            or ("allometric" in desc_lower)
-            or ("metabolic rate" in desc_lower and "mass" in desc_lower)
-            or ("arrhenius" in desc_lower and not _is_variant)
-            or ("rate constant" in desc_lower and len(variable_names or []) == 1 and not _is_variant)
-        )
-        # B2: specialized prompts embed the exact formula AND exact Python code
-        # (liquidation, leverage, collateral, Kelly, capital efficiency, ES) --
-        # that is ground truth in the prompt, so they are disabled together
-        # with the other prompt hints.
-        use_specialized = use_specialized and not disable_hints
+        # Defensive: never forward data-derived stats or any hint-like keys.
+        for _k in ("_x_stats", "_y_stats", "ground_truth", "formula", "hint", "hints"):
+            metadata.pop(_k, None)
 
-        if use_specialized:
-            prompt = self._generate_specialized_prompt(
-                description, domain, variable_names, metadata
-            )
-            # Safety: if specialized prompt returns empty (unmatched case), fall back
-            if not prompt or not prompt.strip():
-                prompt = self._generate_standard_prompt(
-                    description, domain, variable_names, metadata
-                )
-        else:
-            prompt = self._generate_standard_prompt(
-                description, domain, variable_names, metadata
-            )
+        prompt = self._generate_standard_prompt(
+            description, domain, variable_names, metadata
+        )
 
         # Provenance is computed BEFORE the API call so error rows are as
-        # auditable as success rows (previously error rows were always "live").
-        hint_fired = bool(
-            use_specialized
-            or "MANDATORY CODE TEMPLATE" in prompt
-            or "FORMULA HINT" in prompt
-        )
+        # auditable as success rows. The prompt is a single template with no
+        # per-equation branches, so bypass_kind is "live" by construction; the
+        # check below turns any future regression into a loud failure.
+        _leak_markers = ("MANDATORY", "CODE TEMPLATE", "FORMULA HINT", "NEVER use")
+        if any(m in prompt for m in _leak_markers):
+            raise RuntimeError("equation-specific hint marker found in prompt")
         _prov = {
-            "bypass_kind": "prompt_embedded_gt" if hint_fired else "live",
+            "bypass_kind": "live",
             "bypass_flags": {
                 "disable_hardcoded": disable_hc,
                 "disable_prompt_hints": disable_hints,
@@ -602,7 +524,7 @@ class PureLLMBaseline:
                 "assumptions": parsed.get("assumptions", "N/A"),
                 "explanation": parsed.get("explanation", "N/A"),
                 "raw_response": content,
-                "specialized_prompt": use_specialized,
+                "specialized_prompt": False,
                 # --- B2 provenance ---
                 "llm_called": True,
                 "llm_attempted": True,
@@ -657,413 +579,10 @@ class PureLLMBaseline:
         """
         return None
 
-    def _generate_specialized_prompt(
-        self, description: str, domain: str, variable_names: list[str], metadata: dict
-    ) -> str:
-        """Generate specialized prompts for problematic formulas."""
-        desc_lower = description.lower()
-        var_list = ", ".join(variable_names) if variable_names else ""
-
-        # LIQUIDATION LONG
-        if "liquidation" in desc_lower and "long" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula P_liq = P_e × (1 - 1/(L×0.8))
-
-FORMULA:
-entry_price * (1 - 1/(leverage * 0.8))
-
-LATEX:
-P_{{liq}} = P_e \\times \\left(1 - \\frac{{1}}{{L \\times 0.8}}\\right)
-
-PYTHON:
-def formula(entry_price, leverage):
-    maintenance_margin = 0.8
-    return entry_price * (1.0 - 1.0/(leverage * maintenance_margin))
-
-VARIABLES:
-- entry_price: Entry price
-- leverage: Leverage multiplier
-
-ASSUMPTIONS:
-Maintenance margin = 0.8
-
-EXPLANATION:
-Liquidation price for long positions."""
-
-        # LIQUIDATION SHORT
-        if "liquidation" in desc_lower and "short" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula P_liq = P_e × (1 + 1/(L×0.8))
-
-FORMULA:
-entry_price * (1 + 1/(leverage * 0.8))
-
-LATEX:
-P_{{liq}} = P_e \\times \\left(1 + \\frac{{1}}{{L \\times 0.8}}\\right)
-
-PYTHON:
-def formula(entry_price, leverage):
-    maintenance_margin = 0.8
-    return entry_price * (1.0 + 1.0/(leverage * maintenance_margin))
-
-VARIABLES:
-- entry_price: Entry price
-- leverage: Leverage multiplier
-
-ASSUMPTIONS:
-Maintenance margin = 0.8
-
-EXPLANATION:
-Liquidation price for short positions."""
-
-        # MAX LEVERAGE
-        if "maximum" in desc_lower and "leverage" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula L_max = 1/(loss×0.8)
-
-FORMULA:
-1 / (acceptable_loss_pct * 0.8)
-
-LATEX:
-L_{{max}} = \\frac{{1}}{{\\text{{loss}} \\times 0.8}}
-
-PYTHON:
-def formula(entry_price, acceptable_loss_pct):
-    maintenance_margin = 0.8
-    return 1.0 / (acceptable_loss_pct * maintenance_margin)
-
-VARIABLES:
-- entry_price: Not used in calculation
-- acceptable_loss_pct: Maximum acceptable loss
-
-ASSUMPTIONS:
-Maintenance margin = 0.8
-
-EXPLANATION:
-Maximum safe leverage given loss tolerance."""
-
-        # REQUIRED COLLATERAL
-        if (
-            "required collateral" in desc_lower
-            or "collateral for leveraged" in desc_lower
-        ):
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula collateral = position_size/leverage
-
-FORMULA:
-position_size / leverage
-
-LATEX:
-\\text{{collateral}} = \\frac{{\\text{{position\\_size}}}}{{L}}
-
-PYTHON:
-def formula(position_size, leverage):
-    return position_size / leverage
-
-VARIABLES:
-- position_size: Total position size
-- leverage: Leverage multiplier
-
-ASSUMPTIONS:
-Simple inverse relationship
-
-EXPLANATION:
-Required collateral for leveraged position."""
-
-        # KELLY CRITERION
-        if "optimal" in desc_lower and "kelly" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula f* = min(μ/(2σ²), 1)
-
-FORMULA:
-min(expected_fee_apy/(2*il_risk**2), 1.0)
-
-LATEX:
-f^* = \\min\\left(\\frac{{\\mu}}{{2\\sigma^2}}, 1\\right)
-
-PYTHON:
-def formula(expected_fee_apy, il_risk):
-    risk_aversion = 2.0
-    position = expected_fee_apy / (risk_aversion * il_risk**2)
-    return np.minimum(position, 1.0)
-
-VARIABLES:
-- expected_fee_apy: Expected return
-- il_risk: Risk/volatility
-
-ASSUMPTIONS:
-Risk aversion = 2.0, capped at 100%
-
-EXPLANATION:
-Risk-adjusted Kelly criterion for position sizing."""
-
-        # CAPITAL EFFICIENCY
-        if "capital efficiency" in desc_lower and "concentrated" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula efficiency = P_upper/(P_upper - P_lower)
-
-FORMULA:
-price_upper / (price_upper - price_lower)
-
-LATEX:
-\\text{{efficiency}} = \\frac{{P_{{upper}}}}{{P_{{upper}} - P_{{lower}}}}
-
-PYTHON:
-def formula(price_lower, price_upper, price_current):
-    return price_upper / (price_upper - price_lower)
-
-VARIABLES:
-- price_lower, price_upper: Range bounds
-- price_current: Not used in calculation
-
-ASSUMPTIONS:
-Simple ratio calculation
-
-EXPLANATION:
-Capital efficiency for concentrated liquidity."""
-
-        # PORTFOLIO ES
-        if "portfolio expected shortfall" in desc_lower and "correlated" in desc_lower:
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL: Use EXACT formula ES_p = ES₁ + ES₂ + ρ√(ES₁×ES₂)
-
-FORMULA:
-position1_es + position2_es + correlation * sqrt(position1_es * position2_es)
-
-LATEX:
-ES_p = ES_1 + ES_2 + \\rho\\sqrt{{ES_1 \\cdot ES_2}}
-
-PYTHON:
-def formula(position1_es, position2_es, correlation):
-    corr_term = correlation * np.sqrt(position1_es * position2_es)
-    return position1_es + position2_es + corr_term
-
-VARIABLES:
-- position1_es, position2_es: Individual ES values
-- correlation: Correlation coefficient
-
-ASSUMPTIONS:
-Linear aggregation with correlation
-
-EXPLANATION:
-Portfolio Expected Shortfall for correlated positions."""
-
-        # ── Logistic growth rate ──────────────────────────────────────────────
-        # CRITICAL: function must have EXACTLY 1 argument (the population N).
-        # The LLM habitually adds a time variable t — this prompt prevents that.
-        # We also analytically derive r and K from x/y stats when available,
-        # so the LLM receives concrete numeric starting values.
-        if "logistic growth" in desc_lower or (
-            "growth rate" in desc_lower and "logistic" in desc_lower
-        ):
-            n_var = variable_names[0] if variable_names else "N"
-
-            # Derive r and K from data statistics when available
-            r_hint = "r = <choose: ~0.1-3.0 depending on system>"
-            K_hint = "K = <choose: carrying capacity, MUST be >> max N observed>"
-            if metadata and "_x_stats" in metadata and "_y_stats" in metadata:
-                x_st = metadata["_x_stats"].get(n_var, {})
-                y_st = metadata["_y_stats"]
-                N_max = x_st.get("max", None)
-                y_range = y_st.get("range", None)
-                if N_max is not None and y_range is not None and N_max > 0 and y_range > 0:
-                    # Peak of parabola = r*K/4. Since N_max < K/2 (data is sub-peak),
-                    # a safe estimate: K = 4 * N_max, then r = 4*y_range / K
-                    K_est = round(4.0 * N_max, -int(np.floor(np.log10(4.0 * N_max))) + 1)
-                    r_est = round(4.0 * y_range / K_est, 4)
-                    r_hint = f"r = {r_est}   # estimated: 4 * y_range / K"
-                    K_hint = f"K = {K_est}   # estimated: 4 * N_max (carrying capacity >> observed N)"
-
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL RULES:
-1. The function MUST have EXACTLY 1 argument: def formula({n_var}):
-2. Do NOT add a time variable. The input IS the current population value.
-3. Use functional form: r * {n_var} * (1 - {n_var} / K)
-
-ESTIMATED PARAMETERS (from data statistics — use these values):
-{r_hint}
-{K_hint}
-
-FORMULA:
-r * {n_var} * (1 - {n_var} / K)
-
-PYTHON:
-def formula({n_var}):
-    import numpy as np
-    {r_hint}
-    {K_hint}
-    return r * {n_var} * (1.0 - {n_var} / K)
-
-EXPLANATION:
-Logistic growth rate: absolute rate of population change. K is carrying capacity."""
-
-        # ── Michaelis-Menten enzyme kinetics ─────────────────────────────────
-        if "michaelis" in desc_lower or "menten" in desc_lower:
-            s_var = variable_names[0] if variable_names else "S"
-
-            Vmax_hint = "Vmax = <choose: maximum reaction velocity>"
-            Km_hint   = "Km   = <choose: half-saturation constant>"
-            if metadata and "_x_stats" in metadata and "_y_stats" in metadata:
-                x_st = metadata["_x_stats"].get(s_var, {})
-                y_st = metadata["_y_stats"]
-                # Vmax ≈ y_max * 1.1 (asymptote slightly above observed max)
-                # Km ≈ S at half-max-velocity: Km = S where v = Vmax/2
-                # S_half roughly at median S when y is below midpoint
-                Vmax_est = round(y_st.get("max", 100) * 1.1, 2)
-                S_med    = x_st.get("mean", 10.0)
-                Km_est   = round(S_med * 0.5, 2)
-                Vmax_hint = f"Vmax = {Vmax_est}  # ≈ 1.1 * y_max"
-                Km_hint   = f"Km   = {Km_est}  # ≈ 0.5 * mean(S)"
-
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL RULES:
-1. The function MUST have EXACTLY 1 argument: def formula({s_var}):
-2. Use functional form: Vmax * {s_var} / (Km + {s_var})
-
-ESTIMATED PARAMETERS (from data statistics — use these values):
-{Vmax_hint}
-{Km_hint}
-
-FORMULA:
-Vmax * {s_var} / (Km + {s_var})
-
-PYTHON:
-def formula({s_var}):
-    import numpy as np
-    {Vmax_hint}
-    {Km_hint}
-    return Vmax * {s_var} / (Km + {s_var})
-
-EXPLANATION:
-Michaelis-Menten: reaction velocity as a function of substrate concentration."""
-
-        # ── Allometric scaling law ────────────────────────────────────────────
-        if "allometric" in desc_lower or (
-            "metabolic rate" in desc_lower and "mass" in desc_lower
-        ):
-            x_var = variable_names[0] if variable_names else "M"
-
-            a_hint = "a = <choose: scaling coefficient>"
-            b_hint = "b = 0.75  # Kleiber's law exponent"
-            if metadata and "_x_stats" in metadata and "_y_stats" in metadata:
-                x_st = metadata["_x_stats"].get(x_var, {})
-                y_st = metadata["_y_stats"]
-                x_mean = x_st.get("mean", 1.0)
-                y_mean = y_st.get("mean", 1.0)
-                b_val  = 0.75
-                # a * x_mean^b = y_mean → a = y_mean / x_mean^b
-                a_est  = round(y_mean / (max(x_mean, 1e-9) ** b_val), 4)
-                a_hint = f"a = {a_est}  # estimated: y_mean / x_mean^b"
-                b_hint = f"b = {b_val}  # Kleiber's law exponent"
-
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL RULES:
-1. The function MUST have EXACTLY 1 argument: def formula({x_var}):
-2. Use functional form: a * {x_var}^b  (power law)
-
-ESTIMATED PARAMETERS (from data statistics — use these values):
-{a_hint}
-{b_hint}
-
-FORMULA:
-a * {x_var}^b
-
-PYTHON:
-def formula({x_var}):
-    import numpy as np
-    {a_hint}
-    {b_hint}
-    return a * np.power(np.abs({x_var}), b)
-
-EXPLANATION:
-Allometric scaling: metabolic rate as a power law of body mass."""
-
-        # ── Arrhenius rate constant ───────────────────────────────────────────
-        # R=8.314 is a physical constant — must NOT be a free variable.
-        # GUARD: "variant" descriptions use a modified form — skip this template.
-        if ("arrhenius" in desc_lower or (
-            "rate constant" in desc_lower and len(variable_names or []) == 1
-        )) and "variant" not in desc_lower:
-            t_var = variable_names[0] if variable_names else "T"
-
-            A_hint  = "A  = <choose: pre-exponential factor>"
-            Ea_hint = "Ea = <choose: activation energy in J/mol>"
-            if metadata and "_x_stats" in metadata and "_y_stats" in metadata:
-                x_st = metadata["_x_stats"].get(t_var, {})
-                y_st = metadata["_y_stats"]
-                T_mean = x_st.get("mean", 400.0)
-                y_mean = max(y_st.get("mean", 1.0), 1e-300)
-                # Rough OLS: log(y_mean) = log(A) - Ea/(R*T_mean)
-                # Assume typical Ea≈50000 J/mol, solve for A
-                Ea_guess = 50000.0
-                import math
-                A_guess  = y_mean * math.exp(Ea_guess / (8.314 * max(T_mean, 1.0)))
-                # Round to sensible sig figs
-                A_est  = float(f"{A_guess:.2e}")
-                Ea_est = Ea_guess
-                A_hint  = f"A  = {A_est}  # estimated from y_mean and T_mean"
-                Ea_hint = f"Ea = {Ea_est}  # typical activation energy J/mol (adjust if needed)"
-
-            return f"""Task: {description}
-Variables: {var_list}
-
-CRITICAL RULES:
-1. The function MUST have EXACTLY 1 argument: def formula({t_var}):
-2. Functional form: A * exp(-Ea / (8.314 * {t_var}))
-3. R = 8.314 J/(mol·K) is a FIXED physical constant — do NOT make it a parameter.
-
-ESTIMATED PARAMETERS (from data statistics — use these values):
-{A_hint}
-{Ea_hint}
-
-FORMULA:
-A * exp(-Ea / (8.314 * {t_var}))
-
-PYTHON:
-def formula({t_var}):
-    import numpy as np
-    {A_hint}
-    {Ea_hint}
-    return A * np.exp(-Ea / (8.314 * {t_var}))
-
-EXPLANATION:
-Arrhenius: temperature dependence of rate constant. R=8.314 is fixed."""
-
-        # FIX 4: warn when use_specialized=True but no branch matched.
-        # Previously this silently returned "" and degraded to standard prompt
-        # with no indication that a new case was added without a prompt branch.
-        print(
-            f"WARNING: _generate_specialized_prompt matched no branch for "
-            f"'{description}' (domain={domain}). "
-            "Falling back to standard prompt. "
-            "Add a matching branch if this case requires structured output."
-        )
-        return ""
-
     def _generate_standard_prompt(
         self, description: str, domain: str, variable_names: list[str], metadata: dict
     ) -> str:
-        """Generate standard prompt."""
+        """Build the single equation-agnostic prompt."""
         var_info = f"\nVariables: {', '.join(variable_names)}" if variable_names else ""
 
         constants_info = ""
@@ -1072,82 +591,14 @@ Arrhenius: temperature dependence of rate constant. R=8.314 is fixed."""
             for const_name, const_value in metadata["constants"].items():
                 constants_info += f"\n  • {const_name} = {const_value}"
 
-        # ── Domain-specific formula hints ────────────────────────────────────
-        # These target equations that Claude LLMs consistently get wrong without
-        # explicit structural guidance.
-        desc_lower = description.lower()
-        domain_hint = ""
-
-        if "nernst" in desc_lower or "electrode potential" in desc_lower:
-            # FIX 1: sign corrected to MINUS — matches ground_truth and hardcoded formula.
-            # Previous version said "NEVER use a minus sign" which was wrong.
-            var_str = ", ".join(variable_names) if variable_names else "v0, v1, v2"
-            domain_hint = (
-                f"\n\n🔴 MANDATORY CODE TEMPLATE — copy and fill in variable names:\n"
-                f"  The Nernst equation for electrode potential is:\n"
-                f"  E = E0 - (R*T / (n_elec*F)) * np.log(c_ox / c_red)\n"
-                f"  where R=8.314 J/(mol·K), F=96485 C/mol, n_elec=2 (electrons).\n"
-                f"  Your variables are: {var_str}\n"
-                f"  Map them to: E0 (standard potential, ~0.76V), T (temperature, ~300K),\n"
-                f"               c_ox and c_red (concentrations, or their ratio).\n"
-                f"  The sign MUST be NEGATIVE: E0 - (R*T/(n*F))*np.log(...)\n"
-                f"  If only one concentration variable exists, treat it as the ratio c_ox/c_red.\n"
-                f"  NEVER use a plus sign before the log term."
-            )
-        elif "clausius" in desc_lower or ("dielectric" in desc_lower and "effective field" in desc_lower):
-            # FIX 2: formula corrected to (epsilon-1)/(epsilon+2)*E_external,
-            # matching protocol II.6.15a ground_truth and hardcoded formula.
-            # Previous version incorrectly said E_ext*(eps+2)/3 (different physical quantity).
-            var_str = ", ".join(variable_names) if variable_names else "v0, v1"
-            domain_hint = (
-                f"\n\n🔴 MANDATORY CODE TEMPLATE — the output is the LOCAL EFFECTIVE FIELD Eeff:\n"
-                f"  Eeff = (epsilon - 1) / (epsilon + 2) * E_external\n"
-                f"  where E_external is the applied external field and epsilon is the relative permittivity.\n"
-                f"  Your variables are: {var_str}\n"
-                f"  The formula is: return (epsilon - 1.0) / (epsilon + 2.0) * E_external\n"
-                f"  DO NOT use (epsilon + 2) / 3 — that is the wrong Clausius-Mossotti form."
-            )
-        elif ("fourier" in desc_lower or "heat conduction" in desc_lower
-              or "heat flux" in desc_lower):
-            # FIX 3: removed spurious area A factor. Ground truth is kappa*(T2-T1)/d
-            # (no area term). Previous hint said kappa*A*delta_T/d which is wrong
-            # for this protocol equation (II.2.42).
-            var_str = ", ".join(variable_names) if variable_names else "v0, v1, v2, v3"
-            domain_hint = (
-                f"\n\n🔴 MANDATORY CODE TEMPLATE — Fourier heat conduction law:\n"
-                f"  q = kappa * delta_T / d\n"
-                f"  where kappa=thermal conductivity, delta_T=temperature difference, d=thickness.\n"
-                f"  Your variables are: {var_str}\n"
-                f"  Map: kappa (conductivity W/(m·K)), T2 and T1 (temperatures, delta_T = T2-T1), d (thickness m).\n"
-                f"  The formula is: kappa * (T2 - T1) / d\n"
-                f"  DO NOT include an area variable A — the protocol equation has no area term."
-            )
-        elif ("gaussian" in desc_lower or "normal distribution" in desc_lower
-              or "probability density" in desc_lower):
-            domain_hint = (
-                "\n\n⚠️ FORMULA HINT — Gaussian PDF (must be fully normalised):\n"
-                "  f(x, mu, sigma) = (1 / (sigma * np.sqrt(2*np.pi))) * np.exp(-0.5*((x-mu)/sigma)**2)\n"
-                "  The prefactor 1/(sigma*sqrt(2*pi)) is MANDATORY — omitting it gives R²≈-1937."
-            )
-
-        # B2: the hints above spell out the target formula -> ground truth in the
-        # prompt. Drop them when HYPATIAX_DISABLE_PROMPT_HINTS is set.
-        # (constants_info is kept: constants are part of the task spec.)
-        # The closing "CRITICAL REQUIREMENTS" block used to carry the Gaussian
-        # normalisation constant unconditionally -> ground truth leaked even
-        # with the flag set. Now gated like the other hints.
-        _norm_hint = (
-            "\n- If the task involves a probability density or distribution, "
-            "include the FULL normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)"
-        )
-        if _flag("HYPATIAX_DISABLE_PROMPT_HINTS"):
-            domain_hint = ""
-            _norm_hint = ""
+        # No equation-specific hints exist in this prompt (deleted, not gated).
+        # constants_info above is the protocol's task-spec constants; it must
+        # be identical for every system compared (see input-parity paragraph).
 
         return f"""You are a mathematical formula expert in DeFi and quantitative finance.
 
 Task: {description}
-Domain: {domain}{var_info}{constants_info}{domain_hint}
+Domain: {domain}{var_info}{constants_info}
 
 Provide your response in this EXACT format:
 
@@ -1180,7 +631,7 @@ CRITICAL REQUIREMENTS:
 - Use EXACT constant values if specified
 - NO scipy imports (use only numpy)
 - NO markdown code blocks
-- Ensure operations work element-wise on numpy arrays{_norm_hint}"""
+- Ensure operations work element-wise on numpy arrays"""
 
     # Canonical section headers this parser understands, in the order the
     # prompt asks the model to emit them. A single regex finds every header
