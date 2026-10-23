@@ -41,5 +41,7 @@ def flag_state() -> dict:
         "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
         "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
         "HYPATIAX_ALLOW_LEGACY": os.environ.get("HYPATIAX_ALLOW_LEGACY"),
+        "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
+        "r2_sign_flip": __import__("hypatiax.core.r2_canonical", fromlist=["x"]).sign_flip_enabled(),
         "clean_run": clean_run(),
     }
