@@ -886,7 +886,7 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY secret is empty or unset."
             exit 1
           fi
-          python3 "${{ github.workspace }}/config/test_key_status.py"
+          python3 "${{ github.workspace }}/config/check_key_status.py"
 
       - name: Create results directory structure
         run: |

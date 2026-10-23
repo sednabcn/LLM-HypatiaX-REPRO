@@ -1,9 +1,9 @@
 """
-test_key_status.py - validate ANTHROPIC_API_KEY with a live round-trip.
+check_key_status.py - validate ANTHROPIC_API_KEY with a live round-trip.
 
 LOCAL USE:
     Set ANTHROPIC_API_KEY in your shell or hypatiax/.env, then:
-        python3 config/test_key_status.py
+        python3 config/check_key_status.py
 
 CI USE (GitHub Actions):
     The key is injected via the workflow's `env:` block:
