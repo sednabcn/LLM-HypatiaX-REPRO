@@ -1,0 +1,410 @@
+✅ API key found in environment
+populations : 30  (paper-quality, FIX-POP)
+niterations : 1000
+timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
+wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
+seed        : 42  (source: PYSR_SEED)
+✅ Parameters ready
+   [MEM] start: RSS=0.84 GB
+✅ HybridDiscoverySystem (v5.1) imported from /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
+✅ PySR 2.0.0a1 ready
+  [    0.0s] Imports complete
+✅ Core-15 loaded: 15 equations, 5 domains
+  [00] Arrhenius                    (Chemistry)
+  [01] Henderson-Hasselbalch        (Chemistry)
+  [02] Rate Law                     (Chemistry)
+  [03] Allometric Scaling           (Biology)
+  [04] Michaelis-Menten             (Biology)
+  [05] Logistic Growth              (Biology)
+  [06] Kinetic Energy               (Physics)
+  [07] Gravitational Force          (Physics)
+  [08] Ideal Gas Law                (Physics)
+  [09] Impermanent Loss             (DeFi AMM)
+  [10] Price Impact                 (DeFi AMM)
+  [11] Constant Product             (DeFi AMM)
+  [12] Value at Risk                (DeFi Risk)
+  [13] Liquidation Price            (DeFi Risk)
+  [14] Portfolio Std Dev            (DeFi Risk)
+✅ sympy available — true OOD evaluation (Mode A) enabled
+✅ run_condition ready — hypatia → HybridDiscoverySystem v5.1 | pysr_only → raw PySR
+🔀 Shard filter (slug mode, slugs=['physics']): 3/15 equations selected → ['Kinetic Energy', 'Gravitational Force', 'Ideal Gas Law']
+=================================================================
+EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)
+Engine      : hybrid_system_v50_2 (v5.1)
+Equations   : 15  |  Conditions: ['pysr_only', 'hypatia', 'hypatia_nollm']
+populations : 30  |  iterations: 1000  |  timeout: 900s
+Resuming    : 0 checkpointed entries
+=================================================================
+
+────────────────────────────────────────────────────────────
+▶  [06] Kinetic Energy  [Physics]
+────────────────────────────────────────────────────────────
+  [    0.1s] run_condition START: Kinetic Energy [pysr_only]  seed=84  wall_clock=1400s
+  [    0.1s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=84
+  [    0.1s] generate_data done: X_train=(160, 2)
+  [    0.1s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9968  extrap(near=0.9997 med=1.0000 far=0.9997)  time=1184.1s
+  [ 1184.3s] Checkpoint saved: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ pysr_only saved to checkpoint
+  [ 1184.3s] run_condition START: Kinetic Energy [hypatia]  seed=84  wall_clock=3600s
+  [ 1184.3s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=84
+  [ 1184.3s] generate_data done: X_train=(160, 2)
+2026-10-24 17:08:19,919 - INFO - ======================================================================
+2026-10-24 17:08:19,979 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-10-24 17:08:19,979 - INFO - ======================================================================
+2026-10-24 17:08:19,979 - INFO - Domain: physics
+2026-10-24 17:08:19,980 - INFO - Discovery mode: strict
+2026-10-24 17:08:19,981 - INFO - Primary LLM: anthropic
+2026-10-24 17:08:19,981 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-10-24 17:08:19,982 - INFO - Auto-config: True
+2026-10-24 17:08:19,983 - INFO - Max retries: 3
+2026-10-24 17:08:19,983 - INFO - PhysicsAware fallback: False
+2026-10-24 17:08:19,984 - INFO - Complexity threshold: 20
+2026-10-24 17:08:19,984 - INFO - Deterministic PySR: True
+2026-10-24 17:08:19,984 - INFO - ======================================================================
+2026-10-24 17:08:19,985 - INFO - Using provided iterations: 1000
+2026-10-24 17:08:19,985 - INFO - Parsimony: 0.01
+2026-10-24 17:08:19,985 - INFO - Transcendental compositions: False
+2026-10-24 17:08:19,985 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-10-24 17:08:20,699 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-10-24 17:08:22,775 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-10-24 17:08:22,807 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-10-24 17:08:22,807 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-10-24 17:08:29,254 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-24 17:08:29,871 - INFO -    Result: 0.5 * m * v**2
+2026-10-24 17:08:29,872 - INFO -    R2 = 0.9968
+2026-10-24 17:08:29,873 - INFO -    LLM mode: hybrid_llm_only
+2026-10-24 17:08:29,875 - INFO -    [BEST] New best!
+2026-10-24 17:08:29,876 - INFO -    [EARLY STOP] Excellent result (R²=0.996844)
+   ✓ LLM engine initialized (claude-sonnet-4-6)
+   ✓ LLM mode: hybrid
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Kinetic Energy
+Domain: PHYSICS
+Samples: 160
+Variables: ['m', 'v']
+LLM mode: hybrid
+Equation hint: Kinetic Energy
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[HYBRID MODE] LLM first, PySR refinement...
+   LLM best: 0.5 * m * v**2
+   LLM R²: 0.9968
+   LLM time: 6.78s
+   ✅ LLM solution excellent, skipping PySR
+
+[OK] Discovery complete
+   Expression: 0.5 * m * v**2
+   R2 Score: 0.9968
+   Engine: symbolic
+   LLM mode used: hybrid_llm_only
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 100.0/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] 0.5 * m * v**2  R²=0.9968  extrap(near=1.0000 med=1.0000 far=1.0000)  8.1s  scale_log=False  llm=hybrid_llm_only
+  [ 1195.3s] Checkpoint saved: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia saved to checkpoint
+  [ 1195.3s] run_condition START: Kinetic Energy [hypatia_nollm]  seed=84  wall_clock=3600s
+  [ 1195.3s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=84
+  [ 1195.3s] generate_data done: X_train=(160, 2)
+2026-10-24 17:08:30,938 - INFO - ======================================================================
+2026-10-24 17:08:30,938 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-10-24 17:08:30,939 - INFO - ======================================================================
+2026-10-24 17:08:30,939 - INFO - Domain: physics
+2026-10-24 17:08:30,939 - INFO - Discovery mode: strict
+2026-10-24 17:08:30,940 - INFO - Primary LLM: anthropic
+2026-10-24 17:08:30,940 - INFO - use_llm: False  |  llm_mode: none
+2026-10-24 17:08:30,940 - INFO - Auto-config: True
+2026-10-24 17:08:30,941 - INFO - Max retries: 3
+2026-10-24 17:08:30,942 - INFO - PhysicsAware fallback: False
+2026-10-24 17:08:30,942 - INFO - Complexity threshold: 20
+2026-10-24 17:08:30,942 - INFO - Deterministic PySR: True
+2026-10-24 17:08:30,943 - INFO - ======================================================================
+2026-10-24 17:08:30,943 - INFO - Using provided iterations: 1000
+2026-10-24 17:08:30,944 - INFO - Parsimony: 0.01
+2026-10-24 17:08:30,944 - INFO - Transcendental compositions: False
+2026-10-24 17:08:30,944 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-10-24 17:08:30,945 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-10-24 17:08:33,229 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-10-24 17:08:33,233 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-10-24 17:08:33,235 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Kinetic Energy
+Domain: PHYSICS
+Samples: 160
+Variables: ['m', 'v']
+LLM mode: none
+Equation hint: Kinetic Energy
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m, v
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=1.06 GB
+   [MEM] after PySR: RSS=0.89 GB
+2026-10-24 17:24:48,859 - INFO -    Result: m * ((v / 2.0029578) * v)
+2026-10-24 17:24:48,947 - INFO -    R2 = 0.9968
+2026-10-24 17:24:48,948 - INFO -    [BEST] New best!
+2026-10-24 17:24:48,976 - INFO -    [EARLY STOP] Excellent result (R²=0.996848)
+   ✅ Found: m * ((v / 2.0029578) * v)
+   R²: 0.9968  (selected index 4/19 by pysr_default)
+
+[OK] Discovery complete
+   Expression: m * ((v / 2.0029578) * v)
+   R2 Score: 0.9968
+   Engine: symbolic
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 100.0/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] m * ((v / 2.0029578) * v)  R²=0.9968  extrap(near=1.0000 med=1.0000 far=1.0000)  976.4s  scale_log=False  llm=none
+  [ 2174.1s] Checkpoint saved: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia_nollm saved to checkpoint
+
+────────────────────────────────────────────────────────────
+▶  [07] Gravitational Force  [Physics]
+   NOTE: Extreme-scale: features span >6 orders of magnitude. FIX-D log-transform active.
+────────────────────────────────────────────────────────────
+  [ 2174.1s] run_condition START: Gravitational Force [pysr_only]  seed=91  wall_clock=1400s
+  [ 2174.1s] generate_data: Gravitational Force  N=200  noise=0.05  seed=91
+  [ 2174.3s] generate_data done: X_train=(160, 3)
+  [ 2174.3s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9544  extrap(near=-2.6752 med=-0.0016 far=-7.6360)  time=1113.8s
+  [ 3288.2s] Checkpoint saved: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ pysr_only saved to checkpoint
+  [ 3288.2s] run_condition START: Gravitational Force [hypatia]  seed=91  wall_clock=3600s
+  [ 3288.2s] generate_data: Gravitational Force  N=200  noise=0.05  seed=91
+  [ 3289.1s] generate_data done: X_train=(160, 3)
+2026-10-24 17:43:24,887 - INFO - ======================================================================
+2026-10-24 17:43:24,924 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-10-24 17:43:24,924 - INFO - ======================================================================
+2026-10-24 17:43:24,924 - INFO - Domain: physics
+2026-10-24 17:43:24,925 - INFO - Discovery mode: strict
+2026-10-24 17:43:24,925 - INFO - Primary LLM: anthropic
+2026-10-24 17:43:24,925 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-10-24 17:43:24,925 - INFO - Auto-config: True
+2026-10-24 17:43:24,926 - INFO - Max retries: 3
+2026-10-24 17:43:24,926 - INFO - PhysicsAware fallback: False
+2026-10-24 17:43:24,926 - INFO - Complexity threshold: 20
+2026-10-24 17:43:24,926 - INFO - Deterministic PySR: True
+2026-10-24 17:43:24,927 - INFO - ======================================================================
+2026-10-24 17:43:24,927 - INFO - Using provided iterations: 1000
+2026-10-24 17:43:24,927 - INFO - Parsimony: 0.01
+2026-10-24 17:43:24,927 - INFO - Transcendental compositions: False
+2026-10-24 17:43:24,928 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-10-24 17:43:30,393 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-10-24 17:43:36,221 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-10-24 17:43:36,656 - INFO - [FIX-D] Feature 'm1' log10-scaled (range > 4 OOM)
+2026-10-24 17:43:36,657 - INFO - [FIX-D] Feature 'm2' log10-scaled (range > 4 OOM)
+2026-10-24 17:43:36,657 - INFO - [FIX-D] Feature 'r' log10-scaled (range > 4 OOM)
+2026-10-24 17:43:36,657 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-10-24 17:43:36,666 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-10-24 17:43:36,690 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-10-24 17:43:36,701 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-10-24 17:43:51,621 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+   ✓ LLM engine initialized (claude-sonnet-4-6)
+   ✓ LLM mode: hybrid
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Gravitational Force
+Domain: PHYSICS
+Samples: 160
+Variables: ['m1', 'm2', 'r']
+LLM mode: hybrid
+Equation hint: Gravitational Force
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[HYBRID MODE] LLM first, PySR refinement...
+   LLM best: 6.674e-11 * m1 * m2 / r**2 * g_n
+   LLM R²: -0.0724
+   LLM time: 17.95s
+   ⚠ LLM R²=-0.072 < 0.5 — discarding LLM prior, running pure PySR
+   → Refining with PySR...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=0.84 GB
+   [MEM] after PySR: RSS=0.78 GB
+2026-10-24 18:03:18,106 - INFO -    Result: (1.5884413 ^ (sqrt(m1 * m2) + (-5.509185 - r))) ^ r
+2026-10-24 18:03:18,106 - INFO -    R2 = 0.9853
+2026-10-24 18:03:18,106 - INFO -    LLM mode: hybrid_pysr_better
+2026-10-24 18:03:18,107 - INFO -    [BEST] New best!
+2026-10-24 18:03:18,107 - INFO - 
+[SYMBOLIC] Attempt 2/3 (seed=43)
+   ✅ Found: (1.5884413 ^ (sqrt(m1 * m2) + (-5.509185 - r))) ^ r
+   R²: 0.9853  (selected index 9/21 by pysr_default)
+   PySR time: 1114.84s
+   PySR R²: 0.9853
+   ✅ PySR refinement improved result
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=0.88 GB
+   [MEM] after PySR: RSS=0.93 GB
+2026-10-24 18:21:53,954 - INFO -    Result: r * (0.030751199 ^ ((r + (6.0175586 / (m1 / m2))) - m2))
+2026-10-24 18:21:53,955 - INFO -    R2 = 0.9835
+2026-10-24 18:21:53,955 - INFO - 
+[SYMBOLIC] Attempt 3/3 (seed=44)
+   ✅ Found: r * (0.030751199 ^ ((r + (6.0175586 / (m1 / m2))) - m2))
+   R²: 0.9835  (selected index 8/17 by pysr_default)
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=0.93 GB
+   [MEM] after PySR: RSS=0.79 GB
+2026-10-24 18:41:18,338 - INFO -    Result: (((m2 / r) ^ (m1 + -6.7968225)) * (0.27211288 / r)) ^ (r - sqrt(m2))
+2026-10-24 18:41:18,598 - INFO -    R2 = 0.9865
+2026-10-24 18:41:18,851 - INFO -    [BEST] New best!
+2026-10-24 18:41:18,909 - INFO - 
+[SUCCESS] SymbolicEngine succeeded (R2=0.9865)
+2026-10-24 18:41:19,022 - INFO - [NORMALISE] Expression rewritten for validator: '(((m2 / r) ^ (m1 + -6.7968225)) * (0.27211288 / r)) ^ (r - sqrt(m2))' → '(((m2 / r) ** (m1 + -6.7968225)) * (0.27211288 / r)) ** (r - sqrt(m2))'
+   ✅ Found: (((m2 / r) ^ (m1 + -6.7968225)) * (0.27211288 / r)) ^ (r - sqrt(m2))
+   R²: 0.9865  (selected index 11/20 by pysr_default)
+
+[OK] Discovery complete
+   Expression: (((m2 / r) ^ (m1 + -6.7968225)) * (0.27211288 / r)) ^ (r - sqrt(m2))
+   R2 Score: 0.9865
+   Engine: symbolic
+   Attempt: 3/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 89.2/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] (((m2 / r) ^ (m1 + -6.7968225)) * (0.27211288 / r)) ^ (  R²=0.9865  extrap(near=0.9915 med=N/A far=-0.6615)  3468.6s  scale_log=True  llm=hybrid
+  [ 6769.9s] Checkpoint saved: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia saved to checkpoint
+  [ 6770.0s] run_condition START: Gravitational Force [hypatia_nollm]  seed=91  wall_clock=3600s
+  [ 6770.0s] generate_data: Gravitational Force  N=200  noise=0.05  seed=91
+  [ 6770.7s] generate_data done: X_train=(160, 3)
+2026-10-24 18:41:26,455 - INFO - ======================================================================
+2026-10-24 18:41:26,476 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-10-24 18:41:26,476 - INFO - ======================================================================
+2026-10-24 18:41:26,476 - INFO - Domain: physics
+2026-10-24 18:41:26,476 - INFO - Discovery mode: strict
+2026-10-24 18:41:26,476 - INFO - Primary LLM: anthropic
+2026-10-24 18:41:26,477 - INFO - use_llm: False  |  llm_mode: none
+2026-10-24 18:41:26,477 - INFO - Auto-config: True
+2026-10-24 18:41:26,477 - INFO - Max retries: 3
+2026-10-24 18:41:26,477 - INFO - PhysicsAware fallback: False
+2026-10-24 18:41:26,478 - INFO - Complexity threshold: 20
+2026-10-24 18:41:26,478 - INFO - Deterministic PySR: True
+2026-10-24 18:41:26,478 - INFO - ======================================================================
+2026-10-24 18:41:26,478 - INFO - Using provided iterations: 1000
+2026-10-24 18:41:26,478 - INFO - Parsimony: 0.01
+2026-10-24 18:41:26,478 - INFO - Transcendental compositions: False
+2026-10-24 18:41:26,479 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='physics', use_tc=False)
+2026-10-24 18:41:26,557 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-10-24 18:41:34,973 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-10-24 18:41:35,324 - INFO - [FIX-D] Feature 'm1' log10-scaled (range > 4 OOM)
+2026-10-24 18:41:35,326 - INFO - [FIX-D] Feature 'm2' log10-scaled (range > 4 OOM)
+2026-10-24 18:41:35,328 - INFO - [FIX-D] Feature 'r' log10-scaled (range > 4 OOM)
+2026-10-24 18:41:35,329 - INFO - [FIX-D] Target y log10-scaled (extreme output range)
+2026-10-24 18:41:35,329 - INFO - [FIX-D] Extreme-scale log transform applied
+2026-10-24 18:41:35,355 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-10-24 18:41:35,357 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Gravitational Force
+Domain: PHYSICS
+Samples: 160
+Variables: ['m1', 'm2', 'r']
+LLM mode: none
+Equation hint: Gravitational Force
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: m1, m2, r
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=0.81 GB
