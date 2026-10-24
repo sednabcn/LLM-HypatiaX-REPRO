@@ -790,7 +790,7 @@ jobs:
           pip install "pandas==2.2.3"
           pip install "pysr==2.0.0a1" \
             numpy scipy sympy \
-            anthropic \
+            "anthropic==0.73.0" \
             scikit-learn \
             pyyaml \
             python-dotenv \
@@ -2065,8 +2065,15 @@ jobs:
                   print(f"::error::eq {k}: hypatia_nollm made an LLM call - the no-LLM arm is contaminated"); bad = True
               if nollm and nl is None and "hypatia_nollm" not in miss:
                   print(f"::warning::eq {k}: hypatia_nollm has no llm_called flag - cannot prove it stayed LLM-free")
-              if h is False:
-                  print(f"::warning::eq {k}: hypatia arm reports no LLM call")
+              if h is not True:
+                  print(f"::error::eq {k}: hypatia arm did not make a live LLM call (llm_called={h})"); bad = True
+              if (v.get("hypatia") or {}).get("success") is False:
+                  print(f"::error::eq {k}: hypatia arm failed (success=false, best_expression={(v.get('hypatia') or {}).get('best_expression')!r})"); bad = True
+          try:
+              import anthropic
+              print(f"anthropic SDK version: {anthropic.__version__}")
+          except Exception as e:
+              print(f"::warning::cannot read anthropic version: {e}")
           sys.exit(1 if bad else 0)
           PYV
 
@@ -2928,7 +2935,7 @@ jobs:
           pip install "pandas==2.2.3"
           pip install "pysr==2.0.0a1" \
             numpy scipy sympy \
-            anthropic \
+            "anthropic==0.73.0" \
             scikit-learn \
             pyyaml \
             python-dotenv \
