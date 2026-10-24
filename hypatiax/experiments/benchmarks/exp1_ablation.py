@@ -667,6 +667,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
             )
         _api_key  = os.environ.get("ANTHROPIC_API_KEY", "")
         _use_llm  = _api_key.startswith("sk-")
+        if not _use_llm and os.environ.get("HYPATIAX_STRICT") == "1":
+            raise RuntimeError("hypatia condition needs a valid ANTHROPIC_API_KEY in strict mode: "
+                               "otherwise the LLM is silently disabled and the row is mislabelled")
         _dom_slug = eq["domain"].lower().replace(" ", "_")
 
         hybrid = HybridDiscoverySystem(
