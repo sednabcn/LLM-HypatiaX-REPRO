@@ -707,6 +707,7 @@ def _sympy_pow_to_pysr_str(expr, variable_names):
         # [FIX-SQRT-POW] x**0.5 / x**(1/2) (and their reciprocals) are the
         # single most natural way for an LLM to write "sqrt" in Python/numpy
         # style -- e.g. for Nguyen-8 (sqrt(x)) every warm-start candidate
+<<<<<<< Updated upstream
         # came back as a fractional power. Previously this whole branch only
         # accepted exponent.is_Integer, so ALL such candidates were silently
         # dropped here (llm_candidates_parsed==0) before they ever reached
@@ -760,6 +761,24 @@ def _sympy_pow_to_pysr_str(expr, variable_names):
             if exponent_str is None:
                 return None
             return f"exp(({exponent_str}) * log({base_str}))"
+=======
+        # came back as `x**0.5`. Previously this whole branch only accepted
+        # exponent.is_Integer, so ALL such candidates were silently dropped
+        # here (llm_candidates_parsed==0) before they ever reached the
+        # numerical R^2 gate -- not because they were numerically bad, but
+        # because this renderer couldn't express them under the "no ^"
+        # operator set even though "sqrt" is literally in
+        # _PYSR_ALLOWED_UNARY_FUNCS. Special-case the half-integer exponents
+        # so they route through sqrt() instead of being rejected outright.
+        if exponent.is_Rational and not exponent.is_Integer:
+            if exponent == sp.Rational(1, 2):
+                return f"sqrt({base_str})"
+            if exponent == sp.Rational(-1, 2):
+                return f"(1.0 / sqrt({base_str}))"
+            return None  # other fractional powers still unrepresentable
+        if not exponent.is_Integer:
+            return None  # symbolic power -- unrepresentable here
+>>>>>>> Stashed changes
         n = int(exponent)
         if n == 0:
             return "1.0"
