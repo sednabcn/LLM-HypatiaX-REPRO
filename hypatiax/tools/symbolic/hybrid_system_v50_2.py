@@ -843,9 +843,7 @@ class HybridDiscoverySystem:
             raise ValueError(
                 f"All {self.max_retries} discovery attempts failed"
                 + (f": {last_attempt_error}" if last_attempt_error else "")
-                + f"\n  HINT: If this is an optics/trig equation, ensure "
-                  f"safe_asin/safe_acos are in unary_operators (DiscoveryConfig). "
-                  f"Domain detected: '{self.domain}'."
+                + f"\n  Domain detected: '{self.domain}'."
             ) from last_attempt_error
 
     @staticmethod
