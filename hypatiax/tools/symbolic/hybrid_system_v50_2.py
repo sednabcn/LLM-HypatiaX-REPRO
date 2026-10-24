@@ -616,27 +616,8 @@ class HybridDiscoverySystem:
         directly (e.g. interpretation, summarisation steps outside discovery).
         The discovery path itself now uses SymbolicEngineWithLLM internally.
         """
-        api_key = anthropic_api_key or os.getenv("ANTHROPIC_API_KEY")
-        if api_key:
-            try:
-                from hypatiax.tools.llm_providers.anthropic_provider import (
-                    AnthropicProvider,
-                )
-                self.anthropic_provider = AnthropicProvider(api_key=api_key, max_tokens=4096)
-            except Exception:
-                self.anthropic_provider = None
-        else:
-            self.anthropic_provider = None
-
-        api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
-        if api_key:
-            try:
-                from hypatiax.tools.llm_providers.google_provider import GoogleProvider
-                self.google_provider = GoogleProvider(api_key=api_key, max_output_tokens=8192)
-            except Exception:
-                self.google_provider = None
-        else:
-            self.google_provider = None
+        self.anthropic_provider = None   # llm_providers module is not shipped; no caller uses these
+        self.google_provider = None
 
     def _create_optimized_physics_regressor(
         self, noise_level: float | None = None
