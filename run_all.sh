@@ -32,6 +32,11 @@ export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 # (a stale `export ...=0` or an un-exported shell var can no longer leak through).
 # Deliberate legacy comparison only: HYPATIAX_ALLOW_LEGACY=1 ./run_all.sh
 if [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]]; then
+  if [[ -n "${GITHUB_ACTIONS:-}" ]]; then
+    echo "ABORT: HYPATIAX_ALLOW_LEGACY=1 is not allowed in CI (headline runs)" >&2; exit 1
+  fi
+  : "${LEGACY_RESULTS_DIR:?set LEGACY_RESULTS_DIR so legacy output never mixes with headline results}"
+  export RESULTS_DIR="$LEGACY_RESULTS_DIR"
   export HYPATIAX_DISABLE_HARDCODED="${HYPATIAX_DISABLE_HARDCODED:-1}"
   export HYPATIAX_DISABLE_PROMPT_HINTS="${HYPATIAX_DISABLE_PROMPT_HINTS:-1}"
   echo "WARNING: HYPATIAX_ALLOW_LEGACY=1 -- clean-run enforcement disabled" >&2
