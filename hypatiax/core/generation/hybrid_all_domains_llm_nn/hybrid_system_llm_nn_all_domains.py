@@ -325,9 +325,7 @@ class HybridSystemAllDomains:
 
         # FIX prompt-leak: this closed-form example handed the model the Gaussian
         # normalisation constant; it is a hint, so it is dropped when hints are disabled.
-        _norm_hint = "" if _hints_disabled() else (
-            "6. If the task involves a probability density or distribution, include the FULL "
-            "normalization constant (e.g. 1/(sigma*sqrt(2*pi)) for Gaussian)")
+        _norm_hint = ""   # deleted, not gated: the Gaussian normalisation hint is target-formula text
         return f"""[HYBRID-SYSTEM: LLM+NN symbolic discovery — independent from pure-LLM baseline]
 You are a mathematical formula expert specialising in {domain}.
 Your role is symbolic discovery: identify the most parsimonious closed-form
@@ -342,7 +340,7 @@ Domain: {domain}{var_info}{constants_info}{hint_info}
 3. Use EXACT constants shown above
 4. Function named 'formula'
 5. Use numpy: np.sqrt, np.log, np.exp, etc.
-{_norm_hint}
+
 
 Format:
 

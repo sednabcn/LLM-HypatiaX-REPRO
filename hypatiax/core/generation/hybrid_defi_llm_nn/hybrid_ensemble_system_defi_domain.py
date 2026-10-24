@@ -18,11 +18,8 @@ CHANGES (B2 / B3 / B4 / C4 re-run plan)
 ---------------------------------------
 B2  Provenance. Every run now records llm_called, bypass_kind, bypass_flags,
     formula_present and the formula/python_code strings, copied from the
-    shared PureLLMBaseline.generate_formula() result. The canonical Kelly
-    fallback is itself a ground-truth leak, so it is labelled
-    bypass_kind="canonical_fallback" and is DISABLED when both
-    HYPATIAX_DISABLE_HARDCODED=1 and HYPATIAX_DISABLE_PROMPT_HINTS=1 are set
-    (a clean live run must not silently substitute the answer).
+    shared PureLLMBaseline.generate_formula() result. The former canonical Kelly
+    fallback (a canned ground-truth answer) has been deleted.
 B3  One evaluator. R² now comes from hypatiax.core.metrics.compute_r2 for the
     LLM, NN, ensemble and chosen method, instead of sklearn's r2_score
     (which raises on NaN and silently turned a failed LLM into "no LLM").
@@ -78,13 +75,6 @@ def _flag(name: str) -> bool:
 def strict_live_mode() -> bool:
     """True when BOTH bypass switches are off -> a clean, live-LLM-only run."""
     return _flag("HYPATIAX_DISABLE_HARDCODED") and _flag("HYPATIAX_DISABLE_PROMPT_HINTS")
-
-
-def canonical_fallback_allowed() -> bool:
-    """The canned Kelly answer is a ground-truth leak.  Fail-closed: it is used only when
-    a human explicitly opts in (HYPATIAX_ALLOW_CANONICAL_FALLBACK=1) AND the run is not
-    strict-live.  An unset variable therefore never enables the bypass."""
-    return _flag("HYPATIAX_ALLOW_CANONICAL_FALLBACK") and not strict_live_mode()
 
 
 def _score(x) -> float:
@@ -246,14 +236,6 @@ def split_indices(n: int, seed: int, test_frac: float = 0.2):
 # ---------------------------------------------------------------------------
 # Demo / run
 # ---------------------------------------------------------------------------
-CANONICAL_KELLY = """
-def formula(expected_fee_apy, il_risk):
-    risk_aversion = 2.0
-    f_star = expected_fee_apy / (risk_aversion * il_risk**2)
-    return np.minimum(f_star, 1.0)
-"""
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=None, help="write the provenance/result record as JSON")
@@ -281,8 +263,7 @@ def main(argv=None):
     print("Strict live mode (both bypass flags off):", strict)
     if not strict:
         print("⚠  not a clean live run: set HYPATIAX_DISABLE_HARDCODED=1 and "
-              "HYPATIAX_DISABLE_PROMPT_HINTS=1 (canonical fallback is enabled only if "
-              "HYPATIAX_ALLOW_CANONICAL_FALLBACK=1)")
+              "HYPATIAX_DISABLE_PROMPT_HINTS=1")
 
     # 1) Generate/obtain LLM formula
     llm_error = None
@@ -314,15 +295,8 @@ def main(argv=None):
     prov["llm_source"] = llm_source
 
     no_code = not llm_result.get("python_code") or llm_result.get("python_code") == "N/A"
-    if no_code and canonical_fallback_allowed():
-        # The canned Kelly answer is a ground-truth leak: label it.
-        llm_result = {"python_code": CANONICAL_KELLY, "formula": "min(mu/(lambda*sigma^2),1.0)"}
-        prov.update(llm_called=False, bypass_kind="canonical_fallback",
-                    llm_source="canonical_fallback")
-        print("⚠  local fallback for: " + desc[:50] + " (no usable LLM code)")
-        print("Using canonical fallback (labelled bypass_kind=canonical_fallback).")
-    elif no_code:
-        print("No usable LLM code and canonical fallback not enabled; LLM arm recorded as failed.")
+    if no_code:
+        print("No usable LLM code; LLM arm recorded as failed (no canned answer is substituted).")
 
     # 2) Evaluate LLM formula on train and test with the shared evaluator
     llm_pred_tr = llm_pred_te = None

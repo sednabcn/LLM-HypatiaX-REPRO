@@ -36,7 +36,7 @@ FORBIDDEN = (
 
 # Generic detectors for a pre-solved answer embedded in the prompt.
 PREFILLED_FORMULA = re.compile(r"FORMULA:\s*\n\s*(?!\[)\S")
-SOLVED_RETURN = re.compile(r"\breturn\s+(?!result\b|\.\.\.)\S")
+SOLVED_RETURN = re.compile(r"^[ \t]+return[ \t]+(?!result\b|\.\.\.)\S", re.MULTILINE)  # code lines only
 
 
 @dataclass(frozen=True)
