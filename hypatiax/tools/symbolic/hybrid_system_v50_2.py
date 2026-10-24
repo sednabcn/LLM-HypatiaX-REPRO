@@ -1384,6 +1384,11 @@ class HybridDiscoverySystem:
 
                     # sympy.lambdify — safer than eval(), caches well for repeated calls
                     _expr_sym = _sp.sympify(_norm_expr)
+                    from hypatiax.core.constants import PHYSICAL_CONSTANTS as _PC
+                    _expr_sym = _expr_sym.subs({_sp.Symbol(_k): _v for _k, _v in _PC.items() if _k not in _vars_dict})
+                    from hypatiax.core.constants import PHYSICAL_CONSTANTS as _PC
+                    _expr_sym = _expr_sym.subs({_sp.Symbol(_k): _v for _k, _v in _PC.items()
+                                                if _k not in _vars_dict})
                     _ordered_syms = [_sp.Symbol(k) for k in _vars_dict]
 
                     # FIX-B v5.5 (§10.7 investigation, Bug #2): when the RC-5
