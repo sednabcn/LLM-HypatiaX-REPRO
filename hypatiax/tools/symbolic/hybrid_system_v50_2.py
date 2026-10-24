@@ -1286,6 +1286,21 @@ class HybridDiscoverySystem:
                 "(was: %s)", _orig_binary_ops,
             )
 
+        _fixd_ctx = None
+        if _log_scaled:
+            try:
+                _fd_safe = all(
+                    float(np.nanmin(_X_orig[:, _i])) >= 0.0
+                    for _i, _f in enumerate(_x_log_flags) if _f
+                )
+                if _y_log_flag:
+                    _fd_safe = _fd_safe and float(np.nanmin(_y_orig)) >= 0.0
+            except Exception:
+                _fd_safe = False
+            _fixd_ctx = {"safe": _fd_safe, "x_log_flags": list(_x_log_flags), "y_log": bool(_y_log_flag)}
+        # Always assigned so a stale context can never leak into the next call.
+        self.symbolic_engine._fixd_ctx = _fixd_ctx
+
         try:
             full_result = self.discover_validate_interpret(
                 X=X,

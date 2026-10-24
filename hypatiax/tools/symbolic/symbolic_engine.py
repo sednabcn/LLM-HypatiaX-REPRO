@@ -2359,6 +2359,29 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             result["llm_hypotheses"] = [h.equation for h in hypotheses]
             return result
 
+    # Set by HybridDiscoverySystem when FIX-D log10-scaled the data (else None).
+    _fixd_ctx = None
+
+    @staticmethod
+    def _llm_to_fit_space(equation, variable_names, x_log_flags, y_log):
+        """Re-express a raw-unit LLM formula in the log10 space the engine fits in.
+
+        FIX-D fits on u = log10(x + 1) and v = log10(y + 1).  An LLM formula is
+        written in raw units, so scoring it on (u, v) directly is meaningless.
+        Substitute x = 10**u - 1 for each log-scaled variable and wrap the
+        result as log10(|f| + 1).  Valid for non-negative data only; callers
+        gate on ctx["safe"].
+        """
+        import re
+        flags = {n: f for n, f in zip(variable_names, x_log_flags) if f}
+        expr = equation
+        if flags:
+            pat = re.compile(r"(?<![\w.])(" + "|".join(re.escape(n) for n in flags) + r")(?![\w])")
+            expr = pat.sub(lambda m: f"(10**({m.group(1)})-1)", expr)
+        if y_log:
+            expr = f"log(abs({expr})+1)/log(10)"
+        return expr
+
     def _evaluate_hypotheses(
         self,
         hypotheses: list[EquationHypothesis],
@@ -2367,6 +2390,19 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         variable_names: list[str],
     ) -> EquationHypothesis:
         """Evaluate LLM hypotheses against data."""
+
+        _ctx = getattr(self, "_fixd_ctx", None)
+        if _ctx and _ctx.get("safe") and len(variable_names) == len(_ctx["x_log_flags"]):
+            for hyp in hypotheses:
+                if not hasattr(hyp, "raw_equation"):
+                    hyp.raw_equation = hyp.equation
+                hyp.equation = self._llm_to_fit_space(
+                    hyp.raw_equation, variable_names, _ctx["x_log_flags"], _ctx["y_log"]
+                )
+            print("   [FIX-D] LLM hypotheses mapped to the log10 fit space before scoring", flush=True)
+        elif _ctx:
+            print("   ⚠ [FIX-D] data not non-negative: LLM hypotheses cannot be mapped to the "
+                  "log10 fit space; their R² below is NOT comparable", flush=True)
 
         for hyp in hypotheses:
             try:
