@@ -1,0 +1,38 @@
+\begin{table*}[htbp]
+\centering
+\caption{LLM Ablation: PySR Alone vs.\ HypatiaX (PySR + LLM Warm-Start) on Core~15. Extrap columns show $R^2$ at near/medium/far OOD regimes. $\dag$ = wall-clock-capped. $\ddag$ = Arrhenius failure mode.}
+\label{tab:llm_ablation}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccccccc}
+\toprule
+\textbf{Equation} & \textbf{Domain} & \multicolumn{2}{c}{\textbf{Train $R^2$}} & \multicolumn{2}{c}{\textbf{Near $R^2$}} & \multicolumn{2}{c}{\textbf{Med $R^2$}} & \multicolumn{2}{c}{\textbf{Far $R^2$}} & \multicolumn{2}{c}{\textbf{Time (s)}} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
+ & & P & H & P & H & P & H & P & H & P & H \\
+\midrule
+Arrhenius & Chemistry & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Henderson-Hasselbalch & Chemistry & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Rate Law & Chemistry & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Allometric Scaling & Biology & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Michaelis-Menten & Biology & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Logistic Growth & Biology & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Kinetic Energy & Physics & 0.9968 & 0.9968 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & 1.0000 & 175 & 6 \\
+Gravitational Force & Physics & 0.8907 & 0.9883 & -5.1936 & -0.5348 & -0.0277 & 0.9537 & -9.3459 & -1.2135 & 96 & 292 \\
+Ideal Gas Law & Physics & 0.9962 & 0.9978 & 0.9657 & --- & 0.9957 & --- & 0.9657 & --- & 96 & 189 \\
+Impermanent Loss & DeFi AMM & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Price Impact & DeFi AMM & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Constant Product & DeFi AMM & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Value at Risk & DeFi Risk & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Liquidation Price & DeFi Risk & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+Portfolio Std Dev & DeFi Risk & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- \\
+\midrule
+\textbf{Mean} & & 0.9612 & 0.9943 & -1.0760 & 0.2326 & 0.6560 & 0.9768 & -2.4601 & -0.1068 & 122 & 162 \\
+\bottomrule
+\end{tabular}%
+}
+\begin{tablenotes}\small
+\item P = PySR-only; H = HypatiaX. HypatiaX runtime includes all LLM + retry time.
+\item Near/Med/Far $R^2$ at 1.2$\times$, canonical, and 5$\times$ training range.
+\item[$\dag$] Wall-clock cap triggered; excluded from timing averages.
+\item[$\ddag$] Arrhenius failure mode: correct LLM prior constrained PySR search space → premature convergence. See \S\ref{sec:arrhenius}. All runs: populations=30, seed=42, engine v5.1.
+\end{tablenotes}
+\end{table*}

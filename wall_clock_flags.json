@@ -1,0 +1,197 @@
+{
+  "0": {
+    "name": "Arrhenius",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "1": {
+    "name": "Henderson-Hasselbalch",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "2": {
+    "name": "Rate Law",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "3": {
+    "name": "Allometric Scaling",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "4": {
+    "name": "Michaelis-Menten",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "5": {
+    "name": "Logistic Growth",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "6": {
+    "name": "Kinetic Energy",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 174.92789125442505
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 5.5826191902160645
+    }
+  },
+  "7": {
+    "name": "Gravitational Force",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 96.26716184616089
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 291.71577405929565
+    }
+  },
+  "8": {
+    "name": "Ideal Gas Law",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 96.2374382019043
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 189.01738476753235
+    }
+  },
+  "9": {
+    "name": "Impermanent Loss",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "10": {
+    "name": "Price Impact",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "11": {
+    "name": "Constant Product",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "12": {
+    "name": "Value at Risk",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "13": {
+    "name": "Liquidation Price",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  },
+  "14": {
+    "name": "Portfolio Std Dev",
+    "pysr_only": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    },
+    "hypatia": {
+      "timed_out": false,
+      "excluded_from_timing": false,
+      "wall_secs": 0
+    }
+  }
+}
