@@ -43,7 +43,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation/exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -118,6 +118,8 @@ permissions:
 env:
   HYPATIAX_R2_SIGN_FLIP: "0"
   HYPATIAX_STRICT: "1"
+  # exp1_ablation: run the third (no-LLM) arm. Ignored by every other experiment.
+  HYPATIAX_NOLLM_ARM: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
@@ -521,7 +523,7 @@ jobs:
               "exp1b_seeds":        4,   # documented default; enforced below as one shard per seed
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
-              "exp1_ablation":      4,
+              "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
               "exp2_feynman_pca":    1,  # mirrors exp2_feynman (same FEYNMAN_DOMAINS registry, single shard)
@@ -1358,17 +1360,35 @@ jobs:
       - name: Preserve shard-specific exp1_ablation output
         if: always() && env.EXP == 'exp1_ablation'
         run: |
+          # Every shard starts from the committed master checkpoint/results (resume), so it
+          # would otherwise MODIFY committed files (the commit step's isolation guard rejects
+          # that, and the store step would prune them). Copy each top-level json/csv to a
+          # per-shard name, then restore the committed original (or drop it if untracked).
+          # The two files merge/verify key on stay top-level; per-shard analysis files go to
+          # shards/ so they can never collide with the aggregate's own outputs.
           DEST="${OUT_BASE}/${RESULT_SUBDIR}"
-          for base in exp1_ablation_results.json exp1_ablation_checkpoint.json; do
-            SRC="${DEST}/${base}"
-            if [[ -f "${SRC}" ]]; then
-              shard_dest="${DEST}/${base%.json}_shard${SHARD_INDEX}.json"
-              mv "${SRC}" "${shard_dest}"
-              echo "Preserved ${SRC} → ${shard_dest}"
+          mkdir -p "${DEST}/shards"
+          shopt -s nullglob
+          for SRC in "${DEST}"/*.json "${DEST}"/*.csv; do
+            bn="$(basename "${SRC}")"
+            [[ "${bn}" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
+            [[ "${bn}" == _* ]] && continue
+            stem="${bn%.*}"; ext="${bn##*.}"
+            case "${bn}" in
+              exp1_ablation_results.json|exp1_ablation_checkpoint.json) OUTD="${DEST}" ;;
+              *) OUTD="${DEST}/shards" ;;
+            esac
+            cp "${SRC}" "${OUTD}/${stem}_shard${SHARD_INDEX}.${ext}"
+            if git ls-files --error-unmatch "${SRC}" >/dev/null 2>&1; then
+              git checkout -- "${SRC}" && echo "Preserved ${bn} -> ${OUTD}/${stem}_shard${SHARD_INDEX}.${ext} (committed original restored)"
             else
-              echo "::warning::Expected exp1_ablation output not found at ${SRC} — nothing to preserve for shard ${SHARD_INDEX}."
+              rm -f "${SRC}"
+              echo "Preserved ${bn} -> ${OUTD}/${stem}_shard${SHARD_INDEX}.${ext}"
             fi
           done
+          if [[ ! -f "${DEST}/exp1_ablation_checkpoint_shard${SHARD_INDEX}.json" ]]; then
+            echo "::warning::No exp1_ablation checkpoint produced for shard ${SHARD_INDEX}."
+          fi
 
       - name: Diagnostic - locate result files on disk
         if: always()
@@ -1552,6 +1572,8 @@ jobs:
                               shutil.move(src, dst)
                               print(f"  rescued [{EXP}]: {src}  ->  {dst}")
                               rescued += 1
+              elif EXP == "exp1_ablation":
+                  print("  [exp1_ablation] rescue skipped: outputs are shard-suffixed in the result dir; domain-name globs would pick up unrelated files.")
               else:
                   for tid in completed:
                       safe = tid.replace("/", "_").replace(".", "_")
@@ -1583,7 +1605,9 @@ jobs:
           _SHARD_SEEDS_LIST="$(echo "${SHARD_IDS:-[]}" | grep -oE '_seed[0-9]+' | sed 's/_seed//' | sort -u | tr '\n' ' ' || true)"
 
           _extrap_dest="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-          if [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
+          if [[ "${EXP:-}" == "exp1_ablation" ]]; then
+            echo "Store results: skipping store-prune for exp1_ablation (committed master checkpoint/results must survive shard runs)."
+          elif [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
             RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
             if [[ -f "${RUN_START_MARKER}" ]]; then
               RUN_START_EPOCH=$(stat -c %Y "${RUN_START_MARKER}" 2>/dev/null || stat -f %m "${RUN_START_MARKER}" 2>/dev/null || echo 0)
@@ -2010,6 +2034,42 @@ jobs:
           fi
           echo "  OK exp1c output files present in canonical path."
 
+      - name: Verify exp1_ablation output (all arms present, no-LLM arm made no LLM call)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_ablation' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYV'
+          import json, os, sys
+          path = os.path.join(os.environ["OUT_BASE"], os.environ["RESULT_SUBDIR"],
+                              f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json")
+          nollm = os.environ.get("HYPATIAX_NOLLM_ARM") == "1"
+          arms = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if nollm else [])
+          try:
+              d = json.load(open(path))
+          except Exception as e:
+              print(f"::error::cannot read {path}: {e}"); sys.exit(1)
+          if not d:
+              print(f"::error::{path} is empty"); sys.exit(1)
+          bad = False
+          for k in sorted(d, key=lambda x: (not str(x).isdigit(), int(x) if str(x).isdigit() else 0, str(x))):
+              v = d[k]
+              miss = [a for a in arms if not isinstance(v.get(a), dict)]
+              h  = (v.get("hypatia") or {}).get("llm_called")
+              nl = (v.get("hypatia_nollm") or {}).get("llm_called")
+              print(f"[{k}] {v.get('name', '?')}: arms={[a for a in arms if a not in miss]} llm_called(hypatia)={h} llm_called(nollm)={nl}")
+              if miss:
+                  print(f"::error::eq {k}: missing arm(s) {miss}"); bad = True
+              if nollm and nl is True:
+                  print(f"::error::eq {k}: hypatia_nollm made an LLM call - the no-LLM arm is contaminated"); bad = True
+              if nollm and nl is None and "hypatia_nollm" not in miss:
+                  print(f"::warning::eq {k}: hypatia_nollm has no llm_called flag - cannot prove it stayed LLM-free")
+              if h is False:
+                  print(f"::warning::eq {k}: hypatia arm reports no LLM call")
+          sys.exit(1 if bad else 0)
+          PYV
+
       - name: Verify exp1_five output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1_five' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
@@ -2396,7 +2456,26 @@ jobs:
           COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
           search_dirs = [result_dir, "."]
 
-          if EXP in COMBINED_OUTPUT_EXPS:
+          if EXP == "exp1_ablation":
+              # Done only when this shard's checkpoint holds every required arm for every
+              # equation. A same-named file elsewhere in the workspace must never count.
+              ck = os.path.join(result_dir, f"exp1_ablation_checkpoint_shard{os.environ['SHARD_INDEX']}.json")
+              need = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
+              try:
+                  data = json.load(open(ck))
+              except Exception as e:
+                  print(f"  [exp1_ablation] cannot read {ck}: {e} - not marking done")
+                  data = None
+              if data:
+                  bad = [a for a in need
+                         if not all(isinstance(v, dict) and isinstance(v.get(a), dict) for v in data.values())]
+                  if bad:
+                      print(f"  [exp1_ablation] shard checkpoint incomplete for arms {bad} - not marking done")
+                  else:
+                      done_set.update(shard_ids)
+              elif data is not None:
+                  print("  [exp1_ablation] shard checkpoint is empty - not marking done")
+          elif EXP in COMBINED_OUTPUT_EXPS:
               if EXP == "suppB":
                   first_id = shard_ids[0]   # "noise{NL}__{domain}"
                   nl_raw   = first_id.split("__")[0][len("noise"):]  # e.g. "0.0"
@@ -2821,6 +2900,90 @@ jobs:
 
 
 
+
+  exp1_ablation_aggregate:
+    name: "Aggregate - exp1_ablation (merge shards + LLM-CONTRIBUTION)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_ablation' && needs.worker.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            anthropic \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pmlb \
+            pint \
+            psutil
+
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: results-exp1_ablation-shard*
+          path: ${{ github.workspace }}/ablation_artifacts
+
+      - name: Merge shards and run analysis
+        env:
+          ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
+          RESULTS_DIR:           ${{ github.workspace }}/${{ env.OUT_BASE }}
+          ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p "${RESULTS_DIR}/${RESULT_SUBDIR}"
+          bash run_all.sh --step exp1_ablation_aggregate 2>&1 | tee /tmp/ablation_aggregate.log
+
+      - name: Upload merged exp1_ablation results
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-exp1_ablation-merged
+          path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit and push merged results
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          find "${TARGET}" -type f \( -name '*.tex' -o -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
+          git add -f "${TARGET}"
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."; exit 0
+          fi
+          git commit -m "ci: exp1_ablation merged results (all shards, 3 arms) - run ${{ github.run_id }} - $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for i in 1 2 3 4 5; do
+            git pull --rebase -X theirs --autostash origin "${{ github.ref_name }}" && \
+              git push origin HEAD:"${{ github.ref_name }}" && { echo "Pushed merged results."; exit 0; }
+            git rebase --abort 2>/dev/null || true
+            sleep $(( (RANDOM % 10) + 5 * i ))
+          done
+          echo "::error::Failed to push merged exp1_ablation results after 5 attempts."
+          exit 1
 
   pca_run_exp2_feynman:
     name: "C5c-0 · Run exp2_feynman_pca (Feynman PCA 40/60)"

@@ -86,7 +86,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -456,42 +456,187 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
   echo '=== end portfolio ==='
 "
 
-run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX (Tab 5, §10.6)" bash -c "
-  cd '${REPO_ROOT}'
-  _ABL_DIR='${RESULTS_DIR}/ablation/exp1_ablation'
-  mkdir -p \"\${_ABL_DIR}\"
+# ---------------------------------------------------------------------------
+# exp1_ablation: full run, all three arms (pysr_only / hypatia / hypatia_nollm).
+#   * HYPATIAX_NOLLM_ARM defaults to 1 and HYPATIAX_STRICT is forced to 1
+#     (== `HYPATIAX_NOLLM_ARM=1 HYPATIAX_STRICT=1 python exp1_ablation.py`).
+#   * The existing checkpoint in the results dir is KEPT; the script's own
+#     resume logic only runs the missing equations.
+#   * In CI, DOMAIN_FILTER / SHARD_INDEX select this shard's domain.
+#   * A non-zero exit of exp1_ablation.py now FAILS the step (it used to be
+#     swallowed by `|| echo WARNING`).
+# ---------------------------------------------------------------------------
+_exp1_ablation_step() {
+  cd "${REPO_ROOT}"
+  local abl_dir="${RESULTS_DIR}/ablation/exp1_ablation"
+  local script="${EXPERIMENTS_DIR}/exp1_ablation.py"
+  local sfx="${SHARD_INDEX:+_shard${SHARD_INDEX}}"
+  local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
+  mkdir -p "${abl_dir}"
 
-  PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \
-  RESULTS_DIR=\"\${_ABL_DIR}\" \
-  PYSR_POPULATIONS='${PYSR_POPULATIONS}' \
-  PYSR_SEED='${PYSR_SEED}' \
-  METHOD_TIMEOUT='${METHOD_TIMEOUT}' \
-  PYSR_TIMEOUT='${FEYNMAN_TIMEOUT}' \
-  JOB_DEADLINE='${JOB_DEADLINE}' \
-    python3 '${EXPERIMENTS_DIR}/exp1_ablation.py' \
-    2>&1 | tee \"\${_ABL_DIR}/exp1_ablation_run.log\" \
-  || echo 'WARNING: exp1_ablation.py exited non-zero — check exp1_ablation_run.log'
+  export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
+  export HYPATIAX_STRICT=1
 
-  _NTEX=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' 2>/dev/null | wc -l)
-  find \"\${_ABL_DIR}\" -maxdepth 1 -name '*.tex' -delete 2>/dev/null
-  echo \"[exp1_ablation] removed \${_NTEX} .tex table byproduct(s) — table generation disabled\"
+  if [[ -n "${DOMAIN_FILTER:-}" ]] && ! grep -qE 'DOMAIN_FILTER|SHARD_IDS|SHARD_INDEX' "${script}"; then
+    if [[ "${GITHUB_ACTIONS:-}" == "true" ]]; then
+      echo "::error::exp1_ablation: DOMAIN_FILTER='${DOMAIN_FILTER}' is set but ${script} never reads DOMAIN_FILTER/SHARD_IDS/SHARD_INDEX - every shard would run all equations. Refusing."
+      return 1
+    fi
+    warn "exp1_ablation.py has no shard filter; DOMAIN_FILTER='${DOMAIN_FILTER}' will be ignored"
+  fi
+
+  log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
+  if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
+    log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
+  fi
+
+  local rc=0
+  PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
+  RESULTS_DIR="${abl_dir}" \
+  PYSR_POPULATIONS="${PYSR_POPULATIONS}" \
+  PYSR_SEED="${PYSR_SEED}" \
+  METHOD_TIMEOUT="${METHOD_TIMEOUT}" \
+  PYSR_TIMEOUT="${FEYNMAN_TIMEOUT}" \
+  JOB_DEADLINE="${JOB_DEADLINE}" \
+    python3 "${script}" 2>&1 | tee "${logf}" || rc=$?
+
+  local ntex
+  ntex=$(find "${abl_dir}" -maxdepth 1 -name '*.tex' 2>/dev/null | wc -l)
+  find "${abl_dir}" -maxdepth 1 -name '*.tex' -delete 2>/dev/null || true
+  echo "[exp1_ablation] removed ${ntex} .tex table byproduct(s) - table generation disabled"
 
   echo '=== exp1_ablation verification ==='
-  find \"\${_ABL_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
-  _NRESULT=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_ablation_results*.json' 2>/dev/null | wc -l)
-  _NRF01=\$(find \"\${_ABL_DIR}\" -maxdepth 1 -name 'exp1_rf01_mannwhitney*.json' 2>/dev/null | wc -l)
-  if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_ablation_results.json not produced'
-    echo '         Ensure ANTHROPIC_API_KEY is set and HybridDiscoverySystem v5.1 is importable'
-  else
-    echo \"OK: \${_NRESULT} exp1_ablation_results*.json produced\"
+  find "${abl_dir}" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::exp1_ablation.py exited ${rc} - see ${logf}"
+    echo "=== end exp1_ablation (FAILED rc=${rc}) ==="
+    return "${rc}"
   fi
-  if [[ \"\${_NRF01}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_rf01_mannwhitney.json not produced — Mann-Whitney stats will be missing'
+  local nres
+  nres=$(find "${abl_dir}" -maxdepth 1 -name 'exp1_ablation_results*.json' 2>/dev/null | wc -l)
+  if [[ "${nres}" -eq 0 ]]; then
+    echo "::error::exp1_ablation_results.json not produced (ANTHROPIC_API_KEY set? HybridDiscoverySystem importable?)"
+    return 1
   fi
+  echo "OK: ${nres} exp1_ablation_results*.json produced"
   echo '=== end exp1_ablation ==='
-"
+}
 
+run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
+
+# ---------------------------------------------------------------------------
+# exp1_ablation_aggregate: merge the per-shard checkpoints produced by the CI
+# shard jobs (exp1_ablation_checkpoint_shard<N>.json) into the master
+# checkpoint, then run the analysis on the complete set and print the
+# LLM-CONTRIBUTION block.  Fails loudly if any equation/arm is missing.
+#   ABLATION_ARTIFACTS_DIR : dir holding downloaded shard artifacts (optional;
+#                            otherwise shard files are read from the results dir)
+#   ABLATION_N_EQ          : expected number of equations (default 15)
+# ---------------------------------------------------------------------------
+_exp1_ablation_aggregate() {
+  cd "${REPO_ROOT}"
+  local abl_dir="${RESULTS_DIR}/ablation/exp1_ablation"
+  local script="${EXPERIMENTS_DIR}/exp1_ablation.py"
+  local logf="${abl_dir}/exp1_ablation_aggregate_run.log"
+  mkdir -p "${abl_dir}"
+  export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
+  export HYPATIAX_STRICT=1
+
+  ABL_DIR="${abl_dir}" python3 - <<'PYMERGE' || { echo "::error::shard merge failed - some equations/arms are missing (re-run the failed shard job)"; return 1; }
+import glob, json, os, re, sys
+
+abl  = os.environ["ABL_DIR"]
+art  = os.environ.get("ABLATION_ARTIFACTS_DIR", "")
+n_eq = int(os.environ.get("ABLATION_N_EQ", "15"))
+arms = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
+SHARD_RE = re.compile(r"exp1_ablation_checkpoint_shard\d+\.json$")
+
+if art:
+    files = sorted(f for f in glob.glob(os.path.join(art, "**", "*.json"), recursive=True)
+                   if SHARD_RE.search(os.path.basename(f)))
+else:
+    files = sorted(f for f in glob.glob(os.path.join(abl, "*.json"))
+                   if SHARD_RE.search(os.path.basename(f)))
+master = os.path.join(abl, "exp1_ablation_checkpoint.json")
+sources = ([master] if os.path.isfile(master) else []) + files   # later wins ties
+print(f"merge sources: {len(sources)} ({'master + ' if os.path.isfile(master) else ''}{len(files)} shard file(s))")
+if not files:
+    print("::error::no exp1_ablation_checkpoint_shard*.json found")
+    sys.exit(1)
+
+def score(e):
+    return sum(isinstance(e, dict) and isinstance(e.get(a), dict) for a in arms)
+
+merged = {}
+for f in sources:
+    try:
+        d = json.load(open(f))
+    except Exception as ex:
+        print(f"::warning::skipping unreadable {f}: {ex}")
+        continue
+    if not isinstance(d, dict):
+        continue
+    for k, v in d.items():
+        if not isinstance(v, dict):
+            continue
+        if k not in merged or score(v) >= score(merged[k]):
+            merged[k] = v
+
+if all(k.isdigit() for k in merged):
+    expected = [str(i) for i in range(n_eq)]
+    missing = [k for k in expected if k not in merged]
+    if missing:
+        print(f"::error::equations missing from all shards: {missing}")
+        sys.exit(1)
+elif len(merged) < n_eq:
+    print(f"::error::only {len(merged)}/{n_eq} equations after merge")
+    sys.exit(1)
+
+incomplete = {k: [a for a in arms if not isinstance(v.get(a), dict)]
+              for k, v in merged.items() if score(v) < len(arms)}
+if incomplete:
+    print(f"::error::equations with missing arms: {incomplete}")
+    sys.exit(1)
+
+for out in (master, os.path.join(abl, "exp1_ablation_merged_checkpoint.json")):
+    json.dump(merged, open(out, "w"), indent=2)
+print(f"merged {len(merged)} equations x {len(arms)} arms -> {master}")
+PYMERGE
+
+  local flags=()
+  if grep -q -- '--aggregate-only' "${script}"; then
+    flags+=(--aggregate-only)
+    if [[ "${ABLATION_SEED_SWEEP:-0}" == "1" ]] && grep -q -- '--seed-sweep' "${script}"; then
+      flags+=(--seed-sweep)
+    fi
+  else
+    warn "exp1_ablation.py has no --aggregate-only; running it in plain resume mode on the complete merged checkpoint (nothing left to compute, analysis only)"
+  fi
+
+  local rc=0
+  PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
+  RESULTS_DIR="${abl_dir}" \
+  PYSR_POPULATIONS="${PYSR_POPULATIONS}" PYSR_SEED="${PYSR_SEED}" \
+  METHOD_TIMEOUT="${METHOD_TIMEOUT}" PYSR_TIMEOUT="${FEYNMAN_TIMEOUT}" JOB_DEADLINE="${JOB_DEADLINE}" \
+    python3 "${script}" "${flags[@]}" 2>&1 | tee "${logf}" || rc=$?
+
+  find "${abl_dir}" -maxdepth 1 -name '*.tex' -delete 2>/dev/null || true
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::exp1_ablation analysis exited ${rc} - see ${logf}"
+    return "${rc}"
+  fi
+  for f in exp1_ablation_results.json exp1_rf01_mannwhitney.json exp1_llm_contribution.json; do
+    if [[ -s "${abl_dir}/${f}" ]]; then echo "OK: ${f}"; else echo "WARNING: ${f} not produced"; fi
+  done
+  echo '=== LLM-CONTRIBUTION ==='
+  grep -A6 "LLM-CONTRIBUTION" "${logf}" | tee /tmp/llm_contribution.txt || echo "(no LLM-CONTRIBUTION block in log)"
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" && -s /tmp/llm_contribution.txt ]]; then
+    { echo '### exp1_ablation - LLM-CONTRIBUTION'; echo '```'; cat /tmp/llm_contribution.txt; echo '```'; } >> "${GITHUB_STEP_SUMMARY}"
+  fi
+  echo '=== end exp1_ablation_aggregate ==='
+}
+
+run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
 
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
