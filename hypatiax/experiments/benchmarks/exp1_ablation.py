@@ -117,7 +117,8 @@ PYSR_TIMEOUT_SECS  = int(os.environ.get("PYSR_TIMEOUT",   "1100"))
 _TIMEOUT_ENV       = os.environ.get("METHOD_TIMEOUT") or os.environ.get("PYSR_TIMEOUT", "900")
 TIMEOUT_SECS       = int(_TIMEOUT_ENV)
 SEED               = _GLOBAL_SEED
-CONDITIONS         = ["pysr_only", "hypatia"]
+CONDITIONS         = ["pysr_only", "hypatia"] + (
+    ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
@@ -635,7 +636,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
 
     if wall_clock_limit is None:
         wall_clock_limit = (
-            HYPATIA_WALL_CLOCK if condition == "hypatia" else PYSR_ONLY_WALL_CLOCK
+            HYPATIA_WALL_CLOCK if condition in ("hypatia", "hypatia_nollm") else PYSR_ONLY_WALL_CLOCK
         )
 
     eq_seed = seed + EQ_ID.get(eq["name"], 0) * 7
@@ -660,14 +661,14 @@ def run_condition(eq, condition, seed=42, niterations=None,
     # =========================================================================
     # Branch A: hypatia — route through HybridDiscoverySystem v5.1
     # =========================================================================
-    if condition == "hypatia":
+    if condition in ("hypatia", "hypatia_nollm"):
         if HybridDiscoverySystem is None:
             raise RuntimeError(
                 "HybridDiscoverySystem not imported — check hybrid_system_v50_2.py path"
             )
         _api_key  = os.environ.get("ANTHROPIC_API_KEY", "")
-        _use_llm  = _api_key.startswith("sk-")
-        if not _use_llm and os.environ.get("HYPATIAX_STRICT") == "1":
+        _use_llm  = _api_key.startswith("sk-") and condition != "hypatia_nollm"
+        if condition == "hypatia" and not _use_llm and os.environ.get("HYPATIAX_STRICT") == "1":
             raise RuntimeError("hypatia condition needs a valid ANTHROPIC_API_KEY in strict mode: "
                                "otherwise the LLM is silently disabled and the row is mislabelled")
         _dom_slug = eq["domain"].lower().replace(" ", "_")
@@ -707,12 +708,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
         except TimeoutError:
             sr_time = time.time() - t0
             print(f"  [hypatia] ⏰ TIMEOUT after {sr_time:.1f}s")
-            return _build_timeout_result("hypatia", sr_time)
+            return _build_timeout_result(condition, sr_time)
         except Exception as e:
             sr_time = time.time() - t0
             print(f"  [hypatia] ❌ ERROR: {e}")
             traceback.print_exc()
-            return _build_error_result("hypatia", str(e), sr_time)
+            return _build_error_result(condition, str(e), sr_time)
 
         # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
@@ -781,7 +782,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             f"  scale_log={scale_log}  llm={res.get('llm_mode','none')}"
         )
         return {
-            "condition":             "hypatia",
+            "condition":             condition,
             "success":               res.get("success", False),
             "timed_out":             False,
             "excluded_from_timing":  False,
@@ -1229,7 +1230,7 @@ def run_rf01(all_results: dict) -> None:
         W_stat = p_wil = p_wil_gt = None
         print(f"  Wilcoxon N/A: {e}")
 
-    r_rb    = float(1 - (2 * U_gt) / (n_pairs * n_pairs))
+    r_rb    = float((2 * U_gt) / (n_pairs * n_pairs) - 1)   # positive = H higher (sign fixed)
     h_wins  = int(np.sum(H_arr > P_arr + 0.01))
     p_wins  = int(np.sum(P_arr > H_arr + 0.01))
     ties    = n_pairs - h_wins - p_wins
@@ -1441,6 +1442,69 @@ def run_rf01(all_results: dict) -> None:
 # =============================================================================
 # §19 · LaTeX Table 5 builder (resizebox-safe)
 # =============================================================================
+
+def run_llm_contribution(all_results: dict) -> None:
+    """Pairwise far-R2 tests across pysr_only (P), hypatia (H), hypatia_nollm (N).
+    H-P = total effect, N-P = non-LLM pipeline, H-N = LLM alone.
+    Active only when the hypatia_nollm arm was run (HYPATIAX_NOLLM_ARM=1)."""
+    if "hypatia_nollm" not in CONDITIONS:
+        return
+    from scipy import stats as scipy_stats
+
+    TIE = 0.01  # same tolerance as run_rf01
+    rows = []
+    for eq_idx, eq in enumerate(CORE_15):
+        res = all_results.get(str(eq_idx), {}) or {}
+        v = {}
+        for tag, cond in (("P", "pysr_only"), ("H", "hypatia"), ("N", "hypatia_nollm")):
+            x = (res.get(cond) or {}).get("extrap_r2_far")
+            v[tag] = float(x) if x is not None and np.isfinite(float(x)) else None
+        if all(val is not None for val in v.values()):
+            rows.append((eq["name"], v))
+
+    n = len(rows)
+    print(f"\nLLM-CONTRIBUTION (3-arm far-R2): {n} equation(s) with all arms")
+    if n < 3:
+        print("  Need >= 3 complete equations - skipping.")
+        return
+    P = np.array([r[1]["P"] for r in rows])
+    H = np.array([r[1]["H"] for r in rows])
+    N = np.array([r[1]["N"] for r in rows])
+
+    out = {"n": n, "equations": [r[0] for r in rows],
+           "H_far": H.tolist(), "N_far": N.tolist(), "P_far": P.tolist(),
+           "tests": {}}
+    for label, a, b in (("H_vs_P", H, P), ("N_vs_P", N, P), ("H_vs_N", H, N)):
+        d = a - b
+        w, l = int((d > TIE).sum()), int((d < -TIE).sum())
+        tied = np.abs(d) <= TIE                 # differences within tolerance = exact ties
+        a_adj = np.where(tied, b, a)            # collapse tied pairs so float noise is not ranked
+        d_adj = np.where(tied, 0.0, d)
+        U, pg = scipy_stats.mannwhitneyu(a_adj, b, alternative="greater")
+        _, p2 = scipy_stats.mannwhitneyu(a_adj, b, alternative="two-sided")
+        rbc = float(2 * U / (n * n) - 1)   # positive = first arm higher
+        t = {"median_a": float(np.median(a)), "median_b": float(np.median(b)),
+             "wins": w, "ties": n - w - l, "losses": l,
+             "U_greater": float(U), "p_greater": float(pg), "p_two_sided": float(p2),
+             "rank_biserial_r": rbc, "n_tied": int(tied.sum()), "tie_tol": TIE}
+        if np.all(d_adj == 0):
+            t["wilcoxon_note"] = "all paired differences within tolerance (all ties)"
+        else:
+            try:
+                W, pw = scipy_stats.wilcoxon(d_adj, alternative="greater", zero_method="wilcox")
+                t["wilcoxon_W"], t["wilcoxon_p_greater"] = float(W), float(pw)
+            except Exception as e:
+                t["wilcoxon_note"] = str(e)
+        out["tests"][label] = t
+        print(f"  {label}: median {t['median_a']:+.4f} vs {t['median_b']:+.4f} | "
+              f"W/T/L {w}/{n - w - l}/{l} | MWU p(>)={pg:.4f} p(2s)={p2:.4f} | "
+              f"r_rb={rbc:+.3f}")
+
+    path = OUTPUT_DIR / f"exp1_llm_contribution{_seed_suffix}.json"
+    with open(path, "w") as f:
+        json.dump(out, f, indent=2)
+    print(f"  📄  LLM-contribution JSON → {path}")
+
 
 def make_latex_table(all_results: dict) -> str:
     def _fmt(v, d=4):
@@ -1807,6 +1871,7 @@ if __name__ == "__main__":
     # Post-processing
     print_summary(all_results)
     run_rf01(all_results)
+    run_llm_contribution(all_results)
 
     latex = make_latex_table(all_results)
     with open(TEX_PATH, "w") as f:
