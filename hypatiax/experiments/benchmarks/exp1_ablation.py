@@ -733,6 +733,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         _predict     = None
         try:
             import sympy as _sp_ood
+            from hypatiax.core.constants import PHYSICAL_CONSTANTS as _PHYS_CONST
             _formula_safe = res.get("formula", "N/A")
             _expr_sym = _sp_ood.sympify(
                 HybridDiscoverySystem._normalise_expression_numeric(_formula_safe)
@@ -741,6 +742,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 _expr_sym, safe_var_names, safe_var_names,
                 _x_log_flags, _y_log,
                 [HybridDiscoverySystem._TRIG_NUMERIC_FUNCS, "numpy"],
+                constants=_PHYS_CONST,
             )
             if _predict is None:
                 dbg("OOD predictor unavailable: formula references non-input "

@@ -259,6 +259,7 @@ def _make_original_space_predictor(
     x_log_flags,
     y_log,
     modules,
+    constants=None,
 ):
     """
     Build predict(X_raw) -> y_raw for a formula fitted in (possibly) log space.
@@ -280,6 +281,10 @@ def _make_original_space_predictor(
 
     names = list(safe_names) if safe_names else list(var_names)
     syms = [_sp.Symbol(n) for n in names]
+    if constants:  # bind named constants; input columns always take precedence
+        _sub = {_sp.Symbol(k): v for k, v in constants.items() if _sp.Symbol(k) not in syms}
+        if _sub:
+            expr_sym = expr_sym.subs(_sub)
     if set(expr_sym.free_symbols) - set(syms):
         return None
 
