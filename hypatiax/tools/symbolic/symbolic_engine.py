@@ -551,6 +551,8 @@ class IntegratedLLMEngine:
     def __init__(self, config: LLMConfig):
         self.config = config
         self.client = None
+        self.last_call_attempted = False
+        self.last_error = None
 
         if not config.enabled:
             return
@@ -606,13 +608,22 @@ class IntegratedLLMEngine:
             caller_id=caller_id,
         )
 
+        self.last_call_attempted = True
+        self.last_error = None
         try:
             response = self._call_llm(prompt)
-            hypotheses = self._parse_response(response)
-            return hypotheses
         except Exception as e:
-            print(f"⚠️  LLM generation failed: {e}")
+            # API / connection / timeout failure: never let it look like a
+            # model that simply returned nothing.
+            self.last_error = f"{type(e).__name__}: {e}"
+            print(f"⚠️  LLM generation failed: {self.last_error}")
+            if os.environ.get("HYPATIAX_STRICT") == "1":
+                raise
             return []
+        hypotheses = self._parse_response(response)
+        if not hypotheses:
+            self.last_error = "parse_failed_or_empty_response"
+        return hypotheses
 
     def _build_prompt(
         self,
@@ -2162,6 +2173,8 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 **kwargs,
             )
             result["llm_mode"] = "hybrid_llm_failed"
+            result["llm_called"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
+            result["llm_error"] = getattr(self.llm_engine, "last_error", None)
             return result
 
         # Evaluate LLM hypotheses
