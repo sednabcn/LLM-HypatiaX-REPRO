@@ -2951,6 +2951,22 @@ jobs:
           pattern: results-exp1_ablation-shard*
           path: ${{ github.workspace }}/ablation_artifacts
 
+      - name: Overlay partial re-run onto committed results
+        # A dispatch with task_ids_override (e.g. "physics") runs ONE shard, but the merge
+        # needs all 15 equations x all arms and used to fail ("equations missing from all
+        # shards"). This overlays the new equations on the committed ones (whole-equation
+        # replacement, never mixing arms from different runs) and fails with a clear list
+        # if anything is still missing. A full run is left untouched.
+        env:
+          RESULTS_DIR:            ${{ github.workspace }}/${{ env.OUT_BASE }}
+          ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
+        run: |
+          set -euo pipefail
+          NOLLM=""; [[ "${HYPATIAX_NOLLM_ARM:-}" == "1" ]] && NOLLM="--nollm"
+          python3 scripts/ci/overlay_partial_ablation.py \
+            --results-dir "${RESULTS_DIR}/${RESULT_SUBDIR}" \
+            --artifacts-dir "${ABLATION_ARTIFACTS_DIR}" ${NOLLM}
+
       - name: Merge shards and run analysis
         env:
           ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}

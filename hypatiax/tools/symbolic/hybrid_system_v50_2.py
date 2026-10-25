@@ -727,6 +727,9 @@ class HybridDiscoverySystem:
                 # Track whether LLM was actually used this attempt
                 if result.get("llm_mode") and result["llm_mode"] != "none":
                     self.stats["llm_guided"] += 1
+                    if not hasattr(self, "_llm_attempt_modes"):
+                        self._llm_attempt_modes = []
+                    self._llm_attempt_modes.append(result["llm_mode"])
                 else:
                     self.stats["llm_skipped"] += 1
 
@@ -968,6 +971,7 @@ class HybridDiscoverySystem:
 
         print("\n[DISCOVER] Running symbolic regression...")
         try:
+            self._llm_attempt_modes = []   # llm modes seen in ANY attempt of this discover()
             discovery_result = self._discover_with_retry(
                 X, y, variable_names, variable_descriptions, variable_units,
                 equation_name=equation_name,
@@ -1502,13 +1506,21 @@ class HybridDiscoverySystem:
                 "rmse": rmse,
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
                 "strategy": discovery.get("discovery_engine", "symbolic"),
-                "llm_mode": discovery.get("llm_mode", self.llm_mode),
+                # FIX: a later pure-PySR retry can win the attempt loop and carries no
+                # llm_mode, which used to hide that the LLM WAS called in attempt 1
+                # (eq 7 in CI run 2026-10-24: API call logged, llm_called=False).
+                "llm_mode": (discovery.get("llm_mode")
+                             or (getattr(self, "_llm_attempt_modes", None) or [None])[0]
+                             or self.llm_mode),
                 # B2: explicit provenance so result checkers can verify the
                 # LLM actually participated, and that no hardcoded-formula
                 # bypass was used (this engine has none: always "none").
+                # llm_called = an LLM attempt happened; llm_mode says what became of it
+                # (e.g. hybrid_pysr_better = prior discarded).
                 "llm_called": bool(
                     self.llm_mode != "none"
-                    and discovery.get("llm_mode") not in (None, "", "none")
+                    and (discovery.get("llm_mode") not in (None, "", "none")
+                         or bool(getattr(self, "_llm_attempt_modes", None)))
                 ),
                 "bypass_kind": "none",
                 "validations": 1 if validation else 0,
