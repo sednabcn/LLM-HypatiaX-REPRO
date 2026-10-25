@@ -656,11 +656,10 @@ class IntegratedLLMEngine:
         from hypatiax.core.flags import flag_on as _flag_on
         if _flag_on("HYPATIAX_DISABLE_PROMPT_HINTS"):
             description = "(withheld - infer the relationship from the data patterns)"
-            _ex_eq, _ex_conf, _ex_why = (
-                "y = <expression using only the variables above>", 0.5, "<one-line rationale>")
-        else:
-            _ex_eq, _ex_conf, _ex_why = (
-                "y = 0.5 * m * v**2", 0.95, "Classical kinetic energy formula")
+        # The worked example is a placeholder in EVERY mode: the old example was the
+        # Kinetic Energy law itself, i.e. a ground-truth answer path.
+        _ex_eq, _ex_conf, _ex_why = (
+            "y = <expression using only the variables above>", 0.5, "<one-line rationale>")
         prompt = f"""{_caller_comment}You are an expert scientific equation discovery system. Generate {n_candidates} candidate equations for this problem.
 
 AVAILABLE PHYSICAL CONSTANTS (use these exact Python names):
