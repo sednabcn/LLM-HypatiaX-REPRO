@@ -1413,6 +1413,9 @@ class SymbolicEngine:
                     _inspect_guess.signature(PySRRegressor.__init__).parameters
                 )
                 if "guesses" in _pysr_guess_params:
+                    # Julia's parser rejects Python's `**` ("use x^y instead of x**y");
+                    # this crashed every attempt on Rate Law (CI run 40146149579).
+                    _seed_expressions = [str(_e).replace("**", "^") for _e in _seed_expressions]
                     pysr_kwargs["guesses"] = list(_seed_expressions)
                     _guesses_requested = True
                     print(
@@ -1729,7 +1732,19 @@ class SymbolicEngine:
 
             # Fit model with safe variable names
             _log_rss("before PySR")
-            self.model.fit(_X_fit, _y_fit, variable_names=safe_names)
+            try:
+                self.model.fit(_X_fit, _y_fit, variable_names=safe_names)
+            except Exception as _fit_exc:
+                # The LLM warm-start is best-effort: an unparseable / unknown-symbol seed
+                # must never cost the whole PySR run (it previously failed all 3 attempts).
+                if not (_guesses_requested and "guesses" in pysr_kwargs):
+                    raise
+                print(f"   ⚠ [PySR] fit with LLM `guesses` failed ({type(_fit_exc).__name__}: "
+                      f"{str(_fit_exc)[:160]!r}) — retrying once WITHOUT the seed", flush=True)
+                _trace.append("guesses=fit_failed_retrying_without")
+                pysr_kwargs.pop("guesses", None)
+                self.model = PySRRegressor(**pysr_kwargs)
+                self.model.fit(_X_fit, _y_fit, variable_names=safe_names)
             _log_rss("after PySR")
 
             # Get best equation — scan the full Pareto front for highest R²

@@ -2810,10 +2810,13 @@ jobs:
             fi
 
             if ! git diff --cached --quiet; then
-              OVERWRITTEN=$(git diff --cached --name-status \
+              # Only this shard's own output dir is subject to the guard (a stray staged
+              # file elsewhere is not a shard-isolation problem), and per-shard run logs
+              # are legitimately rewritten on every rerun.
+              OVERWRITTEN=$(git diff --cached --name-status -- "${TARGET}" \
                 | grep '^M' \
                 | awk '{print $2}' \
-                | grep -v '_checkpoint_shard[0-9].*\.json$' \
+                | grep -Ev '_checkpoint_shard[0-9].*\.json$|_run_shard[0-9]+\.log$' \
                 || true)
               if [[ -n "$OVERWRITTEN" ]]; then
                 case "${EXP}" in
@@ -2837,7 +2840,7 @@ jobs:
               fi
 
               STAGED=$(git diff --cached --name-only | wc -l)
-              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)" -- "${TARGET}"
             else
               echo "Shard ${SHARD}: nothing newly staged, but HEAD is ${AHEAD} commit(s) ahead of upstream (a prior push in this job likely failed) — skipping commit, retrying push only."
               STAGED=0
