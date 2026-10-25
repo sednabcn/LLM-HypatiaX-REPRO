@@ -7,7 +7,7 @@ requires all 15 equations x all arms.  Without this step that run always fails w
 "equations missing from all shards".
 
 Rules (kept deliberately conservative):
-  * base  = committed exp1_ablation_checkpoint.json, then committed *_shard<N>.json (in order)
+  * base  = committed *_shard<N>.json (fallback), overridden by committed exp1_ablation_checkpoint.json
   * new   = checkpoints from this run's downloaded artifacts; they WIN
   * an equation is replaced as a WHOLE entry -- arms from different runs are never mixed
   * if the artifacts alone already cover every equation, nothing is changed (full run)
@@ -62,9 +62,13 @@ def main() -> int:
         print("artifacts already cover every equation - nothing to overlay")
         return 0
 
+    # Committed base. Per-shard files are only a FALLBACK: a partial re-run's worker
+    # commits its single shard as ..._shard0.json, clobbering the file that held another
+    # domain, and shard files can be older than the aggregate-produced master. So load
+    # the shard files first and let the master (written by the aggregate) override them.
     base, base_src = {}, {}
-    base_files = [os.path.join(a.results_dir, f"{CKPT}.json")] + sorted(
-        glob.glob(os.path.join(a.results_dir, f"{CKPT}_shard*.json")), key=_shard_no)
+    base_files = sorted(glob.glob(os.path.join(a.results_dir, f"{CKPT}_shard*.json")),
+                        key=_shard_no) + [os.path.join(a.results_dir, f"{CKPT}.json")]
     for p in base_files:
         if os.path.isfile(p):
             d = _load(p)
