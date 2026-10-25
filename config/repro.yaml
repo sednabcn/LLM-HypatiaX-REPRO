@@ -80,7 +80,7 @@ pysr:
 
 engine:
   name: "hybrid_system_v50_2"
-  version: "v5.1"
+  version: "5.4"
   max_retries: 3
   allow_nondeterministic: false
 
