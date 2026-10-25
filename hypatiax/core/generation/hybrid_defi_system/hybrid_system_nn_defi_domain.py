@@ -725,9 +725,10 @@ class EnhancedHybridSystemDeFi:
         # Clean-rerun guard: the delegate baseline reads these two env flags.
         # If either is unset, hardcoded answers / prompt hints may leak into
         # the LLM arm, so say so up front rather than let it pass silently.
+        from hypatiax.core.flags import flag_on   # single source of truth (fail closed, strict '1')
         _unset = [
             n for n in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS")
-            if os.environ.get(n, "").strip().lower() not in ("1", "true", "yes")
+            if not flag_on(n)
         ]
         self.strict_live = not _unset
         if _unset:

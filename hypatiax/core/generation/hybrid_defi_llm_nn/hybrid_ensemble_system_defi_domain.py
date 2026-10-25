@@ -66,10 +66,10 @@ def _flag(name: str) -> bool:
     counts as ON (clean run) unless HYPATIAX_ALLOW_LEGACY=1 is set explicitly, and an
     explicit 0 counts as OFF -- the same contract the baseline module tests
     (test_flags_fail_closed).  Every other name is a plain opt-in flag."""
-    raw = (os.environ.get(name) or "").strip().lower()
-    if name in _FAIL_CLOSED and not raw:
-        return (os.environ.get("HYPATIAX_ALLOW_LEGACY") or "").strip().lower() not in _TRUTHY
-    return raw in _TRUTHY
+    if name in _FAIL_CLOSED:
+        from hypatiax.core.flags import flag_on   # single source of truth (fail closed, strict '1')
+        return flag_on(name)
+    return (os.environ.get(name) or "").strip().lower() in _TRUTHY
 
 
 def strict_live_mode() -> bool:

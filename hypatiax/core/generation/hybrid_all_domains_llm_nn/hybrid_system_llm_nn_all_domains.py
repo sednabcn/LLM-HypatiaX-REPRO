@@ -83,9 +83,8 @@ def _r2_rule_a(y_true, y_pred):
 def _switch_on(name: str) -> bool:
     """Fail-closed read of a HYPATIAX_DISABLE_* switch: unset/empty counts as ON (clean run);
     only an explicit HYPATIAX_ALLOW_LEGACY=1 or an explicit 0 turns it off."""
-    legacy = os.environ.get("HYPATIAX_ALLOW_LEGACY", "0").strip().lower() in ("1", "true", "yes")
-    raw = os.environ.get(name, "0" if legacy else "1").strip().lower() or ("0" if legacy else "1")
-    return raw in ("1", "true", "yes")
+    from hypatiax.core.flags import flag_on   # single source of truth (fail closed, strict '1')
+    return flag_on(name)
 
 
 def _hints_disabled() -> bool:
