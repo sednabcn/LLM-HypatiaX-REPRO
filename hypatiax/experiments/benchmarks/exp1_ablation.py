@@ -1,10 +1,10 @@
 """
 HypatiaX — Experiment 1: LLM Ablation  (§10.6 Core-15)
 ========================================================
-PySR-only vs HypatiaX (HybridDiscoverySystem v5.1) on Core-15.
+PySR-only vs HypatiaX (HybridDiscoverySystem v5.4) on Core-15.
 
 Paper sections : §10.6 (ablation), §10.9 (instability)
-Engine         : hybrid_system_v50_2.py (v5.1)
+Engine         : hybrid_system_v50_2.py (v5.4)
 Output files   : exp1_ablation_results[_seedN].json
                  exp1_ablation_table[_seedN].tex
                  exp1_rf01_mannwhitney[_seedN].json
@@ -17,13 +17,13 @@ Output files   : exp1_ablation_results[_seedN].json
 Fixes applied vs original hypatiax_exp1_ablation.ipynb
 -------------------------------------------------------
 FIX-POP       : populations=30 (was 2 — inflated speedup)
-FIX-WIRE      : hypatia → HybridDiscoverySystem v5.1 (was raw PySR + manual warm-start)
+FIX-WIRE      : hypatia → HybridDiscoverySystem v5.4 (was raw PySR + manual warm-start)
 FIX-KEY       : checkpoint keyed on eq_id int (survives equation renames)
 FIX-APIKEY    : Kaggle Secrets / env var (no hardcoded sk-ant key)
 FIX-WALLCLOCK : per-condition wall-clocks; hypatia = 3×PYSR_TIMEOUT+300,
                 pysr_only = PYSR_TIMEOUT+300 (shared cap fired inside Julia retry 2)
 FIX-A         : RMSE in original units via HybridDiscoverySystem.discover()
-FIX-B         : formula/expression/final_formula key aliases resolved in v5.1
+FIX-B         : formula/expression/final_formula key aliases resolved in v5.4
 FIX-C         : deterministic PySR (allow_nondeterministic=False)
 FIX-D         : extreme-scale log-transform active inside discover()
 FIX-POW       : auto pow for non-negative X active inside discover()
@@ -143,7 +143,7 @@ print(f"seed        : {SEED}  (source: {_seed_source})")
 print("✅ Parameters ready")
 
 # =============================================================================
-# §4 · HybridDiscoverySystem import (v5.1)
+# §4 · HybridDiscoverySystem import (v5.4)
 # =============================================================================
 
 _V50_CANDIDATES = [
@@ -164,7 +164,7 @@ else:
     _spec.loader.exec_module(_hs_mod)
     HybridDiscoverySystem = _hs_mod.HybridDiscoverySystem
     DiscoveryConfig       = _hs_mod.DiscoveryConfig
-    print(f"✅ HybridDiscoverySystem (v5.1) imported from {_V50_PATH}")
+    print(f"✅ HybridDiscoverySystem (v5.4) imported from {_V50_PATH}")
 
 # =============================================================================
 # §5 · PySR import
@@ -624,7 +624,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                   timeout_secs=None, populations=None, wall_clock_limit=None):
     """
     condition='pysr_only' : raw PySRRegressor (clean baseline).
-    condition='hypatia'   : HybridDiscoverySystem v5.1 (FIX-A…FIX-POW all active).
+    condition='hypatia'   : HybridDiscoverySystem v5.4 (FIX-A…FIX-POW all active).
 
     Wall-clock caps are per-condition (FIX-WALLCLOCK):
       hypatia   → HYPATIA_WALL_CLOCK   (3 × PYSR_TIMEOUT + post-proc)
@@ -659,7 +659,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         dbg(f"Variable sanitisation: {sanitizer.log()}")
 
     # =========================================================================
-    # Branch A: hypatia — route through HybridDiscoverySystem v5.1
+    # Branch A: hypatia — route through HybridDiscoverySystem v5.4
     # =========================================================================
     if condition in ("hypatia", "hypatia_nollm"):
         if HybridDiscoverySystem is None:
@@ -715,7 +715,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             traceback.print_exc()
             return _build_error_result(condition, str(e), sr_time)
 
-        # FIX-B: resolve key aliases from v5.1 discover() result
+        # FIX-B: resolve key aliases from v5.4 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
         train_r2      = res.get("r2")
         train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
@@ -947,7 +947,7 @@ def _build_error_result(condition: str, error: str, sr_time: float) -> dict:
         "bypass_kind":          "none",
     }
 
-print("✅ run_condition ready — hypatia → HybridDiscoverySystem v5.1 | pysr_only → raw PySR")
+print("✅ run_condition ready — hypatia → HybridDiscoverySystem v5.4 | pysr_only → raw PySR")
 
 # =============================================================================
 # §16 · Main experiment loop
@@ -1068,7 +1068,7 @@ def run_experiment():
 
     print("=" * 65)
     print("EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)")
-    print(f"Engine      : hybrid_system_v50_2 (v5.1)")
+    print(f"Engine      : hybrid_system_v50_2 (v5.4)")
     print(f"Equations   : {_n_run}  |  Conditions: {CONDITIONS}")
     print(f"populations : {POPULATIONS}  |  iterations: {NITERATIONS}  |  timeout: {TIMEOUT_SECS}s")
     print(f"Resuming    : {len(all_results)} checkpointed entries")
@@ -1176,12 +1176,17 @@ def print_summary(all_results: dict) -> None:
 
     if P_far_all:
         print("─" * 80)
-        print(f"{'Mean (far OOD)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
-              f"{np.mean(P_far_all):7.4f} {np.mean(H_far_all):7.4f}")
+        # Medians, not means: one overflowed equation (R2 ~ -1e4) dominates a mean.
+        print(f"{'Median (far OOD)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
+              f"{np.median(P_far_all):7.4f} {np.median(H_far_all):7.4f}")
+        print(f"{'Far R2 >= 0.99 (count)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
+              f"{sum(v >= 0.99 for v in P_far_all):>7d} {sum(v >= 0.99 for v in H_far_all):>7d}"
+              f"   of n={len(P_far_all)} evaluable")
     if speedups:
+        # (A previous version printed mean(P_far_R2)/mean(H_far_R2) here, which is not a speedup.)
         print(f"\nSpeedup (PySR-time / HypatiaX-time):  "
-              f"mean={np.mean(P_far_all)/np.mean(H_far_all):.2f}×  "
-              f"median={np.median(speedups):.2f}×  n={len(speedups)}")
+              f"median={np.median(speedups):.2f}×  n={len(speedups)}  "
+              f"[PySR always runs to its cap; LLM-only wins skip PySR - not a like-for-like speedup]")
 
 # =============================================================================
 # §18 · RF-01 — Mann-Whitney U + Wilcoxon (§10.6 statistics)
@@ -1298,12 +1303,14 @@ def run_rf01(all_results: dict) -> None:
             else:
                 dom_detail += ", suggesting benefit is domain-selective."
         else:
-            dom_detail = "No single domain consistently drives the improvement."
+            dom_detail = "No domain shows a consistent HypatiaX advantage."
         sentence = (
             f"Across Core-15, HypatiaX does not achieve statistically significant "
             f"higher far-extrapolation $R^2$ than PySR-only "
             f"(Mann-Whitney $U={U_gt:.0f}$, $p={p_gt:.4f}$, $n={n_pairs}$; "
-            f"rank-biserial $r={r_rb:+.2f}$). " + dom_detail
+            f"rank-biserial $r={r_rb:+.2f}$; {len(skipped)} equation(s) excluded for "
+            f"non-finite or missing far $R^2$: "
+            f"{', '.join(s_[0] for s_ in skipped) or 'none'}). " + dom_detail
         )
         verdict = "⚠️  NOT SIGNIFICANT"
 
@@ -1604,7 +1611,7 @@ def make_latex_table(all_results: dict) -> str:
         r"\item[$\dag$] Wall-clock cap triggered; excluded from timing averages.",
         r"\item[$\ddag$] Arrhenius failure mode: correct LLM prior constrained PySR search "
         r"space → premature convergence. See \S\ref{sec:arrhenius}."
-        f" All runs: populations={POPULATIONS}, seed={SEED}, engine v5.1.",
+        f" All runs: populations={POPULATIONS}, seed={SEED}, engine v5.4.",
         r"\end{tablenotes}",
         r"\end{table*}",
     ]
@@ -1765,7 +1772,7 @@ def write_provenance(all_results: dict) -> None:
         },
         "fixes_applied": [
             "FIX-POP: populations=30 (was 2 — inflated apparent speedup)",
-            "FIX-WIRE: hypatia → HybridDiscoverySystem v5.1 (was raw PySR + manual warm-start)",
+            "FIX-WIRE: hypatia → HybridDiscoverySystem v5.4 (was raw PySR + manual warm-start)",
             "FIX-KEY: checkpoint keyed on eq_id int (survives renames)",
             "FIX-APIKEY: Kaggle Secrets / env var (no hardcoded key)",
             "FIX-WALLCLOCK: per-condition wall-clocks (hypatia=3×1100+300, pysr_only=1100+300)",

@@ -270,8 +270,8 @@ def _make_original_space_predictor(
         2. evaluate the formula,
         3. invert the y transform ONLY if y itself was log-scaled
            (the old code inverted whenever any X column was scaled).
-    Returns None — so the caller fails loudly — when the formula references
-    symbols that are not input columns (e.g. engineered ratio features).
+    Engineered ratio_/gm_ features are rebuilt from the input columns.  Returns None —
+    so the caller fails loudly — when the formula references any other non-input symbol.
 
     Self-contained (module level, imports sympy locally) so it can be unit
     tested in isolation.
@@ -285,8 +285,23 @@ def _make_original_space_predictor(
         _sub = {_sp.Symbol(k): v for k, v in constants.items() if _sp.Symbol(k) not in syms}
         if _sub:
             expr_sym = expr_sym.subs(_sub)
-    if set(expr_sym.free_symbols) - set(syms):
+    # Engineered features the engine appended during fitting (EXP-RATIO / OPTICS-GM):
+    #   ratio_<a>_<b> = a / (b + 1e-300)      gm_<a>_<b> = sqrt(a * b)
+    # They are pure functions of the input columns, so rebuild them from X here instead
+    # of giving up (Henderson-Hasselbalch's correct law used ratio_HA_A and its OOD R²
+    # came back null).  Computed on the same (log-scaled) columns the fit saw.
+    _eng = {}
+    for _extra_sym in sorted(set(expr_sym.free_symbols) - set(syms), key=str):
+        _nm = str(_extra_sym)
+        for _ia, _a in enumerate(names):
+            for _ib, _b in enumerate(names):
+                if _ia != _ib and _nm == f"ratio_{_a}_{_b}":
+                    _eng[_extra_sym] = ("ratio", _ia, _ib)
+                elif _ia < _ib and _nm in (f"gm_{_a}_{_b}", f"gm_{_b}_{_a}"):
+                    _eng[_extra_sym] = ("gm", _ia, _ib)
+    if set(expr_sym.free_symbols) - set(syms) - set(_eng):
         return None
+    _eng_syms = list(_eng)
 
     def _inv(x):
         with _np.errstate(divide="ignore", invalid="ignore"):
@@ -297,7 +312,7 @@ def _make_original_space_predictor(
         "pow": _np.power, "Abs": _np.abs,
     }
     _mods = [_extra] + list(modules or ["numpy"])
-    _func = _sp.lambdify(syms, expr_sym, modules=_mods)
+    _func = _sp.lambdify(syms + _eng_syms, expr_sym, modules=_mods)
     _flags = list(x_log_flags or []) + [False] * max(0, len(names) - len(x_log_flags or []))
     _y_log = bool(y_log)
 
@@ -310,6 +325,10 @@ def _make_original_space_predictor(
                 c = _np.sign(c) * _np.log10(_np.abs(c) + 1.0)
             cols.append(c)
         with _np.errstate(all="ignore"):
+            for _sy in _eng_syms:
+                _kind, _i, _j = _eng[_sy]
+                cols.append(cols[_i] / (cols[_j] + 1e-300) if _kind == "ratio"
+                            else _np.sqrt(cols[_i] * cols[_j]))
             out = _np.asarray(_func(*cols), dtype=_np.float64)
             if out.ndim == 0:
                 out = _np.full(Xr.shape[0], float(out))
