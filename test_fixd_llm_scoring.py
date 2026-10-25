@@ -67,4 +67,29 @@ def test_unsafe_context_leaves_equation_untouched(grav):
 
 def test_variable_names_only_substituted_as_whole_words():
     out = Engine._llm_to_fit_space("sqrt(r) + m1*r", ["m1", "r"], [True, True], False)
-    assert "sqrt((10**(r)-1))" in out and out.count("10**(m1)") == 1 and "sq(" not in out
+    assert "sqrt((sign(r)*(10**abs(r)-1)))" in out and out.count("10**abs(m1)") == 1 and "sq(" not in out
+
+
+def test_negative_noisy_target_is_mapped(grav):
+    """Noisy targets go negative; the signed log10 mapping must still score a correct formula high."""
+    X, y, Xf, _ = grav
+    rng = np.random.RandomState(1)
+    y_noisy = y + rng.normal(0, 0.05 * y.std(), y.size)
+    assert (y_noisy < 0).any()
+    yf = _slog(y_noisy)
+    e = _engine(CTX)
+    assert e._evaluate_hypotheses([Hyp("6.674e-11 * m1 * m2 / r**2", 0.9, "t")],
+                                  Xf, yf, NAMES).r2_score > 0.9
+    assert e._evaluate_hypotheses([Hyp("6.674e-11 * m1 * m2 / r**2 * g_n", 0.9, "t")],
+                                  Xf, yf, NAMES).r2_score < 0.5
+
+
+def test_prompt_withholds_name_and_worked_example(monkeypatch):
+    monkeypatch.delenv("HYPATIAX_DISABLE_PROMPT_HINTS", raising=False)   # unset == clean
+    eng = se.IntegratedLLMEngine.__new__(se.IntegratedLLMEngine)
+    p = eng._build_prompt("physics", ["m", "v"], "Kinetic Energy", {}, 3)
+    assert "Kinetic Energy" not in p and "0.5 * m * v**2" not in p and "kinetic" not in p.lower()
+    monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")
+    monkeypatch.setenv("HYPATIAX_DISABLE_PROMPT_HINTS", "0")
+    legacy = eng._build_prompt("physics", ["m", "v"], "Kinetic Energy", {}, 3)
+    assert "Kinetic Energy" in legacy and "0.5 * m * v**2" in legacy

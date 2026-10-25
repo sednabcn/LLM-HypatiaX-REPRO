@@ -774,6 +774,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             try: return f"{float(v):.4f}" if np.isfinite(float(v)) else "N/A"
             except Exception: return "N/A"
 
+        _li = res.get("llm_info") or {}
         print(
             f"  [hypatia] {best_expr_raw[:55]}  R²={_f(train_r2)}  "
             f"extrap(near={_f(extrap_r2.get('near'))} "
@@ -795,12 +796,16 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
             "sr_time_s":             sr_time,
-            "llm_time_s":            0.0,
+            "llm_time_s":            float(_li.get("llm_time") or 0.0),
             "total_time_s":          sr_time,
             "best_expression":       best_expr_raw,
             "complexity":            complexity,
-            "llm_expression":        None,
-            "llm_confidence":        None,
+            "llm_expression":        _li.get("llm_best_expression"),
+            "llm_confidence":        _li.get("llm_confidence"),
+            "llm_best_r2":           _li.get("llm_best_r2"),
+            "llm_hypotheses":        _li.get("llm_hypotheses_raw"),
+            "error":                 res.get("error"),
+            "llm_error":             _li.get("llm_error"),
             # v5.4 provenance extras
             "engine_version":        HybridDiscoverySystem.VERSION,
             "scale_log":             scale_log,
@@ -1619,8 +1624,9 @@ def run_instability_stats(all_results: dict) -> None:
     for eq_idx, eq in enumerate(CORE_15):
         res    = all_results.get(str(eq_idx), {})
         h      = res.get("hypatia", {}) or {}
-        r_near = h.get("extrap_r2_near",  0.0) or 0.0
-        r_far  = h.get("extrap_r2_far",   0.0) or 0.0
+        # Missing/failed rows stay None (previously coerced to 0.0 -> "perfectly stable").
+        r_near = h.get("extrap_r2_near")
+        r_far  = h.get("extrap_r2_far")
         ii     = abs(r_far - r_near) if (r_near is not None and r_far is not None) else None
         instability_rows.append({
             "equation":          eq["name"],
@@ -1702,6 +1708,26 @@ def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
 # §21 · Provenance stamp
 # =============================================================================
 
+def _git_sha() -> str | None:
+    import subprocess
+    sha = os.environ.get("GITHUB_SHA")
+    if sha:
+        return sha
+    try:
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True,
+                                       stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return None
+
+
+def _pkg_version(name: str) -> str | None:
+    try:
+        from importlib.metadata import version
+        return version(name)
+    except Exception:
+        return None
+
+
 def write_provenance(all_results: dict) -> None:
     from hypatiax.core.flags import flag_state
     provenance = {
@@ -1714,6 +1740,12 @@ def write_provenance(all_results: dict) -> None:
         "populations":           POPULATIONS,
         "niterations":           NITERATIONS,
         "model_string":          MODEL_STRING,
+        "git_sha":               _git_sha(),
+        "anthropic_sdk":         _pkg_version("anthropic"),
+        "pysr":                  _pkg_version("pysr"),
+        "n_rows_hypatia_failed": sum(
+            1 for r in all_results.values()
+            if isinstance(r, dict) and (r.get("hypatia") or {}).get("success") is False),
         "timestamp":             datetime.now().isoformat(),
         "outputs": {
             "results_json":      str(RESULTS_PATH),

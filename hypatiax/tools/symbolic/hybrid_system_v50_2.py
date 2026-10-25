@@ -730,6 +730,12 @@ class HybridDiscoverySystem:
                     if not hasattr(self, "_llm_attempt_modes"):
                         self._llm_attempt_modes = []
                     self._llm_attempt_modes.append(result["llm_mode"])
+                    if not hasattr(self, "_llm_attempt_info"):
+                        self._llm_attempt_info = []
+                    self._llm_attempt_info.append({
+                        k: result.get(k) for k in (
+                            "llm_mode", "llm_time", "llm_best_expression", "llm_best_r2",
+                            "llm_confidence", "llm_hypotheses_raw", "llm_error")})
                 else:
                     self.stats["llm_skipped"] += 1
 
@@ -972,6 +978,7 @@ class HybridDiscoverySystem:
         print("\n[DISCOVER] Running symbolic regression...")
         try:
             self._llm_attempt_modes = []   # llm modes seen in ANY attempt of this discover()
+            self._llm_attempt_info = []    # per-attempt LLM audit trail
             discovery_result = self._discover_with_retry(
                 X, y, variable_names, variable_descriptions, variable_units,
                 equation_name=equation_name,
@@ -1272,12 +1279,9 @@ class HybridDiscoverySystem:
         _fixd_ctx = None
         if _log_scaled:
             try:
-                _fd_safe = all(
-                    float(np.nanmin(_X_orig[:, _i])) >= 0.0
-                    for _i, _f in enumerate(_x_log_flags) if _f
-                )
-                if _y_log_flag:
-                    _fd_safe = _fd_safe and float(np.nanmin(_y_orig)) >= 0.0
+                # Sign-aware mapping (see _llm_to_fit_space) handles negative
+                # values (noisy targets), so only non-finite data is unsafe.
+                _fd_safe = bool(np.isfinite(_X_orig).all() and np.isfinite(_y_orig).all())
             except Exception:
                 _fd_safe = False
             _fixd_ctx = {"safe": _fd_safe, "x_log_flags": list(_x_log_flags), "y_log": bool(_y_log_flag)}
@@ -1523,6 +1527,7 @@ class HybridDiscoverySystem:
                          or bool(getattr(self, "_llm_attempt_modes", None)))
                 ),
                 "bypass_kind": "none",
+                "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
                 "validations": 1 if validation else 0,
                 "validation_score": validation.get("total_score", 0.0),
                 # FIX-D: flag log-space transform
@@ -1552,13 +1557,14 @@ class HybridDiscoverySystem:
                 "variable_names": var_names,
                 "strategy": "error",
                 "llm_mode": "none",
-                "llm_called": False,
+                "llm_called": bool(getattr(self, "_llm_attempt_modes", None)),
+                "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
                 "bypass_kind": "none",
                 "validations": 0,
                 "scale_log": False,
                 "x_log_flags": [False] * len(var_names),
                 "y_log": False,
-                "error": str(exc)[:200],
+                "error": f"{type(exc).__name__}: {exc}"[:500],
             }
 
     def print_statistics_summary(self) -> None:

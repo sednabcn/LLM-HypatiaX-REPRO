@@ -649,6 +649,18 @@ class IntegratedLLMEngine:
         # per method.  Harmless when caller_id is empty.
         _caller_comment = f"# caller: {caller_id}\n" if caller_id else ""
 
+        # LEAKAGE GUARD: the template used to embed the equation NAME as
+        # "Description:" and a worked example that IS the Kinetic Energy law
+        # ("y = 0.5 * m * v**2", "Classical kinetic energy formula").  Under the
+        # clean-run flag both are withheld.  Constants list is domain-generic and kept.
+        from hypatiax.core.flags import flag_on as _flag_on
+        if _flag_on("HYPATIAX_DISABLE_PROMPT_HINTS"):
+            description = "(withheld - infer the relationship from the data patterns)"
+            _ex_eq, _ex_conf, _ex_why = (
+                "y = <expression using only the variables above>", 0.5, "<one-line rationale>")
+        else:
+            _ex_eq, _ex_conf, _ex_why = (
+                "y = 0.5 * m * v**2", 0.95, "Classical kinetic energy formula")
         prompt = f"""{_caller_comment}You are an expert scientific equation discovery system. Generate {n_candidates} candidate equations for this problem.
 
 AVAILABLE PHYSICAL CONSTANTS (use these exact Python names):
@@ -674,9 +686,9 @@ Use EXACT variable names: {var_list}
 Return ONLY a JSON array:
 [
   {{
-    "equation": "y = 0.5 * m * v**2",
-    "confidence": 0.95,
-    "reasoning": "Classical kinetic energy formula"
+    "equation": "{_ex_eq}",
+    "confidence": {_ex_conf},
+    "reasoning": "{_ex_why}"
   }},
   ...
 ]
@@ -2173,6 +2185,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 **kwargs,
             )
             result["llm_mode"] = "hybrid_llm_failed"
+            result["llm_time"] = llm_time
             result["llm_called"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
             result["llm_error"] = getattr(self.llm_engine, "last_error", None)
             return result
@@ -2180,6 +2193,13 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         # Evaluate LLM hypotheses
         best_hyp = self._evaluate_hypotheses(hypotheses, X, y, safe_names)
 
+        # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping)
+        _llm_info = {
+            "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
+            "llm_best_r2": best_hyp.r2_score,
+            "llm_confidence": getattr(best_hyp, "confidence", None),
+            "llm_hypotheses_raw": [getattr(h, "raw_equation", h.equation) for h in hypotheses],
+        }
         print(f"   LLM best: {best_hyp.equation}")
         print(f"   LLM R²: {best_hyp.r2_score:.4f}")
         print(f"   LLM time: {llm_time:.2f}s")
@@ -2198,6 +2218,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                     best_hyp.equation, X, safe_names
                 ),
                 "llm_mode": "hybrid_llm_only",
+                **_llm_info,
                 "llm_time": llm_time,
                 "validation": {"valid": True, "errors": [], "warnings": []},
                 "llm_hypotheses": [h.equation for h in hypotheses],
@@ -2258,6 +2279,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         if result["r2_score"] > best_hyp.r2_score:
             print("   ✅ PySR refinement improved result")
             result["llm_mode"] = "hybrid_pysr_better"
+            result.update(_llm_info)
             result["llm_hypotheses"] = [h.equation for h in hypotheses]
             result["llm_time"] = llm_time
             result["pysr_time"] = pysr_time
@@ -2276,6 +2298,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                     best_hyp.equation, X, safe_names
                 ),
                 "llm_mode": "hybrid_llm_better",
+                **_llm_info,
                 "llm_time": llm_time,
                 "pysr_time": pysr_time,
                 "validation": {"valid": True, "errors": [], "warnings": []},
@@ -2377,9 +2400,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         expr = equation
         if flags:
             pat = re.compile(r"(?<![\w.])(" + "|".join(re.escape(n) for n in flags) + r")(?![\w])")
-            expr = pat.sub(lambda m: f"(10**({m.group(1)})-1)", expr)
+            # inverse of u = sign(x)*log10(|x|+1)  ->  x = sign(u)*(10**|u| - 1)
+            expr = pat.sub(
+                lambda m: f"(sign({m.group(1)})*(10**abs({m.group(1)})-1))", expr)
         if y_log:
-            expr = f"log(abs({expr})+1)/log(10)"
+            # forward v = sign(f)*log10(|f|+1); noisy targets can be negative
+            expr = f"(sign(({expr}))*log(abs(({expr}))+1)/log(10))"
         return expr
 
     def _evaluate_hypotheses(
