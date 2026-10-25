@@ -2791,7 +2791,13 @@ jobs:
               fi
             fi
 
-            git add -f "${TARGET}"
+            # exp1_ablation: a shard must only ADD/MODIFY its own files.  With the default
+            # `git add <dir>` the shard also stages DELETIONS of every committed file that is
+            # missing in its runner (clean_llm_rerun deletes *checkpoint* files there), which
+            # wiped other shards' checkpoints and the committed master from the repo.
+            ADD_FLAGS=(-f)
+            [[ "${EXP}" == "exp1_ablation" ]] && ADD_FLAGS+=(--ignore-removal)
+            git add "${ADD_FLAGS[@]}" "${TARGET}"
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2813,10 +2819,15 @@ jobs:
               # Only this shard's own output dir is subject to the guard (a stray staged
               # file elsewhere is not a shard-isolation problem), and per-shard run logs
               # are legitimately rewritten on every rerun.
+              # A shard re-writing ITS OWN suffixed files (..._shard<SHARD>.json/.csv/.log,
+              # ..._shard<SHARD>_rescued_...) is a legitimate rerun, not an isolation
+              # failure.  The guard is for files that do NOT carry this shard's suffix
+              # (unsuffixed shared files, or another shard's files).
               OVERWRITTEN=$(git diff --cached --name-status -- "${TARGET}" \
                 | grep '^M' \
                 | awk '{print $2}' \
                 | grep -Ev '_checkpoint_shard[0-9].*\.json$|_run_shard[0-9]+\.log$' \
+                | grep -Ev "_shard${SHARD}([^0-9]|\$)" \
                 || true)
               if [[ -n "$OVERWRITTEN" ]]; then
                 case "${EXP}" in
