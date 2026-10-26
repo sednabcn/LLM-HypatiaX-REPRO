@@ -182,3 +182,35 @@ def test_hardcoded_bypass_function_is_never_called():
     calls = [n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Call)
              and getattr(n.func, "attr", getattr(n.func, "id", "")) == "_try_hardcoded_formula"]
     assert not calls, "hardcoded-formula bypass is being called"
+
+# ------------------------------------------------------------- repo hygiene / pca / legacy scorers
+def test_every_package_file_parses_and_has_no_conflict_markers():
+    bad = []
+    for p in PKG.rglob("*.py"):
+        t = p.read_text(encoding="utf-8", errors="replace")
+        if re.search(r"^(<<<<<<< |>>>>>>> )", t, re.M):
+            bad.append(f"{p.relative_to(ROOT)}: conflict marker")
+        try:
+            ast.parse(t)
+        except SyntaxError as e:
+            bad.append(f"{p.relative_to(ROOT)}: {e}")
+    assert not bad, "\n".join(bad)
+
+
+def test_pca_benchmark_has_no_private_r2_or_fabricated_ypred():
+    src = (PKG / "experiments/benchmarks/run_comparative_suite_benchmark_pca.py").read_text()
+    names = {n.id for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Name)}
+    assert not {"ss_tot", "_ss_tot"} & names, "pca re-implements R^2"
+    assert '_ypred_source = "algebraic_reconstruction"' not in src, "pca fabricates y_pred"
+
+
+@pytest.mark.parametrize("rel", [
+    "tools/symbolic/symbolic_engine.py",
+    "experiments/benchmarks/exp3_nguyen12_consolidated.py",
+    "core/training/baseline_neural_network_defi_improved.py",
+])
+def test_legacy_scorers_use_canonical_r2(rel):
+    src = (PKG / rel).read_text()
+    names = {n.id for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Name)}
+    assert "ss_tot" not in names and "r2_canonical" in src
+

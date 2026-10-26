@@ -3,10 +3,7 @@
   "files": [
     "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py",
     "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py",
-    "hypatiax/core/training/baseline_neural_network_defi_improved.py",
-    "hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
     "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
-    "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
-    "hypatiax/tools/symbolic/symbolic_engine.py"
+    "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
   ]
 }
