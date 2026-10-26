@@ -66,7 +66,7 @@
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7159846105022467,
+      "extrap_r2_near": 0.715990044853483,
       "extrap_r2_far": -Infinity,
       "instability_index": Infinity
     },
