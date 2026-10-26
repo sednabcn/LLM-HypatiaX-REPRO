@@ -1,0 +1,68 @@
+{
+  "rf01_mann_whitney": {
+    "n_pairs": 3,
+    "n_skipped": 12,
+    "skipped_equations": [
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "U_greater": 3.0,
+    "p_greater": 0.8,
+    "U_two_sided": 3.0,
+    "p_two_sided": 0.7,
+    "wilcoxon_W": 1.0,
+    "wilcoxon_p_two": 0.5,
+    "wilcoxon_p_greater": 0.875,
+    "rank_biserial_r": -0.33333333333333337,
+    "H_median_far_r2": 0.999556332019296,
+    "P_median_far_r2": 0.9996917760820492,
+    "H_mean_far_r2": 0.9973340400456009,
+    "P_mean_far_r2": 0.99973545456066,
+    "h_wins": 0,
+    "p_wins": 0,
+    "ties": 3,
+    "significant_p05": false,
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Mann-Whitney $U=3$, $p=0.8000$, $n=3$; rank-biserial $r=-0.33$; 12 equation(s) excluded for non-finite or missing far $R^2$: Arrhenius, Henderson-Hasselbalch, Rate Law, Kinetic Energy, Gravitational Force, Ideal Gas Law, Impermanent Loss, Price Impact, Constant Product, Value at Risk, Liquidation Price, Portfolio Std Dev). No domain shows a consistent HypatiaX advantage.",
+    "equations_included": [
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth"
+    ],
+    "H_far_r2_vector": [
+      1.0,
+      0.9924457881175066,
+      0.999556332019296
+    ],
+    "P_far_r2_vector": [
+      0.9999084249445696,
+      0.9996061626553614,
+      0.9996917760820492
+    ],
+    "subdomain_breakdown": {
+      "Biology": {
+        "n": 3,
+        "h_wins": 0,
+        "ties": 3,
+        "p_wins": 0,
+        "mean_delta": -0.0024014145150591895,
+        "equations": [
+          "Allometric Scaling",
+          "Michaelis-Menten",
+          "Logistic Growth"
+        ]
+      }
+    },
+    "driving_domains": [],
+    "p_dominant_domains": []
+  }
+}
