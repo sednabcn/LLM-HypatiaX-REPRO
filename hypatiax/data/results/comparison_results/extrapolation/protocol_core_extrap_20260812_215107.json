@@ -132,26 +132,17 @@
           "PureLLM Baseline (core)": 0.9970353577837653,
           "ImprovedNN (core)": 0.9970071911965024,
           "EnhancedHybridSystemDeFi (core)": 0.999999776688155,
-          "HybridSystemLLMNN all-domains (core)": 0.9999997516077579,
           "SymbolicEngineWithLLM (tools)": 0.9972994809258371,
           "HybridDiscoverySystem v50_2 (tools)": 0.9965441756716795
         },
         "rankings": {
           "EnhancedHybridSystemDeFi (core)": 1,
-          "HybridSystemLLMNN all-domains (core)": 2,
-          "PureLLM Baseline (core)": 3,
-          "ImprovedNN (core)": 4,
-          "SymbolicEngineWithLLM (tools)": 5,
-          "HybridDiscoverySystem v50_2 (tools)": 6
+          "PureLLM Baseline (core)": 2,
+          "ImprovedNN (core)": 3,
+          "SymbolicEngineWithLLM (tools)": 4,
+          "HybridDiscoverySystem v50_2 (tools)": 5
         },
         "advantages": [
-          {
-            "method": "HybridSystemLLMNN all-domains (core)",
-            "diff": 2.5080397092480666e-08,
-            "pct": 2.508040332225828e-06,
-            "provenance_status": "unverified_no_formula",
-            "exclude_from_reported_results": true
-          },
           {
             "method": "SymbolicEngineWithLLM (tools)",
             "diff": 0.0027002957623178947,
@@ -180,7 +171,11 @@
           "range": 0.40320788949478903,
           "max": 0.3989619521545335,
           "denom": 0.04034599185172144
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "EnhancedHybridSystemDeFi (core)"
       },
       "winner": "EnhancedHybridSystemDeFi (core)",
       "timestamp": "2026-08-12T21:51:07.651624",

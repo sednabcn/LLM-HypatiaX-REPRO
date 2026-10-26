@@ -119,25 +119,16 @@
         "scores": {
           "PureLLM Baseline (core)": 1.0,
           "ImprovedNN (core)": 0.9999660216427276,
-          "HybridSystemLLMNN all-domains (core)": 1.0,
           "SymbolicEngineWithLLM (tools)": 1.0,
           "HybridDiscoverySystem v50_2 (tools)": 0.9997097867135176
         },
         "rankings": {
           "PureLLM Baseline (core)": 1,
-          "HybridSystemLLMNN all-domains (core)": 2,
-          "ImprovedNN (core)": 3,
-          "SymbolicEngineWithLLM (tools)": 4,
-          "HybridDiscoverySystem v50_2 (tools)": 5
+          "ImprovedNN (core)": 2,
+          "SymbolicEngineWithLLM (tools)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4
         },
         "advantages": [
-          {
-            "method": "HybridSystemLLMNN all-domains (core)",
-            "diff": 0.0,
-            "pct": 0.0,
-            "provenance_status": "unverified_no_formula",
-            "exclude_from_reported_results": true
-          },
           {
             "method": "SymbolicEngineWithLLM (tools)",
             "diff": 0.0,
@@ -161,7 +152,11 @@
           "range": 9384.53179023831,
           "max": 9384.666360418903,
           "denom": 2211.2127251783863
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "PureLLM Baseline (core)"
       },
       "winner": "PureLLM Baseline (core)",
       "timestamp": "2026-08-12T09:23:36.152372"
@@ -244,25 +239,16 @@
         "scores": {
           "PureLLM Baseline (core)": 1.0,
           "ImprovedNN (core)": 0.999968272110998,
-          "HybridSystemLLMNN all-domains (core)": 1.0,
           "SymbolicEngineWithLLM (tools)": 0.9999999999994662,
           "HybridDiscoverySystem v50_2 (tools)": 0.9999999999996328
         },
         "rankings": {
           "PureLLM Baseline (core)": 1,
-          "HybridSystemLLMNN all-domains (core)": 2,
-          "ImprovedNN (core)": 3,
-          "SymbolicEngineWithLLM (tools)": 4,
-          "HybridDiscoverySystem v50_2 (tools)": 5
+          "ImprovedNN (core)": 2,
+          "SymbolicEngineWithLLM (tools)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4
         },
         "advantages": [
-          {
-            "method": "HybridSystemLLMNN all-domains (core)",
-            "diff": 0.0,
-            "pct": 0.0,
-            "provenance_status": "unverified_no_formula",
-            "exclude_from_reported_results": true
-          },
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
             "diff": 3.6715075424353927e-13,
@@ -286,7 +272,11 @@
           "range": 96427.42396938158,
           "max": 96471.4373399516,
           "denom": 21839.99657894481
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "PureLLM Baseline (core)"
       },
       "winner": "PureLLM Baseline (core)",
       "timestamp": "2026-08-12T09:25:20.952201"
@@ -369,25 +359,16 @@
         "scores": {
           "PureLLM Baseline (core)": 1.0,
           "ImprovedNN (core)": 0.9999658984500134,
-          "HybridSystemLLMNN all-domains (core)": 1.0,
           "SymbolicEngineWithLLM (tools)": 1.0,
           "HybridDiscoverySystem v50_2 (tools)": 1.0
         },
         "rankings": {
           "PureLLM Baseline (core)": 1,
-          "HybridSystemLLMNN all-domains (core)": 2,
-          "SymbolicEngineWithLLM (tools)": 3,
-          "HybridDiscoverySystem v50_2 (tools)": 4,
-          "ImprovedNN (core)": 5
+          "SymbolicEngineWithLLM (tools)": 2,
+          "HybridDiscoverySystem v50_2 (tools)": 3,
+          "ImprovedNN (core)": 4
         },
         "advantages": [
-          {
-            "method": "HybridSystemLLMNN all-domains (core)",
-            "diff": 0.0,
-            "pct": 0.0,
-            "provenance_status": "unverified_no_formula",
-            "exclude_from_reported_results": true
-          },
           {
             "method": "SymbolicEngineWithLLM (tools)",
             "diff": 0.0,
@@ -411,7 +392,11 @@
           "range": 357.4483780481229,
           "max": 185.0862631691666,
           "denom": 70.76931265845222
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "PureLLM Baseline (core)"
       },
       "winner": "PureLLM Baseline (core)",
       "timestamp": "2026-08-12T09:27:01.986768"

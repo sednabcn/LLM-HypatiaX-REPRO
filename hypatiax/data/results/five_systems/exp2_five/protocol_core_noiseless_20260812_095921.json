@@ -115,34 +115,27 @@
         }
       },
       "comparison": {
-        "winner": "HybridSystemLLMNN all-domains (core)",
+        "winner": "ImprovedNN (core)",
         "scores": {
           "ImprovedNN (core)": 0.9997778855424325,
-          "HybridSystemLLMNN all-domains (core)": 0.9999856777229931,
           "SymbolicEngineWithLLM (tools)": 0.9999999999999979,
           "HybridDiscoverySystem v50_2 (tools)": 1.0
         },
         "rankings": {
-          "HybridSystemLLMNN all-domains (core)": 1,
-          "ImprovedNN (core)": 2,
-          "SymbolicEngineWithLLM (tools)": 3,
-          "HybridDiscoverySystem v50_2 (tools)": 4
+          "ImprovedNN (core)": 1,
+          "SymbolicEngineWithLLM (tools)": 2,
+          "HybridDiscoverySystem v50_2 (tools)": 3
         },
         "advantages": [
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
-            "diff": -1.4322277006928452e-05,
-            "pct": -0.0014322277006928452
+            "diff": -0.00022211445756747938,
+            "pct": -0.02221144575674794
           },
           {
             "method": "SymbolicEngineWithLLM (tools)",
-            "diff": -1.4322277004819028e-05,
-            "pct": -0.0014322277004819059
-          },
-          {
-            "method": "ImprovedNN (core)",
-            "diff": 0.00020779218056055093,
-            "pct": 0.020783834446169276
+            "diff": -0.00022211445756536996,
+            "pct": -0.02221144575653704
           }
         ],
         "duplicates": {},
@@ -152,9 +145,13 @@
           "range": 7.1274596359795765,
           "max": 7.351115665052994,
           "denom": 1.2224464367574954
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "HybridSystemLLMNN all-domains (core)"
       },
-      "winner": "HybridSystemLLMNN all-domains (core)",
+      "winner": "ImprovedNN (core)",
       "timestamp": "2026-08-12T09:55:08.844571"
     },
     {
@@ -235,16 +232,14 @@
         "scores": {
           "PureLLM Baseline (core)": 1.0,
           "ImprovedNN (core)": 0.9999808092846662,
-          "HybridSystemLLMNN all-domains (core)": 0.9999992404918451,
           "SymbolicEngineWithLLM (tools)": 1.0,
           "HybridDiscoverySystem v50_2 (tools)": 1.0
         },
         "rankings": {
           "PureLLM Baseline (core)": 1,
-          "HybridSystemLLMNN all-domains (core)": 2,
-          "ImprovedNN (core)": 3,
-          "SymbolicEngineWithLLM (tools)": 4,
-          "HybridDiscoverySystem v50_2 (tools)": 5
+          "ImprovedNN (core)": 2,
+          "SymbolicEngineWithLLM (tools)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4
         },
         "advantages": [
           {
@@ -256,13 +251,6 @@
             "method": "HybridDiscoverySystem v50_2 (tools)",
             "diff": 0.0,
             "pct": 0.0
-          },
-          {
-            "method": "HybridSystemLLMNN all-domains (core)",
-            "diff": 7.595081549238714e-07,
-            "pct": 7.595087317769469e-05,
-            "provenance_status": "unverified_no_formula",
-            "exclude_from_reported_results": true
           },
           {
             "method": "ImprovedNN (core)",
@@ -277,7 +265,11 @@
           "range": 2.0745825038244607,
           "max": 2.2054084726055176,
           "denom": 0.4841460666276206
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "PureLLM Baseline (core)"
       },
       "winner": "PureLLM Baseline (core)",
       "timestamp": "2026-08-12T09:57:20.017896"
@@ -356,41 +348,34 @@
         }
       },
       "comparison": {
-        "winner": "HybridSystemLLMNN all-domains (core)",
+        "winner": "ImprovedNN (core)",
         "scores": {
           "PureLLM Baseline (core)": 0.9997982907888391,
           "ImprovedNN (core)": 0.9998424788185872,
-          "HybridSystemLLMNN all-domains (core)": 0.9999999841394351,
           "SymbolicEngineWithLLM (tools)": 0.9999999999999929,
           "HybridDiscoverySystem v50_2 (tools)": 0.9999999999998143
         },
         "rankings": {
-          "HybridSystemLLMNN all-domains (core)": 1,
-          "ImprovedNN (core)": 2,
-          "PureLLM Baseline (core)": 3,
-          "SymbolicEngineWithLLM (tools)": 4,
-          "HybridDiscoverySystem v50_2 (tools)": 5
+          "ImprovedNN (core)": 1,
+          "PureLLM Baseline (core)": 2,
+          "SymbolicEngineWithLLM (tools)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4
         },
         "advantages": [
           {
             "method": "SymbolicEngineWithLLM (tools)",
-            "diff": -1.5860557756042226e-08,
-            "pct": -1.5860557756042338e-06
+            "diff": -0.00015752118140566207,
+            "pct": -0.015752118140566318
           },
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
-            "diff": -1.5860379121157564e-08,
-            "pct": -1.586037912116051e-06
-          },
-          {
-            "method": "ImprovedNN (core)",
-            "diff": 0.00015750532084790603,
-            "pct": 0.015753013518090782
+            "diff": -0.00015752118122702718,
+            "pct": -0.015752118122705643
           },
           {
             "method": "PureLLM Baseline (core)",
-            "diff": 0.00020169335059605498,
-            "pct": 0.020173404221057355
+            "diff": 4.418802974814895e-05,
+            "pct": 0.004419694467899587
           }
         ],
         "duplicates": {},
@@ -400,9 +385,13 @@
           "range": 0.34504715654432017,
           "max": 0.34917347027033857,
           "denom": 0.03919282106784838
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "HybridSystemLLMNN all-domains (core)"
       },
-      "winner": "HybridSystemLLMNN all-domains (core)",
+      "winner": "ImprovedNN (core)",
       "timestamp": "2026-08-12T09:59:21.218537"
     }
   ]
