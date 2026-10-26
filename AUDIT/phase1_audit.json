@@ -2,10 +2,10 @@
   "rollup": {
     "Per-row provenance (llm_called, path, formula)": "Closed",
     "Disable hardcoded-formula bypass": "Closed",
-    "M4 missing formula output": "Unverified",
+    "M4 missing formula output": "Closed",
     "Evaluator guard and R2 policy": "Unverified",
     "Noise-sweep check": "Closed",
-    "Quarantine of unresolved results": "Closed"
+    "Quarantine of unresolved results": "Partial"
   },
   "checks": [
     {
@@ -172,9 +172,9 @@
     },
     {
       "item": 3,
-      "check": "M4 stored output",
-      "status": "MANUAL",
-      "detail": "rerun HybridSystemLLMNN or downgrade stored M4 results to exploratory"
+      "check": "stored M4 rows without a formula are flagged or rerun",
+      "status": "PASS",
+      "detail": "none unflagged"
     },
     {
       "item": 5,
@@ -257,8 +257,8 @@
     {
       "item": 6,
       "check": "contaminated result files outside quarantine",
-      "status": "PASS",
-      "detail": "none"
+      "status": "FAIL",
+      "detail": "8 file(s): run scripts/quarantine_contaminated.py (dry run), then --apply or regenerate"
     },
     {
       "item": 6,

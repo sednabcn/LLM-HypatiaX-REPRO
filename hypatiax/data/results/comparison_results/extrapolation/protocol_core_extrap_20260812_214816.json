@@ -100,7 +100,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -152,7 +154,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 6.658514917212699e-08,
-            "pct": 6.658517080121902e-06
+            "pct": 6.658517080121902e-06,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "SymbolicEngineWithLLM (tools)",
@@ -281,7 +285,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -333,7 +339,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 3.3149670786158936e-08,
-            "pct": 3.314967715842683e-06
+            "pct": 3.314967715842683e-06,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "SymbolicEngineWithLLM (tools)",

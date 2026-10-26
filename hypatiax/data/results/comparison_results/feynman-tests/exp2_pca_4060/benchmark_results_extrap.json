@@ -69,7 +69,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Michaelis-Menten enzyme kinetics \u2014 cross-benchmark consistency check",
@@ -177,7 +179,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Logistic growth rate \u2014 cross-benchmark consistency check",
@@ -285,7 +289,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Allometric scaling law (metabolic rate vs mass)",
@@ -393,7 +399,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Arrhenius rate constant (Feynman variant) \u2014 cross-benchmark consistency check",
@@ -501,7 +509,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Henderson-Hasselbalch equation for buffer pH",
@@ -609,7 +619,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Nernst equation for electrode potential \u2014 cross-benchmark consistency check",
@@ -717,7 +729,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Clausius-Mossotti: effective field in dielectric",
@@ -825,7 +839,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Dielectric polarisation: P = n * alpha * E (dilute limit)",
@@ -933,7 +949,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Lorentz force on moving charge in magnetic field: F = qvB",
@@ -1041,7 +1059,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ohm's law: voltage as product of current and resistance",
@@ -1149,7 +1169,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Energy stored in a capacitor: E = 0.5 * C * V^2",
@@ -1257,7 +1279,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb force between two point charges (1D, simplified)",
@@ -1365,7 +1389,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb's law: electric force between charges",
@@ -1473,7 +1499,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Curie's law for magnetic susceptibility: chi = C/T",
@@ -1581,7 +1609,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Newton's gravitational force between two masses",
@@ -1689,7 +1719,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Kinetic energy (classical): KE = 0.5 * m * v\u00b2",
@@ -1797,7 +1829,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Reduced mass of a two-body system",
@@ -1905,7 +1939,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Total mechanical energy: spring potential + kinetic",
@@ -2013,7 +2049,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Snell's law: refracted angle from incident angle and refractive indices",
@@ -2121,7 +2159,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Double-slit wave interference intensity",
@@ -2229,7 +2269,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Gaussian/normal distribution probability density",
@@ -2337,7 +2379,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Photon energy: E = h * f (Planck relation)",
@@ -2445,7 +2489,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Zeeman energy: electron spin in magnetic field",
@@ -2553,7 +2599,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Bose-Einstein occupation number for bosons",
@@ -2661,7 +2709,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fermi-Dirac occupation number for fermions",
@@ -2769,7 +2819,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Rabi frequency of two-level atom in magnetic field",
@@ -2877,7 +2929,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Planck blackbody spectral radiance (dimensionless: x=hf/kT)",
@@ -2985,7 +3039,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fourier's law of heat conduction: heat flux across material",
@@ -3093,7 +3149,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Stefan-Boltzmann law: blackbody radiated power",
@@ -3201,7 +3259,9 @@
     "extrap_n_train": null,
     "extrap_n_test": null,
     "extrap_x_train_max": null,
-    "extrap_far_ceiling": null
+    "extrap_far_ceiling": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ideal gas law: pressure from moles, temperature, volume",

@@ -97,7 +97,9 @@
           "metadata": {
             "decision": "nn",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -157,7 +159,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 1.2825468426957976e-05,
-            "pct": 0.0012825652119500424
+            "pct": 0.0012825652119500424,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "ImprovedNN (core)",
@@ -232,7 +236,9 @@
           "metadata": {
             "decision": "nn",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -299,7 +305,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 7.595081549238714e-07,
-            "pct": 7.595087317769469e-05
+            "pct": 7.595087317769469e-05,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "ImprovedNN (core)",
@@ -374,7 +382,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -436,7 +446,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 9.790247390562001e-09,
-            "pct": 9.790247545840856e-07
+            "pct": 9.790247545840856e-07,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "ImprovedNN (core)",

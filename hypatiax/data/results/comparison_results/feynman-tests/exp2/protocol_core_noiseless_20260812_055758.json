@@ -82,7 +82,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",

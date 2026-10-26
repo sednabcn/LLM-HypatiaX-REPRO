@@ -78,7 +78,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -130,7 +132,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 0.0,
-            "pct": 0.0
+            "pct": 0.0,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "SymbolicEngineWithLLM (tools)",

@@ -45,7 +45,9 @@
     "runtime": 2.2992236614227295,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Michaelis-Menten enzyme kinetics \u2014 cross-benchmark consistency check",
@@ -117,7 +119,9 @@
     "runtime": 1.7919714450836182,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Logistic growth rate \u2014 cross-benchmark consistency check",
@@ -189,7 +193,9 @@
     "runtime": 1.7715590000152588,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Allometric scaling law (metabolic rate vs mass)",
@@ -261,7 +267,9 @@
     "runtime": 9.905632019042969,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Arrhenius rate constant (Feynman variant) \u2014 cross-benchmark consistency check",
@@ -333,7 +341,9 @@
     "runtime": 11.198058128356934,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Henderson-Hasselbalch equation for buffer pH",
@@ -405,7 +415,9 @@
     "runtime": 0.8225007057189941,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Nernst equation for electrode potential \u2014 cross-benchmark consistency check",
@@ -477,7 +489,9 @@
     "runtime": 0.951568603515625,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Clausius-Mossotti: effective field in dielectric",
@@ -549,7 +563,9 @@
     "runtime": 10.915176630020142,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Dielectric polarisation: P = n * alpha * E (dilute limit)",
@@ -621,7 +637,9 @@
     "runtime": 0.9447026252746582,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Lorentz force on moving charge in magnetic field: F = qvB",
@@ -693,7 +711,9 @@
     "runtime": 7.568163633346558,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ohm's law: voltage as product of current and resistance",
@@ -765,7 +785,9 @@
     "runtime": 8.028680562973022,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Energy stored in a capacitor: E = 0.5 * C * V^2",
@@ -837,7 +859,9 @@
     "runtime": 10.850075721740723,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb force between two point charges (1D, simplified)",
@@ -909,7 +933,9 @@
     "runtime": 10.879055261611938,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb's law: electric force between charges",
@@ -981,7 +1007,9 @@
     "runtime": 10.997668266296387,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Curie's law for magnetic susceptibility: chi = C/T",
@@ -1053,7 +1081,9 @@
     "runtime": 8.98117208480835,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Newton's gravitational force between two masses",
@@ -1125,7 +1155,9 @@
     "runtime": 9.011921167373657,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Kinetic energy (classical): KE = 0.5 * m * v\u00b2",
@@ -1197,7 +1229,9 @@
     "runtime": 9.744033098220825,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Reduced mass of a two-body system",
@@ -1269,7 +1303,9 @@
     "runtime": 8.465257167816162,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Total mechanical energy: spring potential + kinetic",
@@ -1341,7 +1377,9 @@
     "runtime": 11.147318124771118,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Snell's law: refracted angle from incident angle and refractive indices",
@@ -1413,7 +1451,9 @@
     "runtime": 13.390321731567383,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Double-slit wave interference intensity",
@@ -1485,7 +1525,9 @@
     "runtime": 1.1750867366790771,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Gaussian/normal distribution probability density",
@@ -1557,7 +1599,9 @@
     "runtime": 9.799315452575684,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Photon energy: E = h * f (Planck relation)",
@@ -1629,7 +1673,9 @@
     "runtime": 1.314009428024292,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Zeeman energy: electron spin in magnetic field",
@@ -1701,7 +1747,9 @@
     "runtime": 0.8916158676147461,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Bose-Einstein occupation number for bosons",
@@ -1773,7 +1821,9 @@
     "runtime": 11.585479974746704,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fermi-Dirac occupation number for fermions",
@@ -1845,7 +1895,9 @@
     "runtime": 11.02199912071228,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Rabi frequency of two-level atom in magnetic field",
@@ -1917,7 +1969,9 @@
     "runtime": 1.8518953323364258,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Planck blackbody spectral radiance (dimensionless: x=hf/kT)",
@@ -1989,7 +2043,9 @@
     "runtime": 1.1357579231262207,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fourier's law of heat conduction: heat flux across material",
@@ -2061,7 +2117,9 @@
     "runtime": 8.42642855644226,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Stefan-Boltzmann law: blackbody radiated power",
@@ -2133,7 +2191,9 @@
     "runtime": 8.849363088607788,
     "success": true,
     "extrap_r2_far": null,
-    "extrap_rmse_far": null
+    "extrap_rmse_far": null,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ideal gas law: pressure from moles, temperature, volume",

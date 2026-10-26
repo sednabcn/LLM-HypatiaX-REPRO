@@ -69,7 +69,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 80.38684048222153,
-    "extrap_far_ceiling": 239.85720244536884
+    "extrap_far_ceiling": 239.85720244536884,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Michaelis-Menten enzyme kinetics \u2014 cross-benchmark consistency check",
@@ -177,7 +179,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 777.5535767061696,
-    "extrap_far_ceiling": 2311.5024819965993
+    "extrap_far_ceiling": 2311.5024819965993,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Logistic growth rate \u2014 cross-benchmark consistency check",
@@ -285,7 +289,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 795.1722023625362,
-    "extrap_far_ceiling": 2380.235019450263
+    "extrap_far_ceiling": 2380.235019450263,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Allometric scaling law (metabolic rate vs mass)",
@@ -393,7 +399,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 441.10162306973433,
-    "extrap_far_ceiling": 919.9915989350416
+    "extrap_far_ceiling": 919.9915989350416,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Arrhenius rate constant (Feynman variant) \u2014 cross-benchmark consistency check",
@@ -501,7 +509,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 1.634927252814125,
-    "extrap_far_ceiling": 4.882329722524716
+    "extrap_far_ceiling": 4.882329722524716,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Henderson-Hasselbalch equation for buffer pH",
@@ -609,7 +619,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 353.3672076899114,
-    "extrap_far_ceiling": 512.9971996450138
+    "extrap_far_ceiling": 512.9971996450138,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Nernst equation for electrode potential \u2014 cross-benchmark consistency check",
@@ -717,7 +729,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.25268148440212,
-    "extrap_far_ceiling": 22.459750768406234
+    "extrap_far_ceiling": 22.459750768406234,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Clausius-Mossotti: effective field in dielectric",
@@ -825,7 +839,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.165481927344709e+24,
-    "extrap_far_ceiling": 2.448392411672106e+25
+    "extrap_far_ceiling": 2.448392411672106e+25,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Dielectric polarisation: P = n * alpha * E (dilute limit)",
@@ -933,7 +949,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7.970174978367477e-18,
-    "extrap_far_ceiling": 2.367800469725486e-17
+    "extrap_far_ceiling": 2.367800469725486e-17,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Lorentz force on moving charge in magnetic field: F = qvB",
@@ -1041,7 +1059,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7.734071722462783,
-    "extrap_far_ceiling": 23.148623716522767
+    "extrap_far_ceiling": 23.148623716522767,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ohm's law: voltage as product of current and resistance",
@@ -1149,7 +1169,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 0.0008092875502988882,
-    "extrap_far_ceiling": 0.002426904602053875
+    "extrap_far_ceiling": 0.002426904602053875,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Energy stored in a capacitor: E = 0.5 * C * V^2",
@@ -1257,7 +1279,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.038684048222152e-07,
-    "extrap_far_ceiling": 2.398572024453688e-06
+    "extrap_far_ceiling": 2.398572024453688e-06,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb force between two point charges (1D, simplified)",
@@ -1365,7 +1389,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 0.0008167298118398549,
-    "extrap_far_ceiling": 0.0024469584888453227
+    "extrap_far_ceiling": 0.0024469584888453227,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Coulomb's law: electric force between charges",
@@ -1473,7 +1499,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.038684048222153,
-    "extrap_far_ceiling": 23.985720244536886
+    "extrap_far_ceiling": 23.985720244536886,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Curie's law for magnetic susceptibility: chi = C/T",
@@ -1581,7 +1609,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.056353561301233,
-    "extrap_far_ceiling": 23.85972276485637
+    "extrap_far_ceiling": 23.85972276485637,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Newton's gravitational force between two masses",
@@ -1689,7 +1719,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 8.183808946160722,
-    "extrap_far_ceiling": 24.339228267836525
+    "extrap_far_ceiling": 24.339228267836525,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Kinetic energy (classical): KE = 0.5 * m * v\u00b2",
@@ -1797,7 +1829,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7.970174978367476,
-    "extrap_far_ceiling": 23.678004697254856
+    "extrap_far_ceiling": 23.678004697254856,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Reduced mass of a two-body system",
@@ -1905,7 +1939,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 3.9802302981380655,
-    "extrap_far_ceiling": 10.917472419677212
+    "extrap_far_ceiling": 10.917472419677212,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Total mechanical energy: spring potential + kinetic",
@@ -2013,7 +2049,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 1.8036720768991144,
-    "extrap_far_ceiling": 3.3999719964501383
+    "extrap_far_ceiling": 3.3999719964501383,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Snell's law: refracted angle from incident angle and refractive indices",
@@ -2121,7 +2159,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 4.101077155170459,
-    "extrap_far_ceiling": 12.097193789131211
+    "extrap_far_ceiling": 12.097193789131211,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Double-slit wave interference intensity",
@@ -2229,7 +2269,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 1.822032461394687,
-    "extrap_far_ceiling": 11.399831978700831
+    "extrap_far_ceiling": 11.399831978700831,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Gaussian/normal distribution probability density",
@@ -2337,7 +2379,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 803868404822215.4,
-    "extrap_far_ceiling": 2398572024453688.5
+    "extrap_far_ceiling": 2398572024453688.5,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Photon energy: E = h * f (Planck relation)",
@@ -2445,7 +2489,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 0.31654635819805277,
-    "extrap_far_ceiling": 1.9484068957410634
+    "extrap_far_ceiling": 1.9484068957410634,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Zeeman energy: electron spin in magnetic field",
@@ -2553,7 +2599,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7951722023625.362,
-    "extrap_far_ceiling": 23802350194502.63
+    "extrap_far_ceiling": 23802350194502.63,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Bose-Einstein occupation number for bosons",
@@ -2661,7 +2709,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 0.2733845106973479,
-    "extrap_far_ceiling": 1.8149938710393805
+    "extrap_far_ceiling": 1.8149938710393805,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fermi-Dirac occupation number for fermions",
@@ -2769,7 +2819,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 9.809287359586247e-24,
-    "extrap_far_ceiling": 1.1426906028959904e-23
+    "extrap_far_ceiling": 1.1426906028959904e-23,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Rabi frequency of two-level atom in magnetic field",
@@ -2877,7 +2929,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 12.86071650961684,
-    "extrap_far_ceiling": 38.38555222323771
+    "extrap_far_ceiling": 38.38555222323771,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Planck blackbody spectral radiance (dimensionless: x=hf/kT)",
@@ -2985,7 +3039,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 163.32761700379075,
-    "extrap_far_ceiling": 489.5365384586386
+    "extrap_far_ceiling": 489.5365384586386,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Fourier's law of heat conduction: heat flux across material",
@@ -3093,7 +3149,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7.951722023625361,
-    "extrap_far_ceiling": 23.80235019450263
+    "extrap_far_ceiling": 23.80235019450263,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Stefan-Boltzmann law: blackbody radiated power",
@@ -3201,7 +3259,9 @@
     "extrap_n_train": 160,
     "extrap_n_test": 40,
     "extrap_x_train_max": 7.7565066559037446,
-    "extrap_far_ceiling": 23.018439323289865
+    "extrap_far_ceiling": 23.018439323289865,
+    "provenance_status": "unverified_no_formula",
+    "exclude_from_reported_results": true
   },
   {
     "test": "Ideal gas law: pressure from moles, temperature, volume",

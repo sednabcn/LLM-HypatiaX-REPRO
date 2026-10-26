@@ -82,7 +82,9 @@
           "metadata": {
             "decision": "nn",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -196,7 +198,9 @@
           "metadata": {
             "decision": "nn",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -256,7 +260,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 7.595081549238714e-07,
-            "pct": 7.595087317769469e-05
+            "pct": 7.595087317769469e-05,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "ImprovedNN (core)",
@@ -317,7 +323,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",

@@ -112,7 +112,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -164,7 +166,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 3.86679361863429e-08,
-            "pct": 3.8667943080472815e-06
+            "pct": 3.8667943080472815e-06,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "SymbolicEngineWithLLM (tools)",
@@ -293,7 +297,9 @@
           "metadata": {
             "decision": "llm",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -345,7 +351,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 3.2025202489904814e-08,
-            "pct": 3.2025210525395066e-06
+            "pct": 3.2025210525395066e-06,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
@@ -474,7 +482,9 @@
           "metadata": {
             "decision": "ensemble",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -655,7 +665,9 @@
           "metadata": {
             "decision": "ensemble",
             "nn_applied": true
-          }
+          },
+          "provenance_status": "unverified_no_formula",
+          "exclude_from_reported_results": true
         },
         "SymbolicEngineWithLLM (tools)": {
           "method": "SymbolicEngineWithLLM (tools)",
@@ -707,7 +719,9 @@
           {
             "method": "HybridSystemLLMNN all-domains (core)",
             "diff": 2.741323357202674e-08,
-            "pct": 2.741323672861827e-06
+            "pct": 2.741323672861827e-06,
+            "provenance_status": "unverified_no_formula",
+            "exclude_from_reported_results": true
           },
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
