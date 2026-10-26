@@ -220,17 +220,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1116.1541638374329
+      "wall_secs": 1116.419954776764
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 128.20522952079773
+      "wall_secs": 124.19676518440247
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 122.78663539886475
+      "wall_secs": 118.9563148021698
     }
   },
   "13": {
@@ -238,17 +238,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.506083726883
+      "wall_secs": 1101.4682109355927
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 138.44581031799316
+      "wall_secs": 134.35851502418518
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 133.94880652427673
+      "wall_secs": 129.6841275691986
     }
   },
   "14": {
@@ -256,17 +256,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.312744140625
+      "wall_secs": 1101.3670279979706
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 5.199223518371582
+      "wall_secs": 4.530595541000366
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 184.0932879447937
+      "wall_secs": 178.48938989639282
     }
   }
 }
