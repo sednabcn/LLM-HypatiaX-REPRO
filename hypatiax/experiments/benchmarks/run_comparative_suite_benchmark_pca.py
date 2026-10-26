@@ -2170,24 +2170,16 @@ class HybridDeFiMethod(BaseMethod):
             # r2==0.0: internal _safe_r2 may have misfired (tiny-scale eqs).
             # Reconstruct from y_pred or rmse algebraically.
             if r2_val == 0.0:
-                y_pred_arr = eval_.get("y_pred") or result.get("y_pred")
+                y_pred_arr = eval_.get("y_pred")  # PHASE1-FIX-P10a: explicit None test, not truthiness
+                if y_pred_arr is None:
+                    y_pred_arr = result.get("y_pred")
                 if y_pred_arr is not None:
                     y_pred_arr = np.asarray(y_pred_arr).flatten()
                     r2_val   = self._safe_r2(y, y_pred_arr)
                     rmse_val = self._safe_rmse(y, y_pred_arr)
-                elif np.isfinite(rmse_val) and rmse_val >= 0:
-                    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
-                    _scale = float(np.max(np.abs(y)) ** 2) * len(y)
-                    _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-                    if ss_tot < _tol:
-                        ss_res = rmse_val ** 2 * len(y)
-                        r2_val = 1.0 if ss_res < _tol else float("-inf")
-                    else:
-                        ss_res = rmse_val ** 2 * len(y)
-                        r2_val = float(1.0 - ss_res / ss_tot)
                 else:
                     return self._unavailable(
-                        "r2=0 and no y_pred or rmse: formula evaluation failed silently"
+                        "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)"
                     )
 
             # ── Build formula string ──────────────────────────────────────
@@ -2634,23 +2626,10 @@ class HybridAllDomainsMethod(BaseMethod):
 
                 # Strategy 3b — algebraic reconstruction fallback for normal-scale eqs
                 if y_pred_llm is None:
-                    try:
-                        rng = np.random.default_rng(
-                            seed=int(abs(hash(description)) % (2**31)))
-                        y_mean   = float(np.mean(y))
-                        y_center = y - y_mean
-                        ss_tot   = float(np.sum(y_center ** 2))
-                        if ss_tot > 0:
-                            scale      = float(np.sqrt(max(r2v, 0.0)))
-                            y_pred_llm = y_mean + scale * y_center
-                            y_pred_llm = y_pred_llm + rng.normal(
-                                0, rmse * 0.01, size=len(y))
-                            _ypred_source = "algebraic_reconstruction"
-                            r2v  = self._safe_r2(y, y_pred_llm)
-                            rmse = self._safe_rmse(y, y_pred_llm)
-                            self._log(f"y_pred reconstructed algebraically R²={r2v:.4f}")
-                    except Exception as _rec_exc:
-                        self._log(f"algebraic reconstruction failed: {_rec_exc}")
+                    # PHASE1-FIX-P10c: removed. This branch FABRICATED y_pred from the reported R^2 plus noise and
+                    # then re-scored it as if it were the LLM's output. Without real predictions the row keeps
+                    # its reported values and the NN correction is skipped (see the y_pred source log below).
+                    self._log("y_pred unavailable: synthetic reconstruction disabled (Phase 1)")
             self._log(
                 f"y_pred source: {_ypred_source or 'NONE — NN correction will be skipped'}"
             )
@@ -2659,14 +2638,10 @@ class HybridAllDomainsMethod(BaseMethod):
             if r2v == 0.0 and y_pred_llm is not None:
                 r2v  = self._safe_r2(y, y_pred_llm)
                 rmse = self._safe_rmse(y, y_pred_llm)
-            elif r2v == 0.0 and np.isfinite(rmse) and rmse >= 0:
-                ss_tot = float(np.sum((y - np.mean(y)) ** 2))
-                _scale = float(np.max(np.abs(y)) ** 2) * len(y)
-                _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-                if ss_tot < _tol:
-                    r2v = 1.0 if rmse ** 2 * len(y) < _tol else float("-inf")
-                else:
-                    r2v = float(1.0 - (rmse ** 2 * len(y)) / ss_tot)
+            elif r2v == 0.0:
+                # PHASE1-FIX-P10d: rmse-algebra R^2 removed (absolute tolerance returned 1.0 on a constant
+                # target). Without y_pred the reported value is unverifiable: keep it, say so.
+                self._log("r2==0.0 with no y_pred: unverifiable, kept as reported")
 
             # ── Mandatory NN residual correction ─────────────────────────────
             # HybridSystemLLMNN internally delegates to PureLLMBaseline first.
@@ -3785,9 +3760,10 @@ class ProtocolBenchmarkSuite:
                         # Use the module-level _runner_eval_formula and compute R² inline.
                         _ypred = _runner_eval_formula(_formula, X_far, var_names)
                         if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
-                            _ss_res = float(np.sum((y_far - _ypred) ** 2))
-                            _ss_tot = float(np.sum((y_far - np.mean(y_far)) ** 2))
-                            _pca_r2[_mname] = float(1.0 - _ss_res / _ss_tot) if _ss_tot > 1e-12 * max(1.0, float(np.sum(y_far ** 2))) else None
+                            # PHASE1-FIX-P11: canonical R^2; degenerate target -> None (unscored), as before
+                            from hypatiax.core.r2_canonical import r2_checked as _r2c
+                            _v = _r2c(y_far, _ypred)[0]
+                            _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
                         else:
                             _pca_r2[_mname] = None
                     except Exception:

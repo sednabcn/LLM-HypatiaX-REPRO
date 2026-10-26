@@ -434,19 +434,12 @@ def train_neural_network(
         mae    = float(np.mean(np.abs(y - y_pred)))
         mse    = float(np.mean((y - y_pred) ** 2))
         ss_res = float(np.sum((y - y_pred) ** 2))
-        ss_tot = float(np.sum((y - np.mean(y)) ** 2))
-
-        # Relative threshold — scales with the target's magnitude, mirroring
-        # the exact fix already applied on the Pure LLM baseline side, so tiny-y
-        # equations (Photon ~1e-19, Zeeman ~1e-23) aren't misclassified as
-        # constant targets by an absolute 1e-10 floor. This keeps the docstring's
-        # claim of "consistent evaluation metrics with Pure LLM baseline" true.
-        _scale = float(np.max(np.abs(y)) ** 2) * len(y)
-        _tol   = 1e-10 * _scale if _scale > 0 else 1e-30
-        if ss_tot > _tol:
-            r2 = float(1.0 - ss_res / ss_tot)
-        else:
-            r2 = 1.0 if ss_res < _tol else float("-inf")
+        # PHASE1-FIX-P3b: canonical R^2; degenerate target keeps this evaluator's contract
+        # (exact match -> 1.0, mismatch -> -inf), identical to the Pure LLM baseline evaluator.
+        from hypatiax.core.r2_canonical import r2_checked as _r2_checked
+        r2, _r2_status = _r2_checked(y, y_pred)
+        if _r2_status == "degenerate_target":
+            r2 = 1.0 if bool(np.allclose(y_pred, y, rtol=1e-9, atol=1e-30)) else float("-inf")
 
         # =====================================================================
         # STEP 5 — Extrapolation analysis (if applicable)

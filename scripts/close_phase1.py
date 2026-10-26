@@ -570,6 +570,16 @@ def _v2d_apply(s: str) -> str:
     return s
 
 
+def _for_pca(fn, s):
+    """Run a v2 patch on the pca benchmark (same code; F_V2 is only used for error context)."""
+    global F_V2
+    old, F_V2 = F_V2, F_PCA
+    try:
+        return fn(s)
+    finally:
+        F_V2 = old
+
+
 PATCHES = [
     ("P1 metrics self-tests / >= / _REL_EPS", F_METRICS, _metrics_ok, _metrics_apply),
     ("P2 v50_2 _r2_np -> r2_checked", F_V50, _v50_r2_ok, _v50_r2_apply),
@@ -584,6 +594,9 @@ PATCHES = [
     ("P11 pca NN-correction scoring -> r2_checked", F_PCA, _v2b_ok, lambda s: _v2b_apply(s, F_PCA)),
     ("P10c v2 no synthetic y_pred reconstruction", F_V2, _v2c_ok, _v2c_apply),
     ("P10d v2 adapter rmse-algebra R2 removed", F_V2, _v2d_ok, _v2d_apply),
+    ("P11a pca rmse-algebra R2 fallback removed", F_PCA, _v2a_ok, lambda s: _for_pca(_v2a_apply, s)),
+    ("P11c pca no synthetic y_pred reconstruction", F_PCA, _v2c_ok, lambda s: _for_pca(_v2c_apply, s)),
+    ("P11d pca adapter rmse-algebra R2 removed", F_PCA, _v2d_ok, lambda s: _for_pca(_v2d_apply, s)),
 ]
 
 # --------------------------------------------------------------------------- P4 failed rows
@@ -807,6 +820,38 @@ def test_hardcoded_bypass_function_is_never_called():
     calls = [n for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Call)
              and getattr(n.func, "attr", getattr(n.func, "id", "")) == "_try_hardcoded_formula"]
     assert not calls, "hardcoded-formula bypass is being called"
+
+# ------------------------------------------------------------- repo hygiene / pca / legacy scorers
+def test_every_package_file_parses_and_has_no_conflict_markers():
+    bad = []
+    for p in PKG.rglob("*.py"):
+        t = p.read_text(encoding="utf-8", errors="replace")
+        if re.search(r"^(<<<<<<< |>>>>>>> )", t, re.M):
+            bad.append(f"{p.relative_to(ROOT)}: conflict marker")
+        try:
+            ast.parse(t)
+        except SyntaxError as e:
+            bad.append(f"{p.relative_to(ROOT)}: {e}")
+    assert not bad, "\\n".join(bad)
+
+
+def test_pca_benchmark_has_no_private_r2_or_fabricated_ypred():
+    src = (PKG / "experiments/benchmarks/run_comparative_suite_benchmark_pca.py").read_text()
+    names = {n.id for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Name)}
+    assert not {"ss_tot", "_ss_tot"} & names, "pca re-implements R^2"
+    assert '_ypred_source = "algebraic_reconstruction"' not in src, "pca fabricates y_pred"
+
+
+@pytest.mark.parametrize("rel", [
+    "tools/symbolic/symbolic_engine.py",
+    "experiments/benchmarks/exp3_nguyen12_consolidated.py",
+    "core/training/baseline_neural_network_defi_improved.py",
+])
+def test_legacy_scorers_use_canonical_r2(rel):
+    src = (PKG / rel).read_text()
+    names = {n.id for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Name)}
+    assert "ss_tot" not in names and "r2_canonical" in src
+
 '''
 
 
@@ -820,7 +865,7 @@ CHECKLIST = {
     6: "Quarantine of unresolved results",
 }
 PATCH_ITEM = {"P1": 4, "P2": 4, "P3": 4, "P6": 1, "P5+P7": 4, "P7": 4, "P9": 3,
-              "P10a": 4, "P10b": 4, "P10c": 1, "P10d": 4}
+              "P10a": 4, "P10b": 4, "P10c": 1, "P10d": 4, "P11": 4, "P11a": 4, "P11c": 1, "P11d": 4}
 Row = tuple  # (item, check, status, detail); status: PASS | FAIL | MANUAL | NOEVID
 
 
@@ -966,8 +1011,27 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
         add(4, "v2 sign-flip opt-in default", "MANUAL",
             "HYPATIAX_R2_SIGN_FLIP must be unset/0 for any reported run; the sweep JSON records run_flags")
 
+    # ---- repo hygiene: syntax + merge-conflict markers (a file that does not import cannot be audited)
+    broken, conflicts, fabricated = [], [], []
+    for p in PKG.rglob("*.py"):
+        if "__pycache__" in p.parts:
+            continue
+        t = safe_read(p) or ""
+        if re.search(r"^(<<<<<<< |>>>>>>> )", t, re.M):
+            conflicts.append(rel(p))
+        try:
+            ast.parse(t)
+        except SyntaxError:
+            broken.append(rel(p))
+        if "tests" not in p.parts and '_ypred_source = "algebraic_reconstruction"' in t:
+            fabricated.append(rel(p))
+    chk(4, "all hypatiax/*.py parse", not broken, ", ".join(broken) or "ok")
+    chk(4, "no committed merge-conflict markers", not conflicts, ", ".join(conflicts) or "none")
+    chk(1, "no code path fabricates y_pred (algebraic_reconstruction)", not fabricated,
+        ", ".join(fabricated) or "none")
+
     # ---- 6: stored rows produced by the removed fabricated-y_pred path
-    _skip = {".git", ".venv", "venv", "node_modules", "site-packages", "__pycache__"}
+    _skip = {".git", ".venv", "venv", "node_modules", "site-packages", "__pycache__", "AUDIT"}  # AUDIT/ names the check itself
     syn = []
     for p in ROOT.rglob("*"):
         if (p.suffix in {".json", ".csv", ".jsonl"} and p.is_file() and not (_skip & set(p.parts))

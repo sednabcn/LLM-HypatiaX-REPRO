@@ -2999,9 +2999,10 @@ class SymbolicTreeEngine:
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
     def _r2(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        ss_res = np.sum((y_true - y_pred) ** 2)
-        ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-        return float(1 - ss_res / ss_tot) if ss_tot != 0 else 0.0
+        # PHASE1-FIX: canonical R^2 (degenerate target -> NaN, non-finite pred -> -inf);
+        # the old `else 0.0` scored a constant target as a zero-skill model.
+        from hypatiax.core.r2_canonical import r2_checked
+        return float(r2_checked(y_true, y_pred)[0])
 
     # ------------------------------------------------------------------
 
