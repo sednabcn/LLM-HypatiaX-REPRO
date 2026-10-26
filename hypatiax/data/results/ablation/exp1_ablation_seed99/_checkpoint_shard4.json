@@ -1,4 +1,8 @@
 {
-  "completed": [],
-  "run_id_map": {}
+  "completed": [
+    "defi_amm"
+  ],
+  "run_id_map": {
+    "defi_amm": "exp1_ablation-4"
+  }
 }
