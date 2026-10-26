@@ -92,4 +92,5 @@ def test_prompt_withholds_name_and_worked_example(monkeypatch):
     monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")
     monkeypatch.setenv("HYPATIAX_DISABLE_PROMPT_HINTS", "0")
     legacy = eng._build_prompt("physics", ["m", "v"], "Kinetic Energy", {}, 3)
-    assert "Kinetic Energy" in legacy and "0.5 * m * v**2" in legacy
+    assert "Kinetic Energy" in legacy               # legacy mode restores the name ...
+    assert "0.5 * m * v**2" not in legacy           # ... but the worked example is a placeholder in EVERY mode
