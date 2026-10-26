@@ -1,0 +1,70 @@
+{
+  "n": 3,
+  "equations": [
+    "Kinetic Energy",
+    "Gravitational Force",
+    "Ideal Gas Law"
+  ],
+  "H_far": [
+    1.0,
+    1.0,
+    -24.391158593577675
+  ],
+  "N_far": [
+    0.9894505252627515,
+    -4.88629648658178,
+    -24.391158593577675
+  ],
+  "P_far": [
+    0.999985461510043,
+    -8.69585851909857,
+    0.9989025828902502
+  ],
+  "tests": {
+    "H_vs_P": {
+      "median_a": 1.0,
+      "median_b": 0.9989025828902502,
+      "wins": 1,
+      "ties": 1,
+      "losses": 1,
+      "U_greater": 5.5,
+      "p_greater": 0.41238904754125666,
+      "p_two_sided": 0.8247780950825133,
+      "rank_biserial_r": 0.22222222222222232,
+      "n_tied": 1,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.75
+    },
+    "N_vs_P": {
+      "median_a": -4.88629648658178,
+      "median_b": 0.9989025828902502,
+      "wins": 1,
+      "ties": 0,
+      "losses": 2,
+      "U_greater": 2.0,
+      "p_greater": 0.9,
+      "p_two_sided": 0.4,
+      "rank_biserial_r": -0.5555555555555556,
+      "n_tied": 0,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 2.0,
+      "wilcoxon_p_greater": 0.75
+    },
+    "H_vs_N": {
+      "median_a": 1.0,
+      "median_b": -4.88629648658178,
+      "wins": 2,
+      "ties": 1,
+      "losses": 0,
+      "U_greater": 6.5,
+      "p_greater": 0.2500921285353972,
+      "p_two_sided": 0.5001842570707944,
+      "rank_biserial_r": 0.4444444444444444,
+      "n_tied": 1,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 3.0,
+      "wilcoxon_p_greater": 0.25
+    }
+  }
+}

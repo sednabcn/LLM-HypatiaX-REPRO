@@ -1,4 +1,8 @@
 {
-  "completed": [],
-  "run_id_map": {}
+  "completed": [
+    "physics"
+  ],
+  "run_id_map": {
+    "physics": "exp1_ablation-3"
+  }
 }
