@@ -1,0 +1,69 @@
+{
+  "n": 3,
+  "equations": [
+    "Allometric Scaling",
+    "Michaelis-Menten",
+    "Logistic Growth"
+  ],
+  "H_far": [
+    1.0,
+    0.9998769594995431,
+    0.9969595938875969
+  ],
+  "N_far": [
+    0.9998953395276645,
+    0.9998769594995431,
+    0.9969344730960187
+  ],
+  "P_far": [
+    0.999802619068264,
+    0.37507041487539516,
+    0.9972441292388851
+  ],
+  "tests": {
+    "H_vs_P": {
+      "median_a": 0.9998769594995431,
+      "median_b": 0.9972441292388851,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5
+    },
+    "N_vs_P": {
+      "median_a": 0.9998769594995431,
+      "median_b": 0.9972441292388851,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5
+    },
+    "H_vs_N": {
+      "median_a": 0.9998769594995431,
+      "median_b": 0.9998769594995431,
+      "wins": 0,
+      "ties": 3,
+      "losses": 0,
+      "U_greater": 4.5,
+      "p_greater": 0.5902615116112394,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.0,
+      "n_tied": 3,
+      "tie_tol": 0.01,
+      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+    }
+  }
+}

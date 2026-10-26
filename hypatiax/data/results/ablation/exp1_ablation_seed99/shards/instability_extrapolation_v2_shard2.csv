@@ -1,0 +1,16 @@
+equation,domain,extrap_r2_near,extrap_r2_far,instability_index
+Arrhenius,Chemistry,,,
+Henderson-Hasselbalch,Chemistry,,,
+Rate Law,Chemistry,,,
+Allometric Scaling,Biology,1.0,1.0,0.0
+Michaelis-Menten,Biology,0.9995761694005434,0.9998769594995431,0.00030079009899974807
+Logistic Growth,Biology,0.9876094680330749,0.9969595938875969,0.009350125854521996
+Kinetic Energy,Physics,,,
+Gravitational Force,Physics,,,
+Ideal Gas Law,Physics,,,
+Impermanent Loss,DeFi AMM,,,
+Price Impact,DeFi AMM,,,
+Constant Product,DeFi AMM,,,
+Value at Risk,DeFi Risk,,,
+Liquidation Price,DeFi Risk,,,
+Portfolio Std Dev,DeFi Risk,,,
