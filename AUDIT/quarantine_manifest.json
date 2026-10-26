@@ -1,0 +1,570 @@
+{
+  "generated_utc": "2026-10-26T18:51:53Z",
+  "head": "6ebf31f",
+  "policy": "quarantined = exploratory only; not to be cited as paper results",
+  "quarantined": [
+    {
+      "path": "exploratory",
+      "n_files": 9,
+      "git": null,
+      "n_tracked_by_git": 0,
+      "reason": "see git.subject (the quarantine commit message); edit if more detail is needed",
+      "files": [
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_ablation_results.json",
+          "bytes": 5469,
+          "sha256": "2d475fb8633bf383cf3d6883c144f7a4da7bb5db8b76882ef1250edff4793949"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_ablation_table.tex",
+          "bytes": 2764,
+          "sha256": "4d8580c52ffd8b854c6d1d3847b8e8ee59b481e50f5dd6eb2c1ae467db8f95d2"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_instability_stats.json",
+          "bytes": 2803,
+          "sha256": "82778f4a51d8f92f87023f9b209ab1f4bcd8880531e020f6b80f5ae1ab6ef7b3"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_rf01_mannwhitney.json",
+          "bytes": 1864,
+          "sha256": "2c2dc01b4c00a04d9110acf7a5fbba227f05b82da2765d5083403cbddb4a9363"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_rf01_significant.tex",
+          "bytes": 1344,
+          "sha256": "b821b692f5c63cf34790f26d9d18707ca5fe411282204259aa305092f63b867d"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/exp1_rf01_subdomain.tex",
+          "bytes": 678,
+          "sha256": "1f4f639b4831b7fb20b785a57bc276bd7c11d1815fbed1ed491dbfc089ce0b3e"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/instability_extrapolation_v2.csv",
+          "bytes": 710,
+          "sha256": "9eb0f89d123e6a356862b172d9d8124ab65f4482b0115837064b2a8632239364"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/provenance_map_exp1.json",
+          "bytes": 2490,
+          "sha256": "3fb9edebc047a2bb14db72bd7c0015775c8437437ff2f36c4562c87031b0fc0d"
+        },
+        {
+          "path": "exploratory/run4_2026-10-24/wall_clock_flags.json",
+          "bytes": 4033,
+          "sha256": "5eec6840392374cc5d91f2b9a2b35859fe2dc10fcf3149b9abecec69d4fa3a65"
+        }
+      ]
+    },
+    {
+      "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix",
+      "n_files": 49,
+      "git": {
+        "commit": "847fee2",
+        "date": "2026-10-25",
+        "subject": "Quarantine ablation results from run 40146149579 (pre prompt-fix) as exploratory"
+      },
+      "n_tracked_by_git": 49,
+      "reason": "see git.subject (the quarantine commit message); edit if more detail is needed",
+      "files": [
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/_checkpoint_shard1.json",
+          "bytes": 98,
+          "sha256": "5fb15c2770b9df8caf99eb8d03d294dd9a25c27151498d299150287d8fc1f4ee"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/_checkpoint_shard2.json",
+          "bytes": 94,
+          "sha256": "273d9a45b6f73fd0d57701660e034a81033d7abfa1cc5c139061d3f799501610"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/_checkpoint_shard4.json",
+          "bytes": 96,
+          "sha256": "a547b387d217fbb98f00670fee110a8b62f365b92a2dd3895fd2aae39e727c2e"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_aggregate_run.log",
+          "bytes": 30374,
+          "sha256": "3803b6848d45bda23e7d18d5b281df98870f7238db0f90fff9b3b1a34a5463b0"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_checkpoint.json",
+          "bytes": 41424,
+          "sha256": "46a7aa2a06704f8709ac8411c53fde6899fa43ded6866f38527af5976b2af5fc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_checkpoint_shard1.json",
+          "bytes": 8343,
+          "sha256": "9e4782e55d5d6aef64613d8b68e6d1a5d44a968097da6fba732bf51bb82c20b8"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_checkpoint_shard2.json",
+          "bytes": 8484,
+          "sha256": "616a60717a65ed9080dc370e9a775931c5bd6717d8dfe9210d645f64bebd760c"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_checkpoint_shard4.json",
+          "bytes": 8106,
+          "sha256": "c8505a17af0ece37a3f680873b9665dc0d907aebe8b34eab2daa4f721c55abdc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_merged_checkpoint.json",
+          "bytes": 41424,
+          "sha256": "46a7aa2a06704f8709ac8411c53fde6899fa43ded6866f38527af5976b2af5fc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_results.json",
+          "bytes": 41424,
+          "sha256": "46a7aa2a06704f8709ac8411c53fde6899fa43ded6866f38527af5976b2af5fc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_results_shard0.json",
+          "bytes": 8373,
+          "sha256": "787452111cdb3b2928f836487d583418c17e1f495c44bc267fe3838db4437176"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_results_shard1.json",
+          "bytes": 8343,
+          "sha256": "9e4782e55d5d6aef64613d8b68e6d1a5d44a968097da6fba732bf51bb82c20b8"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_results_shard2.json",
+          "bytes": 8484,
+          "sha256": "616a60717a65ed9080dc370e9a775931c5bd6717d8dfe9210d645f64bebd760c"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_results_shard4.json",
+          "bytes": 8106,
+          "sha256": "c8505a17af0ece37a3f680873b9665dc0d907aebe8b34eab2daa4f721c55abdc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_run_shard0.log",
+          "bytes": 43618,
+          "sha256": "a69df91baee2b3c77308ecc3977ebf69d762b81b2f8ce8af911fec208928b0d2"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_run_shard1.log",
+          "bytes": 38384,
+          "sha256": "76e4e736673db44eb67b41d60c4394cc4a00a30c02965e9b6a846ff05290fa8f"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_run_shard2.log",
+          "bytes": 39475,
+          "sha256": "bf74fae4bd447eaaf47e6a62e86677f4a65f6c1625a728dd5ba043f87612739b"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_run_shard3.log",
+          "bytes": 21314,
+          "sha256": "28092af2c83619c44236035f1decd0d4f432e73b4c6f325ab22b7da651749e5b"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_ablation_run_shard4.log",
+          "bytes": 36849,
+          "sha256": "3ae6a53322fc40f9f3e70a33a3ac7211725a86d194e3b9d4792a97d2482039ff"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_instability_stats.json",
+          "bytes": 3074,
+          "sha256": "26f0ebadfb37f6992318397f9a08ab698bef5e6b76dce214554f148a5a68f490"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_llm_contribution.json",
+          "bytes": 2147,
+          "sha256": "0520f50913b7f1cc5575f8c59074e02a9884942f13553972c2755df16e81dc45"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/exp1_rf01_mannwhitney.json",
+          "bytes": 2928,
+          "sha256": "8a7f13a042134e6539a8733be076bc751402d1e774eaf6fa063770894399916f"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/fixc3_baseline.json",
+          "bytes": 837,
+          "sha256": "47459b29c0afe365284bf9de2379236c4094fb62249a628e533f513394ce0f78"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/instability_extrapolation_v2.csv",
+          "bytes": 961,
+          "sha256": "ea8c67a96cc51dd19d260a9d119e2af3dd6e68486e9db8a3c27302717437bfbc"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/provenance_map_exp1.json",
+          "bytes": 2899,
+          "sha256": "627b604b9fed875f05fe942f32560c70a47b8f984f22c65fd32ea8cf5006adff"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_instability_stats_shard0.json",
+          "bytes": 2803,
+          "sha256": "7b4e355353fd1c9c19bbd935ffa5d0e07a44dda6ded74ef08e2974080ef51ae5"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_instability_stats_shard1.json",
+          "bytes": 2774,
+          "sha256": "ee07222c973dfe8c16c129d91f6106d9c121729bfb39861d830b966df6cc1022"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_instability_stats_shard2.json",
+          "bytes": 2868,
+          "sha256": "344ee7f38787a26b1b7660bc9f707be0540a6a1d93d8ec5c8c0de1304511b6ad"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_instability_stats_shard4.json",
+          "bytes": 2782,
+          "sha256": "aabe102e7af9c46b5253e2f08c2c3eea529f8278f95fa505ed33ed485ed35752"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_llm_contribution_shard0.json",
+          "bytes": 1534,
+          "sha256": "d0a63a65aebad90d0d337f6a9cae7040dd6dff8a3c1ec8a6bcdb2da5b83f6305"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_llm_contribution_shard1.json",
+          "bytes": 1477,
+          "sha256": "fc398a21d21d1fa2773c666b460cd837fac43070fbe887b6c469cb5fe6f536d4"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_rf01_mannwhitney_shard0.json",
+          "bytes": 1824,
+          "sha256": "57d32cda7dfd88fea94b64160a01fabc3b141520719e54c7fa499f07dcd3f3b5"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/exp1_rf01_mannwhitney_shard1.json",
+          "bytes": 1757,
+          "sha256": "50d5f078b28a0afa6f67383f08e1931e7a22e54771d22d56298671e627bf644e"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/fixc3_baseline_shard1.json",
+          "bytes": 837,
+          "sha256": "47459b29c0afe365284bf9de2379236c4094fb62249a628e533f513394ce0f78"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/fixc3_baseline_shard2.json",
+          "bytes": 837,
+          "sha256": "47459b29c0afe365284bf9de2379236c4094fb62249a628e533f513394ce0f78"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/fixc3_baseline_shard4.json",
+          "bytes": 837,
+          "sha256": "47459b29c0afe365284bf9de2379236c4094fb62249a628e533f513394ce0f78"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/instability_extrapolation_v2_shard0.csv",
+          "bytes": 710,
+          "sha256": "925d345d7a66e5f0487b633f4325c21f061aed70f012fc6ef0df49cfa9023542"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/instability_extrapolation_v2_shard1.csv",
+          "bytes": 681,
+          "sha256": "2ef9afb67d828fb6d6affa972ab21317dc0b159bcb0a3b2c7c5d1207b5a2b4ec"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/instability_extrapolation_v2_shard2.csv",
+          "bytes": 775,
+          "sha256": "d844709dd59775e2c989ce28a34f5fb05585886049ba1647f1dfce23c221fb8d"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/instability_extrapolation_v2_shard4.csv",
+          "bytes": 679,
+          "sha256": "332e60b3731a894942b9b40feb7f051b80215f119bf73476784d1f9366a7184b"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/provenance_map_exp1_shard0.json",
+          "bytes": 2899,
+          "sha256": "83d8ab9c69696d0316d3de9bdaeb0e0b7b91fc3b00fd74ace1ed31107fbfce88"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/provenance_map_exp1_shard1.json",
+          "bytes": 2899,
+          "sha256": "7fce0380ff9a86290cc731a9d2872bcec275ccd506344ea49b5046dec531f685"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/provenance_map_exp1_shard2.json",
+          "bytes": 2899,
+          "sha256": "b7814417703434590d03eb7a43aacc83e1c0499db993ef6ecfed39fe59a20757"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/provenance_map_exp1_shard4.json",
+          "bytes": 2899,
+          "sha256": "b77f532b14d15adfdd124deb81f42538cb2af72e67e5864b8f696aadca5bcbbd"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/wall_clock_flags_shard0.json",
+          "bytes": 5794,
+          "sha256": "f6e939d8961fb9a6733b1978731a29fcba779c328c1daeea0811b9915fb0ccfe"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/wall_clock_flags_shard1.json",
+          "bytes": 5794,
+          "sha256": "590ff75197fdbfcfff08356ca7634853da52945bc7c3db2de17384ad6929d096"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/wall_clock_flags_shard2.json",
+          "bytes": 5793,
+          "sha256": "3d89e28fd4bae73f67c39b355e656642dea22533bb322bdec838cedaf551b47f"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/shards/wall_clock_flags_shard4.json",
+          "bytes": 5797,
+          "sha256": "9dc163da0a3fc38e87b078bc1143f74c4553cf3ebbecd57ddc51e01a94ec9cfd"
+        },
+        {
+          "path": "hypatiax/data/results/ablation/exp1_ablation_pre_prompt_fix/wall_clock_flags.json",
+          "bytes": 6389,
+          "sha256": "10e1302d498bb59f2ae9b3580dd3e0d8b012d24d2e98b9781763ed4952f6dd67"
+        }
+      ]
+    },
+    {
+      "path": "hypatiax/data/results/exploratory",
+      "n_files": 43,
+      "git": {
+        "commit": "45e94b2",
+        "date": "2026-10-24",
+        "subject": "Quarantine leftovers from pre-fix ablation run"
+      },
+      "n_tracked_by_git": 43,
+      "reason": "see git.subject (the quarantine commit message); edit if more detail is needed",
+      "files": [
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/_checkpoint_shard0.json",
+          "bytes": 41,
+          "sha256": "b0c226a2547c57b9c534c47e095b7787f323742e93eec13f095f2b0e3b69fca9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/_checkpoint_shard1.json",
+          "bytes": 41,
+          "sha256": "b0c226a2547c57b9c534c47e095b7787f323742e93eec13f095f2b0e3b69fca9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/_checkpoint_shard2.json",
+          "bytes": 41,
+          "sha256": "b0c226a2547c57b9c534c47e095b7787f323742e93eec13f095f2b0e3b69fca9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/_checkpoint_shard3.json",
+          "bytes": 41,
+          "sha256": "b0c226a2547c57b9c534c47e095b7787f323742e93eec13f095f2b0e3b69fca9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_checkpoint_shard0.json",
+          "bytes": 10439,
+          "sha256": "c9a3152797e3364c7305ad458cde8a32c55d2185a2dffe5ba86fe5032a51852b"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_checkpoint_shard1.json",
+          "bytes": 5337,
+          "sha256": "f51a9987a1dd199c5ca1d4b36475214828682b51335be38af9930c785fdbd606"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_checkpoint_shard2.json",
+          "bytes": 5234,
+          "sha256": "81dc9850bbfa737c3bf8be92df409c2bd03294c3d0f9bad7efd70563040bd47d"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_checkpoint_shard3.json",
+          "bytes": 5055,
+          "sha256": "d2b776e7b0ff25e96edc0c52e0bcc4866e534b0277bd844c735e50dddb5aa9c0"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_results_shard0.json",
+          "bytes": 10439,
+          "sha256": "c9a3152797e3364c7305ad458cde8a32c55d2185a2dffe5ba86fe5032a51852b"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_results_shard1.json",
+          "bytes": 5337,
+          "sha256": "f51a9987a1dd199c5ca1d4b36475214828682b51335be38af9930c785fdbd606"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_results_shard2.json",
+          "bytes": 5234,
+          "sha256": "81dc9850bbfa737c3bf8be92df409c2bd03294c3d0f9bad7efd70563040bd47d"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_results_shard3.json",
+          "bytes": 5055,
+          "sha256": "d2b776e7b0ff25e96edc0c52e0bcc4866e534b0277bd844c735e50dddb5aa9c0"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_run.log__shard0_rescued_1786497899.log",
+          "bytes": 60589,
+          "sha256": "10efa18b2b4f0a43a3d6c0ff233bc8f4c12ee8834a4b8865ae2b2a29b81461d8"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_run.log__shard1_rescued_1786493709.log",
+          "bytes": 36208,
+          "sha256": "95515e4b71313b8776b48784733d1155e8c2dc24efe8200547806ac27cb12c16"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_ablation_run.log__shard2_rescued_1786493416.log",
+          "bytes": 31120,
+          "sha256": "0a2d13d06f5630f6da1a1ee8d3e05075b8643ccf039e5ef4b0ed0f63aba2cc0f"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_arms_merged.csv",
+          "bytes": 1734,
+          "sha256": "346486b7190df97aed53e5ca2f7c8f8818e8fdcb8736d49026c7fd4a43033a92"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_instability_stats__shard0_rescued_1786497899.json",
+          "bytes": 2820,
+          "sha256": "004ac71ed5e40649a4d116b81ca649b68de0f8d88fbd014016bbf6e3dbbca7fd"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_instability_stats__shard1_rescued_1786493709.json",
+          "bytes": 2772,
+          "sha256": "83a3c509267c602f35e1857eafc0975f2494797bea293f0bcd73843e3874eb75"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_instability_stats__shard2_rescued_1786493416.json",
+          "bytes": 2787,
+          "sha256": "4fca4599c550723bb62c909181fd2b0ed3b687a809d038846a84866a32aaafa9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/exp1_rf01_mannwhitney__shard0_rescued_1786497899.json",
+          "bytes": 2138,
+          "sha256": "f950003892169d5004f79c7ca3120b51151f904408a45f450050d68ab3744a21"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/instability_extrapolation_v2.csv__shard0_rescued_1786497899.csv",
+          "bytes": 727,
+          "sha256": "067cd14782887f42edbed32f7cb3f1fe762dab3a6e48b5d7fd8a791df1bc1d48"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/instability_extrapolation_v2.csv__shard1_rescued_1786493709.csv",
+          "bytes": 679,
+          "sha256": "aca3ce10364378a8036c996d2a6d79eb0ad29e8d34de62be1c09fb3da3102dc9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/instability_extrapolation_v2.csv__shard2_rescued_1786493416.csv",
+          "bytes": 684,
+          "sha256": "42d4fd7370a7aa72abdb127a8e23dff6a3e9ffdf99f933857c39e5662be787e6"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/exp1_ablation_run.log",
+          "bytes": 27592,
+          "sha256": "cdf950f0c9f8e686c8839592d6a4d519d62bbbe32e1eff6c4ba32ecb2a7511fc"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/exp1_instability_stats.json",
+          "bytes": 2817,
+          "sha256": "3fbc6e478d3a0a4508da96c3fa4732eb7a6b929f1cd8e90a17ea4bc061922940"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/exp1_rf01_mannwhitney.json",
+          "bytes": 1836,
+          "sha256": "324854e068ef847a80feef7c44ad5adf654940c416251c964b0cc27c75bf81f8"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/instability_extrapolation_v2.csv",
+          "bytes": 724,
+          "sha256": "139b119d72c9281d5d643b75884e8337f1c3563b1ba39e433c7ea23146917915"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/n_paired_10/exp1_rf01_mannwhitney.json",
+          "bytes": 2164,
+          "sha256": "5f4a50de7160033d120986026441116c8272c711aeab9a6729048b4f5eda5acb"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/provenance_map_exp1.json",
+          "bytes": 2682,
+          "sha256": "e840f2c490d5f6b7b9d91b2a9a4dbd5e42decdf630c797be2d48a78d9f94ccef"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/leftovers/wall_clock_flags.json",
+          "bytes": 4036,
+          "sha256": "5a66da834410712f735ebf309ec7df90282183c9b70381bf3beedc03011906f6"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/provenance_map_exp1__shard0_rescued_1786497899.json",
+          "bytes": 2682,
+          "sha256": "f2a7c8c0ff62cd237f87085e728a4e2e1ea1ce0ed5a48ebe74ea833b923a1c2f"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/provenance_map_exp1__shard1_rescued_1786493709.json",
+          "bytes": 2682,
+          "sha256": "121614e7af61ba0ffa83503349ade667e10185dbedd459a2db9f2ac796a63852"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/provenance_map_exp1__shard2_rescued_1786493416.json",
+          "bytes": 2682,
+          "sha256": "786018f8c29387924374bc563122c53a6005f1c5e405d9fe16018d730a1c4e24"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/wall_clock_flags__shard0_rescued_1786497899.json",
+          "bytes": 4134,
+          "sha256": "0f9fba41a4c527bec66d53d6ae4d6f7e97a831d5b041b7ef56da34ea4eada8eb"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/wall_clock_flags__shard1_rescued_1786493709.json",
+          "bytes": 4034,
+          "sha256": "458239a965c9ec9b9556468be736071f89d5c18205b5c37694dd0688fc919859"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/exp1_ablation_pre_fix/wall_clock_flags__shard2_rescued_1786493416.json",
+          "bytes": 4036,
+          "sha256": "b7c89229643ba071775638819ed667218fdde2c1ee74084aa298360a72da81a9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/extrapolation_73cases_enhanced.json",
+          "bytes": 476320,
+          "sha256": "715e66bfaa6044d1b868b43a22c795da0186dd941eefa2f8f54bd477e45690aa"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/hybrid_pysr_defi/_checkpoint_shard0.json",
+          "bytes": 41,
+          "sha256": "b0c226a2547c57b9c534c47e095b7787f323742e93eec13f095f2b0e3b69fca9"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/hybrid_pysr_defi/extrapolation_73cases_enhanced.json",
+          "bytes": 471882,
+          "sha256": "e690c081682156d097966eb03d3544527771177059c5a1218483b2f7d81410b5"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/hybrid_pysr_defi/hybrid_defi_20260812_150129.json",
+          "bytes": 62885,
+          "sha256": "af05cc7038a55dd6dec4eaab1e86f3019e7233219ef7dc28bc9f3606ea522d2d"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/radar_comparison_73cases.png",
+          "bytes": 131217,
+          "sha256": "75c37aa3b6cf87b8ce3e02657204a71252cb52b59aa42ba067e2fed2e1eda549"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/statistical_summary_73cases.tex",
+          "bytes": 382,
+          "sha256": "9ca268978bfa6e4edd338d8bd92b1e345ae43d286d819bb951239fc215a4dd96"
+        },
+        {
+          "path": "hypatiax/data/results/exploratory/pre_fix_73cases/train_vs_test_73cases.png",
+          "bytes": 46181,
+          "sha256": "431fa3fbf09f8785265c7f55beffc49d31b5ff743ed9a82234d39390d3c4d5d6"
+        }
+      ]
+    }
+  ],
+  "proposed": [
+    {
+      "path": "bypass_audit.csv",
+      "n_rows": 133,
+      "sha256": "5c7c359c491442996a23a951daea522676bb04d6caf57d64047116ef44f2dd4b",
+      "git": {
+        "commit": "70c18ac",
+        "date": "2026-10-23",
+        "subject": "Fix code"
+      },
+      "reason": "rows generated while a hardcoded-formula bypass was reachable; regenerate with HYPATIAX_DISABLE_HARDCODED=1 or keep exploratory"
+    },
+    {
+      "path": "hypatiax/data/results/hybrid_llm_nn/all_domains/hybrid_llm_nn_all_domains_20260812_204723.json",
+      "sha256": "2fdbc15efcad970b104069dcfc008504bad19d01c0c0618de5271e685b3cd6c4",
+      "git": {
+        "commit": "05e3bee",
+        "date": "2026-08-12",
+        "subject": "ci: hybrid_all_domains shard0 results (2 file(s)) \u2014 run 31638691392 \u2014 2026-08-12T20:47:25Z"
+      },
+      "reason": "stored all-domains hybrid output (M4): predates per-row provenance, the clean-run flags and the canonical R^2 policy"
+    }
+  ]
+}
