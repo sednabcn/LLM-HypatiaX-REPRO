@@ -990,6 +990,17 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
             if _un else "none unflagged")
     else:
         add(3, "M4 stored output", "MANUAL", "rerun HybridSystemLLMNN or downgrade stored M4 results to exploratory")
+    _cx = ROOT / "scripts/close_m4_exclusion.py"
+    if _cx.is_file():
+        import importlib.util as _ilu3
+        _sp3 = _ilu3.spec_from_file_location("cx", _cx); _m3 = _ilu3.module_from_spec(_sp3); _sp3.loader.exec_module(_m3)
+        _st, _cu = _m3.stale(), _m3.csv_unflagged()
+        chk(3, "M4 comparison/winner/per-method fields recomputed without excluded rows", not _st,
+            f"{len(_st)} test(s) still carry an excluded M4 score: run scripts/close_m4_exclusion.py --apply"
+            if _st else "none stale")
+        chk(3, "M4 rows in noise-sweep / sample-complexity CSVs flagged", not _cu,
+            f"{len(_cu)} CSV file(s) with unflagged M4 rows: run scripts/close_m4_exclusion.py --apply"
+            if _cu else "none unflagged")
 
     # ---- 5: noise sweep
     chk(5, "enforce_flags.py present", find_py("enforce_flags.py") is not None,

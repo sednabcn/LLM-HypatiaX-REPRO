@@ -115,41 +115,34 @@
         }
       },
       "comparison": {
-        "winner": "HybridSystemLLMNN all-domains (core)",
+        "winner": "EnhancedHybridSystemDeFi (core)",
         "scores": {
           "ImprovedNN (core)": 0.9999527943721045,
           "EnhancedHybridSystemDeFi (core)": 0.9999999988688674,
-          "HybridSystemLLMNN all-domains (core)": 1.0,
           "SymbolicEngineWithLLM (tools)": 1.0,
           "HybridDiscoverySystem v50_2 (tools)": 1.0
         },
         "rankings": {
-          "HybridSystemLLMNN all-domains (core)": 1,
-          "EnhancedHybridSystemDeFi (core)": 2,
-          "ImprovedNN (core)": 3,
-          "SymbolicEngineWithLLM (tools)": 4,
-          "HybridDiscoverySystem v50_2 (tools)": 5
+          "EnhancedHybridSystemDeFi (core)": 1,
+          "ImprovedNN (core)": 2,
+          "SymbolicEngineWithLLM (tools)": 3,
+          "HybridDiscoverySystem v50_2 (tools)": 4
         },
         "advantages": [
           {
             "method": "SymbolicEngineWithLLM (tools)",
-            "diff": 0.0,
-            "pct": 0.0
+            "diff": -1.1311326320040394e-09,
+            "pct": -1.1311326320040394e-07
           },
           {
             "method": "HybridDiscoverySystem v50_2 (tools)",
-            "diff": 0.0,
-            "pct": 0.0
-          },
-          {
-            "method": "EnhancedHybridSystemDeFi (core)",
-            "diff": 1.1311326320040394e-09,
-            "pct": 1.1311326332835004e-07
+            "diff": -1.1311326320040394e-09,
+            "pct": -1.1311326320040394e-07
           },
           {
             "method": "ImprovedNN (core)",
-            "diff": 4.720562789550797e-05,
-            "pct": 0.004720785637200961
+            "diff": 4.720449676287597e-05,
+            "pct": 0.004720672518597926
           }
         ],
         "duplicates": {},
@@ -159,9 +152,13 @@
           "range": 0.400641219290534,
           "max": 0.4007162605507187,
           "denom": 0.042881057204578195
-        }
+        },
+        "excluded_from_comparison": [
+          "HybridSystemLLMNN all-domains (core)"
+        ],
+        "winner_before_exclusion": "HybridSystemLLMNN all-domains (core)"
       },
-      "winner": "HybridSystemLLMNN all-domains (core)",
+      "winner": "EnhancedHybridSystemDeFi (core)",
       "timestamp": "2026-08-12T05:57:58.131661"
     }
   ]

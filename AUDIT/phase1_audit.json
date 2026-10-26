@@ -177,6 +177,18 @@
       "detail": "none unflagged"
     },
     {
+      "item": 3,
+      "check": "M4 comparison/winner/per-method fields recomputed without excluded rows",
+      "status": "PASS",
+      "detail": "none stale"
+    },
+    {
+      "item": 3,
+      "check": "M4 rows in noise-sweep / sample-complexity CSVs flagged",
+      "status": "PASS",
+      "detail": "none unflagged"
+    },
+    {
       "item": 5,
       "check": "enforce_flags.py present",
       "status": "PASS",
