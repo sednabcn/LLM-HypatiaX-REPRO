@@ -17,22 +17,22 @@
       "Portfolio Std Dev"
     ],
     "U_greater": 9.0,
-    "p_greater": 0.031801284810376834,
+    "p_greater": 0.03826125023752961,
     "U_two_sided": 9.0,
-    "p_two_sided": 0.06360256962075367,
+    "p_two_sided": 0.07652250047505922,
     "wilcoxon_W": 0.0,
     "wilcoxon_p_two": 0.25,
     "wilcoxon_p_greater": 0.125,
     "rank_biserial_r": 1.0,
     "H_median_far_r2": 1.0,
-    "P_median_far_r2": 0.9999812552142863,
-    "H_mean_far_r2": 1.0,
-    "P_mean_far_r2": -2.2930956245503986,
+    "P_median_far_r2": 0.9999631931521098,
+    "H_mean_far_r2": 0.9999999682268879,
+    "P_mean_far_r2": -2.2872134176709458,
     "h_wins": 1,
     "p_wins": 0,
     "ties": 2,
     "significant_p05": true,
-    "paper_sentence": "HypatiaX achieves significantly higher far-extrapolation $R^2$ than PySR-only across the Core-15 benchmark (Mann-Whitney $U=9$, $p=0.0318$, two-tailed $p=0.0636$, $n=3$; rank-biserial $r=+1.00$). HypatiaX outperforms PySR-only on 1/3 equations (Physics domains), with 2 tie(s) and 0 equation(s) where PySR-only is superior.",
+    "paper_sentence": "HypatiaX achieves significantly higher far-extrapolation $R^2$ than PySR-only across the Core-15 benchmark (Mann-Whitney $U=9$, $p=0.0383$, two-tailed $p=0.0765$, $n=3$; rank-biserial $r=+1.00$). HypatiaX outperforms PySR-only on 1/3 equations (Physics domains), with 2 tie(s) and 0 equation(s) where PySR-only is superior.",
     "equations_included": [
       "Kinetic Energy",
       "Gravitational Force",
@@ -41,12 +41,12 @@
     "H_far_r2_vector": [
       1.0,
       1.0,
-      1.0
+      0.9999999046806634
     ],
     "P_far_r2_vector": [
-      0.9999812552142863,
-      -8.879253202888437,
-      0.999985074022955
+      0.9999631931521098,
+      -8.861601587194851,
+      0.9999981410299045
     ],
     "subdomain_breakdown": {
       "Physics": {
@@ -54,7 +54,7 @@
         "h_wins": 1,
         "ties": 2,
         "p_wins": 0,
-        "mean_delta": 3.293095624550398,
+        "mean_delta": 3.2872133858978336,
         "equations": [
           "Kinetic Energy",
           "Gravitational Force",

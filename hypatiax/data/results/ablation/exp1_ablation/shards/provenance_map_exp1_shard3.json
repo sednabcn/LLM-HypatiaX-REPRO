@@ -15,11 +15,11 @@
   "populations": 30,
   "niterations": 1000,
   "model_string": "claude-sonnet-4-6",
-  "git_sha": "fdacc9a2d3399a6b610ce25df074bbb9ba9b3b3e",
+  "git_sha": "6ebf31f7a1dc99eecca7fb5797ea5f23642f6c4a",
   "anthropic_sdk": "0.73.0",
   "pysr": "2.0.0a1",
   "n_rows_hypatia_failed": 0,
-  "timestamp": "2026-10-25T13:59:11.981168",
+  "timestamp": "2026-10-26T19:58:08.589964",
   "outputs": {
     "results_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json",
     "checkpoint_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json",
