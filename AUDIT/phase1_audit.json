@@ -1,0 +1,204 @@
+{
+  "rollup": {
+    "Per-row provenance (llm_called, path, formula)": "Closed",
+    "Disable hardcoded-formula bypass": "Unverified",
+    "M4 missing formula output": "Unverified",
+    "Evaluator guard and R2 policy": "Partial",
+    "Noise-sweep check": "Unverified",
+    "Quarantine of unresolved results": "Closed"
+  },
+  "checks": [
+    {
+      "item": 4,
+      "check": "P1 metrics self-tests / >= / _REL_EPS",
+      "status": "PASS",
+      "detail": "hypatiax/core/metrics.py"
+    },
+    {
+      "item": 4,
+      "check": "P2 v50_2 _r2_np -> r2_checked",
+      "status": "PASS",
+      "detail": "hypatiax/tools/symbolic/hybrid_system_v50_2.py"
+    },
+    {
+      "item": 1,
+      "check": "P6 v50_2 provenance",
+      "status": "PASS",
+      "detail": "hypatiax/tools/symbolic/hybrid_system_v50_2.py"
+    },
+    {
+      "item": 4,
+      "check": "P3 baseline evaluator -> r2_checked",
+      "status": "PASS",
+      "detail": "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py"
+    },
+    {
+      "item": 3,
+      "check": "P9 M4 private ss_tot R2 -> r2_checked",
+      "status": "PASS",
+      "detail": "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py"
+    },
+    {
+      "item": 1,
+      "check": "P6 baseline provenance",
+      "status": "PASS",
+      "detail": "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py"
+    },
+    {
+      "item": 4,
+      "check": "P5+P7 noise-sweep catastrophic + flags",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py"
+    },
+    {
+      "item": 4,
+      "check": "P7 v2 protocol block: sign-flip state",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "P10a v2 rmse-algebra R2 fallback removed",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "P10b v2 NN-correction scoring -> r2_checked",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "P11 pca NN-correction scoring -> r2_checked",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+    },
+    {
+      "item": 1,
+      "check": "P10c v2 no synthetic y_pred reconstruction",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "P10d v2 adapter rmse-algebra R2 removed",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "P4 failed rows report r2 != 0.0",
+      "status": "PASS",
+      "detail": "none found"
+    },
+    {
+      "item": 4,
+      "check": "P8 regression tests present",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/tests/test_phase1_close.py"
+    },
+    {
+      "item": 4,
+      "check": "metrics self-test (python -m hypatiax.core.metrics)",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "item": 4,
+      "check": "R2 re-implementations (ss_tot) remaining",
+      "status": "FAIL",
+      "detail": "4 legacy file(s): baseline_neural_network_defi_improved.py, exp3_nguyen12_consolidated.py, run_comparative_suite_benchmark_pca.py, symbolic_engine.py"
+    },
+    {
+      "item": 4,
+      "check": "Supplement A Listing 8 guard",
+      "status": "MANUAL",
+      "detail": "no .tex/.md mentions the absolute guard; Listing 8 not in repo, compare manually"
+    },
+    {
+      "item": 1,
+      "check": "EHSDeFi provenance fields",
+      "status": "PASS",
+      "detail": "hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py"
+    },
+    {
+      "item": 2,
+      "check": "_try_hardcoded_formula never called",
+      "status": "PASS",
+      "detail": "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py"
+    },
+    {
+      "item": 2,
+      "check": "scripts/bypass_audit.py exits 0",
+      "status": "PASS",
+      "detail": "Bypassed tasks:"
+    },
+    {
+      "item": 2,
+      "check": "Historical bypassed rows regenerated/quarantined",
+      "status": "MANUAL",
+      "detail": "133 row(s) in bypass_audit.csv: regenerate or quarantine as exploratory"
+    },
+    {
+      "item": 3,
+      "check": "M4 engine has no private ss_tot R2",
+      "status": "PASS",
+      "detail": "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py"
+    },
+    {
+      "item": 3,
+      "check": "M4 engine logs llm_called",
+      "status": "PASS",
+      "detail": "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py"
+    },
+    {
+      "item": 3,
+      "check": "M4 stored output",
+      "status": "MANUAL",
+      "detail": "rerun HybridSystemLLMNN or downgrade stored M4 results to exploratory"
+    },
+    {
+      "item": 5,
+      "check": "enforce_flags.py present",
+      "status": "PASS",
+      "detail": "hypatiax/core/enforce_flags.py"
+    },
+    {
+      "item": 5,
+      "check": "Noise injection code (read it)",
+      "status": "MANUAL",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py lines [5240]: confirm noise is added to the SCORED target"
+    },
+    {
+      "item": 5,
+      "check": "Noise-sweep ceiling audit (stored shards)",
+      "status": "PASS",
+      "detail": "5 shard(s) scanned, 0 with n_above_noise_ceiling > 0"
+    },
+    {
+      "item": 4,
+      "check": "v2 _safe_r2 delegates to r2_canonical",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "v2 sign-flip opt-in default",
+      "status": "MANUAL",
+      "detail": "HYPATIAX_R2_SIGN_FLIP must be unset/0 for any reported run; the sweep JSON records run_flags"
+    },
+    {
+      "item": 6,
+      "check": "Stored rows with fabricated y_pred (algebraic_reconstruction)",
+      "status": "PASS",
+      "detail": "none found"
+    },
+    {
+      "item": 6,
+      "check": "AUDIT/ quarantine manifest",
+      "status": "PASS",
+      "detail": "2 file(s); manifest: AUDIT/quarantine_manifest.json"
+    }
+  ]
+}

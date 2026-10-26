@@ -1,6 +1,6 @@
 {
-  "generated_utc": "2026-10-26T18:51:53Z",
-  "head": "6ebf31f",
+  "generated_utc": "2026-10-26T19:04:52Z",
+  "head": "67bb9e9",
   "policy": "quarantined = exploratory only; not to be cited as paper results",
   "quarantined": [
     {
@@ -317,13 +317,13 @@
     },
     {
       "path": "hypatiax/data/results/exploratory",
-      "n_files": 43,
+      "n_files": 44,
       "git": {
         "commit": "45e94b2",
         "date": "2026-10-24",
         "subject": "Quarantine leftovers from pre-fix ablation run"
       },
-      "n_tracked_by_git": 43,
+      "n_tracked_by_git": 44,
       "reason": "see git.subject (the quarantine commit message); edit if more detail is needed",
       "files": [
         {
@@ -507,6 +507,11 @@
           "sha256": "b7c89229643ba071775638819ed667218fdde2c1ee74084aa298360a72da81a9"
         },
         {
+          "path": "hypatiax/data/results/exploratory/hybrid_llm_nn_all_domains_20260812_204723.json",
+          "bytes": 51184,
+          "sha256": "2fdbc15efcad970b104069dcfc008504bad19d01c0c0618de5271e685b3cd6c4"
+        },
+        {
           "path": "hypatiax/data/results/exploratory/pre_fix_73cases/extrapolation_73cases_enhanced.json",
           "bytes": 476320,
           "sha256": "715e66bfaa6044d1b868b43a22c795da0186dd941eefa2f8f54bd477e45690aa"
@@ -544,27 +549,21 @@
       ]
     }
   ],
-  "proposed": [
+  "proposed": [],
+  "evidence": [
     {
       "path": "bypass_audit.csv",
-      "n_rows": 133,
       "sha256": "5c7c359c491442996a23a951daea522676bb04d6caf57d64047116ef44f2dd4b",
       "git": {
         "commit": "70c18ac",
         "date": "2026-10-23",
         "subject": "Fix code"
       },
-      "reason": "rows generated while a hardcoded-formula bypass was reachable; regenerate with HYPATIAX_DISABLE_HARDCODED=1 or keep exploratory"
-    },
-    {
-      "path": "hypatiax/data/results/hybrid_llm_nn/all_domains/hybrid_llm_nn_all_domains_20260812_204723.json",
-      "sha256": "2fdbc15efcad970b104069dcfc008504bad19d01c0c0618de5271e685b3cd6c4",
-      "git": {
-        "commit": "05e3bee",
-        "date": "2026-08-12",
-        "subject": "ci: hybrid_all_domains shard0 results (2 file(s)) \u2014 run 31638691392 \u2014 2026-08-12T20:47:25Z"
-      },
-      "reason": "stored all-domains hybrid output (M4): predates per-row provenance, the clean-run flags and the canonical R^2 policy"
+      "what": "per-task audit of the hardcoded-formula bypass (these are tasks, not result rows)",
+      "n_tasks": 133,
+      "n_bypassed_when_switch_off": 0,
+      "n_not_restored_by_switch_on": 0,
+      "bypassed_tasks": []
     }
   ]
 }

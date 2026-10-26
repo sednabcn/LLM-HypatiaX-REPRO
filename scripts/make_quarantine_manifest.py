@@ -55,15 +55,21 @@ def main():
                            "sha256": sha(f)} for f in files],
             })
 
-    proposed = []
+    proposed, evidence = [], []
     bp = root / "bypass_audit.csv"
     if bp.is_file():
         with open(bp, newline="") as fh:
             rows = list(csv.DictReader(fh))
-        proposed.append({"path": "bypass_audit.csv", "n_rows": len(rows), "sha256": sha(bp),
-                         "git": commit_of(root, "bypass_audit.csv"),
-                         "reason": "rows generated while a hardcoded-formula bypass was reachable; "
-                                   "regenerate with HYPATIAX_DISABLE_HARDCODED=1 or keep exploratory"})
+        yes = lambda v: str(v).strip().lower() == "true"
+        bypassed = [r for r in rows if yes(r.get("bypassed_when_switch_off"))]
+        evidence.append({
+            "path": "bypass_audit.csv", "sha256": sha(bp), "git": commit_of(root, "bypass_audit.csv"),
+            "what": "per-task audit of the hardcoded-formula bypass (these are tasks, not result rows)",
+            "n_tasks": len(rows),
+            "n_bypassed_when_switch_off": len(bypassed),
+            "n_not_restored_by_switch_on": sum(1 for r in rows if not yes(r.get("switch_on_returns_None"))),
+            "bypassed_tasks": [f"{r.get('suite')}:{r.get('id_or_domain')}" for r in bypassed],
+        })
     for f in sorted(root.glob("hypatiax/data/results/**/*all_domains*.json")):
         if not (SKIP & set(f.parts)) and not any(fnmatch.fnmatch(p.lower(), pat)
                                                   for p in f.parts for pat in DIR_PATTERNS):
@@ -87,7 +93,7 @@ def main():
     out = {"generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
            "head": sh(root, "git", "rev-parse", "--short", "HEAD"),
            "policy": "quarantined = exploratory only; not to be cited as paper results",
-           "quarantined": quarantined, "proposed": proposed}
+           "quarantined": quarantined, "proposed": proposed, "evidence": evidence}
     dest = root / a.out
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(out, indent=2) + "\n")

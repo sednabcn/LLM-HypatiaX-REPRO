@@ -1,0 +1,31 @@
+"""Add `generation_path` to every row written by hybrid_ensemble_system_defi_domain.py
+(Phase 1 item 1, same vocabulary the other generators use).  Guarded: changes nothing if the
+file is not exactly as expected.
+usage: python3 add_generation_path_ehs.py hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
+"""
+import pathlib, sys
+
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+if "generation_path" in s:
+    sys.exit("generation_path already present - nothing to do.")
+anchor = "    record = {\n"
+if s.count(anchor) != 1 or "**prov" not in s:
+    sys.exit(f"expected exactly one '    record = {{' and a '**prov' spread (found {s.count(anchor)}). Nothing changed.")
+block = '''    # PHASE1: generation_path - how the LLM formula in this row came about.
+    #   llm             a live call returned usable code (llm_called is True)
+    #   llm_unverified  usable code, but the generator did not say whether the call was live
+    #   unavailable     no usable code (the LLM arm failed; the row is NOT an LLM result)
+    #   <bypass_kind>   any bypass label the generator reported (never silently "llm")
+    _no_code = (not llm_result.get("python_code")) or llm_result.get("python_code") == "N/A"
+    if prov.get("bypass_kind") not in (None, "none", "live"):
+        prov["generation_path"] = str(prov.get("bypass_kind"))
+    elif _no_code:
+        prov["generation_path"] = "unavailable"
+    elif prov.get("llm_called") is True:
+        prov["generation_path"] = "llm"
+    else:
+        prov["generation_path"] = "llm_unverified"
+
+'''
+p.write_text(s.replace(anchor, block + anchor))
+print("added generation_path:", p)
