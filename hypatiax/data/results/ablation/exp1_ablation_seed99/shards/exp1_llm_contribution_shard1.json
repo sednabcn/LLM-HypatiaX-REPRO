@@ -1,0 +1,67 @@
+{
+  "n": 3,
+  "equations": [
+    "Value at Risk",
+    "Liquidation Price",
+    "Portfolio Std Dev"
+  ],
+  "H_far": [
+    0.9998415686458455,
+    0.9999999428445192,
+    1.0
+  ],
+  "N_far": [
+    0.9998415686458455,
+    0.9999999428445192,
+    0.999922163964839
+  ],
+  "P_far": [
+    0.999834424671203,
+    0.9999998234415967,
+    1.0
+  ],
+  "tests": {
+    "H_vs_P": {
+      "median_a": 0.9999999428445192,
+      "median_b": 0.9999998234415967,
+      "wins": 0,
+      "ties": 3,
+      "losses": 0,
+      "U_greater": 4.5,
+      "p_greater": 0.5902615116112394,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.0,
+      "n_tied": 3,
+      "tie_tol": 0.01,
+      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+    },
+    "N_vs_P": {
+      "median_a": 0.999922163964839,
+      "median_b": 0.9999998234415967,
+      "wins": 0,
+      "ties": 3,
+      "losses": 0,
+      "U_greater": 4.5,
+      "p_greater": 0.5902615116112394,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.0,
+      "n_tied": 3,
+      "tie_tol": 0.01,
+      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+    },
+    "H_vs_N": {
+      "median_a": 0.9999999428445192,
+      "median_b": 0.999922163964839,
+      "wins": 0,
+      "ties": 3,
+      "losses": 0,
+      "U_greater": 4.5,
+      "p_greater": 0.5902615116112394,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.0,
+      "n_tied": 3,
+      "tie_tol": 0.01,
+      "wilcoxon_note": "all paired differences within tolerance (all ties)"
+    }
+  }
+}
