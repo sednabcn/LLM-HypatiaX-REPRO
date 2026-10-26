@@ -231,6 +231,24 @@
       "detail": "none"
     },
     {
+      "item": 4,
+      "check": "all hypatiax/*.py parse",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "item": 4,
+      "check": "no committed merge-conflict markers",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
+      "item": 1,
+      "check": "no code path fabricates y_pred (algebraic_reconstruction)",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
       "item": 6,
       "check": "Stored rows with fabricated y_pred (algebraic_reconstruction)",
       "status": "PASS",
