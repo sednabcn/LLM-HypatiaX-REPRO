@@ -31,8 +31,8 @@ def far(row, arm):
 
 
 def med(xs):
-    xs = sorted(xs)
-    return xs[len(xs) // 2] if len(xs) % 2 else (xs[len(xs) // 2 - 1] + xs[len(xs) // 2]) / 2 if all(map(math.isfinite, xs[len(xs)//2-1:len(xs)//2+1])) else min(xs[len(xs)//2-1:len(xs)//2+1])
+    """Median that tolerates -inf (statistics.median averages the middle pair)."""
+    return st.median(xs)
 
 
 def wtl(a, b):
