@@ -10,8 +10,8 @@
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989601876288976,
-      "extrap_r2_far": 0.9989601876288976,
+      "extrap_r2_near": 1.0,
+      "extrap_r2_far": 1.0,
       "instability_index": 0.0
     },
     {
