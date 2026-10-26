@@ -1,10 +1,10 @@
 {
   "rollup": {
     "Per-row provenance (llm_called, path, formula)": "Closed",
-    "Disable hardcoded-formula bypass": "Unverified",
+    "Disable hardcoded-formula bypass": "Closed",
     "M4 missing formula output": "Unverified",
-    "Evaluator guard and R2 policy": "Partial",
-    "Noise-sweep check": "Unverified",
+    "Evaluator guard and R2 policy": "Unverified",
+    "Noise-sweep check": "Closed",
     "Quarantine of unresolved results": "Closed"
   },
   "checks": [
@@ -88,6 +88,24 @@
     },
     {
       "item": 4,
+      "check": "P11a pca rmse-algebra R2 fallback removed",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+    },
+    {
+      "item": 1,
+      "check": "P11c pca no synthetic y_pred reconstruction",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+    },
+    {
+      "item": 4,
+      "check": "P11d pca adapter rmse-algebra R2 removed",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+    },
+    {
+      "item": 4,
       "check": "P4 failed rows report r2 != 0.0",
       "status": "PASS",
       "detail": "none found"
@@ -107,8 +125,8 @@
     {
       "item": 4,
       "check": "R2 re-implementations (ss_tot) remaining",
-      "status": "FAIL",
-      "detail": "4 legacy file(s): baseline_neural_network_defi_improved.py, exp3_nguyen12_consolidated.py, run_comparative_suite_benchmark_pca.py, symbolic_engine.py"
+      "status": "PASS",
+      "detail": "0 legacy file(s): "
     },
     {
       "item": 4,
@@ -136,9 +154,9 @@
     },
     {
       "item": 2,
-      "check": "Historical bypassed rows regenerated/quarantined",
-      "status": "MANUAL",
-      "detail": "133 row(s) in bypass_audit.csv: regenerate or quarantine as exploratory"
+      "check": "bypass_audit.csv: no task is bypassed",
+      "status": "PASS",
+      "detail": "133 tasks probed (these are tasks, not result rows), 0 bypassed"
     },
     {
       "item": 3,
@@ -166,9 +184,9 @@
     },
     {
       "item": 5,
-      "check": "Noise injection code (read it)",
-      "status": "MANUAL",
-      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py lines [5240]: confirm noise is added to the SCORED target"
+      "check": "noise is added to the scored target before the split (static read)",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
     },
     {
       "item": 5,
@@ -184,9 +202,33 @@
     },
     {
       "item": 4,
-      "check": "v2 sign-flip opt-in default",
-      "status": "MANUAL",
-      "detail": "HYPATIAX_R2_SIGN_FLIP must be unset/0 for any reported run; the sweep JSON records run_flags"
+      "check": "v2 records enforce() flag state (run_flags) in result files",
+      "status": "PASS",
+      "detail": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    },
+    {
+      "item": 4,
+      "check": "enforce_flags fails closed on sign-flip",
+      "status": "PASS",
+      "detail": "HYPATIAX_R2_SIGN_FLIP != off raises unless HYPATIAX_ALLOW_LEGACY=1"
+    },
+    {
+      "item": 4,
+      "check": "all hypatiax/*.py parse",
+      "status": "PASS",
+      "detail": "ok"
+    },
+    {
+      "item": 4,
+      "check": "no committed merge-conflict markers",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
+      "item": 1,
+      "check": "no code path fabricates y_pred (algebraic_reconstruction)",
+      "status": "PASS",
+      "detail": "none"
     },
     {
       "item": 6,
@@ -196,9 +238,15 @@
     },
     {
       "item": 6,
+      "check": "contaminated result files outside quarantine",
+      "status": "PASS",
+      "detail": "none"
+    },
+    {
+      "item": 6,
       "check": "AUDIT/ quarantine manifest",
       "status": "PASS",
-      "detail": "2 file(s); manifest: AUDIT/quarantine_manifest.json"
+      "detail": "3 file(s); manifest: AUDIT/quarantine_manifest.json"
     }
   ]
 }

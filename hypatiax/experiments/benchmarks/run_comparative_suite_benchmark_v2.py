@@ -4519,6 +4519,7 @@ class ProtocolBenchmarkSuite:
                 "mode":        mode,
                 "noise_level": 0.0 if noiseless else _HYPATIAX_NOISE_LEVEL,
                 "r2_sign_flip_enabled": os.environ.get("HYPATIAX_R2_SIGN_FLIP", "0"),  # PHASE1-FIX
+                "run_flags": dict(_RUN_FLAGS),  # PHASE1-FIX
                 "noise_definition": "gaussian, sd = noise_level * std(y), added to ALL targets before the train/test split",
                 "scored_on": "noisy targets (train and test)" if (not noiseless and _HYPATIAX_NOISE_LEVEL > 0.0) else "clean targets",
                 "r2_ceiling": (
@@ -4624,8 +4625,13 @@ class ProtocolBenchmarkSuite:
 # MAIN / CLI
 # ============================================================================
 
+_RUN_FLAGS: dict = {}  # PHASE1-FIX: enforce() state, written into every result file
+
+
 def main():
-    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
+    global _RUN_FLAGS
+    from hypatiax.core.enforce_flags import enforce
+    _RUN_FLAGS = enforce()  # fail-closed flag guard; state recorded in output
     import argparse
 
     parser = argparse.ArgumentParser(
