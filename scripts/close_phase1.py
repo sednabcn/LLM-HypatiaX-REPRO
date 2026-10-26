@@ -963,10 +963,14 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
     else:
         add(2, "scripts/bypass_audit.py", "MANUAL", "present; re-run with --run-bypass-audit")
     csv_ = ROOT / "bypass_audit.csv"
-    n_csv = max(sum(1 for _ in csv_.open(encoding="utf-8", errors="replace")) - 1, 0) if csv_.is_file() else None
-    add(2, "Historical bypassed rows regenerated/quarantined", "MANUAL",
-        f"{n_csv} row(s) in bypass_audit.csv: regenerate or quarantine as exploratory"
-        if n_csv is not None else "bypass_audit.csv missing")
+    if not csv_.is_file():
+        add(2, "bypass_audit.csv per-task probe", "MANUAL", "bypass_audit.csv missing: run scripts/bypass_audit.py")
+    else:
+        import csv as _csv
+        _rows = list(_csv.DictReader(csv_.open(encoding="utf-8", errors="replace")))
+        _hit = [r for r in _rows if str(r.get("bypassed_when_switch_off")).lower() == "true"]
+        chk(2, "bypass_audit.csv: no task is bypassed", not _hit,
+            f"{len(_rows)} tasks probed (these are tasks, not result rows), {len(_hit)} bypassed")
 
     # ---- 3: M4
     m4 = find_py("hybrid_system_llm_nn_all_domains.py")
@@ -985,11 +989,9 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
     if v2 is None:
         add(5, "Noise injection code (read it)", "MANUAL", f"{rel(F_V2)} not found")
     else:
-        lines = [i + 1 for i, ln in enumerate(v2.splitlines())
-                 if re.search(r"noise", ln, re.I) and re.search(r"normal|randn|rng|random", ln, re.I)]
-        add(5, "Noise injection code (read it)", "MANUAL",
-            f"{rel(F_V2)} lines {lines[:12]}: confirm noise is added to the SCORED target"
-            if lines else "no injection pattern found; locate it manually")
+        chk(5, "noise is added to the scored target before the split (static read)",
+            "_y = _y + _noise" in v2 and "added to ALL targets before the train/test split" in v2
+            and "_noisy_tests.append((_desc, _X, _y," in v2, rel(F_V2))
     bad = tot = 0
     for p in ROOT.rglob("noise_sweep_*.json"):
         try:
@@ -1008,8 +1010,10 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
         sp = function_span(v2, "_safe_r2")
         body = "".join(v2.splitlines(keepends=True)[sp[0] - 1:sp[1]]) if sp else ""
         chk(4, "v2 _safe_r2 delegates to r2_canonical", "r2_canonical" in body, rel(F_V2))
-        add(4, "v2 sign-flip opt-in default", "MANUAL",
-            "HYPATIAX_R2_SIGN_FLIP must be unset/0 for any reported run; the sweep JSON records run_flags")
+        chk(4, "v2 records enforce() flag state (run_flags) in result files", '"run_flags": dict(_RUN_FLAGS)' in v2, rel(F_V2))
+        _ef = safe_read(PKG / "core/enforce_flags.py") or ""
+        chk(4, "enforce_flags fails closed on sign-flip", "HYPATIAX_ALLOW_LEGACY" in _ef and "raise RuntimeError" in _ef,
+            "HYPATIAX_R2_SIGN_FLIP != off raises unless HYPATIAX_ALLOW_LEGACY=1")
 
     # ---- repo hygiene: syntax + merge-conflict markers (a file that does not import cannot be audited)
     broken, conflicts, fabricated = [], [], []
@@ -1041,6 +1045,16 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
         "PASS" if not syn else "MANUAL",
         "none found" if not syn else f"{len(syn)} file(s) -> list in the quarantine manifest: "
         + ", ".join(syn[:5]) + (" ..." if len(syn) > 5 else ""))
+
+    # ---- 6: stored results still carrying bypass contamination
+    _qc = ROOT / "scripts/quarantine_contaminated.py"
+    if _qc.is_file():
+        import importlib.util as _ilu
+        _sp = _ilu.spec_from_file_location("qc", _qc); _m = _ilu.module_from_spec(_sp); _sp.loader.exec_module(_m)
+        _left = _m.scan()
+        chk(6, "contaminated result files outside quarantine", not _left,
+            f"{len(_left)} file(s): run scripts/quarantine_contaminated.py (dry run), then --apply or regenerate"
+            if _left else "none")
 
     # ---- 6: quarantine
     adir = ROOT / "AUDIT"
