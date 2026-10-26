@@ -1,0 +1,77 @@
+{
+  "seeds": [
+    42,
+    99,
+    123
+  ],
+  "n_equations": 15,
+  "recovered_ge_0.99": {
+    "pysr_only": 32,
+    "hypatia": 37,
+    "hypatia_nollm": 29
+  },
+  "paired": {
+    "hypatia_vs_pysr": {
+      "wins": 3,
+      "ties": 10,
+      "losses": 0,
+      "mwu_p_greater": 0.30295637102358797,
+      "mwu_p_two_sided": 0.6059127420471759,
+      "wilcoxon_p_two_sided": 0.38037109375
+    },
+    "hypatia_vs_nollm": {
+      "wins": 3,
+      "ties": 10,
+      "losses": 0,
+      "mwu_p_greater": 0.03570175778026949,
+      "mwu_p_two_sided": 0.07140351556053898,
+      "wilcoxon_p_two_sided": 0.078125
+    },
+    "nollm_vs_pysr": {
+      "wins": 3,
+      "ties": 8,
+      "losses": 2,
+      "mwu_p_greater": 0.8705463041226904,
+      "mwu_p_two_sided": 0.28118543027622644,
+      "wilcoxon_p_two_sided": 0.90966796875
+    }
+  },
+  "per_seed": {
+    "42": {
+      "vs_pysr": [
+        3,
+        11,
+        1
+      ],
+      "vs_nollm": [
+        3,
+        12,
+        0
+      ]
+    },
+    "99": {
+      "vs_pysr": [
+        2,
+        11,
+        2
+      ],
+      "vs_nollm": [
+        2,
+        13,
+        0
+      ]
+    },
+    "123": {
+      "vs_pysr": [
+        2,
+        11,
+        2
+      ],
+      "vs_nollm": [
+        3,
+        12,
+        0
+      ]
+    }
+  }
+}

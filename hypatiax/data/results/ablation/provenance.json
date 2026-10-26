@@ -1,0 +1,334 @@
+{
+  "generated_utc": "2026-10-26T13:15:04+00:00",
+  "git": {
+    "commit": "3762b8f1ad870a152e7fa528fff566cc28a908b1",
+    "branch": "audit/step1-cleanup",
+    "remote": "https://github.com/sednabcn/LLM-HypatiaX-REPRO.git",
+    "commit_date": "2026-10-26T12:35:01Z",
+    "dirty": true,
+    "dirty_files": [
+      "?? multiseed_summary.json",
+      "?? provenance.py"
+    ]
+  },
+  "results_dir": "hypatiax/data/results/ablation/",
+  "seeds": [
+    42,
+    99,
+    123
+  ],
+  "skipped_dirs": [
+    "exp1_ablation_pre_prompt_fix"
+  ],
+  "files": [
+    {
+      "seed": 42,
+      "path": "exp1_ablation/exp1_ablation_results.json",
+      "bytes": 47084,
+      "sha256": "0b62ac348b1cddfe0d7a3254dca21fd3f322fb05d55dee4e0e87e8f17e7aa8e4",
+      "mtime": "2026-10-26T09:16:21.963656+00:00"
+    },
+    {
+      "seed": 123,
+      "path": "exp1_ablation_seed123/exp1_ablation_results.json",
+      "bytes": 47334,
+      "sha256": "caa8ca4f0403d95eff0ff718721d0fc43ccdc61470c6eee1e8a65d150005b892",
+      "mtime": "2026-10-26T12:35:41.092782+00:00"
+    },
+    {
+      "seed": 99,
+      "path": "exp1_ablation_seed99/exp1_ablation_results.json",
+      "bytes": 47252,
+      "sha256": "c9f416643ad7cbbcb09fa86b04da76539050fff712399e8c7b34fb4889682b38",
+      "mtime": "2026-10-26T11:20:03.525593+00:00"
+    }
+  ],
+  "mode_counts": {
+    "42": {
+      "hybrid_pysr_better": 9,
+      "hybrid_llm_only": 6
+    },
+    "99": {
+      "hybrid_pysr_better": 10,
+      "hybrid_llm_only": 5
+    },
+    "123": {
+      "hybrid_pysr_better": 9,
+      "hybrid_llm_only": 6
+    }
+  },
+  "equations": {
+    "Ideal Gas Law": {
+      "42": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "T*8.319789*n/V",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "n * T / V * 8.314",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "n * T / V * 8.314",
+        "llm_r2": 0.9976,
+        "nollm_r2_far": 1.0,
+        "nollm_expr": "7.346877e+04 * (((n * T) / V) * 0.0001132427)"
+      },
+      "99": {
+        "pysr_r2_far": 0.9989,
+        "pysr_expr": "T*n/((V*0.11949351))",
+        "hybrid_r2_far": -24.3912,
+        "hybrid_expr": "((V * (1.2326735 - ((V * 1.0528843) ^ (n ^ -4.7789426)))) * (-2.7400124 - ((n * 1.7804041) ^ (n ^ -6.2654777)))) - -4.8899455",
+        "mode": "hybrid_pysr_better",
+        "llm_expr": "n * T / V",
+        "llm_r2": -0.0783,
+        "nollm_r2_far": -24.3912,
+        "nollm_expr": "((V * (1.2326735 - ((V * 1.0528843) ^ (n ^ -4.7789426)))) * (-2.7400124 - ((n * 1.7804041) ^ (n ^ -6.2654777)))) - -4.8899455"
+      },
+      "123": {
+        "pysr_r2_far": 0.9999,
+        "pysr_expr": "T/(0.12010448*((V/n)))",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "n * T / V * N_A * k_B",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "n * T / V * N_A * k_B",
+        "llm_r2": 0.9969,
+        "nollm_r2_far": 0.9999,
+        "nollm_expr": "6.007331e+04 * ((T * (n * 0.00013856644)) / V)"
+      }
+    },
+    "Price Impact": {
+      "42": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "dx/(dx + x)",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "dx / (x + dx)",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "dx / (x + dx)",
+        "llm_r2": 0.9976,
+        "nollm_r2_far": 1.0,
+        "nollm_expr": "dx / (dx + x)"
+      },
+      "99": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "dx/(dx + x)",
+        "hybrid_r2_far": 0.9988,
+        "hybrid_expr": "(dx / x) * (1 - dx / (2 * x))",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "(dx / x) * (1 - dx / (2 * x))",
+        "llm_r2": 0.9963,
+        "nollm_r2_far": 1.0,
+        "nollm_expr": "dx / (dx + x)"
+      },
+      "123": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "dx/(dx + x)",
+        "hybrid_r2_far": 0.9955,
+        "hybrid_expr": "dx * x / (x + dx) ** 2",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "dx * x / (x + dx) ** 2",
+        "llm_r2": 0.9942,
+        "nollm_r2_far": 1.0,
+        "nollm_expr": "dx / (x + dx)"
+      }
+    },
+    "Portfolio Std Dev": {
+      "42": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "sqrt(s1*(2*rho*s2 + s1) + s2**2)",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "llm_r2": 0.9975,
+        "nollm_r2_far": -Infinity,
+        "nollm_expr": "s2 + (((((s2 * rho) - ((sqrt(s2) - sqrt(sqrt(s1))) * 1.7653178)) * (0.99850357 - rho)) + rho) * s1)"
+      },
+      "99": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "sqrt(s1**2 + s2*(2*rho*s1 + s2))",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "llm_r2": 0.9975,
+        "nollm_r2_far": 0.9999,
+        "nollm_expr": "sqrt((s2 * s2) + (s1 * (((s2 * 1.9960631) * rho) + s1)))"
+      },
+      "123": {
+        "pysr_r2_far": -5.4538,
+        "pysr_expr": "(s1 + s2)*(rho*0.31170166 + 0.7163828)",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+        "llm_r2": 0.9979,
+        "nollm_r2_far": -8.3132,
+        "nollm_expr": "(((s1 / (((s2 + s1) / s2) + (s1 * (rho * 3.3769827)))) * 1.1281681) * (rho + -1.027045)) + (s1 + s2)"
+      }
+    },
+    "Kinetic Energy": {
+      "42": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "v*m*v*0.49943316",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.5 * m * v**2",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.5 * m * v**2",
+        "llm_r2": 0.9968,
+        "nollm_r2_far": 1.0,
+        "nollm_expr": "v * ((m * v) * 0.49927166)"
+      },
+      "99": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "v*v*m*0.50048953",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.5 * m * v**2",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.5 * m * v**2",
+        "llm_r2": 0.9973,
+        "nollm_r2_far": 0.9895,
+        "nollm_expr": "(v ^ 1.9851875) * (m * 0.5214878)"
+      },
+      "123": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "v*v*m*0.4992256",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.5 * m * v**2",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.5 * m * v**2",
+        "llm_r2": 0.9978,
+        "nollm_r2_far": 0.9836,
+        "nollm_expr": "((v ^ 1.9849474) / 1.9203992) * m"
+      }
+    },
+    "Allometric Scaling": {
+      "42": {
+        "pysr_r2_far": 1.0,
+        "pysr_expr": "0.10004779857648*sqrt(M**(3/2))",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.1 * M ** 0.75",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.1 * M ** 0.75",
+        "llm_r2": 0.9977,
+        "nollm_r2_far": 0.9836,
+        "nollm_expr": "(M ^ 0.74381983) * 0.102670856"
+      },
+      "99": {
+        "pysr_r2_far": 0.9998,
+        "pysr_expr": "0.100142253819255*sqrt(M**(3/2))",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.1 * M ** 0.75",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.1 * M ** 0.75",
+        "llm_r2": 0.9973,
+        "nollm_r2_far": 0.9999,
+        "nollm_expr": "(M ^ 0.7498026) * 0.100226566"
+      },
+      "123": {
+        "pysr_r2_far": 0.9999,
+        "pysr_expr": "0.10008485*sqrt(M**(3/2))",
+        "hybrid_r2_far": 1.0,
+        "hybrid_expr": "0.1 * M ** 0.75",
+        "mode": "hybrid_llm_only",
+        "llm_expr": "0.1 * M ** 0.75",
+        "llm_r2": 0.9979,
+        "nollm_r2_far": 0.9978,
+        "nollm_expr": "(M / 21.569527) ^ 0.75158286"
+      }
+    }
+  },
+  "flags": [
+    {
+      "seed": 42,
+      "equation": "Rate Law",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 1.0,
+      "hybrid": 0.995,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 42,
+      "equation": "Gravitational Force",
+      "flag": "llm_only_but_final_differs_from_llm_expression"
+    },
+    {
+      "seed": 42,
+      "equation": "Impermanent Loss",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": -63.2549,
+      "hybrid": -Infinity,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 99,
+      "equation": "Rate Law",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 0.9996,
+      "hybrid": 0.9941,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 99,
+      "equation": "Gravitational Force",
+      "flag": "llm_only_but_final_differs_from_llm_expression"
+    },
+    {
+      "seed": 99,
+      "equation": "Ideal Gas Law",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 0.9989,
+      "hybrid": -24.3912,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 99,
+      "equation": "Impermanent Loss",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": -56.9792,
+      "hybrid": -Infinity,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 99,
+      "equation": "Price Impact",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 1.0,
+      "hybrid": 0.9988,
+      "mode": "hybrid_llm_only"
+    },
+    {
+      "seed": 123,
+      "equation": "Arrhenius",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": -14.3558,
+      "hybrid": -Infinity,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 123,
+      "equation": "Michaelis-Menten",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 0.9996,
+      "hybrid": 0.9924,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 123,
+      "equation": "Gravitational Force",
+      "flag": "llm_only_but_final_differs_from_llm_expression"
+    },
+    {
+      "seed": 123,
+      "equation": "Impermanent Loss",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": -63.2847,
+      "hybrid": -Infinity,
+      "mode": "hybrid_pysr_better"
+    },
+    {
+      "seed": 123,
+      "equation": "Price Impact",
+      "flag": "hybrid_worse_than_pysr_only",
+      "pysr": 1.0,
+      "hybrid": 0.9955,
+      "mode": "hybrid_llm_only"
+    }
+  ]
+}
