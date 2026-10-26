@@ -1,0 +1,390 @@
+{
+  "policy": "exploratory only; not to be cited as paper results",
+  "n_files": 64,
+  "files": [
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_210917.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_210917.json",
+      "sha256": "ed53e608e6d19e3119812f14f4c7296ccfeb63402b1d463f2cf94318f4143697",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_212227.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_212227.json",
+      "sha256": "f120a2968059b2ba80f6e349a04a36c9e495d5228409cdb190a83d391d671f7d",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_214013.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_214013.json",
+      "sha256": "f481c717df25441e9ca89929c1241820d492ac62946ea387f95f23cd49144f2f",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_221750.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_221750.json",
+      "sha256": "7a792c85f51983b740b680d6b6c5c47812c7e59972ae2d8db14dd0171a65345c",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_223445.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_223445.json",
+      "sha256": "99d3850d2f03049e755aabcff453cef98fb9137ff1b8c1178cddc16eb398b1d6",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/extrapolation/protocol_core_extrap_20260812_224900.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/extrapolation/protocol_core_extrap_20260812_224900.json",
+      "sha256": "93a4bdb65a151bd48c7e472261ed96d227a8c2496f0ccba49d5dfdfc8c86f8c2",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_053010.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_053010.json",
+      "sha256": "899ed69523de82ce66c0c8bd646f368aa1a55a976ab943ccad88f32893c1c3c1",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_053842.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_053842.json",
+      "sha256": "3d2a8fe711850d42d6a4b9378224569cafa1586c3c59cf5a0eadeb603b3e8d6e",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_054855.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_054855.json",
+      "sha256": "f5c92a0fe4b7705facaad439d3d30423c41b018043a0736750b98929f29a5842",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_061400.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_061400.json",
+      "sha256": "7af6cb621b790f3793cd60bdd30863d5c5e8c0521f01be573efc21488857af6f",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_062629.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_062629.json",
+      "sha256": "601beeef504a1394f01cf25cd260c4ef9fdc4dde5c33b5f0a4db21b2f0801db0",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_063432.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2/protocol_core_noiseless_20260812_063432.json",
+      "sha256": "7241d6aa30a36acf29a42372b1aade0f27fd1ddc5cb2aa351c5a607c0859dfca",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_064422.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_064422.json",
+      "sha256": "3205bb05d8902c849c1d4476e03173f9207a41a8143bea2aa59a0b6d3d3204ff",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_065200.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_065200.json",
+      "sha256": "043825f60701e310c2beba1ab1fdc1f68a4f376a5820ae955337af57c2f1c43d",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_070109.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_070109.json",
+      "sha256": "2595db0c9530e89b522cba07e317fed452722731490f4bdfe7fff89746ef4db7",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_072401.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_072401.json",
+      "sha256": "9e4ceeac1d6ecad04b0481243f57a02a07cc48185391a54340a50521797de933",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_073435.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_073435.json",
+      "sha256": "c0dd313b8e9a9bedb84c03383691aefb3673103d0a23a0e3e1a8d8020a2211eb",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_074145.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/_saved/protocol_core_extrap_20260812_074145.json",
+      "sha256": "29afc3c11ac02bd56c1428c2f08aa9a8a99bfc47bd0695a5f28e140c0efea855",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_064422.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_064422.json",
+      "sha256": "3205bb05d8902c849c1d4476e03173f9207a41a8143bea2aa59a0b6d3d3204ff",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_065200.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_065200.json",
+      "sha256": "043825f60701e310c2beba1ab1fdc1f68a4f376a5820ae955337af57c2f1c43d",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_070109.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_070109.json",
+      "sha256": "2595db0c9530e89b522cba07e317fed452722731490f4bdfe7fff89746ef4db7",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_072401.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_072401.json",
+      "sha256": "9e4ceeac1d6ecad04b0481243f57a02a07cc48185391a54340a50521797de933",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_073435.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_073435.json",
+      "sha256": "c0dd313b8e9a9bedb84c03383691aefb3673103d0a23a0e3e1a8d8020a2211eb",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_074145.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_extrap/protocol_core_extrap_20260812_074145.json",
+      "sha256": "29afc3c11ac02bd56c1428c2f08aa9a8a99bfc47bd0695a5f28e140c0efea855",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_081102.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_081102.json",
+      "sha256": "ce773102cdfd19dd81bba64c62b8eb1ef459d80055914f8d54ccb5e9ebbc9df4",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_084907.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_084907.json",
+      "sha256": "0b1ca30fb8da006a625e3f7b38e139fb76670d8a2c9279bcb2e7d56d3c76d542",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_085505.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_multi/protocol_core_noiseless_20260812_085505.json",
+      "sha256": "0794fc06f9424af460d59ae2c6cbd661912ca3bf38e7568c16c38793a7e901f1",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_040728.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_040728.json",
+      "sha256": "f08954cfb69eaca677fd05e6081a788363509069487d7e45bbab6aa9d4db09e1",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_041731.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_041731.json",
+      "sha256": "a50163c271cd9448c9a7872338fa551d20cbea5a36b72989338b1a71b28ce4f1",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_042804.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_042804.json",
+      "sha256": "e9d9ebdce04bcf6c890f6198828695e4c1463038807822d73a37d4afbaf62079",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_045457.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_045457.json",
+      "sha256": "891b2dc82f3486c6abb09bff17861414470b4f9ed8b90392c32f1c267baf8036",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_050847.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_050847.json",
+      "sha256": "81306f6bf2819b267e7716fcf5ed52f85900d30a02bb74a8fe6f3a0f68c8f227",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_051917.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/_saved/protocol_core_noiseless_pca_20260812_051917.json",
+      "sha256": "ccbe9c1db578f980b73005b0ced273249a1bc203f016b4881e3015db152253d1",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_biology.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_biology.json",
+      "sha256": "6fa89b7820eef5c4c8f2df72d47876855916e51fdcead0ab3eddbfc578f1cfc3",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_electrochemistry.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_electrochemistry.json",
+      "sha256": "56890fb497d6600eec76633c47f066f548010b5a5ece72c276e5d5c455b486ff",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_electromagnetism.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_electromagnetism.json",
+      "sha256": "c4b63a62766350cb98fe107e059020bea3c7da4d145bc0ca2dde05be64a430d8",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_probability.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_probability.json",
+      "sha256": "b27f1c20b2b73927bee0e36935cd66329ec31a67d18d87ebc3769e6e570d982d",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_quantum.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_quantum.json",
+      "sha256": "bf18732e030e3dfd6cb434280252ac32ef40e6bb33e737f3d0e4fffbc7266661",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_thermodynamics.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/pca4060_checkpoint_feynman_thermodynamics.json",
+      "sha256": "529a4e95ca0fc7bc547f3d23ce901f21c5df86dd7ddcd44060479100a5f22ab7",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_040728.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_040728.json",
+      "sha256": "f08954cfb69eaca677fd05e6081a788363509069487d7e45bbab6aa9d4db09e1",
+      "contaminated_rows": 3
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_041731.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_041731.json",
+      "sha256": "a50163c271cd9448c9a7872338fa551d20cbea5a36b72989338b1a71b28ce4f1",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_042804.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_042804.json",
+      "sha256": "e9d9ebdce04bcf6c890f6198828695e4c1463038807822d73a37d4afbaf62079",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_045457.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_045457.json",
+      "sha256": "891b2dc82f3486c6abb09bff17861414470b4f9ed8b90392c32f1c267baf8036",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_050847.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_050847.json",
+      "sha256": "81306f6bf2819b267e7716fcf5ed52f85900d30a02bb74a8fe6f3a0f68c8f227",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_051917.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/exp2_pca_4060/protocol_core_noiseless_pca_20260812_051917.json",
+      "sha256": "ccbe9c1db578f980b73005b0ced273249a1bc203f016b4881e3015db152253d1",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/protocol_core_noiseless_20260812_170344.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/noise-sweep/protocol_core_noiseless_20260812_170344.json",
+      "sha256": "0b05d1a6b653a4a39d03d77b59d8c1ff8fb71924555d9b68932a4877f2a6194d",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_172958.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_172958.json",
+      "sha256": "696d79592227ab290244e4085b2198855ad649927a0d965ce1dc0cfe85901bf7",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_173425.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_173425.json",
+      "sha256": "638637c1b92716eb3274e526b60e74b45257b02149430e68cc071dbf68bcaea4",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_173523.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_173523.json",
+      "sha256": "36c8c5bcf0ce3a5b30f9ecc3fec0736c609725002f232a610438bb01d0ae202b",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_175318.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/noise-sweep/protocol_core_noisy_20260812_175318.json",
+      "sha256": "bce4355672c35daf19d01566e6423998e21cd2b598d93e9880b08c689055c825",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_185045.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_185045.json",
+      "sha256": "2a420bb592fda8d5d1dd12c5c5ff62699e80844f7a08fd7e462ee35f0759be3b",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_185813.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_185813.json",
+      "sha256": "115b26f868771509bbcb435de7063b09e19d7c123fb8b2232a8184b6096a7144",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_190756.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_190756.json",
+      "sha256": "113aec33c85971f14d6a8afc9cc056ff162dc2e66457b1353b9f50f6e17135ee",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_194442.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_194442.json",
+      "sha256": "590f74580204130718412e19e11f76af33c617f3a8e5b34380ea77f690e1c0a9",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_201405.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_201405.json",
+      "sha256": "cf4c0befa2d925d9a4080ab812c6f7684335c56cf6ce87c150890b22d684f73a",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_203510.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/comparison_results/feynman-tests/sample-complexity/protocol_core_noiseless_20260812_203510.json",
+      "sha256": "aed36c885c45b946ab9ca40b492e0e8088555493fee8d11651a3056bd5a32272",
+      "contaminated_rows": 11
+    },
+    {
+      "old": "hypatiax/data/results/five_systems/exp2_five/protocol_core_noiseless_20260812_093946.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/five_systems/exp2_five/protocol_core_noiseless_20260812_093946.json",
+      "sha256": "4225aa19a7c14a3ad4cb41f5ff64cd9f8c3d01a3e2b5d26b062dfc8092f549e3",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/five_systems/exp2_five/protocol_core_noiseless_20260812_101526.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/five_systems/exp2_five/protocol_core_noiseless_20260812_101526.json",
+      "sha256": "1d50379ab1716bbaf7c7896983f03a3ffbb0c51b08682a8c8f25b29f5add64ad",
+      "contaminated_rows": 1
+    },
+    {
+      "old": "hypatiax/data/results/five_systems/exp2_five/protocol_core_noiseless_20260812_102054.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/five_systems/exp2_five/protocol_core_noiseless_20260812_102054.json",
+      "sha256": "1b087acb740803b4c9d2de788b8b86d3afb4b56ae5d4a59ce8a39767e76bc2ac",
+      "contaminated_rows": 2
+    },
+    {
+      "old": "hypatiax/data/results/issue2b_experiment/31662432869/llm_freeze_cache.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/issue2b_experiment/31662432869/llm_freeze_cache.json",
+      "sha256": "0d9e11c3ea9df4aa3af16280787eeb87b1ba8c533b75fdaf41efc7c075bd9548",
+      "contaminated_rows": 4
+    },
+    {
+      "old": "hypatiax/data/results/issue2b_experiment/31662432869/phaseA_run1/protocol_core_noiseless_20260813_031532.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/issue2b_experiment/31662432869/phaseA_run1/protocol_core_noiseless_20260813_031532.json",
+      "sha256": "3c9e89185ebd17ed5e5e905fa0aee4fada514c66b39ca8539f14b6e89a060fc8",
+      "contaminated_rows": 4
+    },
+    {
+      "old": "hypatiax/data/results/issue2b_experiment/31662432869/phaseA_run2/protocol_core_noiseless_20260813_032947.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/issue2b_experiment/31662432869/phaseA_run2/protocol_core_noiseless_20260813_032947.json",
+      "sha256": "e732b6959a69e9715e13dbcf875805c09d4a0b8517553d7f8dd125774a1eb657",
+      "contaminated_rows": 4
+    },
+    {
+      "old": "hypatiax/data/results/issue2b_experiment/31662432869/phaseA_run3/protocol_core_noiseless_20260813_034416.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/issue2b_experiment/31662432869/phaseA_run3/protocol_core_noiseless_20260813_034416.json",
+      "sha256": "8a4a618753e79477b3bbe13f4314dbf28378a457cac337c5327ac7e9c57ae9f9",
+      "contaminated_rows": 4
+    },
+    {
+      "old": "hypatiax/data/results/issue2b_experiment/31662432869/phaseB_full/protocol_core_noiseless_20260813_044317.json",
+      "new": "hypatiax/data/results/exploratory/bypass_contaminated/issue2b_experiment/31662432869/phaseB_full/protocol_core_noiseless_20260813_044317.json",
+      "sha256": "29998bcebf61a4ca99d974e27b197ac671d2985ea1c2775da434db576cc7b964",
+      "contaminated_rows": 4
+    }
+  ]
+}
