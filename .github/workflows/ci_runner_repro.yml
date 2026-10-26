@@ -265,6 +265,7 @@ jobs:
       needs_julia:     ${{ steps.meta.outputs.needs_julia }}
       result_subdir:   ${{ steps.meta.outputs.result_subdir }}
       effective_seeds: ${{ steps.meta.outputs.effective_seeds }}
+      ablation_seed:   ${{ steps.meta.outputs.ablation_seed }}
 
     steps:
       - name: Checkout
@@ -360,7 +361,17 @@ jobs:
               SCRIPT="hypatiax/experiments/benchmarks/exp1_ablation.py"
               NEEDS_JULIA=false
               RESULT_SUBDIR="ablation/exp1_ablation"
-              DEFAULT_SEEDS="42"
+              # One seed per dispatch (a full 5-shard run each). seed 42 (or empty) = canonical
+              # dir; any other seed writes to ablation/exp1_ablation_seed<N> so repeat seeds
+              # never touch the committed seed-42 results. Dispatch once per seed, e.g. 99, 123.
+              ABL_SEED="${SEEDS_IN:-42}"
+              if [[ ! "${ABL_SEED}" =~ ^[0-9]+$ ]]; then
+                echo "::error::exp1_ablation takes exactly ONE seed per dispatch (got '${ABL_SEED}'). Dispatch once per seed."
+                exit 1
+              fi
+              if [[ "${ABL_SEED}" != "42" ]]; then RESULT_SUBDIR="ablation/exp1_ablation_seed${ABL_SEED}"; fi
+              DEFAULT_SEEDS="${ABL_SEED}"
+              echo "ablation_seed=${ABL_SEED}" >> "$GITHUB_OUTPUT"
               ;;
 
             exp1_five)
@@ -749,6 +760,10 @@ jobs:
       SCRIPT_PATH:    ${{ needs.plan.outputs.script_path }}
       NEEDS_JULIA:    ${{ needs.plan.outputs.needs_julia }}
       RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
+      # exp1_ablation repeat seeds: seed + per-seed result dir with canonical file names.
+      PYSR_SEED:      ${{ needs.plan.outputs.ablation_seed || '42' }}
+      ABLATION_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+      EXP1_ABLATION_SEED_IN_DIR: "1"
       SHARD_IDS:      ${{ matrix.ids }}
       SHARD_INDEX:    ${{ matrix.shard }}
       SHARD_ID:       ${{ matrix.shard_id }}
@@ -2930,6 +2945,9 @@ jobs:
     timeout-minutes: 60
     env:
       RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+      PYSR_SEED:      ${{ needs.plan.outputs.ablation_seed || '42' }}
+      ABLATION_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+      EXP1_ABLATION_SEED_IN_DIR: "1"
 
     steps:
       - name: Checkout

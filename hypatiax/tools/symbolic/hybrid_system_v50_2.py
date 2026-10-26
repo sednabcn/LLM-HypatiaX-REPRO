@@ -727,7 +727,9 @@ class HybridDiscoverySystem:
 
         for attempt in range(self.max_retries):
             try:
-                seed = 42 + attempt
+                # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
+                # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
+                seed = int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")) + attempt
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
 

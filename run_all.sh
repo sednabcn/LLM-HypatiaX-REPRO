@@ -473,7 +473,7 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
 # ---------------------------------------------------------------------------
 _exp1_ablation_step() {
   cd "${REPO_ROOT}"
-  local abl_dir="${RESULTS_DIR}/ablation/exp1_ablation"
+  local abl_dir="${RESULTS_DIR}/${ABLATION_SUBDIR:-ablation/exp1_ablation}"  # per-seed dir for repeat seeds
   local script="${EXPERIMENTS_DIR}/exp1_ablation.py"
   local sfx="${SHARD_INDEX:+_shard${SHARD_INDEX}}"
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
@@ -540,7 +540,7 @@ run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM
 # ---------------------------------------------------------------------------
 _exp1_ablation_aggregate() {
   cd "${REPO_ROOT}"
-  local abl_dir="${RESULTS_DIR}/ablation/exp1_ablation"
+  local abl_dir="${RESULTS_DIR}/${ABLATION_SUBDIR:-ablation/exp1_ablation}"  # per-seed dir for repeat seeds
   local script="${EXPERIMENTS_DIR}/exp1_ablation.py"
   local logf="${abl_dir}/exp1_ablation_aggregate_run.log"
   mkdir -p "${abl_dir}"

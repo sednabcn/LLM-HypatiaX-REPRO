@@ -65,6 +65,8 @@ _GLOBAL_SEED = int(os.environ.get("PYSR_SEED", os.environ.get("NN_SEED", 42)))
 random.seed(_GLOBAL_SEED)
 np.random.seed(_GLOBAL_SEED)
 os.environ["PYTHONHASHSEED"] = str(_GLOBAL_SEED)
+# The hybrid engine's PySR attempts (42+attempt) follow the experiment seed (repeat-seed runs).
+os.environ["HYPATIAX_ENGINE_SEED"] = str(_GLOBAL_SEED)
 
 # API key: GITHUB Secrets → environment variable (no hardcoded keys)
 
@@ -94,7 +96,10 @@ _RESULTS_DIR_ENV = os.environ.get("RESULTS_DIR", "")
 OUTPUT_DIR = Path(_RESULTS_DIR_ENV) if _RESULTS_DIR_ENV else _HERE
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-_seed_suffix = f"_seed{_GLOBAL_SEED}" if _GLOBAL_SEED != 42 else ""
+# CI runs repeat seeds in their own result dir (ablation/exp1_ablation_seed<N>) with canonical
+# file names, so the shard/merge/verify plumbing is unchanged: EXP1_ABLATION_SEED_IN_DIR=1.
+_seed_suffix = (f"_seed{_GLOBAL_SEED}"
+                if _GLOBAL_SEED != 42 and os.environ.get("EXP1_ABLATION_SEED_IN_DIR") != "1" else "")
 RESULTS_PATH = OUTPUT_DIR / f"exp1_ablation_results{_seed_suffix}.json"
 CKPT_PATH    = OUTPUT_DIR / f"exp1_ablation_checkpoint{_seed_suffix}.json"
 TEX_PATH     = OUTPUT_DIR / f"exp1_ablation_table{_seed_suffix}.tex"
