@@ -980,7 +980,16 @@ def audit(run_bypass_audit: bool = False) -> list[Row]:
         t = read(m4)
         chk(3, "M4 engine has no private ss_tot R2", not has_ss_tot(t), rel(m4))
         chk(3, "M4 engine logs llm_called", "llm_called" in t, rel(m4))
-    add(3, "M4 stored output", "MANUAL", "rerun HybridSystemLLMNN or downgrade stored M4 results to exploratory")
+    _mk = ROOT / "scripts/mark_m4_unverified.py"
+    if _mk.is_file():
+        import importlib.util as _ilu2
+        _sp2 = _ilu2.spec_from_file_location("mk", _mk); _m2 = _ilu2.module_from_spec(_sp2); _sp2.loader.exec_module(_m2)
+        _un = _m2.unflagged()
+        chk(3, "stored M4 rows without a formula are flagged or rerun", not _un,
+            f"{sum(n for _, n in _un)} unflagged row(s) in {len(_un)} file(s): run scripts/mark_m4_unverified.py (dry run), then --apply or rerun M4"
+            if _un else "none unflagged")
+    else:
+        add(3, "M4 stored output", "MANUAL", "rerun HybridSystemLLMNN or downgrade stored M4 results to exploratory")
 
     # ---- 5: noise sweep
     chk(5, "enforce_flags.py present", find_py("enforce_flags.py") is not None,
