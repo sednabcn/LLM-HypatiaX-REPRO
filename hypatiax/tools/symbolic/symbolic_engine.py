@@ -2597,7 +2597,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         except Exception as exc:
             return {
                 "success": False,
-                "r2": 0.0,
+                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 "rmse": float("inf"),
                 "formula": "N/A",
                 "iterations": max_iterations,
@@ -3135,7 +3135,7 @@ class SymbolicTreeEngine:
             print("  ⚠️  No valid expression found.")
             return {
                 "equation": None,
-                "r2": 0.0,
+                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 "error": float("inf"),
                 "complexity": 0,
                 "posterior": 0.0,

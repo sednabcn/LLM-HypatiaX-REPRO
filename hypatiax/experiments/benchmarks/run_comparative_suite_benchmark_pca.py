@@ -1017,7 +1017,7 @@ class BaseMethod:
     def _unavailable(self, reason: str) -> MethodResult:
         return MethodResult(
             method=self.name, success=False,
-            r2=0.0, rmse=float("inf"), formula="N/A", error=reason,
+            r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
         )
 
     @staticmethod
@@ -2419,7 +2419,8 @@ class HybridAllDomainsMethod(BaseMethod):
 
             best_result = None
             best_r2     = float("-inf")
-            ss_tot      = float(np.sum((y - np.mean(y)) ** 2))
+            # PHASE1-FIX-P10b: canonical R^2 (no private ss_tot / 1e-300 guard)
+            from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
             # Strategy A — log-space correction (for power-law / tiny-scale eqs)
             if _use_log:
@@ -2430,9 +2431,8 @@ class HybridAllDomainsMethod(BaseMethod):
                         y_log_corrected = np.exp(
                             np.clip(np.log(y_pred_llm) + log_corr, -500, 500))
                         if np.all(np.isfinite(y_log_corrected)):
-                            r2_log = float(1.0 - np.sum((y - y_log_corrected) ** 2)
-                                           / max(ss_tot, 1e-300))
-                            if r2_log > best_r2:
+                            r2_log = _r2_checked(y, y_log_corrected)[0]  # PHASE1-FIX-P10b
+                            if np.isfinite(r2_log) and r2_log > best_r2:
                                 best_r2, best_result = r2_log, y_log_corrected
                 except Exception as _e:
                     import logging as _lg, os as _os
@@ -2446,9 +2446,8 @@ class HybridAllDomainsMethod(BaseMethod):
                 if lin_corr is not None:
                     y_lin_corrected = y_pred_llm + lin_corr
                     if np.all(np.isfinite(y_lin_corrected)):
-                        r2_lin = float(1.0 - np.sum((y - y_lin_corrected) ** 2)
-                                       / max(ss_tot, 1e-300))
-                        if r2_lin > best_r2:
+                        r2_lin = _r2_checked(y, y_lin_corrected)[0]  # PHASE1-FIX-P10b
+                        if np.isfinite(r2_lin) and r2_lin > best_r2:
                             best_r2, best_result = r2_lin, y_lin_corrected
             except Exception as _e:
                 import logging as _lg, os as _os
@@ -3498,7 +3497,7 @@ class ProtocolBenchmarkSuite:
                 _timed_out = True
                 result = MethodResult(
                     method=method.name, success=False,
-                    r2=0.0, rmse=float("inf"), formula="N/A",
+                    r2=float("-inf"), rmse=float("inf"), formula="N/A",  # PHASE1-FIX: failure, not a score
                     error=f"hard timeout after {_METHOD_TIMEOUT_SECS}s (thread killed)",
                     metadata={"timed_out": True},
                 )

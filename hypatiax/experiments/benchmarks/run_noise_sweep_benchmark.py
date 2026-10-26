@@ -152,7 +152,9 @@ _DEFAULT_NOISE_LEVELS: list[float] = [0.0, 0.005, 0.01, 0.05, 0.10]
 _DEFAULT_METHODS: list[int] = [3, 4]
 
 # R2 below this triggers a catastrophic-failure flag in the report
-_CATASTROPHIC_R2_THRESHOLD: float = 0.90
+# PHASE1-FIX: one catastrophic definition for the whole repo (R2 < -1; NaN/-inf counted)
+from hypatiax.core.metrics import CATASTROPHIC_THRESHOLD as _CATASTROPHIC_R2_THRESHOLD
+_RUN_FLAGS: dict = {}  # PHASE1-FIX: filled by main() from enforce()
 
 # Single recovery-threshold policy (re-runs plan: fixed 0.99 for cross-
 # condition comparison, strict 0.999999 reported as "exact recovery").
@@ -535,7 +537,7 @@ def _aggregate_results(
                         exact_recovery_rate, n_success, n_total, n_nonfinite,
                         threshold_used, n_catastrophic
       per_equation    : {eq: {method: {r2, rmse, success, catastrophic}}}
-      catastrophic_failures: [{equation, method, r2}]  (R2 < 0.90)
+      catastrophic_failures: [{equation, method, r2}]  (R2 < metrics.CATASTROPHIC_THRESHOLD, or non-finite)
 
     cross_noise_summary: {method: {sigma_str: {median_r2, recovery_rate,
                                                std_r2, n_catastrophic}}}
@@ -613,6 +615,11 @@ def _aggregate_results(
                     _r2_ok = False
                 if not _r2_ok:
                     n_nonfinite += 1
+                    if res:  # PHASE1-FIX: NaN/-inf from a method that ran = catastrophic
+                        n_catastrophic += 1
+                        catastrophic_failures.append(
+                            {"equation": eq_name, "method": method, "r2": float("-inf")}
+                        )
                 elif sigma_c is not None and float(_r2_raw) > sigma_c[0] + sigma_c[1]:
                     # Checked on every finite R2, success-flagged or not.
                     n_above_ceiling += 1
@@ -873,6 +880,7 @@ def _save_sweep_json(agg: dict, ts: str) -> Path:
         )
     path = _RESULTS_DIR / f"noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.json"
     with open(path, "w") as f:
+        agg["run_flags"] = dict(_RUN_FLAGS)  # PHASE1-FIX: sign-flip / bypass flag state
         json.dump(agg, f, indent=2, default=str)
     print(f"  Saved noise sweep JSON  -> {path}")
     return path
@@ -946,7 +954,9 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
 # ============================================================================
 
 def main() -> None:
-    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
+    global _RUN_FLAGS
+    from hypatiax.core.enforce_flags import enforce
+    _RUN_FLAGS = enforce()  # fail-closed flag guard; state recorded in output (PHASE1-FIX)
     parser = argparse.ArgumentParser(
         description=(
             "Noise-level sweep  sigma in {1%,5%,10%}  for "

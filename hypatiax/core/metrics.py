@@ -52,12 +52,6 @@ NEAR_PERFECT_THRESHOLD = 0.99        # cross-condition comparison threshold
 EXACT_RECOVERY_THRESHOLD = 0.999999  # strict "exact recovery" threshold
 CATASTROPHIC_THRESHOLD = -1.0
 
-# Constant-target detection is RELATIVE to the target's scale. A fixed
-# absolute cutoff on the total sum of squares misclassifies legitimately
-# small-scale targets (e.g. values ~1e-6) as constant and silently scores
-# them 0.0.
-_REL_EPS = 1e-12
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers
@@ -197,7 +191,7 @@ def compute_near_perfect_rate(
     threshold: float = NEAR_PERFECT_THRESHOLD,
 ) -> float:
     """
-    Fraction of tasks whose R² exceeds *threshold*.
+    Fraction of tasks whose R² is >= *threshold* (same rule as ``is_recovered``).
 
     NaN scores (failed predictions) stay in the denominator and never count
     as passes.
@@ -214,7 +208,7 @@ def compute_near_perfect_rate(
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
         return float("nan")
-    return float(np.mean(arr > threshold))
+    return float(np.mean(np.isfinite(arr) & (arr >= threshold)))  # PHASE1-FIX: >=, as is_recovered
 
 
 def compute_exact_recovery_rate(
@@ -382,12 +376,13 @@ if __name__ == "__main__":
     except ImportError:
         print("sklearn not installed — skipping cross-check")
 
-    # Regression tests for the evaluator guard / NaN handling
+    # Regression tests (PHASE1-FIX): assertions match the canonical policy (and the
+    # doctests above): degenerate target -> NaN, non-finite prediction -> -inf.
     assert abs(compute_r2([1e-6, 2e-6, 3e-6], [1e-6, 2e-6, 4e-6]) - 0.5) < 1e-9, \
         "small-scale target must not be treated as constant"
-    assert math.isnan(compute_r2([1, 2, 3], [1, float("inf"), 3]))
-    assert compute_r2([5, 5, 5], [5, 5, 5]) == 1.0
-    assert compute_r2([5, 5, 5], [5, 5, 6]) == 0.0
+    assert compute_r2([1, 2, 3], [1, float("inf"), 3]) == float("-inf")
+    assert math.isnan(compute_r2([5, 5, 5], [5, 5, 5])), "constant target is NaN, never 1.0"
+    assert math.isnan(compute_r2([5, 5, 5], [5, 5, 6])), "constant target is NaN, never 0.0"
     assert evaluate_all([1, 2, 3], [float("nan")] * 3)["catastrophic"] is True
     try:
         compute_r2([1, float("nan")], [1, 2])

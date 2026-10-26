@@ -1254,11 +1254,11 @@ EXPLANATION:
         """Evaluate a formula dict (with 'python_code') against data."""
         code = result_dict.get("python_code", "N/A")
         if not code or code == "N/A":
-            return {"success": False, "r2": 0.0, "error": "no python_code"}
+            return {"success": False, "r2": float("-inf"), "error": "no python_code"}  # PHASE1-FIX: failure, not a score
 
         preds = _safe_exec_formula(code, X, variable_names)
         if preds is None or not np.isfinite(preds).all():
-            return {"success": False, "r2": 0.0, "error": "formula evaluation failed"}
+            return {"success": False, "r2": float("-inf"), "error": "formula evaluation failed"}  # PHASE1-FIX: failure, not a score
 
         r2 = r2_score(y, preds)
         _, r2_status = r2_score_checked(y, preds)

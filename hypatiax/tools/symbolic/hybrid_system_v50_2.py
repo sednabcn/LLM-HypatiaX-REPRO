@@ -181,14 +181,12 @@ R2_EXACT = 0.999999
 
 
 def _r2_np(y_true: np.ndarray, y_pred: np.ndarray) -> float:
-    """Plain numpy R² (B3: no sklearn dependency for scoring)."""
-    y_true = np.asarray(y_true, dtype=np.float64)
-    y_pred = np.asarray(y_pred, dtype=np.float64)
-    ss_res = float(np.sum((y_true - y_pred) ** 2))
-    ss_tot = float(np.sum((y_true - np.mean(y_true)) ** 2))
-    if ss_tot <= 1e-24 * max(float(np.sum(y_true ** 2)), 1e-300):
-        return 1.0 if ss_res <= 1e-24 * max(float(np.sum(y_true ** 2)), 1e-300) else float("-inf")
-    return 1.0 - ss_res / ss_tot
+    """Plain numpy R² (PHASE1-FIX: delegates to the canonical policy).
+
+    Degenerate target -> NaN (never 1.0); non-finite prediction -> -inf.
+    """
+    from hypatiax.core.r2_canonical import r2_checked
+    return r2_checked(y_true, y_pred)[0]
 
 
 # ---------------------------------------------------------------------------
@@ -1547,7 +1545,16 @@ class HybridDiscoverySystem:
                     and (discovery.get("llm_mode") not in (None, "", "none")
                          or bool(getattr(self, "_llm_attempt_modes", None)))
                 ),
-                "bypass_kind": "none",
+                "bypass_kind": "live" if (bool(
+                    self.llm_mode != "none"
+                    and (discovery.get("llm_mode") not in (None, "", "none")
+                         or bool(getattr(self, "_llm_attempt_modes", None)))
+                )) else "none",
+                "generation_path": "symbolic+llm" if (bool(
+                    self.llm_mode != "none"
+                    and (discovery.get("llm_mode") not in (None, "", "none")
+                         or bool(getattr(self, "_llm_attempt_modes", None)))
+                )) else "symbolic",
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
                 "validations": 1 if validation else 0,
                 "validation_score": validation.get("total_score", 0.0),
@@ -1569,7 +1576,7 @@ class HybridDiscoverySystem:
             )
             return {
                 "success": False,
-                "r2": 0.0,
+                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 "rmse": float("nan"),   # nan = not computable; inf would mean infinitely bad fit
                 "nrmse": float("nan"),
                 "formula": "N/A",
@@ -1580,7 +1587,8 @@ class HybridDiscoverySystem:
                 "llm_mode": "none",
                 "llm_called": bool(getattr(self, "_llm_attempt_modes", None)),
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
-                "bypass_kind": "none",
+                "bypass_kind": "live" if (bool(getattr(self, "_llm_attempt_modes", None))) else "none",
+                "generation_path": "symbolic+llm" if (bool(getattr(self, "_llm_attempt_modes", None))) else "symbolic",
                 "validations": 0,
                 "scale_log": False,
                 "x_log_flags": [False] * len(var_names),

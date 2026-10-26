@@ -547,6 +547,7 @@ class PureLLMBaseline:
                 "llm_called": True,
                 "llm_attempted": True,
                 **_prov,
+                "generation_path": "pure_llm_api",  # PHASE1-FIX
                 "formula_present": parsed.get("python", "N/A") not in ("N/A", ""),
                 "stop_reason": getattr(response, "stop_reason", None),
                 "usage": {
@@ -576,6 +577,7 @@ class PureLLMBaseline:
                 "llm_attempted": _llm_attempted,
                 "error_stage": "post_response" if _response_received else "api_request",
                 **_prov,
+                "generation_path": "pure_llm_api" if _response_received else "pure_llm_api_failed",
                 "formula_present": False,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -848,25 +850,13 @@ CRITICAL REQUIREMENTS:
             mae = np.mean(np.abs(y_pred - y_true))
             rmse = np.sqrt(mse)
 
-            ss_res = np.sum((y_true - y_pred) ** 2)
-            ss_tot = np.sum((y_true - np.mean(y_true)) ** 2)
-
-            # Relative threshold — scales with the data so tiny-y equations
-            # (Photon y~1e-19, Zeeman y~1e-23, Newton y~1e-11, Lorentz y~1e-11)
-            # are not misclassified as constant targets by an absolute 1e-10 floor.
-            # FIX-EVAL-NEARCONST: the previous tolerance (1e-10 * max|y|^2 * n)
-            # is relative to the OFFSET, not the spread, so y = 1e6 + N(0,1)
-            # was classed "constant" and any prediction within ~10 of it scored
-            # R^2 = 1.0 (true R^2 was -27). A target is constant only if its
-            # peak-to-peak spread is at float-roundoff level of its magnitude.
-            _mag = float(np.max(np.abs(y_true)))
-            _is_const = float(np.ptp(y_true)) <= 1e-12 * _mag if _mag > 0 else True
-            if not _is_const and ss_tot > 0:
-                r2 = float(1.0 - ss_res / ss_tot)
-                _r2_status = "ok"
-            else:
-                # Genuinely constant target: perfect only if predictions match it
-                _match = np.allclose(y_pred, y_true, rtol=1e-9, atol=1e-30)
+            # PHASE1-FIX-P3b: canonical R^2 (hypatiax.core.r2_canonical.r2_checked). A degenerate target keeps the
+            # evaluator's existing contract pinned by test_baseline_regressions: exact match -> 1.0,
+            # mismatch -> -inf. The 1e6 + N(0,1) offset case is scored on its spread, not its offset.
+            from hypatiax.core.r2_canonical import r2_checked as _r2_checked
+            r2, _r2_status = _r2_checked(y_true, y_pred)
+            if _r2_status == "degenerate_target":
+                _match = bool(np.allclose(y_pred, y_true, rtol=1e-9, atol=1e-30))
                 r2 = 1.0 if _match else float("-inf")
                 _r2_status = "constant_target_match" if _match else "constant_target_mismatch"
 

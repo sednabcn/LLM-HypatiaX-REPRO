@@ -352,6 +352,21 @@ def main(argv=None):
     print("Chosen method (picked on train):", chosen)
     print(f"Chosen R² (test): {chosen_r2_te:.6f}")
 
+    # PHASE1: generation_path - how the LLM formula in this row came about.
+    #   llm             a live call returned usable code (llm_called is True)
+    #   llm_unverified  usable code, but the generator did not say whether the call was live
+    #   unavailable     no usable code (the LLM arm failed; the row is NOT an LLM result)
+    #   <bypass_kind>   any bypass label the generator reported (never silently "llm")
+    _no_code = (not llm_result.get("python_code")) or llm_result.get("python_code") == "N/A"
+    if prov.get("bypass_kind") not in (None, "none", "live"):
+        prov["generation_path"] = str(prov.get("bypass_kind"))
+    elif _no_code:
+        prov["generation_path"] = "unavailable"
+    elif prov.get("llm_called") is True:
+        prov["generation_path"] = "llm"
+    else:
+        prov["generation_path"] = "llm_unverified"
+
     record = {
         "description": desc,
         "seed": seed,

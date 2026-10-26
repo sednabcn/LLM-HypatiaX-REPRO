@@ -415,7 +415,7 @@ NO markdown code blocks, individual parameters NOT dict."""
 
         if len(X) < 10:
             return None, {
-                "r2": 0.0,
+                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 "rmse": float("inf"),
                 "mae": float("inf"),
                 "error": "Insufficient data",
@@ -435,7 +435,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             print(f"⚠️  NN training FAILED ({type(e).__name__}: {str(e)[:100]}); "
                   f"this row has no NN arm")
             return None, {
-                "r2": 0.0,
+                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 "rmse": float("inf"),
                 "mae": float("inf"),
                 "error": f"{type(e).__name__}: {e}",
@@ -576,7 +576,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         try:
             code = formula_dict.get("python_code", "")
             if not code or code == "N/A":
-                return {"error": "No code generated", "success": False, "r2": 0.0}
+                return {"error": "No code generated", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
 
             import math as _math
             import warnings as _warnings
@@ -616,7 +616,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             )
 
             if not func:
-                return {"error": "No function found", "success": False, "r2": 0.0}
+                return {"error": "No function found", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
 
             with _warnings.catch_warnings():
                 _warnings.simplefilter("ignore")
@@ -626,12 +626,12 @@ NO markdown code blocks, individual parameters NOT dict."""
                 return {
                     "error": f"Shape mismatch: {len(y_pred)} vs {len(y_true)}",
                     "success": False,
-                    "r2": 0.0,
+                    "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
                 }
 
             # Handle inf/nan values
             if not np.all(np.isfinite(y_pred)):
-                return {"error": "Non-finite predictions", "success": False, "r2": 0.0}
+                return {"error": "Non-finite predictions", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
 
             mse = np.mean((y_pred - y_true) ** 2)
             r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
@@ -644,7 +644,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "success": True,
             }
         except Exception as e:
-            return {"error": str(e)[:100], "success": False, "r2": 0.0}
+            return {"error": str(e)[:100], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
 
     def _evaluate_function(self, func, X, var_names):
         """Evaluate function with multiple strategies"""
@@ -815,7 +815,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         if "error" not in llm_result:
             llm_metrics = self.evaluate_llm_formula(llm_result, X, y_true, var_names)
         else:
-            llm_metrics = {"error": llm_result["error"], "success": False, "r2": 0.0}
+            llm_metrics = {"error": llm_result["error"], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
 
         if verbose:
             if llm_metrics.get("success"):
