@@ -18,7 +18,32 @@ import argparse, collections, hashlib, json, pathlib, subprocess, sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from audit_results_manifest import walk, label  # noqa: E402
+CLEAN_BYPASS_KINDS = (None, "none", "live")  # "live" = real LLM path (the baseline sets it by construction)
+
+
+def classify(obj):
+    """Return (is_contaminated, n_contaminated_rows).
+
+    Contaminated: is_hardcoded is true, method == "pure_llm_hardcoded", or bypass_kind is anything
+    other than none/live. NOTE audit_results_manifest.label() counts bypass_kind == "live" as
+    contaminated; that is a false positive (it flags every clean new run), so it is not used here.
+    """
+    n = [0]
+    def w(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k == "is_hardcoded" and v is True:
+                    n[0] += 1
+                elif k == "bypass_kind" and v not in CLEAN_BYPASS_KINDS:
+                    n[0] += 1
+                elif k == "method" and v == "pure_llm_hardcoded":
+                    n[0] += 1
+                w(v)
+        elif isinstance(o, list):
+            for v in o:
+                w(v)
+    w(obj)
+    return n[0] > 0, n[0]
 
 RES = ROOT / "hypatiax/data/results"
 DEST = RES / "exploratory/bypass_contaminated"
@@ -31,13 +56,12 @@ def scan():
         rel = p.relative_to(RES)
         if any(part in SKIP for part in rel.parts):
             continue
-        c = collections.Counter()
         try:
-            walk(json.loads(p.read_text(encoding="utf-8")), c)
+            bad, n = classify(json.loads(p.read_text(encoding="utf-8")))
         except Exception:
             continue
-        if label(c) == "CONTAMINATED":
-            out.append((p, c["is_hardcoded_true"] + c["bypass_other"] + c["method_pure_llm_hardcoded"]))
+        if bad:
+            out.append((p, n))
     return out
 
 
