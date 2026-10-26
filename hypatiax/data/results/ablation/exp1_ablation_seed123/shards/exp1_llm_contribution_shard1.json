@@ -1,0 +1,70 @@
+{
+  "n": 3,
+  "equations": [
+    "Value at Risk",
+    "Liquidation Price",
+    "Portfolio Std Dev"
+  ],
+  "H_far": [
+    0.9997288652809224,
+    0.9999979912834833,
+    1.0
+  ],
+  "N_far": [
+    0.9997289393058266,
+    0.9999979912834833,
+    -8.313185725420801
+  ],
+  "P_far": [
+    0.9997407617119011,
+    0.9999975796171966,
+    -5.45383337120792
+  ],
+  "tests": {
+    "H_vs_P": {
+      "median_a": 0.9999979912834833,
+      "median_b": 0.9997407617119011,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5
+    },
+    "N_vs_P": {
+      "median_a": 0.9997289393058266,
+      "median_b": 0.9997407617119011,
+      "wins": 0,
+      "ties": 2,
+      "losses": 1,
+      "U_greater": 4.0,
+      "p_greater": 0.673452442533909,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": -0.11111111111111116,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 0.0,
+      "wilcoxon_p_greater": 1.0
+    },
+    "H_vs_N": {
+      "median_a": 0.9999979912834833,
+      "median_b": 0.9997289393058266,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5
+    }
+  }
+}
