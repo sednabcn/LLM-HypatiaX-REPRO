@@ -1,6 +1,6 @@
 {
   "phase": "Option 3 / Phase 2 - matched baseline runs",
-  "generated_utc": "2026-10-27T11:24:03+00:00",
+  "generated_utc": "2026-10-27T12:08:10+00:00",
   "closed": true,
   "settings": {
     "a_name": "pysr_only",
@@ -10,7 +10,7 @@
     "threshold": 0.99,
     "strict_threshold": 0.999999,
     "catastrophic_r2": -10.0,
-    "declare_unequal_timeout": "HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s",
+    "declare_unequal_timeout": "HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. observed: 0/45 HDS rows exceeded 1400 s (max 729 s, median 128 s); cap did not bind (no attempt/retry field in rows; runtime_s may cover only the final attempt)",
     "allow_bypass": false,
     "bootstrap_iters": 10000,
     "bootstrap_seed": 0
@@ -164,7 +164,7 @@
     }
   ],
   "caveats": [
-    "UNEQUAL TIME BUDGETS declared: {\"pysr_only\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. Results are NOT an equal-budget comparison."
+    "UNEQUAL TIME BUDGETS declared: {\"pysr_only\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. observed: 0/45 HDS rows exceeded 1400 s (max 729 s, median 128 s); cap did not bind (no attempt/retry field in rows; runtime_s may cover only the final attempt). Results are NOT an equal-budget comparison."
   ],
   "paired_summary": {
     "recovery_r2>=0.99": {

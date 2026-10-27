@@ -1,6 +1,6 @@
 {
   "phase": "Option 3 / Phase 2 - matched baseline runs",
-  "generated_utc": "2026-10-27T11:24:03+00:00",
+  "generated_utc": "2026-10-27T12:08:11+00:00",
   "closed": true,
   "settings": {
     "a_name": "pysr_only",
@@ -10,18 +10,18 @@
     "threshold": 0.99,
     "strict_threshold": 0.999999,
     "catastrophic_r2": -10.0,
-    "declare_unequal_timeout": "HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s",
+    "declare_unequal_timeout": "HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. observed: 0/45 HDS rows exceeded 1400 s (max 729 s, median 128 s); cap did not bind (no attempt/retry field in rows; runtime_s may cover only the final attempt)",
     "allow_bypass": false,
     "bootstrap_iters": 10000,
     "bootstrap_seed": 0
   },
   "inputs": {
-    "p2_med/pysr_exp1_ablation.jsonl": "f21a1f01e94d8fe62adcb04f61ee3afffad9e27b6c550e5d1532e796bde51924",
-    "p2_med/pysr_exp1_ablation_seed123.jsonl": "cab8bf4a93c5a5bb29ec1eed8aac31800b49d6311aaa8e3465b366c6b8276245",
-    "p2_med/pysr_exp1_ablation_seed99.jsonl": "2333dbc24da3d04095b7d580c9f0ddd546d6084b0d3e2f96e32bca411786528e",
-    "p2_med/hds_exp1_ablation.jsonl": "1e3c39c20987899a6ba440c9ffcda4f25b3a2af4769b2c3848b1b21732d86078",
-    "p2_med/hds_exp1_ablation_seed123.jsonl": "b408dfb4cb592106f7fd46aa753a0196ffc5e4d5ecb177b4168cbae5741f2120",
-    "p2_med/hds_exp1_ablation_seed99.jsonl": "77ffed23798a537749401a2e202549ec99779ecf7eae221dd95356f12098e452"
+    "p2_med/pysr_exp1_ablation.jsonl": "3b916e1a507ae94a63fd16877bbbc5d5b69369f161ae1726d5e45386949e35ec",
+    "p2_med/pysr_exp1_ablation_seed123.jsonl": "8c2351cb9efc05c2b68f967a7693800c1a3aa9a6f0de88c397fbc01ab20bc2a2",
+    "p2_med/pysr_exp1_ablation_seed99.jsonl": "a1a7d191b55800982ed528737c0ac613cc2352a22cbd000789238e40932e0516",
+    "p2_med/hds_exp1_ablation.jsonl": "0864afbe86000416db36a29f0878aad7259f614101322b140443e28f4fabcaf7",
+    "p2_med/hds_exp1_ablation_seed123.jsonl": "b5dc99b83eda0818912a146b6e30fdd76b2d37ac7878246ba8bec37a93171938",
+    "p2_med/hds_exp1_ablation_seed99.jsonl": "64cd364d7fce2f7e29730aed0b9135217be7206aa448667f0bf9ce4c7cf28853"
   },
   "checks": [
     {
@@ -164,7 +164,7 @@
     }
   ],
   "caveats": [
-    "UNEQUAL TIME BUDGETS declared: {\"pysr_only\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. Results are NOT an equal-budget comparison."
+    "UNEQUAL TIME BUDGETS declared: {\"pysr_only\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. observed: 0/45 HDS rows exceeded 1400 s (max 729 s, median 128 s); cap did not bind (no attempt/retry field in rows; runtime_s may cover only the final attempt). Results are NOT an equal-budget comparison."
   ],
   "paired_summary": {
     "recovery_r2>=0.99": {

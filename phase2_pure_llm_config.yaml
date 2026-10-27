@@ -64,7 +64,7 @@ llm:
   model_id: claude-sonnet-4-6                   # checked: single value in all 90 p2 rows; default of LLMConfig.model
   temperature: 0.3                              # read from code: exp1_ablation.py llm_temperature=0.3 -> LLMConfig.temperature
   max_tokens: 2000                              # read from code: LLMConfig.max_tokens default (HDS does not override it)
-  max_calls_per_case: null                      # DECIDE: retries allowed on API error or unparseable output; all count in n_llm_calls
+  max_calls_per_case: 1                      # DECIDE: retries allowed on API error or unparseable output; all count in n_llm_calls
   prompt_inputs: [domain, variable_names, data_patterns, physical_constants_block]   # read from SymbolicEngineWithLLM._build_prompt under HYPATIAX_DISABLE_PROMPT_HINTS=1; the equation NAME/description is withheld
   n_candidates: 3                               # HDS asks for 3 candidate equations per call (exp1_ablation llm_n_candidates=3); DECIDE how a single-formula Pure LLM arm is matched to this
   prompt_hints: disabled                        # HYPATIAX_DISABLE_PROMPT_HINTS=1

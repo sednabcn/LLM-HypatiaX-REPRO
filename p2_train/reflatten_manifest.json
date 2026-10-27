@@ -1,0 +1,23 @@
+{
+  "script": "reflatten_fields.py",
+  "script_version": "1.0",
+  "created_utc": "2026-10-27T12:08:09+00:00",
+  "in_dir": "p2",
+  "primary_field": "extrap_r2_far",
+  "field": "train_r2",
+  "rows": 90,
+  "rows_with_missing_field": 0,
+  "files": {
+    "hds_exp1_ablation.jsonl": 15,
+    "hds_exp1_ablation_seed123.jsonl": 15,
+    "hds_exp1_ablation_seed99.jsonl": 15,
+    "pysr_exp1_ablation.jsonl": 15,
+    "pysr_exp1_ablation_seed123.jsonl": 15,
+    "pysr_exp1_ablation_seed99.jsonl": 15
+  },
+  "source_sha256": {
+    "hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json": "0b62ac348b1cddfe0d7a3254dca21fd3f322fb05d55dee4e0e87e8f17e7aa8e4",
+    "hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results.json": "caa8ca4f0403d95eff0ff718721d0fc43ccdc61470c6eee1e8a65d150005b892",
+    "hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results.json": "c9f416643ad7cbbcb09fa86b04da76539050fff712399e8c7b34fb4889682b38"
+  }
+}
