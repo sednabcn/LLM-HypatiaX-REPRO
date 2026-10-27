@@ -172,3 +172,12 @@ The matrix is 15 equations × 3 seeds = 45 cases. API cost and runtime per case 
 - Most of these are textbook formulas. A Pure LLM may recall them from a name or description, so a high recovery rate may measure recall. If the prompt must include the equation name for parity (D3), say so next to the result.
 - With one LLM sample per case and no sampling seed, repeating the run will not give the same rows. Any rerun is a new run, not a reproduction.
 - The existing HDS rows were produced by the `exp1_ablation` experiment and flattened into `p2/`; they were not launched as a dedicated Phase 2 run.
+
+
+## 11. Values read from the code (added 27 October 2026)
+
+- **LLM settings of the HDS stage:** `temperature = 0.3`, `max_tokens = 2000` (the `LLMConfig` default, not overridden), `n_candidates = 3`, model `claude-sonnet-4-6` (single value in all 90 rows). HDS makes up to `HYPATIA_MAX_RETRIES = 3` PySR attempts per case.
+- **Prompt inputs (D3):** with `HYPATIAX_DISABLE_PROMPT_HINTS=1` the HDS prompt carries the domain, the variable names, data-pattern statistics and a physical-constants block. The equation name and description are withheld, and the worked example is a placeholder. A matched Pure LLM arm must receive the same inputs. Whether `PureLLMBaseline` builds its prompt the same way has **not** been checked.
+- **Sample count (D5):** HDS asks for 3 candidate equations per LLM call and then refines them with PySR. A Pure LLM arm that returns one formula is not given the same number of attempts. Decide whether it also returns 3 candidates and how one is chosen (training R^2 only, never the extrapolation score), or label the difference.
+- **Still undecided:** `max_calls_per_case`, the prompt hash, and the Pure LLM runner itself.
+- **`split_id` caveat:** in the committed `p2/` rows `split_id` is `derived:` plus the first 12 characters of `sha256("equation|seed")`. It is identical for the two systems by construction, so the closure script's "identical split_id" check does not prove the splits match. They do match in the code: `exp1_ablation.generate_data` draws from `RandomState(seed)` and splits with `random_state=seed`, and every condition calls it with the same `(equation, seed)`. Gate G1 for the Pure LLM arm should therefore compare the data arrays or their hashes, not this label.

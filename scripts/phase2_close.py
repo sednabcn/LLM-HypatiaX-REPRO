@@ -262,8 +262,12 @@ def paired_summary(a_idx, b_idx, args):
         boots.sort()
         lo = boots[int(0.025 * len(boots))]
         hi = boots[int(0.975 * len(boots)) - 1]
-        b_better = sum(1 for d in diffs if d > 0)
-        a_better = sum(1 for d in diffs if d < 0)
+        # Direction matters: for rate metrics where LOWER is better (catastrophic, NaN/missing), a
+        # negative B-minus-A difference means B is better. The sign test is symmetric, so its p-value
+        # is unchanged; only the better/worse labels depend on direction.
+        lower_is_better = name.startswith(("catastrophic", "nan_or_missing"))
+        b_better = sum(1 for d in diffs if (d < 0 if lower_is_better else d > 0))
+        a_better = sum(1 for d in diffs if (d > 0 if lower_is_better else d < 0))
         per_seed = {}
         for s in seeds:
             fa = [pred(a_idx[(e, s)]) for e in eqs if (e, s) in a_idx]
@@ -272,6 +276,7 @@ def paired_summary(a_idx, b_idx, args):
         out[name] = {
             "a_rate": statistics.mean(pa.values()),
             "b_rate": statistics.mean(pb.values()),
+            "lower_is_better": lower_is_better,
             "paired_diff_b_minus_a": statistics.mean(diffs),
             "bootstrap_95ci": [lo, hi],
             "equations_b_better": b_better,
