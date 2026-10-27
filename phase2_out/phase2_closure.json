@@ -1,6 +1,6 @@
 {
   "phase": "Option 3 / Phase 2 - matched baseline runs",
-  "generated_utc": "2026-10-27T10:01:57+00:00",
+  "generated_utc": "2026-10-27T11:24:03+00:00",
   "closed": true,
   "settings": {
     "a_name": "pysr_only",
@@ -170,6 +170,7 @@
     "recovery_r2>=0.99": {
       "a_rate": 0.7111111111111111,
       "b_rate": 0.8222222222222222,
+      "lower_is_better": false,
       "paired_diff_b_minus_a": 0.11111111111111112,
       "bootstrap_95ci": [
         -0.022222222222222223,
@@ -197,6 +198,7 @@
     "recovery_r2>=0.999999": {
       "a_rate": 0.13333333333333333,
       "b_rate": 0.35555555555555557,
+      "lower_is_better": false,
       "paired_diff_b_minus_a": 0.2222222222222222,
       "bootstrap_95ci": [
         -1.4802973661668754e-17,
@@ -224,6 +226,7 @@
     "catastrophic_r2<-10.0": {
       "a_rate": 0.15555555555555556,
       "b_rate": 0.15555555555555556,
+      "lower_is_better": true,
       "paired_diff_b_minus_a": 0.0,
       "bootstrap_95ci": [
         -0.06666666666666667,
@@ -251,6 +254,7 @@
     "nan_or_missing_r2": {
       "a_rate": 0.0,
       "b_rate": 0.0,
+      "lower_is_better": true,
       "paired_diff_b_minus_a": 0.0,
       "bootstrap_95ci": [
         0.0,

@@ -1,0 +1,212 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{Inter}
+\setmonofont[Scale=0.86]{DejaVu Sans Mono}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{needspace}
+
+\definecolor{ink}{HTML}{1F2933}
+\definecolor{accent}{HTML}{1D4E89}
+\definecolor{warn}{HTML}{9A3412}
+\hypersetup{colorlinks=true,linkcolor=accent,urlcolor=accent,pdftitle={Phase 2 report}}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parskip}{0.55em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.18}
+\pagestyle{fancy}\fancyhf{}
+\fancyfoot[C]{\small\thepage}
+\fancyhead[L]{\small LLM-HypatiaX-REPRO}
+\fancyhead[R]{\small Phase 2 report, 27 October 2026}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\newcommand{\code}[1]{\texttt{#1}}
+\newmdenv[linecolor=accent,linewidth=1.2pt,leftline=true,topline=false,bottomline=false,rightline=false,
+  backgroundcolor=accent!6,innerleftmargin=9pt,innerrightmargin=6pt,innertopmargin=5pt,innerbottommargin=5pt]{status}
+\newmdenv[linecolor=warn,linewidth=1.2pt,leftline=true,topline=false,bottomline=false,rightline=false,
+  backgroundcolor=warn!6,innerleftmargin=9pt,innerrightmargin=6pt,innertopmargin=5pt,innerbottommargin=5pt]{caution}
+
+\begin{document}
+
+{\Large\bfseries\color{ink} Phase 2: PySR-only against HDS v50\_2, and the plan for the Pure LLM baseline}\par
+\vspace{2pt}
+{\small Audit of the \code{LLM-HypatiaX-REPRO} repository.\ Branch \code{audit/step1-cleanup}, Phase 1 tag \code{phase1-closed} (\code{9d56d8c}).}
+\vspace{6pt}
+
+\begin{status}
+\textbf{Status.} Phase 2 is closed \emph{with caveats} for the comparison that was actually run, PySR-only against HDS v50\_2. HDS is ahead on recovery, but the primary interval includes zero, so the result is a suggestive direction and not a demonstrated improvement. The comparison Option~3 specifies, Pure LLM against HDS, has \textbf{not} been run; Section~6 is its run design.
+\end{status}
+
+\section*{How to read this report}
+The Phase 2 rows (\code{p2/}, \code{p2\_med/}, \code{p2\_train/}), the closure outputs and \code{scripts/phase2\_close.py} are committed on \code{audit/step1-cleanup} (commit \code{7c3e6fa}). The far-extrapolation figures in Section 2 were recomputed independently from the 90 \code{p2/} rows without using the closure script, and agree with its output. The medium and train figures are the closure script's own output, regenerated after the label fix described below. Percentages are per-equation means over three seeds; counts such as 32/45 are rows.
+
+\section{What was compared}
+\begin{itemize}
+\item \textbf{Systems:} PySR-only (A) and full HDS v50\_2 (B, the \code{hypatia} block with the LLM enabled).
+\item \textbf{Cases:} 15 equations $\times$ seeds 42, 99, 123, so 45 rows per system.
+\item \textbf{Scorer:} one wrapper for both (\code{exp1\_ablation.\_safe\_r2}, which calls \code{r2\_scored}) over the frozen \code{hypatiax/core/r2\_canonical.py}. Its SHA-256 (\code{7d5395ed\ldots}) matches both the run configuration and \code{triage\_out/freeze\_manifest.json}. Sign-flip credit is off.
+\item \textbf{Primary field:} the row's \code{r2} is \code{extrap\_r2\_far}, the far-extrapolation score, checked on all 90 rows. Medium extrapolation and training R$^2$ are sensitivity fields.
+\item \textbf{Split parity:} holds by construction of the code, not by the stored ID. \code{split\_id} in these rows is \code{derived:} plus a hash of ``equation$|$seed'', so it is identical for both systems whatever data they saw. In \code{exp1\_ablation} every condition regenerates its data from the same \code{(equation, seed)} (\code{RandomState(seed)} and \code{train\_test\_split(random\_state=seed)}), so the splits do match. The closure script's identical-\code{split\_id} check is therefore not evidence of this.
+\item \textbf{Unit of analysis:} the equation. Seeds within an equation are replicates, not independent observations.
+\end{itemize}
+
+\section{Results}
+Difference is HDS minus PySR-only, in percentage points. Intervals are paired bootstrap intervals over the 15 equations. The sign test counts only equations where the systems differ (HDS better / PySR-only better / tied).
+
+\begin{table}[ht]
+\centering\footnotesize
+\begin{tabular}{@{}p{1.9cm} p{3.5cm} r r r c c@{}}
+\toprule
+Field & Metric & PySR-only & HDS & Diff (pts) & 95\% interval & \parbox[b]{2.3cm}{\centering HDS better /\\ worse / tied} \\
+\midrule
+\textbf{far} (primary) & recovery, \mbox{R$^2\!\geq\!0.99$} & 71.1\% & 82.2\% & +11.1 & [−2.2, +24.4] & 4 / 1 / 10 \\
+ & recovery, \mbox{R$^2\!\geq\!0.999999$} & 13.3\% & 35.6\% & +22.2 & [0.0, +46.7] & 5 / 1 / 9 \\
+ & catastrophic, \mbox{R$^2\!<\!-10$} & 15.6\% & 15.6\% & 0.0 & [−6.7, +6.7] & 1 / 1 / 13 \\
+\addlinespace
+medium & recovery, \mbox{R$^2\!\geq\!0.99$} & 71.1\% & 82.2\% & +11.1 & [−2.2, +24.4] & 4 / 1 / 10 \\
+ & catastrophic, \mbox{R$^2\!<\!-10$} & 8.9\% & 4.4\% & −4.4 & [−13.3, 0.0] & 1 / 0 / 14 \\
+\addlinespace
+train & recovery, \mbox{R$^2\!\geq\!0.99$} & 91.1\% & 93.3\% & +2.2 & [−4.4, +8.9] & 2 / 1 / 12 \\
+ & recovery, \mbox{R$^2\!\geq\!0.999999$} & 0\% & 0\% & 0.0 & [0.0, 0.0] & 0 / 0 / 15 \\
+ & catastrophic, \mbox{R$^2\!<\!-10$} & 0\% & 0\% & 0.0 & [0.0, 0.0] & 0 / 0 / 15 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Sign-test p-values} (two-sided, from the closure output): far, R$^2\ge0.99$: 0.375; far, R$^2\ge0.999999$: 0.219; far, catastrophic: 1.000. For the train recovery row the counts 2/1 give $p=1.000$ (computed here from the counts, not taken from the output).
+
+\textbf{Note on the catastrophic rows.} The closure script originally counted any positive HDS-minus-PySR difference as ``HDS better'', including for the lower-is-better catastrophic and NaN rates. That printed medium catastrophic as 0/1/14 although HDS has the lower rate. It is fixed (a direction-aware count, commit on branch \code{phase2-fix-labels}); the corrected count is 1/0/14. Rates, intervals and sign-test p-values did not change, because the sign test is symmetric.
+
+\textbf{Reading.}
+\begin{itemize}
+\item The primary interval includes zero, and only five equations separate the systems. The strict-threshold row is borderline (lower bound 0.000, $p=0.219$) and is exploratory: four metrics were examined with no correction.
+\item Medium extrapolation repeats the far recovery result exactly. It is the same evidence, not independent confirmation, because a formula that is correct scores near 1 in every regime and a wrong one fails in all of them.
+\item Training R$^2$ is close to uninformative. The data carry noise of 5\% of the target's standard deviation, which caps training R$^2$ near $1/(1+0.05^2)=0.9975$. The 0.99 threshold sits just under that ceiling, so the strict threshold cannot be met on this field. Row counts passing 0.99 are 41/45 (PySR-only) and 42/45 (HDS) on train, against 32/45 and 37/45 on far: many formulas fit the training range and then fail to extrapolate.
+\item Arrhenius and Impermanent Loss fail for both systems. The scorer records scores below $-100$ as $-\infty$, so mean R$^2$ must not be reported; use counts by status.
+\end{itemize}
+
+\section{Time budget}
+\begin{table}[ht]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+System & Declared cap & Observed \\
+\midrule
+PySR-only & 1,400 s (1 attempt $\times$ 1,100 s + 300 s) & about 1,110 s in the one record inspected \\
+HDS v50\_2 & 3,600 s (3 attempts $\times$ 1,100 s + 300 s) & median 128 s, maximum 729 s; 0 of 45 rows above 1,400 s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The rows carry two different \code{timeout\_s} values, so the closure script's single-timeout check fails; the run was closed with \code{--declare-unequal-timeout}. The accurate statement is: \emph{declared budgets differ (3,600 s against 1,400 s), but no HDS row exceeded 1,400 s, so the larger cap did not bind.} This is an observation, not an equal-budget run. It assumes \code{runtime\_s} covers the whole case including retries. In the one record inspected \code{runtime\_s} equals \code{sr\_time\_s} while \code{llm\_time\_s} (7.3 s) is listed separately, so whether LLM time is inside \code{runtime\_s} still needs confirming. The median runtime ratio (HDS/PySR-only) is 0.12.
+
+\Needspace{9\baselineskip}
+\section{What this supports, and what it does not}
+\begin{caution}
+\textbf{Supported:} on the far-extrapolation field HDS recovered more equations than PySR-only in the sample (+11.1 points), in a fraction of the time, and the direction is the same on the strict threshold.\\
+\textbf{Not supported:} ``HDS beats PySR-only'' (interval includes zero), ``HDS beats a Pure LLM'' (not run), any equal-budget claim (declared caps differ), and any claim about the leave-one-gate-out ablations (no result files exist).
+\end{caution}
+Other limits: 15 equations, most of them textbook formulas, so recovery may partly measure recall; the HDS rows came from the \code{exp1\_ablation} experiment and were flattened into \code{p2/}, not launched as a dedicated Phase 2 run; and Phase 3 cannot reuse this data.
+
+\section{Phase 1 preconditions}
+Phase 2 assumes four Phase 1 conditions. Against the audit in \code{AUDIT/phase1\_audit.json}: generation paths are logged, the hardcoded bypass is closed at source and every probed task shows no bypass, the quarantine manifest exists (64 contaminated result files removed, stored M4 rows without a formula flagged and excluded), and the evaluator is on \code{r2\_canonical} with regression tests. One item stays open by design: the row ``Evaluator guard and R2 policy'' reads \emph{Unverified} because the comparison of Supplement~A Listing~8 with \code{r2\_checked} is a manual step the audit cannot perform. Confirm that comparison before the text claims the evaluator is settled.
+
+\section{Pure LLM baseline: run design}
+This is the comparison Option~3 specifies for Phase 2. \textbf{It has not been run}, and the Pure LLM runner was not available when the design was written, so the configuration keys describe the interface the runner needs. The companion files are \code{phase2\_pure\_llm\_config.yaml}, \code{phase2\_pure\_llm\_run\_spec.md} and \code{phase2\_row\_schema.json}.
+
+\subsection*{Decisions to settle before the first run}
+\begin{table}[ht]
+\centering\footnotesize
+\begin{tabularx}{\textwidth}{@{}l X X@{}}
+\toprule
+ID & Decision & Recommended default \\
+\midrule
+D1 & Time budget $B$ & 1,400 s wall-clock per case for all three systems \\
+D2 & How HDS meets $B$ & R0: reuse the 45 rows as compliant by observation. R1: rerun HDS with \code{timeout\_s}\,=\,1400, only if the text must say ``equal budget'' \\
+D3 & Pure LLM prompt inputs & Exactly what the HDS LLM stage receives. \textbf{Must be decided}; if either prompt contains the equation name, recovery partly measures recall \\
+D4 & Constant fitting & None; score the formula as emitted. A fitted variant is a separate labelled arm \\
+D5 & Sampling & One sample per (equation, seed); temperature and \code{max\_tokens} equal to the HDS LLM stage. \textbf{Must be decided.} The API may have no sampling seed (verify), so \code{seed} fixes data only \\
+D6 & Retries & Fixed maximum, all inside $B$ and counted in \code{n\_llm\_calls}. \textbf{Maximum must be decided} \\
+D7 & Timeouts & Row kept with status \code{timeout}, \code{r2} null, counted as not recovered \\
+\bottomrule
+\end{tabularx}
+\end{table}
+In the configuration file \code{temperature}, \code{max\_tokens}, \code{max\_calls\_per\_case}, \code{prompt\_inputs} and the prompt hash are \code{null}; the run is meant to refuse to start while any is unset. ``Matched'' means a matched \emph{cap}, not matched spend: actual spend is reported per row (\code{runtime\_s}, \code{n\_llm\_calls}, tokens).
+
+\subsection*{Analysis declared in advance}
+Primary comparison HDS minus Pure LLM; primary metric recovery at far R$^2\ge0.99$, mean over seeds per equation; interval and sign test as in Section 2. A directional claim is written only if the primary interval excludes zero. With five non-tied equations the smallest two-sided sign-test $p$ is 0.0625, and six non-tied equations all favouring one system give 0.031, so power comes from the number of equations, not seeds. Strict threshold, catastrophic rate and the sensitivity fields are exploratory and are not promoted if they look better. Changes after the first row is written go in \code{phase2\_pure\_llm\_amendments.md} with a date.
+
+\subsection*{Gates}
+Phase 2 for this comparison closes only if all of these hold:
+\begin{center}\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+Gate & Condition \\
+\midrule
+G1 & the data split equals the HDS one for every (equation, seed), compared by hashing the data arrays, not the derived \code{split\_id}; no case without an HDS counterpart \\
+G2 & \code{r2} equals \code{extrap\_r2\_far} in every row \\
+G3 & \code{llm\_called} true and \code{bypass\_used} false in every row \\
+G4 & one \code{timeout\_s} (equal to $B$) and one \code{prompt\_sha256} across all Pure LLM rows \\
+G5 & \code{formula} stored for every row with status \code{ok} \\
+G6 & exactly 45 rows, no duplicate (equation, seed) \\
+G7 & \code{model\_id} and \code{evaluator\_version} identical to the HDS rows \\
+G8 & \code{code\_dirty} false and a single \code{git\_commit} across rows \\
+G9 & every row has \code{r2\_raw} and \code{r2\_status} \\
+G10 & \code{phase2\_close.py} runs with no FAIL other than a declared one \\
+\bottomrule
+\end{tabularx}
+\end{center}
+Cost cannot be estimated until a dry run records calls, tokens and runtime per case; multiply by 45 for the full run. Under R1 add the HDS rerun: about 1.6 hours at the observed median runtime, up to 9.1 hours if every case used the full 1,400 s.
+
+\Needspace{14\baselineskip}
+\section{Verification status and reproduction}
+\begin{table}[ht]
+\centering\small
+\begin{tabularx}{\textwidth}{@{}X l@{}}
+\toprule
+Item & Status \\
+\midrule
+\code{r2\_canonical.py} SHA-256 equals the configuration value and the freeze manifest entry & checked \\
+Tag \code{phase1-closed} points at \code{9d56d8c} & checked \\
+\code{reflatten\_fields.py}: verifies, writes \code{p2\_med}/\code{p2\_train}, stops with exit 2 on a planted mismatch (synthetic fixture, not real rows) & checked \\
+Far-extrapolation rates and counts in Section 2, HDS runtime (median 128 s, maximum 729 s, 0 of 45 above 1,400 s) & recomputed independently from \code{p2/} rows \\
+Medium and train rows in Section 2 & closure script output \\
+Catastrophic ``better/worse'' labels & fixed, regenerated \\
+Supplement A Listing 8 against \code{r2\_checked} & manual, open \\
+Whether \code{runtime\_s} includes LLM time & to confirm \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Commands} (from the repository root):
+\begin{verbatim}
+# verify that r2 is extrap_r2_far on every row (writes nothing)
+python scripts/reflatten_fields.py --check-only
+
+# build the sensitivity sets
+python scripts/reflatten_fields.py --sens p2_med=extrap_r2_medium \
+    --sens p2_train=train_r2 --force
+# primary closure; for a sensitivity set use p2_med/ or p2_train/ and a separate --out-dir
+python scripts/phase2_close.py --pure-llm p2/pysr_*.jsonl --hds p2/hds_*.jsonl \
+    --a-name pysr_only --out-dir phase2_out \
+    --declare-unequal-timeout "HDS: 3 x 1100 s + 300 s = 3600 s; PySR-only: 1400 s"
+\end{verbatim}
+Exit codes of \code{reflatten\_fields.py}: 0 ok, 1 usage or I/O error, 2 primary-field mismatch, 3 source lookup failed. Commit it with \code{p2\_med/} and \code{p2\_train/} so the derived files can be regenerated.
+
+\section{Open items}
+\begin{enumerate}
+\item Merge the label fix and the regenerated closure outputs (branch \code{phase2-fix-labels}). Remove the duplicate \code{scripts/phase2\_close\_v2.py} (identical to \code{phase2\_close.py}) and the three superseded \code{flatten\_results*.py} files, or keep them deliberately.
+\item Confirm \code{runtime\_s} covers LLM time and retries, then restate the budget caveat if it does not.
+\item Compare Supplement~A Listing~8 with \code{r2\_checked}.
+\item Settle D5 (the HDS stage requests 3 candidates per call; decide how a one-formula Pure LLM arm is matched) and D6 (retry maximum), check that \code{PureLLMBaseline} builds the same prompt as the HDS stage (not checked), freeze the prompt and record its hash, then run the dry run and the full Pure LLM run.
+\item Phase 3 (leave-one-gate-out ablations) needs new runs that log \code{r2\_raw}, \code{r2\_status} and \code{config\_diff} per row.
+\end{enumerate}
+
+\end{document}
