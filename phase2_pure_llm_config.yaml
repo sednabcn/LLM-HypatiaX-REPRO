@@ -64,16 +64,16 @@ llm:
   model_id: claude-sonnet-4-6                   # checked: single value in all 90 p2 rows; default of LLMConfig.model
   temperature: 0.3                              # read from code: exp1_ablation.py llm_temperature=0.3 -> LLMConfig.temperature
   max_tokens: 2000                              # read from code: LLMConfig.max_tokens default (HDS does not override it)
-  max_calls_per_case: 1                      # DECIDE: retries allowed on API error or unparseable output; all count in n_llm_calls
-  prompt_inputs: [domain, variable_names, data_patterns, physical_constants_block]   # read from SymbolicEngineWithLLM._build_prompt under HYPATIAX_DISABLE_PROMPT_HINTS=1; the equation NAME/description is withheld
+  max_calls_per_case: 3                      # A3: 3 independent calls per (equation, seed)
+  prompt_inputs: [description, domain, variable_names, constants]   # A3: arm P, no data statistics
   n_candidates: 3                               # HDS asks for 3 candidate equations per call (exp1_ablation llm_n_candidates=3); DECIDE how a single-formula Pure LLM arm is matched to this
   prompt_hints: disabled                        # HYPATIAX_DISABLE_PROMPT_HINTS=1
-  prompt_template_sha256: null                  # fill when the template is frozen; recorded in every row
+  prompt_template_sha256: 852d551b69b7fd3cf80d3b2f7e611952f7eb8e4aeb0853e8a59abeea2d3c3e1c                  # fill when the template is frozen; recorded in every row
   api_has_sampling_seed: false                  # VERIFY against current API docs; if false, 'seed' fixes data only
 
 formula_handling:
   fit_constants: false                          # score the formula as emitted; a fitted arm would be a separate, labelled system
-  selection_among_samples: none                 # primary run has one sample; a best-of-k arm must select on train data only, never on extrap R^2
+  selection_among_samples: train_r2             # A3: select on TRAINING R2 only, never on extrapolation R2
 
 evaluation:
   evaluator: hypatiax.core.r2_canonical
