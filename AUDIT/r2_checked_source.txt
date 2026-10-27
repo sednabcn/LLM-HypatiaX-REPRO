@@ -1,0 +1,23 @@
+def r2_checked(y_true, y_pred) -> tuple[float, str]:
+    """Return (r2, status). Status is one of:
+    ok, degenerate_target, nonfinite_target, nonfinite_pred, bad_shape.
+    """
+    yt = np.asarray(y_true, dtype=float).ravel()
+    yp = np.asarray(y_pred, dtype=float).ravel()
+    if yt.shape != yp.shape:
+        return float("-inf"), "bad_shape"
+    if yt.size < 2:
+        return float("nan"), "degenerate_target"
+    if not np.isfinite(yt).all():
+        return float("nan"), "nonfinite_target"
+    if not np.isfinite(yp).all():
+        return float("-inf"), "nonfinite_pred"
+
+    ss_tot = float(np.sum((yt - yt.mean()) ** 2))
+    scale = float(np.sum(yt ** 2))
+    if ss_tot <= REL_TOL * max(scale, 1e-300):
+        return float("nan"), "degenerate_target"
+
+    ss_res = float(np.sum((yt - yp) ** 2))
+    return 1.0 - ss_res / ss_tot, "ok"
+

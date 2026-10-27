@@ -1,0 +1,293 @@
+{
+  "phase": "Option 3 / Phase 2 - matched baseline runs",
+  "generated_utc": "2026-10-27T10:45:09+00:00",
+  "closed": true,
+  "settings": {
+    "a_name": "pysr_only",
+    "b_name": "hds_v50_2",
+    "out_dir": "phase2_out_p2_train",
+    "min_seeds": 3,
+    "threshold": 0.99,
+    "strict_threshold": 0.999999,
+    "catastrophic_r2": -10.0,
+    "declare_unequal_timeout": "HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s",
+    "allow_bypass": false,
+    "bootstrap_iters": 10000,
+    "bootstrap_seed": 0
+  },
+  "inputs": {
+    "p2_train/pysr_exp1_ablation.jsonl": "dc1b243b99adc8fa34a06809a570395552ad5cb0898976e322dadc22bc321c4d",
+    "p2_train/pysr_exp1_ablation_seed123.jsonl": "5370d8a1ca60fc29a41d8a3e265ebc566bdfceaac3e8c460042ff7ef6e521f68",
+    "p2_train/pysr_exp1_ablation_seed99.jsonl": "4f84ca8b671bb64cc3a83267decf274a683960c4249c08dd96e8dafb4c352b47",
+    "p2_train/hds_exp1_ablation.jsonl": "b063d8b8e07170c947600a2b1fd0bb196550339a0e8965f034cc4d0f6a192a8c",
+    "p2_train/hds_exp1_ablation_seed123.jsonl": "5fd7d9025dca13a53c3e0aab5c5295fb95876622b617da39f98702bb028d1d1e",
+    "p2_train/hds_exp1_ablation_seed99.jsonl": "722c49ae60b1c9915e6d79316cbf74af8a50c827cf45a53c9ddf7cdc33b0f9ed"
+  },
+  "checks": [
+    {
+      "name": "records present for both systems",
+      "passed": true,
+      "blocking": true,
+      "detail": "pysr_only: 45, hds_v50_2: 45"
+    },
+    {
+      "name": "[pysr_only] schema complete",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 records OK"
+    },
+    {
+      "name": "[hds_v50_2] schema complete",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 records OK"
+    },
+    {
+      "name": "[pysr_only] no duplicate (equation, seed) rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 unique cases"
+    },
+    {
+      "name": "[hds_v50_2] no duplicate (equation, seed) rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 unique cases"
+    },
+    {
+      "name": "matched equations x seeds",
+      "passed": true,
+      "blocking": true,
+      "detail": "only in pysr_only: 0 []; only in hds_v50_2: 0 []"
+    },
+    {
+      "name": "identical split_id on every paired case",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 mismatches; first: []"
+    },
+    {
+      "name": "at least 3 seeds",
+      "passed": true,
+      "blocking": true,
+      "detail": "seeds found: [42, 99, 123]"
+    },
+    {
+      "name": "[both] single evaluator_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['r2_canonical@8f11733']"
+    },
+    {
+      "name": "[both] single timeout_s",
+      "passed": false,
+      "blocking": false,
+      "detail": "values: ['1400.0', '3600.0']"
+    },
+    {
+      "name": "[both] single model_id",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['claude-sonnet-4-6']"
+    },
+    {
+      "name": "[pysr_only] single code_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['8f11733']"
+    },
+    {
+      "name": "[pysr_only] single config_hash",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['f209987f6476']"
+    },
+    {
+      "name": "[hds_v50_2] single code_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['5.4']"
+    },
+    {
+      "name": "[hds_v50_2] single config_hash",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['f209987f6476']"
+    },
+    {
+      "name": "[pysr_only] no hardcoded/ground-truth bypass rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bypass rows; first: []"
+    },
+    {
+      "name": "[hds_v50_2] no hardcoded/ground-truth bypass rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bypass rows; first: []"
+    },
+    {
+      "name": "[pysr_only] formula stored for every ok row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 ok rows without formula; first: []"
+    },
+    {
+      "name": "[pysr_only] llm_called is a boolean on every row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bad rows"
+    },
+    {
+      "name": "[hds_v50_2] formula stored for every ok row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 ok rows without formula; first: []"
+    },
+    {
+      "name": "[hds_v50_2] llm_called is a boolean on every row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bad rows"
+    },
+    {
+      "name": "[pysr_only] runtime within timeout_s (or labelled timeout)",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 rows over budget; first: []"
+    },
+    {
+      "name": "[hds_v50_2] runtime within timeout_s (or labelled timeout)",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 rows over budget; first: []"
+    }
+  ],
+  "caveats": [
+    "UNEQUAL TIME BUDGETS declared: {\"pysr_only\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: HDS: 3 attempts x 1100 s + 300 s = 3600 s; PySR-only: 1 attempt x 1100 s + 300 s = 1400 s. Results are NOT an equal-budget comparison."
+  ],
+  "paired_summary": {
+    "recovery_r2>=0.99": {
+      "a_rate": 0.9111111111111111,
+      "b_rate": 0.9333333333333333,
+      "paired_diff_b_minus_a": 0.022222222222222223,
+      "bootstrap_95ci": [
+        -0.044444444444444446,
+        0.08888888888888889
+      ],
+      "equations_b_better": 2,
+      "equations_a_better": 1,
+      "equations_tied": 12,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.8666666666666667,
+          "b": 0.9333333333333333
+        },
+        "99": {
+          "a": 0.9333333333333333,
+          "b": 0.9333333333333333
+        },
+        "123": {
+          "a": 0.9333333333333333,
+          "b": 0.9333333333333333
+        }
+      }
+    },
+    "recovery_r2>=0.999999": {
+      "a_rate": 0.0,
+      "b_rate": 0.0,
+      "paired_diff_b_minus_a": 0.0,
+      "bootstrap_95ci": [
+        0.0,
+        0.0
+      ],
+      "equations_b_better": 0,
+      "equations_a_better": 0,
+      "equations_tied": 15,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "99": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "123": {
+          "a": 0.0,
+          "b": 0.0
+        }
+      }
+    },
+    "catastrophic_r2<-10.0": {
+      "a_rate": 0.0,
+      "b_rate": 0.0,
+      "paired_diff_b_minus_a": 0.0,
+      "bootstrap_95ci": [
+        0.0,
+        0.0
+      ],
+      "equations_b_better": 0,
+      "equations_a_better": 0,
+      "equations_tied": 15,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "99": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "123": {
+          "a": 0.0,
+          "b": 0.0
+        }
+      }
+    },
+    "nan_or_missing_r2": {
+      "a_rate": 0.0,
+      "b_rate": 0.0,
+      "paired_diff_b_minus_a": 0.0,
+      "bootstrap_95ci": [
+        0.0,
+        0.0
+      ],
+      "equations_b_better": 0,
+      "equations_a_better": 0,
+      "equations_tied": 15,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "99": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "123": {
+          "a": 0.0,
+          "b": 0.0
+        }
+      }
+    },
+    "runtime_ratio_b_over_a": {
+      "median": 0.11538065354646328,
+      "p10_p90": [
+        0.004673136505584701,
+        0.19130545923636733
+      ]
+    },
+    "n_equations": 15,
+    "seeds": [
+      42,
+      99,
+      123
+    ]
+  },
+  "note": "Phase 2 reports measured differences only; it does not assume the hybrid is better. Per-equation seed-averaged outcomes are the unit of the paired comparison."
+}

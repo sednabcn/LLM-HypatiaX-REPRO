@@ -1,0 +1,103 @@
+# Phase 2 run config: Pure LLM baseline vs HDS v50_2, matched time budget.
+#
+# STATUS: proposal. The Pure LLM runner has not been seen, so these keys are the
+# interface the runner should accept, not an existing CLI. Entries marked
+# "DECIDE" must be filled from the HDS LLM stage before the first run; the run
+# must refuse to start while any DECIDE value is null.
+# Entries marked "VERIFY" were read off existing rows or code but not re-checked
+# against the runner.
+
+run:
+  run_id: phase2_pure_llm_v1
+  system: pure_llm
+  output_dir: p2
+  output_pattern: "pure_llm_seed{seed}.jsonl"   # one file per seed; one row per equation
+  git_branch: audit/step1-cleanup               # VERIFY: Phase 1 closed at tag phase1-closed (9d56d8c)
+  require_clean_tree: true                      # code_dirty must be false in every row
+
+design:
+  equations:                                    # the 15 equations present in p2/ today
+    - Allometric Scaling
+    - Arrhenius
+    - Constant Product
+    - Gravitational Force
+    - Henderson-Hasselbalch
+    - Ideal Gas Law
+    - Impermanent Loss
+    - Kinetic Energy
+    - Liquidation Price
+    - Logistic Growth
+    - Michaelis-Menten
+    - Portfolio Std Dev
+    - Price Impact
+    - Rate Law
+    - Value at Risk
+  seeds: [42, 99, 123]
+  expected_rows: 45                             # 15 x 3
+  repeats_per_case: 1                           # one LLM sample per (equation, seed) in the primary run
+
+data:                                           # VERIFY against exp1_ablation.py
+  generator: hypatiax.experiments.benchmarks.exp1_ablation.generate_data
+  extrap_generator: hypatiax.experiments.benchmarks.exp1_ablation.generate_extrap_data
+  n_samples: 200
+  noise_level: 0.05
+  test_size: 0.2
+  extrap_n: 100
+  extrap_regimes: [near, medium, far]
+  # The runner must IMPORT these functions. Re-implementing them risks a different
+  # split. Gate G1: split_id must equal the HDS row's split_id for every case.
+
+budget:
+  wall_clock_s: 1400                            # one number for all systems: PySR-only 1100 + 300
+  scope: "case start to final formula returned; includes every LLM call, retry and any fitting; excludes data generation and scoring"
+  enforcement: hard_kill                        # subprocess timeout, not a cooperative check
+  on_timeout:
+    status: timeout
+    r2: null
+    count_as: not_recovered                     # stays in the denominator; never dropped
+  hds_reference:
+    declared_timeout_s: 3600                    # 3 x 1100 + 300, as declared in the closure manifest
+    observed_max_runtime_s: 729                 # 45 rows; 0 above 1400
+    handling: R0                                # R0 = reuse existing HDS rows as "compliant by observation"; R1 = rerun HDS with timeout_s=1400
+
+llm:
+  model_id: claude-sonnet-4-6                   # VERIFY: value stored in the HDS rows; must be identical
+  temperature: null                             # DECIDE: must equal the HDS LLM stage
+  max_tokens: null                              # DECIDE: must equal the HDS LLM stage
+  max_calls_per_case: null                      # DECIDE: retries allowed on API error or unparseable output; all count in n_llm_calls
+  prompt_inputs: null                           # DECIDE: must equal what the HDS LLM stage receives (variable names? description? data sample? equation name?)
+  prompt_hints: disabled                        # HYPATIAX_DISABLE_PROMPT_HINTS=1
+  prompt_template_sha256: null                  # fill when the template is frozen; recorded in every row
+  api_has_sampling_seed: false                  # VERIFY against current API docs; if false, 'seed' fixes data only
+
+formula_handling:
+  fit_constants: false                          # score the formula as emitted; a fitted arm would be a separate, labelled system
+  selection_among_samples: none                 # primary run has one sample; a best-of-k arm must select on train data only, never on extrap R^2
+
+evaluation:
+  evaluator: hypatiax.core.r2_canonical
+  evaluator_version: "r2_canonical@8f11733"     # VERIFY: label in existing rows
+  evaluator_sha256: "7d5395ed728323d8db8b0a5e9e6804a2b142a401c8d7fe4d19d54b32973b7971"   # VERIFY: compare with the entry for hypatiax/core/r2_canonical.py in triage_out/freeze_manifest.json
+  scorer_call: r2_scored                        # same wrapper as exp1_ablation._safe_r2 (floor -100, |pred| limit 1e100)
+  also_record_raw: r2_checked                   # r2_raw = r2_checked() on the same arrays
+  sign_flip: false                              # HYPATIAX_R2_SIGN_FLIP=0
+  primary_field: extrap_r2_far
+  sensitivity_fields: [extrap_r2_medium, train_r2]   # reported, never promoted
+  thresholds:
+    recovery: 0.99
+    recovery_strict: 0.999999
+    catastrophic_below: -10.0
+
+environment:                                    # as exported by env_repro.sh
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
+
+analysis:                                       # declared before any Pure LLM result exists
+  comparison: "hds_v50_2 minus pure_llm"
+  primary_metric: "recovery rate, extrap_r2_far >= 0.99, mean over seeds per equation"
+  unit_of_analysis: equation                    # seeds within an equation are not independent
+  claim_rule: "write a directional claim only if the primary interval excludes 0"
+  everything_else: exploratory
+  amendments_log: phase2_pure_llm_amendments.md # any change after the first run is written here with a date
