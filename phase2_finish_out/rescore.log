@@ -1,0 +1,128 @@
+✅ API key found in environment
+populations : 30  (paper-quality, FIX-POP)
+niterations : 1000
+timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
+wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
+seed        : 42  (source: default)
+✅ Parameters ready
+   [MEM] start: RSS=0.84 GB
+✅ HybridDiscoverySystem (v5.4) imported from /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
+✅ PySR 2.0.0a1 ready
+  [    0.0s] Imports complete
+✅ Core-15 loaded: 15 equations, 5 domains
+  [00] Arrhenius                    (Chemistry)
+  [01] Henderson-Hasselbalch        (Chemistry)
+  [02] Rate Law                     (Chemistry)
+  [03] Allometric Scaling           (Biology)
+  [04] Michaelis-Menten             (Biology)
+  [05] Logistic Growth              (Biology)
+  [06] Kinetic Energy               (Physics)
+  [07] Gravitational Force          (Physics)
+  [08] Ideal Gas Law                (Physics)
+  [09] Impermanent Loss             (DeFi AMM)
+  [10] Price Impact                 (DeFi AMM)
+  [11] Constant Product             (DeFi AMM)
+  [12] Value at Risk                (DeFi Risk)
+  [13] Liquidation Price            (DeFi Risk)
+  [14] Portfolio Std Dev            (DeFi Risk)
+✅ sympy available — true OOD evaluation (Mode A) enabled
+✅ run_condition ready — hypatia → HybridDiscoverySystem v5.4 | pysr_only → raw PySR
+  [    0.0s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=144
+  [    0.1s] generate_data done: X_train=(160, 1)
+  [    0.1s] generate_data: Arrhenius  N=200  noise=0.05  seed=123
+  [    0.1s] generate_data done: X_train=(160, 1)
+  [    0.1s] generate_data: Constant Product  N=200  noise=0.05  seed=200
+  [    0.1s] generate_data done: X_train=(160, 1)
+  [    0.1s] generate_data: Gravitational Force  N=200  noise=0.05  seed=172
+  [    0.1s] generate_data done: X_train=(160, 3)
+  [    0.1s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=130
+  [    0.1s] generate_data done: X_train=(160, 2)
+  [    0.1s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=179
+  [    0.1s] generate_data done: X_train=(160, 3)
+  [    0.1s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=186
+  [    0.1s] generate_data done: X_train=(160, 1)
+  [    0.2s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=165
+  [    0.2s] generate_data done: X_train=(160, 2)
+  [    0.2s] generate_data: Liquidation Price  N=200  noise=0.05  seed=214
+  [    0.2s] generate_data done: X_train=(160, 2)
+  [    0.2s] generate_data: Logistic Growth  N=200  noise=0.05  seed=158
+  [    0.2s] generate_data done: X_train=(160, 1)
+  [    0.2s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=151
+  [    0.2s] generate_data done: X_train=(160, 1)
+  [    0.2s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=221
+  [    0.2s] generate_data done: X_train=(160, 3)
+  [    0.2s] generate_data: Price Impact  N=200  noise=0.05  seed=193
+  [    0.2s] generate_data done: X_train=(160, 2)
+  [    0.2s] generate_data: Rate Law  N=200  noise=0.05  seed=137
+  [    0.2s] generate_data done: X_train=(160, 2)
+  [    0.2s] generate_data: Value at Risk  N=200  noise=0.05  seed=207
+  [    0.2s] generate_data done: X_train=(160, 2)
+  [    0.2s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=63
+  [    0.2s] generate_data done: X_train=(160, 1)
+  [    0.2s] generate_data: Arrhenius  N=200  noise=0.05  seed=42
+  [    0.2s] generate_data done: X_train=(160, 1)
+  [    0.3s] generate_data: Constant Product  N=200  noise=0.05  seed=119
+  [    0.3s] generate_data done: X_train=(160, 1)
+  [    0.3s] generate_data: Gravitational Force  N=200  noise=0.05  seed=91
+  [    0.3s] generate_data done: X_train=(160, 3)
+  [    0.3s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=49
+  [    0.3s] generate_data done: X_train=(160, 2)
+  [    0.3s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=98
+  [    0.3s] generate_data done: X_train=(160, 3)
+  [    0.3s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
+  [    0.3s] generate_data done: X_train=(160, 1)
+  [    0.3s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=84
+  [    0.3s] generate_data done: X_train=(160, 2)
+  [    0.3s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
+  [    0.3s] generate_data done: X_train=(160, 2)
+  [    0.3s] generate_data: Logistic Growth  N=200  noise=0.05  seed=77
+  [    0.3s] generate_data done: X_train=(160, 1)
+  [    0.3s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=70
+  [    0.3s] generate_data done: X_train=(160, 1)
+  [    0.3s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=140
+  [    0.3s] generate_data done: X_train=(160, 3)
+  [    0.4s] generate_data: Price Impact  N=200  noise=0.05  seed=112
+  [    0.4s] generate_data done: X_train=(160, 2)
+  [    0.4s] generate_data: Rate Law  N=200  noise=0.05  seed=56
+  [    0.4s] generate_data done: X_train=(160, 2)
+  [    0.4s] generate_data: Value at Risk  N=200  noise=0.05  seed=126
+  [    0.4s] generate_data done: X_train=(160, 2)
+  [    0.4s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=120
+  [    0.4s] generate_data done: X_train=(160, 1)
+  [    0.4s] generate_data: Arrhenius  N=200  noise=0.05  seed=99
+  [    0.4s] generate_data done: X_train=(160, 1)
+  [    0.4s] generate_data: Constant Product  N=200  noise=0.05  seed=176
+  [    0.4s] generate_data done: X_train=(160, 1)
+  [    0.4s] generate_data: Gravitational Force  N=200  noise=0.05  seed=148
+  [    0.4s] generate_data done: X_train=(160, 3)
+  [    0.4s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=106
+  [    0.4s] generate_data done: X_train=(160, 2)
+  [    0.4s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=155
+  [    0.4s] generate_data done: X_train=(160, 3)
+  [    0.4s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=162
+  [    0.4s] generate_data done: X_train=(160, 1)
+  [    0.5s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=141
+  [    0.5s] generate_data done: X_train=(160, 2)
+  [    0.5s] generate_data: Liquidation Price  N=200  noise=0.05  seed=190
+  [    0.5s] generate_data done: X_train=(160, 2)
+  [    0.5s] generate_data: Logistic Growth  N=200  noise=0.05  seed=134
+  [    0.5s] generate_data done: X_train=(160, 1)
+  [    0.5s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=127
+  [    0.5s] generate_data done: X_train=(160, 1)
+  [    0.5s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=197
+  [    0.5s] generate_data done: X_train=(160, 3)
+  [    0.5s] generate_data: Price Impact  N=200  noise=0.05  seed=169
+  [    0.5s] generate_data done: X_train=(160, 2)
+  [    0.5s] generate_data: Rate Law  N=200  noise=0.05  seed=113
+  [    0.5s] generate_data done: X_train=(160, 2)
+  [    0.5s] generate_data: Value at Risk  N=200  noise=0.05  seed=183
+  [    0.5s] generate_data done: X_train=(160, 2)
+Allometric Scaling 123 -51.01721982259526 -> (-inf, 'failed')
+Henderson-Hasselbalch 123 -5478.533081977644 -> (-inf, 'catastrophic')
+Impermanent Loss 123 -253.2698376229586 -> (-inf, 'catastrophic')
+Michaelis-Menten 123 -3.6853900742448106e+52 -> (-inf, 'failed')
+Allometric Scaling 42 -47.63206839886516 -> (-inf, 'failed')
+Henderson-Hasselbalch 42 -3985.8818831360354 -> (-inf, 'catastrophic')
+Impermanent Loss 42 -239.44888539296136 -> (-inf, 'catastrophic')
+Henderson-Hasselbalch 99 -4325.888749599315 -> (-inf, 'catastrophic')
+Impermanent Loss 99 -242.7317153432833 -> (-inf, 'catastrophic')

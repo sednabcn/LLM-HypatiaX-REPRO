@@ -1,0 +1,452 @@
+[
+ {
+  "equation": "Allometric Scaling",
+  "seed": 123,
+  "stored_far": -51.01721982259526,
+  "scored_far": [
+   -Infinity,
+   "failed"
+  ],
+  "picked": null
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 123,
+  "stored_far": -14.356748021600149,
+  "scored_far": [
+   -14.356748021600149,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 123,
+  "stored_far": -84.26499773625143,
+  "scored_far": [
+   -84.26499773625143,
+   "ok"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 123,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 123,
+  "stored_far": -5478.533081977644,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 123,
+  "stored_far": 0.9999970340198936,
+  "scored_far": [
+   0.9999970340198936,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 123,
+  "stored_far": -253.2698376229586,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 2
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 123,
+  "stored_far": -17.71719637724446,
+  "scored_far": [
+   -17.71719637724446,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 123,
+  "stored_far": -70.92382783631896,
+  "scored_far": [
+   -70.92382783631896,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 123,
+  "stored_far": -12.024277165545072,
+  "scored_far": [
+   -12.024277165545072,
+   "ok"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 123,
+  "stored_far": -3.6853900742448106e+52,
+  "scored_far": [
+   -Infinity,
+   "failed"
+  ],
+  "picked": null
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 123,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 123,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 123,
+  "stored_far": -13.886339869171506,
+  "scored_far": [
+   -13.886339869171506,
+   "ok"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 123,
+  "stored_far": 0.9999996992610958,
+  "scored_far": [
+   0.9999996992610958,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Allometric Scaling",
+  "seed": 42,
+  "stored_far": -47.63206839886516,
+  "scored_far": [
+   -Infinity,
+   "failed"
+  ],
+  "picked": null
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 42,
+  "stored_far": -12.55530761733348,
+  "scored_far": [
+   -12.55530761733348,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 42,
+  "stored_far": -74.12596774564763,
+  "scored_far": [
+   -74.12596774564763,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 42,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 42,
+  "stored_far": -3985.8818831360354,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 42,
+  "stored_far": 0.9999974729188718,
+  "scored_far": [
+   0.9999974729188718,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 42,
+  "stored_far": -239.44888539296136,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 2
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 42,
+  "stored_far": -13.031647603412777,
+  "scored_far": [
+   -13.031647603412777,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 42,
+  "stored_far": -65.09853188063656,
+  "scored_far": [
+   -65.09853188063656,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 42,
+  "stored_far": -10.642351219328656,
+  "scored_far": [
+   -10.642351219328656,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 42,
+  "stored_far": -Infinity,
+  "scored_far": [
+   -Infinity,
+   "failed"
+  ],
+  "picked": null
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 42,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 42,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 42,
+  "stored_far": -16.57987113661681,
+  "scored_far": [
+   -16.57987113661681,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 42,
+  "stored_far": -3.140500281497565,
+  "scored_far": [
+   -3.140500281497565,
+   "ok"
+  ],
+  "picked": 2
+ },
+ {
+  "equation": "Allometric Scaling",
+  "seed": 99,
+  "stored_far": -96.53878113496927,
+  "scored_far": [
+   -96.53878113496927,
+   "ok"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 99,
+  "stored_far": -13.579357402664352,
+  "scored_far": [
+   -13.579357402664352,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 99,
+  "stored_far": -81.47560768746112,
+  "scored_far": [
+   -81.47560768746112,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 99,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 99,
+  "stored_far": -4325.888749599315,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 99,
+  "stored_far": 0.999997915556563,
+  "scored_far": [
+   0.999997915556563,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 99,
+  "stored_far": -242.7317153432833,
+  "scored_far": [
+   -Infinity,
+   "catastrophic"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 99,
+  "stored_far": -13.584448456349946,
+  "scored_far": [
+   -13.584448456349946,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 99,
+  "stored_far": -74.68328886086366,
+  "scored_far": [
+   -74.68328886086366,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 99,
+  "stored_far": -11.233781254658663,
+  "scored_far": [
+   -11.233781254658663,
+   "ok"
+  ],
+  "picked": 2
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 99,
+  "stored_far": -Infinity,
+  "scored_far": [
+   -Infinity,
+   "failed"
+  ],
+  "picked": null
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 99,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 0
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 99,
+  "stored_far": 1.0,
+  "scored_far": [
+   1.0,
+   "ok"
+  ],
+  "picked": 1
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 99,
+  "stored_far": -12.293925449267604,
+  "scored_far": [
+   -12.293925449267604,
+   "ok"
+  ],
+  "picked": 2
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 99,
+  "stored_far": 0.9999998387276149,
+  "scored_far": [
+   0.9999998387276149,
+   "ok"
+  ],
+  "picked": 1
+ }
+]
