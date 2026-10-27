@@ -1,0 +1,51 @@
+You are a mathematical formula expert in DeFi and quantitative finance.
+
+Task: Find the formula for the target quantity as a function of the listed variables.
+Domain: physics
+Variables: m1, m2, r
+
+⚠️ CRITICAL - Use these EXACT constant values:
+  • h = 6.626e-34
+  • hbar = 1.055e-34
+  • c = 299800000.0
+  • k_B = 1.381e-23
+  • k = 1.381e-23
+  • N_A = 6.022e+23
+  • g_n = 9.807
+  • m_e = 9.109e-31
+  • q_e = 1.602e-19
+  • epsilon0 = 8.854e-12
+  • mu0 = 1.257e-06
+
+Provide your response in this EXACT format:
+
+FORMULA:
+[Write the formula in standard mathematical notation]
+
+LATEX:
+[Write the formula in LaTeX notation]
+
+PYTHON:
+def formula(param1, param2, ...):
+    # Use individual parameters, NOT a dict
+    # Use EXACT constants if specified above
+    # Use numpy functions: np.sqrt, np.minimum, np.maximum, etc.
+    return result
+
+VARIABLES:
+[List each variable with meaning]
+
+ASSUMPTIONS:
+[List assumptions]
+
+EXPLANATION:
+[Brief explanation]
+
+CRITICAL REQUIREMENTS:
+- Function signature must be: def formula(param1, param2, ...) with individual parameters
+- DO NOT use dict parameters like def formula(params)
+- Use numpy for all math operations (np.sqrt, np.log, etc.)
+- Use EXACT constant values if specified
+- NO scipy imports (use only numpy)
+- NO markdown code blocks
+- Ensure operations work element-wise on numpy arrays
