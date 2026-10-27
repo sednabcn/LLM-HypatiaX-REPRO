@@ -15,3 +15,5 @@
 4. Phase 3 ablations: no result files; runners must log config_diff, r2_raw and r2_status.
 5. scripts/phase3_close.py not reviewed.
 6. Known failing test, deselected: hypatiax/core/base_pure_llm/test_baseline_regressions.py::test_error_row_is_not_counted_as_llm_call_and_keeps_hint_status
+
+Update (2026-10-27): item 6 resolved (stale test updated, see amendment A2). Tag phase2-closed-with-caveats left in place.

@@ -72,12 +72,12 @@ class _Boom:
 
 
 def test_error_row_is_not_counted_as_llm_call_and_keeps_hint_status(mod, monkeypatch):
-    monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")  # hints ON -> specialized prompt
+    monkeypatch.setenv("HYPATIAX_ALLOW_LEGACY", "1")  # legacy flag only changes the recorded bypass_flags; the prompt has no hints either way
     b = mod.PureLLMBaseline(); b.client = _Boom()
     r = b.generate_formula("Liquidation price for leveraged long", "defi", ["entry_price", "leverage"], {})
     assert r["llm_attempted"] is True and r["llm_called"] is False
     assert r["error_stage"] == "api_request"
-    assert r["bypass_kind"] == "prompt_embedded_gt"      # no longer mislabelled "live"
+    assert r["bypass_kind"] == "live"   # single prompt template, no per-equation hints; leak-marker guard in generate_formula
     assert r["prompt_sha256"] and r["temperature_sent"] is False
 
 
