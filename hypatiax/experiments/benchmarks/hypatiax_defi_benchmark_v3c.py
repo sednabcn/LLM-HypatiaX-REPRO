@@ -136,6 +136,7 @@ from pathlib import Path
 
 # ── third-party ───────────────────────────────────────────────────────────────
 import numpy as np
+from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 import torch
 import torch.nn as nn
 from dotenv import load_dotenv
@@ -417,7 +418,7 @@ def _train_and_eval_nn(
     def _decode(raw): return sy.inverse_transform(raw.reshape(-1, 1)).flatten()
     def _r2(yt_, yp_):
         ss_r = np.sum((yt_ - yp_) ** 2); ss_t = np.sum((yt_ - yt_.mean()) ** 2)
-        return float(1 - ss_r / ss_t) if ss_t > 1e-10 else 0.0
+        return float(_r2_checked(yt_, yp_)[0])  # NaN for a degenerate target
 
     model.eval()
     with torch.no_grad():
@@ -538,7 +539,7 @@ def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict:
     err  = y_true - y_pred
     ss_r = np.sum(err ** 2)
     ss_t = np.sum((y_true - y_true.mean()) ** 2)
-    r2   = float(1 - ss_r / ss_t) if ss_t > 1e-10 else 0.0
+    r2   = float(_r2_checked(y_true, y_pred)[0])  # NaN for a degenerate target
     return {
         "r2":   r2,
         "mae":  float(np.mean(np.abs(err))),
