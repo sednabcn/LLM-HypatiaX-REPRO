@@ -47,7 +47,7 @@ ENGINE_PATH = "hypatiax/tools/symbolic/symbolic_engine.py"
 WIRED = ["llm_acceptance", "pysr_prior"]
 OMIT = {
     'probe': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
-    'complexity_routing': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
+    'complexity_routing': 'only complexity gate is `if False and ...` in symbolic_engine.py, off in the full config, so ablating it is identical by construction',
     'nn_augmentation': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
     'blend_weight': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
 }
