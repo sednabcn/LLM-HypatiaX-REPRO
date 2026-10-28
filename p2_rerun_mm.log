@@ -1,0 +1,75 @@
+Config gates:
+  [PASS] A3-7 max_calls_per_case == 3
+  [PASS] A3-7 prompt_inputs has no statistics
+  [PASS] A3-7 selection_among_samples == train_r2
+  [PASS] A3-7 max_tokens set
+  [PASS] A3-7 temperature entry present (value follows A3-1)
+  [PASS] A3-2 prompt_template_sha256 pinned and matches
+✅ API key found in environment
+populations : 30  (paper-quality, FIX-POP)
+niterations : 1000
+timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
+wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
+seed        : 42  (source: default)
+✅ Parameters ready
+   [MEM] start: RSS=0.85 GB
+✅ HybridDiscoverySystem (v5.4) imported from /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
+✅ PySR 2.0.0a1 ready
+  [    0.0s] Imports complete
+✅ Core-15 loaded: 15 equations, 5 domains
+  [00] Arrhenius                    (Chemistry)
+  [01] Henderson-Hasselbalch        (Chemistry)
+  [02] Rate Law                     (Chemistry)
+  [03] Allometric Scaling           (Biology)
+  [04] Michaelis-Menten             (Biology)
+  [05] Logistic Growth              (Biology)
+  [06] Kinetic Energy               (Physics)
+  [07] Gravitational Force          (Physics)
+  [08] Ideal Gas Law                (Physics)
+  [09] Impermanent Loss             (DeFi AMM)
+  [10] Price Impact                 (DeFi AMM)
+  [11] Constant Product             (DeFi AMM)
+  [12] Value at Risk                (DeFi Risk)
+  [13] Liquidation Price            (DeFi Risk)
+  [14] Portfolio Std Dev            (DeFi Risk)
+✅ sympy available — true OOD evaluation (Mode A) enabled
+✅ run_condition ready — hypatia → HybridDiscoverySystem v5.4 | pysr_only → raw PySR
+FULL RUN: 1 equations x 2 seeds -> p2_rerun_mm
+  [    1.3s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=70
+  [    1.3s] generate_data done: X_train=(160, 1)
+2026-10-28 12:42:58,626 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-28 12:43:06,238 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-28 12:43:15,508 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=9.223741s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.224008s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=7.505042s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.505290s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=9.265392s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.265647s description_hash=8d3cad050baa
+  Michaelis-Menten                 seed  42  sel=None  far=-inf  train=-inf  26s  stage=no_calls
+  [   27.4s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=127
+  [   27.4s] generate_data done: X_train=(160, 1)
+2026-10-28 12:43:23,637 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-28 12:43:32,512 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-10-28 12:43:40,803 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=8.016844s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.017083s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=8.870275s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.870476s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+API_EXIT dt=8.287714s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.287916s description_hash=8d3cad050baa
+  Michaelis-Menten                 seed  99  sel=None  far=-inf  train=-inf  25s  stage=no_calls
+
+Done: 2 rows; time cap hit in 0. Next: --validate, then phase2_close.py.

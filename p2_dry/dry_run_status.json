@@ -1,0 +1,45 @@
+{
+  "pass": true,
+  "checks": [
+    [
+      "A3-3 bypass_kind == live",
+      true,
+      "got 'live'"
+    ],
+    [
+      "A3-3 llm_called",
+      true,
+      ""
+    ],
+    [
+      "A3-5 selection_metric == train_r2",
+      true,
+      ""
+    ],
+    [
+      "A3-5 n_calls == 3 and identical prompt",
+      true,
+      "n_calls=3"
+    ],
+    [
+      "A3-5 one API request per call (no hidden retries)",
+      true,
+      "[1, 1, 1]"
+    ],
+    [
+      "A3-5 section-5 fields all present",
+      true,
+      ""
+    ],
+    [
+      "A3-6 no stop_reason == max_tokens",
+      true,
+      "['end_turn', 'end_turn', 'end_turn']"
+    ],
+    [
+      "model id recorded",
+      true,
+      ""
+    ]
+  ]
+}
