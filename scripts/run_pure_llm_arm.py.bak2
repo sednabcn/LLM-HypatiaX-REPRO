@@ -1,0 +1,1080 @@
+#!/usr/bin/env python3
+"""
+run_pure_llm_arm.py -- Phase 2, Pure LLM arm P (pure_llm_clean), addendum A3 (2026-10-27)
+
+For each (equation, seed): make max_calls_per_case (=3) independent calls with the IDENTICAL
+frozen PureLLMBaseline prompt, score every candidate, and select the winner by TRAINING R2 ONLY.
+Extrapolation R2 is computed for every candidate but is never used for selection.
+
+Nothing here edits a frozen Phase 1 file. The baseline is called as-is; the Anthropic request is
+observed (not changed) by wrapping anthropic.resources.messages.Messages.create, which is how
+effective_request_params, model_id_returned, stop_reason and prompt_sha256 are captured.
+R2 is NOT re-implemented: every score comes from hypatiax.core.r2_canonical.r2_checked.
+
+Modes (all from the repo root):
+  --probe EQ            show what generate_data / the baseline look like (settles adapter guesses)
+  --render EQ           offline gates: render the P prompt without calling the API (A3-1 P side,
+                        A3-2 leak check, A3-7 config check, evaluator hash, template hash)
+  --compare-kwargs A B  A3-1: diff the HDS request kwargs against P's
+  --dry-run             1 equation x 1 seed, live, to p2_dry/ (A3-3, A3-5, A3-6)
+  (default)             full run: 15 equations x 3 seeds -> p2/pure_llm_seed{seed}.jsonl
+  --validate            schema + coverage check of the produced rows
+  --emit-call1-set DIR  derive the secondary "call 1 alone" rows
+  --emit-data-hashes F / --check-hds-hashes F    A3-4 data-hash comparison
+  --selftest            offline tests with fakes (no repo, no API)
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import builtins
+import datetime as dt
+import hashlib
+import importlib
+import inspect
+import json
+import math
+import os
+import re
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+import numpy as np
+
+REPO = Path(os.environ.get("PHASE1_ROOT", Path(__file__).resolve().parents[1]))
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+DATA_FN = "hypatiax.experiments.benchmarks.exp1_ablation:generate_data"
+BASELINE = "hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery:PureLLMBaseline"
+SCORER_MODULE = "hypatiax.core.r2_canonical"
+REGIMES = ("near", "medium", "far")
+DEFAULT_SEEDS = (42, 99, 123)
+STAT_INPUT_MARKERS = ("pattern", "stat", "mean", "std", "range")   # forbidden in prompt_inputs for arm P
+SECTION5_FIELDS = (
+    "arm", "call_index", "n_calls", "candidate_formulas", "candidate_train_r2", "selected_index",
+    "selection_metric", "model_id_returned", "effective_request_params", "stop_reason",
+    "prompt_sha256", "prompt_inputs", "train_data_sha256", "far_data_sha256", "bypass_kind",
+    "llm_called", "llm_attempted", "error_stage", "runtime_s")
+
+
+# ============================================================================ helpers
+def sha256_bytes(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def sha256_file(p: Path) -> str:
+    return sha256_bytes(Path(p).read_bytes())
+
+
+def hash_arrays(X: np.ndarray, y: np.ndarray) -> str:
+    h = hashlib.sha256()
+    for a in (np.asarray(X, dtype="<f8"), np.asarray(y, dtype="<f8")):
+        h.update(str(a.shape).encode())
+        h.update(np.ascontiguousarray(a).tobytes())
+    return h.hexdigest()
+
+
+def split_id(equation: str, seed: int) -> str:
+    return "derived:" + sha256_bytes(f"{equation}|{seed}".encode())[:12]
+
+
+def jsonable(o: Any) -> Any:
+    return json.loads(json.dumps(o, default=str))
+
+
+def git_commit() -> str:
+    try:
+        sha = subprocess.check_output(["git", "-C", str(REPO), "rev-parse", "HEAD"], text=True,
+                                      stderr=subprocess.DEVNULL).strip()
+        dirty = subprocess.call(["git", "-C", str(REPO), "diff", "--quiet"],
+                                stderr=subprocess.DEVNULL) != 0
+        return sha + ("+dirty" if dirty else "")
+    except Exception:
+        return "unknown"
+
+
+def load_object(dotted: str):
+    mod, _, attr = dotted.partition(":")
+    return getattr(importlib.import_module(mod), attr)
+
+
+def flatten(d: Any, prefix: str = "") -> dict:
+    out = {}
+    if isinstance(d, dict):
+        for k, v in d.items():
+            out.update(flatten(v, f"{prefix}{k}."))
+    else:
+        out[prefix.rstrip(".")] = d
+    return out
+
+
+def cfg_get(cfg: dict, *aliases: str, default=None):
+    flat = flatten(cfg)
+    for a in aliases:
+        for k, v in flat.items():
+            if k == a or k.endswith("." + a):
+                return v
+    return default
+
+
+# ============================================================================ config + gates
+def load_config(path: Path) -> dict:
+    import yaml
+    return yaml.safe_load(Path(path).read_text()) or {}
+
+
+def gate_config(cfg: dict, template_sha: Optional[str] = None) -> list[tuple[str, bool, str]]:
+    """A3-7 (and the A3-2 hash pin)."""
+    out = []
+    mc = cfg_get(cfg, "max_calls_per_case")
+    out.append(("A3-7 max_calls_per_case == 3", mc == 3, f"got {mc!r}"))
+    pi = cfg_get(cfg, "prompt_inputs")
+    bad = [x for x in (pi or []) if any(m in str(x).lower() for m in STAT_INPUT_MARKERS)]
+    out.append(("A3-7 prompt_inputs has no statistics", bool(pi) and not bad, f"got {pi!r}"))
+    sel = cfg_get(cfg, "selection_among_samples")
+    out.append(("A3-7 selection_among_samples == train_r2", sel == "train_r2", f"got {sel!r}"))
+    mt = cfg_get(cfg, "max_tokens")
+    out.append(("A3-7 max_tokens set", isinstance(mt, int), f"got {mt!r}"))
+    flat = flatten(cfg)
+    out.append(("A3-7 temperature entry present (value follows A3-1)",
+                any(k.split(".")[-1] == "temperature" for k in flat),
+                "add `temperature:` (null = API default) once A3-1 is decided"))
+    pin = cfg_get(cfg, "prompt_template_sha256")
+    if template_sha is not None:
+        out.append(("A3-2 prompt_template_sha256 pinned and matches",
+                    pin == template_sha, f"config={pin!r} computed={template_sha}"))
+    return out
+
+
+def gate_prompt_leaks(prompt_text: str, case: "Case") -> list[tuple[str, bool, str]]:
+    """A3-2: no statistics, ranges, means, stds or equation name in the rendered P prompt."""
+    out = []
+    low = prompt_text.lower()
+    out.append(("A3-2 equation name absent", case.equation.lower() not in low, case.equation))
+    nums = set(re.findall(r"-?\d+\.?\d*(?:[eE][-+]?\d+)?", prompt_text))
+    stats = []
+    for name, arr in [("y", case.y_train)] + [(f"x{i}", case.X_train[:, i]) for i in range(case.X_train.shape[1])]:
+        for fn_name, fn in (("mean", np.mean), ("std", np.std), ("min", np.min), ("max", np.max),
+                            ("median", np.median)):
+            v = float(fn(arr))
+            for fmt in (f"{v:.3g}", f"{v:.4g}", f"{v:.2f}"):
+                if fmt in nums and abs(v) > 1e-9 and fmt not in {str(c) for c in case.constants.values()}:
+                    stats.append(f"{name}.{fn_name}={fmt}")
+    out.append(("A3-2 no training-data statistic values in prompt", not stats, ", ".join(stats[:6])))
+    words = sorted(set(re.findall(r"\b(mean|std|standard deviation|variance|median|data range|statistics)\b", low)))
+    out.append(("A3-2 no statistics wording in prompt", not words, ", ".join(words)))
+    return out
+
+
+def print_gates(rows: list[tuple[str, bool, str]]) -> bool:
+    ok = True
+    for name, passed, detail in rows:
+        print(f"  [{'PASS' if passed else 'FAIL'}] {name}" + ("" if passed else f"   -> {detail}"))
+        ok &= passed
+    return ok
+
+
+# ============================================================================ case + data adapter
+@dataclass
+class Case:
+    equation: str
+    seed: int
+    description: str
+    domain: str
+    variable_names: list
+    constants: dict
+    X_train: np.ndarray
+    y_train: np.ndarray
+    X_eval: dict = field(default_factory=dict)   # regime -> X
+    y_eval: dict = field(default_factory=dict)   # regime -> y
+
+    def hashes(self) -> dict:
+        return {"train": hash_arrays(self.X_train, self.y_train),
+                "far": hash_arrays(self.X_eval["far"], self.y_eval["far"]) if "far" in self.X_eval else None}
+
+
+def _pick(d: dict, names) -> Any:
+    low = {str(k).lower(): k for k in d}
+    for n in names:
+        if n.lower() in low:
+            return d[low[n.lower()]]
+    return None
+
+
+def _as_2d(X, variable_names=None) -> np.ndarray:
+    if isinstance(X, dict):
+        names = variable_names or list(X)
+        X = np.column_stack([np.asarray(X[n], dtype=float) for n in names])
+    X = np.asarray(X, dtype=float)
+    return X.reshape(-1, 1) if X.ndim == 1 else X
+
+
+def normalise_generated(equation: str, seed: int, ret: Any, meta: dict) -> Case:
+    """Turn whatever generate_data returned into a Case. Raises with the keys it saw if it cannot."""
+    d = ret if isinstance(ret, dict) else (vars(ret) if hasattr(ret, "__dict__") else None)
+    if d is None:
+        raise TypeError(f"generate_data returned {type(ret).__name__}; run --probe {equation} and adapt "
+                        "normalise_generated()")
+    seen = sorted(map(str, d))
+    xt = _pick(d, ["X_train", "x_train", "train_X", "train_x"])
+    yt = _pick(d, ["y_train", "train_y"])
+    if xt is None or yt is None:
+        raise KeyError(f"cannot find training arrays; keys seen: {seen}")
+    var = (meta.get("variable_names") or _pick(d, ["variable_names", "variables", "var_names", "feature_names"])
+           or None)
+    if var is not None and not isinstance(var, (list, tuple)):
+        var = list(var)
+    X_train = _as_2d(xt, var)
+    var = list(var) if var else [f"x{i}" for i in range(X_train.shape[1])]
+    case = Case(
+        equation=equation, seed=seed,
+        description=str(meta.get("description") or _pick(d, ["description", "desc"]) or ""),
+        domain=str(meta.get("domain") or _pick(d, ["domain"]) or ""),
+        variable_names=var,
+        constants=dict(meta.get("constants") or _pick(d, ["constants"]) or {}),
+        X_train=X_train, y_train=np.asarray(yt, dtype=float).ravel())
+    nested = _pick(d, ["extrap", "extrapolation", "eval", "extrap_data"]) or {}
+    for r in REGIMES:
+        xe = _pick(d, [f"X_{r}", f"x_{r}", f"X_extrap_{r}", f"x_extrap_{r}", f"extrap_X_{r}", f"X_test_{r}"])
+        ye = _pick(d, [f"y_{r}", f"y_extrap_{r}", f"extrap_y_{r}", f"y_test_{r}"])
+        if (xe is None or ye is None) and isinstance(nested, dict) and r in nested:
+            v = nested[r]
+            if isinstance(v, (tuple, list)) and len(v) == 2:
+                xe, ye = v
+            elif isinstance(v, dict):
+                xe, ye = _pick(v, ["X", "x"]), _pick(v, ["y"])
+        if xe is not None and ye is not None:
+            case.X_eval[r] = _as_2d(xe, var)
+            case.y_eval[r] = np.asarray(ye, dtype=float).ravel()
+    if "far" not in case.X_eval:
+        raise KeyError(f"cannot find the far extrapolation set; keys seen: {seen}")
+    for k in ("description", "domain"):
+        if not getattr(case, k):
+            raise KeyError(f"{k} missing: pass --equations-meta FILE (JSON keyed by equation) or adapt the adapter")
+    return case
+
+
+class RepoAdapter:
+    """Builds Cases from the repo's own generator (imported, never re-implemented)."""
+
+    def __init__(self, data_fn: str = DATA_FN, resolver: Optional[str] = None, meta: Optional[dict] = None):
+        self.fn = load_object(data_fn)
+        self.resolver = load_object(resolver) if resolver else None
+        self.meta = meta or {}
+
+    def build(self, equation: str, seed: int) -> Case:
+        sig = inspect.signature(self.fn)
+        eq_alias = {"equation", "equation_name", "name", "eq", "eq_name", "key", "case", "spec"}
+        seed_alias = {"seed", "random_state", "rng_seed"}
+        kw = {}
+        for p in sig.parameters.values():
+            if p.name in eq_alias:
+                kw[p.name] = self.resolver(equation) if self.resolver else equation
+            elif p.name in seed_alias:
+                kw[p.name] = seed
+            elif p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY):
+                raise TypeError(f"generate_data{sig}: cannot fill required parameter {p.name!r}. "
+                                "Run --probe, then pass --equation-resolver module:func if it needs an object.")
+        return normalise_generated(equation, seed, self.fn(**kw), self.meta.get(equation, {}))
+
+
+# ============================================================================ formula evaluation
+class FormulaError(Exception):
+    def __init__(self, stage: str, msg: str):
+        super().__init__(msg)
+        self.stage = stage
+
+
+_SAFE = ("abs min max sum len range float int pow round zip enumerate bool list tuple dict isinstance "
+         "ValueError ZeroDivisionError Exception map sorted any all").split()
+_SAFE_BUILTINS = {n: getattr(builtins, n) for n in _SAFE}
+
+
+def _guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+    if name.split(".")[0] not in {"numpy", "math", "scipy"}:
+        raise ImportError(f"import of {name!r} is not allowed in a candidate formula")
+    return builtins.__import__(name, globals, locals, fromlist, level)
+
+
+def _strip_fences(code: str) -> str:
+    code = code.strip()
+    m = re.match(r"^```[a-zA-Z]*\n(.*?)\n?```$", code, re.S)
+    return (m.group(1) if m else code).strip()
+
+
+def evaluate_formula(code: str, variable_names: list, X: np.ndarray, constants: dict) -> np.ndarray:
+    """Evaluate candidate code on X. Accepts an expression, a def, or an assignment to result/y_pred.
+    Restricted builtins and import guard reduce accidents; this is NOT a security sandbox."""
+    if X.shape[1] != len(variable_names):
+        raise FormulaError("exec", f"{X.shape[1]} columns but {len(variable_names)} variable names")
+    n = X.shape[0]
+    ns: dict = {"np": np, "numpy": np, "math": math,
+                "__builtins__": {**_SAFE_BUILTINS, "__import__": _guarded_import}}
+    ns.update(constants or {})
+    ns.update({v: X[:, i] for i, v in enumerate(variable_names)})
+    code = _strip_fences(code)
+    try:
+        with np.errstate(all="ignore"):
+            try:
+                out = eval(compile(ast.parse(code, mode="eval"), "<formula>", "eval"), ns)
+            except SyntaxError:
+                before = set(ns)
+                exec(compile(code, "<formula>", "exec"), ns)
+                fns = [(k, v) for k, v in ns.items() if k not in before and inspect.isfunction(v)]
+                pref = [kv for kv in fns if kv[0] in ("formula", "f", "predict", "model", "equation")]
+                pick = (pref or fns[-1:] or [None])[0]
+                if pick:
+                    params = list(inspect.signature(pick[1]).parameters)
+                    if all(p in ns for p in params):
+                        out = pick[1](**{p: ns[p] for p in params})
+                    elif len(params) == len(variable_names):
+                        out = pick[1](*[X[:, i] for i in range(len(variable_names))])
+                    else:
+                        raise FormulaError("exec", f"cannot bind parameters {params} of {pick[0]}")
+                else:
+                    for name in ("result", "y_pred", "y", "pred"):
+                        if name in ns and name not in variable_names:
+                            out = ns[name]
+                            break
+                    else:
+                        raise FormulaError("exec", "no expression, function or result/y_pred assignment found")
+    except FormulaError:
+        raise
+    except Exception as e:  # noqa: BLE001 - any failure in candidate code is a failed row, never a crash
+        raise FormulaError("exec", f"{type(e).__name__}: {e}") from e
+    out = np.asarray(out, dtype=float)
+    if out.ndim == 0:
+        out = np.full(n, float(out))
+    if out.size != n:
+        raise FormulaError("exec", f"output has {out.size} values, expected {n}")
+    return out.reshape(n)
+
+
+# ============================================================================ scoring
+def load_scorer():
+    mod = importlib.import_module(SCORER_MODULE)
+    return mod.r2_checked, sha256_file(Path(mod.__file__))
+
+
+def score_pair(scorer: Callable, y: np.ndarray, pred: np.ndarray) -> tuple:
+    try:
+        v, st = scorer(np.asarray(y, dtype=float), np.asarray(pred, dtype=float))
+        v = float(v)
+        return (None if math.isnan(v) else v), str(st)
+    except Exception as e:  # noqa: BLE001
+        return None, f"scorer_error:{type(e).__name__}"
+
+
+# ============================================================================ API observation + providers
+class RenderStop(Exception):
+    """Raised by the recorder in --render mode so no request leaves the machine."""
+
+
+class Recorder:
+    def __init__(self):
+        self.calls: list = []
+        self.mode = "live"
+
+    def install(self):
+        import anthropic
+        cls = anthropic.resources.messages.Messages
+        if getattr(cls.create, "_p2_recorder", False):
+            return
+        orig, rec = cls.create, self
+
+        def create(this, *a, **k):
+            entry = {"kwargs": jsonable(k)}
+            rec.calls.append(entry)
+            if rec.mode == "render":
+                raise RenderStop()
+            try:
+                resp = orig(this, *a, **k)
+            except Exception as e:  # noqa: BLE001
+                entry["error"] = f"{type(e).__name__}: {e}"
+                raise
+            entry["response"] = {"model": getattr(resp, "model", None),
+                                 "stop_reason": getattr(resp, "stop_reason", None)}
+            return resp
+        create._p2_recorder = True
+        cls.create = create
+
+
+def install_kwargs_recorder(path: str):
+    """Use this to capture HDS's request kwargs for A3-1:
+         python -c "import scripts.run_pure_llm_arm as r; r.install_kwargs_recorder('hds_kwargs.json'); <one HDS call>"
+    """
+    rec = Recorder()
+    rec.install()
+    import atexit
+    atexit.register(lambda: Path(path).write_text(json.dumps(request_params(rec.calls[0]) if rec.calls else {}, indent=2)))
+
+
+def request_params(entry: dict) -> dict:
+    k = entry["kwargs"]
+    return {"params": {a: b for a, b in k.items() if a not in ("messages", "system")},
+            "temperature_sent": "temperature" in k}
+
+
+def prompt_digest(entry: dict) -> str:
+    k = entry["kwargs"]
+    return sha256_bytes(json.dumps({"system": k.get("system"), "messages": k.get("messages")},
+                                   sort_keys=True).encode())
+
+
+@dataclass
+class CallResult:
+    formula: Optional[str] = None
+    error_stage: Optional[str] = None
+    error: Optional[str] = None
+    request: Optional[dict] = None       # request_params(...) of the first API request in this call
+    model_id: Optional[str] = None
+    stop_reason: Optional[str] = None
+    prompt_sha: Optional[str] = None
+    bypass_kind: Optional[str] = None
+    llm_called: bool = False
+    n_api: int = 0
+
+
+class BaselineProvider:
+    """Calls the frozen PureLLMBaseline unchanged and observes the request it sends."""
+
+    ALIAS = {
+        "description": ("description", "problem", "problem_description", "task", "prompt"),
+        "domain": ("domain",),
+        "variable_names": ("variable_names", "variables", "var_names"),
+        "constants": ("constants",),
+        "equation_name": ("equation_name", "name", "equation"),
+    }
+
+    def __init__(self, baseline: str = BASELINE, ctor_kwargs: Optional[dict] = None, render: bool = False):
+        self.rec = Recorder()
+        self.rec.mode = "render" if render else "live"
+        if render:
+            os.environ.setdefault("ANTHROPIC_API_KEY", "sk-render-only-no-request-is-sent")
+        self.rec.install()
+        cls = load_object(baseline)
+        self.obj = cls(**(ctor_kwargs or {}))
+        self.fn = getattr(self.obj, "generate_formula")
+
+    def _kwargs(self, case: Case) -> dict:
+        have = {"description": case.description, "domain": case.domain,
+                "variable_names": case.variable_names, "constants": case.constants,
+                "equation_name": None}
+        kw = {}
+        for p in inspect.signature(self.fn).parameters.values():
+            for key, names in self.ALIAS.items():
+                if p.name in names:
+                    if key == "equation_name":
+                        raise TypeError("baseline takes the equation name; arm P must not send it. "
+                                        "Run --probe and check the clean-mode call signature.")
+                    kw[p.name] = have[key]
+                    break
+            else:
+                if p.name == "metadata":
+                    # The frozen baseline takes constants through metadata["constants"].
+                    kw["metadata"] = {"constants": dict(case.constants)} if case.constants else {}
+                    continue
+                if p.default is inspect.Parameter.empty and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY):
+                    raise TypeError(f"generate_formula{inspect.signature(self.fn)}: unmapped required "
+                                    f"parameter {p.name!r}; run --probe and extend BaselineProvider.ALIAS")
+        return kw
+
+    @staticmethod
+    def _formula(res: Any) -> Optional[str]:
+        if isinstance(res, str):
+            return res
+        if isinstance(res, dict):
+            for k in ("python_code", "formula", "code", "expression", "llm_expression"):
+                if res.get(k):
+                    return str(res[k])
+            lr = res.get("llm_result")
+            if isinstance(lr, dict):
+                return BaselineProvider._formula(lr)
+        return None
+
+    def generate(self, case: Case, call_index: int) -> CallResult:
+        start = len(self.rec.calls)
+        try:
+            res = self.fn(**self._kwargs(case))
+        except RenderStop:
+            res = None
+        except TypeError:
+            raise
+        except Exception as e:  # noqa: BLE001
+            res, err = None, f"{type(e).__name__}: {e}"
+        else:
+            err = None
+        calls = self.rec.calls[start:]
+        cr = CallResult(n_api=len(calls), llm_called=any("response" in c for c in calls))
+        if calls:
+            cr.request = request_params(calls[0])
+            cr.prompt_sha = prompt_digest(calls[0])
+            resp = next((c["response"] for c in calls if "response" in c), {})
+            cr.model_id, cr.stop_reason = resp.get("model"), resp.get("stop_reason")
+        if isinstance(res, dict):
+            bk = res.get("bypass_kind")
+            cr.bypass_kind = bk if bk is not None else ("live" if cr.llm_called else None)
+            cr.llm_called = bool(res.get("llm_called", cr.llm_called))
+            if res.get("error") and not self._formula(res):
+                err = str(res["error"])
+        else:
+            cr.bypass_kind = "live" if cr.llm_called else None
+        cr.formula = self._formula(res)
+        if cr.formula is None:
+            cr.error_stage = "api" if (err or not cr.llm_called) else "parse"
+            cr.error = err or "no formula in baseline result"
+        return cr
+
+
+# ============================================================================ per-case runner
+@dataclass
+class Runtime:
+    max_calls: int = 3
+    time_cap_s: float = 1400.0
+    prompt_inputs: list = field(default_factory=lambda: ["description", "domain", "variable_names", "constants"])
+    model_requested: Optional[str] = None
+    git_commit: str = "unknown"
+    evaluator_sha256: str = ""
+    config_sha256: str = ""
+    template_sha256: Optional[str] = None
+    attempt: int = 1
+
+
+def run_case(case: Case, provider, scorer: Callable, rt: Runtime, clock: Callable = time.perf_counter) -> dict:
+    t0 = clock()
+    cands = []   # one dict per attempted call
+    cap_hit = False
+    for i in range(rt.max_calls):
+        if clock() - t0 > rt.time_cap_s:
+            cap_hit = True
+            break
+        try:
+            cr = provider.generate(case, i + 1)
+        except TypeError:
+            raise                      # adapter/config bug: stop the run, do not log a fake row
+        except Exception as e:  # noqa: BLE001
+            cr = CallResult(error_stage="api", error=f"{type(e).__name__}: {e}")
+        c = {"cr": cr, "train": None, "train_status": None, "scores": {}, "stage": cr.error_stage,
+             "err": cr.error}
+        if cr.formula is not None:
+            try:
+                pred = evaluate_formula(cr.formula, case.variable_names, case.X_train, case.constants)
+                c["train"], c["train_status"] = score_pair(scorer, case.y_train, pred)
+                for r in REGIMES:
+                    if r in case.X_eval:
+                        pe = evaluate_formula(cr.formula, case.variable_names, case.X_eval[r], case.constants)
+                        c["scores"][r] = score_pair(scorer, case.y_eval[r], pe)
+            except FormulaError as fe:
+                c["stage"], c["err"] = fe.stage, str(fe)
+            except Exception as e:  # noqa: BLE001
+                c["stage"], c["err"] = "score", f"{type(e).__name__}: {e}"
+        cands.append(c)
+
+    # ---- selection: TRAINING R2 ONLY (never an extrapolation score) -----------------------------
+    sel = None
+    for i, c in enumerate(cands):
+        v = c["train"]
+        if v is not None and math.isfinite(v) and (sel is None or v > cands[sel]["train"]):
+            sel = i
+    runtime = clock() - t0
+    NEG = float("-inf")
+
+    def fv(c, r):
+        s = c["scores"].get(r) if c else None
+        return s[0] if s and s[0] is not None else None
+
+    pick = cands[sel] if sel is not None else None
+    far = fv(pick, "far")
+    failed_stages = [c["stage"] for c in cands if c["stage"]]
+    row_stage = None if pick is not None else (max(set(failed_stages), key=failed_stages.count)
+                                              if failed_stages else ("time_cap" if cap_hit else "no_calls"))
+    bks = {c["cr"].bypass_kind for c in cands if c["cr"].bypass_kind}
+    prompts = [c["cr"].prompt_sha for c in cands if c["cr"].prompt_sha]
+    first_req = next((c["cr"].request for c in cands if c["cr"].request), {}) or {}
+    row = {
+        # --- identity / provenance
+        "equation": case.equation, "seed": case.seed, "system": "pure_llm", "arm": "P",
+        "split_id": split_id(case.equation, case.seed), "attempt": rt.attempt,
+        "git_commit": rt.git_commit, "evaluator_sha256": rt.evaluator_sha256,
+        "config_sha256": rt.config_sha256, "prompt_template_sha256": rt.template_sha256,
+        "created_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        # --- primary result (selected candidate, extrapolation scored AFTER selection)
+        "r2": far if far is not None else NEG,
+        "r2_raw": far if far is not None else NEG,
+        "r2_status": (pick["scores"]["far"][1] if pick and "far" in pick["scores"] else f"failed:{row_stage}"),
+        "extrap_r2_far": far if far is not None else NEG,
+        "extrap_r2_medium": fv(pick, "medium") if fv(pick, "medium") is not None else NEG,
+        "extrap_r2_near": fv(pick, "near") if fv(pick, "near") is not None else NEG,
+        "train_r2": pick["train"] if pick else NEG,
+        "best_expression": cands[sel]["cr"].formula if pick else None,
+        "generation_path": "pure_llm_best_of_3_train_r2",
+        # --- A3 section 5
+        "call_index": (sel + 1) if sel is not None else None,
+        "n_calls": len(cands),
+        "candidate_formulas": [c["cr"].formula for c in cands],
+        "candidate_train_r2": [c["train"] for c in cands],
+        "candidate_r2_status": [(c["scores"].get("far") or (None, c["stage"]))[1] for c in cands],
+        "candidate_extrap_r2_near": [fv(c, "near") for c in cands],
+        "candidate_extrap_r2_medium": [fv(c, "medium") for c in cands],
+        "candidate_extrap_r2_far": [fv(c, "far") for c in cands],
+        "candidate_r2_raw_far": [fv(c, "far") for c in cands],
+        "selected_index": sel,
+        "selection_metric": "train_r2",
+        "model_id_returned": next((c["cr"].model_id for c in cands if c["cr"].model_id), None),
+        "effective_request_params": {
+            **first_req,
+            "model_requested": rt.model_requested,
+            "api_requests_per_call": [c["cr"].n_api for c in cands],
+            "stop_reasons": [c["cr"].stop_reason for c in cands],
+            "prompt_identical_across_calls": len(set(prompts)) <= 1,
+            "candidate_errors": [(c["stage"], c["err"]) if c["stage"] else None for c in cands],
+            "time_cap_hit": cap_hit, "time_cap_s": rt.time_cap_s},
+        "stop_reason": pick["cr"].stop_reason if pick else next(
+            (c["cr"].stop_reason for c in cands if c["cr"].stop_reason), None),
+        "prompt_sha256": prompts[0] if prompts else None,
+        "prompt_inputs": list(rt.prompt_inputs),
+        "train_data_sha256": case.hashes()["train"], "far_data_sha256": case.hashes()["far"],
+        "bypass_kind": (next(iter(bks)) if len(bks) == 1 else ("mixed" if bks else None)),
+        "llm_called": any(c["cr"].llm_called for c in cands),
+        "llm_attempted": len(cands) > 0,
+        "error_stage": row_stage,
+        "runtime_s": runtime, "timeout_s": rt.time_cap_s, "timed_out": cap_hit,
+    }
+    return row
+
+
+# ============================================================================ run / validate drivers
+def hds_equations(p2: Path) -> list:
+    eqs = set()
+    for f in sorted(p2.glob("hds_*.jsonl")):
+        for ln in f.read_text().splitlines():
+            if ln.strip():
+                eqs.add(json.loads(ln)["equation"])
+    return sorted(eqs)
+
+
+def write_row(path: Path, row: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
+def existing_attempts(path: Path, equation: str, seed: int) -> int:
+    if not path.exists():
+        return 0
+    n = 0
+    for ln in path.read_text().splitlines():
+        if ln.strip():
+            r = json.loads(ln)
+            n += int(r.get("equation") == equation and r.get("seed") == seed)
+    return n
+
+
+def build_runtime(cfg: dict, scorer_sha: str, cfg_path: Path, template_sha: Optional[str]) -> Runtime:
+    return Runtime(
+        max_calls=int(cfg_get(cfg, "max_calls_per_case", default=3)),
+        time_cap_s=float(cfg_get(cfg, "timeout_s", "per_case_timeout_s", "time_cap_s", default=1400)),
+        prompt_inputs=list(cfg_get(cfg, "prompt_inputs", default=[])),
+        model_requested=cfg_get(cfg, "model_id", "model"),
+        git_commit=git_commit(), evaluator_sha256=scorer_sha,
+        config_sha256=sha256_file(cfg_path), template_sha256=template_sha)
+
+
+def template_sha() -> Optional[str]:
+    """The prompt template lives in the frozen baseline module, so its file hash is the template hash."""
+    try:
+        mod = importlib.import_module(BASELINE.split(":")[0])
+        return sha256_file(Path(mod.__file__))
+    except Exception:
+        return None
+
+
+def cmd_probe(args):
+    adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
+    print(f"generate_data{inspect.signature(adapter.fn)}")
+    try:
+        ret = adapter.fn(**{p: (args.probe if p in ('equation', 'equation_name', 'name', 'eq', 'eq_name') else 42)
+                            for p in inspect.signature(adapter.fn).parameters
+                            if p in ('equation', 'equation_name', 'name', 'eq', 'eq_name', 'seed', 'random_state')})
+        d = ret if isinstance(ret, dict) else getattr(ret, "__dict__", {"<value>": ret})
+        print(f"returned {type(ret).__name__}")
+        for k, v in d.items():
+            sh = getattr(v, "shape", None)
+            print(f"  {k!s:28} {type(v).__name__:12} {sh if sh is not None else str(v)[:60]}")
+    except Exception as e:  # noqa: BLE001
+        print(f"generate_data probe call failed: {type(e).__name__}: {e}")
+    cls = load_object(args.baseline)
+    print(f"\n{cls.__name__}{inspect.signature(cls)}")
+    print(f"generate_formula{inspect.signature(cls.generate_formula)}")
+    try:
+        c = adapter.build(args.probe, 42)
+        print(f"\nnormalise_generated OK: vars={c.variable_names} n_train={len(c.y_train)} "
+              f"regimes={sorted(c.X_eval)} domain={c.domain!r}")
+    except Exception as e:  # noqa: BLE001
+        print(f"\nnormalise_generated FAILED: {type(e).__name__}: {e}")
+    return 0
+
+
+def load_meta(args) -> dict:
+    return json.loads(Path(args.equations_meta).read_text()) if args.equations_meta else {}
+
+
+def cmd_render(args):
+    cfg_path = Path(args.config)
+    cfg = load_config(cfg_path)
+    scorer, scorer_sha = load_scorer()
+    adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
+    eq = args.render
+    case = adapter.build(eq, int(args.seeds.split(",")[0]))
+    prov = BaselineProvider(args.baseline, render=True)
+    prov.generate(case, 1)
+    if not prov.rec.calls:
+        print("no request was captured: the baseline did not reach Messages.create (probe it)")
+        return 2
+    entry = prov.rec.calls[0]
+    text = json.dumps({"system": entry["kwargs"].get("system"), "messages": entry["kwargs"].get("messages")})
+    print(f"Offline gates for {eq} (no API request sent)")
+    tsha = template_sha()
+    ok = print_gates(gate_config(cfg, tsha) + gate_prompt_leaks(text, case))
+    flat = json.dumps(flatten(cfg), default=str)
+    ev_ok = scorer_sha in flat
+    ok &= print_gates([("evaluator sha256 in config", ev_ok, f"computed {scorer_sha}")])
+    Path(args.p_kwargs_out).write_text(json.dumps(request_params(entry), indent=2))
+    print(f"\nP request kwargs -> {args.p_kwargs_out}: {json.dumps(request_params(entry))}")
+    print(f"prompt_template_sha256 to pin in config: {tsha}")
+    print("\nRendered prompt (check it by eye):\n" + "-" * 60)
+    for m in entry["kwargs"].get("messages", []):
+        print(m.get("content") if isinstance(m.get("content"), str) else json.dumps(m.get("content"), indent=1))
+    return 0 if ok else 1
+
+
+def cmd_compare(args):
+    a = json.loads(Path(args.compare_kwargs[0]).read_text())
+    b = json.loads(Path(args.compare_kwargs[1]).read_text())
+    pa, pb = a.get("params", {}), b.get("params", {})
+    diff = {k: {"hds": pa.get(k, "<absent>"), "P": pb.get(k, "<absent>")}
+            for k in sorted(set(pa) | set(pb)) if pa.get(k, "<absent>") != pb.get(k, "<absent>")}
+    out = {"identical": not diff, "differences": diff,
+           "temperature_sent": {"hds": a.get("temperature_sent"), "P": b.get("temperature_sent")}}
+    Path("phase2_a3_kwargs_diff.json").write_text(json.dumps(out, indent=2))
+    print("A3-1:", "IDENTICAL request parameters" if not diff else "DIFFERENCES (record them in the config):")
+    for k, v in diff.items():
+        print(f"  {k}: HDS={v['hds']!r}  P={v['P']!r}")
+    print(f"  temperature sent: HDS={a.get('temperature_sent')} P={b.get('temperature_sent')}")
+    return 0
+
+
+def run_cases(args, dry: bool) -> int:
+    cfg_path = Path(args.config)
+    cfg = load_config(cfg_path)
+    scorer, scorer_sha = load_scorer()
+    tsha = template_sha()
+    print("Config gates:")
+    if not print_gates(gate_config(cfg, tsha)):
+        print("Config gate failed: nothing was run.")
+        return 1
+    p2 = Path(args.p2_dir)
+    out_dir = Path(args.out_dir or ("p2_dry" if dry else args.p2_dir))
+    status_file = Path("p2_dry") / "dry_run_status.json"
+    if not dry and not args.skip_gate_check:
+        if not status_file.exists() or not json.loads(status_file.read_text()).get("pass"):
+            print(f"No passing dry run at {status_file}: run --dry-run first (A3 gates block the full run).")
+            return 1
+    equations = args.equations.split(",") if args.equations else hds_equations(p2)
+    seeds = [int(s) for s in args.seeds.split(",")]
+    if dry:
+        equations, seeds = equations[:1], seeds[:1]
+    if not equations:
+        print(f"No equations: no hds_*.jsonl rows in {p2}; pass --equations.")
+        return 1
+    adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
+    prov = BaselineProvider(args.baseline)
+    rt = build_runtime(cfg, scorer_sha, cfg_path, tsha)
+    print(f"{'DRY RUN' if dry else 'FULL RUN'}: {len(equations)} equations x {len(seeds)} seeds -> {out_dir}")
+    rows = []
+    for seed in seeds:
+        path = out_dir / f"pure_llm_seed{seed}.jsonl"
+        for eq in equations:
+            prior = existing_attempts(path, eq, seed)
+            if prior and not args.rerun_reason:
+                print(f"  {eq} seed {seed}: already has {prior} attempt(s); use --rerun-reason TEXT to add one "
+                      "(both attempts are kept; log an amendment)")
+                continue
+            rt.attempt = prior + 1
+            row = run_case(adapter.build(eq, seed), prov, scorer, rt)
+            if args.rerun_reason:
+                row["rerun_reason"] = args.rerun_reason
+            write_row(path, row)
+            rows.append(row)
+            print(f"  {eq:32} seed {seed:3}  sel={row['selected_index']}  far={row['extrap_r2_far']:.6g}  "
+                  f"train={row['train_r2']:.6g}  {row['runtime_s']:.0f}s  stage={row['error_stage']}")
+    if dry:
+        checks = dry_run_checks(rows, args)
+        print("\nDry-run gates:")
+        ok = print_gates(checks)
+        status_file.parent.mkdir(exist_ok=True)
+        status_file.write_text(json.dumps({"pass": ok, "checks": [(n, p, d) for n, p, d in checks]}, indent=2))
+        print("Dry run", "PASSED: full run unblocked." if ok else "FAILED: fix, log an amendment, rerun.")
+        return 0 if ok else 1
+    capped = sum(1 for r in rows if r["timed_out"])
+    print(f"\nDone: {len(rows)} rows; time cap hit in {capped}. Next: --validate, then phase2_close.py.")
+    return 0
+
+
+def dry_run_checks(rows: list, args) -> list:
+    r = rows[0] if rows else {}
+    epr = r.get("effective_request_params", {})
+    return [
+        ("A3-3 bypass_kind == live", r.get("bypass_kind") == "live", f"got {r.get('bypass_kind')!r}"),
+        ("A3-3 llm_called", bool(r.get("llm_called")), ""),
+        ("A3-5 selection_metric == train_r2", r.get("selection_metric") == "train_r2", ""),
+        ("A3-5 n_calls == 3 and identical prompt", r.get("n_calls") == 3
+         and epr.get("prompt_identical_across_calls") is True, f"n_calls={r.get('n_calls')}"),
+        ("A3-5 one API request per call (no hidden retries)",
+         all(n == 1 for n in epr.get("api_requests_per_call", [0])), str(epr.get("api_requests_per_call"))),
+        ("A3-5 section-5 fields all present", all(k in r for k in SECTION5_FIELDS),
+         ", ".join(k for k in SECTION5_FIELDS if k not in r)),
+        ("A3-6 no stop_reason == max_tokens", "max_tokens" not in (epr.get("stop_reasons") or []),
+         str(epr.get("stop_reasons"))),
+        ("model id recorded", bool(r.get("model_id_returned")), ""),
+    ]
+
+
+def cmd_validate(args) -> int:
+    p2 = Path(args.p2_dir)
+    rows = [json.loads(ln) for f in sorted(p2.glob("pure_llm_*.jsonl")) for ln in f.read_text().splitlines() if ln.strip()]
+    print(f"{len(rows)} pure_llm rows in {p2}")
+    checks = []
+    try:
+        import jsonschema
+        schema = json.loads(Path(args.schema).read_text())
+        bad = []
+        for r in rows:
+            for e in jsonschema.Draft202012Validator(schema).iter_errors(r):
+                bad.append(f"{r.get('equation')}/{r.get('seed')}: {e.message[:90]}")
+        checks.append(("schema validates every row", not bad, "; ".join(bad[:4])))
+    except ImportError:
+        checks.append(("schema validates every row (pip install jsonschema)", False, "jsonschema missing"))
+    want = {(e, int(s)) for e in hds_equations(p2) for s in args.seeds.split(",")}
+    latest = {}
+    for r in rows:
+        latest[(r["equation"], r["seed"])] = r
+    checks += [
+        ("coverage equals the HDS (equation, seed) set", set(latest) == want,
+         f"missing {sorted(want - set(latest))[:3]} extra {sorted(set(latest) - want)[:3]}"),
+        ("selection_metric == train_r2 everywhere", all(r.get("selection_metric") == "train_r2" for r in rows), ""),
+        ("n_calls <= 3 everywhere", all(r.get("n_calls", 99) <= 3 for r in rows), ""),
+        ("bypass_kind live on all rows", all(r.get("bypass_kind") == "live" for r in rows),
+         str({r.get("bypass_kind") for r in rows})),
+        ("no row has r2 == 0.0 with a failed status", not any(r["r2"] == 0.0 and str(r["r2_status"]).startswith("failed") for r in rows), ""),
+        ("one evaluator hash across rows", len({r.get("evaluator_sha256") for r in rows}) == 1, ""),
+        ("time cap never hit (else say so in the report)", not any(r.get("timed_out") for r in rows),
+         f"{sum(1 for r in rows if r.get('timed_out'))} row(s)"),
+        ("no max_tokens stop in any call", not any("max_tokens" in (r["effective_request_params"].get("stop_reasons") or [])
+                                                  for r in rows), ""),
+    ]
+    return 0 if print_gates(checks) else 1
+
+
+def cmd_call1(args) -> int:
+    """Secondary result: call 1 alone (the naive single-sample baseline), same rows, different pick."""
+    out = Path(args.emit_call1_set)
+    out.mkdir(parents=True, exist_ok=True)
+    n = 0
+    for f in sorted(Path(args.p2_dir).glob("pure_llm_*.jsonl")):
+        with open(out / f.name, "w") as fh:
+            for ln in f.read_text().splitlines():
+                if not ln.strip():
+                    continue
+                r = json.loads(ln)
+                neg = float("-inf")
+                g = lambda k: (r.get(k) or [None])[0]
+                for dst, src in (("extrap_r2_far", "candidate_extrap_r2_far"), ("extrap_r2_medium", "candidate_extrap_r2_medium"),
+                                 ("extrap_r2_near", "candidate_extrap_r2_near"), ("train_r2", "candidate_train_r2")):
+                    r[dst] = g(src) if g(src) is not None else neg
+                r["r2"] = r["r2_raw"] = r["extrap_r2_far"]
+                r["r2_status"] = (r.get("candidate_r2_status") or ["failed"])[0] or "failed"
+                r["generation_path"], r["call_index"], r["selected_index"] = "pure_llm_call1_only", 1, 0
+                r["selection_metric"] = "train_r2"   # call 1 is not selected on anything; field kept for schema
+                fh.write(json.dumps(r) + "\n")
+                n += 1
+    print(f"wrote {n} call-1 rows to {out}/  (same data; closes with --a-name pure_llm_call1)")
+    return 0
+
+
+def cmd_data_hashes(args) -> int:
+    equations = args.equations.split(",") if args.equations else hds_equations(Path(args.p2_dir))
+    adapter = RepoAdapter(args.data_fn, args.equation_resolver, load_meta(args))
+    out = {f"{e}|{s}": adapter.build(e, int(s)).hashes() for e in equations for s in args.seeds.split(",")}
+    Path(args.emit_data_hashes).write_text(json.dumps(out, indent=1))
+    print(f"wrote {len(out)} (equation|seed) hash pairs to {args.emit_data_hashes}")
+    return 0
+
+
+def cmd_check_hashes(args) -> int:
+    ref = json.loads(Path(args.check_hds_hashes).read_text())
+    bad, n = [], 0
+    for f in sorted(Path(args.p2_dir).glob("pure_llm_*.jsonl")):
+        for ln in f.read_text().splitlines():
+            if ln.strip():
+                r = json.loads(ln)
+                k = f"{r['equation']}|{r['seed']}"
+                n += 1
+                if k not in ref or ref[k]["train"] != r["train_data_sha256"] or ref[k]["far"] != r["far_data_sha256"]:
+                    bad.append(k)
+    print(f"A3-4: {n - len(bad)}/{n} rows match the reference data hashes" + (f"; MISMATCH {bad[:5]}" if bad else ""))
+    print("Reference must come from the HDS side (same generator, the commit/CI that produced the HDS rows), "
+          "otherwise this is a tautology.")
+    return 1 if bad else 0
+
+
+# ============================================================================ selftest (offline)
+def selftest() -> int:
+    ok = True
+
+    def check(name, cond, detail=""):
+        nonlocal ok
+        ok &= bool(cond)
+        print(f"  [{'PASS' if cond else 'FAIL'}] {name}" + ("" if cond else f"  -> {detail}"))
+
+    rng = np.random.default_rng(0)
+    Xtr = rng.uniform(1, 2, (40, 1))
+    case = Case("Toy", 1, "toy", "physics", ["T"], {"k": 2.0}, Xtr, 3 * Xtr[:, 0],
+                {"far": rng.uniform(5, 6, (10, 1)), "medium": rng.uniform(3, 4, (10, 1))}, {})
+    case.y_eval["far"] = 3 * case.X_eval["far"][:, 0]
+    case.y_eval["medium"] = 3 * case.X_eval["medium"][:, 0]
+
+    def stub_scorer(y, p):   # NOT an R2: a stand-in so selection logic is testable without the repo
+        if not np.all(np.isfinite(p)):
+            return float("-inf"), "non_finite_prediction"
+        return -float(np.mean(np.abs(y - p))), "ok"
+
+    class Fake:
+        def __init__(self, formulas, errs=None, stops=None):
+            self.f, self.errs, self.stops = formulas, errs or {}, stops or {}
+
+        def generate(self, case, i):
+            if i in self.errs:
+                return CallResult(error_stage="api", error=self.errs[i], llm_called=True, n_api=1)
+            return CallResult(formula=self.f[i - 1], model_id="fake-model", stop_reason=self.stops.get(i, "end_turn"),
+                              prompt_sha="p", bypass_kind="live", llm_called=True, n_api=1,
+                              request={"params": {"model": "fake-model", "max_tokens": 2000}, "temperature_sent": False})
+
+    rt = Runtime()
+    # selection must follow TRAIN score even when another candidate would extrapolate better
+    far_better_but_train_worse = "3 * T + 0.5 * (T > 1.5) * 0 + 0.2"          # good far, small train error
+    best_train = "3 * T"                                                      # perfect everywhere
+    row = run_case(case, Fake(["2 * T", best_train, far_better_but_train_worse]), stub_scorer, rt)
+    check("selects best TRAIN score (index 1)", row["selected_index"] == 1 and row["call_index"] == 2, row["selected_index"])
+    check("selection_metric is train_r2", row["selection_metric"] == "train_r2")
+    # make a case where train and far disagree, to prove far is not used
+    case2 = Case("Toy2", 1, "toy", "physics", ["T"], {}, Xtr, 3 * Xtr[:, 0],
+                 {"far": np.array([[10.0], [20.0]])}, {"far": np.array([[30.0], [60.0]])})
+    row = run_case(case2, Fake(["3 * T + 0.001 * T**3", "3.02 * T", "2.5 * T"]), stub_scorer, rt)
+    check("train-best chosen although it is not far-best",
+          row["selected_index"] == 0
+          and row["candidate_extrap_r2_far"][1] > row["candidate_extrap_r2_far"][0],
+          row["candidate_extrap_r2_far"])
+    check("all section-5 fields present", all(k in row for k in SECTION5_FIELDS),
+          [k for k in SECTION5_FIELDS if k not in row])
+    check("n_calls == 3, prompt identical flag", row["n_calls"] == 3 and row["effective_request_params"]["prompt_identical_across_calls"])
+    # failures are explicit, never dropped
+    row = run_case(case, Fake(["3 * T", "x"], errs={1: "boom"}), stub_scorer, rt)
+    check("api error on call 1 kept, call 2 still counted", row["n_calls"] == 3 and row["candidate_formulas"][0] is None)
+    row = run_case(case, Fake(["zzz_undefined + 1"] * 3), stub_scorer, rt)
+    check("all-fail row: r2 = -inf, never 0.0, explicit status/stage",
+          row["r2"] == float("-inf") and row["r2_status"].startswith("failed") and row["error_stage"] == "exec"
+          and row["selected_index"] is None and row["call_index"] is None, (row["r2"], row["r2_status"]))
+    # time cap
+    ticks = iter([0, 0, 5000, 5000, 5000, 5000])
+    row = run_case(case, Fake(["3 * T"] * 3), stub_scorer, rt, clock=lambda: next(ticks))
+    check("time cap stops further calls and is logged", row["timed_out"] and row["n_calls"] == 1, row["n_calls"])
+    row = run_case(case, Fake(["3*T"] * 3, stops={2: "max_tokens"}), stub_scorer, rt)
+    check("max_tokens stop recorded for A3-6", "max_tokens" in row["effective_request_params"]["stop_reasons"])
+    # formula evaluator
+    X = np.array([[1.0], [2.0]])
+    ev = lambda c: evaluate_formula(c, ["T"], X, {"k": 2.0})
+    check("eval expression", np.allclose(ev("k * T"), [2, 4]))
+    check("eval def", np.allclose(ev("def f(T, k):\n    return T**2 + k"), [3, 6]))
+    check("eval assignment + numpy import", np.allclose(ev("import numpy as np\nresult = np.sqrt(T)"), np.sqrt([1, 2])))
+    check("eval fenced + constant output", np.allclose(ev("```python\n7.0\n```"), [7, 7]))
+    for bad in ("import os\nresult = T", "__import__('os').getcwd()", "open('/etc/passwd')"):
+        try:
+            ev(bad)
+            check(f"blocked: {bad[:26]!r}", False)
+        except FormulaError:
+            check(f"blocked: {bad[:26]!r}", True)
+    # gates
+    good = {"max_calls_per_case": 3, "prompt_inputs": ["description", "domain", "variable_names", "constants"],
+            "selection_among_samples": "train_r2", "max_tokens": 2000, "temperature": None}
+    check("config gate passes a correct config", all(p for _, p, _ in gate_config(good)))
+    old = dict(good, max_calls_per_case=1, prompt_inputs=["description", "data_patterns"])
+    check("config gate rejects the A1 defaults", sum(not p for _, p, _ in gate_config(old)) == 2)
+    leaky = f"Toy equation. y mean is {float(np.mean(case.y_train)):.3g}"
+    check("leak gate catches equation name + a data statistic",
+          sum(not p for _, p, _ in gate_leaks(leaky, case)) >= 2 if (gate_leaks := gate_prompt_leaks) else False)
+    check("leak gate passes a clean prompt", all(p for _, p, _ in gate_prompt_leaks("Find a formula for x in physics.", case)))
+    # data normalisation
+    ret = {"X_train": Xtr, "y_train": case.y_train, "X_far": case.X_eval["far"], "y_far": case.y_eval["far"],
+           "variable_names": ["T"], "description": "d", "domain": "p", "constants": {"k": 1}}
+    c = normalise_generated("E", 3, ret, {})
+    check("normalise_generated handles a flat dict", c.X_train.shape == (40, 1) and "far" in c.X_eval)
+    check("hashes are stable", c.hashes() == normalise_generated("E", 3, ret, {}).hashes())
+    print("\nSELFTEST", "PASSED" if ok else "FAILED")
+    return 0 if ok else 1
+
+
+# ============================================================================ CLI
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--config", default=str(REPO / "phase2_pure_llm_config.yaml"))
+    ap.add_argument("--schema", default=str(REPO / "phase2_row_schema.json"))
+    ap.add_argument("--p2-dir", default=str(REPO / "p2"))
+    ap.add_argument("--out-dir")
+    ap.add_argument("--equations", help="comma list; default = the equations in p2/hds_*.jsonl")
+    ap.add_argument("--seeds", default=",".join(map(str, DEFAULT_SEEDS)))
+    ap.add_argument("--data-fn", default=DATA_FN)
+    ap.add_argument("--baseline", default=BASELINE)
+    ap.add_argument("--equation-resolver", help="module:func mapping an equation name to what generate_data needs")
+    ap.add_argument("--equations-meta", help="JSON {equation: {description, domain, variable_names, constants}}")
+    ap.add_argument("--p-kwargs-out", default="phase2_a3_p_kwargs.json")
+    ap.add_argument("--probe", metavar="EQ")
+    ap.add_argument("--render", metavar="EQ")
+    ap.add_argument("--compare-kwargs", nargs=2, metavar=("HDS_JSON", "P_JSON"))
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--skip-gate-check", action="store_true")
+    ap.add_argument("--rerun-reason")
+    ap.add_argument("--validate", action="store_true")
+    ap.add_argument("--emit-call1-set", metavar="DIR")
+    ap.add_argument("--emit-data-hashes", metavar="FILE")
+    ap.add_argument("--check-hds-hashes", metavar="FILE")
+    ap.add_argument("--selftest", action="store_true")
+    a = ap.parse_args(argv)
+    if a.selftest:
+        return selftest()
+    if a.probe:
+        return cmd_probe(a)
+    if a.render:
+        return cmd_render(a)
+    if a.compare_kwargs:
+        return cmd_compare(a)
+    if a.validate:
+        return cmd_validate(a)
+    if a.emit_call1_set:
+        return cmd_call1(a)
+    if a.emit_data_hashes:
+        return cmd_data_hashes(a)
+    if a.check_hds_hashes:
+        return cmd_check_hashes(a)
+    return run_cases(a, dry=a.dry_run)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

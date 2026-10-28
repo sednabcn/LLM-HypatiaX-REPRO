@@ -28,5 +28,5 @@
   - scripts/p2_data.py sha256=2775847534522b3d.. mtime=2026-10-27T14:27:47 tracked, absent from 11c8cc38, older than the first P row file
   - scripts/run_pure_llm_arm.py sha256=6cdee6ad1a44157f.. mtime=2026-10-27T15:42:35 tracked, absent from 11c8cc38, older than the first P row file
 - Binder rule (bind by name, defaults untouched) was set after seeing dry-run output; applied to arm P only.
-- failed:no_calls rows (Michaelis-Menten seeds 42, 99) mean all three candidates had non-finite training R2; label kept in data, counted as catastrophic.
+- Michaelis-Menten seeds 42 and 99 are stored as r2_status failed:no_calls. That label is a runner fallthrough (no stage error, no finite training R2), not a call failure: each row has 3 candidates, all exp(var_S/k_B), all with non-finite training R2. They are scored -Infinity and counted as not recovered and catastrophic. The derived copy (p2_schema/) labels them not_scored.
 - evaluator_version set to r2_canonical@8f11733 by stated constant, on hash evidence (see evaluator/G7).
