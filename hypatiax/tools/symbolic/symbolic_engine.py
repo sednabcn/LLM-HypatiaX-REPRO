@@ -1961,6 +1961,10 @@ class SymbolicEngine:
 class SymbolicEngineWithLLM(SymbolicEngine):
     """Symbolic Engine v20 - Integrated LLM guidance + Variable Name Validation."""
 
+    # Phase 3 ablation switches; defaults preserve existing behaviour.
+    _LLM_ACCEPT_R2 = 0.95
+    _LLM_PRIOR_SEED = True
+
     def __init__(
         self,
         config: DiscoveryConfig | None = None,  # Optional: defaults to DiscoveryConfig()
@@ -2219,7 +2223,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         print(f"   LLM time: {llm_time:.2f}s")
 
         # Decision: Is LLM good enough?
-        if best_hyp.r2_score and best_hyp.r2_score > 0.95:
+        if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:
             print("   ✅ LLM solution excellent, skipping PySR")
             return {
                 "expression": best_hyp.equation,
@@ -2241,7 +2245,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         # Discard LLM prior if it is too weak to be a useful seed for PySR
         _use_llm_seed = True
         _llm_extra_ops = None
-        if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:
+        if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:
             print(
                 f"   ⚠ LLM R²={best_hyp.r2_score:.3f} < 0.5 — discarding LLM prior, "
                 f"running pure PySR",

@@ -6,7 +6,7 @@ Takes per-case results for the full HDS v50_2 configuration and for each
 leave-one-out configuration, verifies the ablation is controlled, and reports each
 component's measured contribution. Writes:
 
-    phase3_closure.json     checks, per-component results, input hashes
+    phase3_closure.json     checks, per-component results, input hashes, analysis plan
     phase3_components.csv   one row per ablated component
     PHASE3_CLOSED           marker, written ONLY if every blocking check passes
 
@@ -21,12 +21,35 @@ Required fields:
     ablated_component  null/"none"/"full" for the full config, else the component removed
     config_diff        list of settings that differ from the full config; must equal
                        [ablated_component] for ablations and [] for the full config
-    equation, seed, split_id, r2, status, formula, generation_path, llm_called,
-    bypass_used, runtime_s, timeout_s, model_id, code_version, evaluator_version
+    equation, seed, split_id, r2, r2_raw, r2_status, status, formula, generation_path,
+    llm_called, bypass_used, runtime_s, timeout_s, model_id, code_version,
+    evaluator_version, git_commit, code_dirty, evaluator_sha256, prompt_template_sha256,
+    train_data_sha256, far_data_sha256
+Optional: extrap_r2_far (must equal r2 if present), error_stage, candidate_r2_status.
+
+What this version adds over the first one (each item closes a gap found in Phase 2):
+    G1  data parity      train/far data hashes identical across configurations per
+                         (equation, seed), and optionally against the P-arm rows (--p-rows)
+    G2  score parity     r2 == r2_raw (== extrap_r2_far if logged) on every ok row; failed
+                         rows cannot carry a recovered score
+    G3  live LLM         llm_called must be a bool and True (except --llm-optional components)
+    G4  prompt/timeout   one prompt_template_sha256 and one timeout_s across all rows
+    G8  clean tree       code_dirty False, git_commit single, no "+dirty" code_version
+                         (--allow-dirty downgrades to a recorded caveat)
+    evaluator pin        one evaluator_sha256 (optionally a prefix via --expected-evaluator-sha)
+    no_calls relabel     rows labelled no_calls that have live, all non-finite candidates are
+                         reported as "failed: all candidates non-finite" (they stay failures);
+                         genuine no_calls rows (no live call) block closure until rerun
+    fixed analysis plan  primary metric, interval method, test and multiplicity are declared
+                         below and checked against the CLI settings before any result is read
+    power note           minimum number of non-tied equations a Holm-adjusted sign test can
+                         ever call significant; components below it are flagged underpowered
+    non-finite scoring   NaN/inf/failed rows count as NOT recovered and as catastrophic
 
 Usage:
     python phase3_close.py --results results/ablation/*.jsonl \
-        --phase2-manifest phase2_out/phase2_closure.json --out-dir phase3_out
+        --phase2-manifest phase2_out/phase2_closure.json --out-dir phase3_out \
+        --expected-evaluator-sha 7d5395ed --p-rows "p2/pure_llm_seed*.jsonl"
 """
 import argparse
 import csv
@@ -44,9 +67,28 @@ COMPONENTS = ["llm_acceptance", "probe", "complexity_routing",
               "nn_augmentation", "blend_weight", "pysr_prior"]
 FULL_LABELS = {None, "", "none", "full"}
 REQUIRED = ["ablated_component", "config_diff", "equation", "seed", "split_id", "r2",
-            "status", "formula", "generation_path", "llm_called", "bypass_used",
-            "runtime_s", "timeout_s", "model_id", "code_version", "evaluator_version"]
-NULLABLE = {"ablated_component", "r2", "formula"}
+            "r2_raw", "r2_status", "status", "formula", "generation_path", "llm_called",
+            "bypass_used", "runtime_s", "timeout_s", "model_id", "code_version",
+            "evaluator_version", "git_commit", "code_dirty", "evaluator_sha256",
+            "prompt_template_sha256", "train_data_sha256", "far_data_sha256"]
+NULLABLE = {"ablated_component", "r2", "r2_raw", "formula"}
+NUMERIC = ("r2", "r2_raw", "runtime_s", "timeout_s")
+OK_R2_STATUS = {"ok"}
+
+# Declared BEFORE launching the runs (Section 6 style). The CLI must match, or the run is
+# labelled exploratory. Changing this block after seeing results is a protocol deviation.
+ANALYSIS_PLAN = {
+    "primary_metric": "recovery_r2>=0.99 per equation, mean over seeds; failed, timed-out, "
+                      "non-finite and NaN rows count as NOT recovered",
+    "effect": "ablated minus full (negative => component helps)",
+    "interval": "percentile bootstrap over equations, 5000 resamples, seed 0, 95%",
+    "test": "exact two-sided sign test over equations, ties dropped",
+    "multiplicity": "Holm across components, primary metric only (confirmatory)",
+    "alpha": 0.05,
+    "exploratory": "strict-threshold and catastrophic-rate results",
+    "power_note": "With 15 equations a sign test has little power: see min_nontied_equations.",
+}
+PLAN_ARGS = {"threshold": 0.99, "alpha": 0.05, "bootstrap_iters": 5000, "bootstrap_seed": 0}
 
 
 # ----------------------------------------------------------------- helpers
@@ -81,6 +123,7 @@ def load_records(files):
 
 
 def as_r2(v):
+    """float, +-inf kept (non-finite is a failure, not a missing value); None for NaN/unparseable."""
     if v is None:
         return None
     try:
@@ -90,14 +133,34 @@ def as_r2(v):
     return None if math.isnan(v) else v
 
 
+def finite(v):
+    return v is not None and math.isfinite(v)
+
+
 def comp_of(r):
     c = r.get("ablated_component")
     return "full" if c in FULL_LABELS else str(c)
 
 
+def _stage_text(r):
+    return f"{r.get('status')} {r.get('r2_status')} {r.get('error_stage')}"
+
+
+def mislabelled_nocalls(r):
+    """no_calls label, but live call(s) were made and every candidate scored non-finite."""
+    cands = r.get("candidate_r2_status") or []
+    return ("no_calls" in _stage_text(r) and r.get("llm_called") is True and bool(cands)
+            and all(c == "nonfinite_pred" for c in cands))
+
+
+def genuine_nocalls(r):
+    return "no_calls" in _stage_text(r) and not mislabelled_nocalls(r)
+
+
 class Report:
     def __init__(self):
         self.checks = []
+        self.caveats = []
 
     def add(self, name, passed, detail="", blocking=True):
         self.checks.append({"name": name, "passed": bool(passed), "blocking": blocking, "detail": detail})
@@ -126,13 +189,37 @@ def holm(pvals):
     return adj
 
 
+def min_nontied(alpha, m):
+    """Smallest number of non-tied equations at which an all-one-direction sign test can
+    reach Holm-level significance (alpha / m for the single best component)."""
+    for n in range(1, 200):
+        if exact_sign_p(n, 0) <= alpha / max(m, 1):
+            return n
+    return None
+
+
 # ------------------------------------------------------------------ checks
 def run_checks(recs, args, omitted, rep):
     bad = [f"{r.get('_file','?')}: missing/null '{k}'" for r in recs for k in REQUIRED
            if k not in r or (r[k] is None and k not in NULLABLE)]
+    for r in recs:
+        for k in NUMERIC:
+            if k in r and r[k] is not None:
+                try:
+                    float(r[k])
+                except (TypeError, ValueError):
+                    bad.append(f"{r.get('_file','?')}: non-numeric '{k}'={r[k]!r}")
     rep.add("schema complete", not bad, f"{len(bad)} problems; first: {bad[:3]}" if bad else f"{len(recs)} records OK")
     if bad:
         return None
+
+    # Analysis plan fixed before launch.
+    dev = {k: (getattr(args, k), v) for k, v in PLAN_ARGS.items() if getattr(args, k) != v}
+    rep.add("analysis settings equal the pre-declared plan", not dev,
+            f"deviations (got, planned): {dev}" if dev else "matches ANALYSIS_PLAN",
+            blocking=not args.exploratory)
+    if dev and args.exploratory:
+        rep.caveats.append(f"exploratory run, settings deviate from the declared plan: {dev}")
 
     by = {}
     for r in recs:
@@ -168,6 +255,12 @@ def run_checks(recs, args, omitted, rep):
                 f"missing {len(miss)} {miss[:3]}; extra {len(extra)} {extra[:3]}")
         sp = [k for k in full_keys & set(idx[comp]) if idx[comp][k]["split_id"] != idx["full"][k]["split_id"]]
         rep.add(f"[{comp}] identical split_id as full", not sp, f"{len(sp)} mismatches; first: {sp[:3]}")
+        # G1: split_id is derived from equation|seed, so it proves nothing about the data.
+        dh = [k for k in full_keys & set(idx[comp])
+              if (idx[comp][k]["train_data_sha256"], idx[comp][k]["far_data_sha256"])
+              != (idx["full"][k]["train_data_sha256"], idx["full"][k]["far_data_sha256"])]
+        rep.add(f"[{comp}] G1 identical train/far data hashes as full", not dh,
+                f"{len(dh)} mismatches; first: {dh[:3]}")
         want = [] if comp == "full" else [comp]
         wrong = [k for k, r in idx[comp].items() if sorted(r["config_diff"]) != want]
         rep.add(f"[{comp}] config differs from full ONLY by this component", not wrong,
@@ -178,9 +271,69 @@ def run_checks(recs, args, omitted, rep):
     seeds = sorted({k[1] for k in full_keys})
     rep.add(f"at least {args.min_seeds} seeds", len(seeds) >= args.min_seeds, f"seeds: {seeds}")
 
-    for field in ("model_id", "code_version", "evaluator_version", "timeout_s"):
+    # G4 / evaluator / model: one value everywhere.
+    for field in ("model_id", "code_version", "evaluator_version", "timeout_s",
+                  "evaluator_sha256", "prompt_template_sha256", "git_commit"):
         vals = sorted({str(r[field]) for r in recs})
-        rep.add(f"single {field} across all configurations", len(vals) == 1, f"values: {vals[:5]}")
+        label = {"prompt_template_sha256": "G4 single prompt_template_sha256",
+                 "timeout_s": "G4 single timeout_s",
+                 "git_commit": "G8 single git_commit"}.get(field, f"single {field}")
+        rep.add(f"{label} across all configurations", len(vals) == 1, f"values: {vals[:5]}")
+    if args.expected_evaluator_sha:
+        evs = {str(r["evaluator_sha256"]) for r in recs}
+        rep.add("evaluator_sha256 matches the pinned evaluator",
+                all(v.startswith(args.expected_evaluator_sha) for v in evs),
+                f"expected prefix {args.expected_evaluator_sha}; found {sorted(evs)[:3]}")
+    else:
+        rep.add("evaluator pinned (--expected-evaluator-sha)", False,
+                "not supplied; evaluator hash is consistent but not tied to r2_canonical.py",
+                blocking=False)
+
+    # G8: a clean tree, or a recorded caveat.
+    dirty_rows = [(comp_of(r), r["equation"], r["seed"]) for r in recs
+                  if r["code_dirty"] is not False or "dirty" in str(r["code_version"]).lower()
+                  or "dirty" in str(r["git_commit"]).lower()]
+    rep.add("G8 clean working tree (code_dirty False, no +dirty suffix)", not dirty_rows,
+            f"{len(dirty_rows)} rows dirty; first: {dirty_rows[:3]}", blocking=not args.allow_dirty)
+    if dirty_rows and args.allow_dirty:
+        rep.caveats.append(f"{len(dirty_rows)} rows were produced from a dirty tree; exact working-tree "
+                           f"state is not recoverable (G8 not met, accepted by --allow-dirty)")
+
+    # G3: live LLM calls.
+    nb = [(comp_of(r), r["equation"], r["seed"]) for r in recs if not isinstance(r["llm_called"], bool)]
+    rep.add("G3 llm_called is a boolean on every row", not nb, f"{len(nb)} rows; first: {nb[:3]}")
+    off = [(comp_of(r), r["equation"], r["seed"]) for r in recs
+           if r["llm_called"] is not True and comp_of(r) not in set(args.llm_optional)]
+    rep.add("G3 llm_called is True on every row (except --llm-optional components)", not off,
+            f"{len(off)} rows with no live call; first: {off[:3]}")
+
+    # G2: score parity.
+    s2 = []
+    for r in recs:
+        a, raw = as_r2(r["r2"]), as_r2(r["r2_raw"])
+        key = (comp_of(r), r["equation"], r["seed"])
+        if r["status"] == "ok":
+            if not (finite(a) and finite(raw) and math.isclose(a, raw, rel_tol=1e-12, abs_tol=1e-12)):
+                s2.append(key)
+            elif str(r["r2_status"]) not in OK_R2_STATUS:
+                s2.append(key)
+            elif r.get("extrap_r2_far") is not None:
+                e = as_r2(r["extrap_r2_far"])
+                if not (finite(e) and math.isclose(a, e, rel_tol=1e-12, abs_tol=1e-12)):
+                    s2.append(key)
+        elif finite(a) and a >= args.threshold:
+            s2.append(key)   # a failed row must not carry a recovered score
+    rep.add("G2 r2 == r2_raw (== extrap_r2_far) on ok rows; failed rows carry no recovered score",
+            not s2, f"{len(s2)} rows; first: {s2[:3]}")
+
+    # no_calls handling.
+    relabel = [(comp_of(r), r["equation"], r["seed"]) for r in recs if mislabelled_nocalls(r)]
+    genuine = [(comp_of(r), r["equation"], r["seed"]) for r in recs if genuine_nocalls(r)]
+    rep.add("no genuine no_calls rows (infrastructure failures must be rerun)", not genuine,
+            f"{len(genuine)} rows; first: {genuine[:3]}")
+    rep.add("no_calls rows with live non-finite candidates (reported as failed: non-finite)", True,
+            f"{len(relabel)} rows relabelled in the report, counted as failures; first: {relabel[:3]}",
+            blocking=False)
 
     if not args.allow_bypass:
         byp = [(comp_of(r), r["equation"], r["seed"]) for r in recs
@@ -194,6 +347,22 @@ def run_checks(recs, args, omitted, rep):
             if float(r["runtime_s"]) > float(r["timeout_s"]) * 1.05 and r["status"] != "timeout"]
     rep.add("runtime within timeout_s (or labelled timeout)", not over, f"{len(over)} rows; first: {over[:3]}")
 
+    # G1 against the P arm, if supplied (HDS exp1 rows carry no data hashes, so this is optional).
+    if args.p_rows:
+        try:
+            prow = {(r["equation"], int(r["seed"])): r for r in load_records(expand(args.p_rows))}
+            mm = [k for k, r in idx["full"].items() if k in prow and
+                  (r["train_data_sha256"], r["far_data_sha256"]) != (prow[k].get("train_data_sha256"),
+                                                                     prow[k].get("far_data_sha256"))]
+            nok = [k for k in idx["full"] if k not in prow]
+            rep.add("G1 full-config data hashes equal the P-arm rows", not mm and not nok,
+                    f"{len(mm)} mismatches {mm[:3]}; {len(nok)} keys absent from P rows {nok[:3]}")
+        except (OSError, json.JSONDecodeError) as e:
+            rep.add("P-arm rows readable for the G1 comparison", False, str(e))
+    else:
+        rep.add("G1 comparison with the P arm (--p-rows)", False,
+                "not supplied; only ablation-vs-full data parity was checked", blocking=False)
+
     # Tie to Phase 2: the full config here must reproduce the Phase 2 HDS result.
     if args.phase2_manifest:
         try:
@@ -206,7 +375,7 @@ def run_checks(recs, args, omitted, rep):
                 rep.add("Phase 2 recovery available for comparison", False, f"'{key}' not in Phase 2 summary")
             else:
                 full_rate = statistics.mean(
-                    1.0 if (as_r2(r["r2"]) is not None and r["status"] == "ok" and as_r2(r["r2"]) >= args.threshold) else 0.0
+                    1.0 if (finite(as_r2(r["r2"])) and r["status"] == "ok" and as_r2(r["r2"]) >= args.threshold) else 0.0
                     for r in idx["full"].values())
                 rep.add("full config reproduces Phase 2 HDS recovery", abs(full_rate - b_rate) <= args.reproduce_tol,
                         f"Phase 3 full={full_rate:.4f}, Phase 2 HDS={b_rate:.4f}, tol={args.reproduce_tol}")
@@ -228,16 +397,20 @@ def analyse(idx, args):
         return {e: statistics.mean(1.0 if pred(d[(e, s)]) else 0.0 for s in seeds if (e, s) in d) for e in eqs}
 
     def rec(th):
-        return lambda r: as_r2(r["r2"]) is not None and r["status"] == "ok" and as_r2(r["r2"]) >= th
+        return lambda r: finite(as_r2(r["r2"])) and r["status"] == "ok" and as_r2(r["r2"]) >= th
+
+    def catastrophic(r):
+        a = as_r2(r["r2"])
+        return r["status"] != "ok" or not finite(a) or a < args.catastrophic_r2
 
     metrics = {
         "primary": (f"recovery_r2>={args.threshold}", rec(args.threshold)),
         "strict": (f"recovery_r2>={args.strict_threshold}", rec(args.strict_threshold)),
-        "catastrophic": (f"catastrophic_r2<{args.catastrophic_r2}",
-                         lambda r: as_r2(r["r2"]) is not None and as_r2(r["r2"]) < args.catastrophic_r2),
+        "catastrophic": (f"catastrophic (failed, non-finite or r2<{args.catastrophic_r2})", catastrophic),
     }
     rng = random.Random(args.bootstrap_seed)
     comps = [c for c in COMPONENTS if c in idx]
+    k_min = min_nontied(args.alpha, len(comps))
     results = {c: {} for c in comps}
     for tag, (label, pred) in metrics.items():
         pf = per_eq(full, pred)
@@ -263,16 +436,21 @@ def analyse(idx, args):
     for c, p in zip(comps, adj):
         r = results[c]["primary"]
         r["sign_p_holm"] = p
+        n_nt = r["equations_full_better"] + r["equations_ablated_better"]
+        r["n_nontied"] = n_nt
+        r["underpowered"] = k_min is None or n_nt < k_min
         if r["bootstrap_95ci"][1] < 0 and p < args.alpha:
             verdict = "helps"
         elif r["bootstrap_95ci"][0] > 0 and p < args.alpha:
             verdict = "hurts"
+        elif r["underpowered"]:
+            verdict = "no detectable effect (underpowered)"
         else:
             verdict = "no detectable effect"
         results[c]["verdict_primary"] = verdict
         rt = [float(idx[c][k]["runtime_s"]) / float(full[k]["runtime_s"]) for k in full if float(full[k]["runtime_s"]) > 0]
         results[c]["runtime_ratio_ablated_over_full_median"] = statistics.median(rt) if rt else None
-    return {"n_equations": len(eqs), "seeds": seeds, "components": results}
+    return {"n_equations": len(eqs), "seeds": seeds, "min_nontied_equations": k_min, "components": results}
 
 
 # --------------------------------------------------------------------- main
@@ -281,6 +459,12 @@ def main():
     ap.add_argument("--results", nargs="+", required=True)
     ap.add_argument("--phase2-manifest", default=None)
     ap.add_argument("--require-phase2", action="store_true", help="make the Phase 2 tie-in blocking")
+    ap.add_argument("--p-rows", nargs="+", default=None, help="P-arm jsonl rows for the G1 data-hash comparison")
+    ap.add_argument("--expected-evaluator-sha", default=None, help="sha256 prefix of hypatiax/core/r2_canonical.py")
+    ap.add_argument("--allow-dirty", action="store_true", help="accept a dirty tree as a recorded caveat (G8)")
+    ap.add_argument("--llm-optional", action="append", default=[], metavar="COMPONENT",
+                    help="component whose rows may have llm_called False (repeatable)")
+    ap.add_argument("--exploratory", action="store_true", help="allow settings that deviate from ANALYSIS_PLAN")
     ap.add_argument("--omit", action="append", default=[], metavar="NAME:REASON",
                     help="declare a component not run, with the reason (repeatable)")
     ap.add_argument("--out-dir", default="phase3_out")
@@ -317,19 +501,30 @@ def main():
     idx = run_checks(recs, args, omitted, rep)
     summary = analyse(idx, args) if idx is not None and rep.closed else None
 
+    relabelled = [{"component": comp_of(r), "equation": r["equation"], "seed": r["seed"],
+                   "reported_as": "failed: all candidates non-finite"}
+                  for r in recs if mislabelled_nocalls(r)]
     os.makedirs(args.out_dir, exist_ok=True)
+    inputs = {f: sha256(f) for f in files if os.path.isfile(f)}
+    if args.phase2_manifest and os.path.isfile(args.phase2_manifest):
+        inputs[args.phase2_manifest] = sha256(args.phase2_manifest)
     manifest = {
         "phase": "Option 3 / Phase 3 - leave-one-gate-out ablation",
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "closed": rep.closed,
+        "exploratory": bool(args.exploratory),
         "settings": {k: v for k, v in vars(args).items() if k != "results"},
+        "analysis_plan": ANALYSIS_PLAN,
         "omitted_components": omitted,
-        "inputs": {f: sha256(f) for f in files if os.path.isfile(f)},
+        "caveats": rep.caveats,
+        "relabelled_no_calls_rows": relabelled,
+        "inputs": inputs,
         "checks": rep.checks,
         "analysis": summary,
         "note": ("Primary metric is confirmatory (Holm-adjusted across components). Strict-threshold and "
                  "catastrophic-rate results are exploratory. Effect = ablated minus full; negative means the "
-                 "component helps. Omitted components are untested, not shown to be irrelevant."),
+                 "component helps. Omitted components are untested, not shown to be irrelevant. Components "
+                 "flagged underpowered cannot be called significant by a sign test over this few equations."),
     }
     man_path = os.path.join(args.out_dir, "phase3_closure.json")
     with open(man_path, "w", encoding="utf-8") as f:
@@ -341,27 +536,33 @@ def main():
     print(f"{'PASS' if rep.closed else 'FAIL'}  checks ({sum(c['passed'] for c in rep.checks)}/{len(rep.checks)} passed)")
     for c in rep.checks:
         if not c["passed"]:
-            print(f"  FAIL{' (blocking)' if c['blocking'] else ''}: {c['name']} - {c['detail']}")
+            print(f"  FAIL{' (blocking)' if c['blocking'] else ' (non-blocking)'}: {c['name']} - {c['detail']}")
+    for cav in rep.caveats:
+        print(f"  CAVEAT: {cav}")
     if rep.closed and summary:
         csv_path = os.path.join(args.out_dir, "phase3_components.csv")
         with open(csv_path, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["component", "full_rate", "ablated_rate", "ablated_minus_full", "ci_lo", "ci_hi",
-                        "sign_p", "sign_p_holm", "verdict", "strict_diff", "catastrophic_diff", "runtime_ratio"])
+                        "n_nontied", "underpowered", "sign_p", "sign_p_holm", "verdict", "strict_diff",
+                        "catastrophic_diff", "runtime_ratio"])
             for c, r in summary["components"].items():
                 p = r["primary"]
+                rt = r["runtime_ratio_ablated_over_full_median"]
                 w.writerow([c, f"{p['full_rate']:.4f}", f"{p['ablated_rate']:.4f}", f"{p['ablated_minus_full']:+.4f}",
-                            f"{p['bootstrap_95ci'][0]:+.4f}", f"{p['bootstrap_95ci'][1]:+.4f}", f"{p['sign_p']:.4f}",
+                            f"{p['bootstrap_95ci'][0]:+.4f}", f"{p['bootstrap_95ci'][1]:+.4f}",
+                            p["n_nontied"], p["underpowered"], f"{p['sign_p']:.4f}",
                             f"{p['sign_p_holm']:.4f}", r["verdict_primary"], f"{r['strict']['ablated_minus_full']:+.4f}",
                             f"{r['catastrophic']['ablated_minus_full']:+.4f}",
-                            f"{r['runtime_ratio_ablated_over_full_median']:.2f}"])
+                            "" if rt is None else f"{rt:.2f}"])
         print(f"\nLeave-one-out vs full, n={summary['n_equations']} equations, seeds={summary['seeds']} "
               f"(effect = ablated minus full; negative => component helps)")
+        print(f"Power: a Holm-level sign test needs >= {summary['min_nontied_equations']} non-tied equations.")
         for c, r in summary["components"].items():
             p = r["primary"]
             print(f"  {c:20s} {p['full_rate']:.3f} -> {p['ablated_rate']:.3f}  {p['ablated_minus_full']:+.3f} "
-                  f"CI [{p['bootstrap_95ci'][0]:+.3f}, {p['bootstrap_95ci'][1]:+.3f}]  Holm p={p['sign_p_holm']:.3f}  "
-                  f"=> {r['verdict_primary']}")
+                  f"CI [{p['bootstrap_95ci'][0]:+.3f}, {p['bootstrap_95ci'][1]:+.3f}]  "
+                  f"non-tied={p['n_nontied']}  Holm p={p['sign_p_holm']:.3f}  => {r['verdict_primary']}")
         for n, why in omitted.items():
             print(f"  {n:20s} NOT RUN: {why}")
         with open(marker, "w") as f:
