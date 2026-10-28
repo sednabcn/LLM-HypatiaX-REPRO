@@ -107,6 +107,8 @@ def apply_engine_patch(path):
 def force_clean_env():
     os.environ["HYPATIAX_DISABLE_PROMPT_HINTS"] = "1"
     os.environ["HYPATIAX_DISABLE_HARDCODED"] = "1"
+os.environ["HYPATIAX_STRICT"] = "1"
+os.environ.pop("HYPATIAX_R2_SIGN_FLIP", None)
     os.environ.pop("HYPATIAX_LLM_MODEL", None)
 
 

@@ -2247,8 +2247,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         _llm_extra_ops = None
         if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:
             print(
-                f"   ⚠ LLM R²={best_hyp.r2_score:.3f} < 0.5 — discarding LLM prior, "
-                f"running pure PySR",
+                (f"   ⚠ LLM R²={best_hyp.r2_score:.3f} < 0.5 — discarding LLM prior, " if self._LLM_PRIOR_SEED else f"   ⚠ ablation _LLM_PRIOR_SEED=False (LLM R²={best_hyp.r2_score}) — discarding LLM prior, ") + "running pure PySR",
                 flush=True,
             )
             _use_llm_seed = False
