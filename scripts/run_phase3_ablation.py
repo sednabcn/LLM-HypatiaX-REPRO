@@ -43,6 +43,10 @@ import tempfile
 import time
 from pathlib import Path
 
+from hypatiax.core.flags import flag_state
+row["flags"] = flag_state()
+row["clean_run"] = row["flags"]["clean_run"]
+
 COMPONENTS = ["llm_acceptance", "probe", "complexity_routing",
               "nn_augmentation", "blend_weight", "pysr_prior"]
 ENGINE_REQUIRED = ["status", "r2_raw", "formula", "generation_path", "llm_called", "bypass_used",
