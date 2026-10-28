@@ -235,7 +235,7 @@ def main(argv=None):
     else:
         print("give --equations or --equations-from", file=sys.stderr)
         return 2
-    commit, dirty = git_state([a.out_dir.rstrip("/") + "/", "p2_", "phase3_out"])
+    commit, dirty = git_state([a.out_dir.rstrip("/") + "/", "p2_", "phase3_out", "phase3_closure_out"])
     if dirty and not a.allow_dirty:
         print("Working tree is dirty (G8). Commit or stash, or pass --allow-dirty to record the caveat.", file=sys.stderr)
         return 2
