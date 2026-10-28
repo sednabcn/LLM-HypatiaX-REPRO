@@ -37,7 +37,7 @@ GATE_SWITCHES = {
     "pysr_prior": ("_LLM_PRIOR_SEED", False),
 }
 
-NO_BYPASS = {"none", None}   # extend with "live" only after grep confirms it is a genuine live call
+NO_BYPASS = {"none", "live", None}   # "live" = real LLM path; confirmed against hybrid_system_v50_2.py:1548,1590 and quarantine_contaminated.py CLEAN_BYPASS_KINDS
 
 
 def _f(x):
