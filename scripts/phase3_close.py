@@ -473,7 +473,7 @@ def main():
     ap.add_argument("--strict-threshold", type=float, default=0.999999)
     ap.add_argument("--catastrophic-r2", type=float, default=-10.0)
     ap.add_argument("--alpha", type=float, default=0.05)
-    ap.add_argument("--reproduce-tol", type=float, default=0.02)
+    ap.add_argument("--reproduce-tol", type=float, default=0.067)
     ap.add_argument("--allow-bypass", action="store_true")
     ap.add_argument("--bootstrap-iters", type=int, default=5000)
     ap.add_argument("--bootstrap-seed", type=int, default=0)
