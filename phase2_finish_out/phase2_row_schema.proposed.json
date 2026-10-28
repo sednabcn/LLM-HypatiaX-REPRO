@@ -1,0 +1,307 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "Phase 2 per-case row (one JSON object per line in p2/*.jsonl)",
+ "description": "Extends the flat rows already in p2/ (system, equation, seed, split_id, r2, status, formula, generation_path, llm_called, bypass_used, runtime_s, timeout_s, model_id, code_version, config_hash, evaluator_version, _source). New required fields are marked NEW in their description. Python's json module writes -Infinity/NaN, which is not strict JSON; readers must accept it (phase2_close.py and reflatten_fields.py do).",
+ "type": "object",
+ "required": [
+  "system",
+  "equation",
+  "seed",
+  "split_id",
+  "r2",
+  "r2_raw",
+  "r2_status",
+  "train_r2",
+  "extrap_r2_near",
+  "extrap_r2_medium",
+  "extrap_r2_far",
+  "generation_path",
+  "llm_called",
+  "runtime_s",
+  "timeout_s",
+  "timed_out",
+  "git_commit",
+  "prompt_sha256"
+ ],
+ "properties": {
+  "system": {
+   "type": "string",
+   "description": "pure_llm | hds_v50_2 | pysr_only"
+  },
+  "equation": {
+   "type": "string"
+  },
+  "seed": {
+   "type": "integer",
+   "description": "Fixes data generation and the train/test split. The LLM API is not seeded by this value."
+  },
+  "split_id": {
+   "type": "string",
+   "description": "Must equal the split_id of the HDS row for the same (equation, seed)."
+  },
+  "r2": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "Primary score. MUST equal extrap_r2_far (value as returned by r2_scored, so below -100 appears as -Infinity). null only when status is timeout, error or no_formula."
+  },
+  "r2_field": {
+   "const": "extrap_r2_far",
+   "description": "NEW. Name of the field copied into r2."
+  },
+  "r2_raw": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "NEW. Far-regime R^2 from r2_checked() on the same arrays, i.e. BEFORE the -100 floor and 1e100 limit of r2_scored(). Lets a -Infinity be told apart from a finite very bad fit."
+  },
+  "r2_status": {
+   "enum": [
+    "ok",
+    "degenerate_target",
+    "nonfinite_target",
+    "nonfinite_pred",
+    "bad_shape",
+    "pred_out_of_range",
+    "catastrophic",
+    "not_scored",
+    "failed:no_calls"
+   ],
+   "description": "NEW. Status returned by r2_scored() for the far regime. not_scored when no formula was produced."
+  },
+  "train_r2": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "NEW in this file (present in source JSON for older rows)."
+  },
+  "extrap_r2_near": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "extrap_r2_medium": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "extrap_r2_far": {
+   "type": [
+    "number",
+    "null"
+   ]
+  },
+  "status": {
+   "enum": [
+    "ok",
+    "timeout",
+    "error",
+    "no_formula"
+   ],
+   "description": "Run status, not scoring status. A -Infinity score is still status ok."
+  },
+  "formula": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "description": "The formula string exactly as scored. null only if status is not ok."
+  },
+  "generation_path": {
+   "type": "string",
+   "description": "Which path produced the formula, e.g. pure_llm_direct. Never a hardcoded path for pure_llm."
+  },
+  "llm_called": {
+   "type": "boolean"
+  },
+  "bypass_used": {
+   "type": "boolean"
+  },
+  "runtime_s": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "minimum": 0,
+   "description": "Wall-clock seconds from case start to final formula returned, INCLUDING all LLM calls and retries; excluding data generation and scoring."
+  },
+  "timeout_s": {
+   "type": "number",
+   "exclusiveMinimum": 0,
+   "description": "The enforced wall-clock cap for this row. Must be identical for all pure_llm rows."
+  },
+  "timed_out": {
+   "type": "boolean",
+   "description": "NEW."
+  },
+  "model_id": {
+   "type": "string",
+   "description": "Pinned model identifier; must equal the HDS rows' model_id."
+  },
+  "model_returned": {
+   "type": [
+    "string",
+    "null"
+   ],
+   "description": "NEW, optional but recommended. Model name echoed back in the API response; compare with model_id to detect silent alias changes."
+  },
+  "code_version": {
+   "type": "string"
+  },
+  "git_commit": {
+   "type": "string",
+   "description": "NEW. Output of git rev-parse HEAD at run start."
+  },
+  "code_dirty": {
+   "type": "boolean",
+   "description": "NEW. True if the working tree had uncommitted changes at run start. Must be false."
+  },
+  "config_hash": {
+   "type": "string"
+  },
+  "evaluator_version": {
+   "type": "string",
+   "description": "Must equal the HDS rows', e.g. r2_canonical@8f11733."
+  },
+  "prompt_sha256": {
+   "type": "string",
+   "pattern": "^[0-9a-f]{64}$",
+   "description": "NEW. SHA-256 of the final prompt template (before variable substitution). Must be identical across all pure_llm rows."
+  },
+  "temperature": {
+   "type": [
+    "number",
+    "null"
+   ],
+   "description": "NEW. Sampling temperature actually sent."
+  },
+  "n_llm_calls": {
+   "type": "integer",
+   "minimum": 0,
+   "description": "NEW. All calls including retries."
+  },
+  "input_tokens": {
+   "type": [
+    "integer",
+    "null"
+   ],
+   "minimum": 0,
+   "description": "NEW. Summed over calls."
+  },
+  "output_tokens": {
+   "type": [
+    "integer",
+    "null"
+   ],
+   "minimum": 0,
+   "description": "NEW. Summed over calls."
+  },
+  "ablated_component": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "config_diff": {
+   "type": "array",
+   "description": "Phase 3 needs this; for Phase 2 it is []."
+  },
+  "error": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "_source": {
+   "type": [
+    "string",
+    "null"
+   ]
+  }
+ },
+ "allOf": [
+  {
+   "if": {
+    "properties": {
+     "system": {
+      "const": "pure_llm"
+     }
+    },
+    "required": [
+     "system"
+    ]
+   },
+   "then": {
+    "properties": {
+     "llm_called": {
+      "const": true
+     },
+     "bypass_used": {
+      "const": false
+     },
+     "code_dirty": {
+      "const": false
+     },
+     "n_llm_calls": {
+      "minimum": 1
+     }
+    }
+   }
+  },
+  {
+   "if": {
+    "properties": {
+     "status": {
+      "const": "ok"
+     }
+    },
+    "required": [
+     "status"
+    ]
+   },
+   "then": {
+    "properties": {
+     "formula": {
+      "type": "string",
+      "minLength": 1
+     },
+     "r2": {
+      "type": "number"
+     },
+     "r2_raw": {
+      "type": "number"
+     },
+     "timed_out": {
+      "const": false
+     }
+    }
+   }
+  },
+  {
+   "if": {
+    "properties": {
+     "status": {
+      "const": "timeout"
+     }
+    },
+    "required": [
+     "status"
+    ]
+   },
+   "then": {
+    "properties": {
+     "timed_out": {
+      "const": true
+     }
+    }
+   }
+  }
+ ],
+ "additionalProperties": true,
+ "$comment": "PROPOSED by phase2_finish.py: removed from required ['ablated_component', 'bypass_used', 'code_dirty', 'code_version', 'config_diff', 'config_hash', 'evaluator_version', 'formula', 'input_tokens', 'model_id', 'n_llm_calls', 'output_tokens', 'r2_field', 'status', 'temperature']; enum additions {'r2_status': ['failed:no_calls']}. Apply only via a logged amendment."
+}

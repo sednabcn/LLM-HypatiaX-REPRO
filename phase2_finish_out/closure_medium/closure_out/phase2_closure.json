@@ -1,0 +1,297 @@
+{
+  "phase": "Option 3 / Phase 2 - matched baseline runs",
+  "generated_utc": "2026-10-28T09:18:34+00:00",
+  "closed": true,
+  "settings": {
+    "a_name": "pure_llm",
+    "b_name": "hds_v50_2",
+    "out_dir": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_medium/closure_out",
+    "min_seeds": 3,
+    "threshold": 0.99,
+    "strict_threshold": 0.999999,
+    "catastrophic_r2": -10.0,
+    "declare_unequal_timeout": "P: 3 calls, cap 1400 s + 300 s; HDS: 3600 s. HDS sees data statistics, P does not. HDS gets 3 candidates from one call, P gets 3 samples from three calls.",
+    "allow_bypass": false,
+    "bootstrap_iters": 10000,
+    "bootstrap_seed": 0
+  },
+  "inputs": {
+    "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed123.jsonl": "b9f33c5b8a23bd4bbe9fd593c6a859d28e1f4e253119e88c37ea7e2ed79a41f5",
+    "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed42.jsonl": "1b07f3f86e370d549c10f8c77d4a81febc159cbeac17f2020f5324cc9c4bd350",
+    "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed99.jsonl": "8f7b0662fa7e21d7fda8f9bb14053029433fb886c200c54557e7fb2932361f3b",
+    "p2_med/hds_exp1_ablation.jsonl": "0864afbe86000416db36a29f0878aad7259f614101322b140443e28f4fabcaf7",
+    "p2_med/hds_exp1_ablation_seed123.jsonl": "b5dc99b83eda0818912a146b6e30fdd76b2d37ac7878246ba8bec37a93171938",
+    "p2_med/hds_exp1_ablation_seed99.jsonl": "64cd364d7fce2f7e29730aed0b9135217be7206aa448667f0bf9ce4c7cf28853"
+  },
+  "checks": [
+    {
+      "name": "records present for both systems",
+      "passed": true,
+      "blocking": true,
+      "detail": "pure_llm: 45, hds_v50_2: 45"
+    },
+    {
+      "name": "[pure_llm] schema complete",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 records OK"
+    },
+    {
+      "name": "[hds_v50_2] schema complete",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 records OK"
+    },
+    {
+      "name": "[pure_llm] no duplicate (equation, seed) rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 unique cases"
+    },
+    {
+      "name": "[hds_v50_2] no duplicate (equation, seed) rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "45 unique cases"
+    },
+    {
+      "name": "matched equations x seeds",
+      "passed": true,
+      "blocking": true,
+      "detail": "only in pure_llm: 0 []; only in hds_v50_2: 0 []"
+    },
+    {
+      "name": "identical split_id on every paired case",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 mismatches; first: []"
+    },
+    {
+      "name": "at least 3 seeds",
+      "passed": true,
+      "blocking": true,
+      "detail": "seeds found: [42, 99, 123]"
+    },
+    {
+      "name": "[both] single evaluator_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['r2_canonical@8f11733']"
+    },
+    {
+      "name": "[both] single timeout_s",
+      "passed": false,
+      "blocking": false,
+      "detail": "values: ['1400.0', '3600.0']"
+    },
+    {
+      "name": "[both] single model_id",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['claude-sonnet-4-6']"
+    },
+    {
+      "name": "[pure_llm] single code_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['11c8cc3821ab5e611400b3c5c63b5dd62699027b+dirty']"
+    },
+    {
+      "name": "[pure_llm] single config_hash",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['b7dd79895a4a96c875ecbd4cc21693931a8e2042a50939730f593988625db4bb']"
+    },
+    {
+      "name": "[hds_v50_2] single code_version",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['5.4']"
+    },
+    {
+      "name": "[hds_v50_2] single config_hash",
+      "passed": true,
+      "blocking": true,
+      "detail": "values: ['f209987f6476']"
+    },
+    {
+      "name": "[pure_llm] no hardcoded/ground-truth bypass rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bypass rows; first: []"
+    },
+    {
+      "name": "[hds_v50_2] no hardcoded/ground-truth bypass rows",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bypass rows; first: []"
+    },
+    {
+      "name": "[pure_llm] formula stored for every ok row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 ok rows without formula; first: []"
+    },
+    {
+      "name": "[pure_llm] llm_called is a boolean on every row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bad rows"
+    },
+    {
+      "name": "[hds_v50_2] formula stored for every ok row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 ok rows without formula; first: []"
+    },
+    {
+      "name": "[hds_v50_2] llm_called is a boolean on every row",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 bad rows"
+    },
+    {
+      "name": "[pure_llm] runtime within timeout_s (or labelled timeout)",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 rows over budget; first: []"
+    },
+    {
+      "name": "[hds_v50_2] runtime within timeout_s (or labelled timeout)",
+      "passed": true,
+      "blocking": true,
+      "detail": "0 rows over budget; first: []"
+    }
+  ],
+  "caveats": [
+    "UNEQUAL TIME BUDGETS declared: {\"pure_llm\": [1400.0], \"hds_v50_2\": [3600.0]} - reason: P: 3 calls, cap 1400 s + 300 s; HDS: 3600 s. HDS sees data statistics, P does not. HDS gets 3 candidates from one call, P gets 3 samples from three calls.. Results are NOT an equal-budget comparison."
+  ],
+  "paired_summary": {
+    "recovery_r2>=0.99": {
+      "a_rate": 0.3111111111111111,
+      "b_rate": 0.8222222222222222,
+      "lower_is_better": false,
+      "paired_diff_b_minus_a": 0.5111111111111111,
+      "bootstrap_95ci": [
+        0.24444444444444444,
+        0.7555555555555556
+      ],
+      "equations_b_better": 9,
+      "equations_a_better": 1,
+      "equations_tied": 5,
+      "exact_sign_test_p": 0.021484375,
+      "per_seed": {
+        "42": {
+          "a": 0.26666666666666666,
+          "b": 0.8
+        },
+        "99": {
+          "a": 0.3333333333333333,
+          "b": 0.8
+        },
+        "123": {
+          "a": 0.3333333333333333,
+          "b": 0.8666666666666667
+        }
+      }
+    },
+    "recovery_r2>=0.999999": {
+      "a_rate": 0.3111111111111111,
+      "b_rate": 0.35555555555555557,
+      "lower_is_better": false,
+      "paired_diff_b_minus_a": 0.04444444444444444,
+      "bootstrap_95ci": [
+        -0.17777777777777778,
+        0.28888888888888886
+      ],
+      "equations_b_better": 3,
+      "equations_a_better": 3,
+      "equations_tied": 9,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.26666666666666666,
+          "b": 0.4
+        },
+        "99": {
+          "a": 0.3333333333333333,
+          "b": 0.3333333333333333
+        },
+        "123": {
+          "a": 0.3333333333333333,
+          "b": 0.3333333333333333
+        }
+      }
+    },
+    "catastrophic_r2<-10.0": {
+      "a_rate": 0.13333333333333333,
+      "b_rate": 0.04444444444444444,
+      "lower_is_better": true,
+      "paired_diff_b_minus_a": -0.08888888888888889,
+      "bootstrap_95ci": [
+        -0.28888888888888886,
+        0.08888888888888888
+      ],
+      "equations_b_better": 2,
+      "equations_a_better": 1,
+      "equations_tied": 12,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.13333333333333333,
+          "b": 0.0
+        },
+        "99": {
+          "a": 0.13333333333333333,
+          "b": 0.06666666666666667
+        },
+        "123": {
+          "a": 0.13333333333333333,
+          "b": 0.06666666666666667
+        }
+      }
+    },
+    "nan_or_missing_r2": {
+      "a_rate": 0.0,
+      "b_rate": 0.0,
+      "lower_is_better": true,
+      "paired_diff_b_minus_a": 0.0,
+      "bootstrap_95ci": [
+        0.0,
+        0.0
+      ],
+      "equations_b_better": 0,
+      "equations_a_better": 0,
+      "equations_tied": 15,
+      "exact_sign_test_p": 1.0,
+      "per_seed": {
+        "42": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "99": {
+          "a": 0.0,
+          "b": 0.0
+        },
+        "123": {
+          "a": 0.0,
+          "b": 0.0
+        }
+      }
+    },
+    "runtime_ratio_b_over_a": {
+      "median": 4.17665079951512,
+      "p10_p90": [
+        0.20642898601014836,
+        8.319709671480586
+      ]
+    },
+    "n_equations": 15,
+    "seeds": [
+      42,
+      99,
+      123
+    ]
+  },
+  "note": "Phase 2 reports measured differences only; it does not assume the hybrid is better. Per-equation seed-averaged outcomes are the unit of the paired comparison."
+}

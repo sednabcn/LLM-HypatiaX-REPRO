@@ -1,0 +1,73 @@
+hypatiax/experiments/benchmarks/exp1_ablation.py:8:Output files   : exp1_ablation_results[_seedN].json
+hypatiax/experiments/benchmarks/exp1_ablation.py:9:                 exp1_ablation_table[_seedN].tex
+hypatiax/experiments/benchmarks/exp1_ablation.py:10:                 exp1_rf01_mannwhitney[_seedN].json
+hypatiax/experiments/benchmarks/exp1_ablation.py:11:                 exp1_rf01_significant[_seedN].tex
+hypatiax/experiments/benchmarks/exp1_ablation.py:12:                 exp1_rf01_subdomain[_seedN].tex
+hypatiax/experiments/benchmarks/exp1_ablation.py:13:                 exp1_instability_stats[_seedN].json
+hypatiax/experiments/benchmarks/exp1_ablation.py:14:                 instability_extrapolation_v2[_seedN].csv
+hypatiax/experiments/benchmarks/exp1_ablation.py:15:                 provenance_map_exp1[_seedN].json
+hypatiax/experiments/benchmarks/exp1_ablation.py:30:FIX-SEED      : env-driven seed (PYSR_SEED → NN_SEED → 42); output files namespaced
+hypatiax/experiments/benchmarks/exp1_ablation.py:65:random.seed(_GLOBAL_SEED)
+hypatiax/experiments/benchmarks/exp1_ablation.py:66:np.random.seed(_GLOBAL_SEED)
+hypatiax/experiments/benchmarks/exp1_ablation.py:68:# The hybrid engine's PySR attempts (42+attempt) follow the experiment seed (repeat-seed runs).
+hypatiax/experiments/benchmarks/exp1_ablation.py:89:# Seed-namespacing: seed=42 keeps canonical names; other seeds append _seedN
+hypatiax/experiments/benchmarks/exp1_ablation.py:90:# so multi-seed runs (exp1b style) never overwrite each other.
+hypatiax/experiments/benchmarks/exp1_ablation.py:99:# CI runs repeat seeds in their own result dir (ablation/exp1_ablation_seed<N>) with canonical
+hypatiax/experiments/benchmarks/exp1_ablation.py:101:_seed_suffix = (f"_seed{_GLOBAL_SEED}"
+hypatiax/experiments/benchmarks/exp1_ablation.py:103:RESULTS_PATH = OUTPUT_DIR / f"exp1_ablation_results{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:104:CKPT_PATH    = OUTPUT_DIR / f"exp1_ablation_checkpoint{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:105:TEX_PATH     = OUTPUT_DIR / f"exp1_ablation_table{_seed_suffix}.tex"
+hypatiax/experiments/benchmarks/exp1_ablation.py:106:RF01_JSON    = OUTPUT_DIR / f"exp1_rf01_mannwhitney{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:107:RF01_SIGTEX  = OUTPUT_DIR / f"exp1_rf01_significant{_seed_suffix}.tex"
+hypatiax/experiments/benchmarks/exp1_ablation.py:108:RF01_SUBDTEX = OUTPUT_DIR / f"exp1_rf01_subdomain{_seed_suffix}.tex"
+hypatiax/experiments/benchmarks/exp1_ablation.py:109:INSTAB_STATS = OUTPUT_DIR / f"exp1_instability_stats{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:110:INSTAB_CSV   = OUTPUT_DIR / f"instability_extrapolation_v2{_seed_suffix}.csv"
+hypatiax/experiments/benchmarks/exp1_ablation.py:111:PROV_PATH    = OUTPUT_DIR / f"provenance_map_exp1{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:138:_seed_source = (
+hypatiax/experiments/benchmarks/exp1_ablation.py:147:print(f"seed        : {SEED}  (source: {_seed_source})")
+hypatiax/experiments/benchmarks/exp1_ablation.py:386:        "note": "C4: run 5-seed sweep to report mean ± std. Seeds [42,99,123,777,2024].",
+hypatiax/experiments/benchmarks/exp1_ablation.py:404:def generate_data(eq, N=200, noise_level=0.05, seed=42):
+hypatiax/experiments/benchmarks/exp1_ablation.py:405:    dbg(f"generate_data: {eq['name']}  N={N}  noise={noise_level}  seed={seed}")
+hypatiax/experiments/benchmarks/exp1_ablation.py:406:    rng    = np.random.RandomState(seed)
+hypatiax/experiments/benchmarks/exp1_ablation.py:410:    y_noisy = y + rng.normal(0, noise_level * np.std(y), N)
+hypatiax/experiments/benchmarks/exp1_ablation.py:412:        X, y_noisy, test_size=0.2, random_state=seed
+hypatiax/experiments/benchmarks/exp1_ablation.py:418:def generate_extrap_data(eq, regime="medium", N=100, seed=42):
+hypatiax/experiments/benchmarks/exp1_ablation.py:419:    rng    = np.random.RandomState(seed + 999)
+hypatiax/experiments/benchmarks/exp1_ablation.py:520:def make_pysr(warm_start_expr=None, seed=42, niterations=None,
+hypatiax/experiments/benchmarks/exp1_ablation.py:541:        random_state   = seed,
+hypatiax/experiments/benchmarks/exp1_ablation.py:628:def run_condition(eq, condition, seed=42, niterations=None,
+hypatiax/experiments/benchmarks/exp1_ablation.py:647:    eq_seed = seed + EQ_ID.get(eq["name"], 0) * 7
+hypatiax/experiments/benchmarks/exp1_ablation.py:649:        f"seed={eq_seed}  wall_clock={wall_clock_limit}s")
+hypatiax/experiments/benchmarks/exp1_ablation.py:652:    X_train, X_test, y_train, y_test, _, _ = generate_data(
+hypatiax/experiments/benchmarks/exp1_ablation.py:653:        eq, N=200, noise_level=0.05, seed=eq_seed
+hypatiax/experiments/benchmarks/exp1_ablation.py:657:        X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
+hypatiax/experiments/benchmarks/exp1_ablation.py:708:                        "noise_level":            0.05,
+hypatiax/experiments/benchmarks/exp1_ablation.py:829:        seed            = eq_seed,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1114:                eq, cond, seed=SEED,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1268:    print(f"  Paper targets              : U=126, p=0.295 (Run A / seed=42 / pops=30)")
+hypatiax/experiments/benchmarks/exp1_ablation.py:1498:        a_adj = np.where(tied, b, a)            # collapse tied pairs so float noise is not ranked
+hypatiax/experiments/benchmarks/exp1_ablation.py:1520:    path = OUTPUT_DIR / f"exp1_llm_contribution{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:1619:        f" All runs: populations={POPULATIONS}, seed={SEED}, engine v5.4.",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1674:def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
+hypatiax/experiments/benchmarks/exp1_ablation.py:1676:    C4: 5-seed stability sweep for Portfolio Std Dev.
+hypatiax/experiments/benchmarks/exp1_ablation.py:1677:    Reports mean ± std to flag seed-sensitive results.
+hypatiax/experiments/benchmarks/exp1_ablation.py:1682:    print(f"\nPortfolio Std Dev — 5-seed stability sweep")
+hypatiax/experiments/benchmarks/exp1_ablation.py:1691:                PV_EQ, cond, seed=s,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1696:                "seed": s,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1713:    pv_path = OUTPUT_DIR / f"portfolio_variance_seed_sweep{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:1750:        "seed":                  SEED,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1751:        "seed_is_paper_primary": SEED == 42,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1774:            "MW_run_a":      "U=126, p=0.295  [seed=42, pops=30 only]",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1775:            "MW_run_b":      "U=101.5, p=0.683  [seed=42, pops=30 only]",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1789:            "FIX-SEED: env-driven seed; output files namespaced per seed",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1824:    pv_path = OUTPUT_DIR / f"portfolio_variance_seed_sweep{_seed_suffix}.json"
+hypatiax/experiments/benchmarks/exp1_ablation.py:1826:    checks.append(("C4 Portfolio seed sweep", c4_ok,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1827:                   "sweep JSON present" if c4_ok else "run run_portfolio_seed_sweep()"))
+hypatiax/experiments/benchmarks/exp1_ablation.py:1890:    parser.add_argument("--seed-sweep",      action="store_true",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1891:                        help="Run Portfolio Std Dev 5-seed sweep (C4)")
+hypatiax/experiments/benchmarks/exp1_ablation.py:1929:    if args.seed_sweep:
+hypatiax/experiments/benchmarks/exp1_ablation.py:1930:        run_portfolio_seed_sweep()
+scripts/p2_data.py:25:def generate_case(equation, seed):
+scripts/p2_data.py:29:    eq_seed = seed + E.EQ_ID.get(equation, 0) * 7
+scripts/p2_data.py:30:    X_train, _, y_train, _, _, _ = E.generate_data(eq, N=200, noise_level=0.05, seed=eq_seed)
+scripts/p2_data.py:37:        Xe, ye = E.generate_extrap_data(eq, regime=regime, N=100, seed=eq_seed)

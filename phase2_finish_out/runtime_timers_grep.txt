@@ -1,0 +1,17 @@
+hypatiax/experiments/benchmarks/exp1_ablation.py:803:            "sr_time_s":             sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:804:            "llm_time_s":            float(_li.get("llm_time") or 0.0),
+hypatiax/experiments/benchmarks/exp1_ablation.py:805:            "total_time_s":          sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:895:        "sr_time_s":             sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:896:        "llm_time_s":            0.0,
+hypatiax/experiments/benchmarks/exp1_ablation.py:897:        "total_time_s":          total_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:923:        "sr_time_s":            sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:924:        "llm_time_s":           0.0,
+hypatiax/experiments/benchmarks/exp1_ablation.py:925:        "total_time_s":         sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:947:        "sr_time_s":            sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:948:        "llm_time_s":           0.0,
+hypatiax/experiments/benchmarks/exp1_ablation.py:949:        "total_time_s":         sr_time,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1168:        pt  = p.get("total_time_s", 0) or 0
+hypatiax/experiments/benchmarks/exp1_ablation.py:1169:        ht  = h.get("total_time_s", 0) or 0
+hypatiax/experiments/benchmarks/exp1_ablation.py:1585:            f"{_fmt(p.get('total_time_s'), 0)} & {_fmt(h.get('total_time_s'), 0)} \\\\"
+hypatiax/experiments/benchmarks/exp1_ablation.py:1591:                ("time", "total_time_s"),
+hypatiax/experiments/benchmarks/exp1_ablation.py:1861:            ws   = d.get("timeout_wall_secs") or d.get("total_time_s", 0)

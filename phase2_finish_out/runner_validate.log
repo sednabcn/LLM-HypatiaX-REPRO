@@ -1,0 +1,10 @@
+45 pure_llm rows in /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/p2
+  [FAIL] schema validates every row   -> Allometric Scaling/123: 'r2_field' is a required property; Allometric Scaling/123: 'status' is a required property; Allometric Scaling/123: 'formula' is a required property; Allometric Scaling/123: 'bypass_used' is a required property
+  [PASS] coverage equals the HDS (equation, seed) set
+  [PASS] selection_metric == train_r2 everywhere
+  [PASS] n_calls <= 3 everywhere
+  [PASS] bypass_kind live on all rows
+  [PASS] no row has r2 == 0.0 with a failed status
+  [PASS] one evaluator hash across rows
+  [PASS] time cap never hit (else say so in the report)
+  [PASS] no max_tokens stop in any call

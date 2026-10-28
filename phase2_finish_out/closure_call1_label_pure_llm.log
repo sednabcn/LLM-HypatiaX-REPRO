@@ -1,0 +1,63 @@
+[PASS] one row per (equation, seed) in P - 45 rows, dup keys=[]
+[PASS] one row per (equation, seed) in HDS - 45 rows
+[PASS] same (equation, seed) keys in both arms - only P=[] only HDS=[]
+[PASS] n equations == 15 - P=15 HDS=15 shared=15
+
+failed:* rows in P: 0
+[PASS] every failed:* row with non-finite R2 is catastrophic, not missing - 0 not catastrophic
+
+own rates (mean over equations of per-equation seed mean), field=extrap_r2_far
+  catastrophic  P=0.689  HDS=0.156
+  nan_or_missing P=0.000  HDS=0.000
+[PASS] nan_or_missing is 0 for P
+
+static scan of scripts/phase2_close.py (read these lines; a filter on status would drop rows):
+  84: continue
+  102: return None if math.isnan(v) else v
+  268: lower_is_better = name.startswith(("catastrophic", "nan_or_missing"))
+[PASS] row r2 equals extrap_r2_far (closure scores r2) - 0 rows differ, e.g. []
+
+adapter: fields HDS rows have, P rows lack, and the closure names
+  not named in phase2_close.py, left alone: ['_source', 'ablated_component', 'config_diff']
+  bypass_used: source=built-in rule  closure lines=['52', '193']
+      P->['False']  HDS has ['False']
+  code_version: source=git_commit  closure lines=['53', '183']
+      P->["'11c8cc3821ab5e611400b3c5c63b5dd62699027b+dirty'"]  HDS has ["'5.4'"]
+  config_hash: source=config_sha256  closure lines=['53', '184']
+      P->["'b7dd79895a4a96c875ecbd4cc21693931a8e2042a50939730f593988625"]  HDS has ["'f209987f6476'"]
+  evaluator_version: source=constant (--set)  closure lines=['53', '173']
+      P->["'r2_canonical@8f11733'"]  HDS has ["'r2_canonical@8f11733'"]
+  formula: source=built-in rule  closure lines=['51', '56', '198']
+      P->['"def formula(M):\\n    # Kleiber\'s Law: Basal Metabolic Rate ', '"def formula(var_N):\\n    # Stirling\'s approximation for ent', '"def formula(var_N):\\n    import numpy as np\\n    # Poisson ', '"def formula(var_N):\\n    import numpy as np\\n    k_B = 1.38', "'def formula(A, B):\\n    import numpy as np\\n    # Henderson"]  HDS has ["'((-11.684344 / r) + (r * -11.676912)) + 23.330383'", "'((A * 0.70780003) ^ 2.0012627) * B'", "'((N * -0.00029662973) + 0.2987651) * N'", "'((N * -0.00029884058) + 0.299345) * N'", "'((V * (1.2326735 - ((V * 1.0528843) ^ (n ^ -4.7789426)))) *"]
+  model_id: source=model_id_returned  closure lines=['53', '181']
+      P->["'claude-sonnet-4-6'"]  HDS has ["'claude-sonnet-4-6'"]
+  status: source=built-in rule  closure lines=['51', '198', '208', '238']
+      P->["'exec'", "'nonfinite_pred'", "'ok'"]  HDS has ["'ok'"]
+  bypass_kind values in P: ["'live'"]
+[PASS] every missing required field has a mapping - unmapped: []; add --map FIELD=SOURCE for each (HDS example values are printed above)
+
+--- closure output (tail) ---
+PASS  checks (22/23 passed)
+  FAIL: [both] single timeout_s - values: ['1400.0', '3600.0']
+
+Paired comparison (hds_v50_2 minus pure_llm), n=15 equations, seeds=[42, 99, 123]
+  recovery_r2>=0.99: 0.267 -> 0.822  diff +0.556 CI [+0.311, +0.778]  B better/A better/tied 10/1/4  sign p=0.012
+  recovery_r2>=0.999999: 0.200 -> 0.356  diff +0.156 CI [-0.022, +0.378]  B better/A better/tied 4/2/9  sign p=0.688
+  catastrophic_r2<-10.0: 0.689 -> 0.156  diff -0.533 CI [-0.800, -0.267]  B better/A better/tied 9/1/5  sign p=0.021
+  nan_or_missing_r2: 0.000 -> 0.000  diff +0.000 CI [+0.000, +0.000]  B better/A better/tied 0/0/15  sign p=1.000
+  runtime ratio (B/A) median 4.18
+
+  CAVEAT: UNEQUAL TIME BUDGETS declared: {"pure_llm": [1400.0], "hds_v50_2": [3600.0]} - reason: P: 3 calls, cap 1400 s + 300 s; HDS: 3600 s. HDS sees data statistics, P does not. HDS gets 3 candidates from one call, P gets 3 samples from three calls.. Results are NOT an equal-budget comparison.
+
+Phase 2 CLOSED WITH CAVEATS -> /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_call1_label_pure_llm/closure_out/PHASE2_CLOSED_WITH_CAVEATS
+Manifest: /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/closure_call1_label_pure_llm/closure_out/phase2_closure.json
+[PASS] closure script ran without a usage/argument error - returncode=0
+[PASS] closure completed (printed the paired comparison)
+[PASS] closure n equations == own n - closure=15 own=15
+[PASS] closure catastrophic_r2: P matches own - closure=0.689 own=0.689
+[PASS] closure catastrophic_r2: HDS matches own - closure=0.156 own=0.156
+[PASS] closure nan_or_missing_r2: P matches own - closure=0.000 own=0.000
+[PASS] closure nan_or_missing_r2: HDS matches own - closure=0.000 own=0.000
+[PASS] closure nan_or_missing for P is 0
+
+RESULT: ALL CHECKS PASSED

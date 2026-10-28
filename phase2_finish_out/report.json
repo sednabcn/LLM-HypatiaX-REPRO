@@ -1,0 +1,122 @@
+[
+ {
+  "step": "dirty",
+  "status": "EXPLAINED",
+  "message": "dirty marker explained by: phase2_pure_llm_config.yaml differs from the commit (8 lines) and its hash (raw-bytes) equals the rows' config_sha256, so the config that ran is the working file; runner files not committed at 11c8cc38 [scripts/p2_data.py sha256=2775847534522b3d.. mtime=2026-10-27T14:27:47 tracked, absent from 11c8cc38, older than the first P row file; scripts/run_pure_llm_arm.py sha256=6cdee6ad1a44157f.. mtime=2026-10-27T15:42:35 tracked, absent from 11c8cc38, older than the first P row file]. 'Unchanged since the run' is inferred from mtimes, not proven. Commit them now (git add scripts/p2_data.py scripts/run_pure_llm_arm.py phase2_pure_llm_config.yaml), and put these hashes plus phase2_finish_out/dirty_vs_p_commit.patch in A5"
+ },
+ {
+  "step": "rows/G6",
+  "status": "PASS",
+  "message": "45 rows, duplicates=[]"
+ },
+ {
+  "step": "rows/G8",
+  "status": "PASS",
+  "message": "single commit (git_commit): {'11c8cc3821ab5e611400b3c5c63b5dd62699027b+dirty': 45}"
+ },
+ {
+  "step": "rows/G8",
+  "status": "EXPLAINED",
+  "message": "dirty rows: 45; code_dirty values: {'None': 45} (None = field not recorded). Cause identified in the dirty step; put it in A5."
+ },
+ {
+  "step": "rows/G4",
+  "status": "PASS",
+  "message": "one timeout (timeout_s): {'1400.0': 45}"
+ },
+ {
+  "step": "rows/G7",
+  "status": "PASS",
+  "message": "one model id (model_id_returned): {'claude-sonnet-4-6': 45}"
+ },
+ {
+  "step": "rows/G4",
+  "status": "PASS",
+  "message": "one prompt template hash (prompt_template_sha256): {'852d551b69b7fd3cf80d3b2f7e611952f7eb8e4aeb0853e8a59abeea2d3c3e1c': 45}"
+ },
+ {
+  "step": "rows/G4",
+  "status": "PASS",
+  "message": "rendered prompt hash (prompt_sha256) is per-equation by design: 15 distinct values for 15 equations, identical across seeds within each equation"
+ },
+ {
+  "step": "rows/G3",
+  "status": "DECLARED",
+  "message": "rows carry no bypass_flags (flag-like keys present: ['bypass_kind']); bypass_kind: {'live': 45}; llm_attempted: {'True': 45}. Shell history shows 0 export line(s) setting both flags (WEAK evidence: it shows the command was typed, not that the full-run shell had it). No gate/log file shows both flags on. Real gap: either rerun with bypass_flags recorded in the rows, or accept it explicitly with --declare 'rows/G3=<what evidence you do have>' || DECLARED CAVEAT: Rows lack bypass_flags because the runner did not copy the baseline per-call bypass_flags record. Evidence instead: (1) the baseline module sha256 852d551b (the prompt_template_sha256 in all 45 rows) equals the committed file, unchanged since 11c8cc38; (2) in that module the two flags are only recorded, never branched on, and the prompt is a single template with a leak-marker guard; (3) all 45 prompt_sha256 values are reproduced from that template, the neutral task sentence and the shared constants block (scripts/check_p_hashes.py), so no hint, equation name or data statistic was sent; (4) _flag is fail-closed (unset means on) and shell history has no falsy export. bypass_kind=live is hard-coded and is not offered as evidence."
+ },
+ {
+  "step": "rows/G9",
+  "status": "DECLARED",
+  "message": "677 schema errors; required-but-absent fields: {'r2_field': 45, 'status': 45, 'formula': 45, 'bypass_used': 45, 'model_id': 45, 'code_version': 45, 'code_dirty': 45, 'config_hash': 45, 'evaluator_version': 45, 'temperature': 45, 'n_llm_calls': 45, 'input_tokens': 45, 'output_tokens': 45, 'ablated_component': 45, 'config_diff': 45}; enum violations: {'r2_status': ['failed:no_calls']}; other: []; runner --validate FAILS:   [PASS] no row has r2 == 0.0 with a failed status |   [PASS] one evaluator hash across rows |   [PASS] time cap never hit (else say so in the report) |   [PASS] no max_tokens stop in any call. Proposed schema in phase2_finish_out/phase2_row_schema.proposed.json (apply via amendment, then rerun). Fields absent from rows that cannot be derived (e.g. input_tokens/output_tokens) are a real logging gap || DECLARED CAVEAT: Raw P rows do not carry the shared schema's field names. scripts/derive_p_schema_fields.py maps them without changing any stored value (model_id, code_version, code_dirty, config_hash, n_llm_calls, temperature from the recorded request, formula from candidate_formulas[selected_index]); all derived rows validate except one rule: code_dirty must be false for pure_llm, and all 45 rows are true (uncommitted runner and config at run time; files now committed, hashes recorded). input_tokens and output_tokens were not logged and are null. r2_status failed:no_calls is relabelled not_scored in the derived copy."
+ },
+ {
+  "step": "evaluator/G7",
+  "status": "PASS",
+  "message": "committed blob sha256=7d5395ed728323d8..; rows=['7d5395ed728323d8']; file status=clean"
+ },
+ {
+  "step": "hashes/G1-control",
+  "status": "PASS",
+  "message": "current tree reproduces the P rows' data hashes (control only, tautological for G1)"
+ },
+ {
+  "step": "hashes/CI-sha",
+  "status": "PASS",
+  "message": "run 40301286024 head SHA = bde3bdd512ebd773c8a56bafd7e3b724fd5daa55"
+ },
+ {
+  "step": "hashes/CI-sha",
+  "status": "PASS",
+  "message": "run 40379400415 head SHA = 6ebf31f7a1dc99eecca7fb5797ea5f23642f6c4a"
+ },
+ {
+  "step": "hashes/G1",
+  "status": "PASS",
+  "message": "generator at 6ebf31f7 reproduces the P rows' train/far data hashes. Direct compare vs current tree: 0/45 keys differ."
+ },
+ {
+  "step": "hashes/G1",
+  "status": "PASS",
+  "message": "generator at bde3bdd5 reproduces the P rows' train/far data hashes. Direct compare vs current tree: 0/45 keys differ."
+ },
+ {
+  "step": "closures/medium",
+  "status": "PASS",
+  "message": "RESULT: ALL CHECKS PASSED (log: closure_medium.log; train is NOT like-for-like: P train R2 is best of 3)"
+ },
+ {
+  "step": "closures/train",
+  "status": "PASS",
+  "message": "RESULT: ALL CHECKS PASSED (log: closure_train.log; train is NOT like-for-like: P train R2 is best of 3)"
+ },
+ {
+  "step": "closures/call1",
+  "status": "PASS",
+  "message": "RESULT: ALL CHECKS PASSED (secondary result; the closure labels these rows 'pure_llm' because it reads the system name from each row, so name the output folder/report line 'call 1 only')"
+ },
+ {
+  "step": "runtime",
+  "status": "EXPLAINED",
+  "message": "45 HDS rows: runtime_s == total_time_s in 45; total == sr+llm in 0; total == sr (llm>0) in 45. total_time_s equals sr_time_s, so either sr_time_s already wraps the LLM stage or runtime_s EXCLUDES LLM time (read runtime_timers_grep.txt). Worst case (runtime+llm): max 734s vs cap 1400s; HDS median 128s reported vs 133s worst-case, so the closure's runtime ratio may be slightly understated. The never-binding budget conclusion survives either way."
+ },
+ {
+  "step": "engine",
+  "status": "PASS",
+  "message": "engine_version 5.4 is assigned only in hybrid_system_v50_2.py (line ['342'])"
+ },
+ {
+  "step": "binder",
+  "status": "EXPLAINED",
+  "message": "the binder rule was set post hoc (after dry-run output) but 0 of 135 P candidates in the 45 real rows have defaulted parameters, so it changed no scored row; HDS final formulas are {'expression': 45} (constants inlined, no signature). State both facts and the post-hoc timing in A5"
+ },
+ {
+  "step": "listing8",
+  "status": "DECLARED",
+  "message": "evaluator hypatiax/core/r2_canonical.py ss_tot lines (4): ['12:* Otherwise R^2 = 1 - ss_res / ss_tot, status \"ok\".', '65:    ss_tot = float(np.sum((yt - yt.mean()) ** 2))', '67:    if ss_tot <= REL_TOL * max(scale, 1e-300):', '71:    return 1.0 - ss_res / ss_tot, \"ok\"']; supplement/doc ss_tot lines (3): ['config/phase2_pure_llm_run_spec.md:61:- **Preconditions from the Phase 1 checklist:** generation paths logged (every row has `llm_called`, `generation', 'triage_out/triage_report.md:48:- **[evaluator]** hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3748  absolute ss_tot guard (S', 'triage_out/triage_report.md:49:    - action: replace absolute ss_tot guard with core.r2_canonical.r2_checked (Rule A)']; test lines mentioning near/constant/degenerate: 2. Decide: does the evaluator's guard equal Listing 8? If the code replaced the absolute 1e-10 guard (apply_adaptive_config_r2.py suggests it did), Listing 8 is stale and the supplement must be corrected. Full list in listing8_compare.txt || DECLARED CAVEAT: Compared by hand: Supplement A Listing 8 matches r2_canonical.py at 8f11733 (relative guard, REL_TOL=1e-24)."
+ },
+ {
+  "step": "amend",
+  "status": "PASS",
+  "message": "draft written to /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/phase2_finish_out/amendment_A5_draft.md (review, then append yourself)"
+ }
+]

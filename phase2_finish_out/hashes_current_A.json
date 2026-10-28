@@ -1,0 +1,182 @@
+{
+ "Allometric Scaling|42": {
+  "train": "a21c3a23dad5d49d8936028a22ecc45e3cb557e048adb4d508416f664a3f5d58",
+  "far": "fb71ae7114f58e1e1289340a5007e9c47ff4c22d7053b04ca2d5483ea1a3a404"
+ },
+ "Allometric Scaling|99": {
+  "train": "f953e0664d1c64c64c4044a963d171b96b36b1ae8bc36e7e338857d545b15448",
+  "far": "c9c40435b306b781ffe90cbc074c73c57dd9bef158b27bf080ebda2ea301e9bb"
+ },
+ "Allometric Scaling|123": {
+  "train": "228452e49a5f2e6d41015bb0ca0568014f3f5d153aa87566e12855e494d55659",
+  "far": "f84f22ba7b5608d957271cdc38901c5bac95ef0e34fea14790e5e61f80802f84"
+ },
+ "Arrhenius|42": {
+  "train": "ceec3ba2c82d9e053acec6e8c4711f31ab2b821cd36e7db56edbbcd20c80b88b",
+  "far": "b736ab1123d7554a40e7f953df0f292341a452a99d7cac79dd3770b001e44f7e"
+ },
+ "Arrhenius|99": {
+  "train": "31a09d9c6752b98d39ff31ea8e68bbdbcf2d96b2cf439e134e6366ce340a5fe6",
+  "far": "370fabb3e9a789d487e8ee5fe65776ad59504d3d0701122cf25d50f4f3edb438"
+ },
+ "Arrhenius|123": {
+  "train": "8130696dce4ed757c088c2c07e5e2af5f91ffd03fe5d4bec89ab3859f48b6a78",
+  "far": "bae2fefa3064d54c2cb49120adc849364d773b5624cb03fb61aa020b9c95c7e6"
+ },
+ "Constant Product|42": {
+  "train": "7de4302338d77ed04544a2919c55591aaa607902e66935f09593ca9ac213bbee",
+  "far": "247c3bb900cdf65a110f3abc9da8f2ead4e2e2dae2d0b97e6503b899789e4dd3"
+ },
+ "Constant Product|99": {
+  "train": "489d0ab7b4f7ec0887064f07986687ee6166288f33b2e64aea4d6f49d78778bc",
+  "far": "f0330cff3690701472d66d116ede14355ee75663cf4c838c9a2435972559e1ca"
+ },
+ "Constant Product|123": {
+  "train": "964819169f4b15a3c1b20cc8ac6ae95b4093a15601b0898fd427f42fedf48b5f",
+  "far": "2e61aa7abb1fda1753d540fbcf7bf9cc2ba553ac33a43c5d34e03c09855263d4"
+ },
+ "Gravitational Force|42": {
+  "train": "b3667a74c8bb79b162617a34bb7ab4691c9b5cf1b423d48053d110859d79f343",
+  "far": "da6e533b9218ef5f2ba84e6cf1b52cdf51f970e3bcfe3d4ff8916883fd9e69a4"
+ },
+ "Gravitational Force|99": {
+  "train": "d1d5f1241832d71f9857f64882b2050b8de9d4ea30b6c6d1955edd176d20069c",
+  "far": "556390694509f3d3a4c469c327d20c32a4e712ff18a2dc168a4caae56e3ef239"
+ },
+ "Gravitational Force|123": {
+  "train": "775a68f2cdca4264a73291fa71e833bd56e0639c1d08ddc4fe4e7e72754f2829",
+  "far": "4d237d79e4869248b7980f8dbfe49b185afbd69488a39625efd3a72ccc39eb8d"
+ },
+ "Henderson-Hasselbalch|42": {
+  "train": "6cfab65d09266c2e40ffcd2292e5f394f9ad6e20284e5cbe898ef49bdf10b845",
+  "far": "f375ad662d5aedcdb697c73acb019815e2189026663aa2379edf2bf279f17db4"
+ },
+ "Henderson-Hasselbalch|99": {
+  "train": "997ae8aa985827f5822426acfb04eb29ec3e0f99bceb57e20776950e2e814a0e",
+  "far": "65ac5c37c629d1e2e04a0031c26bfd79db0a2f22eb2da880bbd26e7dd415b3c2"
+ },
+ "Henderson-Hasselbalch|123": {
+  "train": "1c39b285b884c8a6288239d0b331341801ecd27f4497749c2e3f85e565278714",
+  "far": "e7083ee4d502d9d6261e3432b5259a2ad4f04780b2c23b9f0079328da2d38b1c"
+ },
+ "Ideal Gas Law|42": {
+  "train": "89d0e51634a6b0567db11b4e1100c1e67d936b2946358340385b8d58fa31be89",
+  "far": "185a639778c8acc111c0c6aed810e9628517a119afbd4bfd0c7a2cc628be6455"
+ },
+ "Ideal Gas Law|99": {
+  "train": "035c3cc70d25054621a52027053175fa6a03ea557225a129f05e195d49fa552f",
+  "far": "684458fb7d5d596b7cdc5f9209e329dd0a2f352d3e7554d1a722f4c31f8d3283"
+ },
+ "Ideal Gas Law|123": {
+  "train": "36282a2b7130bf53138f102877a7f533bae939bf56d60f405af4d671502bac49",
+  "far": "133a9b54a928e39208ef0eaa404a76e1ff873bd27b3058ba36dc842cc7fba9c9"
+ },
+ "Impermanent Loss|42": {
+  "train": "78683b263cb2dfdd859dc3d50cca726e3c608afac3b4f72b722b3da2c9c64413",
+  "far": "a845ba72987c8b2ee8d325f8c425b6294f3d8a9ace1f87a67db5d67f81b8513b"
+ },
+ "Impermanent Loss|99": {
+  "train": "081452d0b466b3226d8a85dca4be6dff23289e117d5be8079983afe6fb37cb30",
+  "far": "fae3b4e124755ce1670961223a85490bad99c1b1fb09798d29fdb18c09e2d980"
+ },
+ "Impermanent Loss|123": {
+  "train": "79175921aa63f503b5d3394e09ba4e6a364012a595df866c5dbb0e347e10b80a",
+  "far": "c492ebed2135cdd0bc41b4d1e178d00b539b106f09b9b74c577de9db5c536c7c"
+ },
+ "Kinetic Energy|42": {
+  "train": "75294b9024fa35131a850e0e0d51adac8a7a62929c91154b0216a3f8dcf9d6c5",
+  "far": "c87cb4b8eaf9c1dad5f4626157ec59763eeb46f1f7de975f3693445693d79fee"
+ },
+ "Kinetic Energy|99": {
+  "train": "68c3315e00395f539bbabcaffa191723dd2c48888fa2646be20b06bbb24bd064",
+  "far": "2c7144c97b0e11d2553881d88afb89d91a77935da083fea843eddff93c6c2a20"
+ },
+ "Kinetic Energy|123": {
+  "train": "dec2e7b017b49a93d234ad8c784f56056c8ca6551ab8ac00ce00af988eff1891",
+  "far": "ff1e01c292afa4b1f6a98c69293b4db1a6f7fb404cc61ce075e3a50418f5b868"
+ },
+ "Liquidation Price|42": {
+  "train": "39b9fd9f1f0b569a8eeabb2885885084c717ad78e5ce54c3f8743b74db80910d",
+  "far": "c98abd309193b868a616fb2df466e6e4e6b1f2668fc2ab704b0fd4ec1bc845b3"
+ },
+ "Liquidation Price|99": {
+  "train": "dae3552d7d4a4af81c8baba795b0565937d45da7de2ec6c22ea08e8a76b896e6",
+  "far": "24fcbb37607fdff956e2483d3704da590d11c6eb8c4bc9bd3155c10dae5fd456"
+ },
+ "Liquidation Price|123": {
+  "train": "1660fbf9df11369a7874e5e05ab958b191c531cde926528ae82b0ec02fa199ef",
+  "far": "13fce9ef9a4c6356dee4bb8becc65e674c31ecdd6485bca8eccd34afe1f15f13"
+ },
+ "Logistic Growth|42": {
+  "train": "48698c71bfc2642334ee81230fed64d5ef42e5a0acca77277078df128c7f7efb",
+  "far": "ad654f07ba59c2f0aa0131ca1b2ce8bf6a3018ef83162385794db33099b70d4f"
+ },
+ "Logistic Growth|99": {
+  "train": "5615cb749b4732bd50cc174ada25ac795a73880efd393a3eeae991eb4e6c7245",
+  "far": "f41530008bd39dfd02165b528d327ee09998c9ad9ebb8a860805193175782f61"
+ },
+ "Logistic Growth|123": {
+  "train": "68b1e97fd82a025922bd35536716be632d1245b64267e2e8e8a10a6ee277cbe3",
+  "far": "e4a7915229d344d21088c3e6f5ab7c1d7a442a7a7fa82fabfd9c608019f9d562"
+ },
+ "Michaelis-Menten|42": {
+  "train": "4e3a7b81ae83853d962fe6a0972a09daf989b184f89ac85532c7a307b260c782",
+  "far": "5b331aa820f82a119a2fd0d820be2304eafc023f37d756b289a092bca0839d65"
+ },
+ "Michaelis-Menten|99": {
+  "train": "4582f3b05173c9d707dea4c6f74501d20d83f17ce9a886a9934d121558fb3b45",
+  "far": "c1566660ed3003a9943be71ae1314f9eb6ed27340ed89ff7926366e508f32d1d"
+ },
+ "Michaelis-Menten|123": {
+  "train": "1d7ab332b56b02559862f53c433ba75911edac641b8007a19b23bec64aec2ded",
+  "far": "577c54cf3fb91247a39de18267cb735cdffd1a13b3522c063899e1d1d97c01d8"
+ },
+ "Portfolio Std Dev|42": {
+  "train": "fc99bd0483aec19e68adee1f8c599cd05264be58239d6c55580803f6b3fffa39",
+  "far": "2608b5e13ebe372d221870ea26321134b240048e631baa8e703cc33f129f3630"
+ },
+ "Portfolio Std Dev|99": {
+  "train": "687b06fd579f541fb2f30d53e803b805d421fde65926356791ae85bacfe4936d",
+  "far": "0ab4aafc08a5723921086f7d8037adf4acf94d559ecc2dc199fb909f04e288b5"
+ },
+ "Portfolio Std Dev|123": {
+  "train": "3b8c7f9901aa130c7ee7257be641cd170e70d410d251e898a1092beef142cac1",
+  "far": "24b9350c79b454969c35e7bbde76d8fe519818288eef9adf01dbd7992f98d80f"
+ },
+ "Price Impact|42": {
+  "train": "ba8b28b2d6855df44beaf83e5f703883a3c6dd6976c175085bd7139e3666ae87",
+  "far": "b25ee0b4bcb66e95002059ebe39e15f3f9360ce816f1c0ccb307c346850ec506"
+ },
+ "Price Impact|99": {
+  "train": "7642509db76057e41e25eea7feb491f818306d300b9ba02d49f97825c047dbe1",
+  "far": "4264828225538dfabb6099868ecfb4428dbb04a361eed2a65c5ee375210319d9"
+ },
+ "Price Impact|123": {
+  "train": "baf61f68f0af17ef3f90d5fbcf34c34a2cb460f3b8f58a163890060e13f5097a",
+  "far": "a9c97a21b6f5a409b32abf3a676cfe6f3e4d17f622716ead737ed63eb6d15371"
+ },
+ "Rate Law|42": {
+  "train": "c3efd60ca5be0ebae2e9098ea33c194d88f63c1cc5884c879071583678341940",
+  "far": "4656c2db606e9fafb4ab22e8c2975e411d846699789ef9e34021db6339a07b14"
+ },
+ "Rate Law|99": {
+  "train": "2f3dd6fecaebc87595afc866f94b0d0b672eaee0af44212842d8f766d130f394",
+  "far": "75df2d71a787dc28b5fa286e8dd58bb68422ce58ce314821383ef1e5861f8c91"
+ },
+ "Rate Law|123": {
+  "train": "eb030e6948bac6fbe3020c94a5f83f1912e831106412c9ab0bd41a64732b4644",
+  "far": "8ce3400c046dbbf97d906c71ac34ad20fcc6242b4b8ebf62aa90af5551cc94fe"
+ },
+ "Value at Risk|42": {
+  "train": "7507dbe4c494905c4e93997a26ccf8db366c68b896d832c54f3cebac6e56c766",
+  "far": "1ec702b671e0a87d0741f0e9a70bd53c1855b198a169300637a678925541c10a"
+ },
+ "Value at Risk|99": {
+  "train": "7e2344bf855c02a045288c8592500866fbd106da28f294a9f03fc5404e7c8b1d",
+  "far": "342f1ccb32c05a013594e86d180e07cea965d8c652b514df3dfc28717a8cbdc7"
+ },
+ "Value at Risk|123": {
+  "train": "e7905151aa0c83e2221d25ae9bfbb66cd283b422af4d49fac90872457dd98f65",
+  "far": "0dfd3c08e6ff79b5f55b1c3ca0179d8cb17af3699bf408c3de3a568d9daa0a82"
+ }
+}

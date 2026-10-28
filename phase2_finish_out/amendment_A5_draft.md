@@ -1,0 +1,32 @@
+
+## Amendment A5 (draft, 2026-10-28)
+- Post-closure checks run by scripts/phase2_finish.py. Outcomes (EXPLAINED = cause identified; DECLARED = accepted with stated reason):
+  - [EXPLAINED] dirty: dirty marker explained by: phase2_pure_llm_config.yaml differs from the commit (8 lines) and its hash (raw-bytes) equals the rows' config_sha256, so the config that ran is the working file; runner files not committed at 11c8cc38 [scripts/p2_data.py sha256=2775847534522b3d.. mtime=2026-10-27T14:27:47 tracked, absent from 11c8cc38, older than the first P row file; scripts/run_pure_llm_arm.py sha256=6cdee6ad1a44157f.. mtime=2026-10-27T15:42:35 tracked, absent from 11c8cc38, older than the first P r
+  - [PASS] rows/G6: 45 rows, duplicates=[]
+  - [PASS] rows/G8: single commit (git_commit): {'11c8cc3821ab5e611400b3c5c63b5dd62699027b+dirty': 45}
+  - [EXPLAINED] rows/G8: dirty rows: 45; code_dirty values: {'None': 45} (None = field not recorded). Cause identified in the dirty step; put it in A5.
+  - [PASS] rows/G4: one timeout (timeout_s): {'1400.0': 45}
+  - [PASS] rows/G7: one model id (model_id_returned): {'claude-sonnet-4-6': 45}
+  - [PASS] rows/G4: one prompt template hash (prompt_template_sha256): {'852d551b69b7fd3cf80d3b2f7e611952f7eb8e4aeb0853e8a59abeea2d3c3e1c': 45}
+  - [PASS] rows/G4: rendered prompt hash (prompt_sha256) is per-equation by design: 15 distinct values for 15 equations, identical across seeds within each equation
+  - [DECLARED] rows/G3: rows carry no bypass_flags (flag-like keys present: ['bypass_kind']); bypass_kind: {'live': 45}; llm_attempted: {'True': 45}. Shell history shows 0 export line(s) setting both flags (WEAK evidence: it shows the command was typed, not that the full-run shell had it). No gate/log file shows both flags on. Real gap: either rerun with bypass_flags recorded in the rows, or accept it explicitly with --declare 'rows/G3=<what evidence you do have>' || DECLARED CAVEAT: Rows lack bypass_flags because the 
+  - [DECLARED] rows/G9: 677 schema errors; required-but-absent fields: {'r2_field': 45, 'status': 45, 'formula': 45, 'bypass_used': 45, 'model_id': 45, 'code_version': 45, 'code_dirty': 45, 'config_hash': 45, 'evaluator_version': 45, 'temperature': 45, 'n_llm_calls': 45, 'input_tokens': 45, 'output_tokens': 45, 'ablated_component': 45, 'config_diff': 45}; enum violations: {'r2_status': ['failed:no_calls']}; other: []; runner --validate FAILS:   [PASS] no row has r2 == 0.0 with a failed status |   [PASS] one evaluator h
+  - [PASS] evaluator/G7: committed blob sha256=7d5395ed728323d8..; rows=['7d5395ed728323d8']; file status=clean
+  - [PASS] hashes/G1-control: current tree reproduces the P rows' data hashes (control only, tautological for G1)
+  - [PASS] hashes/CI-sha: run 40301286024 head SHA = bde3bdd512ebd773c8a56bafd7e3b724fd5daa55
+  - [PASS] hashes/CI-sha: run 40379400415 head SHA = 6ebf31f7a1dc99eecca7fb5797ea5f23642f6c4a
+  - [PASS] hashes/G1: generator at 6ebf31f7 reproduces the P rows' train/far data hashes. Direct compare vs current tree: 0/45 keys differ.
+  - [PASS] hashes/G1: generator at bde3bdd5 reproduces the P rows' train/far data hashes. Direct compare vs current tree: 0/45 keys differ.
+  - [PASS] closures/medium: RESULT: ALL CHECKS PASSED (log: closure_medium.log; train is NOT like-for-like: P train R2 is best of 3)
+  - [PASS] closures/train: RESULT: ALL CHECKS PASSED (log: closure_train.log; train is NOT like-for-like: P train R2 is best of 3)
+  - [PASS] closures/call1: RESULT: ALL CHECKS PASSED (secondary result; the closure labels these rows 'pure_llm' because it reads the system name from each row, so name the output folder/report line 'call 1 only')
+  - [EXPLAINED] runtime: 45 HDS rows: runtime_s == total_time_s in 45; total == sr+llm in 0; total == sr (llm>0) in 45. total_time_s equals sr_time_s, so either sr_time_s already wraps the LLM stage or runtime_s EXCLUDES LLM time (read runtime_timers_grep.txt). Worst case (runtime+llm): max 734s vs cap 1400s; HDS median 128s reported vs 133s worst-case, so the closure's runtime ratio may be slightly understated. The never-binding budget conclusion survives either way.
+  - [PASS] engine: engine_version 5.4 is assigned only in hybrid_system_v50_2.py (line ['342'])
+  - [EXPLAINED] binder: the binder rule was set post hoc (after dry-run output) but 0 of 135 P candidates in the 45 real rows have defaulted parameters, so it changed no scored row; HDS final formulas are {'expression': 45} (constants inlined, no signature). State both facts and the post-hoc timing in A5
+  - [DECLARED] listing8: evaluator hypatiax/core/r2_canonical.py ss_tot lines (4): ['12:* Otherwise R^2 = 1 - ss_res / ss_tot, status "ok".', '65:    ss_tot = float(np.sum((yt - yt.mean()) ** 2))', '67:    if ss_tot <= REL_TOL * max(scale, 1e-300):', '71:    return 1.0 - ss_res / ss_tot, "ok"']; supplement/doc ss_tot lines (3): ['config/phase2_pure_llm_run_spec.md:61:- **Preconditions from the Phase 1 checklist:** generation paths logged (every row has `llm_called`, `generation', 'triage_out/triage_report.md:48:- **[eva
+- Runner files that produced the P rows (hashes of the working copies, unchanged-since-run inferred from mtime):
+  - scripts/p2_data.py sha256=2775847534522b3d.. mtime=2026-10-27T14:27:47 tracked, absent from 11c8cc38, older than the first P row file
+  - scripts/run_pure_llm_arm.py sha256=6cdee6ad1a44157f.. mtime=2026-10-27T15:42:35 tracked, absent from 11c8cc38, older than the first P row file
+- Binder rule (bind by name, defaults untouched) was set after seeing dry-run output; applied to arm P only.
+- failed:no_calls rows (Michaelis-Menten seeds 42, 99) mean all three candidates had non-finite training R2; label kept in data, counted as catastrophic.
+- evaluator_version set to r2_canonical@8f11733 by stated constant, on hash evidence (see evaluator/G7).

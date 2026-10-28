@@ -1,0 +1,209 @@
+diff --git a/add_generation_path_ehs.py b/add_generation_path_ehs.py
+new file mode 100644
+index 0000000..9156353
+--- /dev/null
++++ b/add_generation_path_ehs.py
+@@ -0,0 +1,31 @@
++"""Add `generation_path` to every row written by hybrid_ensemble_system_defi_domain.py
++(Phase 1 item 1, same vocabulary the other generators use).  Guarded: changes nothing if the
++file is not exactly as expected.
++usage: python3 add_generation_path_ehs.py hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
++"""
++import pathlib, sys
++
++p = pathlib.Path(sys.argv[1]); s = p.read_text()
++if "generation_path" in s:
++    sys.exit("generation_path already present - nothing to do.")
++anchor = "    record = {\n"
++if s.count(anchor) != 1 or "**prov" not in s:
++    sys.exit(f"expected exactly one '    record = {{' and a '**prov' spread (found {s.count(anchor)}). Nothing changed.")
++block = '''    # PHASE1: generation_path - how the LLM formula in this row came about.
++    #   llm             a live call returned usable code (llm_called is True)
++    #   llm_unverified  usable code, but the generator did not say whether the call was live
++    #   unavailable     no usable code (the LLM arm failed; the row is NOT an LLM result)
++    #   <bypass_kind>   any bypass label the generator reported (never silently "llm")
++    _no_code = (not llm_result.get("python_code")) or llm_result.get("python_code") == "N/A"
++    if prov.get("bypass_kind") not in (None, "none", "live"):
++        prov["generation_path"] = str(prov.get("bypass_kind"))
++    elif _no_code:
++        prov["generation_path"] = "unavailable"
++    elif prov.get("llm_called") is True:
++        prov["generation_path"] = "llm"
++    else:
++        prov["generation_path"] = "llm_unverified"
++
++'''
++p.write_text(s.replace(anchor, block + anchor))
++print("added generation_path:", p)
+diff --git a/hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py b/hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+index ce4928e..e4a4278 100644
+--- a/hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
++++ b/hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py
+@@ -415,7 +415,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+ 
+         if len(X) < 10:
+             return None, {
+-                "r2": 0.0,
++                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                 "rmse": float("inf"),
+                 "mae": float("inf"),
+                 "error": "Insufficient data",
+@@ -435,7 +435,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+             print(f"⚠️  NN training FAILED ({type(e).__name__}: {str(e)[:100]}); "
+                   f"this row has no NN arm")
+             return None, {
+-                "r2": 0.0,
++                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                 "rmse": float("inf"),
+                 "mae": float("inf"),
+                 "error": f"{type(e).__name__}: {e}",
+@@ -576,7 +576,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+         try:
+             code = formula_dict.get("python_code", "")
+             if not code or code == "N/A":
+-                return {"error": "No code generated", "success": False, "r2": 0.0}
++                return {"error": "No code generated", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+ 
+             import math as _math
+             import warnings as _warnings
+@@ -616,7 +616,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+             )
+ 
+             if not func:
+-                return {"error": "No function found", "success": False, "r2": 0.0}
++                return {"error": "No function found", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+ 
+             with _warnings.catch_warnings():
+                 _warnings.simplefilter("ignore")
+@@ -626,12 +626,12 @@ NO markdown code blocks, individual parameters NOT dict."""
+                 return {
+                     "error": f"Shape mismatch: {len(y_pred)} vs {len(y_true)}",
+                     "success": False,
+-                    "r2": 0.0,
++                    "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                 }
+ 
+             # Handle inf/nan values
+             if not np.all(np.isfinite(y_pred)):
+-                return {"error": "Non-finite predictions", "success": False, "r2": 0.0}
++                return {"error": "Non-finite predictions", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+ 
+             mse = np.mean((y_pred - y_true) ** 2)
+             r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
+@@ -644,7 +644,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+                 "success": True,
+             }
+         except Exception as e:
+-            return {"error": str(e)[:100], "success": False, "r2": 0.0}
++            return {"error": str(e)[:100], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+ 
+     def _evaluate_function(self, func, X, var_names):
+         """Evaluate function with multiple strategies"""
+@@ -815,7 +815,7 @@ NO markdown code blocks, individual parameters NOT dict."""
+         if "error" not in llm_result:
+             llm_metrics = self.evaluate_llm_formula(llm_result, X, y_true, var_names)
+         else:
+-            llm_metrics = {"error": llm_result["error"], "success": False, "r2": 0.0}
++            llm_metrics = {"error": llm_result["error"], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+ 
+         if verbose:
+             if llm_metrics.get("success"):
+diff --git a/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py b/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
+index c6370f5..44724f3 100644
+--- a/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
++++ b/hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py
+@@ -352,6 +352,21 @@ def main(argv=None):
+     print("Chosen method (picked on train):", chosen)
+     print(f"Chosen R² (test): {chosen_r2_te:.6f}")
+ 
++    # PHASE1: generation_path - how the LLM formula in this row came about.
++    #   llm             a live call returned usable code (llm_called is True)
++    #   llm_unverified  usable code, but the generator did not say whether the call was live
++    #   unavailable     no usable code (the LLM arm failed; the row is NOT an LLM result)
++    #   <bypass_kind>   any bypass label the generator reported (never silently "llm")
++    _no_code = (not llm_result.get("python_code")) or llm_result.get("python_code") == "N/A"
++    if prov.get("bypass_kind") not in (None, "none", "live"):
++        prov["generation_path"] = str(prov.get("bypass_kind"))
++    elif _no_code:
++        prov["generation_path"] = "unavailable"
++    elif prov.get("llm_called") is True:
++        prov["generation_path"] = "llm"
++    else:
++        prov["generation_path"] = "llm_unverified"
++
+     record = {
+         "description": desc,
+         "seed": seed,
+diff --git a/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py b/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+index 7753b57..f1a3e2f 100644
+--- a/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
++++ b/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py
+@@ -1254,11 +1254,11 @@ EXPLANATION:
+         """Evaluate a formula dict (with 'python_code') against data."""
+         code = result_dict.get("python_code", "N/A")
+         if not code or code == "N/A":
+-            return {"success": False, "r2": 0.0, "error": "no python_code"}
++            return {"success": False, "r2": float("-inf"), "error": "no python_code"}  # PHASE1-FIX: failure, not a score
+ 
+         preds = _safe_exec_formula(code, X, variable_names)
+         if preds is None or not np.isfinite(preds).all():
+-            return {"success": False, "r2": 0.0, "error": "formula evaluation failed"}
++            return {"success": False, "r2": float("-inf"), "error": "formula evaluation failed"}  # PHASE1-FIX: failure, not a score
+ 
+         r2 = r2_score(y, preds)
+         _, r2_status = r2_score_checked(y, preds)
+diff --git a/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py b/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py
+index 0bb66f0..563d350 100644
+--- a/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py
++++ b/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py
+@@ -152,7 +152,9 @@ _DEFAULT_NOISE_LEVELS: list[float] = [0.0, 0.005, 0.01, 0.05, 0.10]
+ _DEFAULT_METHODS: list[int] = [3, 4]
+ 
+ # R2 below this triggers a catastrophic-failure flag in the report
+-_CATASTROPHIC_R2_THRESHOLD: float = 0.90
++# PHASE1-FIX: one catastrophic definition for the whole repo (R2 < -1; NaN/-inf counted)
++from hypatiax.core.metrics import CATASTROPHIC_THRESHOLD as _CATASTROPHIC_R2_THRESHOLD
++_RUN_FLAGS: dict = {}  # PHASE1-FIX: filled by main() from enforce()
+ 
+ # Single recovery-threshold policy (re-runs plan: fixed 0.99 for cross-
+ # condition comparison, strict 0.999999 reported as "exact recovery").
+@@ -535,7 +537,7 @@ def _aggregate_results(
+                         exact_recovery_rate, n_success, n_total, n_nonfinite,
+                         threshold_used, n_catastrophic
+       per_equation    : {eq: {method: {r2, rmse, success, catastrophic}}}
+-      catastrophic_failures: [{equation, method, r2}]  (R2 < 0.90)
++      catastrophic_failures: [{equation, method, r2}]  (R2 < metrics.CATASTROPHIC_THRESHOLD, or non-finite)
+ 
+     cross_noise_summary: {method: {sigma_str: {median_r2, recovery_rate,
+                                                std_r2, n_catastrophic}}}
+@@ -613,6 +615,11 @@ def _aggregate_results(
+                     _r2_ok = False
+                 if not _r2_ok:
+                     n_nonfinite += 1
++                    if res:  # PHASE1-FIX: NaN/-inf from a method that ran = catastrophic
++                        n_catastrophic += 1
++                        catastrophic_failures.append(
++                            {"equation": eq_name, "method": method, "r2": float("-inf")}
++                        )
+                 elif sigma_c is not None and float(_r2_raw) > sigma_c[0] + sigma_c[1]:
+                     # Checked on every finite R2, success-flagged or not.
+                     n_above_ceiling += 1
+@@ -873,6 +880,7 @@ def _save_sweep_json(agg: dict, ts: str) -> Path:
+         )
+     path = _RESULTS_DIR / f"noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.json"
+     with open(path, "w") as f:
++        agg["run_flags"] = dict(_RUN_FLAGS)  # PHASE1-FIX: sign-flip / bypass flag state
+         json.dump(agg, f, indent=2, default=str)
+     print(f"  Saved noise sweep JSON  -> {path}")
+     return path
+@@ -946,7 +954,9 @@ def _save_sweep_csv(agg: dict, ts: str) -> Path:
+ # ============================================================================
+ 
+ def main() -> None:
+-    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
++    global _RUN_FLAGS
++    from hypatiax.core.enforce_flags import enforce
++    _RUN_FLAGS = enforce()  # fail-closed flag guard; state recorded in output (PHASE1-FIX)
+     parser = argparse.ArgumentParser(
+         description=(
+             "Noise-level sweep  sigma in {1%,5%,10%}  for "

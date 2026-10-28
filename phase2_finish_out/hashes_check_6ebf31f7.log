@@ -1,0 +1,2 @@
+A3-4: 45/45 rows match the reference data hashes
+Reference must come from the HDS side (same generator, the commit/CI that produced the HDS rows), otherwise this is a tautology.

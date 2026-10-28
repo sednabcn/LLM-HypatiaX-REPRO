@@ -1,0 +1,122 @@
+hypatiax/tools/validation/symbolic_validator.py:121:            # hybrid_system_v50_2.py, run_comparative_suite_benchmark_v2/_pca.py).
+hypatiax/tools/validation/dimensional_validator.py:104:            # hybrid_system_v50_2.py, run_comparative_suite_benchmark_v2/_pca.py).
+hypatiax/tools/validation/ensemble_validator.py:170:            # hybrid_system_v50_2.py, run_comparative_suite_benchmark_v2/_pca.py,
+hypatiax/tools/symbolic/hybrid_system_v50_2.py:342:ENGINE_VERSION = "5.4"
+hypatiax/tools/symbolic/hybrid_system_v50_2.py:360:    VERSION = ENGINE_VERSION  # programmatic access: HybridDiscoverySystem.VERSION
+hypatiax/tools/symbolic/symbolic_engine.py:1714:            # FIX v1.1 (§10.7 investigation, Bug #2 root cause): hybrid_system_v50_2.py
+hypatiax/tools/symbolic/symbolic_engine.py:1720:            # the "RC-5 stale matrix guard" fallback in hybrid_system_v50_2.py was
+hypatiax/tools/symbolic/symbolic_engine.py:1725:            # (or, after the FIX-B patch in hybrid_system_v50_2.py, a clean ValueError).
+hypatiax/experiments/benchmarks/exp1_ablation.py:7:Engine         : hybrid_system_v50_2.py (v5.4)
+hypatiax/experiments/benchmarks/exp1_ablation.py:155:    _pl.Path("hybrid_system_v50_2.py"),
+hypatiax/experiments/benchmarks/exp1_ablation.py:156:    _pl.Path(__file__).resolve().parents[2] / "tools/symbolic/hybrid_system_v50_2.py",
+hypatiax/experiments/benchmarks/exp1_ablation.py:161:        "⚠️  hybrid_system_v50_2.py not found — hypatia condition will raise at runtime.\n"
+hypatiax/experiments/benchmarks/exp1_ablation.py:167:    _spec   = _ilu.spec_from_file_location("hybrid_system_v50_2", _V50_PATH)
+hypatiax/experiments/benchmarks/exp1_ablation.py:672:                "HybridDiscoverySystem not imported — check hybrid_system_v50_2.py path"
+hypatiax/experiments/benchmarks/exp1_ablation.py:815:            "engine_version":        HybridDiscoverySystem.VERSION,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1076:    print(f"Engine      : hybrid_system_v50_2 (v5.4)")
+hypatiax/experiments/benchmarks/exp1_ablation.py:1662:            "engine_version":     HybridDiscoverySystem.VERSION,
+hypatiax/experiments/benchmarks/exp1_ablation.py:1748:        "engine":                "hybrid_system_v50_2.py",
+hypatiax/experiments/benchmarks/exp1_ablation.py:1749:        "engine_version":        HybridDiscoverySystem.VERSION,
+hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py:435:os.environ.setdefault("ENGINE",      "hybrid_system_v50_2")
+hypatiax/experiments/benchmarks/exp1_five_system.py:22:     6   HybridSystemV50_2Method → Hybrid v50\\_2
+hypatiax/experiments/benchmarks/exp1_five_system.py:25:HybridSystemV50_2Method.run() calls hybrid_system_v50_2 through
+hypatiax/experiments/benchmarks/exp1_five_system.py:26:_run_pysr_in_subprocess(method="hybrid_v50_2", ...) with its own internal
+hypatiax/experiments/benchmarks/exp1_five_system.py:32:the same equation. This experiment's "Hybrid v50_2" row is therefore a
+hypatiax/experiments/benchmarks/exp1_five_system.py:39:HybridSystemV50_2Method are imported directly from
+hypatiax/experiments/benchmarks/exp1_five_system.py:41:importlib.util the same way exp1_ablation.py loads hybrid_system_v50_2.py).
+hypatiax/experiments/benchmarks/exp1_five_system.py:130:    "HybridSystemV50_2Method":  "Hybrid v50_2",
+hypatiax/experiments/benchmarks/exp1_five_system.py:138:    "Hybrid v50_2":          "Extrapolation",
+hypatiax/experiments/benchmarks/exp1_five_system.py:159:# adaptive-iteration heuristics inside SymbolicEngineMethod/HybridSystemV50_2Method
+hypatiax/experiments/benchmarks/exp1_five_system.py:490:            "The 'Hybrid v50_2' row here is NOT expected to reproduce "
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:41:  hypatiax/tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:543:    HybridDiscoverySystem v50_2 produce formula strings and yield non-null values.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:683:# probe silently returns False (HYBRID_V50_2_AVAILABLE=False for the entire run).
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:849:# Methods 5 & 6 (SymbolicEngine, HybridV50_2) MUST NOT be probed via importlib.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:880:        # pint is a required downstream dep of symbolic_engine / hybrid_system_v50_2.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:912:HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_system_v50_2")
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:1108:            # used by Hybrid/SymbolicEngine/HybridSystemV50_2 methods) was
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2719:# Some tool modules (symbolic_engine.py, hybrid_system_v50_2.py) import
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2739:# symbolic_engine.py / hybrid_system_v50_2.py do not crash with
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2753:method   = payload["method"]   # "symbolic_engine" | "hybrid_v50_2"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2770:        # ── FIX: wire DiscoveryConfig from kwargs — same pattern as hybrid_v50_2 ──
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2805:    elif method == "hybrid_v50_2":
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2806:        from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:2884:    method : "symbolic_engine" | "hybrid_v50_2"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3050:        # ── Same adaptive budget as HybridSystemV50_2Method ────────────────────
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3053:        # this method is directly comparable to v50_2.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3141:# METHOD 6 — HybridDiscoverySystem v50_2
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3142:# tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3145:class HybridSystemV50_2Method(BaseMethod):
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3147:    Wraps hypatiax.tools.symbolic.hybrid_system_v50_2.HybridDiscoverySystem.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3152:        super().__init__("HybridDiscoverySystem v50_2 (tools)", verbose)
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3153:        # NOTE: do NOT import hybrid_system_v50_2 or symbolic_engine here.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3157:        if HYBRID_V50_2_AVAILABLE:
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3161:        if not HYBRID_V50_2_AVAILABLE:
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3162:            return self._unavailable("HybridDiscoverySystem v50_2 not available")
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3180:        _MAX_RETRIES_V50_2_OUTER = 3   # kept in sync with _MAX_RETRIES_V50_2 below
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3182:        _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3224:        _MAX_RETRIES_V50_2 = 3
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3226:        _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3234:            "max_retries":    _MAX_RETRIES_V50_2,     # FIX: was not forwarded at all
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3252:            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3265:            method="hybrid_v50_2",
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3310:        (6, HybridSystemV50_2Method,    "tools/symbolic/hybrid_system_v50_2.py"),
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3804:        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3839:        #   • NOT a symbolic-only pair — SymbolicEngine and v50_2 both run PySR
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:3851:        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4357:  6  HybridDiscovery v50_2    tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4430:            "Skip SymbolicEngineWithLLM and HybridDiscoverySystem v50_2 (both use "
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4491:            "like arcsin(sin(x)). Only affects v50_2 / SymbolicEngine methods."
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4500:            "Only affects v50_2 / SymbolicEngine methods."
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4688:    # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4711:    # SymbolicEngineMethod.run() and HybridSystemV50_2Method.run() can read
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:4719:    # them to DiscoveryConfig when constructing v50_2 / SymbolicEngine.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:29:  hypatiax/tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:549:    HybridDiscoverySystem v50_2 produce formula strings and yield non-null values.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:875:# Methods 5 & 6 (SymbolicEngine, HybridV50_2) MUST NOT be probed via importlib.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:906:        # pint is a required downstream dep of symbolic_engine / hybrid_system_v50_2.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:938:HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_system_v50_2")
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1022:        # HybridSystemV50_2Method set this to a real _ProcBox before
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1145:            # used by Hybrid/SymbolicEngine/HybridSystemV50_2 methods) was
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2821:# Some tool modules (symbolic_engine.py, hybrid_system_v50_2.py) import
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2841:# symbolic_engine.py / hybrid_system_v50_2.py do not crash with
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2855:method   = payload["method"]   # "symbolic_engine" | "hybrid_v50_2"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2872:        # ── FIX: wire DiscoveryConfig from kwargs — same pattern as hybrid_v50_2 ──
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2907:    elif method == "hybrid_v50_2":
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2908:        from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2988:    SymbolicEngineMethod/HybridSystemV50_2Method attach a fresh _ProcBox
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3072:    method : "symbolic_engine" | "hybrid_v50_2"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3275:        # ── Same adaptive budget as HybridSystemV50_2Method ────────────────────
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3278:        # this method is directly comparable to v50_2.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3373:# METHOD 6 — HybridDiscoverySystem v50_2
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3374:# tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3377:class HybridSystemV50_2Method(BaseMethod):
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3379:    Wraps hypatiax.tools.symbolic.hybrid_system_v50_2.HybridDiscoverySystem.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3384:        super().__init__("HybridDiscoverySystem v50_2 (tools)", verbose)
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3385:        # NOTE: do NOT import hybrid_system_v50_2 or symbolic_engine here.
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3389:        if HYBRID_V50_2_AVAILABLE:
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3393:        if not HYBRID_V50_2_AVAILABLE:
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3394:            return self._unavailable("HybridDiscoverySystem v50_2 not available")
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3412:        _MAX_RETRIES_V50_2_OUTER = 3   # kept in sync with _MAX_RETRIES_V50_2 below
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3414:        _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3456:        _MAX_RETRIES_V50_2 = 3
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3458:        _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3466:            "max_retries":    _MAX_RETRIES_V50_2,     # FIX: was not forwarded at all
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3484:            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3500:            method="hybrid_v50_2",
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3546:        (6, HybridSystemV50_2Method,    "tools/symbolic/hybrid_system_v50_2.py"),
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3737:                # SymbolicEngineMethod/HybridSystemV50_2Method now attach a
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4059:        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4094:        #   • NOT a symbolic-only pair — SymbolicEngine and v50_2 both run PySR
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4106:        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4648:  6  HybridDiscovery v50_2    tools/symbolic/hybrid_system_v50_2.py
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4744:            "Skip SymbolicEngineWithLLM and HybridDiscoverySystem v50_2 (both use "
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4814:            "like arcsin(sin(x)). Only affects v50_2 / SymbolicEngine methods."
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:4823:            "Only affects v50_2 / SymbolicEngine methods."
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:5103:    # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:5125:    # SymbolicEngineMethod.run() and HybridSystemV50_2Method.run() can read
+hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:5133:    # them to DiscoveryConfig when constructing v50_2 / SymbolicEngine.
+hypatiax/experiments/benchmarks/extrap_r2_far.py:375:    HybridDiscoverySystem v50_2 produce formula strings and yield non-null values.
+hypatiax/experiments/tests/test_phase1_close.py:140:    tree = ast.parse((PKG / "tools/symbolic/hybrid_system_v50_2.py").read_text())
+hypatiax/experiments/tests/test_phase1_close.py:151:    src = (PKG / "tools/symbolic/hybrid_system_v50_2.py").read_text()
+hypatiax/experiments/tests/test_ood_constants.py:4:hs = pytest.importorskip("hypatiax.tools.symbolic.hybrid_system_v50_2")
