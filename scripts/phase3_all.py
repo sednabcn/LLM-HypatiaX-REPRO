@@ -107,8 +107,8 @@ def apply_engine_patch(path):
 def force_clean_env():
     os.environ["HYPATIAX_DISABLE_PROMPT_HINTS"] = "1"
     os.environ["HYPATIAX_DISABLE_HARDCODED"] = "1"
-os.environ["HYPATIAX_STRICT"] = "1"
-os.environ.pop("HYPATIAX_R2_SIGN_FLIP", None)
+    os.environ["HYPATIAX_STRICT"] = "1"
+    os.environ.pop("HYPATIAX_R2_SIGN_FLIP", None)
     os.environ.pop("HYPATIAX_LLM_MODEL", None)
 
 
@@ -135,7 +135,7 @@ def preflight(a):
     p.add("P3 API key in environment", key, "strict mode aborts the hypatia condition without it")
 
     import run_phase3_ablation as R
-    commit, dirty = R.git_state([a.out_dir.rstrip("/") + "/", "p2_", "phase3_out"])
+    commit, dirty = R.git_state([a.out_dir.rstrip("/") + "/", "p2_", "phase3_out", "phase3_closure_out"])
     p.add("P4 clean git tree", not dirty or a.allow_dirty,
           f"{commit[:7]} {'DIRTY (accepted via --allow-dirty, recorded)' if dirty else 'clean'}")
     prow_files = sorted(Path(".").glob(a.p_rows_glob))
