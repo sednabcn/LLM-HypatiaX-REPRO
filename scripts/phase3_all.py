@@ -46,10 +46,10 @@ EVAL_PATH = "hypatiax/core/r2_canonical.py"
 ENGINE_PATH = "hypatiax/tools/symbolic/symbolic_engine.py"
 WIRED = ["llm_acceptance", "pysr_prior"]
 OMIT = {
-    "probe": "no leave-out switch in the HDS v50_2 path run by exp1_ablation (grep: only comments in symbolic_engine.py)",
-    "complexity_routing": "only complexity gate is `if False and ...` in symbolic_engine.py, off in the full config, so ablating it is identical by construction",
-    "nn_augmentation": "string not found anywhere under hypatiax/ on this branch; no switch exists in v50_2",
-    "blend_weight": "string not found anywhere under hypatiax/ on this branch; no switch exists in v50_2",
+    'probe': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
+    'complexity_routing': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
+    'nn_augmentation': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
+    'blend_weight': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
 }
 
 
