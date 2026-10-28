@@ -1,0 +1,14 @@
+
+=== hypatiax_defi_benchmark_v3c2_results.json  (74 cases, CLIP_LO=-10.0)
+flagged cases found: ['Options Delta', 'Optimal LP Position (Kelly)', 'Black-Scholes Call Price']
+flagged names NOT found in this file: ['AMM arbitrage profit', 'Impermanent loss breakeven', 'Put option intrinsic']
+  Options Delta: pure_llm=0.7709  neural_network=-10.3199  hybrid=0.7709
+  Optimal LP Position (Kelly): pure_llm=nan(failed)  neural_network=0.0  hybrid=0.0
+  Black-Scholes Call Price: pure_llm=0.2353  neural_network=-0.9576  hybrid=0.2464
+pure_llm        as published (all cases)   n= 72 median=  1.0000 mean_clip=  0.9720 pct>0.9= 91.89 pct>0.99= 89.19
+pure_llm        flagged cases excluded     n= 70 median=  1.0000 mean_clip=  0.9854 pct>0.9= 95.77 pct>0.99= 92.96
+neural_network  as published (all cases)   n= 64 median= -0.2518 mean_clip= -1.1699 pct>0.9= 13.51 pct>0.99=  2.70
+neural_network  flagged cases excluded     n= 61 median= -0.2493 mean_clip= -1.0478 pct>0.9= 14.08 pct>0.99=  2.82
+hybrid          as published (all cases)   n= 74 median=  1.0000 mean_clip=  0.9376 pct>0.9= 91.89 pct>0.99= 90.54
+hybrid          flagged cases excluded     n= 71 median=  1.0000 mean_clip=  0.9629 pct>0.9= 95.77 pct>0.99= 94.37
+exact-zero test_r2 outside the flagged set: none

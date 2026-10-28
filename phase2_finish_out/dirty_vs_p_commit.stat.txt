@@ -1,36 +1,86 @@
- p2_schema/pure_llm_seed123.jsonl                   |   15 +
- p2_schema/pure_llm_seed42.jsonl                    |   15 +
- p2_schema/pure_llm_seed99.jsonl                    |   15 +
- phase2_finish_out/declare_G3.txt                   |    1 +
- phase2_finish_out/declare_G9.txt                   |    1 +
- phase2_finish_out/p_rescored_r2_scored.json        |  452 ++++++++
- .../rendered_p_requests/Allometric_Scaling.txt     |   51 +
- .../rendered_p_requests/Arrhenius.txt              |   51 +
- .../rendered_p_requests/Constant_Product.txt       |   51 +
- .../rendered_p_requests/Gravitational_Force.txt    |   51 +
- .../rendered_p_requests/Henderson-Hasselbalch.txt  |   51 +
- .../rendered_p_requests/Ideal_Gas_Law.txt          |   51 +
- .../rendered_p_requests/Impermanent_Loss.txt       |   51 +
- .../rendered_p_requests/Kinetic_Energy.txt         |   51 +
- .../rendered_p_requests/Liquidation_Price.txt      |   51 +
- .../rendered_p_requests/Logistic_Growth.txt        |   51 +
- .../rendered_p_requests/Michaelis-Menten.txt       |   51 +
- .../rendered_p_requests/Portfolio_Std_Dev.txt      |   51 +
- .../rendered_p_requests/Price_Impact.txt           |   51 +
- phase2_finish_out/rendered_p_requests/Rate_Law.txt |   51 +
- .../rendered_p_requests/Value_at_Risk.txt          |   51 +
- phase2_finish_out/rescore.log                      |  128 +++
- phase2_pure_llm_config.yaml                        |    8 +-
- scripts/check_p_hashes.py                          |   30 +
- scripts/check_selection.py                         |   17 +
- scripts/derive_p_schema_fields.py                  |   57 +
- scripts/p2_data.py                                 |   39 +
- scripts/phase2_finish.py                           |  650 ++++++++++++
- scripts/rescore_p_r2_scored.py                     |   27 +
- scripts/run_pure_llm_arm.py                        | 1111 ++++++++++++++++++++
- 30 files changed, 3327 insertions(+), 4 deletions(-)
+ p2_schema/pure_llm_seed123.jsonl                   |    15 +
+ p2_schema/pure_llm_seed42.jsonl                    |    15 +
+ p2_schema/pure_llm_seed99.jsonl                    |    15 +
+ phase2_finish_out/A5_session_findings.md           |    12 +
+ phase2_finish_out/amendment_A5_draft.md            |    32 +
+ phase2_finish_out/binder_grep.txt                  |     1 +
+ phase2_finish_out/call_paths.txt                   |    73 +
+ phase2_finish_out/closure_call1.log                |    63 +
+ .../adapted_pure_llm/pure_llm_seed123.jsonl        |    15 +
+ .../adapted_pure_llm/pure_llm_seed42.jsonl         |    15 +
+ .../adapted_pure_llm/pure_llm_seed99.jsonl         |    15 +
+ .../closure_out/PHASE2_CLOSED_WITH_CAVEATS         |     2 +
+ .../closure_call1/closure_out/phase2_closure.json  |   297 +
+ phase2_finish_out/closure_call1_label_pure_llm.log |    63 +
+ .../adapted_pure_llm/pure_llm_seed123.jsonl        |    15 +
+ .../adapted_pure_llm/pure_llm_seed42.jsonl         |    15 +
+ .../adapted_pure_llm/pure_llm_seed99.jsonl         |    15 +
+ .../closure_out/PHASE2_CLOSED_WITH_CAVEATS         |     2 +
+ .../closure_out/phase2_closure.json                |   297 +
+ phase2_finish_out/closure_medium.log               |    65 +
+ .../adapted_pure_llm/pure_llm_seed123.jsonl        |    15 +
+ .../adapted_pure_llm/pure_llm_seed42.jsonl         |    15 +
+ .../adapted_pure_llm/pure_llm_seed99.jsonl         |    15 +
+ .../closure_out/PHASE2_CLOSED_WITH_CAVEATS         |     2 +
+ .../closure_medium/closure_out/phase2_closure.json |   297 +
+ phase2_finish_out/closure_train.log                |    65 +
+ .../adapted_pure_llm/pure_llm_seed123.jsonl        |    15 +
+ .../adapted_pure_llm/pure_llm_seed42.jsonl         |    15 +
+ .../adapted_pure_llm/pure_llm_seed99.jsonl         |    15 +
+ .../closure_out/PHASE2_CLOSED_WITH_CAVEATS         |     2 +
+ .../closure_train/closure_out/phase2_closure.json  |   297 +
+ phase2_finish_out/declare_G3.txt                   |     1 +
+ phase2_finish_out/declare_G9.txt                   |     1 +
+ phase2_finish_out/dirty_vs_p_commit.patch          | 12543 +++++++++++++++++++
+ phase2_finish_out/dirty_vs_p_commit.stat.txt       |   152 +
+ phase2_finish_out/engine_version_grep.txt          |   122 +
+ phase2_finish_out/gen_diff_6ebf31f7.patch          |    37 +
+ phase2_finish_out/gen_diff_bde3bdd5.patch          |   209 +
+ phase2_finish_out/hashes_check_6ebf31f7.log        |     2 +
+ phase2_finish_out/hashes_check_bde3bdd5.log        |     2 +
+ phase2_finish_out/hashes_control.log               |     2 +
+ phase2_finish_out/hashes_current_A.json            |   182 +
+ phase2_finish_out/hashes_current_B.json            |   182 +
+ phase2_finish_out/hds_hashes_6ebf31f7.json         |   182 +
+ phase2_finish_out/hds_hashes_bde3bdd5.json         |   182 +
+ phase2_finish_out/listing8_compare.txt             |   201 +
+ phase2_finish_out/p_rescored_r2_scored.json        |   452 +
+ phase2_finish_out/phase2_row_schema.proposed.json  |   307 +
+ .../rendered_p_requests/Allometric_Scaling.txt     |    51 +
+ .../rendered_p_requests/Arrhenius.txt              |    51 +
+ .../rendered_p_requests/Constant_Product.txt       |    51 +
+ .../rendered_p_requests/Gravitational_Force.txt    |    51 +
+ .../rendered_p_requests/Henderson-Hasselbalch.txt  |    51 +
+ .../rendered_p_requests/Ideal_Gas_Law.txt          |    51 +
+ .../rendered_p_requests/Impermanent_Loss.txt       |    51 +
+ .../rendered_p_requests/Kinetic_Energy.txt         |    51 +
+ .../rendered_p_requests/Liquidation_Price.txt      |    51 +
+ .../rendered_p_requests/Logistic_Growth.txt        |    51 +
+ .../rendered_p_requests/Michaelis-Menten.txt       |    51 +
+ .../rendered_p_requests/Portfolio_Std_Dev.txt      |    51 +
+ .../rendered_p_requests/Price_Impact.txt           |    51 +
+ phase2_finish_out/rendered_p_requests/Rate_Law.txt |    51 +
+ .../rendered_p_requests/Value_at_Risk.txt          |    51 +
+ phase2_finish_out/report.json                      |   122 +
+ phase2_finish_out/rescore.log                      |   128 +
+ phase2_finish_out/runner_validate.log              |    10 +
+ phase2_finish_out/runtime_timers_grep.txt          |    17 +
+ phase2_pure_llm_config.yaml                        |     8 +-
+ scripts/check_closure_nonfinite.py                 |   365 +
+ scripts/check_namespace_use.py                     |    27 +
+ scripts/check_p_hashes.py                          |    30 +
+ scripts/check_selection.py                         |    17 +
+ scripts/derive_p_schema_fields.py                  |    57 +
+ scripts/derive_pure_fields.py                      |    27 +
+ scripts/p2_data.py                                 |    39 +
+ scripts/phase2_finish.py                           |   650 +
+ scripts/rescore_p_r2_scored.py                     |    27 +
+ scripts/run_pure_llm_arm.py                        |  1111 ++
+ scripts/run_pure_llm_arm.py.bak2                   |  1080 ++
+ 79 files changed, 21030 insertions(+), 4 deletions(-)
 
 --- git status --short ---
+ M phase2_finish_out/dirty_vs_p_commit.patch
 ?? p2/pure_llm_seed123.jsonl
 ?? p2/pure_llm_seed42.jsonl
 ?? p2/pure_llm_seed99.jsonl
@@ -46,38 +96,7 @@
 ?? p2_train/pure_llm_seed99.jsonl
 ?? phase2_a3_p_kwargs.json
 ?? phase2_finalize.sh
-?? phase2_finish_out/amendment_A5_draft.md
-?? phase2_finish_out/binder_grep.txt
-?? phase2_finish_out/call_paths.txt
-?? phase2_finish_out/closure_call1.log
-?? phase2_finish_out/closure_call1/
-?? phase2_finish_out/closure_call1_label_pure_llm.log
-?? phase2_finish_out/closure_call1_label_pure_llm/
-?? phase2_finish_out/closure_medium.log
-?? phase2_finish_out/closure_medium/
-?? phase2_finish_out/closure_train.log
-?? phase2_finish_out/closure_train/
-?? phase2_finish_out/dirty_vs_p_commit.patch
-?? phase2_finish_out/dirty_vs_p_commit.stat.txt
-?? phase2_finish_out/engine_version_grep.txt
-?? phase2_finish_out/gen_diff_6ebf31f7.patch
-?? phase2_finish_out/gen_diff_bde3bdd5.patch
-?? phase2_finish_out/hashes_check_6ebf31f7.log
-?? phase2_finish_out/hashes_check_bde3bdd5.log
-?? phase2_finish_out/hashes_control.log
-?? phase2_finish_out/hashes_current_A.json
-?? phase2_finish_out/hashes_current_B.json
-?? phase2_finish_out/hds_hashes_6ebf31f7.json
-?? phase2_finish_out/hds_hashes_bde3bdd5.json
-?? phase2_finish_out/listing8_compare.txt
-?? phase2_finish_out/phase2_row_schema.proposed.json
-?? phase2_finish_out/report.json
-?? phase2_finish_out/runner_validate.log
-?? phase2_finish_out/runtime_timers_grep.txt
 ?? phase2_pure_llm_closure/
-?? scripts/check_closure_nonfinite.py
-?? scripts/derive_pure_fields.py
-?? scripts/run_pure_llm_arm.py.bak2
 
 --- untracked ---
 p2/pure_llm_seed123.jsonl
@@ -98,55 +117,8 @@ p2_train/pure_llm_seed42.jsonl
 p2_train/pure_llm_seed99.jsonl
 phase2_a3_p_kwargs.json
 phase2_finalize.sh
-phase2_finish_out/amendment_A5_draft.md
-phase2_finish_out/binder_grep.txt
-phase2_finish_out/call_paths.txt
-phase2_finish_out/closure_call1.log
-phase2_finish_out/closure_call1/adapted_pure_llm/pure_llm_seed123.jsonl
-phase2_finish_out/closure_call1/adapted_pure_llm/pure_llm_seed42.jsonl
-phase2_finish_out/closure_call1/adapted_pure_llm/pure_llm_seed99.jsonl
-phase2_finish_out/closure_call1/closure_out/PHASE2_CLOSED_WITH_CAVEATS
-phase2_finish_out/closure_call1/closure_out/phase2_closure.json
-phase2_finish_out/closure_call1_label_pure_llm.log
-phase2_finish_out/closure_call1_label_pure_llm/adapted_pure_llm/pure_llm_seed123.jsonl
-phase2_finish_out/closure_call1_label_pure_llm/adapted_pure_llm/pure_llm_seed42.jsonl
-phase2_finish_out/closure_call1_label_pure_llm/adapted_pure_llm/pure_llm_seed99.jsonl
-phase2_finish_out/closure_call1_label_pure_llm/closure_out/PHASE2_CLOSED_WITH_CAVEATS
-phase2_finish_out/closure_call1_label_pure_llm/closure_out/phase2_closure.json
-phase2_finish_out/closure_medium.log
-phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed123.jsonl
-phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed42.jsonl
-phase2_finish_out/closure_medium/adapted_pure_llm/pure_llm_seed99.jsonl
-phase2_finish_out/closure_medium/closure_out/PHASE2_CLOSED_WITH_CAVEATS
-phase2_finish_out/closure_medium/closure_out/phase2_closure.json
-phase2_finish_out/closure_train.log
-phase2_finish_out/closure_train/adapted_pure_llm/pure_llm_seed123.jsonl
-phase2_finish_out/closure_train/adapted_pure_llm/pure_llm_seed42.jsonl
-phase2_finish_out/closure_train/adapted_pure_llm/pure_llm_seed99.jsonl
-phase2_finish_out/closure_train/closure_out/PHASE2_CLOSED_WITH_CAVEATS
-phase2_finish_out/closure_train/closure_out/phase2_closure.json
-phase2_finish_out/dirty_vs_p_commit.patch
-phase2_finish_out/dirty_vs_p_commit.stat.txt
-phase2_finish_out/engine_version_grep.txt
-phase2_finish_out/gen_diff_6ebf31f7.patch
-phase2_finish_out/gen_diff_bde3bdd5.patch
-phase2_finish_out/hashes_check_6ebf31f7.log
-phase2_finish_out/hashes_check_bde3bdd5.log
-phase2_finish_out/hashes_control.log
-phase2_finish_out/hashes_current_A.json
-phase2_finish_out/hashes_current_B.json
-phase2_finish_out/hds_hashes_6ebf31f7.json
-phase2_finish_out/hds_hashes_bde3bdd5.json
-phase2_finish_out/listing8_compare.txt
-phase2_finish_out/phase2_row_schema.proposed.json
-phase2_finish_out/report.json
-phase2_finish_out/runner_validate.log
-phase2_finish_out/runtime_timers_grep.txt
 phase2_pure_llm_closure/adapted_pure_llm/pure_llm_seed123.jsonl
 phase2_pure_llm_closure/adapted_pure_llm/pure_llm_seed42.jsonl
 phase2_pure_llm_closure/adapted_pure_llm/pure_llm_seed99.jsonl
 phase2_pure_llm_closure/closure_out/PHASE2_CLOSED_WITH_CAVEATS
 phase2_pure_llm_closure/closure_out/phase2_closure.json
-scripts/check_closure_nonfinite.py
-scripts/derive_pure_fields.py
-scripts/run_pure_llm_arm.py.bak2

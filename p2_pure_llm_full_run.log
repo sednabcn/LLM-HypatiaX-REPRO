@@ -1,0 +1,855 @@
+──(py312)(agagora㉿localhost)-[~/Downloads/GITHUB/LLM-HypatiaX-REPRO]
+└─$ PYTHONPATH=scripts python scripts/run_pure_llm_arm.py --data-fn p2_data:generate_case
+Config gates:
+  [PASS] A3-7 max_calls_per_case == 3
+  [PASS] A3-7 prompt_inputs has no statistics
+  [PASS] A3-7 selection_among_samples == train_r2
+  [PASS] A3-7 max_tokens set
+  [PASS] A3-7 temperature entry present (value follows A3-1)
+  [PASS] A3-2 prompt_template_sha256 pinned and matches
+✅ API key found in environment
+populations : 30  (paper-quality, FIX-POP)
+niterations : 1000
+timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
+wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
+seed        : 42  (source: default)
+✅ Parameters ready
+   [MEM] start: RSS=0.84 GB
+✅ HybridDiscoverySystem (v5.4) imported from /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
+✅ PySR 2.0.0a1 ready
+  [    0.0s] Imports complete
+✅ Core-15 loaded: 15 equations, 5 domains
+  [00] Arrhenius                    (Chemistry)
+  [01] Henderson-Hasselbalch        (Chemistry)
+  [02] Rate Law                     (Chemistry)
+  [03] Allometric Scaling           (Biology)
+  [04] Michaelis-Menten             (Biology)
+  [05] Logistic Growth              (Biology)
+  [06] Kinetic Energy               (Physics)
+  [07] Gravitational Force          (Physics)
+  [08] Ideal Gas Law                (Physics)
+  [09] Impermanent Loss             (DeFi AMM)
+  [10] Price Impact                 (DeFi AMM)
+  [11] Constant Product             (DeFi AMM)
+  [12] Value at Risk                (DeFi Risk)
+  [13] Liquidation Price            (DeFi Risk)
+  [14] Portfolio Std Dev            (DeFi Risk)
+✅ sympy available — true OOD evaluation (Mode A) enabled
+✅ run_condition ready — hypatia → HybridDiscoverySystem v5.4 | pysr_only → raw PySR
+FULL RUN: 15 equations x 3 seeds -> /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/p2
+  [    0.6s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=63
+  [    0.6s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:14:30,814 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.514338s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.514941s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:14:42,898 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.014492s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.014931s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:14:56,638 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=13.731774s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=13.732202s description_hash=8d3cad050baa
+  Allometric Scaling               seed  42  sel=1  far=-47.6321  train=-398.347  41s  stage=None
+  [   42.5s] generate_data: Arrhenius  N=200  noise=0.05  seed=42
+  [   42.5s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:04,867 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.605239s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.605665s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:12,900 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.033969s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.034512s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:20,367 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.467086s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.469783s description_hash=8d3cad050baa
+  Arrhenius                        seed  42  sel=0  far=-12.5553  train=-0.487588  23s  stage=None
+  [   66.8s] generate_data: Constant Product  N=200  noise=0.05  seed=119
+  [   66.9s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:31,096 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.524036s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.540048s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:38,976 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.824934s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.825467s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:46,113 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.134429s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.137966s description_hash=8d3cad050baa
+  Constant Product                 seed  42  sel=0  far=-74.126  train=-0.232372  25s  stage=None
+  [   91.8s] generate_data: Gravitational Force  N=200  noise=0.05  seed=91
+  [   91.8s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:15:53,672 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.165999s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.176713s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:00,692 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.994964s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.010752s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:06,739 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=5.991616s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=5.995605s description_hash=8d3cad050baa
+  Gravitational Force              seed  42  sel=0  far=1  train=0.997837  20s  stage=None
+  [  112.2s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=49
+  [  112.2s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:16,037 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.101827s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.102390s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:25,955 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.871333s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.872594s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:35,888 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.926696s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.933049s description_hash=8d3cad050baa
+  Henderson-Hasselbalch            seed  42  sel=0  far=-3985.88  train=-70.6729  29s  stage=None
+  [  141.5s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=98
+  [  141.5s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:45,876 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.610413s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.611549s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:16:54,064 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.175437s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.176253s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:02,424 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.342050s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.351621s description_hash=8d3cad050baa
+  Ideal Gas Law                    seed  42  sel=0  far=0.999997  train=0.997554  26s  stage=None
+  [  168.0s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
+  [  168.0s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:09,683 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.967444s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.973750s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:17,961 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.258498s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.258881s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:27,470 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.437845s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.439118s description_hash=8d3cad050baa
+  Impermanent Loss                 seed  42  sel=2  far=-239.449  train=-1.73738  25s  stage=None
+  [  192.9s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=84
+  [  192.9s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:32,240 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.619081s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.631854s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:37,357 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=5.111730s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=5.112723s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:42,181 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.799432s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.800001s description_hash=8d3cad050baa
+  Kinetic Energy                   seed  42  sel=0  far=-13.0316  train=-0.433699  15s  stage=None
+  [  207.7s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
+  [  207.7s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:17:53,940 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.504923s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.509510s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:18:04,056 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.104679s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.106915s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:18:15,032 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.007267s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.007755s description_hash=8d3cad050baa
+  Liquidation Price                seed  42  sel=0  far=-65.0985  train=-2.29048  33s  stage=None
+  [  240.6s] generate_data: Logistic Growth  N=200  noise=0.05  seed=77
+  [  240.6s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:18:28,771 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=13.452441s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=13.467713s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:18:41,015 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.133390s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.145007s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:18:56,285 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.141112s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.146780s description_hash=8d3cad050baa
+  Logistic Growth                  seed  42  sel=0  far=-10.6424  train=-5.73201  41s  stage=None
+  [  281.6s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=70
+  [  281.6s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:05,796 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.421956s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.422493s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:14,970 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.173857s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.183469s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:21,821 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.814682s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.815283s description_hash=8d3cad050baa
+  Michaelis-Menten                 seed  42  sel=None  far=-inf  train=-inf  25s  stage=no_calls
+  [  307.2s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=140
+  [  307.2s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:30,230 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.333205s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.334123s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:39,504 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.265851s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.266304s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:48,000 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.484791s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.485128s description_hash=8d3cad050baa
+  Portfolio Std Dev                seed  42  sel=0  far=1  train=0.997546  26s  stage=None
+  [  333.3s] generate_data: Price Impact  N=200  noise=0.05  seed=112
+  [  333.3s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:19:56,899 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.839962s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.840333s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:20:05,700 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.782844s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.783344s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:20:12,999 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.291397s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.291697s description_hash=8d3cad050baa
+  Price Impact                     seed  42  sel=0  far=1  train=0.997575  25s  stage=None
+  [  358.4s] generate_data: Rate Law  N=200  noise=0.05  seed=56
+  [  358.5s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:20:23,875 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.699569s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.700008s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:20:36,611 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.728482s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.728833s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:20:47,412 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.794880s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.795300s description_hash=8d3cad050baa
+  Rate Law                         seed  42  sel=0  far=-16.5799  train=-0.847018  34s  stage=None
+  [  393.0s] generate_data: Value at Risk  N=200  noise=0.05  seed=126
+  [  393.0s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:00,610 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.917902s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.918226s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:09,511 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.893716s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.901403s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:19,796 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.263728s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.265466s description_hash=8d3cad050baa
+  Value at Risk                    seed  42  sel=2  far=-3.1405  train=0.98555  32s  stage=None
+  [  425.8s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=120
+  [  425.8s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:34,190 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=13.678954s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=13.679369s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:44,293 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.104626s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.132455s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:21:55,011 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.652900s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.653460s description_hash=8d3cad050baa
+  Allometric Scaling               seed  99  sel=1  far=-96.5388  train=-4.20475  35s  stage=None
+  [  460.4s] generate_data: Arrhenius  N=200  noise=0.05  seed=99
+  [  460.4s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:03,233 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.092983s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.093445s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:11,066 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.797302s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.802991s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:19,627 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.542426s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.543691s description_hash=8d3cad050baa
+  Arrhenius                        seed  99  sel=0  far=-13.5794  train=-0.538779  24s  stage=None
+  [  485.0s] generate_data: Constant Product  N=200  noise=0.05  seed=176
+  [  485.0s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:26,773 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.060494s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.062028s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:34,153 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.381844s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.383205s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:41,323 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.154475s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.154893s description_hash=8d3cad050baa
+  Constant Product                 seed  99  sel=0  far=-81.4756  train=-0.214144  22s  stage=None
+  [  506.7s] generate_data: Gravitational Force  N=200  noise=0.05  seed=148
+  [  506.7s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:47,946 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.542104s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.542627s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:22:55,817 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.862699s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.863056s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:02,166 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.343124s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.344977s description_hash=8d3cad050baa
+  Gravitational Force              seed  99  sel=0  far=1  train=0.997843  21s  stage=None
+  [  527.5s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=106
+  [  527.5s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:11,718 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.459630s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.467220s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:21,315 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.584800s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.585691s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:29,890 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.570718s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.571180s description_hash=8d3cad050baa
+  Henderson-Hasselbalch            seed  99  sel=0  far=-4325.89  train=-73.3697  28s  stage=None
+  [  555.2s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=155
+  [  555.2s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:38,622 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.664094s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.664465s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:47,503 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.877412s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.877812s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:23:56,763 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.249965s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.250309s description_hash=8d3cad050baa
+  Ideal Gas Law                    seed  99  sel=0  far=0.999998  train=0.996818  27s  stage=None
+  [  582.1s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=162
+  [  582.1s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:04,936 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.109013s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.109511s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:12,465 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.522931s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.523348s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:20,554 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.083970s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.084428s description_hash=8d3cad050baa
+  Impermanent Loss                 seed  99  sel=1  far=-242.732  train=-1.82723  24s  stage=None
+  [  605.9s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=141
+  [  605.9s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:25,782 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=5.158060s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=5.158391s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:30,895 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=5.107418s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=5.107841s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:35,677 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.775939s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.776334s description_hash=8d3cad050baa
+  Kinetic Energy                   seed  99  sel=0  far=-13.5844  train=-0.422517  15s  stage=None
+  [  621.0s] generate_data: Liquidation Price  N=200  noise=0.05  seed=190
+  [  621.0s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:44,683 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.944318s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.944807s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:24:56,247 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.557329s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.557755s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:25:06,593 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.339955s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.340435s description_hash=8d3cad050baa
+  Liquidation Price                seed  99  sel=0  far=-74.6833  train=-2.2754  31s  stage=None
+  [  651.9s] generate_data: Logistic Growth  N=200  noise=0.05  seed=134
+  [  651.9s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:25:21,110 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=14.444922s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=14.445424s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:25:34,055 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.938464s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.939031s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:25:49,870 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.807552s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.808025s description_hash=8d3cad050baa
+  Logistic Growth                  seed  99  sel=2  far=-11.2338  train=-6.11962  43s  stage=None
+  [  695.2s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=127
+  [  695.2s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:25:57,359 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.411819s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.412259s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:04,419 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.052505s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.052884s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:14,382 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.958675s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.959085s description_hash=8d3cad050baa
+  Michaelis-Menten                 seed  99  sel=None  far=-inf  train=-inf  24s  stage=no_calls
+  [  719.7s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=197
+  [  719.7s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:22,950 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.495772s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.496248s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:31,408 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.448535s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.448888s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:40,343 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.928282s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.928688s description_hash=8d3cad050baa
+  Portfolio Std Dev                seed  99  sel=0  far=1  train=0.997536  26s  stage=None
+  [  745.8s] generate_data: Price Impact  N=200  noise=0.05  seed=169
+  [  745.8s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:48,257 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.763333s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.763690s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:26:56,459 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.201017s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.201416s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:27:03,060 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.595451s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.596003s description_hash=8d3cad050baa
+  Price Impact                     seed  99  sel=1  far=1  train=0.997344  23s  stage=None
+  [  768.4s] generate_data: Rate Law  N=200  noise=0.05  seed=113
+  [  768.4s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:27:16,863 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=13.728400s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=13.728742s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:27:28,016 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.147247s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.147760s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:27:39,478 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.459136s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.459487s description_hash=8d3cad050baa
+  Rate Law                         seed  99  sel=2  far=-12.2939  train=0.710948  36s  stage=None
+  [  804.8s] generate_data: Value at Risk  N=200  noise=0.05  seed=183
+  [  804.8s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:27:53,730 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=14.173093s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=14.173427s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:28:04,035 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.301209s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.301583s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:28:20,017 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.978632s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.979299s description_hash=8d3cad050baa
+  Value at Risk                    seed  99  sel=1  far=1  train=0.997754  40s  stage=None
+  [  845.4s] generate_data: Allometric Scaling  N=200  noise=0.05  seed=144
+  [  845.4s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:28:32,665 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.582839s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.583301s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:28:48,239 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.569264s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.569737s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:03,394 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=15.145345s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=15.145750s description_hash=8d3cad050baa
+  Allometric Scaling               seed 123  sel=2  far=-51.0172  train=-510.348  43s  stage=None
+  [  888.7s] generate_data: Arrhenius  N=200  noise=0.05  seed=123
+  [  888.7s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:11,359 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.901866s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.902233s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:19,810 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.450732s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.451178s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:27,514 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.689773s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.695207s description_hash=8d3cad050baa
+  Arrhenius                        seed 123  sel=0  far=-14.3567  train=-0.426742  24s  stage=None
+  [  912.9s] generate_data: Constant Product  N=200  noise=0.05  seed=200
+  [  912.9s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:35,019 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.347578s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.348579s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:43,830 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.802335s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.802653s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:29:52,471 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.628341s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.628800s description_hash=8d3cad050baa
+  Constant Product                 seed 123  sel=1  far=-84.265  train=-0.209809  25s  stage=None
+  [  937.8s] generate_data: Gravitational Force  N=200  noise=0.05  seed=172
+  [  937.8s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:00,480 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.944600s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.946161s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:06,742 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.256399s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.256805s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:14,783 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.037999s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.038364s description_hash=8d3cad050baa
+  Gravitational Force              seed 123  sel=0  far=1  train=0.998088  22s  stage=None
+  [  960.1s] generate_data: Henderson-Hasselbalch  N=200  noise=0.05  seed=130
+  [  960.1s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:24,142 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.289770s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.290098s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:32,770 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.621558s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.621971s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:42,249 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.474423s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.474821s description_hash=8d3cad050baa
+  Henderson-Hasselbalch            seed 123  sel=0  far=-5478.53  train=-74.7831  27s  stage=None
+  [  987.6s] generate_data: Ideal Gas Law  N=200  noise=0.05  seed=179
+  [  987.6s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:30:51,725 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.420037s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.420806s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:01,155 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.425253s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.425784s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:09,587 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.424304s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.424656s description_hash=8d3cad050baa
+  Ideal Gas Law                    seed 123  sel=0  far=0.999997  train=0.996927  27s  stage=None
+  [ 1014.9s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=186
+  [ 1014.9s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:19,571 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.920518s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.921170s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:27,509 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.933296s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.933662s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:34,702 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.200312s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.204837s description_hash=8d3cad050baa
+  Impermanent Loss                 seed 123  sel=2  far=-253.27  train=-1.53283  25s  stage=None
+  [ 1040.1s] generate_data: Kinetic Energy  N=200  noise=0.05  seed=165
+  [ 1040.1s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:39,522 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.731168s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.731567s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:44,012 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.482976s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.483378s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='physics' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:48,531 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.511901s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.512349s description_hash=8d3cad050baa
+  Kinetic Energy                   seed 123  sel=0  far=-17.7172  train=-0.375803  14s  stage=None
+  [ 1053.9s] generate_data: Liquidation Price  N=200  noise=0.05  seed=214
+  [ 1053.9s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:31:59,248 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.641804s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.642247s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:32:09,059 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=9.790257s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=9.792643s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:32:20,202 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.102426s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.113074s description_hash=8d3cad050baa
+  Liquidation Price                seed 123  sel=0  far=-70.9238  train=-2.58728  32s  stage=None
+  [ 1085.5s] generate_data: Logistic Growth  N=200  noise=0.05  seed=158
+  [ 1085.5s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:32:36,764 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=16.497111s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=16.497529s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:32:49,769 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.992962s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.994022s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:02,450 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.674743s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.675119s description_hash=8d3cad050baa
+  Logistic Growth                  seed 123  sel=1  far=-12.0243  train=-5.06216  42s  stage=None
+  [ 1127.8s] generate_data: Michaelis-Menten  N=200  noise=0.05  seed=151
+  [ 1127.8s] generate_data done: X_train=(160, 1)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:10,463 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.906497s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.907109s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:15,044 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=4.577242s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=4.577720s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='biology' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:22,431 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.381131s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.381448s description_hash=8d3cad050baa
+  Michaelis-Menten                 seed 123  sel=1  far=-3.68539e+52  train=-1.19399e+48  20s  stage=None
+  [ 1147.8s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=221
+  [ 1147.8s] generate_data done: X_train=(160, 3)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:31,333 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.834702s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.835568s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:39,943 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.611935s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.620060s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:50,376 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=10.385717s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=10.389678s description_hash=8d3cad050baa
+  Portfolio Std Dev                seed 123  sel=0  far=1  train=0.997906  28s  stage=None
+  [ 1175.7s] generate_data: Price Impact  N=200  noise=0.05  seed=193
+  [ 1175.7s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:33:59,175 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.723844s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.724631s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:34:06,495 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.312169s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.313904s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_amm' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:34:14,290 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=7.793486s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=7.793875s description_hash=8d3cad050baa
+  Price Impact                     seed 123  sel=0  far=1  train=0.99776  24s  stage=None
+  [ 1199.6s] generate_data: Rate Law  N=200  noise=0.05  seed=137
+  [ 1199.6s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:34:27,366 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=12.991008s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=12.996090s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:34:33,410 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=6.035831s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=6.036232s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='chemistry' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:34:45,400 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.983398s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.983829s description_hash=8d3cad050baa
+  Rate Law                         seed 123  sel=1  far=-13.8863  train=-0.868793  31s  stage=None
+  [ 1231.1s] generate_data: Value at Risk  N=200  noise=0.05  seed=207
+  [ 1231.1s] generate_data done: X_train=(160, 2)
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:35:00,035 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=14.240572s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=14.240941s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:35:11,627 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=11.584198s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=11.584570s description_hash=8d3cad050baa
+GENERATE_ENTER model='claude-sonnet-4-6' domain='defi_risk' description_hash=8d3cad050baa generate_formula_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' api_helper_source='/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py' client_type=anthropic.Anthropic
+API_ENTER model='claude-sonnet-4-6' max_tokens=4000 messages=1
+2026-10-27 16:35:20,437 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+API_EXIT dt=8.802431s response_type=Message block_types=['text']
+GENERATE_API_RETURN dt=8.803143s description_hash=8d3cad050baa
+  Value at Risk                    seed 123  sel=0  far=1  train=0.997785  35s  stage=None
+
+Done: 45 rows; time cap hit in 0. Next: --validate, then phase2_close.py.
+
+┌──(py312)(agagora㉿localhost)-[~/Downloads/GITHUB/LLM-HypatiaX-REPRO]
+└─$ 
+

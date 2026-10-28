@@ -1,0 +1,407 @@
+[
+ {
+  "equation": "Allometric Scaling",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 123,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Allometric Scaling",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 42,
+  "raw_r2_status": "failed:no_calls",
+  "raw_error_stage": "no_calls",
+  "n_calls": 3,
+  "display_label": "all candidates produced non-finite training R2",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 42,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Allometric Scaling",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Arrhenius",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Constant Product",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Gravitational Force",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Henderson-Hasselbalch",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Ideal Gas Law",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Impermanent Loss",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Kinetic Energy",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Liquidation Price",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Logistic Growth",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Michaelis-Menten",
+  "seed": 99,
+  "raw_r2_status": "failed:no_calls",
+  "raw_error_stage": "no_calls",
+  "n_calls": 3,
+  "display_label": "all candidates produced non-finite training R2",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Portfolio Std Dev",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Price Impact",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ },
+ {
+  "equation": "Rate Law",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "catastrophic"
+ },
+ {
+  "equation": "Value at Risk",
+  "seed": 99,
+  "raw_r2_status": "ok",
+  "raw_error_stage": null,
+  "n_calls": 3,
+  "display_label": "ok",
+  "own_class": "ok"
+ }
+]
