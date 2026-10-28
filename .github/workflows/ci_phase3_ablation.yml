@@ -1,0 +1,313 @@
+name: "HypatiaX - Phase 3 ablation (repro)"
+run-name: "HypatiaX - Phase 3 ablation · ${{ inputs.stage }} · seeds ${{ inputs.seeds }}"
+
+# Phase 3 leave-one-gate-out (llm_acceptance, pysr_prior) on the HDS v50_2 engine.
+# Standalone on purpose: it does not go through run_all.sh or the exp1_ablation shard table
+# in ci_runner_repro.yml, so it cannot disturb the Phase 2 experiments.
+#
+#   stage=preflight : scripts/phase3_all.py --stage preflight   (all checks must PASS)
+#   stage=run       : preflight + the runs, one job per seed, resumable (cache per commit)
+#   stage=all       : run, then merge the per-seed rows and run the closure
+#
+# Smoke test first: stage=run, seeds=42, max_cases=3.
+# Engine patch (_LLM_ACCEPT_R2 / _LLM_PRIOR_SEED) and the adapter/runner changes must be
+# COMMITTED before dispatch; CI checks out a clean tree, so P4 passes only if they are.
+# Do NOT use the HDS_ABLATE_GATE / option3 patch: nothing reads that variable.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "preflight = checks only; run = preflight + runs; all = run + merge + closure"
+        required: true
+        type: choice
+        options:
+          - preflight
+          - run
+          - all
+        default: preflight
+      seeds:
+        description: "Comma-separated seeds. One parallel job per seed."
+        required: false
+        default: "42,99,123"
+      max_cases:
+        description: "Stop each seed job after N new cases (smoke test, e.g. 3). Blank or 0 = no limit."
+        required: false
+        default: ""
+      timeout_s:
+        description: "Per-case wall clock; 3600 matches the Phase 2 HDS runs the full config must reproduce."
+        required: false
+        default: "3600"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+# Same environment as ci_runner_repro.yml (the runs that produced the Phase 2 HDS rows).
+env:
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  PYSR_GENERATIONS:    "10000"
+  PYSR_POPULATION:     "100"
+  PYSR_TOURNAMENT_SIZE: "3"
+  PYSR_CROSSOVER:      "0.9"
+  PYSR_MUTATION:       "0.1"
+  PYSR_PARETO_PRESSURE: "0.001"
+  PYSR_POPULATIONS:    "30"
+  FEYNMAN_SAMPLES:     "200"
+  FEYNMAN_TIMEOUT:     "1100"
+  METHOD_TIMEOUT:      "900"
+  LLM_METHOD_TIMEOUT:  "120"
+  PYSR_FIT_WALL_TIMEOUT: "1200"
+  PYSR_FIT_GRACE_SECS: "120"
+  OUT_BASE:            "hypatiax/data/results"
+  REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+  JULIA_NUM_THREADS:   "4"
+  JULIA_EXCLUSIVE:     "0"
+  PYTHONPATH:          "${{ github.workspace }}"
+
+jobs:
+
+  plan:
+    name: "Plan - seeds ${{ inputs.seeds }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      seed_matrix: ${{ steps.m.outputs.seed_matrix }}
+    steps:
+      - name: Build seed matrix
+        id: m
+        env:
+          SEEDS: ${{ inputs.seeds }}
+        run: |
+          set -euo pipefail
+          IDS=$(echo "$SEEDS" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+          [[ -n "$IDS" ]] || { echo "::error::no seeds given"; exit 1; }
+          for s in $IDS; do
+            [[ "$s" =~ ^[0-9]+$ ]] || { echo "::error::bad seed '$s'"; exit 1; }
+          done
+          echo "seed_matrix=$(printf '%s\n' $IDS | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  seed_run:
+    name: "Phase 3 ${{ inputs.stage }} - seed ${{ matrix.seed }}"
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: ${{ fromJson(needs.plan.outputs.seed_matrix) }}
+    env:
+      # exp1_ablation's CI job sets PYSR_SEED to the dispatch seed; do the same per seed job.
+      PYSR_SEED: ${{ matrix.seed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            "anthropic==0.73.0" \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pmlb \
+            pint \
+            psutil
+
+      # Output folders are not source changes: keep them out of `git status` so the P4
+      # clean-tree check sees only real code edits. Repo files are not touched.
+      - name: Keep Phase 3 outputs out of the P4 dirty check
+        run: |
+          printf 'phase3_out/\nphase3_closure_out/\n' >> .git/info/exclude
+          git status --porcelain
+
+      - name: Restore rows from an earlier run of this commit (resume)
+        if: ${{ inputs.stage != 'preflight' }}
+        uses: actions/cache/restore@v4.2.3
+        with:
+          path: phase3_out
+          key: phase3-rows-seed${{ matrix.seed }}-${{ github.sha }}-${{ github.run_id }}
+          restore-keys: |
+            phase3-rows-seed${{ matrix.seed }}-${{ github.sha }}-
+
+      - name: Validate ANTHROPIC_API_KEY (live round-trip)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "::error::ANTHROPIC_API_KEY secret is empty or unset."; exit 1; }
+          python3 "${{ github.workspace }}/config/check_key_status.py"
+
+      # Same Julia path as the Phase 2 exp1_ablation job (PySR provisions Julia itself).
+      # Warm-up only moves first-use compile time out of the first case's wall clock.
+      - name: Warm up PySR / Julia
+        if: ${{ inputs.stage != 'preflight' }}
+        run: |
+          python3 - <<'PYEOF'
+          import subprocess, sys
+          warmup = """
+          import numpy as np, pysr
+          X = np.random.randn(20, 1)
+          y = X[:, 0] * 2.0 + 1.0
+          pysr.PySRRegressor(niterations=5, populations=1, verbosity=0, progress=False,
+                             tempdir="/tmp/pysr_warmup").fit(X, y)
+          print("PySR warm-up OK")
+          """
+          r = subprocess.run([sys.executable, "-c", warmup], timeout=900, capture_output=True, text=True)
+          print(r.stdout or "")
+          if r.returncode != 0:
+              print("::warning::PySR warm-up failed; the first case may include compile time")
+              print((r.stderr or "")[-2000:])
+          PYEOF
+
+      - name: Bypass audit gate (same gate as clean_llm_rerun)
+        run: |
+          set -euo pipefail
+          python3 scripts/bypass_audit.py | tee /tmp/bypass_audit.log
+          if grep -Eq 'bypassed: [1-9]' /tmp/bypass_audit.log; then
+            echo "::error::bypass_audit reports bypassed tasks."; exit 1
+          fi
+          grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised."; exit 1; }
+
+      - name: "Phase 3 ${{ inputs.stage }} - seed ${{ matrix.seed }}"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          STAGE: ${{ inputs.stage }}
+          MAX_CASES: ${{ inputs.max_cases }}
+          TIMEOUT_S: ${{ inputs.timeout_s }}
+        run: |
+          set -euo pipefail
+          if [[ "$STAGE" == "preflight" ]]; then
+            ARGS=(--stage preflight)
+          else
+            ARGS=(--stage run)
+            MC="${MAX_CASES// /}"
+            if [[ -n "$MC" && "$MC" != "0" ]]; then ARGS+=(--max-cases "$MC"); fi
+          fi
+          # 19500 s ends the step cleanly before the 350-min job limit, so the cache and
+          # artifact steps below still run. Finished cases are kept; re-dispatch to resume.
+          timeout 19500 python3 scripts/phase3_all.py "${ARGS[@]}" \
+            --seeds "${{ matrix.seed }}" --timeout-s "$TIMEOUT_S" 2>&1 | tee /tmp/phase3_run.log
+
+      - name: Save rows (resume cache)
+        if: ${{ always() && inputs.stage != 'preflight' }}
+        uses: actions/cache/save@v4.2.3
+        with:
+          path: phase3_out
+          key: phase3-rows-seed${{ matrix.seed }}-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Upload rows
+        if: ${{ always() && inputs.stage != 'preflight' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: phase3-rows-seed${{ matrix.seed }}
+          path: phase3_out/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  close:
+    name: "Phase 3 closure (merge seeds)"
+    needs: [plan, seed_run]
+    if: ${{ inputs.stage == 'all' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            "anthropic==0.73.0" \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pmlb \
+            pint \
+            psutil
+
+      - name: Keep Phase 3 outputs out of the P4 dirty check
+        run: |
+          printf 'phase3_out/\nphase3_closure_out/\nphase3_rows_in/\n' >> .git/info/exclude
+          git status --porcelain
+
+      - name: Download per-seed rows
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: phase3-rows-seed*
+          path: phase3_rows_in
+
+      - name: Merge rows into phase3_out
+        run: |
+          python3 - <<'PYEOF'
+          import glob, os, re
+          os.makedirs("phase3_out", exist_ok=True)
+          names = sorted({os.path.basename(f) for f in glob.glob("phase3_rows_in/*/*.jsonl")})
+          for name in names:
+              n = 0
+              with open(f"phase3_out/{name}", "w", encoding="utf-8") as out:
+                  for f in sorted(glob.glob(f"phase3_rows_in/*/{name}")):
+                      for line in open(f, encoding="utf-8"):
+                          if line.strip():
+                              out.write(line if line.endswith("\n") else line + "\n")
+                              n += 1
+              print(f"{name}: {n} rows")
+          for f in sorted(glob.glob("phase3_rows_in/*/run.log")):
+              seed = re.search(r"seed(\d+)", f).group(1)
+              os.replace(f, f"phase3_out/run_seed{seed}.log")
+          PYEOF
+
+      - name: Phase 3 closure
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SEEDS: ${{ inputs.seeds }}
+          TIMEOUT_S: ${{ inputs.timeout_s }}
+        run: |
+          set -euo pipefail
+          python3 scripts/phase3_all.py --stage close --seeds "$SEEDS" --timeout-s "$TIMEOUT_S" 2>&1 | tee /tmp/phase3_close.log
+
+      - name: Upload closure
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: phase3-closure
+          path: |
+            phase3_closure_out/
+            phase3_out/
+          if-no-files-found: warn
+          retention-days: 90
