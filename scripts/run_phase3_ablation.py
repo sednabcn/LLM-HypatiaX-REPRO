@@ -24,13 +24,15 @@ optional:
 
 A missing required key aborts the run (a silent default would defeat the closure checks).
 The runner adds: ablated_component, config_diff, equation, seed, split_id, runtime_s,
-timeout_s, code_version, evaluator_version, evaluator_sha256, git_commit, code_dirty.
+timeout_s, code_version, evaluator_version, evaluator_sha256, git_commit, code_dirty,
+flags (hypatiax.core.flags.flag_state()) and clean_run.
 
 Safety:
   * refuses to run from a dirty tree unless --allow-dirty (then code_dirty is recorded True)
   * resumable: finished (config, equation, seed) rows are skipped, rows are never edited
   * --retry-errors moves status=="error" rows to <config>.attempts.jsonl and reruns them
   * --max-cases N stops after N new cases (budget control)
+  * flag_state() raises if a clean-run flag is misconfigured, which aborts the run on purpose
 """
 import argparse
 import hashlib
@@ -42,10 +44,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-
-from hypatiax.core.flags import flag_state
-row["flags"] = flag_state()
-row["clean_run"] = row["flags"]["clean_run"]
 
 COMPONENTS = ["llm_acceptance", "probe", "complexity_routing",
               "nn_augmentation", "blend_weight", "pysr_prior"]
@@ -88,7 +86,15 @@ def read_rows(path):
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def run(args, engine, commit, dirty, evaluator_sha):
+def _flag_state():
+    """Imported lazily so this module imports even if the repo root is not yet on sys.path."""
+    sys.path.insert(0, os.getcwd())
+    from hypatiax.core.flags import flag_state
+    return flag_state()
+
+
+def run(args, engine, commit, dirty, evaluator_sha, flag_fn=None):
+    flag_fn = flag_fn or _flag_state
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     configs = ["full"] + [c for c in args.components if c != "full"]
@@ -145,6 +151,7 @@ def run(args, engine, commit, dirty, evaluator_sha):
                            "bypass_kind": None, "llm_mode_used": None, "llm_r2": None,
                            "gate_reachable": None, "train_r2": None,
                            "extrap_r2_near": None, "extrap_r2_medium": None}
+                fs = flag_fn()  # raises on a misconfigured flag: aborts the run on purpose
                 row.update({
                     "ablated_component": None if c == "full" else c,
                     "config_diff": disabled,
@@ -152,6 +159,7 @@ def run(args, engine, commit, dirty, evaluator_sha):
                     "runtime_s": round(runtime, 3), "timeout_s": args.timeout_s,
                     "code_version": code_version, "evaluator_version": evaluator_version,
                     "evaluator_sha256": evaluator_sha, "git_commit": commit, "code_dirty": dirty,
+                    "flags": fs, "clean_run": fs.get("clean_run"),
                 })
                 with open(out / f"{c}.jsonl", "a", encoding="utf-8") as f:
                     f.write(json.dumps(row) + "\n")
@@ -183,7 +191,8 @@ def selftest():
         equations=["Michaelis-Menten", "Kinetic Energy", "Arrhenius", "Ideal Gas"],
         timeout_s=3600, code_version="v50_2@selftest", evaluator_version="r2_checked@selftest",
         retry_errors=False, max_cases=0)
-    n = run(ns, _fake_engine, "selftest", False, "7d5395ed" + "0" * 56)
+    fake_flags = lambda: {"clean_run": True, "selftest": True}
+    n = run(ns, _fake_engine, "selftest", False, "7d5395ed" + "0" * 56, flag_fn=fake_flags)
     print(f"selftest wrote {n} rows to {d}")
     return d
 
