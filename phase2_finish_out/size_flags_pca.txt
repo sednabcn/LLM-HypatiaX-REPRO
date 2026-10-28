@@ -1,0 +1,28 @@
+
+=== hypatiax_defi_benchmark_pca_results_seed42.json  (74 cases, CLIP_LO=-10.0)
+flagged cases found: ['Options Delta', 'Optimal LP Position (Kelly)', 'Black-Scholes Call Price']
+flagged names NOT found in this file: ['AMM arbitrage profit', 'Impermanent loss breakeven', 'Put option intrinsic']
+  Options Delta: pure_llm=nan(failed)  neural_network=-9.9026(failed)  hybrid=-4.2294(failed)
+  Optimal LP Position (Kelly): pure_llm=nan(failed)  neural_network=0.0(failed)  hybrid=0.0(failed)
+  Black-Scholes Call Price: pure_llm=-20.2184(failed)  neural_network=-1.8315(failed)  hybrid=-0.0696(failed)
+pure_llm        as published (all cases)   n= 60 median=  1.0000 mean_clip= -0.6613 pct>0.9= 63.51 pct>0.99= 63.51
+pure_llm        flagged cases excluded     n= 59 median=  1.0000 mean_clip= -0.5030 pct>0.9= 66.20 pct>0.99= 66.20
+neural_network  as published (all cases)   n= 74 median= -0.6598 mean_clip= -1.3643 pct>0.9= 10.81 pct>0.99=  0.00
+neural_network  flagged cases excluded     n= 71 median= -0.6394 mean_clip= -1.2567 pct>0.9= 11.27 pct>0.99=  0.00
+hybrid          as published (all cases)   n= 74 median=  1.0000 mean_clip=  0.4692 pct>0.9= 82.43 pct>0.99= 75.68
+hybrid          flagged cases excluded     n= 71 median=  1.0000 mean_clip=  0.5496 pct>0.9= 85.92 pct>0.99= 78.87
+exact-zero test_r2 outside the flagged set: none
+
+=== hypatiax_defi_benchmark_pca_results_seed99.json  (74 cases, CLIP_LO=-10.0)
+flagged cases found: ['Options Delta', 'Optimal LP Position (Kelly)', 'Black-Scholes Call Price']
+flagged names NOT found in this file: ['AMM arbitrage profit', 'Impermanent loss breakeven', 'Put option intrinsic']
+  Options Delta: pure_llm=nan(failed)  neural_network=-10.1276(failed)  hybrid=-4.2294(failed)
+  Optimal LP Position (Kelly): pure_llm=nan(failed)  neural_network=0.0(failed)  hybrid=0.0(failed)
+  Black-Scholes Call Price: pure_llm=0.2464(failed)  neural_network=-1.3531(failed)  hybrid=-0.0696(failed)
+pure_llm        as published (all cases)   n= 61 median=  1.0000 mean_clip= -0.5765 pct>0.9= 64.86 pct>0.99= 64.86
+pure_llm        flagged cases excluded     n= 60 median=  1.0000 mean_clip= -0.5902 pct>0.9= 67.61 pct>0.99= 67.61
+neural_network  as published (all cases)   n= 74 median= -0.5011 mean_clip= -1.2057 pct>0.9= 10.81 pct>0.99=  1.35
+neural_network  flagged cases excluded     n= 71 median= -0.4883 mean_clip= -1.0967 pct>0.9= 11.27 pct>0.99=  1.41
+hybrid          as published (all cases)   n= 74 median=  1.0000 mean_clip=  0.4688 pct>0.9= 82.43 pct>0.99= 75.68
+hybrid          flagged cases excluded     n= 71 median=  1.0000 mean_clip=  0.5491 pct>0.9= 85.92 pct>0.99= 78.87
+exact-zero test_r2 outside the flagged set: none
