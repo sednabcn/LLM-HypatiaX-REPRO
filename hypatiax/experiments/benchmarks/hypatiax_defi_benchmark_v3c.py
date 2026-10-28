@@ -840,7 +840,7 @@ def _hybrid_predict_and_eval(
 
     if decision == "llm":
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
-        if not ok or np.isnan(test_r2):
+        if not ok or not np.isfinite(test_r2):
             _t_nn0 = time.time()
             nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
