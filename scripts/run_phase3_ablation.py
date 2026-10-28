@@ -15,11 +15,12 @@ The runner does NOT score anything itself. It calls an engine adapter
 `disabled` is [] for the full config, else [component]. The adapter must score through
 hypatiax.core.r2_canonical.r2_checked and return these keys:
 
-    status, r2_raw, formula, generation_path, llm_called, bypass_used, model_id,
-    train_data_sha256, far_data_sha256, prompt_template_sha256
+    status, r2_raw, formula, generation_path, llm_called, bypass_used, bypass_kind,
+    llm_mode_used, model_id, train_data_sha256, far_data_sha256, prompt_template_sha256
 optional:
     r2 (defaults to r2_raw), r2_status, error_stage, candidate_r2_status,
-    extrap_r2_far, timed_out
+    extrap_r2_far, timed_out, llm_r2, gate_reachable, train_r2, extrap_r2_near,
+    extrap_r2_medium
 
 A missing required key aborts the run (a silent default would defeat the closure checks).
 The runner adds: ablated_component, config_diff, equation, seed, split_id, runtime_s,
@@ -45,6 +46,7 @@ from pathlib import Path
 COMPONENTS = ["llm_acceptance", "probe", "complexity_routing",
               "nn_augmentation", "blend_weight", "pysr_prior"]
 ENGINE_REQUIRED = ["status", "r2_raw", "formula", "generation_path", "llm_called", "bypass_used",
+                   "bypass_kind", "llm_mode_used",
                    "model_id", "train_data_sha256", "far_data_sha256", "prompt_template_sha256"]
 
 
@@ -135,7 +137,10 @@ def run(args, engine, commit, dirty, evaluator_sha):
                            "r2_status": "failed:error", "formula": None, "generation_path": "error",
                            "llm_called": False, "bypass_used": False, "model_id": "unknown",
                            "train_data_sha256": "unknown", "far_data_sha256": "unknown",
-                           "prompt_template_sha256": "unknown"}
+                           "prompt_template_sha256": "unknown",
+                           "bypass_kind": None, "llm_mode_used": None, "llm_r2": None,
+                           "gate_reachable": None, "train_r2": None,
+                           "extrap_r2_near": None, "extrap_r2_medium": None}
                 row.update({
                     "ablated_component": None if c == "full" else c,
                     "config_diff": disabled,
@@ -154,7 +159,8 @@ def run(args, engine, commit, dirty, evaluator_sha):
 # ----------------------------------------------------------------- selftest
 def _fake_engine(equation, seed, disabled, timeout_s):
     base = {"model_id": "fake-model", "generation_path": "hds_fake", "llm_called": True,
-            "bypass_used": False, "prompt_template_sha256": "p" * 64,
+            "bypass_used": False, "bypass_kind": "none", "llm_mode_used": "hybrid_llm_only",
+            "prompt_template_sha256": "p" * 64,
             "train_data_sha256": hashlib.sha256(f"tr|{equation}|{seed}".encode()).hexdigest(),
             "far_data_sha256": hashlib.sha256(f"far|{equation}|{seed}".encode()).hexdigest()}
     if equation == "Michaelis-Menten" and "probe" not in disabled and seed == 99:

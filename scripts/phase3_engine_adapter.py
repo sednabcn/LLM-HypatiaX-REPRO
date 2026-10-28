@@ -37,6 +37,17 @@ GATE_SWITCHES = {
     "pysr_prior": ("_LLM_PRIOR_SEED", False),
 }
 
+NO_BYPASS = {"none", None}   # extend with "live" only after grep confirms it is a genuine live call
+
+
+def _f(x):
+    try:
+        x = float(x)
+        return x if math.isfinite(x) else None
+    except (TypeError, ValueError):
+        return None
+
+
 ENGINE_PATCH = """
 In hypatiax/tools/symbolic/symbolic_engine.py, class SymbolicEngineWithLLM, add (un-annotated):
     _LLM_ACCEPT_R2 = 0.95
@@ -182,13 +193,30 @@ def run_case(equation, seed, disabled, timeout_s):
     if "llm_acceptance" in disabled and res.get("llm_mode_used") == "hybrid_llm_only":
         raise RuntimeError("llm_acceptance ablated but the LLM-only shortcut still fired")
 
+    kind = res["bypass_kind"]            # required: KeyError if the engine stops returning it
+    llm_r2 = _f(res.get("llm_best_r2"))
+    # A gate is reachable only if the LLM score sends the engine down the branch the gate controls:
+    # >0.95 -> accepted outright (llm_acceptance); [0.5, 0.95) -> seeded refinement (pysr_prior).
+    reach = {
+        "llm_acceptance": llm_r2 is not None and llm_r2 > 0.95,
+        "pysr_prior": llm_r2 is not None and 0.5 <= llm_r2 < 0.95,
+    }
+    gate_reachable = all(reach[c] for c in disabled) if disabled else None
+
     return {
         "status": status,
         "r2_raw": float(r2) if finite else float("-inf"),
         "formula": res.get("best_expression"),
         "generation_path": "symbolic+llm" if llm_called else "symbolic",
         "llm_called": llm_called,
-        "bypass_used": res.get("bypass_kind", "none") not in ("none", None),
+        "bypass_used": kind not in NO_BYPASS,
+        "bypass_kind": kind,
+        "llm_mode_used": res.get("llm_mode_used"),
+        "llm_r2": llm_r2,
+        "gate_reachable": gate_reachable,
+        "train_r2": res.get("train_r2"),
+        "extrap_r2_near": res.get("extrap_r2_near"),
+        "extrap_r2_medium": res.get("extrap_r2_medium"),
         "model_id": _model_id(),
         "train_data_sha256": _sha(X_tr, y_tr),
         "far_data_sha256": _sha(X_far, y_far),
