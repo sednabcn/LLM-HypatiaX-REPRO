@@ -92,7 +92,7 @@ GitPython==3.2.1
 google-ai-generativelanguage==0.6.15
 google-api-core==2.28.1
 google-api-python-client==2.187.0
-google-auth==2.49.1
+google-auth==2.62.0
 google-auth-httplib2==0.2.1
 google-auth-oauthlib==1.2.2
 google-cloud-aiplatform==1.142.0
