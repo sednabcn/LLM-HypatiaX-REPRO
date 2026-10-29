@@ -141,7 +141,7 @@ jsonpointer==3.0.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 julia==0.6.2
-juliacall==0.9.28
+juliacall==0.9.37
 juliapkg==0.1.22
 jupyter==1.1.1
 jupyter-console==6.6.3
