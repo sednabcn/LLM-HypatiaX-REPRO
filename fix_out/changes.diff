@@ -1,0 +1,14 @@
+--- a/jmlr_paper_main_cleaned.tex
++++ b/jmlr_paper_main_cleaned.tex
+@@ -1224,3 +1224,3 @@
+ with a finite extrapolation-error measurement (Hybrid 10, NN 12); the
+-medium-regime Mann--Whitney test in the benchmark supplement uses $n=12$ (Hybrid) /
++far-regime Mann--Whitney test in the benchmark supplement uses $n=12$ (Hybrid) /
+ $n=15$ (NN). Both five-system tables (exp1\_five and exp2\_five) are regenerated
+--- a/supp_benchmark_report_cleaned.tex
++++ b/supp_benchmark_report_cleaned.tex
+@@ -1753,3 +1753,3 @@
+ 
+-For medium extrapolation regime (2$\times$ training range):
++For the far extrapolation regime ($5\times$ training range; extrapolation error $=100\cdot\mathrm{extrap\_rmse\_far}/\mathrm{train\_rmse}$ per equation, finite values only):
+ 
