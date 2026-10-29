@@ -334,7 +334,7 @@ torch==2.13.0+cpu
 tornado==6.6
 tqdm==4.67.1
 traitlets==5.14.3
-transformers==4.57.3
+transformers==5.20.2
 typer==0.20.0
 typer-slim==0.20.0
 types-PyYAML==6.0.12.20250915
