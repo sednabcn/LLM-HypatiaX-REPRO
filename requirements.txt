@@ -277,7 +277,7 @@ rlp==4.1.0
 roman-numerals==4.1.0
 rpds-py==0.30.0
 rsa==4.9.1
-ruamel.yaml==0.18.16
+ruamel.yaml==0.19.1
 ruamel.yaml.clib==0.2.14
 ruff==0.14.11
 safetensors==0.6.2
