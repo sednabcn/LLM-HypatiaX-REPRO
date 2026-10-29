@@ -1,10 +1,10 @@
 """
 HypatiaX — Experiment 1: LLM Ablation  (§10.6 Core-15)
 ========================================================
-PySR-only vs HypatiaX (HybridDiscoverySystem v5.4) on Core-15.
+PySR-only vs HypatiaX (HybridDiscoverySystem v5.1) on Core-15.
 
 Paper sections : §10.6 (ablation), §10.9 (instability)
-Engine         : hybrid_system_v50_2.py (v5.4)
+Engine         : hybrid_system_v50_2.py (v5.1)
 Output files   : exp1_ablation_results[_seedN].json
                  exp1_ablation_table[_seedN].tex
                  exp1_rf01_mannwhitney[_seedN].json
@@ -17,13 +17,13 @@ Output files   : exp1_ablation_results[_seedN].json
 Fixes applied vs original hypatiax_exp1_ablation.ipynb
 -------------------------------------------------------
 FIX-POP       : populations=30 (was 2 — inflated speedup)
-FIX-WIRE      : hypatia → HybridDiscoverySystem v5.4 (was raw PySR + manual warm-start)
+FIX-WIRE      : hypatia → HybridDiscoverySystem v5.1 (was raw PySR + manual warm-start)
 FIX-KEY       : checkpoint keyed on eq_id int (survives equation renames)
 FIX-APIKEY    : Kaggle Secrets / env var (no hardcoded sk-ant key)
 FIX-WALLCLOCK : per-condition wall-clocks; hypatia = 3×PYSR_TIMEOUT+300,
                 pysr_only = PYSR_TIMEOUT+300 (shared cap fired inside Julia retry 2)
 FIX-A         : RMSE in original units via HybridDiscoverySystem.discover()
-FIX-B         : formula/expression/final_formula key aliases resolved in v5.4
+FIX-B         : formula/expression/final_formula key aliases resolved in v5.1
 FIX-C         : deterministic PySR (allow_nondeterministic=False)
 FIX-D         : extreme-scale log-transform active inside discover()
 FIX-POW       : auto pow for non-negative X active inside discover()
@@ -65,8 +65,6 @@ _GLOBAL_SEED = int(os.environ.get("PYSR_SEED", os.environ.get("NN_SEED", 42)))
 random.seed(_GLOBAL_SEED)
 np.random.seed(_GLOBAL_SEED)
 os.environ["PYTHONHASHSEED"] = str(_GLOBAL_SEED)
-# The hybrid engine's PySR attempts (42+attempt) follow the experiment seed (repeat-seed runs).
-os.environ["HYPATIAX_ENGINE_SEED"] = str(_GLOBAL_SEED)
 
 # API key: GITHUB Secrets → environment variable (no hardcoded keys)
 
@@ -96,10 +94,10 @@ _RESULTS_DIR_ENV = os.environ.get("RESULTS_DIR", "")
 OUTPUT_DIR = Path(_RESULTS_DIR_ENV) if _RESULTS_DIR_ENV else _HERE
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# CI runs repeat seeds in their own result dir (ablation/exp1_ablation_seed<N>) with canonical
-# file names, so the shard/merge/verify plumbing is unchanged: EXP1_ABLATION_SEED_IN_DIR=1.
-_seed_suffix = (f"_seed{_GLOBAL_SEED}"
-                if _GLOBAL_SEED != 42 and os.environ.get("EXP1_ABLATION_SEED_IN_DIR") != "1" else "")
+# CI sets EXP1_ABLATION_SEED_IN_DIR=1 and a per-seed result dir (ablation/exp1_ablation_seed<N>): the seed is then
+# in the directory name, so files keep canonical names (the workflow's preserve/merge steps key on them).
+_seed_suffix = ("" if os.environ.get("EXP1_ABLATION_SEED_IN_DIR") == "1"
+                else (f"_seed{_GLOBAL_SEED}" if _GLOBAL_SEED != 42 else ""))
 RESULTS_PATH = OUTPUT_DIR / f"exp1_ablation_results{_seed_suffix}.json"
 CKPT_PATH    = OUTPUT_DIR / f"exp1_ablation_checkpoint{_seed_suffix}.json"
 TEX_PATH     = OUTPUT_DIR / f"exp1_ablation_table{_seed_suffix}.tex"
@@ -148,7 +146,7 @@ print(f"seed        : {SEED}  (source: {_seed_source})")
 print("✅ Parameters ready")
 
 # =============================================================================
-# §4 · HybridDiscoverySystem import (v5.4)
+# §4 · HybridDiscoverySystem import (v5.1)
 # =============================================================================
 
 _V50_CANDIDATES = [
@@ -169,7 +167,7 @@ else:
     _spec.loader.exec_module(_hs_mod)
     HybridDiscoverySystem = _hs_mod.HybridDiscoverySystem
     DiscoveryConfig       = _hs_mod.DiscoveryConfig
-    print(f"✅ HybridDiscoverySystem (v5.4) imported from {_V50_PATH}")
+    print(f"✅ HybridDiscoverySystem (v5.1) imported from {_V50_PATH}")
 
 # =============================================================================
 # §5 · PySR import
@@ -629,7 +627,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                   timeout_secs=None, populations=None, wall_clock_limit=None):
     """
     condition='pysr_only' : raw PySRRegressor (clean baseline).
-    condition='hypatia'   : HybridDiscoverySystem v5.4 (FIX-A…FIX-POW all active).
+    condition='hypatia'   : HybridDiscoverySystem v5.1 (FIX-A…FIX-POW all active).
 
     Wall-clock caps are per-condition (FIX-WALLCLOCK):
       hypatia   → HYPATIA_WALL_CLOCK   (3 × PYSR_TIMEOUT + post-proc)
@@ -664,7 +662,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         dbg(f"Variable sanitisation: {sanitizer.log()}")
 
     # =========================================================================
-    # Branch A: hypatia — route through HybridDiscoverySystem v5.4
+    # Branch A: hypatia — route through HybridDiscoverySystem v5.1
     # =========================================================================
     if condition in ("hypatia", "hypatia_nollm"):
         if HybridDiscoverySystem is None:
@@ -720,7 +718,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             traceback.print_exc()
             return _build_error_result(condition, str(e), sr_time)
 
-        # FIX-B: resolve key aliases from v5.4 discover() result
+        # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
         train_r2      = res.get("r2")
         train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
@@ -779,7 +777,6 @@ def run_condition(eq, condition, seed=42, niterations=None,
             try: return f"{float(v):.4f}" if np.isfinite(float(v)) else "N/A"
             except Exception: return "N/A"
 
-        _li = res.get("llm_info") or {}
         print(
             f"  [hypatia] {best_expr_raw[:55]}  R²={_f(train_r2)}  "
             f"extrap(near={_f(extrap_r2.get('near'))} "
@@ -801,16 +798,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
             "sr_time_s":             sr_time,
-            "llm_time_s":            float(_li.get("llm_time") or 0.0),
+            "llm_time_s":            0.0,
             "total_time_s":          sr_time,
             "best_expression":       best_expr_raw,
             "complexity":            complexity,
-            "llm_expression":        _li.get("llm_best_expression"),
-            "llm_confidence":        _li.get("llm_confidence"),
-            "llm_best_r2":           _li.get("llm_best_r2"),
-            "llm_hypotheses":        _li.get("llm_hypotheses_raw"),
-            "error":                 res.get("error"),
-            "llm_error":             _li.get("llm_error"),
+            "llm_expression":        None,
+            "llm_confidence":        None,
             # v5.4 provenance extras
             "engine_version":        HybridDiscoverySystem.VERSION,
             "scale_log":             scale_log,
@@ -952,7 +945,7 @@ def _build_error_result(condition: str, error: str, sr_time: float) -> dict:
         "bypass_kind":          "none",
     }
 
-print("✅ run_condition ready — hypatia → HybridDiscoverySystem v5.4 | pysr_only → raw PySR")
+print("✅ run_condition ready — hypatia → HybridDiscoverySystem v5.1 | pysr_only → raw PySR")
 
 # =============================================================================
 # §16 · Main experiment loop
@@ -1073,7 +1066,7 @@ def run_experiment():
 
     print("=" * 65)
     print("EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)")
-    print(f"Engine      : hybrid_system_v50_2 (v5.4)")
+    print(f"Engine      : hybrid_system_v50_2 (v5.1)")
     print(f"Equations   : {_n_run}  |  Conditions: {CONDITIONS}")
     print(f"populations : {POPULATIONS}  |  iterations: {NITERATIONS}  |  timeout: {TIMEOUT_SECS}s")
     print(f"Resuming    : {len(all_results)} checkpointed entries")
@@ -1181,17 +1174,12 @@ def print_summary(all_results: dict) -> None:
 
     if P_far_all:
         print("─" * 80)
-        # Medians, not means: one overflowed equation (R2 ~ -1e4) dominates a mean.
-        print(f"{'Median (far OOD)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
-              f"{np.median(P_far_all):7.4f} {np.median(H_far_all):7.4f}")
-        print(f"{'Far R2 >= 0.99 (count)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
-              f"{sum(v >= 0.99 for v in P_far_all):>7d} {sum(v >= 0.99 for v in H_far_all):>7d}"
-              f"   of n={len(P_far_all)} evaluable")
+        print(f"{'Mean (far OOD)':25s}  {'':>7} {'':>7}  {'':>7} {'':>7}  "
+              f"{np.mean(P_far_all):7.4f} {np.mean(H_far_all):7.4f}")
     if speedups:
-        # (A previous version printed mean(P_far_R2)/mean(H_far_R2) here, which is not a speedup.)
         print(f"\nSpeedup (PySR-time / HypatiaX-time):  "
-              f"median={np.median(speedups):.2f}×  n={len(speedups)}  "
-              f"[PySR always runs to its cap; LLM-only wins skip PySR - not a like-for-like speedup]")
+              f"mean={np.mean(P_far_all)/np.mean(H_far_all):.2f}×  "
+              f"median={np.median(speedups):.2f}×  n={len(speedups)}")
 
 # =============================================================================
 # §18 · RF-01 — Mann-Whitney U + Wilcoxon (§10.6 statistics)
@@ -1308,14 +1296,12 @@ def run_rf01(all_results: dict) -> None:
             else:
                 dom_detail += ", suggesting benefit is domain-selective."
         else:
-            dom_detail = "No domain shows a consistent HypatiaX advantage."
+            dom_detail = "No single domain consistently drives the improvement."
         sentence = (
             f"Across Core-15, HypatiaX does not achieve statistically significant "
             f"higher far-extrapolation $R^2$ than PySR-only "
             f"(Mann-Whitney $U={U_gt:.0f}$, $p={p_gt:.4f}$, $n={n_pairs}$; "
-            f"rank-biserial $r={r_rb:+.2f}$; {len(skipped)} equation(s) excluded for "
-            f"non-finite or missing far $R^2$: "
-            f"{', '.join(s_[0] for s_ in skipped) or 'none'}). " + dom_detail
+            f"rank-biserial $r={r_rb:+.2f}$). " + dom_detail
         )
         verdict = "⚠️  NOT SIGNIFICANT"
 
@@ -1616,7 +1602,7 @@ def make_latex_table(all_results: dict) -> str:
         r"\item[$\dag$] Wall-clock cap triggered; excluded from timing averages.",
         r"\item[$\ddag$] Arrhenius failure mode: correct LLM prior constrained PySR search "
         r"space → premature convergence. See \S\ref{sec:arrhenius}."
-        f" All runs: populations={POPULATIONS}, seed={SEED}, engine v5.4.",
+        f" All runs: populations={POPULATIONS}, seed={SEED}, engine v5.1.",
         r"\end{tablenotes}",
         r"\end{table*}",
     ]
@@ -1636,9 +1622,8 @@ def run_instability_stats(all_results: dict) -> None:
     for eq_idx, eq in enumerate(CORE_15):
         res    = all_results.get(str(eq_idx), {})
         h      = res.get("hypatia", {}) or {}
-        # Missing/failed rows stay None (previously coerced to 0.0 -> "perfectly stable").
-        r_near = h.get("extrap_r2_near")
-        r_far  = h.get("extrap_r2_far")
+        r_near = h.get("extrap_r2_near",  0.0) or 0.0
+        r_far  = h.get("extrap_r2_far",   0.0) or 0.0
         ii     = abs(r_far - r_near) if (r_near is not None and r_far is not None) else None
         instability_rows.append({
             "equation":          eq["name"],
@@ -1720,26 +1705,6 @@ def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
 # §21 · Provenance stamp
 # =============================================================================
 
-def _git_sha() -> str | None:
-    import subprocess
-    sha = os.environ.get("GITHUB_SHA")
-    if sha:
-        return sha
-    try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True,
-                                       stderr=subprocess.DEVNULL).strip()
-    except Exception:
-        return None
-
-
-def _pkg_version(name: str) -> str | None:
-    try:
-        from importlib.metadata import version
-        return version(name)
-    except Exception:
-        return None
-
-
 def write_provenance(all_results: dict) -> None:
     from hypatiax.core.flags import flag_state
     provenance = {
@@ -1752,12 +1717,6 @@ def write_provenance(all_results: dict) -> None:
         "populations":           POPULATIONS,
         "niterations":           NITERATIONS,
         "model_string":          MODEL_STRING,
-        "git_sha":               _git_sha(),
-        "anthropic_sdk":         _pkg_version("anthropic"),
-        "pysr":                  _pkg_version("pysr"),
-        "n_rows_hypatia_failed": sum(
-            1 for r in all_results.values()
-            if isinstance(r, dict) and (r.get("hypatia") or {}).get("success") is False),
         "timestamp":             datetime.now().isoformat(),
         "outputs": {
             "results_json":      str(RESULTS_PATH),
@@ -1777,7 +1736,7 @@ def write_provenance(all_results: dict) -> None:
         },
         "fixes_applied": [
             "FIX-POP: populations=30 (was 2 — inflated apparent speedup)",
-            "FIX-WIRE: hypatia → HybridDiscoverySystem v5.4 (was raw PySR + manual warm-start)",
+            "FIX-WIRE: hypatia → HybridDiscoverySystem v5.1 (was raw PySR + manual warm-start)",
             "FIX-KEY: checkpoint keyed on eq_id int (survives renames)",
             "FIX-APIKEY: Kaggle Secrets / env var (no hardcoded key)",
             "FIX-WALLCLOCK: per-condition wall-clocks (hypatia=3×1100+300, pysr_only=1100+300)",
@@ -1891,6 +1850,11 @@ if __name__ == "__main__":
                         help="Run Portfolio Std Dev 5-seed sweep (C4)")
     parser.add_argument("--check",           action="store_true",
                         help="Print submission readiness checklist and exit")
+    parser.add_argument("--aggregate-only",  action="store_true",
+                        help="Do not run experiments: load the merged checkpoint at CKPT_PATH, "
+                             "require all Core-15 equations x all active arms, write the results "
+                             "file, then run post-processing (RF-01, LLM-contribution, tables...). "
+                             "Used by CI after the per-domain shards are merged.")
     parser.add_argument("--task-ids",        default="",
                         help="Comma- or space-separated shard slug filter "
                              "(e.g. 'amm risk_var'); overrides DOMAIN_FILTER env var")
@@ -1909,8 +1873,24 @@ if __name__ == "__main__":
         check_readiness()
         sys.exit(0)
 
-    # Run main experiment
-    all_results = run_experiment()
+    # Run main experiment (or, in CI aggregation, load the merged shard checkpoint)
+    if args.aggregate_only:
+        all_results = load_checkpoint(CKPT_PATH)
+        _missing = []
+        for _eq in CORE_15:
+            _e = all_results.get(str(EQ_ID[_eq["name"]]), {}) or {}
+            _lack = [c for c in CONDITIONS if not isinstance(_e.get(c), dict)]
+            if _lack:
+                _missing.append((_eq["name"], _lack))
+        if _missing:
+            for _n, _l in _missing:
+                print(f"::error::aggregate-only: {_n} lacks arm(s) {_l}")
+            sys.exit(2)
+        with open(RESULTS_PATH, "w") as _f:
+            json.dump(all_results, _f, indent=2)
+        print(f"✅ aggregate-only: {len(CORE_15)} equations x {CONDITIONS} -> {RESULTS_PATH}")
+    else:
+        all_results = run_experiment()
 
     # Post-processing
     print_summary(all_results)

@@ -2080,10 +2080,16 @@ jobs:
                   print(f"::error::eq {k}: hypatia_nollm made an LLM call - the no-LLM arm is contaminated"); bad = True
               if nollm and nl is None and "hypatia_nollm" not in miss:
                   print(f"::warning::eq {k}: hypatia_nollm has no llm_called flag - cannot prove it stayed LLM-free")
+              hy = v.get("hypatia") or {}
               if h is not True:
-                  print(f"::error::eq {k}: hypatia arm did not make a live LLM call (llm_called={h})"); bad = True
-              if (v.get("hypatia") or {}).get("success") is False:
-                  print(f"::error::eq {k}: hypatia arm failed (success=false, best_expression={(v.get('hypatia') or {}).get('best_expression')!r})"); bad = True
+                  if hy.get("timed_out"):
+                      # timeout rows never record llm_called; a timeout is a legitimate (flagged) result, not a contamination
+                      print(f"::warning::eq {k}: hypatia arm timed out (llm_called not recorded) - legitimate negative result")
+                  else:
+                      print(f"::error::eq {k}: hypatia arm did not make a live LLM call (llm_called={h})"); bad = True
+              elif hy.get("success") is False:
+                  # the LLM WAS called and the method still failed: that is a finding (e.g. the Arrhenius failure mode), not a CI failure
+                  print(f"::warning::eq {k}: hypatia arm failed after a live LLM call (success=false, best_expression={hy.get('best_expression')!r}) - recorded as a negative result")
           try:
               import anthropic
               print(f"anthropic SDK version: {anthropic.__version__}")
@@ -2940,7 +2946,8 @@ jobs:
   exp1_ablation_aggregate:
     name: "Aggregate - exp1_ablation (merge shards + LLM-CONTRIBUTION)"
     needs: [plan, worker]
-    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_ablation' && needs.worker.result != 'skipped' }}
+    # Only after EVERY shard succeeded: a failed shard must stop the aggregate, not be back-filled from committed results.
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_ablation' && needs.worker.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -3004,6 +3011,8 @@ jobs:
           ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
           RESULTS_DIR:           ${{ github.workspace }}/${{ env.OUT_BASE }}
           ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
+          # strict merge (this run's shards only) unless this is a deliberate partial re-run
+          ABLATION_ALLOW_MASTER_FILL: ${{ github.event.inputs.task_ids_override != '' && '1' || '' }}
         run: |
           set -euo pipefail
           mkdir -p "${RESULTS_DIR}/${RESULT_SUBDIR}"

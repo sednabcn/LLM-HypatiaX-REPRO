@@ -556,15 +556,41 @@ n_eq = int(os.environ.get("ABLATION_N_EQ", "15"))
 arms = ["pysr_only", "hypatia"] + (["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 SHARD_RE = re.compile(r"exp1_ablation_checkpoint_shard\d+\.json$")
 
+def own_shard_files(root):
+    # Every downloaded artifact results-exp1_ablation-shard<N>/ also contains the COMMITTED copies of the
+    # other shards' checkpoints (restored by the preserve step). Read ONLY the artifact's own shard file,
+    # otherwise a stale committed file can win a tie against this run's result.
+    out, matched = [], 0
+    for d in sorted(glob.glob(os.path.join(root, "*"))):
+        m = re.fullmatch(r"results-exp1_ablation-shard(\d+)", os.path.basename(d))
+        if not (os.path.isdir(d) and m):
+            continue
+        matched += 1
+        n = m.group(1)
+        hits = glob.glob(os.path.join(d, "**", f"exp1_ablation_checkpoint_shard{n}.json"), recursive=True)
+        if hits:
+            out.append(sorted(hits, key=len)[0])
+        else:
+            print(f"::warning::artifact {os.path.basename(d)} has no exp1_ablation_checkpoint_shard{n}.json")
+    return out, matched
+
 if art:
-    files = sorted(f for f in glob.glob(os.path.join(art, "**", "*.json"), recursive=True)
-                   if SHARD_RE.search(os.path.basename(f)))
+    files, _matched = own_shard_files(art)
+    if not _matched:   # flat layout fallback
+        files = sorted(f for f in glob.glob(os.path.join(art, "**", "*.json"), recursive=True)
+                       if SHARD_RE.search(os.path.basename(f)))
 else:
     files = sorted(f for f in glob.glob(os.path.join(abl, "*.json"))
                    if SHARD_RE.search(os.path.basename(f)))
 master = os.path.join(abl, "exp1_ablation_checkpoint.json")
-sources = ([master] if os.path.isfile(master) else []) + files   # later wins ties
-print(f"merge sources: {len(sources)} ({'master + ' if os.path.isfile(master) else ''}{len(files)} shard file(s))")
+# STRICT (CI full run): every equation must come from THIS run's shard files; the committed master is ignored,
+# so a crashed shard can never be silently back-filled with an older run. The master may fill gaps only for
+# a deliberate partial re-run (ABLATION_ALLOW_MASTER_FILL=1) or a local run (no artifacts dir).
+strict = bool(art) and os.environ.get("ABLATION_ALLOW_MASTER_FILL") != "1"
+use_master = os.path.isfile(master) and not strict
+sources = ([master] if use_master else []) + files   # later wins ties
+print(f"merge mode: {'STRICT - shard files of this run only' if strict else 'FILL - committed master may supply equations not re-run'}")
+print(f"merge sources: {len(sources)} ({'master + ' if use_master else ''}{len(files)} shard file(s))")
 if not files:
     print("::error::no exp1_ablation_checkpoint_shard*.json found")
     sys.exit(1)

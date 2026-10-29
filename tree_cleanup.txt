@@ -1,10 +1,114 @@
 .
 ├── activate_hypatiax.sh
-├── add_generation_path_ehs.py
-├── all_domains_and_recovery_tests.patch
-├── apply_adaptive_config_r2.py
-├── apply_baseline_hardening.py
-├── apply_flag_patch.py
+├── archive
+│   ├── MOVED.tsv
+│   ├── one_off_scripts
+│   │   ├── add_generation_path_ehs.py
+│   │   ├── apply_adaptive_config_r2.py
+│   │   ├── apply_baseline_hardening.py
+│   │   ├── apply_flag_patch.py
+│   │   ├── audit_and_fix.py
+│   │   ├── fix_manifest_bypass.py
+│   │   ├── fix_missing_names.py
+│   │   ├── fix_paper_issues.py
+│   │   ├── flatten_results.py
+│   │   ├── flatten_results_v2.py
+│   │   ├── flatten_results_v3.py
+│   │   ├── make_quarantine_manifest.py
+│   │   ├── paired_checker_audit.py
+│   │   ├── patch_strict_llm.py
+│   │   ├── phase2_finalize.sh
+│   │   ├── probe_old.sh
+│   │   ├── reanalyze_excluding_bypass.py
+│   │   └── step1_freeze_and_triage.py
+│   ├── patches
+│   │   ├── all_domains_and_recovery_tests.patch
+│   │   ├── fix_out
+│   │   │   ├── changes.diff
+│   │   │   ├── fix_report.md
+│   │   │   └── patched
+│   │   │       ├── jmlr_paper_main_cleaned.tex
+│   │   │       └── supp_benchmark_report_cleaned.tex
+│   │   ├── followup_fixes.patch
+│   │   ├── hybrid-ingest-test.patch
+│   │   ├── repro-adaptive-config.patch
+│   │   ├── repro-metrics-api.patch
+│   │   └── rule_a_fixes.patch
+│   ├── phase2
+│   │   ├── p2_backup_20261028_1234
+│   │   │   ├── hds_exp1_ablation.jsonl
+│   │   │   ├── hds_exp1_ablation_seed123.jsonl
+│   │   │   ├── hds_exp1_ablation_seed99.jsonl
+│   │   │   ├── pure_llm_seed123.jsonl
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   ├── pure_llm_seed99.jsonl
+│   │   │   ├── pysr_exp1_ablation.jsonl
+│   │   │   ├── pysr_exp1_ablation_seed123.jsonl
+│   │   │   └── pysr_exp1_ablation_seed99.jsonl
+│   │   ├── p2_call1
+│   │   │   ├── pure_llm_seed123.jsonl
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   └── pure_llm_seed99.jsonl
+│   │   ├── p2_med
+│   │   │   ├── hds_exp1_ablation.jsonl
+│   │   │   ├── hds_exp1_ablation_seed123.jsonl
+│   │   │   ├── hds_exp1_ablation_seed99.jsonl
+│   │   │   ├── pure_llm_seed123.jsonl
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   ├── pure_llm_seed99.jsonl
+│   │   │   ├── pysr_exp1_ablation.jsonl
+│   │   │   ├── pysr_exp1_ablation_seed123.jsonl
+│   │   │   ├── pysr_exp1_ablation_seed99.jsonl
+│   │   │   └── reflatten_manifest.json
+│   │   ├── p2_pure_llm_full_run.log
+│   │   ├── p2_rerun_mm
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   └── pure_llm_seed99.jsonl
+│   │   ├── p2_rerun_mm.log
+│   │   ├── p2_schema
+│   │   │   ├── pure_llm_seed123.jsonl
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   └── pure_llm_seed99.jsonl
+│   │   ├── p2_train
+│   │   │   ├── hds_exp1_ablation.jsonl
+│   │   │   ├── hds_exp1_ablation_seed123.jsonl
+│   │   │   ├── hds_exp1_ablation_seed99.jsonl
+│   │   │   ├── pure_llm_seed123.jsonl
+│   │   │   ├── pure_llm_seed42.jsonl
+│   │   │   ├── pure_llm_seed99.jsonl
+│   │   │   ├── pysr_exp1_ablation.jsonl
+│   │   │   ├── pysr_exp1_ablation_seed123.jsonl
+│   │   │   ├── pysr_exp1_ablation_seed99.jsonl
+│   │   │   └── reflatten_manifest.json
+│   │   ├── phase2_out_p2_med
+│   │   │   ├── PHASE2_CLOSED_WITH_CAVEATS
+│   │   │   └── phase2_closure.json
+│   │   ├── phase2_out_p2_train
+│   │   │   ├── PHASE2_CLOSED_WITH_CAVEATS
+│   │   │   └── phase2_closure.json
+│   │   └── phase2_pure_llm_closure
+│   │       ├── adapted_pure_llm
+│   │       │   ├── pure_llm_seed123.jsonl
+│   │       │   ├── pure_llm_seed42.jsonl
+│   │       │   └── pure_llm_seed99.jsonl
+│   │       └── closure_out
+│   │           ├── PHASE2_CLOSED_WITH_CAVEATS
+│   │           └── phase2_closure.json
+│   ├── README.md
+│   └── results_snapshots
+│       ├── exp1_ablation_table.tex
+│       ├── exp1_instability_stats.json
+│       ├── exp1_rf01_significant.tex
+│       ├── exp1_rf01_subdomain.tex
+│       ├── instability_extrapolation_v2.csv
+│       ├── multiseed_summary.json
+│       ├── provenance_map_exp1.json
+│       ├── scan_after2.txt
+│       ├── scan_after3.txt
+│       ├── scan_after4.txt
+│       ├── scan_after.txt
+│       ├── scan_report.json
+│       └── scan_report.txt
 ├── audit
 │   ├── option3
 │   │   ├── repro-adaptive-config-r2.patch
@@ -18,11 +122,11 @@
 │   ├── phase1_audit.json
 │   ├── quarantine_manifest.json
 │   └── r2_checked_source.txt
-├── audit_and_fix.py
 ├── audit_out
 │   ├── apply_audit_patches.py
 │   ├── manifest_summary.txt
 │   ├── manifest_summary_v2.txt
+│   ├── merge_exp1_ablation_shards.py
 │   ├── paired_audit.csv
 │   ├── probe2_old.txt
 │   ├── probe_old.txt
@@ -40,8 +144,6 @@
 ├── config
 │   ├── check_key_status.py
 │   ├── phase2_pure_llm_run_spec.md
-│   ├── __pycache__
-│   │   └── test_key_status.cpython-312-pytest-9.0.3.pyc
 │   └── repro.yaml
 ├── docs
 │   ├── diagrams
@@ -51,13 +153,9 @@
 │   └── phase2_report.tex
 ├── env_repro.sh
 ├── exp1_ablation_results.json
-├── exp1_ablation_table.tex
-├── exp1_instability_stats.json
 ├── exp1_llm_contribution.json
 ├── exp1_llm_contribution.py
 ├── exp1_rf01_mannwhitney.json
-├── exp1_rf01_significant.tex
-├── exp1_rf01_subdomain.tex
 ├── exploratory
 │   └── run4_2026-10-24
 │       ├── exp1_ablation_results.json
@@ -69,27 +167,11 @@
 │       ├── instability_extrapolation_v2.csv
 │       ├── provenance_map_exp1.json
 │       └── wall_clock_flags.json
-├── fix_manifest_bypass.py
-├── fix_missing_names.py
-├── fix_out
-│   ├── changes.diff
-│   ├── fix_report.md
-│   └── patched
-│       ├── jmlr_paper_main_cleaned.tex
-│       └── supp_benchmark_report_cleaned.tex
-├── fix_paper_issues.py
 ├── fix_swallow.py
-├── flatten_results.py
-├── flatten_results_v2.py
-├── flatten_results_v3.py
-├── followup_fixes.patch
-├── hybrid-ingest-test.patch
 ├── hypatiax
 │   ├── core
 │   │   ├── base_pure_llm
 │   │   │   ├── baseline_pure_llm_defi_discovery.py
-│   │   │   ├── baseline_pure_llm_defi_discovery.py.bak
-│   │   │   ├── baseline_pure_llm_defi_discovery.py.rej
 │   │   │   ├── __init__.py
 │   │   │   ├── __pycache__
 │   │   │   │   ├── baseline_pure_llm_defi_discovery.cpython-312.pyc
@@ -102,10 +184,7 @@
 │   │   ├── generation
 │   │   │   ├── hybrid_all_domains_llm_nn
 │   │   │   │   ├── hybrid_system_llm_nn_all_domains.py
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── __pycache__
-│   │   │   │       ├── hybrid_system_llm_nn_all_domains.cpython-312.pyc
-│   │   │   │       └── __init__.cpython-312.pyc
+│   │   │   │   └── __init__.py
 │   │   │   ├── hybrid_defi_llm_nn
 │   │   │   │   ├── hybrid_ensemble_system_defi_domain.py
 │   │   │   │   ├── __init__.py
@@ -114,10 +193,7 @@
 │   │   │   │       └── __init__.cpython-312.pyc
 │   │   │   ├── hybrid_defi_system
 │   │   │   │   ├── hybrid_system_nn_defi_domain.py
-│   │   │   │   ├── __init__.py
-│   │   │   │   └── __pycache__
-│   │   │   │       ├── hybrid_system_nn_defi_domain.cpython-312.pyc
-│   │   │   │       └── __init__.cpython-312.pyc
+│   │   │   │   └── __init__.py
 │   │   │   ├── __init__.py
 │   │   │   └── __pycache__
 │   │   │       └── __init__.cpython-312.pyc
@@ -125,24 +201,17 @@
 │   │   ├── json_safe.py
 │   │   ├── metrics.py
 │   │   ├── __pycache__
-│   │   │   ├── constants.cpython-312.pyc
 │   │   │   ├── enforce_flags.cpython-312.pyc
 │   │   │   ├── flags.cpython-312.pyc
 │   │   │   ├── __init__.cpython-312.pyc
-│   │   │   ├── json_safe.cpython-312.pyc
 │   │   │   ├── metrics.cpython-312.pyc
-│   │   │   ├── r2_canonical.cpython-312.pyc
-│   │   │   └── recovery_eval.cpython-312.pyc
+│   │   │   └── r2_canonical.cpython-312.pyc
 │   │   ├── r2_canonical.py
 │   │   ├── recovery_eval.py
 │   │   └── training
 │   │       ├── adaptive_config.py
 │   │       ├── baseline_neural_network_defi_improved.py
-│   │       ├── __init__.py
-│   │       └── __pycache__
-│   │           ├── adaptive_config.cpython-312.pyc
-│   │           ├── baseline_neural_network_defi_improved.cpython-312.pyc
-│   │           └── __init__.cpython-312.pyc
+│   │       └── __init__.py
 │   ├── data
 │   │   ├── checksums.txt
 │   │   ├── results
@@ -861,7 +930,6 @@
 │   ├── experiments
 │   │   ├── benchmarks
 │   │   │   ├── exp1_ablation.py
-│   │   │   ├── exp1_ablation.py.bak
 │   │   │   ├── exp1_five_system.py
 │   │   │   ├── exp3_nguyen12_consolidated.py
 │   │   │   ├── extrap_r2_far.py
@@ -870,17 +938,8 @@
 │   │   │   ├── hypatiax_defi_benchmark_v3c.py
 │   │   │   ├── __init__.py
 │   │   │   ├── portfolio_variance_v3c2.py
-│   │   │   ├── __pycache__
-│   │   │   │   ├── exp1_ablation.cpython-312.pyc
-│   │   │   │   ├── exp3_nguyen12_consolidated.cpython-312.pyc
-│   │   │   │   ├── hypatiax_defi_benchmark_v3c.cpython-312.pyc
-│   │   │   │   ├── hypatiax_defi_benchmark_v4.cpython-312.pyc
-│   │   │   │   ├── hypatiax_defi_benchmark_v4_pca.cpython-312.pyc
-│   │   │   │   └── __init__.cpython-312.pyc
 │   │   │   ├── run_comparative_suite_benchmark_pca.py
-│   │   │   ├── run_comparative_suite_benchmark_pca.py.bak
 │   │   │   ├── run_comparative_suite_benchmark_v2.py
-│   │   │   ├── run_comparative_suite_benchmark_v2.py.bak
 │   │   │   ├── run_hybrid_system_benchmark.py
 │   │   │   ├── run_instability_suite.py
 │   │   │   ├── run_noise_sweep_benchmark.py
@@ -894,11 +953,12 @@
 │   │       │   ├── conftest.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_baseline_regressions.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_core_metrics_compat.cpython-312-pytest-9.0.3.pyc
-│   │       │   ├── test_defi_benchmark_v4_selection.cpython-312.pyc
-│   │       │   ├── test_defi_benchmark_v4_selection.cpython-312-pytest-9.0.3.pyc
-│   │       │   ├── test_defi_benchmark_v4_smoke.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_engineered_predictor.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_enhanced_defi_extrapolation.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_extrapolation_helpers.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_fixd_llm_scoring.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_flag_parsers.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_flags.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_llm_gate_fallback.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_m4_exclusion.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_no_bypass.cpython-312-pytest-9.0.3.pyc
@@ -906,14 +966,20 @@
 │   │       │   ├── test_ood_constants.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_phase1_close.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_proc_box_wiring.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_prompt_parity.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_r2_policy.cpython-312-pytest-9.0.3.pyc
 │   │       │   ├── test_recovery_evaluator.cpython-312-pytest-9.0.3.pyc
-│   │       │   └── test_rule_a.cpython-312-pytest-9.0.3.pyc
+│   │       │   ├── test_rule_a.cpython-312-pytest-9.0.3.pyc
+│   │       │   └── test_sign_flip_pin.cpython-312-pytest-9.0.3.pyc
 │   │       ├── r2_legacy_baseline.json
 │   │       ├── test_baseline_regressions.py
 │   │       ├── test_core_metrics_compat.py
+│   │       ├── test_engineered_predictor.py
 │   │       ├── test_enhanced_defi_extrapolation.py
 │   │       ├── test_extrapolation_helpers.py
+│   │       ├── test_fixd_llm_scoring.py
+│   │       ├── test_flag_parsers.py
+│   │       ├── test_flags.py
 │   │       ├── test_llm_gate_fallback.py
 │   │       ├── test_m4_exclusion.py
 │   │       ├── test_no_bypass.py
@@ -921,9 +987,11 @@
 │   │       ├── test_ood_constants.py
 │   │       ├── test_phase1_close.py
 │   │       ├── test_proc_box_wiring.py
+│   │       ├── test_prompt_parity.py
 │   │       ├── test_r2_policy.py
 │   │       ├── test_recovery_evaluator.py
-│   │       └── test_rule_a.py
+│   │       ├── test_rule_a.py
+│   │       └── test_sign_flip_pin.py
 │   ├── __init__.py
 │   ├── path.py
 │   ├── protocols
@@ -933,8 +1001,6 @@
 │   │   ├── experiment_protocol_nguyen12.py
 │   │   ├── __init__.py
 │   │   └── __pycache__
-│   │       ├── experiment_protocol_all_30.cpython-312.pyc
-│   │       ├── experiment_protocol_benchmark_v2.cpython-312.pyc
 │   │       ├── experiment_protocol_defi.cpython-312.pyc
 │   │       └── __init__.cpython-312.pyc
 │   ├── __pycache__
@@ -956,10 +1022,7 @@
 │   │   │   └── symbolic_engine.py
 │   │   ├── utils
 │   │   │   ├── __init__.py
-│   │   │   ├── pca_split_utils.py
-│   │   │   └── __pycache__
-│   │   │       ├── __init__.cpython-312.pyc
-│   │   │       └── pca_split_utils.cpython-312.pyc
+│   │   │   └── pca_split_utils.py
 │   │   └── validation
 │   │       ├── dimensional_validator.py
 │   │       ├── domain_validator.py
@@ -978,13 +1041,9 @@
 │   ├── PKG-INFO
 │   ├── SOURCES.txt
 │   └── top_level.txt
-├── instability_extrapolation_v2.csv
 ├── LICENSE
 ├── llm_model_probe.py
-├── make_quarantine_manifest.py
 ├── MANIFEST.md
-├── merge_instability_shards.py
-├── multiseed_summary.json
 ├── outputs
 │   ├── 20261023_194259_5kxOow
 │   │   ├── checkpoint.pkl
@@ -1082,59 +1141,11 @@
 │   ├── pysr_exp1_ablation.jsonl
 │   ├── pysr_exp1_ablation_seed123.jsonl
 │   └── pysr_exp1_ablation_seed99.jsonl
-├── p2_backup_20261028_1234
-│   ├── hds_exp1_ablation.jsonl
-│   ├── hds_exp1_ablation_seed123.jsonl
-│   ├── hds_exp1_ablation_seed99.jsonl
-│   ├── pure_llm_seed123.jsonl
-│   ├── pure_llm_seed42.jsonl
-│   ├── pure_llm_seed99.jsonl
-│   ├── pysr_exp1_ablation.jsonl
-│   ├── pysr_exp1_ablation_seed123.jsonl
-│   └── pysr_exp1_ablation_seed99.jsonl
-├── p2_call1
-│   ├── pure_llm_seed123.jsonl
-│   ├── pure_llm_seed42.jsonl
-│   └── pure_llm_seed99.jsonl
 ├── p2_dry
 │   ├── dry_run_status.json
 │   └── pure_llm_seed42.jsonl
-├── p2_med
-│   ├── hds_exp1_ablation.jsonl
-│   ├── hds_exp1_ablation_seed123.jsonl
-│   ├── hds_exp1_ablation_seed99.jsonl
-│   ├── pure_llm_seed123.jsonl
-│   ├── pure_llm_seed42.jsonl
-│   ├── pure_llm_seed99.jsonl
-│   ├── pysr_exp1_ablation.jsonl
-│   ├── pysr_exp1_ablation_seed123.jsonl
-│   ├── pysr_exp1_ablation_seed99.jsonl
-│   └── reflatten_manifest.json
-├── p2_pure_llm_full_run.log
 ├── p2_pure_llm_status_relabel.json
-├── p2_rerun_mm
-│   ├── pure_llm_seed42.jsonl
-│   └── pure_llm_seed99.jsonl
-├── p2_rerun_mm.log
-├── p2_schema
-│   ├── pure_llm_seed123.jsonl
-│   ├── pure_llm_seed42.jsonl
-│   └── pure_llm_seed99.jsonl
-├── p2_train
-│   ├── hds_exp1_ablation.jsonl
-│   ├── hds_exp1_ablation_seed123.jsonl
-│   ├── hds_exp1_ablation_seed99.jsonl
-│   ├── pure_llm_seed123.jsonl
-│   ├── pure_llm_seed42.jsonl
-│   ├── pure_llm_seed99.jsonl
-│   ├── pysr_exp1_ablation.jsonl
-│   ├── pysr_exp1_ablation_seed123.jsonl
-│   ├── pysr_exp1_ablation_seed99.jsonl
-│   └── reflatten_manifest.json
-├── paired_checker_audit.py
-├── patch_strict_llm.py
 ├── phase2_a3_p_kwargs.json
-├── phase2_finalize.sh
 ├── phase2_finish_out
 │   ├── A5_session_findings.md
 │   ├── amendment_A5_draft.md
@@ -1218,62 +1229,36 @@
 ├── phase2_out
 │   ├── PHASE2_CLOSED_WITH_CAVEATS
 │   └── phase2_closure.json
-├── phase2_out_p2_med
-│   ├── PHASE2_CLOSED_WITH_CAVEATS
-│   └── phase2_closure.json
-├── phase2_out_p2_train
-│   ├── PHASE2_CLOSED_WITH_CAVEATS
-│   └── phase2_closure.json
 ├── phase2_pure_llm_amendments.md
-├── phase2_pure_llm_closure
-│   ├── adapted_pure_llm
-│   │   ├── pure_llm_seed123.jsonl
-│   │   ├── pure_llm_seed42.jsonl
-│   │   └── pure_llm_seed99.jsonl
-│   └── closure_out
-│       ├── PHASE2_CLOSED_WITH_CAVEATS
-│       └── phase2_closure.json
 ├── phase2_pure_llm_config.yaml
-├── phase2_pure_llm_config.yaml.bak
 ├── phase2_row_schema.json
-├── pin_ci_env.py
-├── probe_old.sh
-├── provenance_map_exp1.json
 ├── provenance.py
-├── __pycache__
-│   ├── audit_results_manifest.cpython-312.pyc
-│   ├── enforce_flags.cpython-312.pyc
-│   ├── test_defi_benchmark_v4_smoke.cpython-312-pytest-9.0.3.pyc
-│   ├── test_engineered_predictor.cpython-312-pytest-9.0.3.pyc
-│   ├── test_fixd_llm_scoring.cpython-312-pytest-9.0.3.pyc
-│   ├── test_flag_parsers.cpython-312-pytest-9.0.3.pyc
-│   ├── test_flags.cpython-312-pytest-9.0.3.pyc
-│   ├── test_no_equation_hints.cpython-312.pyc
-│   ├── test_no_equation_hints.cpython-312-pytest-9.0.3.pyc
-│   ├── test_prompt_parity.cpython-312-pytest-9.0.3.pyc
-│   ├── test_sign_flip_pin.cpython-312-pytest-9.0.3.pyc
-│   ├── test_v4_hybrid_selection.cpython-312-pytest-9.0.3.pyc
-│   └── test_v4_robust_fallback.cpython-312-pytest-9.0.3.pyc
 ├── pyproject.toml
 ├── README.md
-├── reanalyze_excluding_bypass.py
-├── repro-adaptive-config.patch
-├── repro-metrics-api.patch
+├── requirements_torch213.txt
 ├── requirements.txt
-├── rule_a_fixes.patch
 ├── run_all.sh
 ├── run_checks.py
 ├── run.log
-├── scan_after2.txt
-├── scan_after3.txt
-├── scan_after4.txt
-├── scan_after.txt
-├── scan_hypatiax.py
-├── scan_repo.py
-├── scan_report.json
-├── scan_report.txt
 ├── scripts
 │   ├── archive
+│   │   ├── derive_p_schema_fields.py
+│   │   ├── derive_pure_fields.py
+│   │   ├── find_zero_r2.py
+│   │   ├── make_quarantine_manifest.py
+│   │   ├── option3
+│   │   │   ├── patch_runner_for_ablation.py
+│   │   │   ├── static_audit.py
+│   │   │   └── summarize_recovery.py
+│   │   ├── p2_fix_all.py
+│   │   ├── p2_hds_from_source.py
+│   │   ├── phase2_finish.py
+│   │   ├── phase3_patch_omit.py
+│   │   ├── phase3_reachability.py
+│   │   ├── reflatten_fields.py
+│   │   ├── rescore_p_r2_scored.py
+│   │   ├── size_case47.py
+│   │   └── size_flags.py
 │   ├── bypass_audit.py
 │   ├── check_closure_nonfinite.py
 │   ├── check_namespace_use.py
@@ -1281,66 +1266,31 @@
 │   ├── check_selection.py
 │   ├── ci
 │   │   ├── ablation_multiseed_summary.py
-│   │   ├── overlay_partial_ablation.py
-│   │   └── __pycache__
-│   │       └── overlay_partial_ablation.cpython-312.pyc
+│   │   └── overlay_partial_ablation.py
 │   ├── close_m4_exclusion.py
 │   ├── close_phase1.py
-│   ├── derive_p_schema_fields.py
-│   ├── derive_pure_fields.py
-│   ├── find_zero_r2.py
-│   ├── make_quarantine_manifest.py
 │   ├── mark_m4_unverified.py
 │   ├── migrate_r2_repro.py
-│   ├── option3
-│   │   ├── patch_runner_for_ablation.py
-│   │   ├── static_audit.py
-│   │   └── summarize_recovery.py
 │   ├── p2_data.py
-│   ├── p2_data.py~
-│   ├── p2_fix_all.py
-│   ├── p2_hds_from_source.py
 │   ├── phase2_close.py
-│   ├── phase2_finish.py
 │   ├── phase3_all.py
 │   ├── phase3_close.py
 │   ├── phase3_engine_adapter.py
-│   ├── phase3_patch_omit.py
-│   ├── phase3_reachability.py
 │   ├── __pycache__
-│   │   ├── close_m4_exclusion.cpython-312.pyc
-│   │   ├── mark_m4_unverified.cpython-312.pyc
-│   │   ├── migrate_r2_repro.cpython-312.pyc
-│   │   ├── p2_data.cpython-312.pyc
-│   │   ├── p2_resolver_mm.cpython-312.pyc
-│   │   ├── phase2_close.cpython-312.pyc
-│   │   ├── phase3_all.cpython-312.pyc
-│   │   ├── phase3_engine_adapter.cpython-312.pyc
-│   │   ├── quarantine_contaminated.cpython-312.pyc
-│   │   ├── run_phase3_ablation.cpython-312.pyc
-│   │   └── run_pure_llm_arm.cpython-312.pyc
+│   │   └── close_m4_exclusion.cpython-312.pyc
 │   ├── quarantine_contaminated.py
-│   ├── reflatten_fields.py
-│   ├── rescore_p_r2_scored.py
-│   ├── rescore_p_r2_scored.py~
 │   ├── run_phase3_ablation.py
 │   ├── run_pure_llm_arm.py
-│   ├── run_pure_llm_arm.py.bak
-│   ├── run_pure_llm_arm.py.bak2
-│   ├── size_case47.py
-│   └── size_flags.py
+│   └── tools
+│       ├── merge_instability_shards.py
+│       ├── pin_ci_env.py
+│       ├── scan_hypatiax.py
+│       ├── scan_repo.py
+│       └── summarize_exp1_logs.py
 ├── setup_environment.sh
 ├── setup.py
-├── step1_freeze_and_triage.py
-├── summarize_exp1_logs.py
-├── test_engineered_predictor.py
-├── test_fixd_llm_scoring.py
-├── test_flag_parsers.py
-├── test_flags.py
 ├── test_no_equation_hints.py
-├── test_prompt_parity.py
-├── test_sign_flip_pin.py
-├── tree_clean.txt
+├── tree_cleanup.txt
 ├── triage_out
 │   ├── freeze_checksums.sha256
 │   ├── freeze_manifest.json
@@ -1348,4 +1298,4 @@
 │   └── triage_report.md
 └── wall_clock_flags.json
 
-161 directories, 1188 files
+159 directories, 1140 files

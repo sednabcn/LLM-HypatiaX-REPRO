@@ -56,6 +56,16 @@ def _flag(name: str) -> bool:
     return raw.strip().lower() in ("1", "true", "yes")
 
 
+def _opt_in(name: str) -> bool:
+    """True ONLY when env var `name` is explicitly set to 1/true/yes.
+
+    Unlike _flag() this is fail-OPEN-to-OFF: unset/empty means False. Use it
+    for scoring conveniences (e.g. sign-flip) that must never be active by
+    default, because they would break input/scoring parity between arms.
+    """
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes")
+
+
 _DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
@@ -719,7 +729,19 @@ CRITICAL REQUIREMENTS:
         var_names,
         verbose: bool = False,
     ) -> dict:
-        """Test formula accuracy with FIXED evaluation logic."""
+        """Test formula accuracy with FIXED evaluation logic.
+
+        Result-row contract for scored rows (every row that reaches the R²
+        stage carries `r2`, `r2_status`, `r2_sign_flip`, `success`):
+          * non-finite predictions -> success=False, r2=-inf,
+                                      r2_status="nonfinite_pred"
+          * zero-variance target   -> success=False, r2=nan,
+                                      r2_status="degenerate_target"
+          * otherwise              -> success=True, canonical R^2.
+        Sign-flip rescoring (score -y_pred when it beats y_pred) is OFF by
+        default and only enabled by HYPATIAX_R2_SIGN_FLIP=1; the row always
+        records whether a flip was applied in `r2_sign_flip`.
+        """
         try:
             python_code = formula_dict.get("python_code", "")
             if not python_code or python_code == "N/A":
@@ -835,14 +857,18 @@ CRITICAL REQUIREMENTS:
                 }
 
             # B2/C4: NaN/inf predictions are failures, not "success with NaN R²".
+            # Contract: r2 = -inf (worst possible score), status "nonfinite_pred".
+            # (_json_safe writes -inf as null on disk; r2_status keeps the reason.)
             y_pred = np.asarray(y_pred, dtype=float)
+            y_true = np.asarray(y_true, dtype=float)
             if not np.all(np.isfinite(y_pred)):
                 n_bad = int((~np.isfinite(y_pred)).sum())
                 return {
                     "success": False,
                     "error": f"non-finite predictions ({n_bad}/{len(y_pred)})",
-                    "r2": float("nan"),
-                    "r2_status": "nonfinite_prediction",
+                    "r2": float("-inf"),
+                    "r2_status": "nonfinite_pred",
+                    "r2_sign_flip": False,
                 }
 
             # Calculate metrics
@@ -850,15 +876,38 @@ CRITICAL REQUIREMENTS:
             mae = np.mean(np.abs(y_pred - y_true))
             rmse = np.sqrt(mse)
 
-            # PHASE1-FIX-P3b: canonical R^2 (hypatiax.core.r2_canonical.r2_checked). A degenerate target keeps the
-            # evaluator's existing contract pinned by test_baseline_regressions: exact match -> 1.0,
-            # mismatch -> -inf. The 1e6 + N(0,1) offset case is scored on its spread, not its offset.
-            from hypatiax.core.r2_canonical import r2_checked as _r2_checked
-            r2, _r2_status = _r2_checked(y_true, y_pred)
+            # PHASE1-FIX-P3b: canonical R^2 (hypatiax.core.r2_canonical.r2_checked).
+            r2, _r2_status = _r2_checked_call(y_true, y_pred)
+
+            # A zero-variance target has no defined R^2. It is reported as a
+            # degenerate, FAILED row (r2 = nan) instead of being scored 1.0 for a
+            # trivial exact match or -inf for a mismatch: a constant target must
+            # never contribute a "perfect" score to the arm.
+            # NOTE: this replaces the old constant_target_match /
+            # constant_target_mismatch contract; update test_baseline_regressions.
             if _r2_status == "degenerate_target":
-                _match = bool(np.allclose(y_pred, y_true, rtol=1e-9, atol=1e-30))
-                r2 = 1.0 if _match else float("-inf")
-                _r2_status = "constant_target_match" if _match else "constant_target_mismatch"
+                return {
+                    "mse": float(mse),
+                    "mae": float(mae),
+                    "rmse": float(rmse),
+                    "r2": float("nan"),
+                    "r2_status": "degenerate_target",
+                    "r2_sign_flip": False,
+                    "success": False,
+                    "error": "degenerate target (zero variance): R^2 undefined",
+                }
+
+            # Optional sign-flip rescoring. OFF by default (explicit opt-in only);
+            # whether it fired is always recorded in `r2_sign_flip`.
+            r2_sign_flip = False
+            if _opt_in("HYPATIAX_R2_SIGN_FLIP") and np.isfinite(r2) and r2 < 0:
+                _r2_alt, _alt_status = _r2_checked_call(y_true, -y_pred)
+                if np.isfinite(_r2_alt) and _r2_alt > r2:
+                    r2, _r2_status, r2_sign_flip = _r2_alt, _alt_status, True
+                    y_pred = -y_pred
+                    mse = np.mean((y_pred - y_true) ** 2)
+                    mae = np.mean(np.abs(y_pred - y_true))
+                    rmse = np.sqrt(mse)
 
             return {
                 "mse": float(mse),
@@ -866,6 +915,7 @@ CRITICAL REQUIREMENTS:
                 "rmse": float(rmse),
                 "r2": float(r2),
                 "r2_status": _r2_status,
+                "r2_sign_flip": r2_sign_flip,
                 "success": True,
             }
 
@@ -884,6 +934,13 @@ CRITICAL REQUIREMENTS:
         with open(filepath, "w") as f:
             json.dump(_json_safe(self.results), f, indent=2, allow_nan=False)
         print(f"\n✅ Results saved: {filepath}")
+
+
+def _r2_checked_call(y_true, y_pred):
+    """Thin wrapper around the canonical R^2 so it is imported lazily (and in
+    one place). Returns (r2, status)."""
+    from hypatiax.core.r2_canonical import r2_checked as _r2_checked
+    return _r2_checked(y_true, y_pred)
 
 
 def run_comprehensive_test(
