@@ -57,10 +57,17 @@ def test_tiny_scale_targets_still_scored(mod):
     y = 1e-19 * rng.uniform(1, 2, 100)
     assert _r2(mod, y, y)["r2"] == pytest.approx(1.0)
 
-def test_constant_target_exact_match_is_one_mismatch_is_neg_inf(mod):
+def test_constant_target_is_degenerate_failed_row(mod):
+    """A zero-variance target has no defined R^2: it is a FAILED row (r2=nan),
+    whether or not the prediction matches. It must never score a perfect 1.0.
+    (Contract changed in d9b27b9; replaces constant_target_match/mismatch.)"""
     y = np.full(50, 3.0)
-    assert _r2(mod, y, y.copy())["r2"] == 1.0
-    assert _r2(mod, y, y + 0.1)["r2"] == float("-inf")
+    for y_pred in (y.copy(), y + 0.1):
+        res = _r2(mod, y, y_pred)
+        assert np.isnan(res["r2"])
+        assert res["r2_status"] == "degenerate_target"
+        assert res["success"] is False
+        assert "degenerate target" in res["error"]
 
 
 # ───────────── provenance / model / JSON fixes ─────────────
@@ -137,5 +144,5 @@ def test_results_json_is_strict(mod, tmp_path):
 
 def test_r2_status_reported(mod):
     y = np.full(20, 2.0)
-    assert _r2(mod, y, y + 1)["r2_status"] == "constant_target_mismatch"
-    assert _r2(mod, y, y.copy())["r2_status"] == "constant_target_match"
+    assert _r2(mod, y, y + 1)["r2_status"] == "degenerate_target"
+    assert _r2(mod, y, y.copy())["r2_status"] == "degenerate_target"
