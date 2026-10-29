@@ -1,0 +1,116 @@
+{
+  "delegating_modules": [
+    {
+      "file": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+      "call_lines": [
+        1383
+      ]
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+      "call_lines": [
+        1506
+      ]
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py",
+      "call_lines": [
+        1272
+      ]
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+      "call_lines": [
+        1558
+      ]
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+      "call_lines": [
+        731
+      ]
+    },
+    {
+      "file": "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py",
+      "call_lines": [
+        176
+      ]
+    },
+    {
+      "file": "hypatiax/core/generation/hybrid_defi_llm_nn/hybrid_ensemble_system_defi_domain.py",
+      "call_lines": [
+        21,
+        269
+      ]
+    },
+    {
+      "file": "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py",
+      "call_lines": [
+        829
+      ]
+    }
+  ],
+  "absolute_ss_tot_guards": [
+    {
+      "file": "hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+      "line": 189,
+      "code": "if ss_tot <= 1e-24 * max(float(np.sum(y_true ** 2)), 1e-300):"
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+      "line": 2603,
+      "code": "if ss_tot > 0:"
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+      "line": 3748,
+      "code": "_pca_r2[_mname] = float(1.0 - _ss_res / _ss_tot) if _ss_tot > 1e-300 else None"
+    },
+    {
+      "file": "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+      "line": 2726,
+      "code": "if ss_tot > 0:"
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_r2_policy.py",
+      "line": 134,
+      "code": "if ss_tot < 1e-10:"
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+      "line": 148,
+      "code": "r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0"
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+      "line": 200,
+      "code": "return float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0"
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+      "line": 295,
+      "code": "return float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0"
+    },
+    {
+      "file": "hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+      "line": 875,
+      "code": "test_r2 = float(1 - ss_res / ss_tot) if ss_tot > 1e-10 else 0.0"
+    },
+    {
+      "file": "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py",
+      "line": 171,
+      "code": "if not np.isfinite(ss_res) or not np.isfinite(ss_tot) or ss_tot < 1e-30:"
+    },
+    {
+      "file": "scripts/option3/static_audit.py",
+      "line": 7,
+      "code": "2. absolute ss_tot guards in recovery evaluators (report s2.2, e.g. `ss_tot > 1e-10`)"
+    }
+  ],
+  "ablation_toggle_files": [
+    "scripts/option3/static_audit.py",
+    "scripts/option3/patch_runner_for_ablation.py"
+  ],
+  "notes": [],
+  "failures": []
+}

@@ -1,0 +1,849 @@
+[
+ {
+  "severity": "ERROR",
+  "category": "import",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 615,
+  "message": "module not found: hypatiax.tools.llm_providers.anthropic_provider"
+ },
+ {
+  "severity": "ERROR",
+  "category": "import",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 627,
+  "message": "module not found: hypatiax.tools.llm_providers.google_provider"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/metrics.py",
+  "line": 334,
+  "message": "redefinition of unused 'r2' from line 38"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/training/adaptive_config.py",
+  "line": 543,
+  "message": "redefinition of unused 'selection_score' from line 44"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 163,
+  "message": "redefinition of unused 'Any' from line 88"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 163,
+  "message": "redefinition of unused 'Dict' from line 88"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 163,
+  "message": "redefinition of unused 'List' from line 88"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 163,
+  "message": "redefinition of unused 'Optional' from line 88"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 165,
+  "message": "redefinition of unused 'np' from line 152"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 142,
+  "message": "redefinition of unused 'dataclass' from line 83"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 143,
+  "message": "redefinition of unused 'Any' from line 86"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 143,
+  "message": "redefinition of unused 'Dict' from line 86"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 143,
+  "message": "redefinition of unused 'List' from line 86"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 143,
+  "message": "redefinition of unused 'Optional' from line 86"
+ },
+ {
+  "severity": "ERROR",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 145,
+  "message": "redefinition of unused 'np' from line 131"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/core/metrics.py",
+  "line": 394,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 273,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 382,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 391,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 446,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/extrap_r2_far.py",
+  "line": 245,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/hypatia.py",
+  "line": 69,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_pca.py",
+  "line": 151,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+  "line": 244,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py",
+  "line": 131,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py",
+  "line": 177,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 413,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 705,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 769,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 1135,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 1482,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 2526,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 422,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 749,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 800,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 1172,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 1523,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3067,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3075,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 176,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 196,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 266,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 606,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 636,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py",
+  "line": 153,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py",
+  "line": 246,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py",
+  "line": 645,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py",
+  "line": 671,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_sample_complexity_benchmark.py",
+  "line": 1269,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/tests/test_proc_box_wiring.py",
+  "line": 58,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/tests/test_proc_box_wiring.py",
+  "line": 66,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "WARN",
+  "category": "silent-except",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/tests/test_proc_box_wiring.py",
+  "line": 159,
+  "message": "exception swallowed with 'pass'"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp1_ablation.py",
+  "line": 1060,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp1_ablation.py",
+  "line": 1247,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp1_ablation.py",
+  "line": 1595,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 1753,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/exp3_nguyen12_consolidated.py",
+  "line": 1755,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3016,
+  "message": "local variable 'counters' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3159,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3396,
+  "message": "local variable 'flag' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3498,
+  "message": "local variable '_timed_out' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3919,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3924,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3928,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3929,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3930,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3932,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 3933,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4027,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4070,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4073,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4093,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4095,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4096,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 4097,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5053,
+  "message": "local variable 'remaining' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5119,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5130,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5132,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5133,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py",
+  "line": 5138,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 1808,
+  "message": "local variable 'X_all_s' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3248,
+  "message": "local variable 'counters' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3398,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3639,
+  "message": "local variable 'flag' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 3741,
+  "message": "local variable '_timed_out' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4182,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4187,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4191,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4192,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4193,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4195,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4196,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4290,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4333,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4336,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4356,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4358,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4359,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 4360,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5483,
+  "message": "local variable 'remaining' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5549,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5560,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5562,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5563,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+  "line": 5568,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1169,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1179,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1180,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1181,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1182,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1183,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_instability_suite.py",
+  "line": 1426,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py",
+  "line": 811,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py",
+  "line": 859,
+  "message": "local variable 'test_m_llm' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/protocols/experiment_protocol_nguyen12.py",
+  "line": 919,
+  "message": "f-string is missing placeholders"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 959,
+  "message": "local variable '_effective_llm' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 1008,
+  "message": "local variable '_orig_binary' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 1009,
+  "message": "local variable '_orig_unary' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 1010,
+  "message": "local variable '_orig_maxsize' is assigned to but never used"
+ },
+ {
+  "severity": "INFO",
+  "category": "pyflakes",
+  "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+  "line": 1328,
+  "message": "local variable '_X_for_rmse' is assigned to but never used"
+ }
+]
