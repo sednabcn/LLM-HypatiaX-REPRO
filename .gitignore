@@ -44,3 +44,9 @@ exploratory/
 scan_report.json
 audit_out/*.txt
 audit_out/*.csv
+
+# --- added by cleanup_repo.py ---
+*.py[cod]
+.pytest_cache/
+*.bak[0-9]
+.cleanup_trash/

@@ -1,0 +1,86 @@
+status	original_path	new_path	reason
+trashed	hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py.bak	.cleanup_trash/20261029_130803/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py.bak	stray backup
+trashed	hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py.rej	.cleanup_trash/20261029_130803/hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py.rej	stray backup
+trashed	hypatiax/experiments/benchmarks/exp1_ablation.py.bak	.cleanup_trash/20261029_130803/hypatiax/experiments/benchmarks/exp1_ablation.py.bak	stray backup
+trashed	hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py.bak	.cleanup_trash/20261029_130803/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py.bak	stray backup
+trashed	hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py.bak	.cleanup_trash/20261029_130803/hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py.bak	stray backup
+trashed	phase2_pure_llm_config.yaml.bak	.cleanup_trash/20261029_130803/phase2_pure_llm_config.yaml.bak	stray backup
+trashed	scripts/p2_data.py~	.cleanup_trash/20261029_130803/scripts/p2_data.py~	stray backup
+trashed	scripts/rescore_p_r2_scored.py~	.cleanup_trash/20261029_130803/scripts/rescore_p_r2_scored.py~	stray backup
+trashed	scripts/run_pure_llm_arm.py.bak	.cleanup_trash/20261029_130803/scripts/run_pure_llm_arm.py.bak	stray backup
+trashed	scripts/run_pure_llm_arm.py.bak2	.cleanup_trash/20261029_130803/scripts/run_pure_llm_arm.py.bak2	stray backup
+moved	add_generation_path_ehs.py	archive/one_off_scripts/add_generation_path_ehs.py	one-off fixer / patcher / audit script
+moved	all_domains_and_recovery_tests.patch	archive/patches/all_domains_and_recovery_tests.patch	patch files / patch-generation output
+moved	apply_adaptive_config_r2.py	archive/one_off_scripts/apply_adaptive_config_r2.py	one-off fixer / patcher / audit script
+moved	apply_baseline_hardening.py	archive/one_off_scripts/apply_baseline_hardening.py	one-off fixer / patcher / audit script
+moved	apply_flag_patch.py	archive/one_off_scripts/apply_flag_patch.py	one-off fixer / patcher / audit script
+moved	audit_and_fix.py	archive/one_off_scripts/audit_and_fix.py	one-off fixer / patcher / audit script
+moved	exp1_ablation_table.tex	archive/results_snapshots/exp1_ablation_table.tex	loose result / log snapshot in the repo root
+moved	exp1_instability_stats.json	archive/results_snapshots/exp1_instability_stats.json	loose result / log snapshot in the repo root
+moved	exp1_rf01_significant.tex	archive/results_snapshots/exp1_rf01_significant.tex	loose result / log snapshot in the repo root
+moved	exp1_rf01_subdomain.tex	archive/results_snapshots/exp1_rf01_subdomain.tex	loose result / log snapshot in the repo root
+moved	fix_manifest_bypass.py	archive/one_off_scripts/fix_manifest_bypass.py	one-off fixer / patcher / audit script
+moved	fix_missing_names.py	archive/one_off_scripts/fix_missing_names.py	one-off fixer / patcher / audit script
+moved	fix_out	archive/patches/fix_out	patch files / patch-generation output
+moved	fix_paper_issues.py	archive/one_off_scripts/fix_paper_issues.py	one-off fixer / patcher / audit script
+moved	flatten_results.py	archive/one_off_scripts/flatten_results.py	one-off fixer / patcher / audit script
+moved	flatten_results_v2.py	archive/one_off_scripts/flatten_results_v2.py	one-off fixer / patcher / audit script
+moved	flatten_results_v3.py	archive/one_off_scripts/flatten_results_v3.py	one-off fixer / patcher / audit script
+moved	followup_fixes.patch	archive/patches/followup_fixes.patch	patch files / patch-generation output
+moved	hybrid-ingest-test.patch	archive/patches/hybrid-ingest-test.patch	patch files / patch-generation output
+moved	instability_extrapolation_v2.csv	archive/results_snapshots/instability_extrapolation_v2.csv	loose result / log snapshot in the repo root
+moved	make_quarantine_manifest.py	archive/one_off_scripts/make_quarantine_manifest.py	one-off fixer / patcher / audit script
+moved	merge_instability_shards.py	scripts/tools/merge_instability_shards.py	reusable helper sitting in the repo root
+moved	multiseed_summary.json	archive/results_snapshots/multiseed_summary.json	loose result / log snapshot in the repo root
+moved	p2_backup_20261028_1234	archive/phase2/p2_backup_20261028_1234	phase-2 run data / closure evidence
+moved	p2_call1	archive/phase2/p2_call1	phase-2 run data / closure evidence
+moved	p2_med	archive/phase2/p2_med	phase-2 run data / closure evidence
+moved	p2_pure_llm_full_run.log	archive/phase2/p2_pure_llm_full_run.log	phase-2 run data / closure evidence
+moved	p2_rerun_mm	archive/phase2/p2_rerun_mm	phase-2 run data / closure evidence
+moved	p2_rerun_mm.log	archive/phase2/p2_rerun_mm.log	phase-2 run data / closure evidence
+moved	p2_schema	archive/phase2/p2_schema	phase-2 run data / closure evidence
+moved	p2_train	archive/phase2/p2_train	phase-2 run data / closure evidence
+moved	paired_checker_audit.py	archive/one_off_scripts/paired_checker_audit.py	one-off fixer / patcher / audit script
+moved	patch_strict_llm.py	archive/one_off_scripts/patch_strict_llm.py	one-off fixer / patcher / audit script
+moved	phase2_finalize.sh	archive/one_off_scripts/phase2_finalize.sh	one-off fixer / patcher / audit script
+moved	phase2_out_p2_med	archive/phase2/phase2_out_p2_med	phase-2 run data / closure evidence
+moved	phase2_out_p2_train	archive/phase2/phase2_out_p2_train	phase-2 run data / closure evidence
+moved	phase2_pure_llm_closure	archive/phase2/phase2_pure_llm_closure	phase-2 run data / closure evidence
+moved	pin_ci_env.py	scripts/tools/pin_ci_env.py	reusable helper sitting in the repo root
+moved	probe_old.sh	archive/one_off_scripts/probe_old.sh	one-off fixer / patcher / audit script
+moved	provenance_map_exp1.json	archive/results_snapshots/provenance_map_exp1.json	loose result / log snapshot in the repo root
+moved	reanalyze_excluding_bypass.py	archive/one_off_scripts/reanalyze_excluding_bypass.py	one-off fixer / patcher / audit script
+moved	repro-adaptive-config.patch	archive/patches/repro-adaptive-config.patch	patch files / patch-generation output
+moved	repro-metrics-api.patch	archive/patches/repro-metrics-api.patch	patch files / patch-generation output
+moved	rule_a_fixes.patch	archive/patches/rule_a_fixes.patch	patch files / patch-generation output
+moved	scan_after.txt	archive/results_snapshots/scan_after.txt	loose result / log snapshot in the repo root
+moved	scan_after2.txt	archive/results_snapshots/scan_after2.txt	loose result / log snapshot in the repo root
+moved	scan_after3.txt	archive/results_snapshots/scan_after3.txt	loose result / log snapshot in the repo root
+moved	scan_after4.txt	archive/results_snapshots/scan_after4.txt	loose result / log snapshot in the repo root
+moved	scan_hypatiax.py	scripts/tools/scan_hypatiax.py	reusable helper sitting in the repo root
+moved	scan_repo.py	scripts/tools/scan_repo.py	reusable helper sitting in the repo root
+moved	scan_report.json	archive/results_snapshots/scan_report.json	loose result / log snapshot in the repo root
+moved	scan_report.txt	archive/results_snapshots/scan_report.txt	loose result / log snapshot in the repo root
+moved	scripts/derive_p_schema_fields.py	scripts/archive/derive_p_schema_fields.py	one-off phase / closure script
+moved	scripts/derive_pure_fields.py	scripts/archive/derive_pure_fields.py	one-off phase / closure script
+moved	scripts/find_zero_r2.py	scripts/archive/find_zero_r2.py	one-off phase / closure script
+moved	scripts/make_quarantine_manifest.py	scripts/archive/make_quarantine_manifest.py	one-off phase / closure script
+moved	scripts/option3	scripts/archive/option3	one-off phase / closure script
+moved	scripts/p2_fix_all.py	scripts/archive/p2_fix_all.py	one-off phase / closure script
+moved	scripts/p2_hds_from_source.py	scripts/archive/p2_hds_from_source.py	one-off phase / closure script
+moved	scripts/phase2_finish.py	scripts/archive/phase2_finish.py	one-off phase / closure script
+moved	scripts/phase3_patch_omit.py	scripts/archive/phase3_patch_omit.py	one-off phase / closure script
+moved	scripts/phase3_reachability.py	scripts/archive/phase3_reachability.py	one-off phase / closure script
+moved	scripts/reflatten_fields.py	scripts/archive/reflatten_fields.py	one-off phase / closure script
+moved	scripts/rescore_p_r2_scored.py	scripts/archive/rescore_p_r2_scored.py	one-off phase / closure script
+moved	scripts/size_case47.py	scripts/archive/size_case47.py	one-off phase / closure script
+moved	scripts/size_flags.py	scripts/archive/size_flags.py	one-off phase / closure script
+moved	step1_freeze_and_triage.py	archive/one_off_scripts/step1_freeze_and_triage.py	one-off fixer / patcher / audit script
+moved	summarize_exp1_logs.py	scripts/tools/summarize_exp1_logs.py	reusable helper sitting in the repo root
+moved	test_engineered_predictor.py	hypatiax/experiments/tests/test_engineered_predictor.py	root-level test
+moved	test_fixd_llm_scoring.py	hypatiax/experiments/tests/test_fixd_llm_scoring.py	root-level test
+moved	test_flag_parsers.py	hypatiax/experiments/tests/test_flag_parsers.py	root-level test
+moved	test_flags.py	hypatiax/experiments/tests/test_flags.py	root-level test
+moved	test_prompt_parity.py	hypatiax/experiments/tests/test_prompt_parity.py	root-level test
+moved	test_sign_flip_pin.py	hypatiax/experiments/tests/test_sign_flip_pin.py	root-level test
+gitignore	.gitignore		added 4 patterns
