@@ -1,0 +1,134 @@
+{
+  "Arrhenius": {
+    "description": "Arrhenius",
+    "domain": "Chemistry",
+    "variable_names": [
+      "T"
+    ],
+    "constants": {}
+  },
+  "Henderson-Hasselbalch": {
+    "description": "Henderson-Hasselbalch",
+    "domain": "Chemistry",
+    "variable_names": [
+      "A",
+      "HA"
+    ],
+    "constants": {}
+  },
+  "Rate Law": {
+    "description": "Rate Law",
+    "domain": "Chemistry",
+    "variable_names": [
+      "A",
+      "B"
+    ],
+    "constants": {}
+  },
+  "Allometric Scaling": {
+    "description": "Allometric Scaling",
+    "domain": "Biology",
+    "variable_names": [
+      "M"
+    ],
+    "constants": {}
+  },
+  "Michaelis-Menten": {
+    "description": "Michaelis-Menten",
+    "domain": "Biology",
+    "variable_names": [
+      "S"
+    ],
+    "constants": {}
+  },
+  "Logistic Growth": {
+    "description": "Logistic Growth",
+    "domain": "Biology",
+    "variable_names": [
+      "N"
+    ],
+    "constants": {}
+  },
+  "Kinetic Energy": {
+    "description": "Kinetic Energy",
+    "domain": "Physics",
+    "variable_names": [
+      "m",
+      "v"
+    ],
+    "constants": {}
+  },
+  "Gravitational Force": {
+    "description": "Gravitational Force",
+    "domain": "Physics",
+    "variable_names": [
+      "m1",
+      "m2",
+      "r"
+    ],
+    "constants": {}
+  },
+  "Ideal Gas Law": {
+    "description": "Ideal Gas Law",
+    "domain": "Physics",
+    "variable_names": [
+      "n",
+      "T",
+      "V"
+    ],
+    "constants": {}
+  },
+  "Impermanent Loss": {
+    "description": "Impermanent Loss",
+    "domain": "DeFi AMM",
+    "variable_names": [
+      "r"
+    ],
+    "constants": {}
+  },
+  "Price Impact": {
+    "description": "Price Impact",
+    "domain": "DeFi AMM",
+    "variable_names": [
+      "dx",
+      "x"
+    ],
+    "constants": {}
+  },
+  "Constant Product": {
+    "description": "Constant Product",
+    "domain": "DeFi AMM",
+    "variable_names": [
+      "x"
+    ],
+    "constants": {}
+  },
+  "Value at Risk": {
+    "description": "Value at Risk",
+    "domain": "DeFi Risk",
+    "variable_names": [
+      "P",
+      "sigma"
+    ],
+    "constants": {}
+  },
+  "Liquidation Price": {
+    "description": "Liquidation Price",
+    "domain": "DeFi Risk",
+    "variable_names": [
+      "p0",
+      "L"
+    ],
+    "constants": {}
+  },
+  "Portfolio Std Dev": {
+    "description": "Portfolio Std Dev",
+    "domain": "DeFi Risk",
+    "variable_names": [
+      "s1",
+      "s2",
+      "rho"
+    ],
+    "constants": {}
+  }
+}
