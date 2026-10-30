@@ -171,10 +171,31 @@ def preflight(a):
                 X, _, y, _, _, _ = exp1.generate_data(eq, N=200, noise_level=0.05, seed=eq_seed)
                 Xf, yf = exp1.generate_extrap_data(eq, regime="far", N=100, seed=eq_seed)
             checked += 1
-            if hash_arrays(X, y) != r.get("train_data_sha256") or hash_arrays(Xf, yf) != r.get("far_data_sha256"):
-                bad.append((r["equation"], s))
+            train_expected = r.get("train_data_sha256")
+            far_expected = r.get("far_data_sha256")
+            train_actual = hash_arrays(X, y)
+            far_actual = hash_arrays(Xf, yf)
+            if train_actual != train_expected or far_actual != far_expected:
+                bad.append({
+                    "equation": r["equation"],
+                    "seed": s,
+                    "train_expected": train_expected,
+                    "train_actual": train_actual,
+                    "far_expected": far_expected,
+                    "far_actual": far_actual,
+                })
+        if bad:
+            print("P6 G1 dry check mismatches:")
+            for m in bad:
+                print(
+                    f"  equation={m['equation']}, seed={m['seed']}\n"
+                    f"    train expected={m['train_expected']}\n"
+                    f"    train actual  ={m['train_actual']}\n"
+                    f"    far   expected={m['far_expected']}\n"
+                    f"    far   actual  ={m['far_actual']}"
+                )
         p.add("P6 G1 dry check: HDS data hashes == P rows (P hash scheme)", not bad and checked > 0,
-              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches {bad[:4]}")
+              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches {[(m['equation'], m['seed']) for m in bad[:4]]}")
     except Exception as e:  # engine import problems must be visible, not swallowed
         p.add("P6 G1 dry check", False, f"{type(e).__name__}: {e}")
     return p, (commit, dirty)
