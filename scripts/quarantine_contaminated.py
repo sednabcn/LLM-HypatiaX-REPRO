@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# audit: ignore[F1] cleanup/migration utility, writes no new result rows
 """Quarantine stored result files that carry hardcoded-bypass contamination.
 
     python scripts/quarantine_contaminated.py             # dry run: list what would move

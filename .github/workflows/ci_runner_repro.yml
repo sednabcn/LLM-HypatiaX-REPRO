@@ -18,6 +18,7 @@ on:
 #         - exp1c
           - exp1_ablation
           - exp1_five
+          - exp1_llm_sens
           - exp1_pca
           - exp1b_pca
           - exp1_pca_seeds
@@ -43,7 +44,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). exp1_llm_sens: forced to 6 (one shard per condition: arm x named/neutral description, each running all seeds). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -176,7 +177,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds exp1c_pca \
+          VALID_IDS="exp1 exp1b exp1b_seeds portfolio exp1c exp1_ablation exp1_five exp1_llm_sens exp1_pca exp1b_pca exp1_pca_seeds exp1c_pca \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -381,6 +382,17 @@ jobs:
               DEFAULT_SEEDS="42"
               ;;
 
+            exp1_llm_sens)
+              # LLM-sensitive DeFi protocol: 27 cases, arms x named/neutral descriptions.
+              # One shard per "<condition>_seed<N>" task. NEEDS_JULIA=true because three of the
+              # six conditions run PySR. Requires repo vars/secrets-free config: LLM_SENS_RUNNER and
+              # LLM_SENS_PRIOR_TARGETS (set as workflow/repo variables) - see exp1_llm_sens.py.
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_llm_sens.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="ablation/exp1_llm_sens"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,7,2024}"
+              ;;
+
             exp2_feynman)
               SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
               NEEDS_JULIA=true
@@ -535,6 +547,7 @@ jobs:
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
               "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
+              "exp1_llm_sens":      6,   # one shard per condition (registry is condition-major: 6 conditions x seeds)
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
               "exp2_feynman_pca":    1,  # mirrors exp2_feynman (same FEYNMAN_DOMAINS registry, single shard)
@@ -629,6 +642,12 @@ jobs:
           SUPPB_SC_IDS = [f"sc_n{n}__{eq}" for n in SUPPB_SC_SAMPLE_COUNTS
                           for eq in FEYNMAN_DOMAINS]
 
+          LLM_SENS_CONDS = [
+              "pysr_only__na", "hypatia_nollm__na",
+              "pure_llm__named", "pure_llm__neutral",
+              "hypatia__named", "hypatia__neutral",
+          ]
+
           registry = {
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
@@ -639,6 +658,7 @@ jobs:
               "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+              "exp1_llm_sens":     [f"{c}_seed{s}" for c in LLM_SENS_CONDS for s in SEEDS],
               "exp2_feynman":       FEYNMAN_DOMAINS,
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
               "exp2_feynman_pca":   FEYNMAN_DOMAINS,
@@ -988,7 +1008,7 @@ jobs:
           grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised - refusing to run unverified."; exit 1; }
 
       - name: Warn - affected step run without clean_llm_rerun
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && contains(fromJSON('["exp2_feynman","exp2","exp2_five","exp2_feynman_extrap","hybrid_all_domains","suppB_sc","extrap","exp1_five"]'), needs.plan.outputs.exp_id) }}
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && contains(fromJSON('["exp2_feynman","exp2","exp2_five","exp2_feynman_extrap","hybrid_all_domains","suppB_sc","extrap","exp1_five","exp1_llm_sens"]'), needs.plan.outputs.exp_id) }}
         run: |
           echo "::warning::${EXP} depends on PureLLMBaseline. Without clean_llm_rerun=true it may reuse cached/committed checkpoints produced with hardcoded answers."
 
@@ -2115,6 +2135,38 @@ jobs:
             exit 1
           fi
           echo "  OK exp1_five output files present."
+
+      - name: Verify exp1_llm_sens output (condition file exists, LLM arms had salted prior calls)
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_llm_sens' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYV'
+          import json, os, re, sys
+          target = os.path.join(os.environ["GITHUB_WORKSPACE"], os.environ["OUT_BASE"], os.environ["RESULT_SUBDIR"])
+          tasks = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          rep_path = os.path.join(target, f"exp1_llm_sens_run_report_shard{os.environ['SHARD_INDEX']}.json")
+          report = json.load(open(rep_path)) if os.path.exists(rep_path) else []
+          bad = False
+          for t in tasks:
+              m = re.fullmatch(r"(.+)_seed(\d+)", t)
+              cond, seed = m.group(1), int(m.group(2))
+              f = os.path.join(target, f"exp1_llm_sens_{cond}_seed{seed}.json")
+              if not (os.path.exists(f) and os.path.getsize(f) > 2):
+                  print(f"::error::missing/empty result for {t}: {f}")
+                  bad = True
+                  continue
+              llm = cond.startswith(("pure_llm", "hypatia__"))
+              rows = [r for r in report if r["condition"] == cond and r["seed"] == seed]
+              calls = sum(r["prior_calls"] for r in rows)
+              if llm and calls == 0:
+                  print(f"::error::{t}: LLM arm made 0 intercepted get_llm_prior calls - cache_salt/blind NOT enforced (check LLM_SENS_PRIOR_TARGETS import sites).")
+                  bad = True
+              else:
+                  print(f"  OK {t}: result present, intercepted prior calls = {calls}")
+          sys.exit(1 if bad else 0)
+          PYV
 
       - name: Verify exp2_feynman output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp2_feynman' && steps.resolve_ids.outputs.has_work == 'true' }}

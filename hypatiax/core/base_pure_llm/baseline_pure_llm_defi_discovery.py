@@ -866,9 +866,9 @@ CRITICAL REQUIREMENTS:
                 return {
                     "success": False,
                     "error": f"non-finite predictions ({n_bad}/{len(y_pred)})",
-                    "r2": float("-inf"),
+                    "r2": None,
                     "r2_status": "nonfinite_pred",
-                    "r2_sign_flip": False,
+                    "r2_sign_flip": False, "reason": "nonfinite_metric",
                 }
 
             # Calculate metrics
@@ -890,11 +890,11 @@ CRITICAL REQUIREMENTS:
                     "mse": float(mse),
                     "mae": float(mae),
                     "rmse": float(rmse),
-                    "r2": float("nan"),
+                    "r2": None,
                     "r2_status": "degenerate_target",
                     "r2_sign_flip": False,
                     "success": False,
-                    "error": "degenerate target (zero variance): R^2 undefined",
+                    "error": "degenerate target (zero variance): R^2 undefined", "reason": "nonfinite_metric",
                 }
 
             # Optional sign-flip rescoring. OFF by default (explicit opt-in only);

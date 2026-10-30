@@ -91,7 +91,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_llm_sens exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -668,6 +668,89 @@ PYMERGE
 }
 
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
+
+# ---------------------------------------------------------------------------
+# exp1_llm_sens: LLM-sensitive DeFi protocol (experiment_protocol_defi_llm_sensitive.py).
+#   27 cases (21 llm_sensitive + 6 neutral-name controls); conditions =
+#   arm x description (named / neutral) with blind + per-condition cache_salt
+#   (see ablation_conditions.py).  Tasks are "<condition>_seed<N>" (e.g. hypatia__neutral_seed42);
+#   with 6 shards each shard = one condition x all seeds.  Local run (no SHARD_IDS/TASK_IDS): all
+#   conditions x DEFI_SEEDS (default 42,99,123,7,2024).
+#   REQUIRED env (no safe default - the arm code is repo-specific):
+#     LLM_SENS_RUNNER          module:function adapter (see exp1_llm_sens.py --help)
+#     LLM_SENS_PRIOR_TARGETS   comma list of module:function for every get_llm_prior import site
+#   PySR arms get LLM_SENS_PYSR_TIMEOUT seconds per case (default 90): 27 cases x 5 seeds per
+#   shard at the global 900-1100 s would exceed the 330-min CI job limit.
+# ---------------------------------------------------------------------------
+_exp1_llm_sens_step() {
+  cd "${REPO_ROOT}"
+  local out_dir="${RESULTS_DIR}/${LLM_SENS_SUBDIR:-ablation/exp1_llm_sens}"
+  local script="${EXPERIMENTS_DIR}/exp1_llm_sens.py"
+  local sfx="${SHARD_INDEX:+_shard${SHARD_INDEX}}"
+  local logf="${out_dir}/exp1_llm_sens_run${sfx}.log"
+  mkdir -p "${out_dir}"
+
+  if [[ ! -f "${script}" ]]; then
+    echo "::error::exp1_llm_sens: ${script} not found (also needs ablation_conditions.py beside it and hypatiax/protocols/experiment_protocol_defi_llm_sensitive.py)"
+    return 1
+  fi
+  export HYPATIAX_STRICT=1
+  export PYSR_TIMEOUT="${LLM_SENS_PYSR_TIMEOUT:-90}"
+  export METHOD_TIMEOUT="${LLM_SENS_PYSR_TIMEOUT:-90}"
+
+  # Task IDs look like "<condition>_seed<N>" (registry is condition-major, so with
+  # 6 shards each shard = one condition x all seeds). Group the shard's tasks by
+  # condition -> seeds; any shard count works. Strip JSON punctuation first.
+  local raw="${SHARD_IDS:-${TASK_IDS:-}}"
+  raw="$(echo "${raw}" | tr -d '[]",' | tr -s ' ' | sed 's/^ *//;s/ *$//')"
+  declare -A cond_seeds=()
+  if [[ -n "${raw}" ]]; then
+    local t c s
+    for t in ${raw}; do
+      c="$(echo "${t}" | sed -E 's/_seed[0-9]+$//')"
+      s="$(echo "${t}" | sed -nE 's/.*_seed([0-9]+)$/\1/p')"
+      if [[ -z "${s}" ]]; then
+        echo "::error::exp1_llm_sens: no _seed<N> suffix in task '${t}'"
+        return 1
+      fi
+      cond_seeds["${c}"]+="${cond_seeds[${c}]:+ }${s}"
+    done
+  else
+    local dseeds="${DEFI_SEEDS:-42,99,123,7,2024}"
+    cond_seeds["__all__"]="${dseeds//,/ }"
+  fi
+
+  : > "${logf}"
+  local rc=0 c
+  for c in "${!cond_seeds[@]}"; do
+    local args=(--seeds ${cond_seeds[${c}]})
+    [[ "${c}" != "__all__" ]] && args+=(--only "${c}")
+    [[ -n "${SHARD_INDEX:-}" ]] && args+=(--shard "${SHARD_INDEX}")
+    log "exp1_llm_sens: condition='${c/__all__/<all>}' seeds='${cond_seeds[${c}]}' shard=${SHARD_INDEX:-all} pysr_timeout=${PYSR_TIMEOUT}s"
+    PYTHONPATH="${REPO_ROOT}:${EXPERIMENTS_DIR}${PYTHONPATH:+:${PYTHONPATH}}" \
+    RESULTS_DIR="${out_dir}" \
+    PYSR_POPULATIONS="${PYSR_POPULATIONS}" \
+    JOB_DEADLINE="${JOB_DEADLINE}" \
+      python3 "${script}" --out "${out_dir}" "${args[@]}" 2>&1 | tee -a "${logf}" || rc=$?
+  done
+
+  echo '=== exp1_llm_sens verification ==='
+  find "${out_dir}" -maxdepth 1 -name 'exp1_llm_sens_*.json' 2>/dev/null | sort
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::exp1_llm_sens.py exited ${rc} - see ${logf}"
+    return "${rc}"
+  fi
+  local nres
+  nres=$(find "${out_dir}" -maxdepth 1 -name 'exp1_llm_sens_*_seed*.json' 2>/dev/null | wc -l)
+  if [[ "${nres}" -eq 0 ]]; then
+    echo "::error::exp1_llm_sens produced no exp1_llm_sens_<condition>_seed<N>.json"
+    return 1
+  fi
+  echo "OK: ${nres} result file(s)"
+  echo '=== end exp1_llm_sens ==='
+}
+
+run exp1_llm_sens "LLM-sensitive protocol: arms x named/neutral descriptions, 27 cases (paper: LLM-benefit test)" _exp1_llm_sens_step
 
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'

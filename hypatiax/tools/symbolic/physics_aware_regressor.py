@@ -1779,7 +1779,7 @@ class PhysicsAwareRegressor:
                 complexity += 10 * (tree_size - 50)
 
             return r2 - self.parsimony_coefficient * complexity
-        except Exception:
+        except Exception:  # audit: ignore[M5] -- GP-internal fitness: -inf ranks a failed individual last; never a result row
             return -np.inf
 
     # ========================================================================

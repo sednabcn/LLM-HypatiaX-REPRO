@@ -50,3 +50,6 @@ audit_out/*.csv
 .pytest_cache/
 *.bak[0-9]
 .cleanup_trash/
+run.log
+__pycache__/
+*.pyc

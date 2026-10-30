@@ -1354,7 +1354,7 @@ class HybridDiscoverySystem:
             #   RC-5  Length-mismatch guard: if _X_aug row count ≠ _y_for_rmse
             #         length (stale _last_X_aug from a prior call), fall back to
             #         the current scaled X so evaluation never silently truncates.
-            rmse  = float("nan")
+            rmse  = None  # audit-M3: was float('nan')
             nrmse = float("nan")
             _X_for_rmse = getattr(self, "_discover_X_orig", X)
             _y_for_rmse = getattr(self, "_discover_y_orig", y)
@@ -1576,8 +1576,8 @@ class HybridDiscoverySystem:
             )
             return {
                 "success": False,
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("nan"),   # nan = not computable; inf would mean infinitely bad fit
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,   # nan = not computable; inf would mean infinitely bad fit
                 "nrmse": float("nan"),
                 "formula": "N/A",
                 "expression": "N/A",
@@ -1593,7 +1593,7 @@ class HybridDiscoverySystem:
                 "scale_log": False,
                 "x_log_flags": [False] * len(var_names),
                 "y_log": False,
-                "error": f"{type(exc).__name__}: {exc}"[:500],
+                "error": f"{type(exc).__name__}: {exc}"[:500], "reason": "fit_or_metric_failed",
             }
 
     def print_statistics_summary(self) -> None:

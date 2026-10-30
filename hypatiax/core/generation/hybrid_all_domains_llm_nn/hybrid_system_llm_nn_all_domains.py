@@ -68,6 +68,14 @@ except ImportError:
 
 from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
+M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
+
+
+def _m5_record_failure(where, exc):
+    """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
+    M5_FAILURES.append({"where": where, "error": f"{type(exc).__name__}: {exc}"})
+    return None
+
 
 def _r2_rule_a(y_true, y_pred):
     """Canonical R2 for every score this module reports.  Rule A: a degenerate target,
@@ -415,10 +423,10 @@ NO markdown code blocks, individual parameters NOT dict."""
 
         if len(X) < 10:
             return None, {
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("inf"),
-                "mae": float("inf"),
-                "error": "Insufficient data",
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,
+                "mae": None,
+                "error": "Insufficient data", "reason": "nonfinite_metric",
             }
 
         # FIX (crash-to-failure-dict): the rest of the method is wrapped in
@@ -435,11 +443,11 @@ NO markdown code blocks, individual parameters NOT dict."""
             print(f"⚠️  NN training FAILED ({type(e).__name__}: {str(e)[:100]}); "
                   f"this row has no NN arm")
             return None, {
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("inf"),
-                "mae": float("inf"),
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,
+                "mae": None,
                 "error": f"{type(e).__name__}: {e}",
-                "nn_failed": True,
+                "nn_failed": True, "reason": "fit_or_metric_failed",
             }
 
     def _train_nn_inner(
@@ -576,7 +584,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         try:
             code = formula_dict.get("python_code", "")
             if not code or code == "N/A":
-                return {"error": "No code generated", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "No code generated", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             import math as _math
             import warnings as _warnings
@@ -616,7 +624,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             )
 
             if not func:
-                return {"error": "No function found", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "No function found", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             with _warnings.catch_warnings():
                 _warnings.simplefilter("ignore")
@@ -626,12 +634,12 @@ NO markdown code blocks, individual parameters NOT dict."""
                 return {
                     "error": f"Shape mismatch: {len(y_pred)} vs {len(y_true)}",
                     "success": False,
-                    "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                    "r2": None, "reason": "nonfinite_metric",  # PHASE1-FIX: failure, not a score
                 }
 
             # Handle inf/nan values
             if not np.all(np.isfinite(y_pred)):
-                return {"error": "Non-finite predictions", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "Non-finite predictions", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             mse = np.mean((y_pred - y_true) ** 2)
             r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
@@ -644,7 +652,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "success": True,
             }
         except Exception as e:
-            return {"error": str(e)[:100], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+            return {"error": str(e)[:100], "success": False, "r2": None, "reason": "fit_or_metric_failed"}  # PHASE1-FIX: failure, not a score
 
     def _evaluate_function(self, func, X, var_names):
         """Evaluate function with multiple strategies"""
@@ -764,8 +772,8 @@ NO markdown code blocks, individual parameters NOT dict."""
                 _warnings.simplefilter("ignore")
                 preds = self._evaluate_function(func, X, var_names)
             return preds if np.all(np.isfinite(preds)) else None
-        except Exception:
-            return None
+        except Exception as e:
+            return _m5_record_failure("_get_llm_predictions", e)
 
     def _get_nn_predictions(self, nn_model, X: np.ndarray) -> np.ndarray | None:
         """Run trained NN on full dataset for blending, in original y-scale."""
@@ -815,7 +823,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         if "error" not in llm_result:
             llm_metrics = self.evaluate_llm_formula(llm_result, X, y_true, var_names)
         else:
-            llm_metrics = {"error": llm_result["error"], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+            llm_metrics = {"error": llm_result["error"], "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
         if verbose:
             if llm_metrics.get("success"):
@@ -854,7 +862,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                     "python_code": llm_result.get("python_code", "N/A"),
                     "metrics": llm_metrics,
                 },
-                "nn_result": {"metrics": {"r2": 0.0, "rmse": float("inf"), "mae": float("inf")}},
+                "nn_result": {"metrics": {"r2": 0.0, "rmse": None, "mae": None, "reason": "nonfinite_metric"}},
                 "evaluation": {
                     "r2": float(llm_r2),
                     "rmse": float(llm_metrics.get("rmse", float("inf"))),

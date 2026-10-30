@@ -87,6 +87,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
+
+
+def _m5_record_failure(where, exc):
+    """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
+    M5_FAILURES.append({"where": where, "error": f"{type(exc).__name__}: {exc}"})
+    return None
+
 def _kill_thread(thread_id) -> bool:
     """Best-effort hard stop of a Python thread by injecting SystemExit.
 
@@ -460,6 +468,15 @@ def _runner_eval_formula(
 #     Source: run_test() inner block, lines ~2868-2981
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _finite(x) -> bool:
+    """True only for a real, finite number. None-safe: np.isfinite(None) raises
+    TypeError, which is what the M3/M5 codemods turn failed metrics into."""
+    try:
+        return x is not None and bool(np.isfinite(x))
+    except (TypeError, ValueError):
+        return False
+
+
 def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
     """
     R² on the far region with the same sign-flip correction used throughout
@@ -483,7 +500,7 @@ def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
         from hypatiax.core.r2_canonical import r2_scored as _r2_scored
     _val, _status = _r2_scored(y_true, y_pred)
     if _status == "catastrophic":
-        return float("-inf")
+        return None  # audit-M3: was float('-inf')
     return _val if _status == "ok" else None
 
 
@@ -580,7 +597,7 @@ def compute_extrap_r2_far(
 
         # Symbolic methods: re-evaluate on the far region.
         try:
-            y_far_pred = _runner_eval_formula(formula, X_far, var_names)
+            y_far_pred = _runner_eval_formula(formula, X_far, var_names)  # audit: ignore[L2] formula = method OUTPUT (res.formula), not ground truth
             if y_far_pred is None or len(y_far_pred) != len(y_far):
                 extrap_r2_far[mname]    = None
                 extrap_rmse_far[mname]  = None
@@ -1009,9 +1026,9 @@ class BaseMethod:
 
     def _safe_rmse(self, y_true, y_pred) -> float:
         if not np.all(np.isfinite(y_pred)):
-            return float("inf")
+            return None  # audit-M3: was float('inf')
         if len(y_true) == 0:
-            return float("inf")
+            return None  # audit-M3: was float('inf')
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
     def _unavailable(self, reason: str) -> MethodResult:
@@ -1310,8 +1327,8 @@ class BaseMethod:
                         best_r2, best_y_hybrid = r2_lin, y_hybrid_lin
 
             return best_y_hybrid
-        except Exception:
-            return None
+        except Exception as e:
+            return _m5_record_failure("_nn_residual_fit", e)
 
 
 # ============================================================================
@@ -2210,12 +2227,12 @@ class HybridDeFiMethod(BaseMethod):
                     _y_pred_defi = None
             if (TORCH_AVAILABLE and _y_pred_defi is not None
                     and np.all(np.isfinite(_y_pred_defi))
-                    and np.isfinite(r2_val) and r2_val > -1.0):
+                    and _finite(r2_val) and r2_val > -1.0):
                 _y_hybrid = self._nn_residual_fit(X, y, _y_pred_defi)
                 if _y_hybrid is not None and np.all(np.isfinite(_y_hybrid)):
                     _r2h  = self._safe_r2(y, _y_hybrid)
                     _rmh  = self._safe_rmse(y, _y_hybrid)
-                    if np.isfinite(_r2h) and _r2h >= r2_val - 0.002:
+                    if _finite(_r2h) and _r2h >= r2_val - 0.002:
                         r2_val   = _r2h
                         rmse_val = _rmh
                         _nn_applied_defi = True
@@ -2447,8 +2464,8 @@ class HybridAllDomainsMethod(BaseMethod):
                 if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             return best_result
-        except Exception:
-            return None
+        except Exception as e:
+            return _m5_record_failure("_nn_residual_fit", e)
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._system is None:
@@ -2552,7 +2569,7 @@ class HybridAllDomainsMethod(BaseMethod):
                             r2v  = self._safe_r2(y, y_pred_llm)
                             rmse = self._safe_rmse(y, y_pred_llm)
 
-            if y_pred_llm is None and np.isfinite(r2v) and r2v > 0 and np.isfinite(rmse):
+            if y_pred_llm is None and _finite(r2v) and r2v > 0 and _finite(rmse):
                 # Strategy 3a — Direct NN fit (X→y) for power-law / tiny-scale equations.
                 # Root cause of Newton's gravity failure: algebraic reconstruction
                 # produces y_pred = f(y_stats) with no X information. The NN then
@@ -2667,7 +2684,7 @@ class HybridAllDomainsMethod(BaseMethod):
                     rmse_hybrid = self._safe_rmse(y, y_hybrid)
                     # Accept if the NN doesn't degrade the LLM result by more
                     # than a small tolerance (accounts for NN noise on easy eqs).
-                    if np.isfinite(r2_hybrid) and r2_hybrid >= r2v - 0.002:
+                    if _finite(r2_hybrid) and r2_hybrid >= r2v - 0.002:
                         r2v  = r2_hybrid
                         rmse = rmse_hybrid
                         nn_applied = True
@@ -4896,6 +4913,7 @@ Examples
         # After splitting: (desc, X_train, y_train, var_names, meta, domain, X_test, y_test)
         _pca_tests = []
         _pca_fail  = 0
+        _SPLIT_FAILURES = []
         for _t in all_tests:
             _desc, _X, _y, _vnames, _meta, _dom = _t
             try:
@@ -4909,11 +4927,16 @@ Examples
                 _pca_tests.append((_desc, _Xtr, _ytr, _vnames, _meta_pca, _dom, _Xte, _yte))
             except Exception as _pca_exc:
                 _pca_fail += 1
-                print(f"  ⚠️  PCA split failed for '{_desc[:50]}': {_pca_exc} — using full data")
-                _pca_tests.append((_desc, _X, _y, _vnames, _meta, _dom, None, None))
+                # AUDIT-FIX: do NOT fall back to the full data (X_test=None means
+                # train and score on the same rows, silently in-sample).
+                # Exclude the equation and record why, so it is counted as a failure.
+                print(f"  ⚠️  PCA split failed for '{_desc[:50]}': {_pca_exc} — EXCLUDED (no in-sample fallback)")
+                _SPLIT_FAILURES.append({"equation": _desc, "error": f"{type(_pca_exc).__name__}: {_pca_exc}"})
+                continue
         all_tests = _pca_tests
-        _n_split  = len(all_tests) - _pca_fail
-        print(f"   Applied PCA 40/60 split to {_n_split}/{len(all_tests)} test(s). "
+        _n_split  = len(all_tests)   # failed splits were excluded above, not kept
+        print(f"   Applied PCA 40/60 split to {_n_split} test(s); "
+              f"{_pca_fail} EXCLUDED on split failure. "
               f"All methods receive pre-split data.\n")
 
 

@@ -261,6 +261,11 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
     # extrapolation numbers are computed identically to exp2/exp2_five's,
     # not by a second, possibly-divergent implementation.
     extrap_r2, extrap_rmse = {}, {}
+    def _finite(x):
+        try:
+            return x is not None and bool(np.isfinite(x))
+        except (TypeError, ValueError):
+            return False
     _predict_fn = getattr(result, "_predict_fn", None)
     for regime_name, (X_e, y_e) in extrap_sets.items():
         if _predict_fn is not None:
@@ -275,7 +280,7 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
                 print(f"  [{method_name}] extrap predict_fn failed ({regime_name}): {_pred_exc}")
                 y_pred = None
         else:
-            y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])
+            y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])  # audit: ignore[L2] method OUTPUT, not ground truth
         if y_pred is None:
             extrap_r2[regime_name] = None
             extrap_rmse[regime_name] = None
@@ -284,7 +289,7 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
             extrap_rmse[regime_name] = _far_rmse(y_e, y_pred)
 
     print(
-        f"  [{method_name}] {result.formula[:50]!r}  R²={result.r2:.4f}  "
+        f"  [{method_name}] {result.formula[:50]!r}  R²={(f'{result.r2:.4f}' if _finite(result.r2) else 'n/a')}  "
         f"extrap(near={extrap_r2.get('near')}, medium={extrap_r2.get('medium')}, "
         f"far={extrap_r2.get('far')})  {elapsed:.1f}s"
     )

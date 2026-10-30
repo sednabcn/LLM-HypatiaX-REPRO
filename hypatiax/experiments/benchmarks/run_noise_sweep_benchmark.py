@@ -618,7 +618,7 @@ def _aggregate_results(
                     if res:  # PHASE1-FIX: NaN/-inf from a method that ran = catastrophic
                         n_catastrophic += 1
                         catastrophic_failures.append(
-                            {"equation": eq_name, "method": method, "r2": float("-inf")}
+                            {"equation": eq_name, "method": method, "r2": None, "reason": "nonfinite_metric"}
                         )
                 elif sigma_c is not None and float(_r2_raw) > sigma_c[0] + sigma_c[1]:
                     # Checked on every finite R2, success-flagged or not.

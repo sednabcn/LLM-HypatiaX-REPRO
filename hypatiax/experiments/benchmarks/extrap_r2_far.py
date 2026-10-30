@@ -315,7 +315,7 @@ def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
         from hypatiax.core.r2_canonical import r2_scored as _r2_scored
     _val, _status = _r2_scored(y_true, y_pred)
     if _status == "catastrophic":
-        return float("-inf")
+        return None  # audit-M3: was float('-inf')
     return _val if _status == "ok" else None
 
 
@@ -412,7 +412,7 @@ def compute_extrap_r2_far(
 
         # Symbolic methods: re-evaluate on the far region.
         try:
-            y_far_pred = _runner_eval_formula(formula, X_far, var_names)
+            y_far_pred = _runner_eval_formula(formula, X_far, var_names)  # audit: ignore[L2] formula = res.formula (method OUTPUT), not ground truth
             if y_far_pred is None or len(y_far_pred) != len(y_far):
                 extrap_r2_far[mname]    = None
                 extrap_rmse_far[mname]  = None
