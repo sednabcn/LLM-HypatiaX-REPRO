@@ -34,6 +34,10 @@ on:
         description: "Stop each seed job after N new cases (smoke test, e.g. 3). Blank or 0 = no limit."
         required: false
         default: ""
+      warmup:
+        description: "Warm up PySR/Julia first (diagnostic: set false to skip)"
+        required: false
+        default: "true"
       timeout_s:
         description: "Per-case wall clock; 3600 matches the Phase 2 HDS runs the full config must reproduce."
         required: false
@@ -162,7 +166,7 @@ jobs:
       # Same Julia path as the Phase 2 exp1_ablation job (PySR provisions Julia itself).
       # Warm-up only moves first-use compile time out of the first case's wall clock.
       - name: Warm up PySR / Julia
-        if: ${{ inputs.stage != 'preflight' }}
+        if: ${{ inputs.stage != 'preflight' && inputs.warmup != 'false' }}
         run: |
           python3 - <<'PYEOF'
           import subprocess, sys
