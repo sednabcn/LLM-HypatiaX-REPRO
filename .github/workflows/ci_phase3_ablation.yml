@@ -81,7 +81,7 @@ jobs:
 
   plan:
     name: "Plan - seeds ${{ inputs.seeds }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       seed_matrix: ${{ steps.m.outputs.seed_matrix }}
@@ -102,7 +102,7 @@ jobs:
   seed_run:
     name: "Phase 3 ${{ inputs.stage }} - seed ${{ matrix.seed }}"
     needs: plan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 350
     strategy:
       fail-fast: false
@@ -129,7 +129,7 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install "pandas==2.2.3"
           pip install "pysr==2.0.0a1" \
-            numpy scipy sympy \
+            "numpy==2.5.4" "scipy==1.18.1" "sympy==1.14.0" \
             "anthropic==0.73.0" \
             scikit-learn \
             pyyaml \
@@ -139,6 +139,13 @@ jobs:
             pmlb \
             pint \
             psutil
+
+      - name: Record environment
+        run: |
+          lscpu | grep -E "Model name" || true
+          python -c "import sys, numpy, scipy, pandas; print(sys.version); print('numpy', numpy.__version__, 'scipy', scipy.__version__, 'pandas', pandas.__version__)"
+          pip freeze | sort > /tmp/pip_freeze.txt; wc -l /tmp/pip_freeze.txt
+          grep -i -E "^(numpy|scipy|pandas|sympy|pysr|torch)==" /tmp/pip_freeze.txt
 
       # Output folders are not source changes: keep them out of `git status` so the P4
       # clean-tree check sees only real code edits. Repo files are not touched.
@@ -234,7 +241,7 @@ jobs:
     name: "Phase 3 closure (merge seeds)"
     needs: [plan, seed_run]
     if: ${{ inputs.stage == 'all' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
@@ -254,7 +261,7 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install "pandas==2.2.3"
           pip install "pysr==2.0.0a1" \
-            numpy scipy sympy \
+            "numpy==2.5.4" "scipy==1.18.1" "sympy==1.14.0" \
             "anthropic==0.73.0" \
             scikit-learn \
             pyyaml \
@@ -264,6 +271,13 @@ jobs:
             pmlb \
             pint \
             psutil
+
+      - name: Record environment
+        run: |
+          lscpu | grep -E "Model name" || true
+          python -c "import sys, numpy, scipy, pandas; print(sys.version); print('numpy', numpy.__version__, 'scipy', scipy.__version__, 'pandas', pandas.__version__)"
+          pip freeze | sort > /tmp/pip_freeze.txt; wc -l /tmp/pip_freeze.txt
+          grep -i -E "^(numpy|scipy|pandas|sympy|pysr|torch)==" /tmp/pip_freeze.txt
 
       - name: Keep Phase 3 outputs out of the P4 dirty check
         run: |
