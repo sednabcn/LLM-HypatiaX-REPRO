@@ -1650,6 +1650,7 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
                         verbose=False,
                         model=os.environ["LLM_MODEL"],
                         temperature=temperature,
+                        cache_salt=f"seed{seed}_k{_k}",
                     ) or []
                     llm_calls_ok += 1
                     for _expr in _one_call_exprs:
