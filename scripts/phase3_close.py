@@ -34,6 +34,9 @@ What this version adds over the first one (each item closes a gap found in Phase
                          rows cannot carry a recovered score
     G3  live LLM         llm_called must be a bool and True (except --llm-optional components)
     G4  prompt/timeout   one prompt_template_sha256 and one timeout_s across all rows
+    G9  seed record      every row logs guesses requested/used/dropped + reasons; no in-fit fallback
+                         to unseeded PySR; same LLM sample in every arm (--allow-legacy-seed-record
+                         downgrades missing fields to a caveat)
     G8  clean tree       code_dirty False, git_commit single, no "+dirty" code_version
                          (--allow-dirty downgrades to a recorded caveat)
     evaluator pin        one evaluator_sha256 (optionally a prefix via --expected-evaluator-sha)
@@ -347,6 +350,51 @@ def run_checks(recs, args, omitted, rep):
             if float(r["runtime_s"]) > float(r["timeout_s"]) * 1.05 and r["status"] != "timeout"]
     rep.add("runtime within timeout_s (or labelled timeout)", not over, f"{len(over)} rows; first: {over[:3]}")
 
+    # G9: seed (guess) record. A guess PySR cannot parse used to vanish into a log-only fallback;
+    # every row must now say what was requested, used, dropped and why, and fit() must not have
+    # fallen back to unseeded after a Julia error.
+    g9 = ("guesses_requested", "guesses_used", "guesses_dropped", "guess_dropped_reasons", "guess_fit_fallback")
+    legacy = [(comp_of(r), r["equation"], r["seed"]) for r in recs if any(f not in r for f in g9)]
+    rep.add("G9 seed record present on every row (guesses_requested/used/dropped/reasons, guess_fit_fallback)",
+            not legacy, f"{len(legacy)} rows without it; first: {legacy[:3]}",
+            blocking=not args.allow_legacy_seed_record)
+    if legacy and args.allow_legacy_seed_record:
+        rep.caveats.append(f"{len(legacy)} rows carry no seed record (G9 not met, accepted by "
+                           f"--allow-legacy-seed-record); dropped/failed guesses on them are unknown")
+    have = [r for r in recs if all(f in r for f in g9)]
+    incons = [(comp_of(r), r["equation"], r["seed"]) for r in have
+              if not (isinstance(r["guesses_requested"], int) and isinstance(r["guesses_used"], int)
+                      and isinstance(r["guesses_dropped"], int)
+                      and r["guesses_requested"] == r["guesses_used"] + r["guesses_dropped"]
+                      and isinstance(r["guess_dropped_reasons"], list)
+                      and (r["guesses_dropped"] == 0) == (len(r["guess_dropped_reasons"]) == 0))]
+    rep.add("G9 seed record consistent (requested == used + dropped; dropped>0 iff reasons given)",
+            not incons, f"{len(incons)} rows; first: {incons[:3]}")
+    fb = [(comp_of(r), r["equation"], r["seed"]) for r in have if r["guess_fit_fallback"] is not False]
+    rep.add("G9 no in-fit seed fallback (guess_fit_fallback False): the guesses actually seeded PySR",
+            not fb, f"{len(fb)} rows fell back to unseeded fit; first: {fb[:3]}")
+    if have:
+        tot = {}
+        for r in have:
+            t = tot.setdefault(comp_of(r), [0, 0])
+            t[0] += r["guesses_requested"]
+            t[1] += r["guesses_dropped"]
+        rep.add("G9 guesses dropped before fit, by configuration (disclosure)", True,
+                "; ".join(f"{c}: {d}/{q}" for c, (q, d) in sorted(tot.items())), blocking=False)
+    # Shared LLM sample: when rows log a sample hash, every arm must have seen the same candidates
+    # for a given (equation, seed), so an ablation differs only by its gate.
+    hs = {}
+    for r in recs:
+        if r.get("llm_sample_sha256"):
+            hs.setdefault((r["equation"], int(r["seed"])), set()).add(r["llm_sample_sha256"])
+    split = [k for k, v in hs.items() if len(v) > 1]
+    if hs:
+        rep.add("G9 same LLM sample in every arm per (equation, seed) (llm_sample_sha256)", not split,
+                f"{len(split)} keys with differing samples; first: {split[:3]}")
+    else:
+        rep.add("G9 shared LLM sample verifiable (llm_sample_sha256 logged)", False,
+                "no row logs llm_sample_sha256; arm-to-arm sample sharing was not checked", blocking=False)
+
     # G1 against the P arm, if supplied (HDS exp1 rows carry no data hashes, so this is optional).
     if args.p_rows:
         try:
@@ -462,6 +510,8 @@ def main():
     ap.add_argument("--p-rows", nargs="+", default=None, help="P-arm jsonl rows for the G1 data-hash comparison")
     ap.add_argument("--expected-evaluator-sha", default=None, help="sha256 prefix of hypatiax/core/r2_canonical.py")
     ap.add_argument("--allow-dirty", action="store_true", help="accept a dirty tree as a recorded caveat (G8)")
+    ap.add_argument("--allow-legacy-seed-record", action="store_true",
+                    help="accept rows with no guesses_* fields as a recorded caveat (G9)")
     ap.add_argument("--llm-optional", action="append", default=[], metavar="COMPONENT",
                     help="component whose rows may have llm_called False (repeatable)")
     ap.add_argument("--exploratory", action="store_true", help="allow settings that deviate from ANALYSIS_PLAN")

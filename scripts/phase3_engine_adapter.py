@@ -23,6 +23,8 @@ import os
 
 import numpy as np
 
+from hypatiax.tools.symbolic import guess_sanitizer
+
 # TODO(module): confirm the exact module name of the exp1_ablation file (ls the directory).
 EXP1_MODULE = "hypatiax.experiments.benchmarks.exp1_ablation"
 ENGINE_MODULE = "hypatiax.tools.symbolic.symbolic_engine"
@@ -175,8 +177,10 @@ def run_case(equation, seed, disabled, timeout_s):
         X_tr, _, y_tr, _, _, _ = exp1.generate_data(eq, N=200, noise_level=0.05, seed=eq_seed)
         X_far, y_far = exp1.generate_extrap_data(eq, regime="far", N=100, seed=eq_seed)
 
+    guess_sanitizer.reset_audit()       # run_condition is in-process: the log is per case
     with _gates_off(cls, disabled):
         res = exp1.run_condition(eq, "hypatia", seed=seed, wall_clock_limit=timeout_s)
+    seed_audit = guess_sanitizer.drain_audit()   # guesses_* + llm_sample_sha256, required by G9
 
     timed_out = bool(res.get("timed_out"))
     r2 = None if timed_out else _rescore_far(res)
@@ -224,4 +228,5 @@ def run_case(equation, seed, disabled, timeout_s):
         "extrap_r2_far": res.get("extrap_r2_far"),
         "timed_out": timed_out,
         "error_stage": res.get("error"),
+        **seed_audit,
     }
