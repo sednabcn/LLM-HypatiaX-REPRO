@@ -1,0 +1,11 @@
+PHASE_ABLATION_CODE_OPEN   ->  phase_ablation_code_audit   (31 files, 278 findings)
+  PASS    A0_coverage            no known bad pattern found
+  CAVEAT  A1_data_generation     D1 unseeded or global rng; D3 data regenerated inside the condition loop; D4 noise added to test targets; D5 random spli
+  CAVEAT  A2_regime_split        R2 regime boundary from data quantiles or sorted slices; R3 regime metrics copied or computed from mixed arrays; R4 corr
+  CAVEAT  A3_metrics             M1 non-canonical or invalid r2; M3 non-finite sentinel or json nan; M4 no relative rmse next to r2; M5 exception swallow
+  FAIL    A4_results_format      F1 provenance field missing from result rows; F2 per-shard / non-row output
+  CAVEAT  A5_fairness            X1 search budget not uniform; X2 pysr not deterministic; X3 llm response not cached or temperature unpinned
+  CAVEAT  A6_proxy_metrics       P1 validation_score used as evidence; P2 more than one complexity measure
+  CAVEAT  A7_statistics          S5 mean / nanmean of r2 hides failures
+  CAVEAT  A8_recall_control      L2 ground truth or equation name reaches the llm
+  [HIGH] F1 hypatiax/experiments/benchmarks/run_instability_suite.py:1  result rows never record seed

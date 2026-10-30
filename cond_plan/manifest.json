@@ -1,0 +1,61 @@
+{
+ "run_tag": "exp1",
+ "n": 40,
+ "n_cases": 27,
+ "domains": [
+  "llm_sensitive",
+  "controls"
+ ],
+ "conditions": [
+  {
+   "id": "pysr_only__na",
+   "arm": "pysr_only",
+   "description": "n/a",
+   "blind": null,
+   "cache_salt": null,
+   "case_set": "named"
+  },
+  {
+   "id": "hypatia_nollm__na",
+   "arm": "hypatia_nollm",
+   "description": "n/a",
+   "blind": null,
+   "cache_salt": null,
+   "case_set": "named"
+  },
+  {
+   "id": "pure_llm__named",
+   "arm": "pure_llm",
+   "description": "named",
+   "blind": false,
+   "cache_salt": "exp1|pure_llm|named|blind=False",
+   "case_set": "named"
+  },
+  {
+   "id": "pure_llm__neutral",
+   "arm": "pure_llm",
+   "description": "neutral",
+   "blind": true,
+   "cache_salt": "exp1|pure_llm|neutral|blind=True",
+   "case_set": "neutral"
+  },
+  {
+   "id": "hypatia__named",
+   "arm": "hypatia",
+   "description": "named",
+   "blind": false,
+   "cache_salt": "exp1|hypatia|named|blind=False",
+   "case_set": "named"
+  },
+  {
+   "id": "hypatia__neutral",
+   "arm": "hypatia",
+   "description": "neutral",
+   "blind": true,
+   "cache_salt": "exp1|hypatia|neutral|blind=True",
+   "case_set": "neutral"
+  }
+ ],
+ "ground_truth_withheld_from_metadata": true,
+ "note": "Residual leak: numeric ranges are unchanged and can hint at units."
+}
