@@ -71,3 +71,20 @@ def test_replay_off_by_default(monkeypatch):
     eng._call_llm = lambda p: (n.append(1), "[]")[1]
     eng.generate_hypotheses("d", ["x0"], "t", {}); eng.generate_hypotheses("d", ["x0"], "t", {})
     assert len(n) == 2
+
+
+def test_timeout_is_not_a_seed_fallback(monkeypatch):
+    calls = []
+    orig = F.FakePySR.fit
+    def timing_out_fit(self, X, y, **kw):
+        calls.append(bool(self.guesses))
+        if self.guesses:
+            raise TimeoutError("Wall-clock limit of 600s exceeded")
+        return orig(self, X, y, **kw)
+    monkeypatch.setattr(F.FakePySR, "fit", timing_out_fit)
+    G.reset_audit()
+    res = E.SymbolicEngine(CFG()).discover(X, y, ["x0"], equation_name="t", random_state=1,
+                                           seed_expressions=["x0*x0"])
+    assert calls == [True]                                   # no second, unseeded attempt
+    assert res["expression"] == "DISCOVERY_FAILED"           # same as a timeout without a seed
+    assert res["guess_audit"]["guess_fit_fallback"] is False  # not mislabelled as a bad seed

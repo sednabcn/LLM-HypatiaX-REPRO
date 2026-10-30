@@ -1788,7 +1788,10 @@ class SymbolicEngine:
             except Exception as _fit_exc:
                 # The LLM warm-start is best-effort: an unparseable / unknown-symbol seed
                 # must never cost the whole PySR run (it previously failed all 3 attempts).
-                if not (_guesses_requested and "guesses" in pysr_kwargs):
+                # A wall-clock timeout is not a bad seed: re-raise it (same as the no-guess path)
+                # instead of burning a second budget and mislabelling the row as a seed fallback.
+                if (not (_guesses_requested and "guesses" in pysr_kwargs)
+                        or isinstance(_fit_exc, TimeoutError)):
                     raise
                 print(f"   ⚠ [PySR] fit with LLM `guesses` failed ({type(_fit_exc).__name__}: "
                       f"{str(_fit_exc)[:160]!r}) — retrying once WITHOUT the seed", flush=True)
