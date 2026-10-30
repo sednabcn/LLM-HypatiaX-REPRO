@@ -28,13 +28,28 @@ CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned 
 
 Exit codes: 0 closed, 1 not closed / preflight failed, 2 bad usage.
 """
+import os
+import sys
+
+# --- P6 numerics pin (must run before ANY numpy import) ---------------------------------------
+# NumPy picks its SIMD kernels for exp/log/log10/power once, at first import. The AVX512 kernels
+# round the last bit differently from the code path that produced the Phase 2 P-arm hashes, so on
+# an AVX512 host Arrhenius, Henderson-Hasselbalch and Allometric Scaling regenerate data that is
+# mathematically equal but hashes differently (9 of 45 pairs). With AVX512 disabled all 45 match.
+# The expected hashes and the P6 gate are NOT touched; only the kernel dispatch is pinned.
+# On a host without AVX512 this is a no-op.
+_AVX512_OFF = ("AVX512_SPR AVX512_ICL AVX512_SKX AVX512_CLX AVX512_CNL AVX512_KNL AVX512_KNM "
+               "AVX512F AVX512CD X86_V4")
+_NUMPY_PRELOADED = "numpy" in sys.modules
+_cur = os.environ.get("NPY_DISABLE_CPU_FEATURES", "")
+if _AVX512_OFF.split()[0] not in _cur.split():
+    os.environ["NPY_DISABLE_CPU_FEATURES"] = (_cur + " " + _AVX512_OFF).strip()
+
 import argparse
 import hashlib
 import json
-import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -112,6 +127,27 @@ def force_clean_env():
     os.environ.pop("HYPATIAX_LLM_MODEL", None)
 
 
+def _avx512_state():
+    """(ok, detail): no AVX512 feature is active in this process's numpy."""
+    import numpy as np
+    try:
+        mu = np._core._multiarray_umath
+    except Exception:
+        try:
+            mu = np.core._multiarray_umath
+        except Exception as e:
+            return False, f"cannot read numpy CPU features ({type(e).__name__}); P6 would be unverifiable"
+    # __cpu_features__ is what the hardware has; only features in __cpu_dispatch__ are actually used,
+    # and NPY_DISABLE_CPU_FEATURES turns those off (same view as np.show_runtime()).
+    feats = mu.__cpu_features__
+    on = sorted(k for k in mu.__cpu_dispatch__ if feats.get(k) and k.startswith(("AVX512", "X86_V4")))
+    if on:
+        why = " (numpy was imported before the pin; run phase3_all.py as the entry point or set " \
+              "NPY_DISABLE_CPU_FEATURES in the environment)" if _NUMPY_PRELOADED else ""
+        return False, f"AVX512 still active: {on}{why}"
+    return True, f"numpy {np.__version__}, NPY_DISABLE_CPU_FEATURES pinned"
+
+
 # ---------------------------------------------------------------- preflight
 def preflight(a):
     print("== PREFLIGHT")
@@ -152,6 +188,8 @@ def preflight(a):
     seeds = sorted({int(r["seed"]) for r in prows})
     a._eqs, a._seeds_p = eqs, seeds
     p.add("P5 seeds in P rows cover requested seeds", set(a.seeds) <= set(seeds), f"P seeds {seeds}, requested {a.seeds}")
+
+    p.add("P6 numpy AVX512 kernels off (hash-exact exp/log10/pow)", *_avx512_state())
 
     # P6: G1 dry check against the P-arm rows, before any API spend.
     try:
