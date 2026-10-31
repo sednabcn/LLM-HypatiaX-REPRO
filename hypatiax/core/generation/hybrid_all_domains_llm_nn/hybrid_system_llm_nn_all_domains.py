@@ -884,14 +884,23 @@ NO markdown code blocks, individual parameters NOT dict."""
         nn_model, nn_metrics = self.train_nn(X, y_true, epochs=1000, seed=_nn_seed)
 
         if verbose:
-            print(f"  [HYBRID] NN R²: {nn_metrics['r2']:.4f}")
+            _nn_r2_txt = (
+                f"{nn_metrics['r2']:.4f}"
+                if nn_metrics.get("r2") is not None
+                else "n/a (NN failed)"
+            )
+            print(f"  [HYBRID] NN R²: {_nn_r2_txt}")
 
         # Step 3: Decision logic — prefer symbolic LLM formula when it works.
         # Old logic gated LLM behind R²>0.95, causing good formulas to fall through
         # to the NN. New logic: if LLM succeeded and beats NN, use it; if both are
         # strong and close, blend predictions; only fall to NN when LLM failed.
         # Note: llm_r2 / llm_ok already computed above (before force_llm check).
-        nn_r2 = nn_metrics.get("r2", 0)
+        # None = NN failed (train_nn failure dict); nan = undefined target
+        # (rule A) and is left as is. A failed NN must never outrank the LLM.
+        nn_r2 = nn_metrics.get("r2")
+        if nn_r2 is None:
+            nn_r2 = -np.inf
 
         if llm_ok and llm_r2 >= nn_r2:
             # LLM formula beats or ties the NN — use it directly.
@@ -936,7 +945,9 @@ NO markdown code blocks, individual parameters NOT dict."""
             # LLM failed or produced negative R² — fall back to NN
             decision = "nn"
             final_r2   = nn_r2
-            final_rmse = nn_metrics["rmse"]
+            final_rmse = nn_metrics.get("rmse")
+            if final_rmse is None:
+                final_rmse = float("inf")
             reason = "NN fallback (LLM failed)"
             validation_score = "FAIR" if nn_r2 > 0.8 else "POOR"
 
