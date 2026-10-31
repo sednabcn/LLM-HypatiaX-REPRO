@@ -1129,13 +1129,23 @@ def run_hybrid_test_all_domains(
     print("SUMMARY STATISTICS".center(80))
     print("=" * 80)
 
-    r2_scores = [r["evaluation"]["r2"] for r in all_results]
+    r2_all = [r["evaluation"]["r2"] for r in all_results]
+    r2_scores = [x for x in r2_all if np.isfinite(x)]
+    _n_nonfinite = len(r2_all) - len(r2_scores)
     print(f"\n📊 Total Test Cases: {len(all_results)}")
-    print(f"Mean R²: {np.mean(r2_scores):.6f}")
-    print(f"Median R²: {np.median(r2_scores):.6f}")
-    print(f"Std Dev R²: {np.std(r2_scores):.6f}")
-    print(f"Min R²: {np.min(r2_scores):.6f}")
-    print(f"Max R²: {np.max(r2_scores):.6f}")
+    if _n_nonfinite:
+        print(
+            f"⚠️  {_n_nonfinite}/{len(r2_all)} rows have non-finite R² "
+            f"(-inf = failed, nan = undefined); excluded from the statistics below"
+        )
+    if r2_scores:
+        print(f"Mean R²: {np.mean(r2_scores):.6f}")
+        print(f"Median R²: {np.median(r2_scores):.6f}")
+        print(f"Std Dev R²: {np.std(r2_scores):.6f}")
+        print(f"Min R²: {np.min(r2_scores):.6f}")
+        print(f"Max R²: {np.max(r2_scores):.6f}")
+    else:
+        print("No finite R² values; statistics unavailable")
 
     # Decision breakdown
     print("\n🎯 Decision Breakdown:")
@@ -1147,9 +1157,11 @@ def run_hybrid_test_all_domains(
         if r2_list:
             count = len(r2_list)
             pct = 100 * count / len(all_results)
-            mean_r2 = np.mean(r2_list)
+            _fin = [x for x in r2_list if np.isfinite(x)]
+            mean_txt = f"{np.mean(_fin):.4f}" if _fin else "n/a"
             print(
-                f"  {dec.upper()}: {count}/{len(all_results)} ({pct:.1f}%) - Mean R² = {mean_r2:.4f}"
+                f"  {dec.upper()}: {count}/{len(all_results)} ({pct:.1f}%) - "
+                f"Mean R² = {mean_txt} (finite: {len(_fin)}/{count})"
             )
 
     # LLM source breakdown (delegate vs local fallback)
