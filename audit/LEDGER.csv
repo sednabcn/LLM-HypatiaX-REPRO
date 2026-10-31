@@ -23,3 +23,7 @@ L21,check,hybrid_all_domains and validate and qualify,those steps,hybrid_system_
 L22,C1,deleted data and core files still needed,release,hypatiax/data (64); hypatiax/core (2); hypatiax/experiments (6),S1,verify,git diff --diff-filter=D --name-only freeze-pre-audit audit-main
 L23,C1,archived snapshot and table-to-file manifest,release,audit/MANIFEST.csv,S5,open,after S4
 L24,text,A1 A2 A3 A5 A6 B1 C5 C6 and Part D,manuscript,none,S5,open,can start now in parallel
+L27,map,step list verified from run lines,all steps,run_all.sh lines 142-4198,S1,done,suppA suppB suppB_sc were missed by a lowercase-only regex
+L28,A2,instability step describes Regime A/B/C,instability,run_instability_suite.py,S4,decide,define Regime C in prereg or remove claims
+L29,D,audit_figures_tables is a no-op,reporting,run_all.sh:4088,S5,open,need a step that builds tables from result files
+L30,order,exp2 block dependencies,exp2_feynman then pca_4060 then extrap,run_all.sh 1441-1450 and 1974-1975,S4,note,use --from exp2_feynman
