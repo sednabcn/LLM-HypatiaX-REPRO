@@ -834,8 +834,10 @@ NO markdown code blocks, individual parameters NOT dict."""
                 )
 
         # Compute llm_r2 / llm_ok here (also used by Step 3 decision logic below).
-        llm_r2 = llm_metrics.get("r2", 0) if llm_metrics.get("success") else -np.inf
-        llm_ok = llm_metrics.get("success", False) and np.isfinite(llm_r2) and llm_r2 > 0
+        _r2 = llm_metrics.get("r2")
+        _llm_scored = bool(llm_metrics.get("success")) and _r2 is not None and np.isfinite(_r2)
+        llm_r2 = _r2 if _llm_scored else -np.inf
+        llm_ok = _llm_scored and _r2 > 0
 
         # Step 2: Train NN
         # force_llm=True is injected by the benchmark runner for Feynman physics
@@ -902,7 +904,23 @@ NO markdown code blocks, individual parameters NOT dict."""
         if nn_r2 is None:
             nn_r2 = -np.inf
 
-        if llm_ok and llm_r2 >= nn_r2:
+        if not np.isfinite(nn_r2):
+            # NN failed (None mapped to -inf above) or undefined (nan):
+            # it must never be ranked against the LLM.
+            if llm_ok:
+                decision = "llm"
+                final_r2 = llm_r2
+                final_rmse = llm_metrics.get("rmse", float("inf"))
+                reason = "NN non-finite; using LLM"
+                validation_score = "EXCELLENT" if llm_r2 > 0.95 else "GOOD"
+            else:
+                decision = "fail"
+                final_r2 = nn_r2
+                final_rmse = float("inf")
+                reason = "both failed"
+                validation_score = "POOR"
+
+        elif llm_ok and llm_r2 >= nn_r2:
             # LLM formula beats or ties the NN — use it directly.
             # Only prefer symbolic when it genuinely wins; don't force it when the
             # NN is actually scoring higher (that was causing Snell's/Zeeman regression).
@@ -948,7 +966,11 @@ NO markdown code blocks, individual parameters NOT dict."""
             final_rmse = nn_metrics.get("rmse")
             if final_rmse is None:
                 final_rmse = float("inf")
-            reason = "NN fallback (LLM failed)"
+            reason = (
+                "NN fallback (LLM failed)"
+                if not llm_ok
+                else "NN beats LLM (R2 below blend threshold)"
+            )
             validation_score = "FAIR" if nn_r2 > 0.8 else "POOR"
 
         if verbose:
@@ -987,7 +1009,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             "evaluation": {
                 "r2": float(final_r2),
                 "rmse": float(final_rmse),
-                "success": True,
+                "success": decision != "fail",
             },
             "metadata": metadata,
             "timestamp": datetime.now().isoformat(),
