@@ -199,6 +199,8 @@ def run_case(equation, seed, disabled, timeout_s):
 
     kind = res["bypass_kind"]            # required: KeyError if the engine stops returning it
     llm_r2 = _f(res.get("llm_best_r2"))
+    if llm_r2 is None:       # run_condition does not pass it through; the engine logs it in the audit
+        llm_r2 = _f(seed_audit.get("llm_best_r2"))
     # A gate is reachable only if the LLM score sends the engine down the branch the gate controls:
     # >0.95 -> accepted outright (llm_acceptance); [0.5, 0.95) -> seeded refinement (pysr_prior).
     reach = {

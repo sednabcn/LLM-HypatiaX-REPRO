@@ -2286,6 +2286,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
         # Evaluate LLM hypotheses
         best_hyp = self._evaluate_hypotheses(hypotheses, X, y, safe_names)
+        try:   # Phase 3 audit: LLM R2 on this case (never affects the run)
+            from hypatiax.tools.symbolic import guess_sanitizer as _gs_r2
+            _gs_r2.record_llm_r2(best_hyp.r2_score)
+        except Exception:
+            pass
 
         # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping)
         _llm_info = {

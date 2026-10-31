@@ -61,3 +61,12 @@ def test_response_hash_independent_of_guesses():
     # no LLM response at all
     G.reset_audit()
     assert G.drain_audit()["llm_sample_sha256"] is None
+
+
+def test_llm_r2_recorded_first_value_only():
+    G.reset_audit()
+    G.record_llm_r2(0.9968)
+    G.record_llm_r2(0.5)          # a later attempt must not change the gate input
+    assert G.drain_audit()["llm_best_r2"] == 0.9968
+    G.reset_audit()
+    assert G.drain_audit()["llm_best_r2"] is None

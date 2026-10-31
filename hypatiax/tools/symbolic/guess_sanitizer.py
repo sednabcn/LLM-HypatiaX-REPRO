@@ -124,12 +124,22 @@ def sanitize_guesses(guesses, binary_ops, unary_ops, variables):
 
 # ---------------------------------------------------------------- audit
 _AUDIT = []
+_LLM_R2 = []      # LLM-vs-data R2 of each LLM evaluation since reset_audit(); the first one is used
 _SAMPLES = []   # sha256 of each distinct raw LLM response seen since reset_audit()
 
 
 def reset_audit():
     _AUDIT.clear()
     _SAMPLES.clear()
+    _LLM_R2.clear()
+
+
+def record_llm_r2(r2):
+    """Engine: R2 of the best LLM hypothesis on the case data (what the 0.95 / 0.5 gates look at)."""
+    try:
+        _LLM_R2.append(float(r2))
+    except (TypeError, ValueError):
+        pass
 
 
 def record_llm_response(response):
@@ -154,7 +164,7 @@ def mark_fit_fallback(rec):
         rec["fallback"] = True
 
 
-def summarize(records, samples=()):
+def summarize(records, samples=(), llm_r2=()):
     req = [g for x in records for g in x["requested"]]
     return {
         "guesses_requested": sum(len(x["requested"]) for x in records),
@@ -162,6 +172,7 @@ def summarize(records, samples=()):
         "guesses_dropped": sum(len(x["dropped"]) for x in records),
         "guess_dropped_reasons": sorted({r for x in records for _, r in x["dropped"]}),
         "guess_fit_fallback": any(x["fallback"] for x in records),
+        "llm_best_r2": llm_r2[0] if llm_r2 else None,
         # hash of the LLM response(s) the engine actually used, whatever path followed (None = no LLM response)
         "llm_sample_sha256": hashlib.sha256("\n".join(sorted(samples)).encode()).hexdigest() if samples else None,
         # hash of the requested seed guesses (informational; differs between arms that seed vs not)
@@ -171,7 +182,8 @@ def summarize(records, samples=()):
 
 def drain_audit():
     """Row fields for the adapter (consumed by phase3_close.py G9). Clears the log."""
-    out = summarize(list(_AUDIT), list(_SAMPLES))
+    out = summarize(list(_AUDIT), list(_SAMPLES), list(_LLM_R2))
     _AUDIT.clear()
     _SAMPLES.clear()
+    _LLM_R2.clear()
     return out
