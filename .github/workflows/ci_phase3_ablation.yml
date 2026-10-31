@@ -162,7 +162,7 @@ jobs:
       # clean-tree check sees only real code edits. Repo files are not touched.
       - name: Keep Phase 3 outputs out of the P4 dirty check
         run: |
-          printf 'phase3_out/\nphase3_closure_out/\n' >> .git/info/exclude
+          printf 'phase3_out/\nphase3_closure_out/\nbypass_audit.csv\n' >> .git/info/exclude
           git status --porcelain
 
       - name: Restore rows from an earlier run of this commit (resume)
@@ -211,6 +211,13 @@ jobs:
             echo "::error::bypass_audit reports bypassed tasks."; exit 1
           fi
           grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised."; exit 1; }
+
+      # scripts/bypass_audit.py writes bypass_audit.csv into the repo root; it is excluded above so the
+      # runner's G8 clean-tree check does not see it. If another file ever dirties the tree, this names it.
+      - name: Tree state before the run (diagnostic)
+        run: |
+          git status --porcelain --untracked-files=all | head -30
+          echo "dirty lines: $(git status --porcelain | wc -l)"
 
       - name: "Phase 3 smoke - seed ${{ matrix.seed }} (full + llm_acceptance, 2 cases)"
         if: ${{ inputs.stage == 'smoke' }}
