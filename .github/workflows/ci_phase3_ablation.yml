@@ -9,7 +9,12 @@ run-name: "HypatiaX - Phase 3 ablation · ${{ inputs.stage }} · seeds ${{ input
 #   stage=run       : preflight + the runs, one job per seed, resumable (cache per commit)
 #   stage=all       : run, then merge the per-seed rows and run the closure
 #
-# Smoke test first: stage=run, seeds=42, max_cases=3.
+#   stage=smoke     : the local smoke test in CI: ONE equation, seed 42, full + llm_acceptance (2 cases),
+#                     then assertions on the rows (G9 fields, same LLM sample in both arms, no seed
+#                     fallback, replay file written). Uses the P3_ALLOW_* overrides, so its rows are
+#                     for testing only: they go to artifact phase3-smoke-seed<N>, never to the closure.
+#
+# Smoke test first: stage=smoke, seeds=42 (about 20 min). Then stage=run, seeds=42, max_cases=3.
 # Engine patch (_LLM_ACCEPT_R2 / _LLM_PRIOR_SEED) and the adapter/runner changes must be
 # COMMITTED before dispatch; CI checks out a clean tree, so P4 passes only if they are.
 # Do NOT use the HDS_ABLATE_GATE / option3 patch: nothing reads that variable.
@@ -18,18 +23,31 @@ on:
   workflow_dispatch:
     inputs:
       stage:
-        description: "preflight = checks only; run = preflight + runs; all = run + merge + closure"
+        description: "preflight = checks only; smoke = 2-case test + assertions; run = preflight + runs; all = run + merge + closure"
         required: true
         type: choice
         options:
           - preflight
+          - smoke
           - run
           - all
         default: preflight
+      smoke_equation:
+        description: "stage=smoke only: the one equation to run (full + llm_acceptance)."
+        required: false
+        default: "Kinetic Energy"
       seeds:
         description: "Comma-separated seeds. One parallel job per seed."
         required: false
         default: "42,99,123"
+      p_rows_glob:
+        description: "P-arm rows for the G1 data-hash check (must be committed in the repo; phase3_all.py preflight P5/P6 verifies them)."
+        required: false
+        default: "archive/phase2/p2/pure_llm_seed*.jsonl"
+      phase2_manifest:
+        description: "Phase 2 closure manifest (committed path). Required for every stage except smoke."
+        required: false
+        default: ""
       max_cases:
         description: "Stop each seed job after N new cases (smoke test, e.g. 3). Blank or 0 = no limit."
         required: false
@@ -72,6 +90,10 @@ env:
   JULIA_NUM_THREADS:   "4"
   JULIA_EXCLUSIVE:     "0"
   PYTHONPATH:          "${{ github.workspace }}"
+  # One LLM sample per prompt, replayed by every arm of an (equation, seed): the ablation then
+  # differs only by its gate (G9). Under phase3_out/ so it is git-excluded and kept by the cache.
+  HYPATIAX_LLM_REPLAY_DIR: "${{ github.workspace }}/phase3_out/llm_replay"
+  HYPATIAX_LLM_CACHE_DIR:  "${{ github.workspace }}/phase3_out/llm_cache"
 
 jobs:
 
@@ -144,7 +166,7 @@ jobs:
           git status --porcelain
 
       - name: Restore rows from an earlier run of this commit (resume)
-        if: ${{ inputs.stage != 'preflight' }}
+        if: ${{ inputs.stage != 'preflight' && inputs.stage != 'smoke' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: phase3_out
@@ -190,14 +212,87 @@ jobs:
           fi
           grep -q 'bypassed: 0' /tmp/bypass_audit.log || { echo "::error::bypass_audit output not recognised."; exit 1; }
 
+      - name: "Phase 3 smoke - seed ${{ matrix.seed }} (full + llm_acceptance, 2 cases)"
+        if: ${{ inputs.stage == 'smoke' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SMOKE_EQ: ${{ inputs.smoke_equation }}
+          TIMEOUT_S: ${{ inputs.timeout_s }}
+          # smoke test ONLY: the adapter's r2_checked / model_id wiring may not be finished.
+          # Rows made with these set can never close Phase 3.
+          P3_ALLOW_SAFE_R2: "1"
+          P3_ALLOW_UNKNOWN_META: "1"
+        run: |
+          set -euo pipefail
+          timeout 3000 python3 scripts/run_phase3_ablation.py \
+            --out-dir phase3_out/smoke --components llm_acceptance \
+            --seeds "${{ matrix.seed }}" --equations "$SMOKE_EQ" \
+            --max-cases 2 --timeout-s "$TIMEOUT_S" 2>&1 | tee /tmp/phase3_smoke.log
+
+      - name: Check smoke rows (G9 fields, shared LLM sample, no seed fallback)
+        if: ${{ always() && inputs.stage == 'smoke' }}
+        run: |
+          python3 - <<'PYEOF'
+          import glob, json, os, sys
+          out = "phase3_out/smoke"
+          replay = os.environ["HYPATIAX_LLM_REPLAY_DIR"]
+          sha = os.environ["GITHUB_SHA"]
+          G9 = ("guesses_requested", "guesses_used", "guesses_dropped", "guess_dropped_reasons",
+                "guess_fit_fallback", "llm_sample_sha256")
+          SHOW = ("status", "llm_called", "llm_mode_used", "llm_r2", "gate_reachable") + G9 + ("guess_set_sha256", "extrap_r2_far")
+          errs, rows = [], {}
+          for arm in ("full", "llm_acceptance"):
+              p = f"{out}/{arm}.jsonl"
+              rows[arm] = [json.loads(l) for l in open(p, encoding="utf-8") if l.strip()] if os.path.isfile(p) else []
+              if not rows[arm]:
+                  errs.append(f"{arm}: no rows written")
+          for arm, rs in rows.items():
+              for r in rs:
+                  print(arm, r.get("equation"), {k: r.get(k) for k in SHOW})
+                  miss = [k for k in G9 if k not in r]
+                  if miss: errs.append(f"{arm}: missing seed-record fields {miss}")
+                  if r.get("status") != "ok": errs.append(f"{arm}: status={r.get('status')} ({r.get('error_stage')})")
+                  if r.get("guess_fit_fallback") is not False: errs.append(f"{arm}: guess_fit_fallback={r.get('guess_fit_fallback')}")
+                  if r.get("code_dirty") is not False: errs.append(f"{arm}: code_dirty={r.get('code_dirty')}")
+                  if r.get("git_commit") != sha: errs.append(f"{arm}: git_commit {str(r.get('git_commit'))[:8]} != {sha[:8]}")
+                  if not r.get("llm_sample_sha256"): errs.append(f"{arm}: llm_sample_sha256 is empty")
+                  if r.get("llm_r2") is None: errs.append(f"{arm}: llm_r2 not populated")
+          hs = {r.get("llm_sample_sha256") for rs in rows.values() for r in rs}
+          if len(hs) != 1: errs.append(f"arms did not share one LLM sample: {sorted(map(str, hs))}")
+          n = len(glob.glob(f"{replay}/*.json"))
+          if n < 1: errs.append(f"no replay file in {replay}")
+          note = ""
+          if rows["llm_acceptance"] and all(r.get("guesses_requested") == 0 for r in rows["llm_acceptance"]):
+              note = "NOTE: llm_acceptance arm requested no guesses; the seeding path was not exercised by this equation."
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          msg = ("Phase 3 smoke: " + ("FAIL\n- " + "\n- ".join(errs) if errs else f"PASS (replay files: {n})") + (f"\n{note}" if note else ""))
+          print("\n" + msg)
+          if summary:
+              open(summary, "a", encoding="utf-8").write(msg + "\n")
+          sys.exit(1 if errs else 0)
+          PYEOF
+
+      - name: Upload smoke rows (testing only)
+        if: ${{ always() && inputs.stage == 'smoke' }}
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: phase3-smoke-seed${{ matrix.seed }}
+          path: phase3_out/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: "Phase 3 ${{ inputs.stage }} - seed ${{ matrix.seed }}"
+        if: ${{ inputs.stage != 'smoke' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           STAGE: ${{ inputs.stage }}
           MAX_CASES: ${{ inputs.max_cases }}
           TIMEOUT_S: ${{ inputs.timeout_s }}
+          P_ROWS: ${{ inputs.p_rows_glob }}
+          P2_MANIFEST: ${{ inputs.phase2_manifest }}
         run: |
           set -euo pipefail
+          [[ -n "$P2_MANIFEST" ]] || { echo "::error::phase2_manifest input is empty (phase3_all.py preflight P5 needs a committed phase2_closure.json)"; exit 1; }
           if [[ "$STAGE" == "preflight" ]]; then
             ARGS=(--stage preflight)
           else
@@ -208,17 +303,18 @@ jobs:
           # 19500 s ends the step cleanly before the 350-min job limit, so the cache and
           # artifact steps below still run. Finished cases are kept; re-dispatch to resume.
           timeout 19500 python3 scripts/phase3_all.py "${ARGS[@]}" \
-            --seeds "${{ matrix.seed }}" --timeout-s "$TIMEOUT_S" 2>&1 | tee /tmp/phase3_run.log
+            --seeds "${{ matrix.seed }}" --timeout-s "$TIMEOUT_S" \
+            --p-rows-glob "$P_ROWS" --phase2-manifest "$P2_MANIFEST" 2>&1 | tee /tmp/phase3_run.log
 
       - name: Save rows (resume cache)
-        if: ${{ always() && inputs.stage != 'preflight' }}
+        if: ${{ always() && inputs.stage != 'preflight' && inputs.stage != 'smoke' }}
         uses: actions/cache/save@v4.2.3
         with:
           path: phase3_out
           key: phase3-rows-seed${{ matrix.seed }}-${{ github.sha }}-${{ github.run_id }}
 
       - name: Upload rows
-        if: ${{ always() && inputs.stage != 'preflight' }}
+        if: ${{ always() && inputs.stage != 'preflight' && inputs.stage != 'smoke' }}
         uses: actions/upload-artifact@v4.3.6
         with:
           name: phase3-rows-seed${{ matrix.seed }}
@@ -297,9 +393,13 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SEEDS: ${{ inputs.seeds }}
           TIMEOUT_S: ${{ inputs.timeout_s }}
+          P_ROWS: ${{ inputs.p_rows_glob }}
+          P2_MANIFEST: ${{ inputs.phase2_manifest }}
         run: |
           set -euo pipefail
-          python3 scripts/phase3_all.py --stage close --seeds "$SEEDS" --timeout-s "$TIMEOUT_S" 2>&1 | tee /tmp/phase3_close.log
+          [[ -n "$P2_MANIFEST" ]] || { echo "::error::phase2_manifest input is empty"; exit 1; }
+          python3 scripts/phase3_all.py --stage close --seeds "$SEEDS" --timeout-s "$TIMEOUT_S" \
+            --p-rows-glob "$P_ROWS" --phase2-manifest "$P2_MANIFEST" 2>&1 | tee /tmp/phase3_close.log
 
       - name: Upload closure
         if: always()
