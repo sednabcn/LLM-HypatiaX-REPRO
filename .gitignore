@@ -57,3 +57,4 @@ phase3_out/
 phase3_closure_out/
 **/llm_replay/
 **/llm_cache/
+tree_cleanup.txt
