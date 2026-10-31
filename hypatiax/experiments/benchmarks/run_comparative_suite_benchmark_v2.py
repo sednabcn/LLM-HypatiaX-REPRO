@@ -2275,7 +2275,10 @@ class HybridDeFiMethod(BaseMethod):
                 )
 
             # ── Extract r2 / rmse from the located eval dict ──────────────
-            r2_val   = float(eval_.get("r2", 0.0))
+            r2_val   = eval_.get("r2")
+            if r2_val is None:
+                return self._unavailable("evaluation has no r2")
+            r2_val   = float(r2_val)
             rmse_val = eval_.get("rmse")
             if rmse_val is None or not np.isfinite(float(rmse_val)):
                 mse = eval_.get("mse")
