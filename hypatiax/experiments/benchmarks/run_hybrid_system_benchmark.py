@@ -512,7 +512,7 @@ def generate_final_report():
                 print(f"     {key.capitalize():<12}: {cnt:>3}  ({cnt / total * 100:.1f}%)")
 
             print("   R² by decision (in-distribution):")
-            for label in ("llm", "nn", "ensemble"):
+            for label in ("llm", "nn", "ensemble", "fail"):
                 group = [r for r in hybrid_data if r.get("decision") == label]
                 if not group:
                     continue

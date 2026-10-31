@@ -1245,11 +1245,11 @@ def _generate_report(results: list):
         llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback") and r["results"].get("neural_network")]
+                          ("nn", "nn_fallback", "fail") and r["results"].get("neural_network")]
         llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
                           for r in results
                           if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback") and r["results"].get("hybrid")]
+                          ("nn", "nn_fallback", "fail") and r["results"].get("hybrid")]
         if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
             sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
             print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
