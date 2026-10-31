@@ -19,6 +19,7 @@ scan_report.html
 **/checkpoint_plan.json
 *.bak
 *.bak
+.env
 scan_after*.txt
 triage_out/
 _quarantine/
