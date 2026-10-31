@@ -1,0 +1,298 @@
+=== 01_provenance_gate
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_checkpoint_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_merged_checkpoint.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed123/exp1_ablation_results_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_checkpoint_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_merged_checkpoint.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results.json: rows=45 {'llm_row_unknown_source': 15, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard0.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard1.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard2.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard3.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard4.json: rows=9 {'llm_row_unknown_source': 3, 'no_signflip_field': 1}
+
+SUMMARY {'llm_row_unknown_source': 210, 'no_signflip_field': 38, 'files_with_provenance': 38, 'file_no_provenance': 494}
+RESULT: FAILED 704
+=== 02_static_checks
+FAIL S01 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:838 llm_r2 may be None -> np.isfinite(None) TypeError | llm_ok = llm_metrics.get("success", False) and np.isfinite(llm_r2) and llm_r2 > 0
+FAIL S02 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:865 failure scored as 0.0 | "nn_result": {"metrics": {"r2": 0.0, "rmse": None, "mae": None, "reason": "nonfinite_metric"}},
+FAIL S03 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:0 no explicit nan branch for nn_r2: nan NN falls through decision logic
+FAIL S04 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2278 missing r2 defaults to 0.0 | r2_val   = float(eval_.get("r2", 0.0))
+FAIL S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1073 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
+FAIL S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3752 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A",  # PHASE1-FIX: failure, not a score
+FAIL S08 hypatiax/experiments/benchmarks/exp1_ablation.py:724 rmse default inf (audit-M3) | train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
+FAIL S10 run_all.sh:0 no assertion STRICT==1
+WARN S05 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2243 _extract_eval fallthrough ignores decision | for _key in ("evaluation", "nn_result", "llm_result", "result"):
+WARN S11 run_all.sh:215 stale warning: extrap module is inlined | echo "ERROR: extrap_r2_far.py not found — exp2_feynman_extrap will produce null extrap_r2_far values."
+WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:409 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1226 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1227 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1516 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1517 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/exp1_five_system.py:283 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/extrap_r2_far.py:415 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py:600 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:605 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1724 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1728 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_instability_suite.py:1 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_instability_suite.py:1113 suppression without a reason
+WARN S12 hypatiax/experiments/benchmarks/run_instability_suite.py:1122 suppression without a reason
+WARN S12 hypatiax/tools/symbolic/physics_aware_regressor.py:1782 suppression without a reason
+WARN S12 scripts/ci/ablation_multiseed_summary.py:107 suppression without a reason
+WARN S12 scripts/ci/ablation_multiseed_summary.py:108 suppression without a reason
+WARN S12 scripts/exp1_resolver.py:1 suppression without a reason
+WARN S12 scripts/mark_m4_unverified.py:1 suppression without a reason
+WARN S12 scripts/migrate_r2_repro.py:1 suppression without a reason
+WARN S12 scripts/phase4_close_unified.py:42 suppression without a reason
+WARN S12 scripts/phase4_close_unified.py:1664 suppression without a reason
+WARN S12 scripts/quarantine_contaminated.py:1 suppression without a reason
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:556 unseeded? confirm routed through seed audit | np.random.uniform(0.5, 2) * v**2 + np.random.uniform(0.5, 2) * v
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:563 unseeded? confirm routed through seed audit | terms = [np.random.uniform(0.5, 1.5) * symbols[v] for v in varying[:3]]
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:581 unseeded? confirm routed through seed audit | symbols[const[1]] if len(const) > 1 else np.random.uniform(1e4, 1e5)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:583 unseeded? confirm routed through seed audit | R = symbols[const[2]] if len(const) > 2 else np.random.uniform(8, 9)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:587 unseeded? confirm routed through seed audit | c1 = np.random.uniform(0.95, 1.05)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:588 unseeded? confirm routed through seed audit | c2 = np.random.uniform(0.95, 1.05)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:594 unseeded? confirm routed through seed audit | np.random.uniform(0.5, 2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:595 unseeded? confirm routed through seed audit | * sp.exp(np.random.uniform(-0.1, -0.01) * v)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:609 unseeded? confirm routed through seed audit | b = np.random.uniform(-0.1, -0.01)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:651 unseeded? confirm routed through seed audit | symbols[varying[0]] + np.random.uniform(0.3, 0.7) * v**2
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:671 unseeded? confirm routed through seed audit | terms = [np.random.uniform(0.5, 1.5) * symbols[v] for v in varying[:3]]
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:676 unseeded? confirm routed through seed audit | np.random.uniform(0.5, 1.5) * v**2 + np.random.uniform(0.5, 1.5) * v
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:754 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:761 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:769 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:775 unseeded? confirm routed through seed audit | a = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:791 unseeded? confirm routed through seed audit | c = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:797 unseeded? confirm routed through seed audit | c   = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:801 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:818 unseeded? confirm routed through seed audit | c1  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:819 unseeded? confirm routed through seed audit | c2  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:825 unseeded? confirm routed through seed audit | a = np.random.uniform(0.5, 1.5)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:826 unseeded? confirm routed through seed audit | b = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:827 unseeded? confirm routed through seed audit | c = np.random.uniform(1.0, 3.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:846 unseeded? confirm routed through seed audit | c = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:849 unseeded? confirm routed through seed audit | c = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:852 unseeded? confirm routed through seed audit | c = np.random.uniform(0.3, 1.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:868 unseeded? confirm routed through seed audit | c = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:876 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:879 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:895 unseeded? confirm routed through seed audit | c    = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:900 unseeded? confirm routed through seed audit | c    = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:904 unseeded? confirm routed through seed audit | c    = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:964 unseeded? confirm routed through seed audit | c = np.random.uniform(0.92, 1.08)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:971 unseeded? confirm routed through seed audit | c = np.random.uniform(0.92, 1.08)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:976 unseeded? confirm routed through seed audit | c = np.random.uniform(0.92, 1.08)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:996 unseeded? confirm routed through seed audit | c = np.random.uniform(0.92, 1.08)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1002 unseeded? confirm routed through seed audit | c = np.random.uniform(1.8, 2.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1006 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1016 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1084 unseeded? confirm routed through seed audit | c   = np.random.uniform(0.9, 1.1)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1092 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.9, 1.1)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1100 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1113 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1123 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1132 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1186 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1197 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1207 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1220 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1276 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1281 unseeded? confirm routed through seed audit | c  = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1284 unseeded? confirm routed through seed audit | c = np.random.uniform(0.3, 1.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1293 unseeded? confirm routed through seed audit | c1 = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1294 unseeded? confirm routed through seed audit | c2 = np.random.uniform(0.45, 0.55)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1305 unseeded? confirm routed through seed audit | c = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1316 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1353 unseeded? confirm routed through seed audit | c1, c2 = np.random.uniform(0.95, 1.05), np.random.uniform(0.95, 1.05)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1372 unseeded? confirm routed through seed audit | a = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1373 unseeded? confirm routed through seed audit | b = symbols[const[0]] if const else np.random.uniform(5, 15)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1377 unseeded? confirm routed through seed audit | c = np.random.uniform(0.1, 1.0) * symbols[const[1]]
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1388 unseeded? confirm routed through seed audit | else np.random.uniform(1, 10),
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1391 unseeded? confirm routed through seed audit | return 1.0 / (np.random.uniform(1, 10) + S)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1399 unseeded? confirm routed through seed audit | return S / (np.random.uniform(5, 15) + S)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1434 unseeded? confirm routed through seed audit | c1 = np.random.uniform(0.95, 1.05)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1435 unseeded? confirm routed through seed audit | c2 = np.random.uniform(0.48, 0.52)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1436 unseeded? confirm routed through seed audit | c3 = np.random.uniform(0.95, 1.05)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1450 unseeded? confirm routed through seed audit | np.random.uniform(0.1, 2.0) * symbols[v] ** np.random.choice([1, 2])
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1470 unseeded? confirm routed through seed audit | alpha = np.random.uniform(0.3, 0.7)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1477 unseeded? confirm routed through seed audit | Ea = symbols[const[1]] if len(const) > 1 else np.random.uniform(1e4, 1e5)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1481 unseeded? confirm routed through seed audit | alpha = np.random.uniform(0.3, 0.7)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1493 unseeded? confirm routed through seed audit | c = np.random.uniform(0.8, 1.2)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1500 unseeded? confirm routed through seed audit | alpha = np.random.uniform(0.3, 0.7)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1513 unseeded? confirm routed through seed audit | alpha = np.random.uniform(0.3, 0.7)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1519 unseeded? confirm routed through seed audit | c = np.random.uniform(0.5, 2.0)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1525 unseeded? confirm routed through seed audit | alpha = np.random.uniform(0.3, 0.7)
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1545 unseeded? confirm routed through seed audit | return expr.subs(old, float(old) * np.random.uniform(0.5, 1.5))
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1550 unseeded? confirm routed through seed audit | return expr + np.random.uniform(0.3, 0.7) * symbols[
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1855 unseeded? confirm routed through seed audit | return np.random.uniform(0.3, 0.7) * p1 + np.random.uniform(0.3, 0.7) * p2
+WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1871 unseeded? confirm routed through seed audit | c, float(c) * np.random.uniform(0.85, 1.15)
+INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2211 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
+INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2612 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
+INFO S12 (all):0 suppressions by code: {'M5': 1, 'D5': 3, 'S1': 6, 'L2': 4, 'F1': 5, 'P3': 2, 'D2': 1, 'D1': 1}
+
+RESULT: FAILED (8 FAIL, 105 WARN)
+=== 03_r2_policy_selftest
+ok   perfect prediction -> 1.0 (1.0, 'ok')
+ok   constant target -> nan degenerate (nan, 'degenerate_target')
+ok   nan prediction -> -inf (-inf, 'nonfinite_pred')
+ok   |pred|>1e100 -> -inf (-inf, 'pred_out_of_range')
+ok   R2 < -100 -> -inf catastrophic (-inf, 'catastrophic')
+ok   sign flip OFF by default (R2(-y) stays negative) (-3.001008647273591, 'ok')
+ok   sign flip only when explicitly requested (-3.001008647273591, 1.0)
+ok   sign_flip_enabled() False without env 
+ok   no ss_tot copies drift: r2_checked == r2_scored on benign data 
+info offset target: ss_tot/sum(y^2)=1.05e-18, status=ok, R2=0.9905 (status 'ok' but cancellation-prone)
+
+fragile targets: 0; policy assertion failures: 0
+=== 04_decision_logic
+llm ok, nn ok                        original: llm                                      fixed: llm
+llm r2=None (PHASE1-FIX), nn ok      original: RAISES TypeError                         fixed: nn_fallback
+llm failed                           original: nn_fallback                              fixed: nn_fallback
+llm ok, nn=nan                       original: nn_fallback  <-- expected llm            fixed: llm
+llm ok, nn=None                      original: RAISES TypeError                         fixed: llm
+both fail, nn=nan                    original: nn_fallback  <-- expected fail           fixed: fail
+
+original misbehaves in 4 cases; fixed in 0
+
+Proposed patch (hybrid_predict, replace lines 837-838):
+    _r2 = llm_metrics.get("r2")
+    llm_ok = bool(llm_metrics.get("success")) and _r2 is not None and np.isfinite(_r2) and _r2 > 0
+    llm_r2 = _r2 if llm_ok or (_r2 is not None and np.isfinite(_r2)) else -np.inf
+and add before the decision block:
+    if nn_r2 is None or not np.isfinite(nn_r2):   # explicit branch, record reason='nn_nonfinite'
+        decision, reason = ("llm", "NN non-finite") if llm_ok else ("fail", "both failed")
+
+=== 05_null_census
+arm                                    field          counts
+Arrhenius rate constant (Feynman varia r2             n=6 {'finite': 6}
+Bernoulli's Equation: Total = P + (1/2 r2             n=2 {'finite': 2}
+Break-Even Point: BEP = FC/(P-VC)      r2             n=2 {'finite': 2}
+Carnot Efficiency: η = 1 - Tc/Th       r2             n=2 {'finite': 2}
+Cobb-Douglas: Y = A*K^0.3*L^0.7        r2             n=2 {'finite': 2}
+Compound Interest: A = P*(1+r/n)^(n*t) r2             n=2 {'finite': 2}
+Compton Shift: Δλ = 2.426e-12*(1-cos(θ r2             n=2 {'finite': 2}
+Coulomb force between two point charge r2             n=6 {'finite': 6}
+Coulomb's law: electric force between  r2             n=6 {'finite': 6}
+Curie's law for magnetic susceptibilit r2             n=6 {'finite': 3, 'exact_0.0': 3}  <-- 0.0 may be a failure-as-score
+Diffraction: sin(θ) = λ/a              r2             n=2 {'finite': 2}
+Double-slit wave interference intensit r2             n=6 {'finite': 6}
+EnhancedHybridSystemDeFi (core)        extrap_r2_far  n=150 {'-inf': 20, 'None': 130}
+EnhancedHybridSystemDeFi (core)        r2             n=638 {'finite': 638}
+Gravitational Potential Energy: PE = m r2             n=2 {'finite': 2}
+Hagen-Poiseuille: Q = π*r⁴*ΔP/(8*0.001 r2             n=2 {'finite': 2}
+Heat Capacity: Q = m*c*ΔT              r2             n=2 {'finite': 2}
+Henderson-Hasselbalch equation for buf r2             n=6 {'finite': 6}
+Hooke's Law: F = k*x                   r2             n=2 {'finite': 2}
+Hybrid v50_2                           extrap_r2_far  n=30 {'-inf': 6, 'None': 6, 'finite': 18}
+HybridDiscoverySystem v50_2 (tools)    extrap_r2_far  n=150 {'finite': 128, 'None': 20, '-inf': 2}
+HybridDiscoverySystem v50_2 (tools)    r2             n=644 {'finite': 644}
+HybridSystemLLMNN all-domains (core)   extrap_r2_far  n=150 {'None': 150}
+HybridSystemLLMNN all-domains (core)   r2             n=659 {'finite': 659}
+Ideal Gas Law: PV = nRT => P = n*8.314 r2             n=2 {'finite': 2}
+ImprovedNN (core)                      extrap_r2_far  n=150 {'None': 150}
+ImprovedNN (core)                      r2             n=633 {'finite': 633}
+Kinetic Energy: KE = (1/2)*m*v²        r2             n=2 {'exact_0.0': 1, 'finite': 1}  <-- 0.0 may be a failure-as-score
+Kinetic energy (classical): KE = 0.5 * r2             n=6 {'finite': 6}
+Neural Network                         extrap_r2_far  n=30 {'finite': 24, '-inf': 6}
+Newton's gravitational force between t r2             n=6 {'finite': 6}
+Photon Energy: E = 4.136e-15*f (visibl r2             n=2 {'finite': 2}
+Price Elasticity: Ed = (ΔQ/Q)/(ΔP/P)   r2             n=2 {'finite': 2}
+Pure LLM                               extrap_r2_far  n=30 {'None': 26, '-inf': 4}
+PureLLM Baseline (core)                extrap_r2_far  n=150 {'-inf': 20, 'None': 130}
+PureLLM Baseline (core)                r2             n=629 {'finite': 612, 'exact_0.0': 17}  <-- 0.0 may be a failure-as-score
+Pythagorean Theorem: c = sqrt(a² + b²) r2             n=2 {'finite': 2}
+Quadratic Discriminant: Δ = b² - 4ac   r2             n=2 {'finite': 1, 'exact_0.0': 1}  <-- 0.0 may be a failure-as-score
+Reduced mass of a two-body system      r2             n=6 {'finite': 6}
+Reynolds Number: Re = ρ*v*L/μ          r2             n=2 {'finite': 2}
+Snell's Law: n1*sin(θ1) = n2*sin(θ2)   r2             n=2 {'finite': 2}
+Snell's law: refracted angle from inci r2             n=6 {'finite': 6}
+SymbolicEngineWithLLM (tools)          extrap_r2_far  n=150 {'finite': 137, '-inf': 7, 'None': 6}
+SymbolicEngineWithLLM (tools)          r2             n=629 {'finite': 629}
+System 2 Symbolic                      extrap_r2_far  n=30 {'finite': 24, 'None': 4, '-inf': 2}
+System 3 LLM+Fallback                  extrap_r2_far  n=30 {'None': 30}
+Thin Lens: 1/f = 1/do + 1/di           r2             n=2 {'finite': 2}
+Total mechanical energy: spring potent r2             n=6 {'finite': 6}
+core15_instability                     extrap_r2_far  n=330 {'-inf': 13, 'finite': 86, 'None': 180, 'exact_0.0': 49, 'below_-100': 2}  <-- 0.0 may be a failure-as-score
+de Broglie Wavelength: λ = 1/(v) (norm r2             n=2 {'finite': 2}
+evaluation                             r2             n=1590 {'finite': 1530, '-inf': 54, 'below_-100': 6}
+hypatia                                extrap_r2_far  n=240 {'-inf': 30, 'finite': 198, 'None': 8, 'below_-100': 4}
+hypatia_nollm                          extrap_r2_far  n=210 {'-inf': 32, 'finite': 178}
+metrics                                r2             n=60 {'finite': 60}
+pysr_only                              extrap_r2_far  n=240 {'-inf': 11, 'finite': 227, 'below_-100': 2}
+tests                                  extrap_r2_far  n=66 {'other': 66}
+=== 06_pipeline
+ok   dry-run steps (41) == _STEP_ORDER (41)
+FAIL run lines match _STEP_ORDER
+38,40c38
+< suppA
+< suppB
+< suppB_sc
+---
+> supp
+ok   SIGN_FLIP exported in run_all.sh
+FAIL STRICT==1 asserted in run_all.sh
+ok   freeze-pre-audit tag exists
+INFO 7d45ebc / 81662dd patches differ or missing (a=092be3338100777481a772acc1e54212cff7e84a b=c2087b81b82389b796d48fd7dbadecfb13299822)
+--- deletions since freeze (top dirs) ---
+     64 hypatiax/data
+      6 hypatiax/experiments
+      2 hypatiax/core
+      1 enforce_flags.py/
+      1 audit_out/generated_formulas.json
+--- deleted files still referenced by run_all.sh ---
+INFO hybrid_all_domains uses ExperimentProtocolAll (ignores seed/noiseless): no seed or noise claims from that step
+=== 07_ledger_dry_run
+15 new rows, 2 ids already present (left untouched: ['L03', 'L06'])
+  + L32 hybrid_predict llm_r2 None crash
+  + L33 nn_r2 nan falls through decision logic
+  + L34 NN failure path scores r2 0.0
+  + L35 _extract_eval fallthrough
+  + L36 eval_.get(r2, 0.0) default
+  + L37 _unavailable returns -inf/inf
+  + L38 exp1_ablation rmse default inf
+  + L39 FIX 3 force_llm for 5 Feynman domains
+  + L40 Table 14 null policy
+  + L41 exp1_llm_contribution.py null policy
+  + L42 R2 policy constants
+  + L43 sign flip controls
+  + L44 all_domains protocol ignores seed/noiseless
+  + L45 three compute_extrap_r2_far copies
+  + L46 stale run_all.sh extrap warnings
+dry run; use --write to append
+SUMMARY (0 = clean)
+01_provenance_gate         exit 1
+02_static_checks           exit 1
+03_r2_policy_selftest      exit 0
+04_decision_logic          exit 1
+05_null_census             exit 0
+06_pipeline                exit 1
+07_ledger_dry_run          exit 0
+exp1_llm_contribution.py usage in run_all.sh, Fix 4 text decision, REL_TOL decision.
