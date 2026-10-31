@@ -38,7 +38,7 @@ L39,B4,FIX 3 force_llm for 5 Feynman domains,run_comparative_suite_benchmark_v2.
 L40,B4,Table 14 null policy,scripts/ci/ablation_multiseed_summary.py,None -> -inf; paired test uses equations with finite median in all arms,S1,documented,"report failed_cells and excluded_from_paired per arm; primary test is paired Wilcoxon+Holm, MWU is sensitivity only"
 L41,B4,exp1_llm_contribution.py null policy,exp1_llm_contribution.py:37-61,drops non-finite rows; 7 field-name aliases,S1,open,align with summary script or mark orphan
 L42,B2,R2 policy constants,hypatiax/core/r2_canonical.py:42-47,"REL_TOL=1e-24, CATASTROPHIC_FLOOR=-100, PRED_ABS_LIMIT=1e100, sign flip off",S1,document,state in manuscript; run 03_r2_policy_selftest.py on benchmark targets for fragile offsets
-L43,B2,sign flip controls,run_all.sh,STRICT/DISABLE flags exported; SIGN_FLIP only default-off,S1,open,export SIGN_FLIP=0 and assert STRICT==1
+L43,B2,sign flip controls,run_all.sh,STRICT/DISABLE flags exported; SIGN_FLIP only default-off,S1,fixed-committed,16166e4 fail-closed DISABLE flags; 2503407 pins SIGN_FLIP=0 and STRICT=1 in run_all.sh and CI; 84aef30 refuses HYPATIAX_ALLOW_LEGACY in CI; run_all.sh 59-62 aborts on SIGN_FLIP unless ALLOW_LEGACY=1; STRICT assertion at line 55 (92c53eb)
 L44,B4,all_domains protocol ignores seed/noiseless,hybrid_all_domains step,ExperimentProtocolAll takes no seed,S1,disclose,no seed or noise claims from this step
 L45,B2,three compute_extrap_r2_far copies,v2 runner; PCA runner; extrap_r2_far.py,all call r2_canonical; PCA mixes r2_checked and r2_scored,S1,open,pick one canonical copy or add agreement test
 L46,B2,stale run_all.sh extrap warnings,run_all.sh:196-217,_EXTRAP_MODULE_AVAILABLE is constant True,S1,open,delete stale warnings
