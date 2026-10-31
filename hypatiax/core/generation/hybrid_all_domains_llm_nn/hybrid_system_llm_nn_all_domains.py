@@ -907,6 +907,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "nn_result": {"metrics": {"r2": None, "rmse": None, "mae": None, "reason": "skipped_force_llm"}},
                 "evaluation": {
                     "r2": float(llm_r2),
+                    "r2_in_sample": float(llm_r2),  # force_llm: LLM formula only; no NN, no blend, no held-out
                     "rmse": float(llm_metrics.get("rmse", float("inf"))),
                     "success": True,
                 },
