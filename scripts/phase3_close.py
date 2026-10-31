@@ -388,6 +388,13 @@ def run_checks(recs, args, omitted, rep):
         if r.get("llm_sample_sha256"):
             hs.setdefault((r["equation"], int(r["seed"])), set()).add(r["llm_sample_sha256"])
     split = [k for k, v in hs.items() if len(v) > 1]
+    # llm_sample_sha256 hashes the raw LLM response, so it is set on every row that made (or replayed)
+    # an LLM call, including rows where the answer was accepted and PySR was never seeded.
+    nosample = [(comp_of(r), r["equation"], r["seed"]) for r in recs
+                if r.get("llm_called") is True and not r.get("llm_sample_sha256")]
+    rep.add("G9 llm_sample_sha256 (hash of the LLM response) logged on every row with llm_called",
+            not nosample, f"{len(nosample)} rows without it; first: {nosample[:3]}",
+            blocking=not args.allow_legacy_seed_record)
     if hs:
         rep.add("G9 same LLM sample in every arm per (equation, seed) (llm_sample_sha256)", not split,
                 f"{len(split)} keys with differing samples; first: {split[:3]}")

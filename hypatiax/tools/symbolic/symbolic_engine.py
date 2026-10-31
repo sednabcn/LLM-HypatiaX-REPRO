@@ -634,12 +634,14 @@ class IntegratedLLMEngine:
                 with open(_replay_path, encoding="utf-8") as _fh:
                     response = json.load(_fh)["response"]
                 self.last_response_replayed = True
+                self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
         try:
             response = self._call_llm(prompt)
+            self._note_llm_sample(response)
             if _replay_path:
                 _tmp = _replay_path + f".tmp{os.getpid()}"
                 with open(_tmp, "w", encoding="utf-8") as _fh:
@@ -657,6 +659,15 @@ class IntegratedLLMEngine:
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
         return hypotheses
+
+    @staticmethod
+    def _note_llm_sample(response):
+        """Log a hash of the raw response for the Phase 3 seed audit (G9). Never affects the run."""
+        try:
+            from hypatiax.tools.symbolic import guess_sanitizer as _gs
+            _gs.record_llm_response(response)
+        except Exception:
+            pass
 
     def _build_prompt(
         self,

@@ -31,9 +31,33 @@ def test_missing_binary_op():
 
 def test_duplicate_and_audit():
     G.reset_audit()
+    G.record_llm_response("raw response A")
     kept, dropped = G.sanitize_guesses(["x0*x1", "x0 * x1", "sign(x0)"], B, U, V)
     G.record_audit(["x0*x1", "x0 * x1", "sign(x0)"], kept, dropped)
     r = G.drain_audit()
     assert (r["guesses_requested"], r["guesses_used"], r["guesses_dropped"]) == (3, 1, 2)
     assert r["guess_fit_fallback"] is False and r["llm_sample_sha256"]
     assert G.drain_audit()["guesses_requested"] == 0
+
+
+def test_response_hash_independent_of_guesses():
+    # accepted answer, no guesses requested: the sample hash must still be set
+    G.reset_audit()
+    G.record_llm_response("raw response A")
+    a = G.drain_audit()
+    assert a["guesses_requested"] == 0 and a["llm_sample_sha256"]
+    # same response, now with a seeded fit: same sample hash
+    G.reset_audit()
+    G.record_llm_response("raw response A")
+    G.record_llm_response("raw response A")          # repeated call (attempt 2): still one sample
+    G.record_audit(["x0*x1"], ["(x0 * x1)"], [])
+    b = G.drain_audit()
+    assert b["llm_sample_sha256"] == a["llm_sample_sha256"]
+    assert b["guess_set_sha256"] and a["guess_set_sha256"] is None
+    # different response -> different sample hash
+    G.reset_audit()
+    G.record_llm_response("raw response B")
+    assert G.drain_audit()["llm_sample_sha256"] != a["llm_sample_sha256"]
+    # no LLM response at all
+    G.reset_audit()
+    assert G.drain_audit()["llm_sample_sha256"] is None

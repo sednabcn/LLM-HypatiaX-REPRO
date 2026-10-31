@@ -124,10 +124,19 @@ def sanitize_guesses(guesses, binary_ops, unary_ops, variables):
 
 # ---------------------------------------------------------------- audit
 _AUDIT = []
+_SAMPLES = []   # sha256 of each distinct raw LLM response seen since reset_audit()
 
 
 def reset_audit():
     _AUDIT.clear()
+    _SAMPLES.clear()
+
+
+def record_llm_response(response):
+    """Called by the engine with the raw LLM response (live or replayed). Only a hash is kept."""
+    h = hashlib.sha256(str(response).encode()).hexdigest()
+    if h not in _SAMPLES:
+        _SAMPLES.append(h)
 
 
 def record_audit(requested, kept, dropped, fit_fallback=False):
@@ -145,7 +154,7 @@ def mark_fit_fallback(rec):
         rec["fallback"] = True
 
 
-def summarize(records):
+def summarize(records, samples=()):
     req = [g for x in records for g in x["requested"]]
     return {
         "guesses_requested": sum(len(x["requested"]) for x in records),
@@ -153,12 +162,16 @@ def summarize(records):
         "guesses_dropped": sum(len(x["dropped"]) for x in records),
         "guess_dropped_reasons": sorted({r for x in records for _, r in x["dropped"]}),
         "guess_fit_fallback": any(x["fallback"] for x in records),
-        "llm_sample_sha256": hashlib.sha256("\n".join(sorted(req)).encode()).hexdigest() if req else None,
+        # hash of the LLM response(s) the engine actually used, whatever path followed (None = no LLM response)
+        "llm_sample_sha256": hashlib.sha256("\n".join(sorted(samples)).encode()).hexdigest() if samples else None,
+        # hash of the requested seed guesses (informational; differs between arms that seed vs not)
+        "guess_set_sha256": hashlib.sha256("\n".join(sorted(req)).encode()).hexdigest() if req else None,
     }
 
 
 def drain_audit():
     """Row fields for the adapter (consumed by phase3_close.py G9). Clears the log."""
-    out = summarize(list(_AUDIT))
+    out = summarize(list(_AUDIT), list(_SAMPLES))
     _AUDIT.clear()
+    _SAMPLES.clear()
     return out
