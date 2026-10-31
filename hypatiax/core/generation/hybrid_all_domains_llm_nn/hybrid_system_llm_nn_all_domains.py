@@ -904,7 +904,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                     "python_code": llm_result.get("python_code", "N/A"),
                     "metrics": llm_metrics,
                 },
-                "nn_result": {"metrics": {"r2": 0.0, "rmse": None, "mae": None, "reason": "nonfinite_metric"}},
+                "nn_result": {"metrics": {"r2": None, "rmse": None, "mae": None, "reason": "skipped_force_llm"}},
                 "evaluation": {
                     "r2": float(llm_r2),
                     "rmse": float(llm_metrics.get("rmse", float("inf"))),
