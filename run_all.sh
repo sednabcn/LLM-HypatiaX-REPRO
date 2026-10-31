@@ -91,7 +91,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_llm_sens exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_llm_sens exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate phase2_closure"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -4134,6 +4134,69 @@ sys.exit(0 if overall_ok else 1)
 PYEOF
 '
 
+# ---------------------------------------------------------------------------
+# phase2_closure: Phase 2 closure (Pure LLM vs HDS) on the COMMITTED Phase 2 rows.
+#   * Opt-in: runs ONLY as `./run_all.sh phase2_closure` (or --step phase2_closure), which is
+#     how ci_phase2_closure.yml calls it. In a full run or --from run it is skipped, so a
+#     missing archive/phase2/ cannot fail the main reproduction pipeline.
+#   * Needs no API key, no Julia, no PySR (env_check is not run for this step).
+#   * Delegates to scripts/run_phase2_closure.sh (adapts a TEMP copy of the P rows, verifies the
+#     evaluator is identical across arms, runs scripts/phase2_close.py, cross-checks n /
+#     catastrophic / nan_or_missing).
+#   * Inputs (env, same names as the workflow):
+#       P2_PURE_LLM_GLOB   default archive/phase2/p2/pure_llm_*.jsonl
+#       P2_HDS_GLOB        default archive/phase2/p2/hds_*.jsonl
+#       PHASE2_CLOSURE_OUT default ${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure
+#   * Log: ${RESULTS_DIR}/phase2_closure_run.log (the workflow's Summary step tails it).
+#   * A non-zero exit of the closure FAILS the step (pipefail + explicit rc check).
+# ---------------------------------------------------------------------------
+_phase2_closure_step() {
+  if [[ "${ONLY_STEP}" != "phase2_closure" ]]; then
+    log "phase2_closure: opt-in step, skipped (run: ./run_all.sh phase2_closure)"
+    return 0
+  fi
+  cd "${REPO_ROOT}"
+  local script="${SCRIPTS_DIR}/run_phase2_closure.sh"
+  local out="${PHASE2_CLOSURE_OUT:-${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure}"
+  local logf="${RESULTS_DIR}/phase2_closure_run.log"
+  mkdir -p "${RESULTS_DIR}"
+
+  if [[ ! -f "${script}" ]]; then
+    echo "::error::phase2_closure: ${script} not found"
+    return 1
+  fi
+  export P2_PURE_LLM_GLOB="${P2_PURE_LLM_GLOB:-archive/phase2/p2/pure_llm_*.jsonl}"
+  export P2_HDS_GLOB="${P2_HDS_GLOB:-archive/phase2/p2/hds_*.jsonl}"
+
+  if ! compgen -G "${P2_PURE_LLM_GLOB}" >/dev/null; then
+    echo "::error::phase2_closure: no Pure LLM rows match ${P2_PURE_LLM_GLOB}"
+    return 1
+  fi
+  if ! compgen -G "${P2_HDS_GLOB}" >/dev/null; then
+    echo "::error::phase2_closure: no HDS rows match ${P2_HDS_GLOB}"
+    return 1
+  fi
+
+  log "phase2_closure: pure_llm='${P2_PURE_LLM_GLOB}' hds='${P2_HDS_GLOB}' out='${out}'"
+  local rc=0
+  bash "${script}" "${out}" 2>&1 | tee "${logf}" || rc=$?
+
+  echo '=== phase2_closure verification ==='
+  find "${out}" -maxdepth 2 -type f 2>/dev/null | sort || echo '  (no output)'
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::phase2_closure exited ${rc} - see ${logf}"
+    return "${rc}"
+  fi
+  if [[ ! -s "${out}/p2_pure_llm_status_relabel.json" ]]; then
+    echo "::error::phase2_closure exited 0 but wrote no ${out}/p2_pure_llm_status_relabel.json"
+    return 1
+  fi
+  echo 'OK: phase2_closure complete'
+  echo '=== end phase2_closure ==='
+}
+
+run phase2_closure "Phase 2 closure: Pure LLM vs HDS on committed rows (opt-in; no API key / Julia)" _phase2_closure_step
+
 echo ""
 log "============================================================"
 log " HypatiaX reproduction pipeline COMPLETE"
@@ -4173,6 +4236,10 @@ echo "    ${RESULTS_DIR}/audit_nb04_run.log       (NB-04 numerical consistency)"
 echo "    ${RESULTS_DIR}/audit_nb05_run.log       (NB-05 figure dependencies)"
 echo "    logs/verify_report.json                 (structured verify output)"
 echo "    logs/paper_audit_findings.json          (structured audit output)"
+echo ""
+echo "  Phase 2 closure (opt-in: ./run_all.sh phase2_closure):"
+echo "    ${RESULTS_DIR}/phase2_closure_run.log"
+echo "    ${PHASE2_CLOSURE_OUT:-${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure}/   (manifest + adapted rows + status relabel sidecar)"
 echo ""
 echo "  Notebook audit outputs (executed .ipynb with cell outputs):"
 echo "    notebooks/NB-01_Citation_Bibliography_Audit.ipynb"
