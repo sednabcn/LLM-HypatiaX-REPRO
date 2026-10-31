@@ -1,0 +1,25 @@
+id,source,item,step_or_area,code,stage,status,check
+L01,prereg,one recovery policy and one catastrophic definition (A3),all,audit/PREREGISTRATION.md,S0,open,write and tag prereg-v1
+L02,A4,evaluator ss_tot guard (Listing 8),all scorers,hypatiax/core/r2_canonical.py; test_r2_policy.py,S1,fixed-verify,commits a4bfcfd 6ebf31f 76f21f5; confirm by test
+L03,B2,bypass off in controlled comparison,exp1 family; phase2_closure,run_pure_llm_arm.py; phase3_audit_wiring_check.py; test_no_equation_hints.py,S1,tooling-exists,run ci_bypass_audit; every row logs generation_path
+L04,B2,M4 stores formula; rerun,hybrid steps,close_m4_exclusion.py; mark_m4_unverified.py; test_m4_exclusion.py,S1,flagged-not-rerun,M4 stays exploratory until rerun
+L05,B3,store hybrid formula and re-score on same split,phase2_closure,run_pure_llm_arm.py; phase2_close.py,S2,open,drop bug wording and tie-by-tier claim until done
+L06,B4,Fix 4 blend weight uses X_test,hybrid routing,hybrid_system_v50_2.py or symbolic_engine.py,S1,unverified,grep -n X_test in both files
+L07,B5,noise sweep scoring (clean vs noisy targets),suppB,run_noise_sweep_benchmark.py,S1,open,15 lines changed; no commit names it
+L08,C4,Core-15 nan and -inf equations,comparative suite,run_comparative_suite_benchmark_v2.py,S1,open,diagnose before rerun
+L09,C1,equal timeouts and pinned model id,all LLM steps,7d45ebc 81662dd; run_all.sh,S0,partial,timeout no longer a seed fallback; budgets still to pin
+L10,Ph2,matched Pure LLM vs HDS,phase2_closure,run_phase2_closure.sh; phase2_close.py,S2,built-not-run,run from clean pushed commit
+L11,Ph3,leave-one-gate-out ablation (6 gates),phase3 ablation,run_phase3_ablation.py; phase3_all.py; ci_phase3_ablation.yml,S3,built-not-run,closure passes; per-gate table generated
+L12,Ph3,seed sanitizer and G9 and replay cache,phase3,guess_sanitizer.py; 3e50f5f; de9529f,S3,done,tests in test_guess_sanitizer.py
+L13,rerun,exp1 exp1b exp1_five exp1_pca exp1b_pca extrap,those steps,exp1_five_system.py; defi_benchmark_pca.py; extrap_r2_far.py,S4,rerun-needed,commits 99f094a 1ce3f5c 6ebf31f
+L14,rerun,exp1_ablation and exp1_ablation_aggregate,exp1_ablation,exp1_ablation.py,S4,rerun-needed,8f11733 repeat-seed support
+L15,rerun,exp3 and exp3b,exp3 exp3b,exp3_nguyen12_consolidated.py,S4,rerun-needed,77cb58c cache_salt; 347e047
+L16,rerun,exp2 family (feynman and pca),exp2*,run_comparative_suite_benchmark_v2.py; _pca.py,S4,rerun-needed,226 and 201 lines changed
+L17,rerun,DeFi and portfolio,exp1 DeFi; portfolio,hypatiax_defi_benchmark_v3c.py; portfolio_variance_v3c2.py,S4,rerun-needed,4c00a79 says results not regenerated
+L18,A2,instability suite,instability,run_instability_suite.py,S4,decide,no multi-run II reported; run it or remove claims
+L19,rerun,suppB noise and suppB_sc sample complexity,suppB suppB_sc,run_noise_sweep_benchmark.py; run_sample_complexity_benchmark.py,S4,exploratory,after L07
+L20,new,exp1_llm_sens,exp1_llm_sens,experiment_protocol_defi_llm_sensitive.py,S4,first-run,8d502fd
+L21,check,hybrid_all_domains and validate and qualify,those steps,hybrid_system_llm_nn_all_domains.py,S4,verify-reach,no direct scorer reference found
+L22,C1,deleted data and core files still needed,release,hypatiax/data (64); hypatiax/core (2); hypatiax/experiments (6),S1,verify,git diff --diff-filter=D --name-only freeze-pre-audit audit-main
+L23,C1,archived snapshot and table-to-file manifest,release,audit/MANIFEST.csv,S5,open,after S4
+L24,text,A1 A2 A3 A5 A6 B1 C5 C6 and Part D,manuscript,none,S5,open,can start now in parallel
