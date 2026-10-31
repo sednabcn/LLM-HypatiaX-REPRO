@@ -53,3 +53,7 @@ audit_out/*.csv
 run.log
 __pycache__/
 *.pyc
+phase3_out/
+phase3_closure_out/
+**/llm_replay/
+**/llm_cache/
