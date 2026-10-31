@@ -158,6 +158,14 @@ jobs:
             pint \
             psutil
 
+      # Fails the job (before any API spend) if the seed audit is not wired into this checkout:
+      # sanitizer, engine hooks, adapter drain, G9 in the closure, replay env, no bypass flags.
+      - name: Audit wiring check (no API spend)
+        run: |
+          python3 scripts/phase3_audit_wiring_check.py
+          python3 -m pip install -q pytest
+          PYTHONPATH="$PWD:$PWD/hypatiax/experiments/tests" python3 -m pytest -q hypatiax/experiments/tests/test_guess_sanitizer.py
+
       # Output folders are not source changes: keep them out of `git status` so the P4
       # clean-tree check sees only real code edits. Repo files are not touched.
       - name: Keep Phase 3 outputs out of the P4 dirty check
