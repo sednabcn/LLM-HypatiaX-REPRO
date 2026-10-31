@@ -28,13 +28,28 @@ CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned 
 
 Exit codes: 0 closed, 1 not closed / preflight failed, 2 bad usage.
 """
+import os
+import sys
+
+# --- P6 numerics pin (must run before ANY numpy import) ---------------------------------------
+# NumPy picks its SIMD kernels for exp/log/log10/power once, at first import. The AVX512 kernels
+# round the last bit differently from the code path that produced the Phase 2 P-arm hashes, so on
+# an AVX512 host Arrhenius, Henderson-Hasselbalch and Allometric Scaling regenerate data that is
+# mathematically equal but hashes differently (9 of 45 pairs). With AVX512 disabled all 45 match.
+# The expected hashes and the P6 gate are NOT touched; only the kernel dispatch is pinned.
+# On a host without AVX512 this is a no-op.
+_AVX512_OFF = ("AVX512_SPR AVX512_ICL AVX512_SKX AVX512_CLX AVX512_CNL AVX512_KNL AVX512_KNM "
+               "AVX512F AVX512CD X86_V4")
+_NUMPY_PRELOADED = "numpy" in sys.modules
+_cur = os.environ.get("NPY_DISABLE_CPU_FEATURES", "")
+if _AVX512_OFF.split()[0] not in _cur.split():
+    os.environ["NPY_DISABLE_CPU_FEATURES"] = (_cur + " " + _AVX512_OFF).strip()
+
 import argparse
 import hashlib
 import json
-import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -112,6 +127,27 @@ def force_clean_env():
     os.environ.pop("HYPATIAX_LLM_MODEL", None)
 
 
+def _avx512_state():
+    """(ok, detail): no AVX512 feature is active in this process's numpy."""
+    import numpy as np
+    try:
+        mu = np._core._multiarray_umath
+    except Exception:
+        try:
+            mu = np.core._multiarray_umath
+        except Exception as e:
+            return False, f"cannot read numpy CPU features ({type(e).__name__}); P6 would be unverifiable"
+    # __cpu_features__ is what the hardware has; only features in __cpu_dispatch__ are actually used,
+    # and NPY_DISABLE_CPU_FEATURES turns those off (same view as np.show_runtime()).
+    feats = mu.__cpu_features__
+    on = sorted(k for k in mu.__cpu_dispatch__ if feats.get(k) and k.startswith(("AVX512", "X86_V4")))
+    if on:
+        why = " (numpy was imported before the pin; run phase3_all.py as the entry point or set " \
+              "NPY_DISABLE_CPU_FEATURES in the environment)" if _NUMPY_PRELOADED else ""
+        return False, f"AVX512 still active: {on}{why}"
+    return True, f"numpy {np.__version__}, NPY_DISABLE_CPU_FEATURES pinned"
+
+
 # ---------------------------------------------------------------- preflight
 def preflight(a):
     print("== PREFLIGHT")
@@ -150,13 +186,10 @@ def preflight(a):
         if r["equation"] not in eqs:
             eqs.append(r["equation"])
     seeds = sorted({int(r["seed"]) for r in prows})
-    if a.equations:   # shard: restrict to a subset of the P-row equations (CI runs groups in parallel)
-        want = [e.strip() for e in a.equations.split(",") if e.strip()]
-        unknown = [e for e in want if e not in eqs]
-        p.add("P5 --equations are all in the P rows", not unknown, f"unknown: {unknown}; running {len(want)} of {len(eqs)}")
-        eqs = [e for e in eqs if e in want]
     a._eqs, a._seeds_p = eqs, seeds
     p.add("P5 seeds in P rows cover requested seeds", set(a.seeds) <= set(seeds), f"P seeds {seeds}, requested {a.seeds}")
+
+    p.add("P6 numpy AVX512 kernels off (hash-exact exp/log10/pow)", *_avx512_state())
 
     # P6: G1 dry check against the P-arm rows, before any API spend.
     try:
@@ -176,23 +209,31 @@ def preflight(a):
                 X, _, y, _, _, _ = exp1.generate_data(eq, N=200, noise_level=0.05, seed=eq_seed)
                 Xf, yf = exp1.generate_extrap_data(eq, regime="far", N=100, seed=eq_seed)
             checked += 1
-            tr_act, far_act = hash_arrays(X, y), hash_arrays(Xf, yf)
-            tr_exp, far_exp = r.get("train_data_sha256"), r.get("far_data_sha256")
-            if tr_act != tr_exp or far_act != far_exp:
-                bad.append({"equation": r["equation"], "seed": s, "eq_seed": eq_seed,
-                            "train_ok": tr_act == tr_exp, "far_ok": far_act == far_exp,
-                            "train_expected": tr_exp, "train_actual": tr_act,
-                            "far_expected": far_exp, "far_actual": far_act})
+            train_expected = r.get("train_data_sha256")
+            far_expected = r.get("far_data_sha256")
+            train_actual = hash_arrays(X, y)
+            far_actual = hash_arrays(Xf, yf)
+            if train_actual != train_expected or far_actual != far_expected:
+                bad.append({
+                    "equation": r["equation"],
+                    "seed": s,
+                    "train_expected": train_expected,
+                    "train_actual": train_actual,
+                    "far_expected": far_expected,
+                    "far_actual": far_actual,
+                })
         if bad:
-            print("  P6 G1 dry check mismatches:")
-            for b in bad:
-                print(f"    {b['equation']} seed={b['seed']} (eq_seed={b['eq_seed']}) "
-                      f"train_ok={b['train_ok']} far_ok={b['far_ok']}\n"
-                      f"      train exp {b['train_expected']}\n      train act {b['train_actual']}\n"
-                      f"      far   exp {b['far_expected']}\n      far   act {b['far_actual']}")
+            print("P6 G1 dry check mismatches:")
+            for m in bad:
+                print(
+                    f"  equation={m['equation']}, seed={m['seed']}\n"
+                    f"    train expected={m['train_expected']}\n"
+                    f"    train actual  ={m['train_actual']}\n"
+                    f"    far   expected={m['far_expected']}\n"
+                    f"    far   actual  ={m['far_actual']}"
+                )
         p.add("P6 G1 dry check: HDS data hashes == P rows (P hash scheme)", not bad and checked > 0,
-              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches "
-              f"{[(b['equation'], b['seed']) for b in bad[:4]]}")
+              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches {[(m['equation'], m['seed']) for m in bad[:4]]}")
     except Exception as e:  # engine import problems must be visible, not swallowed
         p.add("P6 G1 dry check", False, f"{type(e).__name__}: {e}")
     return p, (commit, dirty)
@@ -272,8 +313,6 @@ def main(argv=None):
     ap.add_argument("--seeds", default="42,99,123")
     ap.add_argument("--timeout-s", type=float, default=3600.0)
     ap.add_argument("--model-id", default="claude-sonnet-4-6", help="from your smoke log; written to every row")
-    ap.add_argument("--equations", default=None,
-                    help="comma list: run only these equations (default: all equations in the P rows). Used to shard a seed across CI jobs.")
     ap.add_argument("--p-rows-glob", default="p2/pure_llm_seed*.jsonl")
     ap.add_argument("--phase2-manifest", default="phase2_out/phase2_closure.json")
     ap.add_argument("--apply-engine-patch", action="store_true")
