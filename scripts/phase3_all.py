@@ -209,31 +209,23 @@ def preflight(a):
                 X, _, y, _, _, _ = exp1.generate_data(eq, N=200, noise_level=0.05, seed=eq_seed)
                 Xf, yf = exp1.generate_extrap_data(eq, regime="far", N=100, seed=eq_seed)
             checked += 1
-            train_expected = r.get("train_data_sha256")
-            far_expected = r.get("far_data_sha256")
-            train_actual = hash_arrays(X, y)
-            far_actual = hash_arrays(Xf, yf)
-            if train_actual != train_expected or far_actual != far_expected:
-                bad.append({
-                    "equation": r["equation"],
-                    "seed": s,
-                    "train_expected": train_expected,
-                    "train_actual": train_actual,
-                    "far_expected": far_expected,
-                    "far_actual": far_actual,
-                })
+            tr_act, far_act = hash_arrays(X, y), hash_arrays(Xf, yf)
+            tr_exp, far_exp = r.get("train_data_sha256"), r.get("far_data_sha256")
+            if tr_act != tr_exp or far_act != far_exp:
+                bad.append({"equation": r["equation"], "seed": s, "eq_seed": eq_seed,
+                            "train_ok": tr_act == tr_exp, "far_ok": far_act == far_exp,
+                            "train_expected": tr_exp, "train_actual": tr_act,
+                            "far_expected": far_exp, "far_actual": far_act})
         if bad:
-            print("P6 G1 dry check mismatches:")
-            for m in bad:
-                print(
-                    f"  equation={m['equation']}, seed={m['seed']}\n"
-                    f"    train expected={m['train_expected']}\n"
-                    f"    train actual  ={m['train_actual']}\n"
-                    f"    far   expected={m['far_expected']}\n"
-                    f"    far   actual  ={m['far_actual']}"
-                )
+            print("  P6 G1 dry check mismatches:")
+            for b in bad:
+                print(f"    {b['equation']} seed={b['seed']} (eq_seed={b['eq_seed']}) "
+                      f"train_ok={b['train_ok']} far_ok={b['far_ok']}\n"
+                      f"      train exp {b['train_expected']}\n      train act {b['train_actual']}\n"
+                      f"      far   exp {b['far_expected']}\n      far   act {b['far_actual']}")
         p.add("P6 G1 dry check: HDS data hashes == P rows (P hash scheme)", not bad and checked > 0,
-              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches {[(m['equation'], m['seed']) for m in bad[:4]]}")
+              f"{checked} (equation, seed) pairs checked; {len(bad)} mismatches "
+              f"{[(b['equation'], b['seed']) for b in bad[:4]]}")
     except Exception as e:  # engine import problems must be visible, not swallowed
         p.add("P6 G1 dry check", False, f"{type(e).__name__}: {e}")
     return p, (commit, dirty)
