@@ -5,7 +5,7 @@
 #     bash scripts/close_phase3.sh
 #
 # Settings (environment variables, all optional):
-#     OUT         results dir of run_phase3_ablation.py       [results/phase3]
+#     OUT         results dir of run_phase3_ablation.py       [phase3_out/ablation]
 #     CLOSE_OUT   where the closure manifest/CSV/marker go    [phase3_closure_out]
 #     P_ROWS      glob of the P-arm rows used for G1          [archive/phase2/p2/pure_llm_seed*.jsonl]
 #     MANIFEST    phase2_closure.json for the Phase 2 tie-in  [empty = tie-in skipped, non-blocking]
@@ -16,7 +16,7 @@
 # It never edits rows, never commits, and exits non-zero unless Phase 3 is CLOSED.
 set -uo pipefail
 
-OUT="${OUT:-results/phase3}"
+OUT="${OUT:-phase3_out/ablation}"
 CLOSE_OUT="${CLOSE_OUT:-phase3_closure_out}"
 P_ROWS="${P_ROWS:-archive/phase2/p2/pure_llm_seed*.jsonl}"
 MANIFEST="${MANIFEST:-}"
@@ -43,7 +43,7 @@ echo "r2_canonical.py sha256 prefix: $ACTUAL_EVAL   (expected: $EVAL_SHA)"
 
 # ---------------------------------------------------------------- 2. clean tree (same rule as the runner's git_state)
 step "2. clean tree (G8)"
-DIRTY="$(git status --porcelain | grep -vE "^.. \"?(${OUT%/}/|${CLOSE_OUT%/}/|p2_|phase3_out|phase3_closure_out)" || true)"
+DIRTY="$(git status --porcelain --untracked-files=all | grep -vE "^.. \"?(${OUT%/}/|${CLOSE_OUT%/}/|p2_|phase3_out|phase3_closure_out)" || true)"
 if [ -n "$DIRTY" ]; then echo "$DIRTY" | head -20; die "working tree is dirty; commit or move these (G8)"; fi
 echo "clean"
 
@@ -53,7 +53,7 @@ if [ "$SKIP_TESTS" != "1" ]; then
   T=hypatiax/experiments/tests
   PYTHONPATH=".:$T" python -m pytest -q "$T/test_guess_sanitizer.py" "$T/test_engine_seed_audit.py" 2>&1 | tail -3
   [ "${PIPESTATUS[0]}" -eq 0 ] || die "tests failed"
-  [ -z "$(git status --porcelain | grep -vE "^.. \"?(${OUT%/}/|${CLOSE_OUT%/}/)" || true)" ] || die "tests dirtied the tree"
+  [ -z "$(git status --porcelain --untracked-files=all | grep -vE "^.. \"?(${OUT%/}/|${CLOSE_OUT%/}/)" || true)" ] || die "tests dirtied the tree"
 fi
 
 # ---------------------------------------------------------------- 4. result files and row sanity
