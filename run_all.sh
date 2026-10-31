@@ -1013,7 +1013,7 @@ PYEOF_FINGERPRINT_1
     echo 'WARNING: exp1_pca produced no result JSON — check exp1_pca_run.log'
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo 'ERROR: split_protocol_disclosure.json not found' >&2; exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
     echo 'WARNING: exp1_pca_summary.json not found — qualify/audit steps will not see DeFi PCA solve rate'
@@ -1248,8 +1248,8 @@ PYEOF_FINGERPRINT_1B
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
     echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
   fi
-  if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
+  if [[ \"\${_NDISC}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
+    echo 'ERROR: split_protocol_disclosure.json not found in 15_pca/' >&2; exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
     echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
@@ -1875,7 +1875,7 @@ PYEOF_FINGERPRINT_2
     echo 'WARNING: exp2_pca_4060_summary.json not found — domain runs may not have completed yet'
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo 'ERROR: split_protocol_disclosure.json not found' >&2; exit 1
   fi
   echo '=== end exp2_feynman_pca_4060 ==='
 "
@@ -2296,9 +2296,6 @@ PYEOF
   python3 '${EXPERIMENTS_DIR}/run_hybrid_system_benchmark.py' \
     2>&1 | tee    '${RESULTS_DIR}'/suppA_run.log
   python3 hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py \
-    2>&1 | tee -a '${RESULTS_DIR}'/suppA_run.log
-  python3 hypatiax/analysis/analyze_hybrid_performance.py \
-    --results-dir '${RESULTS_DIR}' \
     2>&1 | tee -a '${RESULTS_DIR}'/suppA_run.log
   for _sroot in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_sroot}\" -maxdepth 1 -name 'consolidated_hybrid_*.json' \
