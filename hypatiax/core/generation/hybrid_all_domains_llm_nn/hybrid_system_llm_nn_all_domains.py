@@ -1139,7 +1139,7 @@ def run_hybrid_test_all_domains(
 
     # Decision breakdown
     print("\n🎯 Decision Breakdown:")
-    decisions = {"llm": [], "ensemble": [], "nn": []}
+    decisions = {"llm": [], "ensemble": [], "nn": [], "fail": []}
     for r in all_results:
         decisions[r["decision"]].append(r["evaluation"]["r2"])
 
