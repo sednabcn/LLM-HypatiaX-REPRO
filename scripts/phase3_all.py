@@ -150,6 +150,11 @@ def preflight(a):
         if r["equation"] not in eqs:
             eqs.append(r["equation"])
     seeds = sorted({int(r["seed"]) for r in prows})
+    if a.equations:   # shard: restrict to a subset of the P-row equations (CI runs groups in parallel)
+        want = [e.strip() for e in a.equations.split(",") if e.strip()]
+        unknown = [e for e in want if e not in eqs]
+        p.add("P5 --equations are all in the P rows", not unknown, f"unknown: {unknown}; running {len(want)} of {len(eqs)}")
+        eqs = [e for e in eqs if e in want]
     a._eqs, a._seeds_p = eqs, seeds
     p.add("P5 seeds in P rows cover requested seeds", set(a.seeds) <= set(seeds), f"P seeds {seeds}, requested {a.seeds}")
 
@@ -267,6 +272,8 @@ def main(argv=None):
     ap.add_argument("--seeds", default="42,99,123")
     ap.add_argument("--timeout-s", type=float, default=3600.0)
     ap.add_argument("--model-id", default="claude-sonnet-4-6", help="from your smoke log; written to every row")
+    ap.add_argument("--equations", default=None,
+                    help="comma list: run only these equations (default: all equations in the P rows). Used to shard a seed across CI jobs.")
     ap.add_argument("--p-rows-glob", default="p2/pure_llm_seed*.jsonl")
     ap.add_argument("--phase2-manifest", default="phase2_out/phase2_closure.json")
     ap.add_argument("--apply-engine-patch", action="store_true")
