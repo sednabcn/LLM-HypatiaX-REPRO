@@ -1962,10 +1962,10 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/ — ci_analysis.yml merge step will find nothing'
+    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
-    echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
+    echo '    (merge into ablation_paired.json was removed from this repo in 78e4244; the file is not produced here)'
   fi
 "
 
