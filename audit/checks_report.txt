@@ -41,16 +41,14 @@ hypatiax/data/results/ablation/exp1_ablation_seed99/exp1_ablation_results_shard4
 SUMMARY {'llm_row_unknown_source': 210, 'no_signflip_field': 38, 'files_with_provenance': 38, 'file_no_provenance': 494}
 RESULT: FAILED 704
 === 02_static_checks
-FAIL S01 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:838 llm_r2 may be None -> np.isfinite(None) TypeError | llm_ok = llm_metrics.get("success", False) and np.isfinite(llm_r2) and llm_r2 > 0
-FAIL S02 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:865 failure scored as 0.0 | "nn_result": {"metrics": {"r2": 0.0, "rmse": None, "mae": None, "reason": "nonfinite_metric"}},
-FAIL S03 hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py:0 no explicit nan branch for nn_r2: nan NN falls through decision logic
-FAIL S04 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2278 missing r2 defaults to 0.0 | r2_val   = float(eval_.get("r2", 0.0))
-FAIL S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1073 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
-FAIL S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3752 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A",  # PHASE1-FIX: failure, not a score
-FAIL S08 hypatiax/experiments/benchmarks/exp1_ablation.py:724 rmse default inf (audit-M3) | train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
-FAIL S10 run_all.sh:0 no assertion STRICT==1
+INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2211 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
+INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2615 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
+INFO S12 (all):0 suppressions by code: {'M5': 1, 'D5': 3, 'S1': 6, 'L2': 4, 'F1': 5, 'P3': 2, 'D2': 1, 'D1': 1}
 WARN S05 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2243 _extract_eval fallthrough ignores decision | for _key in ("evaluation", "nn_result", "llm_result", "result"):
-WARN S11 run_all.sh:215 stale warning: extrap module is inlined | echo "ERROR: extrap_r2_far.py not found — exp2_feynman_extrap will produce null extrap_r2_far values."
+WARN S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:1073 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
+WARN S06 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:3755 _unavailable returns -inf/inf (JSON -Infinity); use None + reason | r2=float("-inf"), rmse=float("inf"), formula="N/A",  # PHASE1-FIX: failure, not a score
+WARN S08 hypatiax/experiments/benchmarks/exp1_ablation.py:724 rmse default inf (audit-M3) | train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
+WARN S11 run_all.sh:216 stale warning: extrap module is inlined | echo "ERROR: extrap_r2_far.py not found — exp2_feynman_extrap will produce null extrap_r2_far values."
 WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:409 suppression without a reason
 WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1226 suppression without a reason
 WARN S12 hypatiax/experiments/benchmarks/exp1_ablation.py:1227 suppression without a reason
@@ -154,11 +152,8 @@ WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1545 unseeded? confi
 WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1550 unseeded? confirm routed through seed audit | return expr + np.random.uniform(0.3, 0.7) * symbols[
 WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1855 unseeded? confirm routed through seed audit | return np.random.uniform(0.3, 0.7) * p1 + np.random.uniform(0.3, 0.7) * p2
 WARN S13 hypatiax/tools/symbolic/physics_aware_regressor.py:1871 unseeded? confirm routed through seed audit | c, float(c) * np.random.uniform(0.85, 1.15)
-INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2211 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
-INFO S07 hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py:2612 FIX 3 result-informed routing override: disclose | metadata = {**metadata, "force_llm": True}
-INFO S12 (all):0 suppressions by code: {'M5': 1, 'D5': 3, 'S1': 6, 'L2': 4, 'F1': 5, 'P3': 2, 'D2': 1, 'D1': 1}
 
-RESULT: FAILED (8 FAIL, 105 WARN)
+RESULT: ok (0 FAIL, 108 WARN)
 === 03_r2_policy_selftest
 ok   perfect prediction -> 1.0 (1.0, 'ok')
 ok   constant target -> nan degenerate (nan, 'degenerate_target')
@@ -250,7 +245,7 @@ pysr_only                              extrap_r2_far  n=240 {'-inf': 11, 'finite
 tests                                  extrap_r2_far  n=66 {'other': 66}
 === 06_pipeline
 ok   dry-run steps (41) == _STEP_ORDER (41)
-FAIL run lines match _STEP_ORDER
+INFO run-line names differ from _STEP_ORDER (generated names such as supp* are expected; inspect diff)
 38,40c38
 < suppA
 < suppB
@@ -258,7 +253,7 @@ FAIL run lines match _STEP_ORDER
 ---
 > supp
 ok   SIGN_FLIP exported in run_all.sh
-FAIL STRICT==1 asserted in run_all.sh
+ok   STRICT==1 asserted in run_all.sh
 ok   freeze-pre-audit tag exists
 INFO 7d45ebc / 81662dd patches differ or missing (a=092be3338100777481a772acc1e54212cff7e84a b=c2087b81b82389b796d48fd7dbadecfb13299822)
 --- deletions since freeze (top dirs) ---
@@ -270,29 +265,15 @@ INFO 7d45ebc / 81662dd patches differ or missing (a=092be3338100777481a772acc1e5
 --- deleted files still referenced by run_all.sh ---
 INFO hybrid_all_domains uses ExperimentProtocolAll (ignores seed/noiseless): no seed or noise claims from that step
 === 07_ledger_dry_run
-15 new rows, 2 ids already present (left untouched: ['L03', 'L06'])
-  + L32 hybrid_predict llm_r2 None crash
-  + L33 nn_r2 nan falls through decision logic
-  + L34 NN failure path scores r2 0.0
-  + L35 _extract_eval fallthrough
-  + L36 eval_.get(r2, 0.0) default
-  + L37 _unavailable returns -inf/inf
-  + L38 exp1_ablation rmse default inf
-  + L39 FIX 3 force_llm for 5 Feynman domains
-  + L40 Table 14 null policy
-  + L41 exp1_llm_contribution.py null policy
-  + L42 R2 policy constants
-  + L43 sign flip controls
-  + L44 all_domains protocol ignores seed/noiseless
-  + L45 three compute_extrap_r2_far copies
-  + L46 stale run_all.sh extrap warnings
+0 new rows, 30 ids already present (left untouched: ['L03', 'L06', 'L32', 'L33', 'L34', 'L35', 'L36', 'L37', 'L38', 'L39', 'L40', 'L41', 'L42', 'L43', 'L44', 'L45', 'L46', 'L47', 'L48', 'L49', 'L50', 'L51', 'L52', 'L53', 'L54', 'L55', 'L56', 'L57', 'L58', 'L59'])
 dry run; use --write to append
 SUMMARY (0 = clean)
 01_provenance_gate         exit 1
-02_static_checks           exit 1
+02_static_checks           exit 0
 03_r2_policy_selftest      exit 0
 04_decision_logic          exit 1
 05_null_census             exit 0
-06_pipeline                exit 1
+06_pipeline                exit 0
 07_ledger_dry_run          exit 0
+--- FAIL / MISSING lines (full report: audit/checks_report.txt)
 exp1_llm_contribution.py usage in run_all.sh, Fix 4 text decision, REL_TOL decision.
