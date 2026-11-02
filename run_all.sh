@@ -1979,8 +1979,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   mkdir -p "${_EXTRAP_DIR}"
 
   if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
-    echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
-    echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
+    echo "[SKIP] merge_extrap_into_benchmark.py removed from this repo (78e4244); ablation_paired.json is NOT produced here"
   else
     _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
     if [[ -z "${_BENCH_EXT}" ]]; then
@@ -2238,8 +2237,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   if [[ -z "${_SEED_FILES}" ]]; then
     echo "[SKIP] No exp3_nguyen12_seed*.json files found — symbolic equivalence check skipped."
   elif [[ ! -f "${_SCRIPT}" ]]; then
-    echo "[SKIP] check_symbolic_equivalence.py not found at ${_SCRIPT}"
-    echo "       Symbolic equivalence report will not be produced locally."
+    echo "[SKIP] check_symbolic_equivalence.py removed from this repo (78e4244); no symbolic-equivalence report is produced here"
   else
     echo "[exp3_sym] Running check_symbolic_equivalence.py ..."
     mkdir -p "${_SEED_DIR}"

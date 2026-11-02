@@ -121,6 +121,7 @@ env:
   HYPATIAX_STRICT: "1"
   # exp1_ablation: run the third (no-LLM) arm. Ignored by every other experiment.
   HYPATIAX_NOLLM_ARM: "1"
+  HYPATIAX_HOLDOUT: "1"   # L06: held-out llm/nn/blend R2 (extra NN fit per case)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
