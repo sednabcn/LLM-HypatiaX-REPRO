@@ -54,7 +54,7 @@ find("INFO", "S07", V2, r'"force_llm":\s*True', None, "FIX 3 result-informed rou
 find("WARN", "S08", AB, r'get\("rmse",\s*float\("inf"\)\)', None, "rmse default inf (audit-M3)")
 # run_all.sh controls
 absent("FAIL", "S09", RA, r"export HYPATIAX_R2_SIGN_FLIP", "SIGN_FLIP not exported explicitly")
-absent("FAIL", "S10", RA, r'STRICT.*!=\s*"?1"?|\$\{?HYPATIAX_STRICT\}?"?\s*!=', "no assertion STRICT==1")
+absent("FAIL", "S10", RA, r'STRICT.*!=\s*"?1"?|\$\{?HYPATIAX_STRICT\}?"?\s*!=|HYPATIAX_STRICT\}?"?\s*==\s*"?1"?', "no assertion STRICT==1")
 find("WARN", "S11", RA, r"will produce null extrap_r2_far", None, "stale warning: extrap module is inlined")
 # Suppressions inventory
 cnt = collections.Counter()

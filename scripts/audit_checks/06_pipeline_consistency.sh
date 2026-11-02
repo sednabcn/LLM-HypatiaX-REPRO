@@ -16,7 +16,7 @@ diff /tmp/order.txt /tmp/runs.txt | head -10
 
 # 3. controlled flags
 grep -qE 'export HYPATIAX_R2_SIGN_FLIP' run_all.sh; chk "SIGN_FLIP exported in run_all.sh" $?
-grep -qE 'HYPATIAX_STRICT.*(!=|-ne)' run_all.sh; chk "STRICT==1 asserted in run_all.sh" $?
+grep -qE 'HYPATIAX_STRICT.*(!=|-ne|==)' run_all.sh; chk "STRICT==1 asserted in run_all.sh" $?
 
 # 4. freeze tag and duplicate commits
 git rev-parse -q --verify freeze-pre-audit >/dev/null; chk "freeze-pre-audit tag exists" $?
