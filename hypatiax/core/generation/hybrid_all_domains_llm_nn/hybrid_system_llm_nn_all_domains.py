@@ -182,8 +182,8 @@ class HybridSystemAllDomains:
         self._formula_cache: dict = {}
 
         # Delegate LLM formula generation to PureLLMBaseline so the hybrid
-        # automatically benefits from hardcoded formula paths, OLS enrichment,
-        # and all prompt fixes (variant guard, max_tokens, etc.) without
+        # automatically benefits from all prompt fixes (variant guard,
+        # max_tokens, etc.) without
         # reimplementing them here.
         try:
             from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
@@ -204,7 +204,7 @@ class HybridSystemAllDomains:
         """Generate formula using LLM.
 
         Delegates to PureLLMBaseline when available so the hybrid benefits from
-        all LLM-path improvements (hardcoded formulas, OLS enrichment, variant
+        all LLM-path improvements (hardcoded formulas, variant
         guards, max_tokens=4000) without duplicating that logic here.
 
         Falls back to the local implementation if PureLLMBaseline cannot be
@@ -853,9 +853,10 @@ NO markdown code blocks, individual parameters NOT dict."""
         if verbose:
             print("\n  [HYBRID] Generating LLM formula...")
 
-        # Step 1: Get LLM formula — pass X/y so PureLLMBaseline can run OLS
-        # enrichment (Arrhenius, Michaelis-Menten, logistic growth, allometric)
-        # before deciding whether to call the LLM at all.
+        # Step 1: Get LLM formula. X/y are passed for call compatibility only;
+        # PureLLMBaseline.generate_formula does not use them (no data statistics
+        # in the prompt and nothing is fitted), so the formula is not fitted to
+        # the rows scored below.
         llm_result = self.generate_llm_formula(
             description, domain, var_names, metadata, X=X, y=y_true
         )
