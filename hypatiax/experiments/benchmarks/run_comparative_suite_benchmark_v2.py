@@ -2670,6 +2670,8 @@ class HybridAllDomainsMethod(BaseMethod):
                 "feynman_thermodynamics",
                 "feynman_optics",
             ):
+                # AUDIT-PATCH L39: Feynman-domain guard forces the LLM path. Disclose in the paper, or rerun
+                # the comparison with this guard disabled and report both.
                 metadata = {**metadata, "force_llm": True}
                 self._log(f"domain guard: forced force_llm=True for domain '{_domain}'")
 

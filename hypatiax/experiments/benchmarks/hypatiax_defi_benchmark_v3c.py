@@ -724,7 +724,10 @@ def formula({var_list}):
         resp = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            temperature=0.0,   # C2: same setting as PureLLMBaseline
+            # AUDIT-PATCH C2: direct messages.create(temperature=0.0). PureLLMBaseline and the shared
+            # wrapper do NOT send temperature on SDK>=1.0 (model default applies); the engine/CI
+            # env default is LLM_TEMPERATURE=0.25. These are different settings: report as such.
+            temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
         )
         code = resp.content[0].text.strip()
@@ -869,6 +872,9 @@ def _hybrid_predict_and_eval(
                 test_r2  = nn_m["test_r2"]
                 decision = "nn_fallback"
             else:
+                # AUDIT-PATCH B4 DISCLOSURE: blend weight is computed from X_test INPUTS (no labels), so the
+                # manuscript statement 'routing uses training data only' must be amended to say that the
+                # final ensemble weight is input-dependent at test time.
                 # B4-reviewed: weight depends on X_test inputs only, never y_test.
                 llm_w         = _distance_llm_weight(X_test, X_train, base_weight=0.3)
                 nn_w          = 1.0 - llm_w
