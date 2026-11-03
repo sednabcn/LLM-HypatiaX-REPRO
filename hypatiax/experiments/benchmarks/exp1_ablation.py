@@ -704,10 +704,17 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     description = eq["name"],
                     metadata    = {
                         "equation_name":          eq["name"],
+<<<<<<< Updated upstream
                         # AUDIT C4: key metadata by the SAFE names actually passed as
                         # var_names (S->var_S, N->var_N), otherwise the engine finds no
                         # description/unit for renamed variables.
                         "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
+=======
+                        # Keyed by the SAFE names passed as var_names (S -> var_S, N -> var_N, ...);
+                        # the description keeps the original symbol so the LLM can still read it.
+                        # Identical to the old mapping for every non-reserved variable.
+                        "variable_descriptions":  {sv: ov for ov, sv in zip(eq["vars"], safe_var_names)},
+>>>>>>> Stashed changes
                         "variable_units":         {sv: "" for sv in safe_var_names},
                         "noise_level":            0.05,
                         "domain":                 _dom_slug,
@@ -744,6 +751,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
         _predict     = None
+        _ood_note    = None   # why extrap metrics are None (None = predictor built fine)
         try:
             import sympy as _sp_ood
             from hypatiax.core.constants import PHYSICAL_CONSTANTS as _PHYS_CONST
@@ -758,10 +766,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 constants=_PHYS_CONST,
             )
             if _predict is None:
-                dbg("OOD predictor unavailable: formula references non-input "
-                    "symbols (engineered features) — extrap metrics = None")
+                _ood_note = ("predictor unavailable: formula references non-input symbols "
+                             f"(engineered features): {_formula_safe!r}")
+                print(f"  [hypatia] WARN {eq['name']}: {_ood_note}")
         except Exception as ee:
-            dbg(f"OOD predictor build failed: {ee}")
+            _ood_note = f"predictor build failed: {type(ee).__name__}: {ee}"
+            print(f"  [hypatia] WARN {eq['name']}: {_ood_note}")
             _predict = None
 
         for regime_name, (X_e, y_e) in extrap_sets.items():
@@ -829,6 +839,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
             "sanitized_vars":        dict(sanitizer.fwd),
             "validation_score":      res.get("validation_score"),
+            "ood_predictor_note":    _ood_note,    # None when extrap metrics were computed
+            "sanitized_vars":        dict(sanitizer.fwd),   # {} when no variable was renamed
         }
 
     # =========================================================================

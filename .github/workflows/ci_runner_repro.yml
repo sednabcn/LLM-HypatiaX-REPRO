@@ -109,7 +109,7 @@ on:
         default: "fallback"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.event.inputs.seeds || 'default' }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -891,9 +891,9 @@ jobs:
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
-          key:  checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-${{ github.ref_name }}-${{ github.run_id }}
+          key:  checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-seeds${{ github.event.inputs.seeds || 'default' }}-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
-            checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-${{ github.ref_name }}-
+            checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-seeds${{ github.event.inputs.seeds || 'default' }}-${{ github.ref_name }}-
 
       - name: Environment check and repro.yaml audit
         env:
@@ -2125,6 +2125,20 @@ jobs:
           sys.exit(1 if bad else 0)
           PYV
 
+      - name: Check exp1_ablation log for LLM-guess fit fallback
+        if: ${{ always() && needs.plan.outputs.exp_id == 'exp1_ablation' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          # The ablation rows carry no guess_fit_fallback field, so the log is the only evidence.
+          N=$(grep -c "fit with LLM guesses failed" /tmp/run_all_step.log 2>/dev/null || true)
+          N="${N:-0}"
+          echo "exp1_ablation shard ${SHARD_INDEX}: 'fit with LLM guesses failed' x ${N}"
+          if [[ "${N}" -ne 0 ]]; then
+            echo "::warning::exp1_ablation shard ${SHARD_INDEX}: 'fit with LLM guesses failed' appeared ${N} time(s) - hypatia arm fell back to the no-guess fit."
+          fi
+          {
+            echo "### exp1_ablation shard ${SHARD_INDEX} - guess-fit fallbacks: ${N}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify exp1_five output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1_five' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
@@ -2705,7 +2719,7 @@ jobs:
         uses: actions/cache/save@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
-          key: checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-${{ github.ref_name }}-${{ github.run_id }}
+          key: checkpoint-worker-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}-seeds${{ github.event.inputs.seeds || 'default' }}-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Copy shard checkpoint into result subdir
         if: always()
