@@ -496,6 +496,67 @@ _exp1_ablation_step() {
     log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
   fi
 
+  # Generation-time provenance (same fields as Phase 3 rows). Written BEFORE the run so the
+  # commit/flags recorded are those the results are generated under, not those at aggregation.
+  ABL_DIR="${abl_dir}" ABL_SFX="${sfx}" PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
+    python3 - <<'PYPROV' || warn "exp1_ablation: generation provenance NOT written (continuing)"
+import datetime, hashlib, json, os, subprocess
+def git(*a):
+    return subprocess.check_output(["git", *a], text=True).strip()
+def num(name, default):
+    try:
+        return int(os.environ.get(name) or default)
+    except ValueError:
+        return os.environ.get(name)
+commit = git("rev-parse", "HEAD")
+dirty = [l for l in git("status", "--porcelain").splitlines()
+         if not l[3:].strip().strip('"').startswith(("hypatiax/data/results", "phase3_out", "phase3_closure_out"))]
+ev = "hypatiax/core/r2_canonical.py"
+ev_sha = hashlib.sha256(open(ev, "rb").read()).hexdigest()
+try:
+    from hypatiax.core.flags import flag_state
+    flags = flag_state()
+except Exception as e:                      # keep the raw env if the helper cannot import
+    flags = {"flag_state_error": repr(e)[:200]}
+for n in ("HYPATIAX_STRICT", "HYPATIAX_HOLDOUT", "HYPATIAX_NOLLM_ARM", "HYPATIAX_DISABLE_HARDCODED",
+          "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_R2_SIGN_FLIP", "HYPATIAX_ALLOW_LEGACY"):
+    flags.setdefault(n, os.environ.get(n))
+pysr_t, retries, post = num("PYSR_TIMEOUT", 1100), num("HYPATIA_MAX_RETRIES", 3), num("PYSR_POST_PROC_BUDGET", 300)
+rec = {
+    "experiment": "exp1_ablation",
+    "written_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    "git_commit": commit, "code_dirty": bool(dirty), "dirty_files": [l.strip() for l in dirty][:20],
+    "evaluator_path": ev, "evaluator_sha256": ev_sha,
+    "flags": flags,
+    "seed": num("PYSR_SEED", 42),
+    "shard_index": os.environ.get("SHARD_INDEX"), "n_shards": os.environ.get("N_SHARDS"),
+    "domain_filter": os.environ.get("DOMAIN_FILTER") or None,
+    "n_core15_tasks": os.environ.get("N_CORE15_TASKS"),
+    "llm_model": os.environ.get("LLM_MODEL", "claude-sonnet-4-6"),
+    "llm_replay_dir": os.environ.get("HYPATIAX_LLM_REPLAY_DIR"),
+    "budgets_s": {
+        "pysr_attempt": pysr_t, "hypatia_max_retries": retries, "post_proc": post,
+        "hypatia_wall_clock": (retries * pysr_t + post) if isinstance(pysr_t, int) and isinstance(retries, int) and isinstance(post, int) else None,
+        "pysr_only_wall_clock": (pysr_t + post) if isinstance(pysr_t, int) and isinstance(post, int) else None,
+        "method_timeout": os.environ.get("METHOD_TIMEOUT"),
+    },
+    "pysr": {"populations": os.environ.get("PYSR_POPULATIONS"), "niterations": os.environ.get("PYSR_NITERATIONS"),
+             "generations": os.environ.get("PYSR_GENERATIONS")},
+    "github": {"run_id": os.environ.get("GITHUB_RUN_ID"), "ref": os.environ.get("GITHUB_REF_NAME"),
+               "workflow": os.environ.get("GITHUB_WORKFLOW")},
+}
+out = os.path.join(os.environ["ABL_DIR"], f"provenance_generation{os.environ.get('ABL_SFX', '')}.json")
+json.dump(rec, open(out, "w"), indent=1)
+if os.environ.get("GITHUB_ACTIONS") == "true":
+    if dirty:
+        print(f"::warning::exp1_ablation shard runs on DIRTY code ({len(dirty)} file(s)); see {out}")
+    _gs = os.environ.get("GITHUB_SHA")
+    if _gs and _gs != commit:
+        print(f"::warning::HEAD {commit[:7]} != GITHUB_SHA {_gs[:7]}: results are tied to HEAD, recorded in {out}")
+print(f"[exp1_ablation] provenance -> {out} (commit {commit[:7]}, dirty={bool(dirty)}, "
+      f"hypatia wall clock {rec['budgets_s']['hypatia_wall_clock']} s)")
+PYPROV
+
   local rc=0
   PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
   RESULTS_DIR="${abl_dir}" \

@@ -138,6 +138,10 @@ env:
   LLM_METHOD_TIMEOUT:  "120"   # tight timeout for LLM/NN-only runs (methods 1-4, no PySR)
   PYSR_FIT_WALL_TIMEOUT: "1200" # repro.yaml timeouts.fit_wall_timeout → DiscoveryConfig
   PYSR_FIT_GRACE_SECS: "120"   # repro.yaml timeouts.fit_grace_secs → DiscoveryConfig
+  # exp1_ablation per-case wall clock = Phase 3 timeout_s 3600: HYPATIA_MAX_RETRIES x PYSR_TIMEOUT(=FEYNMAN_TIMEOUT 1100) + post-proc.
+  # Same values as exp1_ablation.py's defaults, set explicitly so they are documented here and recorded in provenance_generation_shard<N>.json.
+  HYPATIA_MAX_RETRIES: "3"
+  PYSR_POST_PROC_BUDGET: "300"
   FEYNMAN_NOISELESS_THRESHOLD: "0.999999"  # matches run_noise_sweep_benchmark.py --threshold-noiseless default
   OUT_BASE:            "hypatiax/data/results"
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
