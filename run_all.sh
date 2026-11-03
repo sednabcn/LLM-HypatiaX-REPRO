@@ -121,6 +121,16 @@ log()  { echo -e "${GREEN}[run_all]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 die()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 
+# --- failure ledger -----------------------------------------------------------
+# Result-producing steps that used to end in `|| echo WARNING ... continuing`
+# now ALSO call record_failure, so the run keeps going (other domains still run)
+# but is reported as FAILED at the end instead of finishing green with gaps.
+# Exported so bash -c children inherit both the function and the log path.
+export HYPATIAX_FAILED_LOG="${HYPATIAX_FAILED_LOG:-${RESULTS_DIR}/failed_steps.txt}"
+mkdir -p "$(dirname "${HYPATIAX_FAILED_LOG}")"; : > "${HYPATIAX_FAILED_LOG}"
+record_failure() { echo "$*" >> "${HYPATIAX_FAILED_LOG}"; }
+export -f record_failure
+
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
@@ -286,7 +296,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   cd '${ANALYSIS_DIR}'
   python3 statistical_analysis.py \
     2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
-  || echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'
+  || { echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'; record_failure statistical_analysis; }
 
   echo '=== exp1 verification ==='
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
@@ -347,7 +357,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
-  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
+  ) || { echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'; record_failure portfolio_variance_v3c2; }
   if [[ -s \"\${_PV_FILE}\" ]]; then
     echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
   else
@@ -833,7 +843,7 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   JOB_DEADLINE='${JOB_DEADLINE}' \
     python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
     2>&1 | tee \"\${_FIVE_DIR}/exp1_five_run.log\" \
-  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+  || { echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'; record_failure exp1_five_system; }
 
   echo '=== exp1_five verification ==='
   find \"\${_FIVE_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
@@ -1132,7 +1142,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     RESULTS_DIR=\"\${_PCA15_DIR}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || { echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'; record_failure portfolio_variance_v3c2_pca; }
   fi
 
   _SHARD=\${SHARD_INDEX:-0}
@@ -1352,7 +1362,7 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
         --output-dir '${RESULTS_DIR}/comparison_results/extrapolation' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/extrap_run.log' \
-      || echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure extrap_\${DOMAIN_ID}; }
   done
   echo 'extrap output: ${RESULTS_DIR}/comparison_results/extrapolation/'
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
@@ -1496,7 +1506,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
         --resume \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
-    || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure domain_\${DOMAIN_ID}; }
   done
 "
 
@@ -1680,7 +1690,7 @@ PYEOF
         --output-dir \"\${_PCA_DIR}\" \
         --force-fresh \
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
-    || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure pca_4060_\${DOMAIN_ID}; }
 
     mkdir -p \"\${_PCA_DIR}/_saved\"
     while IFS= read -r _pf; do
@@ -1981,7 +1991,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --output-dir \"\${_EXT_DIR}\" \
         --resume \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
-    || echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_feynman_extrap_\${DOMAIN_ID}; }
   done
 
   mkdir -p \"\${_EXT_DIR}/_saved\"
@@ -2056,7 +2066,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --benchmark-dir        "${_BENCHMARK_DIR}" \
         --output               "${_PAIRED}" \
         2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"
+      || { echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"; record_failure merge_extrap_into_benchmark; }
       if [[ -f "${_PAIRED}" ]]; then
         _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
         echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
@@ -2135,7 +2145,7 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_\${DOMAIN_ID}; }
   done
 "
 
@@ -2167,7 +2177,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_multi_\${DOMAIN_ID}; }
   done
 "
 
@@ -3922,7 +3932,7 @@ run audit_nb06_fixc3_rerun \
         --output-dir "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3 \
         --resume \
       2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log \
-    || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
+    || { echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"; record_failure fixc3_${DOMAIN_ID}; }
   done
 
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log
@@ -4313,3 +4323,9 @@ echo "  To rebuild the paper PDF:"
 echo "    cd ${REPO_ROOT} && pdflatex jmlr_paper_main.tex"
 echo ""
 log "Done. See individual *_run.log files in ${RESULTS_DIR}/ for per-step output."
+
+if [[ -s "${HYPATIAX_FAILED_LOG}" ]]; then
+  echo -e "${RED}[run_all] FAILED STEPS (non-fatal during the run, fatal now):${NC}"
+  sed 's/^/    - /' "${HYPATIAX_FAILED_LOG}"
+  exit 1
+fi
