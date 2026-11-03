@@ -14,7 +14,11 @@ def test_transcript_case():
 
 def test_pow_added_when_available():
     assert t("x0**0.75", B + ["^"])[0] == ["(x0 ^ 0.75)"]
-    assert t("x0^x1", B + ["pow"])[0] == ["pow(x0, x1)"]
+    # "pow" active: still emitted as "^" (PySR 2.x cannot resolve a guess that calls `pow(`)
+    assert t("x0^x1", B + ["pow"])[0] == ["(x0 ^ x1)"]
+    assert t("0.1*x0**0.75", B + ["pow"])[0] == ["(0.1 * (x0 ^ 0.75))"]
+    assert t("pow(x0, 0.75)", B + ["pow"])[0] == ["(x0 ^ 0.75)"]
+    assert "pow(" not in t("x0**0.75 + pow(x0, 2.5)", B + ["pow"])[0][0]
 
 def test_unary_minus():
     assert t("-x0")[0] == ["(0 - x0)"]

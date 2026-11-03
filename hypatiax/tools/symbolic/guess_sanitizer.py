@@ -6,7 +6,7 @@
     # kept    -> ['(0.16 - (x0 * x0))']
     # dropped -> [('sign(x0)', 'unsupported_operator:sign'), ('x0**0.75', 'needs_pow')]
 
-Rules: ** or ^ needs "^" or "pow" in binary_ops (integer powers 2..4 are expanded to products);
+Rules: ** or ^ needs "^" or "pow" in binary_ops and is always emitted as "^" (integer powers 2..4 are expanded to products);
 unary minus becomes 0 - x; sign()/unknown functions/unknown names are dropped with a reason.
 Nothing here is Julia-specific, so a bad guess is rejected up front instead of failing inside fit().
 
@@ -41,10 +41,12 @@ def sanitize_guesses(guesses, binary_ops, unary_ops, variables):
             raise _Drop(f"unsupported_operator:{op}")
 
     def pow_(a, b):
-        if "^" in binary:
+        # PySR 2.x registers the power operator under the name "^" even when it was requested as
+        # "pow" (CI: a kept guess "(0.1 * pow(M, 0.75))" failed inside fit() with "Tried to
+        # interpolate function `pow` ... Function not found in operators" and silently fell back to
+        # an unseeded fit). Emit "^" whenever either name is active.
+        if "^" in binary or "pow" in binary:
             return f"({a} ^ {b})"
-        if "pow" in binary:
-            return f"pow({a}, {b})"
         raise _Drop("needs_pow")
 
     def emit(n):
