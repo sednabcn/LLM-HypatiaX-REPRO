@@ -159,6 +159,48 @@ for _noisy_logger in ("httpx", "httpcore", "anthropic"):
 
 import numpy as np
 
+# --- BEGIN null-json helpers (AUDIT L37; identical in v2 and pca suites) -------
+# In memory MethodResult keeps -inf/inf (comparisons and routing unchanged).
+# Result EXPORTS write null + r2_status/rmse_status instead of bare -Infinity,
+# which is not valid strict JSON.  The resume CHECKPOINT is deliberately NOT
+# converted: load_checkpoint() reads it back into floats.
+import math as _jmath
+import numbers as _jnum
+
+def _status_of(v):
+    """'ok' for a finite real number, 'failed' for None/nan/inf."""
+    try:
+        return "ok" if (isinstance(v, _jnum.Real) and not isinstance(v, bool)
+                        and _jmath.isfinite(float(v))) else "failed"
+    except (TypeError, ValueError):
+        return "failed"
+
+def _nulls(o):
+    """Recursively replace non-finite floats (incl. numpy floats) with None."""
+    if isinstance(o, dict):
+        return {k: _nulls(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_nulls(v) for v in o]
+    if isinstance(o, _jnum.Real) and not isinstance(o, (bool, int)):
+        try:
+            return o if _jmath.isfinite(float(o)) else None
+        except (TypeError, ValueError):
+            return o
+    return o
+
+def _dump_json_null(obj, fp, **kw):
+    """json.dump with non-finite -> null. Serialises to a string first, so a
+    failure never leaves a half-written file; if strict encoding still fails
+    it warns loudly and falls back rather than losing a long run's results."""
+    kw.setdefault("default", str)
+    try:
+        s = json.dumps(_nulls(obj), allow_nan=False, **kw)
+    except ValueError as _e:
+        print(f"WARNING: strict JSON encoding failed ({_e}); writing with allow_nan=True")
+        s = json.dumps(obj, **kw)
+    fp.write(s)
+# --- END null-json helpers -----------------------------------------------------
+
 # ---------------------------------------------------------------------------
 # extrap_r2_far — inlined directly so no sys.path dependency is needed.
 # All functions (build_extrap_split, compute_extrap_r2_far,
@@ -972,6 +1014,8 @@ class MethodResult:
             "success":      self.success,
             "r2":           float(self.r2),
             "rmse":         float(self.rmse),
+            "r2_status":    _status_of(self.r2),
+            "rmse_status":  _status_of(self.rmse),
             "formula":      self.formula,
             "formula_hash": self.formula_hash,
             "error":        self.error,
@@ -4168,7 +4212,7 @@ class ProtocolBenchmarkSuite:
                          if (r.get("test"), r.get("method")) not in _new_keys]
             _merged = _existing + _flat_records
             with open(_json_path, "w") as _jf:
-                json.dump(_merged, _jf, indent=2, default=str)
+                _dump_json_null(_merged, _jf, indent=2)
             print(f"\n📄 Flat results exported → {_json_path}  ({len(_flat_records)} records)")
         except Exception as _je:
             print(f"\n⚠️  Could not export benchmark_results_pca_4060.json: {_je}")
@@ -4247,7 +4291,7 @@ class ProtocolBenchmarkSuite:
                                  if (r.get("test"), r.get("method")) not in _ext_new_keys]
                 _ext_merged = _ext_existing + _extrap_rows
                 with open(_ext_path, "w") as _ef:
-                    json.dump(_ext_merged, _ef, indent=2, default=str)
+                    _dump_json_null(_ext_merged, _ef, indent=2)
                 _n_with_far = sum(1 for r in _extrap_rows if r.get("extrap_r2_far") is not None)
                 print(f"\n📄 Extrap results exported → {_ext_path}"
                       f"  ({len(_extrap_rows)} rows, {_n_with_far} with extrap_r2_far)")
@@ -4316,7 +4360,7 @@ class ProtocolBenchmarkSuite:
             "tests":        self.results,
         }
         with open(path, "w") as f:
-            json.dump(payload, f, indent=2, default=str)
+            _dump_json_null(payload, f, indent=2)
         print(f"\n💾 Results saved → {path}")
         if n_trunc > 0:
             print(f"   ⚠️  {n_trunc} truncated PureLLM formulas recorded as INVALID in JSON")
