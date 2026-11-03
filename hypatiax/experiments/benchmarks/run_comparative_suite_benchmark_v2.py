@@ -1640,9 +1640,11 @@ class PureLLMBaselineMethod(BaseMethod):
             )
             if metrics.get("success"):
                 _is_hardcoded = result.get("method") == "pure_llm_hardcoded"
+                if metrics.get("r2") is None:  # AUDIT L36: no silent 0.0 score
+                    return self._unavailable("AUDIT L36: success reported without an r2")
                 return MethodResult(
                     method=self.name, success=True,
-                    r2=float(metrics.get("r2", 0.0)),
+                    r2=float(metrics["r2"]),
                     rmse=float(metrics.get("rmse", float("inf"))),
                     formula=python_code[:500], formula_hash=BaseMethod._make_formula_result(python_code)[1], formula_full=python_code,
                     metadata={**_provenance(result), "truncated_formula": False,
@@ -3404,9 +3406,11 @@ class SymbolicEngineMethod(BaseMethod):
             _trace = result.get("trace", [])
             if _trace:
                 print(f"   [SE-TRACE] {' | '.join(str(t) for t in _trace[:20])}", flush=True)
+            if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
+                return self._unavailable("AUDIT L36: success reported without an r2")
             return MethodResult(
                 method=self.name, success=True,
-                r2=float(result.get("r2", 0.0)),
+                r2=float(result["r2"]),
                 rmse=float(result.get("rmse", float("nan"))),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={"iterations": _n_iter},
@@ -3566,9 +3570,11 @@ class HybridSystemV50_2Method(BaseMethod):
         if result and result.get("success"):
             raw_formula = result.get("final_formula", result.get("formula", "N/A"))
             formula = _restore_var_names(raw_formula, rename_map)
+            if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
+                return self._unavailable("AUDIT L36: success reported without an r2")
             return MethodResult(
                 method=self.name, success=True,
-                r2=float(result.get("r2", 0.0)),
+                r2=float(result["r2"]),
                 rmse=float(result.get("rmse", float("nan"))),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={

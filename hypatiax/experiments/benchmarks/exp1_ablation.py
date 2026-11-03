@@ -727,7 +727,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
         train_r2      = res.get("r2")
-        train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
+        train_rmse    = res.get("rmse")   # FIX-A: original-unit RMSE; AUDIT L38: None (not inf) when absent
         scale_log     = res.get("scale_log", False)     # FIX-D flag
         complexity    = len(best_expr_raw) if best_expr_raw not in ("N/A", "") else None
 

@@ -65,3 +65,13 @@ def test_single_temperature_setting_is_wired():
     assert re.search(r"^llm_temperature:\s*0\.25", (root / "config/repro.yaml").read_text(encoding="utf-8"), re.M)
     for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
         assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
+
+
+def test_no_silent_zero_r2_defaults():
+    """Audit L36/L38: a missing r2 must become 'unavailable', never a 0.0 score."""
+    base = SRC.parent
+    for name in ("run_comparative_suite_benchmark_v2.py", "run_comparative_suite_benchmark_pca.py"):
+        t = (base / name).read_text(encoding="utf-8", errors="replace")
+        assert not re.search(r'get\("r2",\s*0\.0\)', t), name
+        assert "AUDIT L36" in t or 'evaluation has no r2' in t
+    assert 'res.get("rmse", float("inf"))' not in _text()
