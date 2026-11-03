@@ -27,8 +27,13 @@ REVISION NOTES (re-runs plan, B5)
     (plus a 3-s.d. finite-sample slack) are counted in n_above_noise_ceiling
     and flagged in the report: they indicate CLEAN-target scoring.
   * sigma is declared as a FRACTION of std(y) in the output JSON
-    ("sigma_definition").  The injection itself lives in the inner runner
-    and is NOT verified here -- audit it (clean vs noisy targets) first.
+    ("sigma_definition").  The injection lives in the inner runner
+    (gaussian, sd = sigma*std(y), added to all targets before the split, scored
+    on noisy targets; checked in code 2026-11-03).  Each per_noise block carries
+    the runner's own protocol fields (noise_seed, noise_injected_equations,
+    scored_on), a warning is printed if sigma>0 and nothing was injected, and
+    results written by another seed are never adopted (protocol.noise_seed).
+  * Output JSON is strict: non-finite values are written as null.
 
 Background
 ----------
@@ -235,7 +240,7 @@ class _TeeLogger:
 # RESULT HELPERS
 # ============================================================================
 
-def _result_matches(path: Path, noise_level, n_samples=None) -> bool:
+def _result_matches(path: Path, noise_level, n_samples=None, seed=None) -> bool:
     """
     True if the result JSON's own protocol block matches the run we launched.
 
@@ -250,6 +255,14 @@ def _result_matches(path: Path, noise_level, n_samples=None) -> bool:
             proto = (json.load(fh) or {}).get("protocol", {}) or {}
     except Exception:
         return False
+    # AUDIT B5: a result written by another seed must never be adopted (the sweep
+    # tags its output with this seed).  The inner runner records protocol.noise_seed.
+    if seed is not None and proto.get("noise_seed") is not None:
+        try:
+            if int(proto["noise_seed"]) != int(seed):
+                return False
+        except (TypeError, ValueError):
+            return False
     nl = proto.get("noise_level")
     if noise_level is not None and nl is not None:
         try:
@@ -284,7 +297,7 @@ def _ceiling_tol(sigma: float, n_test: int) -> float:
     return 3.0 * (sigma ** 2) * (2.0 / max(int(n_test), 20)) ** 0.5
 
 
-def _find_result_written_after(mode: str, t_start: float, noise_level=None) -> Path | None:
+def _find_result_written_after(mode: str, t_start: float, noise_level=None, seed=None) -> Path | None:
     """
     Return the newest result JSON for *mode* whose mtime is >= t_start.
 
@@ -294,22 +307,51 @@ def _find_result_written_after(mode: str, t_start: float, noise_level=None) -> P
     """
     candidates = [
         p for p in _RESULTS_DIR.glob(f"protocol_core_{mode}_*.json")
-        if p.stat().st_mtime >= t_start and _result_matches(p, noise_level)
+        if p.stat().st_mtime >= t_start and _result_matches(p, noise_level, seed=seed)
     ]
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
-def _find_latest_result(mode: str, noise_level=None) -> Path | None:
+def _find_latest_result(mode: str, noise_level=None, seed=None) -> Path | None:
     """Return the most-recently-modified JSON for protocol_core_{mode}_*.json."""
     candidates = sorted(
         _RESULTS_DIR.glob(f"protocol_core_{mode}_*.json"),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
-    candidates = [p for p in candidates if _result_matches(p, noise_level)]
+    candidates = [p for p in candidates if _result_matches(p, noise_level, seed=seed)]
     return candidates[0] if candidates else None
+
+
+def _cf_sort_key(cf: dict):
+    """AUDIT B5: non-finite rows have r2=None; sort them first (worst), never compare None<float."""
+    r = cf.get("r2")
+    return (0, 0.0) if r is None else (1, float(r))
+
+
+def _is_catastrophic_row(eq_res: dict) -> bool:
+    """Same rule as the aggregate: a row that ran but has a non-finite R2, or R2 < threshold."""
+    if not eq_res:
+        return False
+    r = eq_res.get("r2")
+    try:
+        rf = float(r) if r is not None else float("nan")
+    except (TypeError, ValueError):
+        rf = float("nan")
+    return (not np.isfinite(rf)) or rf < _CATASTROPHIC_R2_THRESHOLD
+
+
+def _nulls(o):
+    """AUDIT L37/M3: non-finite floats -> null on disk (strict JSON); in-memory values untouched."""
+    if isinstance(o, float):
+        return o if np.isfinite(o) else None
+    if isinstance(o, dict):
+        return {k: _nulls(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_nulls(v) for v in o]
+    return o
 
 
 def _extract_per_test(data: dict) -> dict[str, dict]:
@@ -501,11 +543,11 @@ def _run_noise_level(
         print("  Attempting to locate partial results...")
 
     mode      = "noiseless" if noise_level == 0.0 else "noisy"
-    json_path = _find_result_written_after(mode, t_start, noise_level=noise_level)
+    json_path = _find_result_written_after(mode, t_start, noise_level=noise_level, seed=args.seed)
     if json_path is None:
         # Fallback only accepts a file whose own protocol.noise_level matches;
         # never a stale file from another sigma/seed.
-        json_path = _find_latest_result(mode, noise_level=noise_level)
+        json_path = _find_latest_result(mode, noise_level=noise_level, seed=args.seed)
 
     if json_path is None:
         print(f"\n  ERROR: No result JSON found for noise_level={noise_level:.4f}.")
@@ -572,6 +614,17 @@ def _aggregate_results(
 
         per_eq    = _extract_per_test(data)
         threshold = threshold_fn(sigma)
+        _proto = (data.get("protocol") or {})
+        _noise_proto = {
+            "noise_level":              _proto.get("noise_level"),
+            "noise_seed":               _proto.get("noise_seed"),
+            "noise_injected_equations": _proto.get("noise_injected_equations"),
+            "scored_on":                _proto.get("scored_on"),
+        }
+        if sigma > 0 and not _noise_proto["noise_injected_equations"]:
+            print(f"  !! AUDIT B5: sigma={sigma*100:.4g}% but the inner runner reports "
+                  f"noise_injected_equations={_noise_proto['noise_injected_equations']!r} "
+                  f"-- noise may NOT have been applied (or result file predates the field).")
         method_summary: dict[str, dict] = {}
         catastrophic_failures: list[dict] = []
 
@@ -668,8 +721,9 @@ def _aggregate_results(
             }
 
         per_noise_data[sigma_str] = {
+            "noise_protocol":       _noise_proto,
             "method_summary":       method_summary,
-            "catastrophic_failures": sorted(catastrophic_failures, key=lambda x: x["r2"]),
+            "catastrophic_failures": sorted(catastrophic_failures, key=_cf_sort_key),
             "per_equation": {
                 eq: {
                     m: {
@@ -682,10 +736,7 @@ def _aggregate_results(
                         # loop above -- this is the root fix for Issue 3's
                         # missing tab:time_noise timing data.
                         "time":        eq_res.get("time"),
-                        "catastrophic": (
-                            np.isfinite(float(eq_res["r2"]))
-                            and float(eq_res["r2"]) < _CATASTROPHIC_R2_THRESHOLD
-                        ) if eq_res.get("r2") is not None else False,
+                        "catastrophic": _is_catastrophic_row(eq_res),
                     }
                     for m, eq_res in methods_dict.items()
                 }
@@ -836,9 +887,10 @@ def _print_noise_sweep_table(agg: dict) -> None:
         print(f"{'='*100}")
         print(f"  {'sigma':>8}  {'Method':<44}  {'Equation':<38}  {'R2':>8}")
         print("  " + "-" * 96)
-        for cf in sorted(all_cats, key=lambda x: x["r2"]):
+        for cf in sorted(all_cats, key=_cf_sort_key):
             eq_short = cf["equation"][:38]
-            print(f"  {cf['sigma']*100:>7.4g}%  {cf['method']:<44}  {eq_short:<38}  {cf['r2']:>8.4f}")
+            _r2_txt = "nonfinite" if cf["r2"] is None else f"{cf['r2']:.4f}"
+            print(f"  {cf['sigma']*100:>7.4g}%  {cf['method']:<44}  {eq_short:<38}  {_r2_txt:>9}")
         print()
 
     print(f"{'='*100}\n")
@@ -881,7 +933,7 @@ def _save_sweep_json(agg: dict, ts: str) -> Path:
     path = _RESULTS_DIR / f"noise_sweep_{ts}{_SEED_TAG}{_SHARD_TAG}.json"
     with open(path, "w") as f:
         agg["run_flags"] = dict(_RUN_FLAGS)  # PHASE1-FIX: sign-flip / bypass flag state
-        json.dump(agg, f, indent=2, default=str)
+        json.dump(_nulls(agg), f, indent=2, default=str, allow_nan=False)
     print(f"  Saved noise sweep JSON  -> {path}")
     return path
 
