@@ -52,6 +52,9 @@ else
 fi
 # Swallowed exceptions raise instead of logging (see fix_swallow.py).
 export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
+# AUDIT C1: one LLM sampling temperature for every experiment (config/repro.yaml llm_temperature).
+export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
+export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
 [[ "${HYPATIAX_STRICT}" == "1" ]] || { echo "ERROR: HYPATIAX_STRICT must be 1" >&2; exit 1; }
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
@@ -533,6 +536,7 @@ rec = {
     "domain_filter": os.environ.get("DOMAIN_FILTER") or None,
     "n_core15_tasks": os.environ.get("N_CORE15_TASKS"),
     "llm_model": os.environ.get("LLM_MODEL", "claude-sonnet-4-6"),
+    "llm_temperature": os.environ.get("LLM_TEMPERATURE"),
     "llm_replay_dir": os.environ.get("HYPATIAX_LLM_REPLAY_DIR"),
     "budgets_s": {
         "pysr_attempt": pysr_t, "hypatia_max_retries": retries, "post_proc": post,
@@ -2176,7 +2180,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
-    --temperature 0.25 \
+    --temperature '"${LLM_TEMPERATURE:-0.25}"' \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || _EXP3_RC=$?
   if [ "$_EXP3_RC" -ne 0 ]; then
@@ -2257,7 +2261,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
-      --temperature 0.25 \
+      --temperature ${LLM_TEMPERATURE:-0.25} \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
       || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done

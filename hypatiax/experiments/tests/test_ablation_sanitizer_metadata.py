@@ -52,3 +52,16 @@ def test_extract_eval_is_decision_aware():
         assert '_eval_keys = ("evaluation", "llm_result", "result")' in t
         assert '_eval_keys = ("evaluation", "nn_result", "result")' in t
         assert 'for _key in ("evaluation", "nn_result", "llm_result", "result"):' not in t
+
+
+def test_single_temperature_setting_is_wired():
+    """Audit C1: 0.25 is set once per entry point and read from LLM_TEMPERATURE."""
+    root = SRC.parents[3]
+    wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
+    assert 'LLM_TEMPERATURE:  "0.25"' in wf and 'LLM_MODEL:        "claude-sonnet-4-6"' in wf
+    sh = (root / "run_all.sh").read_text(encoding="utf-8", errors="replace")
+    assert 'export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in sh
+    assert "--temperature 0.25" not in sh and sh.count("LLM_TEMPERATURE:-0.25") >= 3
+    assert re.search(r"^llm_temperature:\s*0\.25", (root / "config/repro.yaml").read_text(encoding="utf-8"), re.M)
+    for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
+        assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")

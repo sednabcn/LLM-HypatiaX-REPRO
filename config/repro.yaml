@@ -23,6 +23,11 @@ seeds:
   portfolio_variance: [42, 99, 123, 777, 2024]
 
 llm_model:     "claude-sonnet-4-6"
+# AUDIT C1: single research setting for the LLM sampling temperature. Exported as LLM_TEMPERATURE by
+# ci_runner_repro.yml and run_all.sh. It only takes effect on code paths that send a temperature
+# (symbolic_engine / HybridDiscoverySystem, exp1_ablation, exp3). PureLLMBaseline sends none under
+# SDK>=1.0 (rows carry temperature_sent: false), so report it as "API default", not 0.25.
+llm_temperature: 0.25
 llm_retries:   3
 llm_k_runs:    30
 
