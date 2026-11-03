@@ -1,0 +1,47 @@
+{
+ "experiment": "exp1_ablation",
+ "written_utc": "2026-11-03T09:34:10+00:00",
+ "git_commit": "19ed05b67affa50102eeac91c5e8fd2e45082b2d",
+ "code_dirty": true,
+ "dirty_files": [
+  "?? checkpoint_worker_shard0.json"
+ ],
+ "evaluator_path": "hypatiax/core/r2_canonical.py",
+ "evaluator_sha256": "7d5395ed728323d8db8b0a5e9e6804a2b142a401c8d7fe4d19d54b32973b7971",
+ "flags": {
+  "HYPATIAX_DISABLE_HARDCODED": "1",
+  "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
+  "HYPATIAX_ALLOW_LEGACY": null,
+  "HYPATIAX_R2_SIGN_FLIP": "0",
+  "r2_sign_flip": false,
+  "clean_run": true,
+  "HYPATIAX_STRICT": "1",
+  "HYPATIAX_HOLDOUT": "1",
+  "HYPATIAX_NOLLM_ARM": "1"
+ },
+ "seed": 777,
+ "shard_index": "0",
+ "n_shards": "5",
+ "domain_filter": "chemistry",
+ "n_core15_tasks": null,
+ "llm_model": "claude-sonnet-4-6",
+ "llm_replay_dir": null,
+ "budgets_s": {
+  "pysr_attempt": 1100,
+  "hypatia_max_retries": 3,
+  "post_proc": 300,
+  "hypatia_wall_clock": 3600,
+  "pysr_only_wall_clock": 1400,
+  "method_timeout": "900"
+ },
+ "pysr": {
+  "populations": "30",
+  "niterations": null,
+  "generations": "10000"
+ },
+ "github": {
+  "run_id": "41611490235",
+  "ref": "audit-main",
+  "workflow": "HypatiaX - runner (repro)"
+ }
+}
