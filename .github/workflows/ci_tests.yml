@@ -1,7 +1,8 @@
 name: Unit tests (full pytest)
 
 # Runs the whole hypatiax/experiments/tests suite in an environment that has the
-# heavy dependencies (torch CPU, anthropic, sympy, pysr).  No API key is provided:
+# heavy dependencies (torch CPU, anthropic, sympy, pysr).  No API key is provided
+# (do NOT define ANTHROPIC_API_KEY here, not even empty: some tests rely on setdefault);
 # tests must not spend API budget.  Julia is NOT installed by default; tests that
 # need it will fail loudly -- tick `with_julia` to include it.
 
@@ -46,7 +47,6 @@ env:
   HYPATIAX_DISABLE_PROMPT_HINTS: "1"
   HYPATIAX_R2_SIGN_FLIP: "0"
   HYPATIAX_STRICT: "1"
-  ANTHROPIC_API_KEY: ""          # tests must run offline
   PYTHONHASHSEED: "0"
 
 jobs:

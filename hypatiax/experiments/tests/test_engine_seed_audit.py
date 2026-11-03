@@ -74,6 +74,9 @@ def test_replay_off_by_default(monkeypatch):
 
 
 def test_timeout_is_not_a_seed_fallback(monkeypatch):
+    # discover() returns DISCOVERY_FAILED only in NON-strict mode; under HYPATIAX_STRICT=1
+    # (fail-closed, set by CI/run_all.sh) it re-raises -- see the strict twin below.
+    monkeypatch.delenv("HYPATIAX_STRICT", raising=False)
     calls = []
     orig = F.FakePySR.fit
     def timing_out_fit(self, X, y, **kw):
@@ -88,3 +91,21 @@ def test_timeout_is_not_a_seed_fallback(monkeypatch):
     assert calls == [True]                                   # no second, unseeded attempt
     assert res["expression"] == "DISCOVERY_FAILED"           # same as a timeout without a seed
     assert res["guess_audit"]["guess_fit_fallback"] is False  # not mislabelled as a bad seed
+
+
+def test_timeout_reraises_in_strict_mode(monkeypatch):
+    monkeypatch.setenv("HYPATIAX_STRICT", "1")
+    calls = []
+    orig = F.FakePySR.fit
+    def timing_out_fit(self, X, y, **kw):
+        calls.append(bool(self.guesses))
+        if self.guesses:
+            raise TimeoutError("Wall-clock limit of 600s exceeded")
+        return orig(self, X, y, **kw)
+    monkeypatch.setattr(F.FakePySR, "fit", timing_out_fit)
+    G.reset_audit()
+    import pytest
+    with pytest.raises(TimeoutError):
+        E.SymbolicEngine(CFG()).discover(X, y, ["x0"], equation_name="t", random_state=1,
+                                         seed_expressions=["x0*x0"])
+    assert calls == [True]                                   # still no second, unseeded attempt
