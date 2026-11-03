@@ -626,6 +626,12 @@ def save_checkpoint(path, results: dict) -> None:
 # §15 · run_condition — single equation × single condition
 # =============================================================================
 
+def _reseed_for_task(task_seed):
+    """AUDIT L57/L72: deterministic per-task reseed of the global RNGs."""
+    random.seed(task_seed)
+    np.random.seed(task_seed % (2**32))
+
+
 def run_condition(eq, condition, seed=42, niterations=None,
                   timeout_secs=None, populations=None, wall_clock_limit=None):
     """
@@ -694,6 +700,13 @@ def run_condition(eq, condition, seed=42, niterations=None,
             enable_physics_fallback = False,
             allow_nondeterministic  = False,   # FIX-C
         )
+
+        # AUDIT L57/L72: physics_aware_regressor draws from global np.random and takes no
+        # seed. Module-level seed(42) at import would otherwise make a task's result depend
+        # on how many draws earlier tasks consumed (differs under resume/sharding). Reseed
+        # once per task from the task's own seed. Not inside discover(): its PySR retries
+        # must not repeat identically.
+        _reseed_for_task(eq_seed)
 
         t0 = time.time()
         try:
@@ -830,7 +843,6 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_temperature":       LLM_TEMPERATURE,
             "wall_clock_budget_s":   wall_clock_limit,        # AUDIT C1: unequal arms are disclosed per row
             "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
-            "sanitized_vars":        dict(sanitizer.fwd),
             "validation_score":      res.get("validation_score"),
             "ood_predictor_note":    _ood_note,    # None when extrap metrics were computed
             "sanitized_vars":        dict(sanitizer.fwd),   # {} when no variable was renamed

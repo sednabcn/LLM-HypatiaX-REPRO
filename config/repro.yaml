@@ -317,5 +317,5 @@ ci_runner:
     requires: "scripts/bypass_audit.py reports 0 bypassed"
     deletes_stale_checkpoints: true
   triggers:
-    spend_api_on_dispatch_only: [ci_runner_repro.yml, ci_pipeline_repro.yml, ci_phase3_ablation.yml]
+    spend_api_on_dispatch_only: [ci_runner_repro.yml, ci_phase3_ablation.yml]
     offline_on_push_and_pr:     [ci_bypass_audit.yml, ci_r2_policy.yml]   # ANTHROPIC_API_KEY=dummy-offline
