@@ -293,10 +293,14 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   python3 -c 'import seaborn' 2>/dev/null || \
     python3 -m pip install --quiet seaborn || \
     { echo 'ERROR: seaborn install failed — statistical_analysis.py will crash'; exit 1; }
-  cd '${ANALYSIS_DIR}'
-  python3 statistical_analysis.py \
-    2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
-  || { echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'; record_failure statistical_analysis; }
+  if [[ -f '${ANALYSIS_DIR}/statistical_analysis.py' ]]; then
+    cd '${ANALYSIS_DIR}'
+    python3 statistical_analysis.py \
+      2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
+    || { echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'; record_failure statistical_analysis; }
+  else
+    echo '[SKIP] statistical_analysis.py not present in ${ANALYSIS_DIR} - optional post-hoc analysis not run'
+  fi
 
   echo '=== exp1 verification ==='
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
@@ -4156,7 +4160,7 @@ if bad:
 PYEOF
 '
 
-run audit_figures_tables "No-op: table/figure generation disabled pipeline-wide" bash -c '
+run audit_figures_tables "SKIPPED: table/figure generators removed - NOT validated (AUDIT L50)" bash -c '
   set -euo pipefail
   mkdir -p logs
   python3 - <<'"'"'PYEOF'"'"'
@@ -4166,11 +4170,12 @@ from pathlib import Path
 out = Path("logs/figures_tables_report.json")
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({
-    "all_ok": True,
+    "status": "skipped",
+    "all_ok": None,
     "findings": [{"category": "figures_tables", "name": "generation disabled",
-                   "ok": True, "detail": "table/figure generation removed from pipeline"}]
+                   "ok": None, "detail": "SKIPPED: generators removed; table/figure consistency is NOT validated"}]
 }, indent=2))
-print("  [OK]  [figures_tables]  generation disabled — nothing to validate")
+print("  [SKIP] [figures_tables]  generators removed - table/figure consistency NOT validated")
 print("  Report -> " + str(out))
 PYEOF
 '
@@ -4192,14 +4197,14 @@ print(sep)
 rows = [
     ("1. numerical-verify",        verify, ok_verify),
     ("2. paper-audit",             audit,  ok_audit),
-    ("3. figures-tables-validate (no-op, disabled)", figs, ok_figs),
+    ("3. figures-tables-validate (SKIPPED, not validated)", "skipped", None),
 ]
 for label, result, ok in rows:
-    tag = "PASS" if ok else "FAIL"
+    tag = "SKIP" if ok is None else ("PASS" if ok else "FAIL")
     print("  [" + tag + "]  " + label.ljust(33) + "  " + result)
 print(sep)
-overall_ok = ok_verify and ok_audit and ok_figs
-print("  Overall: PAPER AUDIT " + ("PASSED" if overall_ok else "FAILED"))
+overall_ok = ok_verify and ok_audit   # figures/tables are NOT counted: no generator exists (AUDIT L50)
+print("  Overall: PAPER AUDIT " + ("PASSED" if overall_ok else "FAILED") + "  (table/figure consistency NOT covered)")
 print(sep)
 sys.exit(0 if overall_ok else 1)
 PYEOF
