@@ -2141,7 +2141,19 @@ class HybridDeFiMethod(BaseMethod):
                 return None
 
             eval_ = None
-            for _key in ("evaluation", "nn_result", "llm_result", "result"):
+            # AUDIT L35: do not let a failed LLM/ensemble row inherit the *other* model's r2.
+            _dec = str(decision).lower()
+            if _dec == "llm":
+                _eval_keys = ("evaluation", "llm_result", "result")
+            elif _dec.startswith("nn"):
+                _eval_keys = ("evaluation", "nn_result", "result")
+            elif _dec in ("blend", "ensemble"):
+                _eval_keys = ("evaluation", "result")
+            elif _dec == "fail":
+                _eval_keys = ("evaluation",)
+            else:
+                _eval_keys = ("evaluation", "nn_result", "llm_result", "result")
+            for _key in _eval_keys:
                 _sub = result.get(_key)
                 if isinstance(_sub, dict):
                     eval_ = _extract_eval(_sub)

@@ -36,3 +36,19 @@ def test_rows_record_provenance():
     for key in ('"llm_source"', '"llm_enabled"', '"llm_model"', '"llm_temperature"', '"sanitized_vars"'):
         assert key in t
     assert "llm_temperature         = LLM_TEMPERATURE" in t
+
+
+def test_budgets_recorded_per_row():
+    t = _text()
+    assert t.count('"wall_clock_budget_s"') >= 2 and t.count('"pysr_attempts_allowed"') >= 2
+
+
+def test_extract_eval_is_decision_aware():
+    """Audit L35: a failed llm row must not inherit nn_result's r2 (and vice versa)."""
+    base = SRC.parent
+    for name in ("run_comparative_suite_benchmark_v2.py", "run_comparative_suite_benchmark_pca.py"):
+        t = (base / name).read_text(encoding="utf-8", errors="replace")
+        assert "for _key in _eval_keys:" in t
+        assert '_eval_keys = ("evaluation", "llm_result", "result")' in t
+        assert '_eval_keys = ("evaluation", "nn_result", "result")' in t
+        assert 'for _key in ("evaluation", "nn_result", "llm_result", "result"):' not in t

@@ -825,6 +825,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_enabled":           bool(_use_llm),
             "llm_model":             MODEL_STRING,
             "llm_temperature":       LLM_TEMPERATURE,
+            "wall_clock_budget_s":   wall_clock_limit,        # AUDIT C1: unequal arms are disclosed per row
+            "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
             "sanitized_vars":        dict(sanitizer.fwd),
             "validation_score":      res.get("validation_score"),
         }
@@ -908,6 +910,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "llm_expression":        None,
         "llm_confidence":        None,
         "llm_called":            False,    # B2: pysr_only baseline never calls the LLM
+        "wall_clock_budget_s":   wall_clock_limit,   # AUDIT C1
+        "pysr_attempts_allowed": 1,
         "bypass_kind":           "none",
     }
 
