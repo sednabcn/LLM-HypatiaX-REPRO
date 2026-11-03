@@ -704,17 +704,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     description = eq["name"],
                     metadata    = {
                         "equation_name":          eq["name"],
-<<<<<<< Updated upstream
                         # AUDIT C4: key metadata by the SAFE names actually passed as
                         # var_names (S->var_S, N->var_N), otherwise the engine finds no
                         # description/unit for renamed variables.
                         "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
-=======
-                        # Keyed by the SAFE names passed as var_names (S -> var_S, N -> var_N, ...);
-                        # the description keeps the original symbol so the LLM can still read it.
-                        # Identical to the old mapping for every non-reserved variable.
-                        "variable_descriptions":  {sv: ov for ov, sv in zip(eq["vars"], safe_var_names)},
->>>>>>> Stashed changes
                         "variable_units":         {sv: "" for sv in safe_var_names},
                         "noise_level":            0.05,
                         "domain":                 _dom_slug,
