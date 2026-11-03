@@ -123,6 +123,9 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
+# AUDIT C1: temperature is now env-controlled and recorded in every hypatia row.
+# Default stays 0.3 (previous hard-coded value); the paper cites 0.25 -- decide and set LLM_TEMPERATURE.
+LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
@@ -687,7 +690,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             use_llm                 = _use_llm,
             llm_mode                = "hybrid" if _use_llm else "none",
             llm_n_candidates        = 3,
-            llm_temperature         = 0.3,
+            llm_temperature         = LLM_TEMPERATURE,
             enable_physics_fallback = False,
             allow_nondeterministic  = False,   # FIX-C
         )
@@ -701,8 +704,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     description = eq["name"],
                     metadata    = {
                         "equation_name":          eq["name"],
-                        "variable_descriptions":  {v: v for v in eq["vars"]},
-                        "variable_units":         {v: "" for v in eq["vars"]},
+                        # AUDIT C4: key metadata by the SAFE names actually passed as
+                        # var_names (S->var_S, N->var_N), otherwise the engine finds no
+                        # description/unit for renamed variables.
+                        "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
+                        "variable_units":         {sv: "" for sv in safe_var_names},
                         "noise_level":            0.05,
                         "domain":                 _dom_slug,
                     },
@@ -811,6 +817,15 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_mode_used":         res.get("llm_mode", "none"),
             "llm_called":            bool(res.get("llm_called", False)),   # B2
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
+            # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
+            # "live" only when the LLM was called and the engine reported no bypass.
+            "llm_source":            (res.get("llm_source")
+                                      or ("live" if (res.get("llm_called") and res.get("bypass_kind", "none") in ("none", "live", None))
+                                          else (res.get("bypass_kind") if res.get("llm_called") else None))),
+            "llm_enabled":           bool(_use_llm),
+            "llm_model":             MODEL_STRING,
+            "llm_temperature":       LLM_TEMPERATURE,
+            "sanitized_vars":        dict(sanitizer.fwd),
             "validation_score":      res.get("validation_score"),
         }
 
