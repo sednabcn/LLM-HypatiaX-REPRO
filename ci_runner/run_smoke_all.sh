@@ -105,9 +105,13 @@ s_required_files() {
   # only warns or silently degrades a step (WARN). Paths mirror run_all.sh defaults.
   local rc=0 f
   local bench=hypatiax/experiments/benchmarks
-  for f in scripts/patches/paper_targets.json scripts/run_phase2_closure.sh; do
+  for f in scripts/run_phase2_closure.sh; do
     if [[ -f "$f" ]]; then echo "OK   $f"; else echo "FAIL missing (step errors without it): $f"; rc=1; fi
   done
+  # paper_targets.json is deliberately not committed (hardcoded paper values, not a valid
+  # reference): audit_paper exits 1 without it, so only warn instead of failing the smoke run.
+  if [[ -f scripts/patches/paper_targets.json ]]; then echo "OK   scripts/patches/paper_targets.json"
+  else echo "WARN missing: scripts/patches/paper_targets.json (audit_paper step will exit 1 without it)"; fi
   # exp1_llm_sens needs ablation_conditions.py beside it (only checked if the runner exists)
   if [[ -f "$bench/exp1_llm_sens.py" ]]; then
     if [[ -f "$bench/ablation_conditions.py" ]]; then echo "OK   $bench/ablation_conditions.py"
