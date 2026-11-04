@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
         with:
-          fetch-depth: 1
+          fetch-depth: 0   # phase2_closure needs history for git show <HDS commit>
 
       # Same interpreter the repro workflow runs run_all.sh under.
       - uses: actions/setup-python@v5.3.0
