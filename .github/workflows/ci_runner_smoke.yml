@@ -1,6 +1,6 @@
 name: ci_runner_smoke
 
-# Fast, free wiring check for ci_runner/run_all.sh (no API key, no Julia/PySR, no LLM calls).
+# Fast, free wiring check for run_all.sh (repo root, as invoked by ci_runner_repro.yml) (no API key, no Julia/PySR, no LLM calls).
 # Stages: bash_syntax step_registry required_files failure_ledger dry_run_all cli_contract
 #         clean_run_guards gt_leak_guard py_preflight script_help phase2_closure live_llm
 
