@@ -109,7 +109,7 @@ def _score(b, code, x, y):
 def test_constant_target_is_degenerate_not_perfect(baseline):
     x = np.linspace(1, 2, 20)
     r = _score(baseline, "def formula(x):\n    return x*0+3.0", x, np.full(20, 3.0))
-    assert r["success"] is False and r["r2_status"] == "degenerate_target" and np.isnan(r["r2"])
+    assert r["success"] is False and r["r2_status"] == "degenerate_target" and r["r2"] is None
 
 
 def test_large_offset_small_spread_is_scored_not_constant(baseline):
@@ -130,7 +130,7 @@ def test_tiny_scale_target_is_scored(baseline):
 def test_nonfinite_prediction_is_failure(baseline):
     x = np.linspace(1, 2, 20)
     r = _score(baseline, "def formula(x):\n    return x*float('nan')", x, x)
-    assert r["success"] is False and r["r2"] == float("-inf") and r["r2_status"] == "nonfinite_pred"
+    assert r["success"] is False and r["r2"] is None and r["r2_status"] == "nonfinite_pred"
 
 
 def test_sign_flip_off_by_default_and_recorded(baseline, monkeypatch):

@@ -52,6 +52,10 @@ else
 fi
 # Swallowed exceptions raise instead of logging (see fix_swallow.py).
 export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
+# AUDIT C1: one LLM sampling temperature for every experiment (config/repro.yaml llm_temperature).
+export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
+export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
+[[ "${HYPATIAX_STRICT}" == "1" ]] || { echo "ERROR: HYPATIAX_STRICT must be 1" >&2; exit 1; }
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
 # (HYPATIAX_ALLOW_LEGACY=1); otherwise any truthy value aborts and the flag is forced to 0.
@@ -91,7 +95,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_llm_sens exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate phase2_closure"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -116,6 +120,16 @@ GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
 log()  { echo -e "${GREEN}[run_all]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 die()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
+
+# --- failure ledger -----------------------------------------------------------
+# Result-producing steps that used to end in `|| echo WARNING ... continuing`
+# now ALSO call record_failure, so the run keeps going (other domains still run)
+# but is reported as FAILED at the end instead of finishing green with gaps.
+# Exported so bash -c children inherit both the function and the log path.
+export HYPATIAX_FAILED_LOG="${HYPATIAX_FAILED_LOG:-${RESULTS_DIR}/failed_steps.txt}"
+mkdir -p "$(dirname "${HYPATIAX_FAILED_LOG}")"; : > "${HYPATIAX_FAILED_LOG}"
+record_failure() { echo "$*" >> "${HYPATIAX_FAILED_LOG}"; }
+export -f record_failure
 
 run() {
   local step="$1" desc="$2"; shift 2
@@ -279,10 +293,14 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   python3 -c 'import seaborn' 2>/dev/null || \
     python3 -m pip install --quiet seaborn || \
     { echo 'ERROR: seaborn install failed — statistical_analysis.py will crash'; exit 1; }
-  cd '${ANALYSIS_DIR}'
-  python3 statistical_analysis.py \
-    2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
-  || echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'
+  if [[ -f '${ANALYSIS_DIR}/statistical_analysis.py' ]]; then
+    cd '${ANALYSIS_DIR}'
+    python3 statistical_analysis.py \
+      2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
+    || { echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'; record_failure statistical_analysis; }
+  else
+    echo '[SKIP] statistical_analysis.py not present in ${ANALYSIS_DIR} - optional post-hoc analysis not run'
+  fi
 
   echo '=== exp1 verification ==='
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
@@ -343,7 +361,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
-  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
+  ) || { echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'; record_failure portfolio_variance_v3c2; }
   if [[ -s \"\${_PV_FILE}\" ]]; then
     echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
   else
@@ -494,6 +512,68 @@ _exp1_ablation_step() {
   if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
     log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
   fi
+
+  # Generation-time provenance (same fields as Phase 3 rows). Written BEFORE the run so the
+  # commit/flags recorded are those the results are generated under, not those at aggregation.
+  ABL_DIR="${abl_dir}" ABL_SFX="${sfx}" PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
+    python3 - <<'PYPROV' || warn "exp1_ablation: generation provenance NOT written (continuing)"
+import datetime, hashlib, json, os, subprocess
+def git(*a):
+    return subprocess.check_output(["git", *a], text=True).strip()
+def num(name, default):
+    try:
+        return int(os.environ.get(name) or default)
+    except ValueError:
+        return os.environ.get(name)
+commit = git("rev-parse", "HEAD")
+dirty = [l for l in git("status", "--porcelain").splitlines()
+         if not l[3:].strip().strip('"').startswith(("hypatiax/data/results", "phase3_out", "phase3_closure_out"))]
+ev = "hypatiax/core/r2_canonical.py"
+ev_sha = hashlib.sha256(open(ev, "rb").read()).hexdigest()
+try:
+    from hypatiax.core.flags import flag_state
+    flags = flag_state()
+except Exception as e:                      # keep the raw env if the helper cannot import
+    flags = {"flag_state_error": repr(e)[:200]}
+for n in ("HYPATIAX_STRICT", "HYPATIAX_HOLDOUT", "HYPATIAX_NOLLM_ARM", "HYPATIAX_DISABLE_HARDCODED",
+          "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_R2_SIGN_FLIP", "HYPATIAX_ALLOW_LEGACY"):
+    flags.setdefault(n, os.environ.get(n))
+pysr_t, retries, post = num("PYSR_TIMEOUT", 1100), num("HYPATIA_MAX_RETRIES", 3), num("PYSR_POST_PROC_BUDGET", 300)
+rec = {
+    "experiment": "exp1_ablation",
+    "written_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+    "git_commit": commit, "code_dirty": bool(dirty), "dirty_files": [l.strip() for l in dirty][:20],
+    "evaluator_path": ev, "evaluator_sha256": ev_sha,
+    "flags": flags,
+    "seed": num("PYSR_SEED", 42),
+    "shard_index": os.environ.get("SHARD_INDEX"), "n_shards": os.environ.get("N_SHARDS"),
+    "domain_filter": os.environ.get("DOMAIN_FILTER") or None,
+    "n_core15_tasks": os.environ.get("N_CORE15_TASKS"),
+    "llm_model": os.environ.get("LLM_MODEL", "claude-sonnet-4-6"),
+    "llm_temperature": os.environ.get("LLM_TEMPERATURE"),
+    "llm_replay_dir": os.environ.get("HYPATIAX_LLM_REPLAY_DIR"),
+    "budgets_s": {
+        "pysr_attempt": pysr_t, "hypatia_max_retries": retries, "post_proc": post,
+        "hypatia_wall_clock": (retries * pysr_t + post) if isinstance(pysr_t, int) and isinstance(retries, int) and isinstance(post, int) else None,
+        "pysr_only_wall_clock": (pysr_t + post) if isinstance(pysr_t, int) and isinstance(post, int) else None,
+        "method_timeout": os.environ.get("METHOD_TIMEOUT"),
+    },
+    "pysr": {"populations": os.environ.get("PYSR_POPULATIONS"), "niterations": os.environ.get("PYSR_NITERATIONS"),
+             "generations": os.environ.get("PYSR_GENERATIONS")},
+    "github": {"run_id": os.environ.get("GITHUB_RUN_ID"), "ref": os.environ.get("GITHUB_REF_NAME"),
+               "workflow": os.environ.get("GITHUB_WORKFLOW")},
+}
+out = os.path.join(os.environ["ABL_DIR"], f"provenance_generation{os.environ.get('ABL_SFX', '')}.json")
+json.dump(rec, open(out, "w"), indent=1)
+if os.environ.get("GITHUB_ACTIONS") == "true":
+    if dirty:
+        print(f"::warning::exp1_ablation shard runs on DIRTY code ({len(dirty)} file(s)); see {out}")
+    _gs = os.environ.get("GITHUB_SHA")
+    if _gs and _gs != commit:
+        print(f"::warning::HEAD {commit[:7]} != GITHUB_SHA {_gs[:7]}: results are tied to HEAD, recorded in {out}")
+print(f"[exp1_ablation] provenance -> {out} (commit {commit[:7]}, dirty={bool(dirty)}, "
+      f"hypatia wall clock {rec['budgets_s']['hypatia_wall_clock']} s)")
+PYPROV
 
   local rc=0
   PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
@@ -669,6 +749,89 @@ PYMERGE
 
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
 
+# ---------------------------------------------------------------------------
+# exp1_llm_sens: LLM-sensitive DeFi protocol (experiment_protocol_defi_llm_sensitive.py).
+#   27 cases (21 llm_sensitive + 6 neutral-name controls); conditions =
+#   arm x description (named / neutral) with blind + per-condition cache_salt
+#   (see ablation_conditions.py).  Tasks are "<condition>_seed<N>" (e.g. hypatia__neutral_seed42);
+#   with 6 shards each shard = one condition x all seeds.  Local run (no SHARD_IDS/TASK_IDS): all
+#   conditions x DEFI_SEEDS (default 42,99,123,7,2024).
+#   REQUIRED env (no safe default - the arm code is repo-specific):
+#     LLM_SENS_RUNNER          module:function adapter (see exp1_llm_sens.py --help)
+#     LLM_SENS_PRIOR_TARGETS   comma list of module:function for every get_llm_prior import site
+#   PySR arms get LLM_SENS_PYSR_TIMEOUT seconds per case (default 90): 27 cases x 5 seeds per
+#   shard at the global 900-1100 s would exceed the 330-min CI job limit.
+# ---------------------------------------------------------------------------
+_exp1_llm_sens_step() {
+  cd "${REPO_ROOT}"
+  local out_dir="${RESULTS_DIR}/${LLM_SENS_SUBDIR:-ablation/exp1_llm_sens}"
+  local script="${EXPERIMENTS_DIR}/exp1_llm_sens.py"
+  local sfx="${SHARD_INDEX:+_shard${SHARD_INDEX}}"
+  local logf="${out_dir}/exp1_llm_sens_run${sfx}.log"
+  mkdir -p "${out_dir}"
+
+  if [[ ! -f "${script}" ]]; then
+    echo "::error::exp1_llm_sens: ${script} not found (also needs ablation_conditions.py beside it and hypatiax/protocols/experiment_protocol_defi_llm_sensitive.py)"
+    return 1
+  fi
+  export HYPATIAX_STRICT=1
+  export PYSR_TIMEOUT="${LLM_SENS_PYSR_TIMEOUT:-90}"
+  export METHOD_TIMEOUT="${LLM_SENS_PYSR_TIMEOUT:-90}"
+
+  # Task IDs look like "<condition>_seed<N>" (registry is condition-major, so with
+  # 6 shards each shard = one condition x all seeds). Group the shard's tasks by
+  # condition -> seeds; any shard count works. Strip JSON punctuation first.
+  local raw="${SHARD_IDS:-${TASK_IDS:-}}"
+  raw="$(echo "${raw}" | tr -d '[]",' | tr -s ' ' | sed 's/^ *//;s/ *$//')"
+  declare -A cond_seeds=()
+  if [[ -n "${raw}" ]]; then
+    local t c s
+    for t in ${raw}; do
+      c="$(echo "${t}" | sed -E 's/_seed[0-9]+$//')"
+      s="$(echo "${t}" | sed -nE 's/.*_seed([0-9]+)$/\1/p')"
+      if [[ -z "${s}" ]]; then
+        echo "::error::exp1_llm_sens: no _seed<N> suffix in task '${t}'"
+        return 1
+      fi
+      cond_seeds["${c}"]+="${cond_seeds[${c}]:+ }${s}"
+    done
+  else
+    local dseeds="${DEFI_SEEDS:-42,99,123,7,2024}"
+    cond_seeds["__all__"]="${dseeds//,/ }"
+  fi
+
+  : > "${logf}"
+  local rc=0 c
+  for c in "${!cond_seeds[@]}"; do
+    local args=(--seeds ${cond_seeds[${c}]})
+    [[ "${c}" != "__all__" ]] && args+=(--only "${c}")
+    [[ -n "${SHARD_INDEX:-}" ]] && args+=(--shard "${SHARD_INDEX}")
+    log "exp1_llm_sens: condition='${c/__all__/<all>}' seeds='${cond_seeds[${c}]}' shard=${SHARD_INDEX:-all} pysr_timeout=${PYSR_TIMEOUT}s"
+    PYTHONPATH="${REPO_ROOT}:${EXPERIMENTS_DIR}${PYTHONPATH:+:${PYTHONPATH}}" \
+    RESULTS_DIR="${out_dir}" \
+    PYSR_POPULATIONS="${PYSR_POPULATIONS}" \
+    JOB_DEADLINE="${JOB_DEADLINE}" \
+      python3 "${script}" --out "${out_dir}" "${args[@]}" 2>&1 | tee -a "${logf}" || rc=$?
+  done
+
+  echo '=== exp1_llm_sens verification ==='
+  find "${out_dir}" -maxdepth 1 -name 'exp1_llm_sens_*.json' 2>/dev/null | sort
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::exp1_llm_sens.py exited ${rc} - see ${logf}"
+    return "${rc}"
+  fi
+  local nres
+  nres=$(find "${out_dir}" -maxdepth 1 -name 'exp1_llm_sens_*_seed*.json' 2>/dev/null | wc -l)
+  if [[ "${nres}" -eq 0 ]]; then
+    echo "::error::exp1_llm_sens produced no exp1_llm_sens_<condition>_seed<N>.json"
+    return 1
+  fi
+  echo "OK: ${nres} result file(s)"
+  echo '=== end exp1_llm_sens ==='
+}
+
+run exp1_llm_sens "LLM-sensitive protocol: arms x named/neutral descriptions, 27 cases (paper: LLM-benefit test)" _exp1_llm_sens_step
+
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
@@ -684,7 +847,7 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   JOB_DEADLINE='${JOB_DEADLINE}' \
     python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
     2>&1 | tee \"\${_FIVE_DIR}/exp1_five_run.log\" \
-  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+  || { echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'; record_failure exp1_five_system; }
 
   echo '=== exp1_five verification ==='
   find \"\${_FIVE_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
@@ -930,7 +1093,7 @@ PYEOF_FINGERPRINT_1
     echo 'WARNING: exp1_pca produced no result JSON — check exp1_pca_run.log'
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo 'ERROR: split_protocol_disclosure.json not found' >&2; exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
     echo 'WARNING: exp1_pca_summary.json not found — qualify/audit steps will not see DeFi PCA solve rate'
@@ -983,7 +1146,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     RESULTS_DIR=\"\${_PCA15_DIR}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || { echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'; record_failure portfolio_variance_v3c2_pca; }
   fi
 
   _SHARD=\${SHARD_INDEX:-0}
@@ -1165,8 +1328,8 @@ PYEOF_FINGERPRINT_1B
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
     echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
   fi
-  if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
+  if [[ \"\${_NDISC}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
+    echo 'ERROR: split_protocol_disclosure.json not found in 15_pca/' >&2; exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
     echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
@@ -1203,7 +1366,7 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
         --output-dir '${RESULTS_DIR}/comparison_results/extrapolation' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/extrap_run.log' \
-      || echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure extrap_\${DOMAIN_ID}; }
   done
   echo 'extrap output: ${RESULTS_DIR}/comparison_results/extrapolation/'
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
@@ -1347,7 +1510,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
         --resume \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
-    || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure domain_\${DOMAIN_ID}; }
   done
 "
 
@@ -1531,7 +1694,7 @@ PYEOF
         --output-dir \"\${_PCA_DIR}\" \
         --force-fresh \
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
-    || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure pca_4060_\${DOMAIN_ID}; }
 
     mkdir -p \"\${_PCA_DIR}/_saved\"
     while IFS= read -r _pf; do
@@ -1792,7 +1955,7 @@ PYEOF_FINGERPRINT_2
     echo 'WARNING: exp2_pca_4060_summary.json not found — domain runs may not have completed yet'
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo 'ERROR: split_protocol_disclosure.json not found' >&2; exit 1
   fi
   echo '=== end exp2_feynman_pca_4060 ==='
 "
@@ -1832,7 +1995,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --output-dir \"\${_EXT_DIR}\" \
         --resume \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
-    || echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_feynman_extrap_\${DOMAIN_ID}; }
   done
 
   mkdir -p \"\${_EXT_DIR}/_saved\"
@@ -1878,10 +2041,10 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/ — ci_analysis.yml merge step will find nothing'
+    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
-    echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
+    echo '    (merge into ablation_paired.json was removed from this repo in 78e4244; the file is not produced here)'
   fi
 "
 
@@ -1895,8 +2058,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   mkdir -p "${_EXTRAP_DIR}"
 
   if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
-    echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
-    echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
+    echo "[SKIP] merge_extrap_into_benchmark.py removed from this repo (78e4244); ablation_paired.json is NOT produced here"
   else
     _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
     if [[ -z "${_BENCH_EXT}" ]]; then
@@ -1908,7 +2070,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --benchmark-dir        "${_BENCHMARK_DIR}" \
         --output               "${_PAIRED}" \
         2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"
+      || { echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"; record_failure merge_extrap_into_benchmark; }
       if [[ -f "${_PAIRED}" ]]; then
         _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
         echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
@@ -1987,7 +2149,7 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_\${DOMAIN_ID}; }
   done
 "
 
@@ -2019,7 +2181,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'; record_failure exp2_multi_\${DOMAIN_ID}; }
   done
 "
 
@@ -2032,7 +2194,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
-    --temperature 0.25 \
+    --temperature '"${LLM_TEMPERATURE:-0.25}"' \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || _EXP3_RC=$?
   if [ "$_EXP3_RC" -ne 0 ]; then
@@ -2113,7 +2275,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
-      --temperature 0.25 \
+      --temperature ${LLM_TEMPERATURE:-0.25} \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
       || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done
@@ -2154,8 +2316,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
   if [[ -z "${_SEED_FILES}" ]]; then
     echo "[SKIP] No exp3_nguyen12_seed*.json files found — symbolic equivalence check skipped."
   elif [[ ! -f "${_SCRIPT}" ]]; then
-    echo "[SKIP] check_symbolic_equivalence.py not found at ${_SCRIPT}"
-    echo "       Symbolic equivalence report will not be produced locally."
+    echo "[SKIP] check_symbolic_equivalence.py removed from this repo (78e4244); no symbolic-equivalence report is produced here"
   else
     echo "[exp3_sym] Running check_symbolic_equivalence.py ..."
     mkdir -p "${_SEED_DIR}"
@@ -2213,9 +2374,6 @@ PYEOF
   python3 '${EXPERIMENTS_DIR}/run_hybrid_system_benchmark.py' \
     2>&1 | tee    '${RESULTS_DIR}'/suppA_run.log
   python3 hypatiax/experiments/tests/test_enhanced_defi_extrapolation.py \
-    2>&1 | tee -a '${RESULTS_DIR}'/suppA_run.log
-  python3 hypatiax/analysis/analyze_hybrid_performance.py \
-    --results-dir '${RESULTS_DIR}' \
     2>&1 | tee -a '${RESULTS_DIR}'/suppA_run.log
   for _sroot in '${REPO_ROOT}' '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
     find \"\${_sroot}\" -maxdepth 1 -name 'consolidated_hybrid_*.json' \
@@ -3778,7 +3936,7 @@ run audit_nb06_fixc3_rerun \
         --output-dir "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3 \
         --resume \
       2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log \
-    || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
+    || { echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"; record_failure fixc3_${DOMAIN_ID}; }
   done
 
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log
@@ -4002,7 +4160,7 @@ if bad:
 PYEOF
 '
 
-run audit_figures_tables "No-op: table/figure generation disabled pipeline-wide" bash -c '
+run audit_figures_tables "SKIPPED: table/figure generators removed - NOT validated (AUDIT L50)" bash -c '
   set -euo pipefail
   mkdir -p logs
   python3 - <<'"'"'PYEOF'"'"'
@@ -4012,11 +4170,12 @@ from pathlib import Path
 out = Path("logs/figures_tables_report.json")
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(json.dumps({
-    "all_ok": True,
+    "status": "skipped",
+    "all_ok": None,
     "findings": [{"category": "figures_tables", "name": "generation disabled",
-                   "ok": True, "detail": "table/figure generation removed from pipeline"}]
+                   "ok": None, "detail": "SKIPPED: generators removed; table/figure consistency is NOT validated"}]
 }, indent=2))
-print("  [OK]  [figures_tables]  generation disabled — nothing to validate")
+print("  [SKIP] [figures_tables]  generators removed - table/figure consistency NOT validated")
 print("  Report -> " + str(out))
 PYEOF
 '
@@ -4038,18 +4197,81 @@ print(sep)
 rows = [
     ("1. numerical-verify",        verify, ok_verify),
     ("2. paper-audit",             audit,  ok_audit),
-    ("3. figures-tables-validate (no-op, disabled)", figs, ok_figs),
+    ("3. figures-tables-validate (SKIPPED, not validated)", "skipped", None),
 ]
 for label, result, ok in rows:
-    tag = "PASS" if ok else "FAIL"
+    tag = "SKIP" if ok is None else ("PASS" if ok else "FAIL")
     print("  [" + tag + "]  " + label.ljust(33) + "  " + result)
 print(sep)
-overall_ok = ok_verify and ok_audit and ok_figs
-print("  Overall: PAPER AUDIT " + ("PASSED" if overall_ok else "FAILED"))
+overall_ok = ok_verify and ok_audit   # figures/tables are NOT counted: no generator exists (AUDIT L50)
+print("  Overall: PAPER AUDIT " + ("PASSED" if overall_ok else "FAILED") + "  (table/figure consistency NOT covered)")
 print(sep)
 sys.exit(0 if overall_ok else 1)
 PYEOF
 '
+
+# ---------------------------------------------------------------------------
+# phase2_closure: Phase 2 closure (Pure LLM vs HDS) on the COMMITTED Phase 2 rows.
+#   * Opt-in: runs ONLY as `./run_all.sh phase2_closure` (or --step phase2_closure), which is
+#     how ci_phase2_closure.yml calls it. In a full run or --from run it is skipped, so a
+#     missing archive/phase2/ cannot fail the main reproduction pipeline.
+#   * Needs no API key, no Julia, no PySR (env_check is not run for this step).
+#   * Delegates to scripts/run_phase2_closure.sh (adapts a TEMP copy of the P rows, verifies the
+#     evaluator is identical across arms, runs scripts/phase2_close.py, cross-checks n /
+#     catastrophic / nan_or_missing).
+#   * Inputs (env, same names as the workflow):
+#       P2_PURE_LLM_GLOB   default archive/phase2/p2/pure_llm_*.jsonl
+#       P2_HDS_GLOB        default archive/phase2/p2/hds_*.jsonl
+#       PHASE2_CLOSURE_OUT default ${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure
+#   * Log: ${RESULTS_DIR}/phase2_closure_run.log (the workflow's Summary step tails it).
+#   * A non-zero exit of the closure FAILS the step (pipefail + explicit rc check).
+# ---------------------------------------------------------------------------
+_phase2_closure_step() {
+  if [[ "${ONLY_STEP}" != "phase2_closure" ]]; then
+    log "phase2_closure: opt-in step, skipped (run: ./run_all.sh phase2_closure)"
+    return 0
+  fi
+  cd "${REPO_ROOT}"
+  local script="${SCRIPTS_DIR}/run_phase2_closure.sh"
+  local out="${PHASE2_CLOSURE_OUT:-${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure}"
+  local logf="${RESULTS_DIR}/phase2_closure_run.log"
+  mkdir -p "${RESULTS_DIR}"
+
+  if [[ ! -f "${script}" ]]; then
+    echo "::error::phase2_closure: ${script} not found"
+    return 1
+  fi
+  export P2_PURE_LLM_GLOB="${P2_PURE_LLM_GLOB:-archive/phase2/p2/pure_llm_*.jsonl}"
+  export P2_HDS_GLOB="${P2_HDS_GLOB:-archive/phase2/p2/hds_*.jsonl}"
+
+  if ! compgen -G "${P2_PURE_LLM_GLOB}" >/dev/null; then
+    echo "::error::phase2_closure: no Pure LLM rows match ${P2_PURE_LLM_GLOB}"
+    return 1
+  fi
+  if ! compgen -G "${P2_HDS_GLOB}" >/dev/null; then
+    echo "::error::phase2_closure: no HDS rows match ${P2_HDS_GLOB}"
+    return 1
+  fi
+
+  log "phase2_closure: pure_llm='${P2_PURE_LLM_GLOB}' hds='${P2_HDS_GLOB}' out='${out}'"
+  local rc=0
+  bash "${script}" "${out}" 2>&1 | tee "${logf}" || rc=$?
+
+  echo '=== phase2_closure verification ==='
+  find "${out}" -maxdepth 2 -type f 2>/dev/null | sort || echo '  (no output)'
+  if [[ "${rc}" -ne 0 ]]; then
+    echo "::error::phase2_closure exited ${rc} - see ${logf}"
+    return "${rc}"
+  fi
+  if [[ ! -s "${out}/p2_pure_llm_status_relabel.json" ]]; then
+    echo "::error::phase2_closure exited 0 but wrote no ${out}/p2_pure_llm_status_relabel.json"
+    return 1
+  fi
+  echo 'OK: phase2_closure complete'
+  echo '=== end phase2_closure ==='
+}
+
+run phase2_closure "Phase 2 closure: Pure LLM vs HDS on committed rows (opt-in; no API key / Julia)" _phase2_closure_step
 
 echo ""
 log "============================================================"
@@ -4091,6 +4313,10 @@ echo "    ${RESULTS_DIR}/audit_nb05_run.log       (NB-05 figure dependencies)"
 echo "    logs/verify_report.json                 (structured verify output)"
 echo "    logs/paper_audit_findings.json          (structured audit output)"
 echo ""
+echo "  Phase 2 closure (opt-in: ./run_all.sh phase2_closure):"
+echo "    ${RESULTS_DIR}/phase2_closure_run.log"
+echo "    ${PHASE2_CLOSURE_OUT:-${REPO_ROOT}/archive/phase2/phase2_pure_llm_closure}/   (manifest + adapted rows + status relabel sidecar)"
+echo ""
 echo "  Notebook audit outputs (executed .ipynb with cell outputs):"
 echo "    notebooks/NB-01_Citation_Bibliography_Audit.ipynb"
 echo "    notebooks/NB-02_CrossReference_Label_Audit.ipynb"
@@ -4102,3 +4328,9 @@ echo "  To rebuild the paper PDF:"
 echo "    cd ${REPO_ROOT} && pdflatex jmlr_paper_main.tex"
 echo ""
 log "Done. See individual *_run.log files in ${RESULTS_DIR}/ for per-step output."
+
+if [[ -s "${HYPATIAX_FAILED_LOG}" ]]; then
+  echo -e "${RED}[run_all] FAILED STEPS (non-fatal during the run, fatal now):${NC}"
+  sed 's/^/    - /' "${HYPATIAX_FAILED_LOG}"
+  exit 1
+fi

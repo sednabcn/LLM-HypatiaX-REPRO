@@ -1,6 +1,7 @@
 # hypatiax/experiments/tests/test_no_bypass.py
 import os, pathlib, re
-os.environ.setdefault("ANTHROPIC_API_KEY", "dummy-offline")
+if not os.environ.get("ANTHROPIC_API_KEY"):   # setdefault() would keep an empty string
+    os.environ["ANTHROPIC_API_KEY"] = "dummy-offline"
 from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
 
 CASES = [("Gaussian/normal distribution probability density", ["theta", "sigma"]),

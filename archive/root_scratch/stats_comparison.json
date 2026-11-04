@@ -1,0 +1,89 @@
+{
+  "seeds": [
+    42,
+    99,
+    123
+  ],
+  "failed_cells": {
+    "pysr_only": 2,
+    "hypatia": 6,
+    "hypatia_nollm": 7
+  },
+  "floor": -63.28468946351657,
+  "survivors_only": {
+    "H_vs_P": {
+      "n": 13,
+      "wtl": [
+        3,
+        10,
+        0
+      ],
+      "mwu_p": 0.30295637102358797,
+      "wilcoxon_p": 0.125,
+      "wilcoxon_holm": 0.375
+    },
+    "N_vs_P": {
+      "n": 13,
+      "wtl": [
+        3,
+        8,
+        2
+      ],
+      "mwu_p": 0.8594072848618868,
+      "wilcoxon_p": 0.3125,
+      "wilcoxon_holm": 0.375
+    },
+    "H_vs_N": {
+      "n": 13,
+      "wtl": [
+        3,
+        10,
+        0
+      ],
+      "mwu_p": 0.03570175778026949,
+      "wilcoxon_p": 0.125,
+      "wilcoxon_holm": 0.375
+    }
+  },
+  "failures_as_worst": {
+    "H_vs_P": {
+      "n": 15,
+      "wtl": [
+        3,
+        11,
+        1
+      ],
+      "mwu_p": 0.3538552710185725,
+      "wilcoxon_p": 0.07206351740800766,
+      "wilcoxon_holm": 0.16321414506081852
+    },
+    "N_vs_P": {
+      "n": 15,
+      "wtl": [
+        3,
+        9,
+        3
+      ],
+      "mwu_p": 0.83017211672547,
+      "wilcoxon_p": 0.37657618238295726,
+      "wilcoxon_holm": 0.37657618238295726
+    },
+    "H_vs_N": {
+      "n": 15,
+      "wtl": [
+        3,
+        12,
+        0
+      ],
+      "mwu_p": 0.07247804662021728,
+      "wilcoxon_p": 0.05440471502027284,
+      "wilcoxon_holm": 0.16321414506081852
+    }
+  },
+  "flips": [
+    {
+      "comparison": "H_vs_N",
+      "what": "old MWU vs new Holm-Wilcoxon"
+    }
+  ]
+}

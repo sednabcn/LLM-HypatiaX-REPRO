@@ -1,0 +1,145 @@
+name: Unit tests (full pytest)
+
+# Runs the whole hypatiax/experiments/tests suite in an environment that has the
+# heavy dependencies (torch CPU, anthropic, sympy, pysr).  No API key is provided
+# (do NOT define ANTHROPIC_API_KEY here, not even empty: some tests rely on setdefault);
+# tests must not spend API budget.  Julia is NOT installed by default; tests that
+# need it will fail loudly -- tick `with_julia` to include it.
+
+on:
+  push:
+    branches: [audit-main, master]
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/ci_tests.yml"
+  pull_request:
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/ci_tests.yml"
+  workflow_dispatch:
+    inputs:
+      with_julia:
+        description: "Install Julia 1.11 + precompile PySR (slow; only if tests need it)"
+        type: boolean
+        default: false
+      pytest_args:
+        description: "Extra pytest arguments, e.g. -k noise_sweep or -x"
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
+  PYTHONHASHSEED: "0"
+
+jobs:
+  preflight:
+    name: "Preflight (shell syntax, YAML)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+      - name: bash -n run_all.sh and parse workflows/config
+        run: |
+          bash -n run_all.sh
+          pip install -q pyyaml
+          python - <<'PY'
+          import glob, yaml
+          for f in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml"]:
+              yaml.safe_load(open(f))
+              print("ok", f)
+          PY
+
+  pytest:
+    name: "pytest (py3.12, torch CPU, anthropic, sympy)"
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/ci_tests.yml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            "anthropic==0.73.0" \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pint \
+            psutil \
+            pytest pytest-timeout
+
+      - name: Set up Julia 1.11
+        if: ${{ github.event.inputs.with_julia == 'true' }}
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Install PySR Julia backend
+        if: ${{ github.event.inputs.with_julia == 'true' }}
+        run: python -c "import pysr; pysr.install()"
+
+      - name: Dependency gate (fails with ONE clear message instead of hundreds of collection errors)
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          missing = []
+          for m in ("torch", "anthropic", "sympy", "numpy", "scipy", "sklearn", "pandas", "yaml"):
+              try:
+                  mod = importlib.import_module(m)
+                  print(f"{m:10s} {getattr(mod, '__version__', '?')}")
+              except Exception as e:
+                  missing.append(f"{m}: {e}")
+          if missing:
+              sys.exit("MISSING DEPENDENCIES:\n  " + "\n  ".join(missing))
+          PY
+
+      - name: Run full pytest
+        run: |
+          python -m pytest -q -ra --timeout=600 \
+            --junitxml=pytest-report.xml \
+            ${{ github.event.inputs.pytest_args }}
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: pytest-report.xml
+          retention-days: 30

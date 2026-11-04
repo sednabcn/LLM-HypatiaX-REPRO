@@ -68,6 +68,14 @@ except ImportError:
 
 from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
+M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
+
+
+def _m5_record_failure(where, exc):
+    """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
+    M5_FAILURES.append({"where": where, "error": f"{type(exc).__name__}: {exc}"})
+    return None
+
 
 def _r2_rule_a(y_true, y_pred):
     """Canonical R2 for every score this module reports.  Rule A: a degenerate target,
@@ -174,8 +182,8 @@ class HybridSystemAllDomains:
         self._formula_cache: dict = {}
 
         # Delegate LLM formula generation to PureLLMBaseline so the hybrid
-        # automatically benefits from hardcoded formula paths, OLS enrichment,
-        # and all prompt fixes (variant guard, max_tokens, etc.) without
+        # automatically benefits from all prompt fixes (variant guard,
+        # max_tokens, etc.) without
         # reimplementing them here.
         try:
             from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import (
@@ -196,7 +204,7 @@ class HybridSystemAllDomains:
         """Generate formula using LLM.
 
         Delegates to PureLLMBaseline when available so the hybrid benefits from
-        all LLM-path improvements (hardcoded formulas, OLS enrichment, variant
+        all LLM-path improvements (hardcoded formulas, variant
         guards, max_tokens=4000) without duplicating that logic here.
 
         Falls back to the local implementation if PureLLMBaseline cannot be
@@ -415,10 +423,10 @@ NO markdown code blocks, individual parameters NOT dict."""
 
         if len(X) < 10:
             return None, {
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("inf"),
-                "mae": float("inf"),
-                "error": "Insufficient data",
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,
+                "mae": None,
+                "error": "Insufficient data", "reason": "nonfinite_metric",
             }
 
         # FIX (crash-to-failure-dict): the rest of the method is wrapped in
@@ -435,11 +443,11 @@ NO markdown code blocks, individual parameters NOT dict."""
             print(f"⚠️  NN training FAILED ({type(e).__name__}: {str(e)[:100]}); "
                   f"this row has no NN arm")
             return None, {
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("inf"),
-                "mae": float("inf"),
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,
+                "mae": None,
                 "error": f"{type(e).__name__}: {e}",
-                "nn_failed": True,
+                "nn_failed": True, "reason": "fit_or_metric_failed",
             }
 
     def _train_nn_inner(
@@ -576,7 +584,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         try:
             code = formula_dict.get("python_code", "")
             if not code or code == "N/A":
-                return {"error": "No code generated", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "No code generated", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             import math as _math
             import warnings as _warnings
@@ -616,7 +624,7 @@ NO markdown code blocks, individual parameters NOT dict."""
             )
 
             if not func:
-                return {"error": "No function found", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "No function found", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             with _warnings.catch_warnings():
                 _warnings.simplefilter("ignore")
@@ -626,12 +634,12 @@ NO markdown code blocks, individual parameters NOT dict."""
                 return {
                     "error": f"Shape mismatch: {len(y_pred)} vs {len(y_true)}",
                     "success": False,
-                    "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                    "r2": None, "reason": "nonfinite_metric",  # PHASE1-FIX: failure, not a score
                 }
 
             # Handle inf/nan values
             if not np.all(np.isfinite(y_pred)):
-                return {"error": "Non-finite predictions", "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+                return {"error": "Non-finite predictions", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
             mse = np.mean((y_pred - y_true) ** 2)
             r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
@@ -644,7 +652,7 @@ NO markdown code blocks, individual parameters NOT dict."""
                 "success": True,
             }
         except Exception as e:
-            return {"error": str(e)[:100], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+            return {"error": str(e)[:100], "success": False, "r2": None, "reason": "fit_or_metric_failed"}  # PHASE1-FIX: failure, not a score
 
     def _evaluate_function(self, func, X, var_names):
         """Evaluate function with multiple strategies"""
@@ -764,8 +772,8 @@ NO markdown code blocks, individual parameters NOT dict."""
                 _warnings.simplefilter("ignore")
                 preds = self._evaluate_function(func, X, var_names)
             return preds if np.all(np.isfinite(preds)) else None
-        except Exception:
-            return None
+        except Exception as e:
+            return _m5_record_failure("_get_llm_predictions", e)
 
     def _get_nn_predictions(self, nn_model, X: np.ndarray) -> np.ndarray | None:
         """Run trained NN on full dataset for blending, in original y-scale."""
@@ -790,6 +798,46 @@ NO markdown code blocks, individual parameters NOT dict."""
         except Exception:
             return None
 
+    def _holdout_scores(self, description, X, y_true, var_names, llm_result, llm_ok):
+        # L06: held-out R2 on a third split. Trains a SECOND NN on the train
+        # rows only; held-out rows never reach training or early stopping.
+        from sklearn.model_selection import train_test_split as _tts
+
+        _seed = int(hashlib.sha256(("holdout:" + description).encode()).hexdigest(), 16) % (2**31)
+        _tr, _te = _tts(np.arange(len(X)), test_size=0.2, random_state=_seed)
+        out = {"holdout_n_test": int(len(_te)), "holdout_seed": _seed}
+        if len(_tr) < 10 or len(_te) < 2:
+            out["holdout_status"] = "too_small"
+            return out
+        _attrs = ("_last_nn_scaler_X", "_last_nn_scaler_y", "_last_nn_use_logy")
+        _saved = {a: getattr(self, a, None) for a in _attrs}
+
+        def _r2(yt, yp):
+            v = _r2_rule_a(yt, yp)[0]
+            return float(v) if v is not None and np.isfinite(v) else None
+
+        try:
+            llm_te = self._get_llm_predictions(llm_result, X[_te], var_names) if llm_ok else None
+            llm_tr = self._get_llm_predictions(llm_result, X[_tr], var_names) if llm_ok else None
+            model, _m = self.train_nn(X[_tr], y_true[_tr], epochs=1000, seed=_seed)
+            nn_te = self._get_nn_predictions(model, X[_te])
+            nn_tr = self._get_nn_predictions(model, X[_tr])
+            out["r2_holdout_llm"] = _r2(y_true[_te], llm_te) if llm_te is not None else None
+            out["r2_holdout_nn"] = _r2(y_true[_te], nn_te) if nn_te is not None else None
+            out["r2_holdout_blend"] = None
+            if all(p is not None for p in (llm_te, llm_tr, nn_te, nn_tr)):
+                w_llm = max(_r2(y_true[_tr], llm_tr) or 0.0, 0.0)
+                w_nn = max(_r2(y_true[_tr], nn_tr) or 0.0, 0.0)
+                tot = w_llm + w_nn if (w_llm + w_nn) > 0 else 1.0
+                out["r2_holdout_blend"] = _r2(y_true[_te], (w_llm * llm_te + w_nn * nn_te) / tot)
+            out["holdout_status"] = "ok"
+        except Exception as e:
+            out["holdout_status"] = "error: %s: %s" % (type(e).__name__, str(e)[:80])
+        finally:
+            for a, v in _saved.items():
+                setattr(self, a, v)
+        return out
+
     def hybrid_predict(
         self,
         description: str,
@@ -805,9 +853,10 @@ NO markdown code blocks, individual parameters NOT dict."""
         if verbose:
             print("\n  [HYBRID] Generating LLM formula...")
 
-        # Step 1: Get LLM formula — pass X/y so PureLLMBaseline can run OLS
-        # enrichment (Arrhenius, Michaelis-Menten, logistic growth, allometric)
-        # before deciding whether to call the LLM at all.
+        # Step 1: Get LLM formula. X/y are passed for call compatibility only;
+        # PureLLMBaseline.generate_formula does not use them (no data statistics
+        # in the prompt and nothing is fitted), so the formula is not fitted to
+        # the rows scored below.
         llm_result = self.generate_llm_formula(
             description, domain, var_names, metadata, X=X, y=y_true
         )
@@ -815,7 +864,7 @@ NO markdown code blocks, individual parameters NOT dict."""
         if "error" not in llm_result:
             llm_metrics = self.evaluate_llm_formula(llm_result, X, y_true, var_names)
         else:
-            llm_metrics = {"error": llm_result["error"], "success": False, "r2": float("-inf")}  # PHASE1-FIX: failure, not a score
+            llm_metrics = {"error": llm_result["error"], "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
         if verbose:
             if llm_metrics.get("success"):
@@ -826,8 +875,10 @@ NO markdown code blocks, individual parameters NOT dict."""
                 )
 
         # Compute llm_r2 / llm_ok here (also used by Step 3 decision logic below).
-        llm_r2 = llm_metrics.get("r2", 0) if llm_metrics.get("success") else -np.inf
-        llm_ok = llm_metrics.get("success", False) and np.isfinite(llm_r2) and llm_r2 > 0
+        _r2 = llm_metrics.get("r2")
+        _llm_scored = bool(llm_metrics.get("success")) and _r2 is not None and np.isfinite(_r2)
+        llm_r2 = _r2 if _llm_scored else -np.inf
+        llm_ok = _llm_scored and _r2 > 0
 
         # Step 2: Train NN
         # force_llm=True is injected by the benchmark runner for Feynman physics
@@ -854,9 +905,10 @@ NO markdown code blocks, individual parameters NOT dict."""
                     "python_code": llm_result.get("python_code", "N/A"),
                     "metrics": llm_metrics,
                 },
-                "nn_result": {"metrics": {"r2": 0.0, "rmse": float("inf"), "mae": float("inf")}},
+                "nn_result": {"metrics": {"r2": None, "rmse": None, "mae": None, "reason": "skipped_force_llm"}},
                 "evaluation": {
                     "r2": float(llm_r2),
+                    "r2_in_sample": float(llm_r2),  # force_llm: LLM formula only; no NN, no blend, no held-out
                     "rmse": float(llm_metrics.get("rmse", float("inf"))),
                     "success": True,
                 },
@@ -876,16 +928,41 @@ NO markdown code blocks, individual parameters NOT dict."""
         nn_model, nn_metrics = self.train_nn(X, y_true, epochs=1000, seed=_nn_seed)
 
         if verbose:
-            print(f"  [HYBRID] NN R²: {nn_metrics['r2']:.4f}")
+            _nn_r2_txt = (
+                f"{nn_metrics['r2']:.4f}"
+                if nn_metrics.get("r2") is not None
+                else "n/a (NN failed)"
+            )
+            print(f"  [HYBRID] NN R²: {_nn_r2_txt}")
 
         # Step 3: Decision logic — prefer symbolic LLM formula when it works.
         # Old logic gated LLM behind R²>0.95, causing good formulas to fall through
         # to the NN. New logic: if LLM succeeded and beats NN, use it; if both are
         # strong and close, blend predictions; only fall to NN when LLM failed.
         # Note: llm_r2 / llm_ok already computed above (before force_llm check).
-        nn_r2 = nn_metrics.get("r2", 0)
+        # None = NN failed (train_nn failure dict); nan = undefined target
+        # (rule A) and is left as is. A failed NN must never outrank the LLM.
+        nn_r2 = nn_metrics.get("r2")
+        if nn_r2 is None:
+            nn_r2 = -np.inf
 
-        if llm_ok and llm_r2 >= nn_r2:
+        if not np.isfinite(nn_r2):
+            # NN failed (None mapped to -inf above) or undefined (nan):
+            # it must never be ranked against the LLM.
+            if llm_ok:
+                decision = "llm"
+                final_r2 = llm_r2
+                final_rmse = llm_metrics.get("rmse", float("inf"))
+                reason = "NN non-finite; using LLM"
+                validation_score = "EXCELLENT" if llm_r2 > 0.95 else "GOOD"
+            else:
+                decision = "fail"
+                final_r2 = nn_r2
+                final_rmse = float("inf")
+                reason = "both failed"
+                validation_score = "POOR"
+
+        elif llm_ok and llm_r2 >= nn_r2:
             # LLM formula beats or ties the NN — use it directly.
             # Only prefer symbolic when it genuinely wins; don't force it when the
             # NN is actually scoring higher (that was causing Snell's/Zeeman regression).
@@ -928,12 +1005,24 @@ NO markdown code blocks, individual parameters NOT dict."""
             # LLM failed or produced negative R² — fall back to NN
             decision = "nn"
             final_r2   = nn_r2
-            final_rmse = nn_metrics["rmse"]
-            reason = "NN fallback (LLM failed)"
+            final_rmse = nn_metrics.get("rmse")
+            if final_rmse is None:
+                final_rmse = float("inf")
+            reason = (
+                "NN fallback (LLM failed)"
+                if not llm_ok
+                else "NN beats LLM (R2 below blend threshold)"
+            )
             validation_score = "FAIR" if nn_r2 > 0.8 else "POOR"
 
         if verbose:
             print(f"  [HYBRID] Decision: {decision.upper()} - {reason}")
+
+        _holdout = {}
+        if os.environ.get("HYPATIAX_HOLDOUT") == "1":
+            _holdout = self._holdout_scores(
+                description, X, y_true, var_names, llm_result, llm_ok
+            )
 
         # Build result with observations
         observations = []
@@ -968,7 +1057,9 @@ NO markdown code blocks, individual parameters NOT dict."""
             "evaluation": {
                 "r2": float(final_r2),
                 "rmse": float(final_rmse),
-                "success": True,
+                "success": decision != "fail",
+                "r2_in_sample": float(final_r2),
+                **_holdout,
             },
             "metadata": metadata,
             "timestamp": datetime.now().isoformat(),
@@ -1088,17 +1179,27 @@ def run_hybrid_test_all_domains(
     print("SUMMARY STATISTICS".center(80))
     print("=" * 80)
 
-    r2_scores = [r["evaluation"]["r2"] for r in all_results]
+    r2_all = [r["evaluation"]["r2"] for r in all_results]
+    r2_scores = [x for x in r2_all if np.isfinite(x)]
+    _n_nonfinite = len(r2_all) - len(r2_scores)
     print(f"\n📊 Total Test Cases: {len(all_results)}")
-    print(f"Mean R²: {np.mean(r2_scores):.6f}")
-    print(f"Median R²: {np.median(r2_scores):.6f}")
-    print(f"Std Dev R²: {np.std(r2_scores):.6f}")
-    print(f"Min R²: {np.min(r2_scores):.6f}")
-    print(f"Max R²: {np.max(r2_scores):.6f}")
+    if _n_nonfinite:
+        print(
+            f"⚠️  {_n_nonfinite}/{len(r2_all)} rows have non-finite R² "
+            f"(-inf = failed, nan = undefined); excluded from the statistics below"
+        )
+    if r2_scores:
+        print(f"Mean R²: {np.mean(r2_scores):.6f}")
+        print(f"Median R²: {np.median(r2_scores):.6f}")
+        print(f"Std Dev R²: {np.std(r2_scores):.6f}")
+        print(f"Min R²: {np.min(r2_scores):.6f}")
+        print(f"Max R²: {np.max(r2_scores):.6f}")
+    else:
+        print("No finite R² values; statistics unavailable")
 
     # Decision breakdown
     print("\n🎯 Decision Breakdown:")
-    decisions = {"llm": [], "ensemble": [], "nn": []}
+    decisions = {"llm": [], "ensemble": [], "nn": [], "fail": []}
     for r in all_results:
         decisions[r["decision"]].append(r["evaluation"]["r2"])
 
@@ -1106,9 +1207,11 @@ def run_hybrid_test_all_domains(
         if r2_list:
             count = len(r2_list)
             pct = 100 * count / len(all_results)
-            mean_r2 = np.mean(r2_list)
+            _fin = [x for x in r2_list if np.isfinite(x)]
+            mean_txt = f"{np.mean(_fin):.4f}" if _fin else "n/a"
             print(
-                f"  {dec.upper()}: {count}/{len(all_results)} ({pct:.1f}%) - Mean R² = {mean_r2:.4f}"
+                f"  {dec.upper()}: {count}/{len(all_results)} ({pct:.1f}%) - "
+                f"Mean R² = {mean_txt} (finite: {len(_fin)}/{count})"
             )
 
     # LLM source breakdown (delegate vs local fallback)

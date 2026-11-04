@@ -19,6 +19,7 @@ scan_report.html
 **/checkpoint_plan.json
 *.bak
 *.bak
+.env
 scan_after*.txt
 triage_out/
 _quarantine/
@@ -51,4 +52,10 @@ audit_out/*.csv
 *.bak[0-9]
 .cleanup_trash/
 run.log
+__pycache__/
+*.pyc
+phase3_out/
+phase3_closure_out/
+**/llm_replay/
+**/llm_cache/
 tree_cleanup.txt

@@ -1,0 +1,91 @@
+name: ci_runner_smoke
+
+# Fast, free wiring check for run_all.sh (repo root, as invoked by ci_runner_repro.yml) (no API key, no Julia/PySR, no LLM calls).
+# Stages: bash_syntax step_registry required_files failure_ledger dry_run_all cli_contract
+#         clean_run_guards gt_leak_guard py_preflight script_help phase2_closure live_llm
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated stages to run (blank = all), e.g. step_registry,cli_contract"
+        required: false
+        default: ""
+      script_help:
+        description: "Run `--help` import check on every benchmark script (needs torch + pysr; slow). auto = only if both import."
+        required: false
+        type: choice
+        options:
+          - "0"
+          - auto
+          - "1"
+        default: "0"
+      live:
+        description: "Also do ONE live Anthropic API round-trip (uses the ANTHROPIC_API_KEY secret)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LLM_MODE: offline          # no secrets needed for the default smoke run
+      STAGE_TIMEOUT: "300"       # seconds per stage (run_smoke_all.sh)
+      SMOKE_HELP: ${{ github.event.inputs.script_help || '0' }}
+      SMOKE_LIVE: ${{ github.event.inputs.live == 'true' && '1' || '0' }}
+      # only exposed when a live round-trip was explicitly requested
+      ANTHROPIC_API_KEY: ${{ github.event.inputs.live == 'true' && secrets.ANTHROPIC_API_KEY || '' }}
+      SMOKE_ONLY: ${{ github.event.inputs.only }}
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0   # phase2_closure needs history for git show <HDS commit>
+
+      # Same interpreter the repro workflow runs run_all.sh under.
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          pip install pytest
+
+      - name: Run smoke pipeline
+        run: |
+          set -euo pipefail
+          chmod +x ci_runner/run_smoke_all.sh
+          args=()
+          if [[ -n "${SMOKE_ONLY}" ]]; then
+            # passed via env (never interpolated into the script); allow only stage-name characters
+            if [[ ! "${SMOKE_ONLY}" =~ ^[a-z_,]+$ ]]; then
+              echo "::error::invalid 'only' value: ${SMOKE_ONLY}"; exit 2
+            fi
+            args=(--only "${SMOKE_ONLY}")
+          fi
+          ./ci_runner/run_smoke_all.sh --keep-going "${args[@]}"
+
+      - name: Upload smoke outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-outputs
+          path: smoke_outputs/
+          if-no-files-found: warn
+          retention-days: 7

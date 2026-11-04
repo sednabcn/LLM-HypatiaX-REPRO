@@ -120,6 +120,14 @@ try:
 except ImportError:
     PySR = None
 
+M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
+
+
+def _m5_record_failure(where, exc):
+    """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
+    M5_FAILURES.append({"where": where, "error": f"{type(exc).__name__}: {exc}"})
+    return None
+
 # Memory logging function
 def _log_rss(label: str):
     rss = psutil.Process(os.getpid()).memory_info().rss / 1e9
@@ -523,7 +531,8 @@ class LLMConfig:
 
     model: str = "claude-sonnet-4-6"
     max_tokens: int = 2000
-    temperature: float = 0.3
+    # AUDIT C1: shared setting. CI/run_all.sh export LLM_TEMPERATURE=0.25; default unchanged outside CI.
+    temperature: float = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
     api_key: str | None = None
@@ -610,8 +619,35 @@ class IntegratedLLMEngine:
 
         self.last_call_attempted = True
         self.last_error = None
+        self.last_response_replayed = False
+        # Opt-in replay (HYPATIAX_LLM_REPLAY_DIR): the response is keyed on the full prompt, which
+        # embeds the data patterns, so each (equation, seed) gets ONE sample reused by every arm
+        # and an ablation differs only by its gate. Unset = unchanged live behaviour.
+        _replay_dir = os.environ.get("HYPATIAX_LLM_REPLAY_DIR")
+        _replay_path = None
+        if _replay_dir:
+            import hashlib as _hl
+            os.makedirs(_replay_dir, exist_ok=True)
+            _key = _hl.sha256(
+                f"{self.config.model}|{self.config.temperature}|{prompt}".encode()).hexdigest()
+            _replay_path = os.path.join(_replay_dir, _key + ".json")
+            if os.path.isfile(_replay_path):
+                with open(_replay_path, encoding="utf-8") as _fh:
+                    response = json.load(_fh)["response"]
+                self.last_response_replayed = True
+                self._note_llm_sample(response)
+                hypotheses = self._parse_response(response)
+                if not hypotheses:
+                    self.last_error = "parse_failed_or_empty_response"
+                return hypotheses
         try:
             response = self._call_llm(prompt)
+            self._note_llm_sample(response)
+            if _replay_path:
+                _tmp = _replay_path + f".tmp{os.getpid()}"
+                with open(_tmp, "w", encoding="utf-8") as _fh:
+                    json.dump({"response": response}, _fh)
+                os.replace(_tmp, _replay_path)
         except Exception as e:
             # API / connection / timeout failure: never let it look like a
             # model that simply returned nothing.
@@ -624,6 +660,15 @@ class IntegratedLLMEngine:
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
         return hypotheses
+
+    @staticmethod
+    def _note_llm_sample(response):
+        """Log a hash of the raw response for the Phase 3 seed audit (G9). Never affects the run."""
+        try:
+            from hypatiax.tools.symbolic import guess_sanitizer as _gs
+            _gs.record_llm_response(response)
+        except Exception:
+            pass
 
     def _build_prompt(
         self,
@@ -1406,6 +1451,7 @@ class SymbolicEngine:
             # is handled below by retrying once without it, rather than
             # aborting the whole discover() call.
             _guesses_requested = False
+            _guess_rec = None   # seed audit record (guess_sanitizer), attached to the result below
             if _seed_expressions:
                 import inspect as _inspect_guess
                 _pysr_guess_params = set(
@@ -1414,15 +1460,30 @@ class SymbolicEngine:
                 if "guesses" in _pysr_guess_params:
                     # Julia's parser rejects Python's `**` ("use x^y instead of x**y");
                     # this crashed every attempt on Rate Law (CI run 40146149579).
-                    _seed_expressions = [str(_e).replace("**", "^") for _e in _seed_expressions]
-                    pysr_kwargs["guesses"] = list(_seed_expressions)
-                    _guesses_requested = True
+                    # Fit the seed to the ACTIVE operator set before PySR sees it: a guess using
+                    # pow / sign / an unknown name used to fail inside Julia and silently fall back.
+                    from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                    _requested = [str(_e) for _e in _seed_expressions]
+                    _kept, _dropped = _gs.sanitize_guesses(
+                        _requested, merged_binary_operators, active_unary, safe_names)
+                    _guess_rec = _gs.record_audit(_requested, _kept, _dropped)
+                    _seed_expressions = _kept
+                    if _kept:
+                        pysr_kwargs["guesses"] = list(_kept)
+                        _guesses_requested = True
                     print(
-                        f"   [PySR] guesses param available — seeding with "
-                        f"{_seed_expressions!r}",
+                        f"   [PySR] guesses param available — seeding with {_kept!r}"
+                        + (f" ({len(_dropped)} of {len(_requested)} dropped: "
+                           f"{', '.join(r for _, r in _dropped)})" if _dropped else ""),
                         flush=True,
                     )
+                    if _dropped:
+                        _trace.append(f"guesses_dropped={[r for _, r in _dropped]}")
                 else:
+                    from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                    _guess_rec = _gs.record_audit(
+                        [str(_e) for _e in _seed_expressions], [],
+                        [(str(_e), "guesses_param_unavailable") for _e in _seed_expressions])
                     print(
                         "   [PySR] guesses param not available in this pysr "
                         "version — falling back to operator biasing only",
@@ -1470,6 +1531,9 @@ class SymbolicEngine:
                         flush=True,
                     )
                     _trace.append("guesses=construction_failed_retrying_without")
+                    if _guess_rec is not None:
+                        from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                        _gs.mark_fit_fallback(_guess_rec)
                     pysr_kwargs.pop("guesses", None)
                     self.model = PySRRegressor(**pysr_kwargs)
                     print("   [PySR] PySRRegressor constructed OK (without guesses)", flush=True)
@@ -1736,11 +1800,17 @@ class SymbolicEngine:
             except Exception as _fit_exc:
                 # The LLM warm-start is best-effort: an unparseable / unknown-symbol seed
                 # must never cost the whole PySR run (it previously failed all 3 attempts).
-                if not (_guesses_requested and "guesses" in pysr_kwargs):
+                # A wall-clock timeout is not a bad seed: re-raise it (same as the no-guess path)
+                # instead of burning a second budget and mislabelling the row as a seed fallback.
+                if (not (_guesses_requested and "guesses" in pysr_kwargs)
+                        or isinstance(_fit_exc, TimeoutError)):
                     raise
                 print(f"   ⚠ [PySR] fit with LLM `guesses` failed ({type(_fit_exc).__name__}: "
                       f"{str(_fit_exc)[:160]!r}) — retrying once WITHOUT the seed", flush=True)
                 _trace.append("guesses=fit_failed_retrying_without")
+                if _guess_rec is not None:
+                    from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                    _gs.mark_fit_fallback(_guess_rec)
                 pysr_kwargs.pop("guesses", None)
                 self.model = PySRRegressor(**pysr_kwargs)
                 self.model.fit(_X_fit, _y_fit, variable_names=safe_names)
@@ -1911,6 +1981,9 @@ class SymbolicEngine:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
                 if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+            if _guess_rec is not None:
+                from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                _result["guess_audit"] = _gs.summarize([_guess_rec])
             return _result
 
         except Exception as e:
@@ -1934,7 +2007,7 @@ class SymbolicEngine:
             import os as _os_strict
             if _os_strict.environ.get("HYPATIAX_STRICT") == "1":
                 raise
-            return {
+            _failed = {
                 "expression": "DISCOVERY_FAILED",
                 "r2_score": 0.0,
                 "complexity": 0,
@@ -1945,6 +2018,10 @@ class SymbolicEngine:
                 "validation": {"valid": False, "errors": [_full_tb], "warnings": []},
                 "trace": _trace,
             }
+            if locals().get("_guess_rec") is not None:
+                from hypatiax.tools.symbolic import guess_sanitizer as _gs
+                _failed["guess_audit"] = _gs.summarize([_guess_rec])
+            return _failed
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions using discovered equation."""
@@ -2210,6 +2287,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
         # Evaluate LLM hypotheses
         best_hyp = self._evaluate_hypotheses(hypotheses, X, y, safe_names)
+        try:   # Phase 3 audit: LLM R2 on this case (never affects the run)
+            from hypatiax.tools.symbolic import guess_sanitizer as _gs_r2
+            _gs_r2.record_llm_r2(best_hyp.r2_score)
+        except Exception:
+            pass
 
         # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping)
         _llm_info = {
@@ -2288,6 +2370,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         )
 
         pysr_time = time.time() - pysr_start
+        _guess_audit = result.get("guess_audit")   # survives the rebuilt dict below
 
         print(f"   PySR time: {pysr_time:.2f}s")
         print(f"   PySR R²: {result['r2_score']:.4f}")
@@ -2315,6 +2398,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                     best_hyp.equation, X, safe_names
                 ),
                 "llm_mode": "hybrid_llm_better",
+                "guess_audit": _guess_audit,
                 **_llm_info,
                 "llm_time": llm_time,
                 "pysr_time": pysr_time,
@@ -2581,7 +2665,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             try:
                 rmse = float(np.sqrt(np.mean((y - y_pred) ** 2)))
             except Exception:
-                rmse = float("inf")
+                rmse = None  # audit-M3: was float('inf')
 
             return {
                 "success": r2 > 0.0 and result.get("expression", "DISCOVERY_FAILED") not in (
@@ -2600,12 +2684,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         except Exception as exc:
             return {
                 "success": False,
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
-                "rmse": float("inf"),
+                "r2": None,  # PHASE1-FIX: failure, not a score
+                "rmse": None,
                 "formula": "N/A",
                 "iterations": max_iterations,
                 "error": str(exc)[:200],
-                "trace": [f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}"],
+                "trace": [f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}"], "reason": "fit_or_metric_failed",
             }
 
     def _extract_operators_from_equation(self, equation: str) -> dict:
@@ -3041,8 +3125,8 @@ class SymbolicTreeEngine:
                 "complexity": complexity,
                 "posterior": posterior,
             }
-        except Exception:
-            return None
+        except Exception as e:
+            return _m5_record_failure("_evaluate", e)
 
     # ------------------------------------------------------------------
 
@@ -3139,11 +3223,11 @@ class SymbolicTreeEngine:
             print("  ⚠️  No valid expression found.")
             return {
                 "equation": None,
-                "r2": float("-inf"),  # PHASE1-FIX: failure, not a score
+                "r2": None,  # PHASE1-FIX: failure, not a score
                 "error": float("inf"),
                 "complexity": 0,
                 "posterior": 0.0,
-                "dimensionally_valid": False,
+                "dimensionally_valid": False, "reason": "nonfinite_metric",
             }
 
         # Dimensional validation

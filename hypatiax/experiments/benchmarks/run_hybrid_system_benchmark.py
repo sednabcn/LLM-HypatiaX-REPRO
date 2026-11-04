@@ -1,3 +1,4 @@
+import math
 #!/usr/bin/env python3
 """
 run_hybrid_system_benchmark.py
@@ -512,7 +513,7 @@ def generate_final_report():
                 print(f"     {key.capitalize():<12}: {cnt:>3}  ({cnt / total * 100:.1f}%)")
 
             print("   R² by decision (in-distribution):")
-            for label in ("llm", "nn", "ensemble"):
+            for label in ("llm", "nn", "ensemble", "fail"):
                 group = [r for r in hybrid_data if r.get("decision") == label]
                 if not group:
                     continue
@@ -530,9 +531,21 @@ def generate_final_report():
                 v = r.get("evaluation", {}).get("r2")
                 return v if v is not None else r.get("hybrid_train_r2")
 
-            poor = [r for r in hybrid_data if (_get_r2(r) or 1.0) < 0.80]
+            def _is_poor(r2, thr=0.80):
+                # missing or non-finite R² is a failure, not a pass
+                if r2 is None:
+                    return True
+                try:
+                    r2 = float(r2)
+                except (TypeError, ValueError):
+                    return True
+                return math.isnan(r2) or r2 < thr
+
+            poor = [r for r in hybrid_data if _is_poor(_get_r2(r))]
+            n_missing = sum(1 for r in hybrid_data if _get_r2(r) is None)
             if poor:
-                print(f"\n   ⚠️  {len(poor)} in-distribution case(s) with R² < 0.80:")
+                print(f"\n   ⚠️  {len(poor)} in-distribution case(s) with R² < 0.80 "
+                      f"or missing ({n_missing} missing):")
                 for r in poor[:5]:
                     print(f"     • {r.get('description', 'Unknown')[:65]}…")
             else:

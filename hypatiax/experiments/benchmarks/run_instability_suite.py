@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# audit: ignore[F1] analysis/plot script: reads existing run JSONs, writes no experiment result rows; seeds belong to the producing runs
 """
 run_instability_suite.py
 ========================
@@ -1110,7 +1110,7 @@ def plot_EX_instability_vs_extrap(merged_df: pd.DataFrame,
         scatter_kw["markers"] = markers
     sns.scatterplot(**scatter_kw)
 
-    y_bot = plot_df["extrapolation_r2"].min() - 0.02
+    y_bot = plot_df["extrapolation_r2"].min() - 0.02  # audit: ignore[P3] plot axis limit only
     ax.axvline(0.05, linestyle="--", color="#555", alpha=0.55, linewidth=1.2)
     ax.axvline(0.10, linestyle="--", color="#555", alpha=0.35, linewidth=1.2)
     ax.axhline(0.90, linestyle="--", color="steelblue", alpha=0.45, linewidth=1.2)
@@ -1119,7 +1119,7 @@ def plot_EX_instability_vs_extrap(merged_df: pd.DataFrame,
     ax.text(0.002, 0.905,        "R² = 0.90", fontsize=8, color="steelblue")
 
     # Annotate 4 worst cases
-    worst = plot_df.nsmallest(4, "extrapolation_r2")
+    worst = plot_df.nsmallest(4, "extrapolation_r2")  # audit: ignore[P3] label placement only, selects nothing
     for _, row in worst.iterrows():
         ax.annotate(row["case"],
                     xy=(row["ii"], row["extrapolation_r2"]),

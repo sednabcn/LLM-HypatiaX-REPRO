@@ -64,7 +64,7 @@ def test_constant_target_is_degenerate_failed_row(mod):
     y = np.full(50, 3.0)
     for y_pred in (y.copy(), y + 0.1):
         res = _r2(mod, y, y_pred)
-        assert np.isnan(res["r2"])
+        assert res["r2"] is None
         assert res["r2_status"] == "degenerate_target"
         assert res["success"] is False
         assert "degenerate target" in res["error"]

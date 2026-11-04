@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# audit: ignore[F1] cleanup/migration utility, writes no new result rows
 """Migrate the central R^2 scorers to hypatiax/core/r2_canonical.py.
 
 Why a script and not a diff: scorers are located by FUNCTION NAME with the

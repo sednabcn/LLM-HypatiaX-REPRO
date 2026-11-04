@@ -123,6 +123,9 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
+# AUDIT C1: temperature is now env-controlled and recorded in every hypatia row.
+# Default stays 0.3 (previous hard-coded value); the paper cites 0.25 -- decide and set LLM_TEMPERATURE.
+LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
@@ -406,7 +409,7 @@ def generate_data(eq, N=200, noise_level=0.05, seed=42):
     X      = np.column_stack([rng.uniform(lo, hi, N) for lo, hi in eq["train_range"]])
     y      = eq["fn"](*[X[:, i] for i in range(n_vars)])
     y_noisy = y + rng.normal(0, noise_level * np.std(y), N)
-    X_train, X_test, y_train, y_test = train_test_split(
+    X_train, X_test, y_train, y_test = train_test_split(  # audit: ignore[D5] -- X_test/y_test are never used; every reported OOD number comes from generate_extrap_data
         X, y_noisy, test_size=0.2, random_state=seed
     )
     dbg(f"generate_data done: X_train={X_train.shape}")
@@ -505,7 +508,7 @@ def _full_math_namespace() -> dict:
 
 def _safe_rmse(y_true, y_pred):
     if not np.all(np.isfinite(y_pred)) or len(y_true) == 0:
-        return float("inf")
+        return None  # audit-M3: was float('inf')
     return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
 # =============================================================================
@@ -623,6 +626,12 @@ def save_checkpoint(path, results: dict) -> None:
 # §15 · run_condition — single equation × single condition
 # =============================================================================
 
+def _reseed_for_task(task_seed):
+    """AUDIT L57/L72: deterministic per-task reseed of the global RNGs."""
+    random.seed(task_seed)
+    np.random.seed(task_seed % (2**32))
+
+
 def run_condition(eq, condition, seed=42, niterations=None,
                   timeout_secs=None, populations=None, wall_clock_limit=None):
     """
@@ -687,10 +696,17 @@ def run_condition(eq, condition, seed=42, niterations=None,
             use_llm                 = _use_llm,
             llm_mode                = "hybrid" if _use_llm else "none",
             llm_n_candidates        = 3,
-            llm_temperature         = 0.3,
+            llm_temperature         = LLM_TEMPERATURE,
             enable_physics_fallback = False,
             allow_nondeterministic  = False,   # FIX-C
         )
+
+        # AUDIT L57/L72: physics_aware_regressor draws from global np.random and takes no
+        # seed. Module-level seed(42) at import would otherwise make a task's result depend
+        # on how many draws earlier tasks consumed (differs under resume/sharding). Reseed
+        # once per task from the task's own seed. Not inside discover(): its PySR retries
+        # must not repeat identically.
+        _reseed_for_task(eq_seed)
 
         t0 = time.time()
         try:
@@ -701,8 +717,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
                     description = eq["name"],
                     metadata    = {
                         "equation_name":          eq["name"],
-                        "variable_descriptions":  {v: v for v in eq["vars"]},
-                        "variable_units":         {v: "" for v in eq["vars"]},
+                        # AUDIT C4: key metadata by the SAFE names actually passed as
+                        # var_names (S->var_S, N->var_N), otherwise the engine finds no
+                        # description/unit for renamed variables.
+                        "variable_descriptions":  {sv: ov for sv, ov in zip(safe_var_names, eq["vars"])},
+                        "variable_units":         {sv: "" for sv in safe_var_names},
                         "noise_level":            0.05,
                         "domain":                 _dom_slug,
                     },
@@ -721,7 +740,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
         train_r2      = res.get("r2")
-        train_rmse    = res.get("rmse", float("inf"))   # FIX-A: original-unit RMSE
+        train_rmse    = res.get("rmse")   # FIX-A: original-unit RMSE; AUDIT L38: None (not inf) when absent
         scale_log     = res.get("scale_log", False)     # FIX-D flag
         complexity    = len(best_expr_raw) if best_expr_raw not in ("N/A", "") else None
 
@@ -738,6 +757,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
         _predict     = None
+        _ood_note    = None   # why extrap metrics are None (None = predictor built fine)
         try:
             import sympy as _sp_ood
             from hypatiax.core.constants import PHYSICAL_CONSTANTS as _PHYS_CONST
@@ -752,10 +772,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 constants=_PHYS_CONST,
             )
             if _predict is None:
-                dbg("OOD predictor unavailable: formula references non-input "
-                    "symbols (engineered features) — extrap metrics = None")
+                _ood_note = ("predictor unavailable: formula references non-input symbols "
+                             f"(engineered features): {_formula_safe!r}")
+                print(f"  [hypatia] WARN {eq['name']}: {_ood_note}")
         except Exception as ee:
-            dbg(f"OOD predictor build failed: {ee}")
+            _ood_note = f"predictor build failed: {type(ee).__name__}: {ee}"
+            print(f"  [hypatia] WARN {eq['name']}: {_ood_note}")
             _predict = None
 
         for regime_name, (X_e, y_e) in extrap_sets.items():
@@ -811,7 +833,19 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_mode_used":         res.get("llm_mode", "none"),
             "llm_called":            bool(res.get("llm_called", False)),   # B2
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
+            # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
+            # "live" only when the LLM was called and the engine reported no bypass.
+            "llm_source":            (res.get("llm_source")
+                                      or ("live" if (res.get("llm_called") and res.get("bypass_kind", "none") in ("none", "live", None))
+                                          else (res.get("bypass_kind") if res.get("llm_called") else None))),
+            "llm_enabled":           bool(_use_llm),
+            "llm_model":             MODEL_STRING,
+            "llm_temperature":       LLM_TEMPERATURE,
+            "wall_clock_budget_s":   wall_clock_limit,        # AUDIT C1: unequal arms are disclosed per row
+            "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
             "validation_score":      res.get("validation_score"),
+            "ood_predictor_note":    _ood_note,    # None when extrap metrics were computed
+            "sanitized_vars":        dict(sanitizer.fwd),   # {} when no variable was renamed
         }
 
     # =========================================================================
@@ -893,6 +927,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "llm_expression":        None,
         "llm_confidence":        None,
         "llm_called":            False,    # B2: pysr_only baseline never calls the LLM
+        "wall_clock_budget_s":   wall_clock_limit,   # AUDIT C1
+        "pysr_attempts_allowed": 1,
         "bypass_kind":           "none",
     }
 
@@ -1178,7 +1214,7 @@ def print_summary(all_results: dict) -> None:
               f"{np.mean(P_far_all):7.4f} {np.mean(H_far_all):7.4f}")
     if speedups:
         print(f"\nSpeedup (PySR-time / HypatiaX-time):  "
-              f"mean={np.mean(P_far_all)/np.mean(H_far_all):.2f}×  "
+              f"mean={np.mean(speedups):.2f}×  "
               f"median={np.median(speedups):.2f}×  n={len(speedups)}")
 
 # =============================================================================
@@ -1223,8 +1259,8 @@ def run_rf01(all_results: dict) -> None:
         print(f"⚠  Only {n_pairs} pair(s) — need ≥ 3 to compute statistics.")
         return
 
-    U_gt,    p_gt    = scipy_stats.mannwhitneyu(H_far, P_far, alternative="greater")
-    U_two,   p_two   = scipy_stats.mannwhitneyu(H_far, P_far, alternative="two-sided")
+    U_gt,    p_gt    = scipy_stats.mannwhitneyu(H_far, P_far, alternative="greater")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
+    U_two,   p_two   = scipy_stats.mannwhitneyu(H_far, P_far, alternative="two-sided")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
     try:
         W_stat,  p_wil   = scipy_stats.wilcoxon(H_far, P_far, alternative="two-sided")
         _,       p_wil_gt= scipy_stats.wilcoxon(H_far, P_far, alternative="greater")
@@ -1237,7 +1273,13 @@ def run_rf01(all_results: dict) -> None:
     h_wins  = int(np.sum(H_arr > P_arr + 0.01))
     p_wins  = int(np.sum(P_arr > H_arr + 0.01))
     ties    = n_pairs - h_wins - p_wins
-    IS_SIG  = bool(p_gt < ALPHA)
+    # [AUDIT-S1] The design is paired (same equation, both arms): Wilcoxon signed-rank is the
+    # PRIMARY test; Mann-Whitney is reported only as a sensitivity check. Falls back to
+    # Mann-Whitney only if Wilcoxon could not be computed.
+    P_PRIM   = float(p_wil_gt) if p_wil_gt is not None else float(p_gt)
+    PRIM_TXT = (f"Wilcoxon signed-rank $W={W_stat:.0f}$, $p_{{H>P}}={p_wil_gt:.4f}$"
+                if p_wil_gt is not None else "Wilcoxon unavailable")
+    IS_SIG  = bool(P_PRIM < ALPHA)
 
     print(f"\n{'═' * 72}")
     print("AGGREGATE STATISTICAL TESTS  (RF-01)")
@@ -1246,6 +1288,7 @@ def run_rf01(all_results: dict) -> None:
     print(f"  H Far-R²  median/mean      : {np.median(H_arr):+.4f} / {np.mean(H_arr):+.4f}")
     print(f"  P Far-R²  median/mean      : {np.median(P_arr):+.4f} / {np.mean(P_arr):+.4f}")
     print(f"  H wins / ties / P wins     : {h_wins} / {ties} / {p_wins}")
+    print(f"  PRIMARY: Wilcoxon p(H>P)   : {P_PRIM:.4f}   (Mann-Whitney below = sensitivity only)")
     print(f"  Mann-Whitney U (H > P)     : U={U_gt:.0f},  p={p_gt:.4f}")
     print(f"  Mann-Whitney U (two-sided) : U={U_two:.0f},  p={p_two:.4f}")
     if W_stat is not None:
@@ -1274,7 +1317,7 @@ def run_rf01(all_results: dict) -> None:
         sentence = (
             f"HypatiaX achieves significantly higher far-extrapolation $R^2$ than "
             f"PySR-only across the Core-15 benchmark "
-            f"(Mann-Whitney $U={U_gt:.0f}$, $p={p_gt:.4f}$, two-tailed $p={p_two:.4f}$, "
+            f"({PRIM_TXT}; Mann-Whitney sensitivity $U={U_gt:.0f}$, $p={p_gt:.4f}$, two-tailed $p={p_two:.4f}$, "
             f"$n={n_pairs}$; rank-biserial $r={r_rb:+.2f}$). "
             f"HypatiaX outperforms PySR-only on {h_wins}/{n_pairs} equations "
             f"({', '.join(driving_doms) if driving_doms else 'multiple'} domains), "
@@ -1300,7 +1343,7 @@ def run_rf01(all_results: dict) -> None:
         sentence = (
             f"Across Core-15, HypatiaX does not achieve statistically significant "
             f"higher far-extrapolation $R^2$ than PySR-only "
-            f"(Mann-Whitney $U={U_gt:.0f}$, $p={p_gt:.4f}$, $n={n_pairs}$; "
+            f"({PRIM_TXT}; Mann-Whitney sensitivity $U={U_gt:.0f}$, $p={p_gt:.4f}$, $n={n_pairs}$; "
             f"rank-biserial $r={r_rb:+.2f}$). " + dom_detail
         )
         verdict = "⚠️  NOT SIGNIFICANT"
@@ -1325,6 +1368,8 @@ def run_rf01(all_results: dict) -> None:
             "H_mean_far_r2":   float(np.mean(H_arr)),
             "P_mean_far_r2":   float(np.mean(P_arr)),
             "h_wins": h_wins, "p_wins": p_wins, "ties": ties,
+            "primary_test": "wilcoxon_signed_rank" if p_wil_gt is not None else "mann_whitney_fallback",
+            "primary_p_greater": P_PRIM,
             "significant_p05": IS_SIG,
             "paper_sentence":  sentence,
             "equations_included": [r[0] for r in pairs],
@@ -1356,7 +1401,7 @@ def run_rf01(all_results: dict) -> None:
     tex_sig = [
         r"\begin{table}[htbp]", r"\centering",
         r"\caption{RF-01: Far-extrapolation $R^2$ per equation. "
-        + f"Mann-Whitney $U={U_gt:.0f}$, $p_{{H>P}}={p_gt:.4f}$ ($n={n_pairs}$), "
+        + f"{PRIM_TXT} ($n={n_pairs}$); Mann-Whitney sensitivity $U={U_gt:.0f}$, $p_{{H>P}}={p_gt:.4f}$, "
         + f"rank-biserial $r={r_rb:+.2f}$: "
         + ("HypatiaX significantly outperforms ($p<0.05$).}"
            if IS_SIG else "difference not significant ($p\\geq0.05$).}"),
@@ -1446,6 +1491,17 @@ def run_rf01(all_results: dict) -> None:
 # §19 · LaTeX Table 5 builder (resizebox-safe)
 # =============================================================================
 
+def _holm(pvals):
+    """Holm-Bonferroni step-down adjusted p-values (same order as input; None stays None)."""
+    idx = [i for i, p in enumerate(pvals) if p is not None]
+    order = sorted(idx, key=lambda i: pvals[i])
+    adj, run, m = [None] * len(pvals), 0.0, len(order)
+    for rank, i in enumerate(order):
+        run = max(run, min(1.0, (m - rank) * pvals[i]))
+        adj[i] = run
+    return adj
+
+
 def run_llm_contribution(all_results: dict) -> None:
     """Pairwise far-R2 tests across pysr_only (P), hypatia (H), hypatia_nollm (N).
     H-P = total effect, N-P = non-LLM pipeline, H-N = LLM alone.
@@ -1466,7 +1522,16 @@ def run_llm_contribution(all_results: dict) -> None:
             rows.append((eq["name"], v))
 
     n = len(rows)
+    # [AUDIT-S2/S5] failures per arm: equations whose far-R2 is missing/non-finite are excluded
+    # from the paired tests, so report them instead of letting them vanish.
+    _fail = {}
+    for tag, cond in (("P", "pysr_only"), ("H", "hypatia"), ("N", "hypatia_nollm")):
+        _fail[tag] = [eq["name"] for i, eq in enumerate(CORE_15)
+                      if (lambda x: x is None or not np.isfinite(float(x)))(
+                          ((all_results.get(str(i), {}) or {}).get(cond) or {}).get("extrap_r2_far"))]
     print(f"\nLLM-CONTRIBUTION (3-arm far-R2): {n} equation(s) with all arms")
+    print("  failures per arm (excluded from tests): "
+          + ", ".join(f"{k}={len(v)}" for k, v in _fail.items()))
     if n < 3:
         print("  Need >= 3 complete equations - skipping.")
         return
@@ -1476,15 +1541,16 @@ def run_llm_contribution(all_results: dict) -> None:
 
     out = {"n": n, "equations": [r[0] for r in rows],
            "H_far": H.tolist(), "N_far": N.tolist(), "P_far": P.tolist(),
-           "tests": {}}
+           "tests": {}, "failures_per_arm": _fail,
+           "primary_test": "wilcoxon_signed_rank", "multiplicity": "holm_across_3_comparisons"}
     for label, a, b in (("H_vs_P", H, P), ("N_vs_P", N, P), ("H_vs_N", H, N)):
         d = a - b
         w, l = int((d > TIE).sum()), int((d < -TIE).sum())
         tied = np.abs(d) <= TIE                 # differences within tolerance = exact ties
         a_adj = np.where(tied, b, a)            # collapse tied pairs so float noise is not ranked
         d_adj = np.where(tied, 0.0, d)
-        U, pg = scipy_stats.mannwhitneyu(a_adj, b, alternative="greater")
-        _, p2 = scipy_stats.mannwhitneyu(a_adj, b, alternative="two-sided")
+        U, pg = scipy_stats.mannwhitneyu(a_adj, b, alternative="greater")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
+        _, p2 = scipy_stats.mannwhitneyu(a_adj, b, alternative="two-sided")  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
         rbc = float(2 * U / (n * n) - 1)   # positive = first arm higher
         t = {"median_a": float(np.median(a)), "median_b": float(np.median(b)),
              "wins": w, "ties": n - w - l, "losses": l,
@@ -1502,6 +1568,13 @@ def run_llm_contribution(all_results: dict) -> None:
         print(f"  {label}: median {t['median_a']:+.4f} vs {t['median_b']:+.4f} | "
               f"W/T/L {w}/{n - w - l}/{l} | MWU p(>)={pg:.4f} p(2s)={p2:.4f} | "
               f"r_rb={rbc:+.3f}")
+
+    _labs = list(out["tests"])
+    _adj = _holm([out["tests"][l].get("wilcoxon_p_greater") for l in _labs])
+    for l, ap in zip(_labs, _adj):
+        out["tests"][l]["wilcoxon_p_greater_holm"] = ap
+        print(f"  {l}: PRIMARY Wilcoxon p(>)={out['tests'][l].get('wilcoxon_p_greater')} "
+              f"Holm-adjusted={ap}  (Mann-Whitney = sensitivity only)")
 
     path = OUTPUT_DIR / f"exp1_llm_contribution{_seed_suffix}.json"
     with open(path, "w") as f:
@@ -1622,8 +1695,16 @@ def run_instability_stats(all_results: dict) -> None:
     for eq_idx, eq in enumerate(CORE_15):
         res    = all_results.get(str(eq_idx), {})
         h      = res.get("hypatia", {}) or {}
-        r_near = h.get("extrap_r2_near",  0.0) or 0.0
-        r_far  = h.get("extrap_r2_far",   0.0) or 0.0
+        # failed / non-finite runs stay None (never 0.0): a missing R2 must not become a number
+        def _fin(v):
+            try:
+                return v is not None and bool(np.isfinite(float(v)))
+            except (TypeError, ValueError):
+                return False
+        r_near = h.get("extrap_r2_near")
+        r_far  = h.get("extrap_r2_far")
+        r_near = float(r_near) if _fin(r_near) else None
+        r_far  = float(r_far)  if _fin(r_far)  else None
         ii     = abs(r_far - r_near) if (r_near is not None and r_far is not None) else None
         instability_rows.append({
             "equation":          eq["name"],

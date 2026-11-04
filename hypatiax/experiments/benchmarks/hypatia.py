@@ -51,6 +51,7 @@ Dependencies
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -92,6 +93,10 @@ def _get_anthropic():
 # Public API
 # ===========================================================================
 
+class _CacheHit(Exception):
+    """Internal control-flow marker: raw completion came from the cache."""
+
+
 def get_llm_prior(
     eq: dict[str, Any],
     X_train: np.ndarray,
@@ -104,6 +109,9 @@ def get_llm_prior(
     timeout: float = 60.0,
     temperature: float = 0.25,
     verbose: bool = True,
+    cache_dir: str | None = None,
+    cache_salt: str = "",
+    blind: bool = False,
 ) -> list[str]:
     """Return a list of candidate expressions for ``eq`` ordered by LLM confidence.
 
@@ -139,6 +147,19 @@ def get_llm_prior(
         required.
     verbose:
         Print progress to stdout.
+    cache_dir:
+        [AUDIT-X3] Directory for the on-disk LLM response cache. Defaults to
+        ``$HYPATIAX_LLM_CACHE_DIR`` or ``./llm_cache``. Since temperature can no
+        longer be pinned, the cache is the only reproducibility control: the raw
+        completion is stored per (model, prompt, max_tokens, cache_salt) and
+        replayed on reruns. Failed calls are never cached. Pass
+        ``cache_salt=f"seed{seed}"`` to get one cached draw per seed.
+    cache_salt:
+        Extra string mixed into the cache key (e.g. the seed).
+    blind:
+        [AUDIT-L2/A8] If True the prompt omits the Nguyen id and the formula
+        hint, so a win cannot come from recalling a named textbook equation.
+        Default False keeps the previous behaviour.
 
     Returns
     -------
@@ -169,7 +190,7 @@ def get_llm_prior(
     # ------------------------------------------------------------------
     # 2. Build prompt
     # ------------------------------------------------------------------
-    prompt = _build_prompt(eq, patterns, n_candidates)
+    prompt = _build_prompt(eq, patterns, n_candidates, blind=blind)
 
     # ------------------------------------------------------------------
     # 3. Call API
@@ -178,7 +199,24 @@ def get_llm_prior(
         print(f"  [LLM] querying {model} for {eq['id']} ({n_candidates} candidates)...")
 
     t0 = time.time()
+    _cdir = cache_dir or os.getenv("HYPATIAX_LLM_CACHE_DIR", "llm_cache")
+    _ckey = hashlib.sha256(
+        json.dumps([model, max_tokens, cache_salt, prompt]).encode("utf-8")
+    ).hexdigest()
+    _cpath = os.path.join(_cdir, f"{_ckey}.json")
+    raw = None
+    if os.path.isfile(_cpath):
+        try:
+            with open(_cpath, encoding="utf-8") as _fh:
+                raw = json.load(_fh)["raw"]
+            if verbose:
+                print(f"  [LLM] cache hit for {eq['id']} ({_ckey[:10]})")
+        except Exception as _cexc:  # corrupt entry: fall through to a live call
+            warnings.warn(f"  [LLM] unreadable cache entry {_cpath}: {_cexc}", RuntimeWarning, stacklevel=2)
+            raw = None
     try:
+        if raw is not None:
+            raise _CacheHit
         anthropic = _get_anthropic()
         client = anthropic.Anthropic(api_key=resolved_key)
         # [FIX-SDK1.0-TEMPERATURE] anthropic SDK v1.0 (2026-08-20) removed
@@ -220,6 +258,16 @@ def get_llm_prior(
                 f"{[getattr(b, 'type', type(b).__name__) for b in message.content]})"
             )
         raw = text_blocks[0].text
+        try:  # write-once; atomic rename so a killed run never leaves a half file
+            os.makedirs(_cdir, exist_ok=True)
+            _tmp = _cpath + ".tmp"
+            with open(_tmp, "w", encoding="utf-8") as _fh:
+                json.dump({"model": model, "salt": cache_salt, "seed": cache_salt, "eq": eq["id"], "raw": raw}, _fh)
+            os.replace(_tmp, _cpath)
+        except OSError as _werr:
+            warnings.warn(f"  [LLM] could not write cache: {_werr}", RuntimeWarning, stacklevel=2)
+    except _CacheHit:
+        pass
     except Exception as exc:
         warnings.warn(
             f"  [LLM] API call failed for {eq['id']}: {exc}",
@@ -310,11 +358,13 @@ def _build_prompt(
     eq: dict[str, Any],
     patterns: dict[str, Any],
     n_candidates: int,
+    blind: bool = False,
 ) -> str:
     var_names = eq["vars"]
     var_list = ", ".join(var_names)
-    hint = eq.get("formula_hint", "unknown structure")
-    eq_id = eq["id"]
+    # [AUDIT-L2] blind mode: no benchmark name, no formula hint.
+    hint = "withheld" if blind else eq.get("formula_hint", "unknown structure")
+    eq_id = "unnamed benchmark problem" if blind else eq["id"]
 
     patterns_json = json.dumps(patterns, indent=2)
 
@@ -322,8 +372,8 @@ def _build_prompt(
 
 TASK
 ----
-Generate {n_candidates} candidate symbolic expressions for the Nguyen benchmark equation
-{eq_id}. The expressions will seed PySR's evolutionary search (warm-start), so they
+Generate {n_candidates} candidate symbolic expressions for the following
+benchmark problem: {eq_id}. The expressions will seed PySR's evolutionary search (warm-start), so they
 must be in Python syntax compatible with numpy operations.
 
 EQUATION CONTEXT

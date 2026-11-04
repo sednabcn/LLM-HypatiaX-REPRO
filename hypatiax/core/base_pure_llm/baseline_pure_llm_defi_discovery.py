@@ -733,9 +733,9 @@ CRITICAL REQUIREMENTS:
 
         Result-row contract for scored rows (every row that reaches the R²
         stage carries `r2`, `r2_status`, `r2_sign_flip`, `success`):
-          * non-finite predictions -> success=False, r2=-inf,
+          * non-finite predictions -> success=False, r2=None,
                                       r2_status="nonfinite_pred"
-          * zero-variance target   -> success=False, r2=nan,
+          * zero-variance target   -> success=False, r2=None,
                                       r2_status="degenerate_target"
           * otherwise              -> success=True, canonical R^2.
         Sign-flip rescoring (score -y_pred when it beats y_pred) is OFF by
@@ -857,8 +857,8 @@ CRITICAL REQUIREMENTS:
                 }
 
             # B2/C4: NaN/inf predictions are failures, not "success with NaN R²".
-            # Contract: r2 = -inf (worst possible score), status "nonfinite_pred".
-            # (_json_safe writes -inf as null on disk; r2_status keeps the reason.)
+            # Contract: r2 = None (null) with r2_status carrying the reason; consumers score None as unavailable.
+            # (_json_safe keeps None as null on disk.)
             y_pred = np.asarray(y_pred, dtype=float)
             y_true = np.asarray(y_true, dtype=float)
             if not np.all(np.isfinite(y_pred)):
@@ -866,9 +866,9 @@ CRITICAL REQUIREMENTS:
                 return {
                     "success": False,
                     "error": f"non-finite predictions ({n_bad}/{len(y_pred)})",
-                    "r2": float("-inf"),
+                    "r2": None,
                     "r2_status": "nonfinite_pred",
-                    "r2_sign_flip": False,
+                    "r2_sign_flip": False, "reason": "nonfinite_metric",
                 }
 
             # Calculate metrics
@@ -880,7 +880,7 @@ CRITICAL REQUIREMENTS:
             r2, _r2_status = _r2_checked_call(y_true, y_pred)
 
             # A zero-variance target has no defined R^2. It is reported as a
-            # degenerate, FAILED row (r2 = nan) instead of being scored 1.0 for a
+            # degenerate, FAILED row (r2 = None) instead of being scored 1.0 for a
             # trivial exact match or -inf for a mismatch: a constant target must
             # never contribute a "perfect" score to the arm.
             # NOTE: this replaces the old constant_target_match /
@@ -890,11 +890,11 @@ CRITICAL REQUIREMENTS:
                     "mse": float(mse),
                     "mae": float(mae),
                     "rmse": float(rmse),
-                    "r2": float("nan"),
+                    "r2": None,
                     "r2_status": "degenerate_target",
                     "r2_sign_flip": False,
                     "success": False,
-                    "error": "degenerate target (zero variance): R^2 undefined",
+                    "error": "degenerate target (zero variance): R^2 undefined", "reason": "nonfinite_metric",
                 }
 
             # Optional sign-flip rescoring. OFF by default (explicit opt-in only);

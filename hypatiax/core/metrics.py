@@ -207,7 +207,7 @@ def compute_near_perfect_rate(
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
-        return float("nan")
+        return None  # audit-M3: was float('nan')
     return float(np.mean(np.isfinite(arr) & (arr >= threshold)))  # PHASE1-FIX: >=, as is_recovered
 
 
@@ -252,7 +252,7 @@ def compute_catastrophic_rate(
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
-        return float("nan")
+        return None  # audit-M3: was float('nan')
     fails = arr < threshold
     if nan_as_failure:
         fails = fails | np.isnan(arr)
@@ -285,7 +285,7 @@ def compute_speedup(t_baseline: float, t_system: float) -> float:
     if t_system < 0 or t_baseline < 0:
         raise ValueError("Times must be non-negative")
     if t_system == 0.0:
-        return float("inf")
+        return None  # audit-M3: was float('inf')
     return float(t_baseline / t_system)
 
 
