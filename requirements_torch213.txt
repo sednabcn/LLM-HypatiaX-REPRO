@@ -194,7 +194,7 @@ nodeenv==1.9.1
 notebook==7.6.3
 notebook_shim==0.2.4
 numpy==2.3.5
-oauthlib==4.0.0
+oauthlib==4.0.1
 onnx==1.22.0
 onnxruntime==1.23.2
 openai==2.7.2
