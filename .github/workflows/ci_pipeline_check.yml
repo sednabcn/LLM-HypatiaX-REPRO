@@ -279,8 +279,7 @@ jobs:
                                     "hypatiax_defi_benchmark_v3*results*.json"],
               # Ablation outputs are preserved with shard suffixes; the
               # per-shard checkpoint files are the authoritative completion records.
-              "exp1_ablation":     ["exp1_ablation_checkpoint_shard*.json",
-                                    "exp1_ablation_results_shard*.json"],
+              "exp1_ablation":     ["exp1_ablation_results_shard*.json"],
               # FIX-exp1_five/exp2_five-GLOBS: both were previously absent from this
               # dict, silently falling back to RESULT_GLOBS.get(exp_id, ["*.json"]).
               # exp1_five commits exp1_five_results*.json (see exp1_five_system.py's
@@ -858,6 +857,8 @@ jobs:
               # exp1_pca / exp1b_pca use _pca_results filename pattern
               "exp1_pca":          ["hypatiax_defi_benchmark_pca_results*.json"],
               "exp1b_pca":         ["hypatiax_defi_benchmark_pca_results*.json"],
+              # Ablation result payloads are copied to one shard-suffixed JSON per worker.
+              "exp1_ablation":     ["exp1_ablation_results_shard*.json"],
               # exp1_five / exp2_five — mirrors job 1's RESULT_GLOBS entry above
               # (was previously absent from this dict, silently falling back to
               # ["*.json", "*.csv"]). exp1_five commits exp1_five_results*.json;
@@ -911,13 +912,25 @@ jobs:
                       ckpt_detail = f"status={cd.get('status','?')} completed={len(cd.get('completed',[]))}"
                   except Exception as e:
                       ckpt_detail = f"parse error: {e}"
+              if exp_id == "exp1_ablation":
+                  # Its checkpoints use experiment-specific names and are validated
+                  # by Job 2's per-shard arm-aware completion check.
+                  ablation_completion = COMPLETION.get(exp_id, {})
+                  ablation_total = int(ablation_completion.get("total", 0) or 0)
+                  ablation_done = int(ablation_completion.get("done", 0) or 0)
+                  ckpt_ok = ablation_total == 5 and ablation_done == 5
+                  ckpt_detail = f"verified ablation shards: {ablation_done}/{ablation_total}"
               if not ckpt_ok:
                   # FIX qualify-DIM1: consolidate is disabled and _checkpoint.json is never
                   # written by the worker.  exp1b (and any multi-shard experiment) writes
                   # _checkpoint_shard{N}.json files (copied into RESULT_SUBDIR by the runner's
                   # "Copy shard checkpoint into result subdir" step).  Accept dim① as passing
                   # if any per-shard checkpoint records at least one completed task.
-                  shard_ckpts = list(result_dir.glob("_checkpoint_shard*.json")) if result_dir.exists() else []
+                  shard_ckpts = (
+                      list(result_dir.glob("exp1_ablation_checkpoint_shard*.json"))
+                      if exp_id == "exp1_ablation" and result_dir.exists()
+                      else (list(result_dir.glob("_checkpoint_shard*.json")) if result_dir.exists() else [])
+                  )
                   if shard_ckpts:
                       total_completed = 0
                       for sc in shard_ckpts:
