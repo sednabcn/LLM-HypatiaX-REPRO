@@ -275,7 +275,7 @@ jobs:
 
       - name: Restore shared checkpoint (plan)
         id: restore_plan
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.resume != 'false' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -520,6 +520,7 @@ jobs:
           EFFECTIVE_SEEDS: ${{ steps.meta.outputs.effective_seeds }}
           EXP:            ${{ steps.meta.outputs.exp_id }}
           ORIG_EXP:       ${{ github.event.inputs.experiment }}
+          RESUME:         ${{ github.event.inputs.clean_llm_rerun == 'true' && 'false' || github.event.inputs.resume || 'true' }}
         run: |
           python3 - <<'PYEOF'
           import json, os, sys
@@ -679,8 +680,11 @@ jobs:
               except Exception as e:
                   print(f"Warning: could not read checkpoint: {e}")
 
-          pending = [t for t in all_ids if t not in done]
-          print(f"Total={len(all_ids)}  Done={len(done)}  Pending={len(pending)}")
+          resume = os.environ.get("RESUME", "true").strip().lower() == "true"
+          pending = [t for t in all_ids if t not in done] if resume else list(all_ids)
+          if not resume:
+              print("Resume disabled: ignoring plan checkpoint and scheduling every assigned task.")
+          print(f"Total={len(all_ids)}  Done={len(done) if resume else 0}  Pending={len(pending)}")
 
           if not pending:
               print("Nothing pending - all tasks already complete.")
@@ -860,7 +864,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.resume != 'false' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -932,7 +936,7 @@ jobs:
             "${{ github.workspace }}/logs"
 
       - name: Seed shard checkpoint from committed results (cache miss only)
-        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.resume != 'false' }}
         env:
           SHARD_IDS_JSON: ${{ matrix.ids }}
           RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
@@ -994,6 +998,8 @@ jobs:
 
       - name: Resolve this shard's pending IDs
         id: resolve_ids
+        env:
+          RESUME: ${{ github.event.inputs.clean_llm_rerun == 'true' && 'false' || github.event.inputs.resume || 'true' }}
         run: |
           python3 - <<'PYEOF'
           import json, os
@@ -1009,9 +1015,12 @@ jobs:
               except Exception as e:
                   print(f"Warning: could not read shard checkpoint: {e}")
 
-          pending = [t for t in shard_ids if t not in done]
+          resume = os.environ.get("RESUME", "true").strip().lower() == "true"
+          pending = [t for t in shard_ids if t not in done] if resume else list(shard_ids)
+          if not resume:
+              print("Resume disabled: ignoring shard checkpoint and scheduling every assigned task.")
           print(f"Shard {os.environ['SHARD_INDEX']}: {len(shard_ids)} assigned, "
-                f"{len(done)} done, {len(pending)} pending")
+                f"{len(done) if resume else 0} done, {len(pending)} pending")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
               fh.write(f"pending_ids={json.dumps(pending)}\n")
