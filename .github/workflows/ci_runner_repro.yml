@@ -108,7 +108,7 @@ on:
         default: "fallback"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.inputs.experiment }}-${{ github.event.inputs.seeds || 'default' }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
