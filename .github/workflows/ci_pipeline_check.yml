@@ -14,7 +14,7 @@
 #
 #    2. COMPLETE — Are there any incomplete tasks?  Compares the task IDs
 #                  recorded in _merged.json against the full task registry
-#                  from ci_runner.yml (mirrored here).  Emits a per-exp
+#                  from ci_runner_repro.yml (mirrored here).  Emits a per-exp
 #                  table of missing task IDs so the operator knows exactly
 #                  what to re-dispatch.
 #
@@ -30,7 +30,7 @@
 #
 #  TRIGGER STRATEGY
 #  ----------------
-#  Auto:   Fires after ci_runner.yml (any experiment) completes.
+#  Auto:   Fires after ci_runner_repro.yml (any experiment) completes.
 #          Reads the experiment that triggered it and runs all three phases
 #          for that experiment only, then runs the cross-experiment qualify
 #          gate on the full set.
@@ -48,7 +48,7 @@
 #      exp1  → "comparison_results/extrapolation"
 #      exp1b → "comparison_results/extrapolation"
 #      exp2  → "comparison_results/feynman-tests/exp2"
-#    Fixed (matches ci_runner.yml plan meta):
+#    Fixed (matches ci_runner_repro.yml plan meta):
 #      exp1  → comparison_results/noise-noiseless/noiseless
 #      exp1b → comparison_results/noise-noiseless/15
 #      exp2  → comparison_results/feynman-tests/exp2_multi
@@ -213,7 +213,7 @@ jobs:
           SEEDS        = [s.strip() for s in os.environ["SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
-          # ── Canonical subdir map (source of truth: ci_runner.yml plan job)
+          # ── Canonical subdir map (source of truth: ci_runner_repro.yml plan job)
           # BUG 1 FIX: exp1 and exp1b were mapped to "comparison_results/extrapolation"
           # and exp2 was mapped to "comparison_results/feynman-tests/exp2"
           # in run_all_checkpoint.py.  All three are wrong; correct values are below.
@@ -251,7 +251,7 @@ jobs:
               sys.exit(1)
 
           # FIX check-PRESENCE: the consolidate job is disabled in
-          # ci_runner.yml — each worker shard commits its own
+          # ci_runner_repro.yml — each worker shard commits its own
           # result files directly.  _merged.json / _merged.csv / _checkpoint.json
           # are NEVER written, so checking for them always reports MISSING.
           #
@@ -279,8 +279,7 @@ jobs:
               "exp1_pca":          ["hypatiax_defi_benchmark_pca_results*.json"],
               "exp1b_pca":         ["hypatiax_defi_benchmark_pca_results*.json"],
               "exp2_feynman":      ["protocol_core_*.json", "benchmark_results.json"],
-              "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json",
-                                      "ablation_paired.json"],
+              "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json"],
               "exp2_feynman_pca":   ["fixc3_baseline.json", "exp2_pca_4060_summary.json",
                                     "protocol_core_*.json", "benchmark_results.json"],
               "exp2":              ["protocol_core_*.json", "benchmark_results.json"],
@@ -326,7 +325,7 @@ jobs:
               # A plain "*portfolio*variance*.json" pattern only matched files
               # sitting straight in result_dir; anything nested one level
               # deeper (as exp1b's portfolio_variance_audit/ output was,
-              # before ci_runner.yml's FIX-PVA patch) was invisible here.
+              # before ci_runner_repro.yml's FIX-PVA patch) was invisible here.
               # "**/" still matches result_dir's own top level too, so this
               # is purely additive — no previously-found files stop matching.
               data_files = []
@@ -466,7 +465,7 @@ jobs:
               print(f"::error::Unknown experiment '{_exp_input}' — not in known experiment list.")
               sys.exit(1)
 
-          # ── Task registries (mirrors ci_runner.yml plan job + split step)
+          # ── Task registries (mirrors ci_runner_repro.yml plan job + split step)
           FEYNMAN_DOMAINS = [
               "feynman_biology", "feynman_chemistry", "feynman_electrochemistry",
               "feynman_electromagnetism", "feynman_electrostatics", "feynman_magnetism",
@@ -583,7 +582,7 @@ jobs:
               # was tuned for known cases like suppB's noise_sweep_saved/, but
               # would silently miss anything nested two or more levels down —
               # exactly the class of bug that made exp1b report "0 done" before
-              # ci_runner.yml's FIX-PVA patch (portfolio_variance_audit/ output
+              # ci_runner_repro.yml's FIX-PVA patch (portfolio_variance_audit/ output
               # that never even reached this subdir). This is a defensive
               # generalisation so a similarly-nested output from any future
               # experiment doesn't reproduce that failure mode here too.
@@ -694,7 +693,7 @@ jobs:
                     + ", ".join(incomplete))
               print()
               print("  To resume, re-dispatch ci_pipeline.yml from the first")
-              print("  incomplete slot (experiment_index=N), or use ci_runner.yml")
+              print("  incomplete slot (experiment_index=N), or use ci_runner_repro.yml")
               print("  with task_ids_override for targeted task recovery.")
 
           with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
@@ -762,7 +761,7 @@ jobs:
           COMPLETION   = json.loads(os.environ.get("COMPLETION_REPORT") or "{}")
           CHECK        = json.loads(os.environ.get("CHECK_REPORT")      or "{}")
 
-          # BUG 1 FIX: matches ci_runner.yml and job 1 above (exp1, exp1b, exp2 corrected)
+          # BUG 1 FIX: matches ci_runner_repro.yml and job 1 above (exp1, exp1b, exp2 corrected)
           SUBDIR = {
               "exp1":              "comparison_results/noise-noiseless/noiseless/defi",
               "exp1b":             "comparison_results/noise-noiseless/15",
@@ -818,8 +817,7 @@ jobs:
               "exp1_five":         ["exp1_five_results*.json"],
               "exp2_five":         ["protocol_core_*.json", "benchmark_results.json"],
               "exp2_feynman":      ["protocol_core_*.json", "benchmark_results.json"],
-              "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json",
-                                      "ablation_paired.json"],
+              "exp2_feynman_extrap": ["merged_extrap_*.json", "protocol_core_extrap_*.json"],
               "exp2_feynman_pca":   ["fixc3_baseline.json", "exp2_pca_4060_summary.json",
                                     "protocol_core_*.json", "benchmark_results.json"],
               "exp2":              ["protocol_core_*.json", "benchmark_results.json"],
@@ -1152,7 +1150,7 @@ jobs:
 # ==============================================================================
 #  JOB 6 — dispatch: launch missing experiments via gh workflow run
 #
-#  Reads the completion_report from JOB 2 and dispatches ci_runner.yml
+#  Reads the completion_report from JOB 2 and dispatches ci_runner_repro.yml
 #  for every experiment that has 0 done tasks (never launched).
 #  Experiments with partial results are skipped — use task_ids_override to resume.
 #  instability is skipped here — it depends on exp1 and is dispatched separately.
@@ -1177,9 +1175,9 @@ jobs:
     steps:
       - name: Dispatch experiments with 0 done tasks
         env:
-          GH_TOKEN:          ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN:          ${{ secrets.PAT_TOKEN }}
           COMPLETION_REPORT: ${{ needs.complete.outputs.completion_report }}
-          WORKFLOW_FILE:     ci_runner.yml
+          WORKFLOW_FILE:     ci_runner_repro.yml
           # Pass through repro params so dispatched runs use the same config
           PYSR_GENERATIONS:  ${{ github.event.inputs.pysr_generations || '10000' }}
           PYSR_POPULATIONS:  ${{ github.event.inputs.pysr_populations || '30' }}
@@ -1201,7 +1199,8 @@ jobs:
           # Dispatch order matters for dependency: exp1 before instability.
           # exp1_five/exp2_five added (previously absent — never auto-dispatched
           # even when 0 done tasks were reported for them).
-          ORDER = ["exp1", "exp1b", "exp1_five", "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
+          ORDER = ["exp1", "exp1b", "exp1_five", "exp1_pca", "exp1b_pca",
+                   "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
                    "exp2", "exp2_five", "exp3", "exp3b",
                    "suppA", "suppB", "suppB_sc", "hybrid_all_domains", "extrap"]
 
