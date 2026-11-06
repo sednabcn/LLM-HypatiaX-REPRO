@@ -1237,6 +1237,8 @@ jobs:
           GH_TOKEN:          ${{ secrets.PAT_TOKEN }}
           COMPLETION_REPORT: ${{ needs.complete.outputs.completion_report }}
           WORKFLOW_FILE:     ci_runner_repro.yml
+          REPO:              ${{ github.repository }}
+          REF:               ${{ github.ref_name }}
           # Pass through repro params so dispatched runs use the same config
           PYSR_GENERATIONS:  ${{ github.event.inputs.pysr_generations || '10000' }}
           PYSR_POPULATIONS:  ${{ github.event.inputs.pysr_populations || '30' }}
@@ -1265,6 +1267,7 @@ jobs:
 
           dispatched = []
           skipped    = []
+          failed     = []
 
           for exp_id in ORDER:
               info = report.get(exp_id, {})
@@ -1290,6 +1293,8 @@ jobs:
               print(f"  🚀 {exp_id:<25} dispatching ({total} tasks) ...")
               cmd = [
                   gh, "workflow", "run", wf,
+                  "--repo", os.environ["REPO"],
+                  "--ref", os.environ["REF"],
                   "--field", f"experiment={exp_id}",
                   "--field", f"n_shards=1",
                   "--field", f"pysr_generations={os.environ['PYSR_GENERATIONS']}",
@@ -1305,7 +1310,9 @@ jobs:
                   print(f"       ✓ dispatched")
                   dispatched.append(exp_id)
               else:
-                  print(f"       ✗ FAILED: {result.stderr.strip()[:200]}")
+                  error = result.stderr.strip() or result.stdout.strip() or "unknown gh error"
+                  print(f"       ✗ FAILED: {error[:200]}")
+                  failed.append(exp_id)
               time.sleep(3)   # avoid GitHub API rate limits
 
           print()
@@ -1313,4 +1320,7 @@ jobs:
           print(f"  Skipped    : {skipped}")
           if not dispatched:
               print("  Nothing dispatched — all experiments either complete or partial.")
+          if failed:
+              print(f"::error::Required runner dispatches failed: {', '.join(failed)}")
+              sys.exit(1)
           PYEOF
