@@ -1258,7 +1258,7 @@ jobs:
           # Dispatch order matters for dependency: exp1 before instability.
           # exp1_five/exp2_five added (previously absent — never auto-dispatched
           # even when 0 done tasks were reported for them).
-          ORDER = ["exp1", "exp1b", "exp1_five", "exp1_pca", "exp1b_pca",
+          ORDER = ["exp1", "exp1b", "exp1_ablation", "exp1_five", "exp1_pca", "exp1b_pca",
                    "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
                    "exp2", "exp2_five", "exp3", "exp3b",
                    "suppA", "suppB", "suppB_sc", "hybrid_all_domains", "extrap"]
@@ -1296,7 +1296,7 @@ jobs:
                   "--field", f"pysr_populations={os.environ['PYSR_POPULATIONS']}",
                   "--field", f"n_samples={os.environ['N_SAMPLES']}",
                   "--field", f"noise_levels={os.environ['NOISE_LEVELS']}",
-                  "--field", f"seeds={os.environ['SEEDS']}",
+                  "--field", f"seeds={os.environ['SEEDS'].split(',')[0].strip() if exp_id == 'exp1_ablation' else os.environ['SEEDS']}",
                   "--field", "resume=true",
                   "--field", "dry_run=false",
               ]
