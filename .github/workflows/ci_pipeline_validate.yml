@@ -29,7 +29,7 @@
 #                                 raw numerical results (figures/tables
 #                                 qualification dimensions will read as
 #                                 "missing" here — that's expected, not a bug)
-#  C6  self-dispatch            — advance to next experiment slot
+#  C6  self-dispatch            — opt-in only (continue_queue=true);
 #
 #  To add figures/tables back in later (e.g. after acceptance, or for a
 #  camera-ready release), re-insert the C1/C2 jobs from
@@ -82,7 +82,7 @@
 #  Pipeline stages (repro / numerical-results-only version):
 #    C0 → ci_runner_repro.yml     — experiment workers (sharded)
 #    C3 → ci_pipeline_check.yml   — qualification + completeness gate
-#    C6 → self-dispatch            — next experiment slot
+#    C6 → self-dispatch            — opt-in only; repro workflow owns the default queue
 #
 #  Slot queue (19 entries, index 0-18):
 #    0 exp1 · 1 exp1b · 2 exp1_ablation · 3 exp1_five · 4 exp1_pca · 5 exp1b_pca ·
@@ -153,6 +153,12 @@ on:
           completed successfully in a prior run (true/false).
         required: false
         default: "false"
+
+      continue_queue:
+        description: "Enable this legacy workflow's self-advancing queue (off by default; ci_pipeline_repro.yml is the canonical numerical queue)."
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -692,7 +698,8 @@ jobs:
     if: |
       always() &&
       needs.resolve.outputs.run_full == 'true' &&
-      needs.run-checkpoint.result == 'success'
+      needs.run-checkpoint.result == 'success' &&
+      github.event.inputs.continue_queue == 'true'
 
     steps:
       - name: Dispatch next pipeline slot
