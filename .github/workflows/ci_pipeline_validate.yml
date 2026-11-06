@@ -491,13 +491,15 @@ jobs:
           N_SHARDS:  ${{ github.event.inputs.n_shards || '1' }}
           SEEDS:     ${{ github.event.inputs.seeds || '' }}
           SAMPLES:   ${{ github.event.inputs.n_samples || '200' }}
-          NOISE:     ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+          NOISE:     ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           DRY_RUN:   ${{ github.event.inputs.dry_run || 'false' }}
           REPO:      ${{ github.repository }}
+          BRANCH:    ${{ github.ref_name }}
         run: |
           set -euo pipefail
           echo "Dispatching ci_runner_repro.yml for experiment=${EXP}"
 
+          DISPATCH_STARTED_EPOCH="$(date -u +%s)"
           RUN_OUTPUT="$(
             gh workflow run ci_runner_repro.yml \
               --repo "${REPO}" --ref "${{ github.ref_name }}" \
@@ -521,9 +523,8 @@ jobs:
               DISPATCHED_ID="$(
                 gh run list \
                   --repo "${REPO}" --workflow ci_runner_repro.yml --event workflow_dispatch \
-                  --limit 20 --json databaseId,createdAt \
-                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
-                  2>/dev/null || true
+                  --limit 100 --json databaseId,createdAt,headBranch,displayTitle \
+                  2>/dev/null | python3 -c 'import datetime,json,os,sys; runs=json.load(sys.stdin); exp=os.environ["EXP"].lower(); branch=os.environ["BRANCH"]; started=int(os.environ["DISPATCH_STARTED_EPOCH"]); matches=[r for r in runs if r.get("headBranch")==branch and (r.get("displayTitle") or "").strip().lower().endswith(exp) and datetime.datetime.fromisoformat(r["createdAt"].replace("Z","+00:00")).timestamp() >= started]; print(max(matches,key=lambda r:r["createdAt"])["databaseId"] if matches else "")' || true
               )"
               [[ -n "${DISPATCHED_ID}" ]] && break
               echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
@@ -612,12 +613,14 @@ jobs:
           EXP:                ${{ needs.resolve.outputs.experiment }}
           FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'false' }}
           SEEDS:              ${{ github.event.inputs.seeds || '42,99,123,777,2024' }}
-          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           REPO:               ${{ github.repository }}
+          BRANCH:             ${{ github.ref_name }}
         run: |
           set -euo pipefail
           echo "Dispatching ci_pipeline_check.yml for experiment=${EXP}"
 
+          DISPATCH_STARTED_EPOCH="$(date -u +%s)"
           RUN_OUTPUT="$(
             gh workflow run ci_pipeline_check.yml \
               --repo "${REPO}" --ref "${{ github.ref_name }}" \
@@ -639,9 +642,8 @@ jobs:
               DISPATCHED_ID="$(
                 gh run list \
                   --repo "${REPO}" --workflow ci_pipeline_check.yml --event workflow_dispatch \
-                  --limit 20 --json databaseId,createdAt \
-                  --jq 'sort_by(.createdAt) | last | .databaseId // empty' \
-                  2>/dev/null || true
+                  --limit 100 --json databaseId,createdAt,headBranch,displayTitle \
+                  2>/dev/null | python3 -c 'import datetime,json,os,sys; runs=json.load(sys.stdin); exp=os.environ["EXP"].lower(); branch=os.environ["BRANCH"]; started=int(os.environ["DISPATCH_STARTED_EPOCH"]); matches=[r for r in runs if r.get("headBranch")==branch and (r.get("displayTitle") or "").strip().lower().endswith(exp) and datetime.datetime.fromisoformat(r["createdAt"].replace("Z","+00:00")).timestamp() >= started]; print(max(matches,key=lambda r:r["createdAt"])["databaseId"] if matches else "")' || true
               )"
               [[ -n "${DISPATCHED_ID}" ]] && break
               echo "  Attempt ${attempt}/30: run not yet visible — waiting 5s..."
@@ -709,7 +711,7 @@ jobs:
           N_SHARDS:     ${{ github.event.inputs.n_shards || '1' }}
           SEEDS:        ${{ github.event.inputs.seeds || '' }}
           SAMPLES:      ${{ github.event.inputs.n_samples || '200' }}
-          NOISE:        ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+          NOISE:        ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           REPO:         ${{ github.repository }}
         run: |
           set -euo pipefail
