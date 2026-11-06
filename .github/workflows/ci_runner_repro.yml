@@ -157,7 +157,7 @@ jobs:
     steps:
       - name: Fan out one isolated dispatch per experiment ID
         env:
-          GH_TOKEN:          ${{ secrets.DISPATCH_PAT }}
+          GH_TOKEN:          ${{ secrets.PAT_TOKEN }}
           REPO:               ${{ github.repository }}
           REF:                ${{ github.ref_name }}
           EXPERIMENTS:        ${{ github.event.inputs.experiments }}
