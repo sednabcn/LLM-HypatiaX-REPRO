@@ -242,6 +242,16 @@ jobs:
           # Resolve which experiments to check
           EXPERIMENT = os.environ["EXPERIMENT"].strip()
 
+          # exp1_ablation accepts one seed per runner dispatch.  The shared
+          # SEEDS default is multi-seed for exp1b/exp3b, so check its first
+          # entry (42 by default); pass another seed first to check that run.
+          ABLATION_SEED = SEEDS[0] if SEEDS else "42"
+          if not ABLATION_SEED.isdigit():
+              print(f"::error::Invalid exp1_ablation seed '{ABLATION_SEED}'. Expected an integer.")
+              sys.exit(1)
+          if EXPERIMENT == "exp1_ablation" and len(SEEDS) > 1:
+              print(f"::warning::exp1_ablation is single-seed; checking only seed {ABLATION_SEED}.")
+
           if EXPERIMENT in ("all", ""):
               target_exps = list(SUBDIR.keys())
           elif EXPERIMENT in SUBDIR:
@@ -267,6 +277,10 @@ jobs:
               "exp1b":             ["comparison_FIXED_*.json", "defi_v3_*.json",
                                     "*portfolio*variance*.json",
                                     "hypatiax_defi_benchmark_v3*results*.json"],
+              # Ablation outputs are preserved with shard suffixes; the
+              # per-shard checkpoint files are the authoritative completion records.
+              "exp1_ablation":     ["exp1_ablation_checkpoint_shard*.json",
+                                    "exp1_ablation_results_shard*.json"],
               # FIX-exp1_five/exp2_five-GLOBS: both were previously absent from this
               # dict, silently falling back to RESULT_GLOBS.get(exp_id, ["*.json"]).
               # exp1_five commits exp1_five_results*.json (see exp1_five_system.py's
@@ -315,7 +329,9 @@ jobs:
           print("-" * 110)
 
           for exp_id in target_exps:
-              subdir     = SUBDIR[exp_id]
+              subdir = SUBDIR[exp_id]
+              if exp_id == "exp1_ablation" and ABLATION_SEED != "42":
+                  subdir = f"ablation/exp1_ablation_seed{ABLATION_SEED}"
               result_dir = OUT_BASE / subdir
               globs      = RESULT_GLOBS.get(exp_id, ["*.json"])
 
@@ -485,6 +501,11 @@ jobs:
               # exp1 committed a single hypatiax_defi_benchmark_v3_results.json
               # (not per-task files). Use filename-stem sentinel — same pattern as exp1b.
               "exp1":              ["hypatiax_defi_benchmark_v3_results"],
+              # exp1_ablation has five fixed domain shards.  The runner writes
+              # exp1_ablation_checkpoint_shard<N>.json (N=0..4); each is complete
+              # only when every equation entry contains all three required arms.
+              # _done_set_from_files validates checkpoint contents, not filenames.
+              "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               # exp1_pca / exp1b_pca committed hypatiax_defi_benchmark_pca_results.json
               # (PCA split variant — filename uses "_pca_results" not "_v3_results").
               "exp1_pca":          ["hypatiax_defi_benchmark_pca_results"],
@@ -572,10 +593,38 @@ jobs:
           # substring (the same heuristic used by the worker's Save shard checkpoint
           # step).  If _merged.json is present (manual consolidation), it is used
           # as an additional source and unioned in.
-          def _done_set_from_files(result_dir, all_ids):
-              """Return set of task IDs whose output file is present in result_dir."""
+          def _done_set_from_files(result_dir, all_ids, exp_id=None):
+              """Return task IDs verified from committed result/checkpoint files."""
               import glob as _g
               done = set()
+
+              if exp_id == "exp1_ablation":
+                  # The runner fixes five block shards, preserving original shard
+                  # indices 0..4. Each checkpoint is keyed by equation and contains
+                  # the arm payloads; result filenames alone do not prove completion.
+                  required_arms = ("pysr_only", "hypatia", "hypatia_nollm")
+                  for shard_index, task_id in enumerate(all_ids):
+                      ckpt = result_dir / f"exp1_ablation_checkpoint_shard{shard_index}.json"
+                      try:
+                          payload = json.loads(ckpt.read_text())
+                      except Exception:
+                          continue
+                      if not isinstance(payload, dict) or not payload:
+                          continue
+                      complete = all(
+                          isinstance(entry, dict)
+                          and all(isinstance(entry.get(arm), dict) for arm in required_arms)
+                          for entry in payload.values()
+                      )
+                      # A completed no-LLM arm must not report an LLM call.
+                      uncontaminated = all(
+                          (entry.get("hypatia_nollm") or {}).get("llm_called") is not True
+                          for entry in payload.values()
+                          if isinstance(entry, dict)
+                      )
+                      if complete and uncontaminated:
+                          done.add(task_id)
+                  return done
               # FIX-RECURSE: scan result_dir recursively rather than top-level +
               # one subdir level. The previous one-level-deep scan (top-level
               # files, plus one iterdir() pass into immediate subdirectories)
@@ -645,7 +694,7 @@ jobs:
               else:
                   subdir     = info["subdir"]
                   result_dir = OUT_BASE / subdir
-                  done_set   = _done_set_from_files(result_dir, all_ids)
+                  done_set   = _done_set_from_files(result_dir, all_ids, exp_id)
 
                   # Union with _merged.json keys when consolidation ran manually
                   merged = result_dir / "_merged.json"
@@ -840,7 +889,9 @@ jobs:
 
           def qualify_experiment(exp_id: str) -> dict:
               checks = []
-              subdir_rel = SUBDIR.get(exp_id, "")
+              # Use the check job's resolved path so seed-specific ablation
+              # directories are qualified consistently with completion checks.
+              subdir_rel = CHECK.get(exp_id, {}).get("subdir") or SUBDIR.get(exp_id, "")
               result_dir = OUT_BASE / subdir_rel if subdir_rel else OUT_BASE
 
               # 1. Checkpoint pass
