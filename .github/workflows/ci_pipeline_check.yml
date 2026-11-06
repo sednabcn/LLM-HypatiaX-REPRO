@@ -249,9 +249,6 @@ jobs:
           if not ABLATION_SEED.isdigit():
               print(f"::error::Invalid exp1_ablation seed '{ABLATION_SEED}'. Expected an integer.")
               sys.exit(1)
-          if EXPERIMENT == "exp1_ablation" and len(SEEDS) > 1:
-              print(f"::warning::exp1_ablation is single-seed; checking only seed {ABLATION_SEED}.")
-
           if EXPERIMENT in ("all", ""):
               target_exps = list(SUBDIR.keys())
           elif EXPERIMENT in SUBDIR:
@@ -259,6 +256,9 @@ jobs:
           else:
               print(f"::error::Unknown experiment '{EXPERIMENT}' — not in SUBDIR map.")
               sys.exit(1)
+
+          if "exp1_ablation" in target_exps and len(SEEDS) > 1:
+              print(f"::warning::exp1_ablation is single-seed; checking only seed {ABLATION_SEED}.")
 
           # FIX check-PRESENCE: the consolidate job is disabled in
           # ci_runner_repro.yml — each worker shard commits its own
@@ -920,17 +920,13 @@ jobs:
                   ablation_done = int(ablation_completion.get("done", 0) or 0)
                   ckpt_ok = ablation_total == 5 and ablation_done == 5
                   ckpt_detail = f"verified ablation shards: {ablation_done}/{ablation_total}"
-              if not ckpt_ok:
+              if not ckpt_ok and exp_id != "exp1_ablation":
                   # FIX qualify-DIM1: consolidate is disabled and _checkpoint.json is never
                   # written by the worker.  exp1b (and any multi-shard experiment) writes
                   # _checkpoint_shard{N}.json files (copied into RESULT_SUBDIR by the runner's
                   # "Copy shard checkpoint into result subdir" step).  Accept dim① as passing
                   # if any per-shard checkpoint records at least one completed task.
-                  shard_ckpts = (
-                      list(result_dir.glob("exp1_ablation_checkpoint_shard*.json"))
-                      if exp_id == "exp1_ablation" and result_dir.exists()
-                      else (list(result_dir.glob("_checkpoint_shard*.json")) if result_dir.exists() else [])
-                  )
+                  shard_ckpts = list(result_dir.glob("_checkpoint_shard*.json")) if result_dir.exists() else []
                   if shard_ckpts:
                       total_completed = 0
                       for sc in shard_ckpts:
