@@ -157,3 +157,13 @@ def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_
     assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
     assert "::error::benchmark_results_extrap.json not found" in runner
     assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" not in runner
+
+
+def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
+    runner = (ROOT / "run_all.sh").read_text()
+    start = runner.index('run gt_leak_guard "')
+    end = runner.find("\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert block.count("Required gt_leak_guard target missing") == 2
+    assert "Required gt_leak_guard target hybrid_system_nn_defi_domain.py not found" in block
+    assert "_FAIL=1" in block
