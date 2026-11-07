@@ -537,29 +537,8 @@ def _split_case_data(X, y, feature_names=None, return_metadata=False):
             X_train, y_train, X_test, y_test
         )
 
-    order = np.arange(len(X))
-    vals = X[:, 0] if X.ndim > 1 and X.shape[1] > 0 else X.flatten()
-    thresh = np.percentile(vals, 40)
-    train_mask = vals <= thresh
-    test_mask = vals > thresh
-
-    if train_mask.sum() < 20 or test_mask.sum() < 20:
-        train_mask = order < int(0.4 * len(order))
-        test_mask = ~train_mask
-
-    result = (X[train_mask], y[train_mask], X[test_mask], y[test_mask])
-    if not return_metadata:
-        return result
-    metadata = {
-        'split_protocol': 'first_feature_percentile_40_60',
-        'split_method': '40th percentile threshold on first feature',
-        'feature_scaling': 'none',
-        'n_samples': int(len(X)),
-        'n_train': int(len(result[0])),
-        'n_test': int(len(result[2])),
-        'split_is_transductive': False,
-    }
-    return result + (metadata,)
+    from hypatiax.tools.utils.pca_split_utils import first_feature_percentile_split
+    return first_feature_percentile_split(X, y, return_metadata=return_metadata)
 
 
 def find_portfolio_variance_case(proto):
