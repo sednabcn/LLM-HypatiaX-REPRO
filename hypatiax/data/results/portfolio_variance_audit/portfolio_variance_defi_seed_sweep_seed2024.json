@@ -1,6 +1,58 @@
 {
   "case": "Portfolio VaR for two correlated assets",
-  "benchmark_version": "v3c3",
+  "case_identity": {
+    "domain": "risk_var",
+    "name": "Portfolio VaR for two correlated assets",
+    "protocol_index": 18,
+    "ground_truth": "sqrt(var1**2 + var2**2 + 2*rho*var1*var2)",
+    "variables": [
+      "var_asset1",
+      "var_asset2",
+      "correlation"
+    ]
+  },
+  "benchmark_version": "v3c3-pca",
+  "split_protocol": "pca_40_60_pc1",
+  "split_is_transductive": true,
+  "split_details": {
+    "split_protocol": "pca_40_60_pc1",
+    "split_method": "PCA(n_components=1) on raw, unstandardized features",
+    "feature_scaling": "none",
+    "n_samples": 200,
+    "n_train": 80,
+    "n_test": 120,
+    "test_size": 0.6,
+    "random_state": 42,
+    "split_is_transductive": true,
+    "pc1_explained_variance_ratio": 1.0,
+    "pc1_loadings": {
+      "var_asset1": 0.8574929254074083,
+      "var_asset2": 0.5144957552444459,
+      "correlation": 2.6677557679341714e-05
+    },
+    "feature_summary": {
+      "var_asset1": {
+        "mean": 27500.0,
+        "std": 13055.496156772346,
+        "min": 5000.0,
+        "max": 50000.0
+      },
+      "var_asset2": {
+        "mean": 16500.0,
+        "std": 7833.297694063408,
+        "min": 3000.0,
+        "max": 30000.0
+      },
+      "correlation": {
+        "mean": 0.19999999999999993,
+        "std": 0.40617099154402847,
+        "min": -0.5,
+        "max": 0.9
+      }
+    },
+    "pc1_score_min": -26239.283536141003,
+    "pc1_score_max": 26239.28353614099
+  },
   "seeds_run": [
     2024
   ],
@@ -12,7 +64,7 @@
       "decision": "llm",
       "success": true,
       "llm_train_r2": 1.0,
-      "time_s": 1.1914889812469482,
+      "time_s": 1.3347866535186768,
       "llm_code": "def formula(var_asset1, var_asset2, correlation):\n    return np.sqrt(var_asset1**2 + var_asset2**2 + 2 * correlation * var_asset1 * var_asset2)"
     }
   ],
