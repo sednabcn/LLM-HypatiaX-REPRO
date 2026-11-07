@@ -980,7 +980,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     HYPATIAX_RESULTS_DIR=\"\${_PCA15_DIR}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || { echo "::error::exp1b_pca portfolio analysis failed"; exit 1; }
   fi
 
   _SHARD=\${SHARD_INDEX:-0}
