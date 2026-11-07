@@ -1620,50 +1620,10 @@ jobs:
           _SHARD_SEEDS_LIST="$(echo "${SHARD_IDS:-[]}" | grep -oE '_seed[0-9]+' | sed 's/_seed//' | sort -u | tr '\n' ' ' || true)"
 
           _extrap_dest="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-          if [[ "${EXP:-}" == "exp1_ablation" ]]; then
-            echo "Store results: skipping store-prune for exp1_ablation (committed master checkpoint/results must survive shard runs)."
-          elif [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
-            RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
-            if [[ -f "${RUN_START_MARKER}" ]]; then
-              RUN_START_EPOCH=$(stat -c %Y "${RUN_START_MARKER}" 2>/dev/null || stat -f %m "${RUN_START_MARKER}" 2>/dev/null || echo 0)
-            else
-              echo "  store prune: WARNING - run start marker not found (${RUN_START_MARKER}); treating all files as prunable by git status only."
-              RUN_START_EPOCH=0
-            fi
-            pruned_store=0
-            while IFS= read -r f; do
-              [[ -f "$f" ]] || continue
-              fname=$(basename "$f")
-              [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
-              [[ "$fname" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
-              if [[ "${EXP:-}" == "exp1b_seeds" || "${EXP:-}" == "exp1_pca_seeds" || "${EXP:-}" == "portfolio" ]]; then
-                # only ever prune THIS shard's own seed: a rerun of one seed must not delete
-                # the other seeds' committed results from multi-seeds/
-                _mine=false
-                for _s in ${_SHARD_SEEDS_LIST}; do
-                  [[ "$fname" == *seed${_s}[!0-9]* ]] && _mine=true
-                done
-                if [[ "${_mine}" != "true" ]]; then
-                  echo "  store prune: SKIP (exp1b_seeds: not this shard's seed): $f"
-                  continue
-                fi
-              fi
-              f_mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null || echo 0)
-              if [[ "$f_mtime" -ge "$RUN_START_EPOCH" ]]; then
-                echo "  store prune: SKIP (written this run, mtime >= run-start marker): $f"
-                continue
-              fi
-              if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-                echo "  store prune: removing stale committed file: $f"
-                git rm --cached --quiet "$f" 2>/dev/null || true
-                rm -f "$f"
-                pruned_store=$((pruned_store + 1))
-              fi
-            done < <(find "${DEST}" -maxdepth 1 -type f \( -name "*.json" -o -name "*.csv" \) 2>/dev/null)
-            [[ $pruned_store -gt 0 ]] && echo "Store results: pruned ${pruned_store} stale committed file(s) from ${DEST}" || true
-          else
-            echo "Store results: skipping store-prune for exp2_extrap dir (protocol_core_extrap_* and benchmark_results_extrap.json must not be pruned)."
-          fi
+          # Result directories are append/replace-only by default. Never remove committed
+          # JSON/CSV results based on mtimes: resumed shards may skip older outputs, and
+          # absence from this runner is not evidence that a committed result is stale.
+          echo "Store results: destructive stale-result pruning disabled for ${DEST}."
 
           copied=0
           while IFS= read -r f; do
@@ -2693,7 +2653,7 @@ jobs:
           retention-days: 30
 
       - name: Commit and push shard results to repo
-        if: always()
+        if: ${{ success() }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -2812,13 +2772,9 @@ jobs:
               fi
             fi
 
-            # exp1_ablation: a shard must only ADD/MODIFY its own files.  With the default
-            # `git add <dir>` the shard also stages DELETIONS of every committed file that is
-            # missing in its runner (clean_llm_rerun deletes *checkpoint* files there), which
-            # wiped other shards' checkpoints and the committed master from the repo.
-            ADD_FLAGS=(-f)
-            [[ "${EXP}" == "exp1_ablation" ]] && ADD_FLAGS+=(--ignore-removal)
-            git add "${ADD_FLAGS[@]}" "${TARGET}"
+            # Shards may publish additions and modifications only. A file absent from
+            # this runner is not an instruction to delete its committed counterpart.
+            git add -f --ignore-removal "${TARGET}"
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2899,7 +2855,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: always()
+        if: ${{ success() }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3190,7 +3146,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp2.outputs.already_done != 'true'
         env:
@@ -3352,7 +3308,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1.outputs.already_done != 'true'
         env:
@@ -3512,7 +3468,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1b.outputs.already_done != 'true'
         env:
@@ -4184,7 +4140,7 @@ jobs:
 
       - name: Commit and push corrected baseline
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true'
         env:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
