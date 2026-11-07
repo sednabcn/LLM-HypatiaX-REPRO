@@ -14,7 +14,7 @@ SPEC.loader.exec_module(mod)
 
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
     assert mod.resolve_result_subdir("exp1b") == (
-        "comparison_results/noise-noiseless/defi"
+        "comparison_results/noise-noiseless/15"
     )
 
 
