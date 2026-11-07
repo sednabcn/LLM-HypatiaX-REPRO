@@ -15,6 +15,7 @@ for _root in (_here.parent, *_here.parents):
 @pytest.fixture()
 def mod(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
+    monkeypatch.delenv("HYPATIAX_LLM_MODEL", raising=False)
     for k in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_ALLOW_LEGACY"):
         monkeypatch.delenv(k, raising=False)
     stub = types.ModuleType("hypatiax.protocols.experiment_protocol_defi")
@@ -64,7 +65,7 @@ def test_constant_target_is_degenerate_failed_row(mod):
     y = np.full(50, 3.0)
     for y_pred in (y.copy(), y + 0.1):
         res = _r2(mod, y, y_pred)
-        assert np.isnan(res["r2"])
+        assert res["r2"] is None
         assert res["r2_status"] == "degenerate_target"
         assert res["success"] is False
         assert "degenerate target" in res["error"]

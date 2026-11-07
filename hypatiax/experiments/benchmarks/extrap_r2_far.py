@@ -22,6 +22,7 @@ also included verbatim, as compute_extrap_r2_far() depends on it.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -177,114 +178,64 @@ def _runner_eval_formula(
     X: np.ndarray,
     var_names: List[str],
 ) -> Optional[np.ndarray]:
-    """
-    Evaluate *python_code* as a numpy expression that maps X columns to a 1-D
-    prediction array.
+    """Evaluate formulas using the shared restricted AST interpreter."""
+    from hypatiax.safe_formula import parse_formula, evaluate_expression
 
-    Supports three surface forms:
-      • Bare expression:   ``(x0 * 50.0) / (x0 + 10.0)``
-      • Assignment form:   ``y = (x0 * 50.0) / (x0 + 10.0)``
-      • Def form:          ``def formula(x0, k): return x0 * k / (x0 + k)``
-
-    Returns a numpy array of length len(X), or None on any failure.
-    """
     try:
-        import scipy.special as _spsp
-    except ImportError:
-        _spsp = None
+        X = np.asarray(X, dtype=float)
+        if (
+            X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0
+            or len(var_names) != X.shape[1]
+            or len(set(var_names)) != len(var_names)
+            or not np.all(np.isfinite(X))
+        ):
+            return None
 
-    safe_globals: Dict[str, Any] = {
-        "__builtins__": {},
-        "np": np,
-        "numpy": np,
-        "math": math,
-        "pi": np.pi,
-        "e":  np.e,
-        "inf": np.inf,
-        "nan": np.nan,
-        # common numpy ufuncs as bare names
-        "exp":    lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-        "log":    np.log,
-        "log10":  np.log10,
-        "log2":   np.log2,
-        "sqrt":   np.sqrt,
-        "sin":    np.sin,
-        "cos":    np.cos,
-        "tan":    np.tan,
-        "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-        "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-        "arctan": np.arctan,
-        "arctan2": np.arctan2,
-        "abs":    np.abs,
-        "fabs":   np.abs,
-        "floor":  np.floor,
-        "ceil":   np.ceil,
-        "sign":   np.sign,
-        "power":  np.power,
-        "tanh":   np.tanh,
-        "sinh":   np.sinh,
-        "cosh":   np.cosh,
-        "erf":    (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
-        "erfc":   (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
-    }
-    if _spsp is not None:
-        safe_globals["scipy"]   = type("m", (), {"special": _spsp})()
-        safe_globals["special"] = _spsp
+        code = str(python_code).strip()
+        code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
+        code = code.replace("^", "**")
 
-    # Inject each variable as the corresponding X column.
-    local_ns: Dict[str, Any] = {}
-    for i, vn in enumerate(var_names):
-        local_ns[vn] = X[:, i] if X.ndim == 2 else X
-
-    code   = python_code.strip()
-    y_pred = None
-
-    # Strategy 1: bare expression
-    try:
-        y_pred = eval(code, safe_globals, local_ns)  # noqa: S307
-    except (SyntaxError, Exception):
-        pass
-
-    # Strategy 2: assignment form — execute and grab last assigned var
-    if y_pred is None:
-        try:
-            exec_ns = {**safe_globals, **local_ns}  # noqa: S102
-            exec(code, exec_ns)                      # noqa: S102
-            for candidate in ("y", "result", "output", "pred", "f"):
-                if candidate in exec_ns and isinstance(
-                    exec_ns[candidate], (np.ndarray, float, int)
-                ):
-                    y_pred = exec_ns[candidate]
-                    break
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    # Strategy 3: def form — find the first callable and call it
-    if y_pred is None and "def " in code:
-        try:
-            exec_ns: Dict[str, Any] = dict(safe_globals)
-            exec(code, exec_ns)  # noqa: S102
-            fn = next(
-                (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                None,
+        if code.startswith("def "):
+            func = parse_formula(code)
+            result = func(*(X[:, i] for i in range(X.shape[1])))
+        else:
+            match = re.fullmatch(
+                r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)",
+                code, flags=re.DOTALL,
             )
-            if fn is not None:
-                fn_args = [local_ns[vn] for vn in var_names]
-                y_pred  = fn(*fn_args)
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+            expression = match.group(1) if match else code
 
-    if y_pred is None:
-        return None
+            namespace = {name: X[:, i] for i, name in enumerate(var_names)}
+            namespace.update({
+                "pi": np.pi, "e": np.e,
+                "exp": lambda x: np.exp(np.clip(x, -500.0, 500.0)),
+                "log": np.log, "log10": np.log10, "log2": np.log2,
+                "sqrt": np.sqrt, "sin": np.sin, "cos": np.cos,
+                "tan": np.tan,
+                "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+                "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+                "arctan": np.arctan, "arctan2": np.arctan2,
+                "abs": np.abs, "fabs": np.abs, "floor": np.floor,
+                "ceil": np.ceil, "sign": np.sign, "power": np.power,
+                "minimum": np.minimum, "maximum": np.maximum,
+                "clip": np.clip, "square": np.square,
+                "tanh": np.tanh, "sinh": np.sinh, "cosh": np.cosh,
+                "erf": np.vectorize(math.erf),
+                "erfc": np.vectorize(math.erfc),
+            })
+            expression = re.sub(r"\b(?:np|numpy|math)\.", "", expression)
+            result = evaluate_expression(expression, namespace)
 
-    arr = np.asarray(y_pred, dtype=float).flatten()
-    if len(arr) != len(X):
+        result = np.asarray(result, dtype=float)
+        if result.ndim == 0:
+            result = np.full(X.shape[0], float(result))
+        if result.ndim != 1 or result.shape != (X.shape[0],):
+            return None
+        if not np.all(np.isfinite(result)):
+            return None
+        return result
+    except Exception:
         return None
-    return arr
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -315,7 +266,7 @@ def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
         from hypatiax.core.r2_canonical import r2_scored as _r2_scored
     _val, _status = _r2_scored(y_true, y_pred)
     if _status == "catastrophic":
-        return float("-inf")
+        return None  # audit-M3: was float('-inf')
     return _val if _status == "ok" else None
 
 
@@ -412,7 +363,7 @@ def compute_extrap_r2_far(
 
         # Symbolic methods: re-evaluate on the far region.
         try:
-            y_far_pred = _runner_eval_formula(formula, X_far, var_names)
+            y_far_pred = _runner_eval_formula(formula, X_far, var_names)  # audit: ignore[L2] formula = res.formula (method OUTPUT), not ground truth
             if y_far_pred is None or len(y_far_pred) != len(y_far):
                 extrap_r2_far[mname]    = None
                 extrap_rmse_far[mname]  = None
