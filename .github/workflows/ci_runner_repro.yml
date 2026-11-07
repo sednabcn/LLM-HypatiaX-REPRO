@@ -87,12 +87,6 @@ on:
         required: false
         default: "false"
 
-      failure_path_test:
-        description: "TEMPORARY TEST ONLY: create a harmless fixture and fail after the experiment step to verify preservation/artifact/commit guards."
-        required: false
-        type: boolean
-        default: false
-
       force_rerun:
         description: "exp2_feynman_pca only: clear stale exp2_pca_4060/*.json before running, bypassing the already-done skip-guard (true/false). Use after pipeline/aggregation fixes to force a clean regeneration."
         required: false
@@ -1377,18 +1371,6 @@ jobs:
               exit 1
             fi
           fi
-
-      - name: "TEMPORARY TEST ONLY: force worker failure after experiment"
-        if: ${{ inputs.failure_path_test == true }}
-        env:
-          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
-        run: |
-          set -euo pipefail
-          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
-          mkdir -p "${TARGET}"
-          printf 'failure-path-test run=%s\n' "${GITHUB_RUN_ID}" > "${TARGET}/failure-path-test-${GITHUB_RUN_ID}.txt"
-          echo "::error::Intentional failure-path test. Fixture is harmless and must not be committed."
-          exit 86
 
       - name: Preserve shard-specific exp1_ablation output
         if: always() && env.EXP == 'exp1_ablation'
