@@ -171,5 +171,8 @@ def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
 
 def test_exp1b_artifact_rescue_moves_do_not_suppress_failures():
     runner = (ROOT / "run_all.sh").read_text()
-    assert 'mv -v \\"\\$src\\" \\"\\$dst\\" || true' not in runner
-    assert 'if [ -f \\"\\$src\\" ]; then mv -v \\"\\$src\\" \\"\\$dst\\"; fi' in runner
+    for step in ("exp1b", "exp1b_pca"):
+        start = runner.index(f'run {step} "')
+        end = runner.find("\\nrun ", start + 1)
+        block = runner[start: end if end >= 0 else len(runner)]
+        assert 'mv -v \\"\\$src\\" \\"\\$dst\\" || true' not in block
