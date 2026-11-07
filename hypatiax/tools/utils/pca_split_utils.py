@@ -159,7 +159,7 @@ def pca_directed_split(X, y, test_size=0.6, random_state=None, feature_names=Non
 
 def first_feature_percentile_split(X, y, return_metadata=False):
     """Reproduce the historical first-feature 40/60 split without PCA."""
-    X_array = np.asarray(X, dtype=float)
+    X_array = np.asarray(X)
     y_array = np.asarray(y)
     if X_array.ndim == 1:
         X_array = X_array.reshape(-1, 1)
