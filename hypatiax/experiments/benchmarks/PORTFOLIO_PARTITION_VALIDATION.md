@@ -22,6 +22,21 @@ far-range extrapolation. Report its scores separately from the
 `pca_40_60_pc1` results. It is non-transductive because no PCA fit on the
 full feature matrix is used to construct these holdouts.
 
+## Score-field semantics
+
+The JSON uses schema version 2 to avoid conflating the LLM formula score with
+the neural-network score:
+
+- `llm_train_r2` is the LLM formula's training R² only. A `NaN` means that
+  the LLM formula was unavailable or invalid; it does **not** mean the neural
+  network failed to train. The benchmark helper does not currently expose a
+  neural-network training R².
+- `test_r2` is the test R² from the route selected by the benchmark.
+- `test_r2_source` records that selected route (for example, `nn`).
+- `success_test_r2_gt_0_99` explicitly records whether test R² exceeds 0.99.
+
+The aggregate success count and rate refer only to that test-R² threshold.
+
 The runner is opt-in and is not dispatched automatically by the existing
 portfolio workflow. It does not modify the historical split default or
 replace the existing PCA sweep.
