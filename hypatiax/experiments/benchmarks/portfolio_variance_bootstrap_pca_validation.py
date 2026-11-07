@@ -48,7 +48,7 @@ def set_all_seeds(seed):
         pass
 
 
-def bootstrap_pc1_partition(X, y, seed, test_size):
+def bootstrap_pc1_partition(X, seed, test_size, feature_names):
     """Estimate PC1 on a row bootstrap, then rank all rows on that axis."""
     rng = np.random.default_rng(seed)
     n_samples = len(X)
@@ -74,7 +74,7 @@ def bootstrap_pc1_partition(X, y, seed, test_size):
         "n_train": int(len(train_idx)),
         "n_test": int(len(test_idx)),
         "pc1_explained_variance_ratio_on_bootstrap": float(pca.explained_variance_ratio_[0]),
-        "pc1_loadings": [float(value) for value in component],
+        "pc1_loadings": {name: float(value) for name, value in zip(feature_names, component)},
         "pc1_score_min": float(np.min(scores)),
         "pc1_score_max": float(np.max(scores)),
     }
@@ -117,7 +117,7 @@ def main():
     records = []
     for bootstrap_seed in BOOTSTRAP_SEEDS:
         train_idx, test_idx, split_meta = bootstrap_pc1_partition(
-            X, y, bootstrap_seed, TEST_SIZE
+            X, bootstrap_seed, TEST_SIZE, case["variables"]
         )
         set_all_seeds(MODEL_SEED)
         started = time.time()
@@ -130,7 +130,7 @@ def main():
         records.append({
             **split_meta,
             "model_seed": MODEL_SEED,
-            "llm_train_r2": float(result["llm_train_r2"]),
+            "llm_train_r2": (float(result["llm_train_r2"]) if np.isfinite(result["llm_train_r2"]) else None),
             "llm_formula_train_r2_available": bool(np.isfinite(result["llm_train_r2"])),
             "tail_test_r2": test_r2,
             "test_r2_source": result.get("decision"),
@@ -197,7 +197,7 @@ def main():
         },
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT.write_text(json.dumps(output, indent=2, allow_nan=True) + "\n")
+    OUTPUT.write_text(json.dumps(output, indent=2, allow_nan=False) + "\n")
     print(f"Saved bootstrap PCA validation: {OUTPUT}")
 
 
