@@ -258,7 +258,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo '::error::Required gt_leak_guard target hybrid_system_nn_defi_domain.py not found.'
+    echo '::error::Required gt_leak_guard target missing: hybrid_system_nn_defi_domain.py'
     _FAIL=1
   fi
 
