@@ -91,3 +91,14 @@ def test_pipeline_forwards_force_rerun_to_runner():
     validate = (ROOT / ".github/workflows/ci_pipeline_validate.yml").read_text()
     assert 'FORCE_RERUN: ${{ github.event.inputs.force_rerun || \'false\' }}' in validate
     assert '--field force_rerun="${FORCE_RERUN}"' in validate
+
+def test_exp1b_pca_fails_closed_on_missing_required_inputs_and_outputs():
+    runner = (ROOT / "run_all.sh").read_text()
+    start = runner.index('run exp1b_pca "')
+    end = runner.find("\\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert "set -euo pipefail" in block
+    assert "portfolio_variance_v3c2.py skipped" in block
+    assert "::error::split_protocol_disclosure.json not found" in block
+    assert "::error::exp1b_pca_summary.json not found" in block
+    assert "HYPATIAX_RESULTS_DIR=" in block
