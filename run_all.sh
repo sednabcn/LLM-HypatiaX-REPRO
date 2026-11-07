@@ -283,7 +283,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   cd '${ANALYSIS_DIR}'
   python3 statistical_analysis.py \
     2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
-  || echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'
+
 
   echo '=== exp1 verification ==='
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
@@ -681,6 +681,7 @@ PYMERGE
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
 
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
   mkdir -p \"\${_FIVE_DIR}\"
@@ -695,7 +696,7 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   JOB_DEADLINE='${JOB_DEADLINE}' \
     python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
     2>&1 | tee \"\${_FIVE_DIR}/exp1_five_run.log\" \
-  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+  # strict mode above propagates the Python/tee failure.
 
   echo '=== exp1_five verification ==='
   find \"\${_FIVE_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
@@ -703,18 +704,21 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   _NPERF=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_performance*.json' 2>/dev/null | wc -l)
   _NEXTRAP=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_extrapolation*.json' 2>/dev/null | wc -l)
   if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_five_results.json not produced'
+    echo '::error::exp1_five_results.json not produced'
+    exit 1
   else
     echo \"OK: \${_NRESULT} exp1_five_results*.json produced\"
   fi
   if [[ \"\${_NPERF}\" -eq 0 || \"\${_NEXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: performance/extrapolation sub-table source JSON missing — five_system.tex sub-tables will be incomplete'
+    echo '::error::performance/extrapolation sub-table source JSON missing'
+    exit 1
   fi
   echo '=== end exp1_five ==='
 "
 
 
 run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 with PCA split)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
@@ -939,13 +943,16 @@ PYEOF_FINGERPRINT_1
   echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
   echo \"  Summary file    : \${_NSUMMARY} (exp1_pca_summary.json)\"
   if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_pca produced no result JSON — check exp1_pca_run.log'
+    echo '::error::exp1_pca produced no result JSON'
+    exit 1
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo '::error::split_protocol_disclosure.json not found'
+    exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_pca_summary.json not found — qualify/audit steps will not see DeFi PCA solve rate'
+    echo '::error::exp1_pca_summary.json not found'
+    exit 1
   fi
   echo '=== end exp1_pca ==='
 "
