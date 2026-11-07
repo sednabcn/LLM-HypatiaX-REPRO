@@ -51,3 +51,23 @@ jobs:
             hypatiax/experiments/tests/test_recovery_evaluator.py \
             hypatiax/experiments/tests/test_workflow_cleanup_policy.py \
             hypatiax/experiments/tests/test_result_subdir_map.py
+
+  experiment-contract:
+    name: "Experiment artifact and workflow contracts"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest numpy
+      - name: Validate runner shell syntax
+        run: bash -n run_all.sh
+      - name: Run experiment contract regressions
+        run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
