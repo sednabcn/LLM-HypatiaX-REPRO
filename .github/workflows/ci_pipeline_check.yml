@@ -153,7 +153,7 @@ on:
       fail_on_incomplete:
         description: "Fail the job if any experiment has missing tasks"
         required: false
-        default: "false"
+        default: "true"
 
 permissions:
   contents: write  # write needed by qualify job to commit moved figures/tables
