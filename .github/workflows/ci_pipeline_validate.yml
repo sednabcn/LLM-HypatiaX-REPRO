@@ -486,8 +486,9 @@ jobs:
           SEEDS:     ${{ github.event.inputs.seeds || '' }}
           SAMPLES:   ${{ github.event.inputs.n_samples || '200' }}
           NOISE:     ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
-          DRY_RUN:   ${{ github.event.inputs.dry_run || 'false' }}
-          REPO:      ${{ github.repository }}
+          DRY_RUN:     ${{ github.event.inputs.dry_run || 'false' }}
+          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
+          REPO:        ${{ github.repository }}
         run: |
           set -euo pipefail
           echo "Dispatching ci_runner_repro.yml for experiment=${EXP}"
@@ -498,6 +499,7 @@ jobs:
               --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
               --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
               --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}" \
+              --field force_rerun="${FORCE_RERUN}" \
               2>&1
           )"
           echo "${RUN_OUTPUT}"
