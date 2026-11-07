@@ -38,7 +38,7 @@ jobs:
       PYTHONPATH: ${{ github.workspace }}
       PARTITION_SEEDS: ${{ inputs.partition_seeds || '11,23,42,77,101' }}
       MODEL_SEED: ${{ inputs.model_seed || '42' }}
-      PARTITION_VALIDATION_OUTPUT: ${{ runner.temp }}/portfolio_variance_random_holdout_validation.json
+      PARTITION_VALIDATION_OUTPUT: ${{ github.workspace }}/portfolio_variance_random_holdout_validation.json
       HYPOTIAX_DISABLE_HARDCODED: "1"
       HYPOTIAX_DISABLE_PROMPT_HINTS: "1"
       HYPOTIAX_STRICT: "1"
@@ -92,5 +92,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: portfolio-random-holdout-validation
-          path: ${{ runner.temp }}/portfolio_variance_random_holdout_validation.json
+          path: ${{ github.workspace }}/portfolio_variance_random_holdout_validation.json
           if-no-files-found: error
