@@ -83,6 +83,7 @@ from dataclasses import dataclass, field
 from typing import ClassVar
 
 import numpy as np
+from hypatiax.safe_formula import evaluate_expression
 import psutil
 import sympy as sp
 
@@ -2597,7 +2598,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         )
 
         try:
-            result = eval(equation, {"__builtins__": {}}, namespace)
+            result = evaluate_expression(equation, namespace)
             return np.array(result)
         except Exception as e:
             raise ValueError(f"Failed to evaluate equation: {e}")
@@ -2777,16 +2778,19 @@ class EquationTools:
         Returns:
             func(X: np.ndarray) -> np.ndarray
         """
-        code = compile(expr, "<equation>", "eval")
-
         def func(X: np.ndarray) -> np.ndarray:
+            X = np.asarray(X)
+            if X.ndim != 2 or X.shape[1] != len(variables):
+                raise ValueError("X must be 2D with one column per variable")
+            if len(set(variables)) != len(variables):
+                raise ValueError("Variable names must be unique")
             scope = {v: X[:, i] for i, v in enumerate(variables)}
             scope.update({
                 "sin": np.sin, "cos": np.cos, "tan": np.tan,
                 "exp": np.exp, "log": np.log, "sqrt": np.sqrt,
                 "abs": np.abs, "pi": np.pi,
             })
-            return eval(code, scope)  # noqa: S307
+            return evaluate_expression(expr, scope)
 
         return func
 

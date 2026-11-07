@@ -9,6 +9,7 @@ Fully implements:
   - --batch CLI mode          (runs full DeFi benchmark suite, writes hybrid_defi_*.json)
 """
 
+from hypatiax.safe_formula import parse_formula
 import argparse
 import hashlib
 import json
@@ -173,6 +174,7 @@ def r2_score_checked(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, str
     prediction.  The canonical guard is RELATIVE.  Status is one of: ok,
     degenerate_target, nonfinite_target, nonfinite_pred, bad_shape.
     """
+    # HYPATIAX_R2_CANONICAL_MIGRATION_V1
     with np.errstate(over="ignore", invalid="ignore"):
         return r2_checked(y_true, y_pred)
 
@@ -191,93 +193,36 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 # ---------------------------------------------------------------------------
 # Formula evaluation helpers
-# ---------------------------------------------------------------------------
-
-def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
-    """Execute a formula string against data rows. Returns array or None."""
-    import math as _math
-    # Build namespace with safe wrappers for common out-of-domain operations.
-    # arcsin/arccos clip to [-1,1] to prevent RuntimeWarning on Snell-like
-    # equations; exp clips to [-500,500] to prevent overflow on Bose-Einstein.
-    ns = {
-        "np":      np,
-        "numpy":   np,
-        "math":    _math,
-        "pi":      np.pi,
-        "e":       np.e,
-        "exp":     lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-        "log":     np.log,
-        "sqrt":    np.sqrt,
-        "sin":     np.sin,
-        "cos":     np.cos,
-        "tan":     np.tan,
-        "arcsin":  lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-        "arccos":  lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-        "arctan":  np.arctan,
-        "arctan2": np.arctan2,
-        "abs":     np.abs,
-        "sign":    np.sign,
-        "tanh":    np.tanh,
-        "sinh":    np.sinh,
-        "cosh":    np.cosh,
-    }
-
-    # Clean code
-    code = python_code.strip()
-    if not code.startswith("def "):
-        return None
-
+# -----------------------------def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
+    """Safely evaluate a restricted LLM formula against a feature matrix."""
     try:
-        import warnings as _warnings
-        # Snapshot the namespace BEFORE exec so we can identify the newly
-        # defined formula function.  Without this, the loop below would
-        # stop at the first pre-existing lambda in ns (e.g. the `exp`
-        # wrapper) instead of the actual formula — causing every formula
-        # to be silently replaced by  exp(X[:,0]), which produces wildly
-        # wrong predictions (R² ≈ -1e78 for Michaelis-Menten, silent
-        # failure for logistic growth).
-        pre_exec_keys = set(ns.keys())
-        with _warnings.catch_warnings():
-            _warnings.simplefilter("ignore")
-            exec(compile(code, "<formula>", "exec"), ns)
-        # Find the function that exec() just added to the namespace.
-        # Prefer a function literally named 'formula' so that LLM outputs
-        # containing helper functions don't get mistakenly selected as the
-        # entry-point (Bug #2: multi-function formulas used to pick the first
-        # callable found in dict-iteration order, which was often a helper).
-        new_callables = {
-            k: v for k, v in ns.items()
-            if k not in pre_exec_keys and callable(v) and not isinstance(v, type)
-        }
-        fn = new_callables.get("formula") or (
-            next(iter(new_callables.values()), None)
-        )
-        if fn is None:
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+            return None
+        if len(var_names) != X.shape[1] or not np.all(np.isfinite(X)):
             return None
 
-        # Try vectorised call first
+        func = parse_formula(python_code)
+        args = [X[:, i] for i in range(X.shape[1])]
+
         try:
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                args = [X[:, i] for i in range(min(len(var_names), X.shape[1]))]
-                result = fn(*args)
-            if np.isscalar(result):
-                result = np.full(len(X), float(result))
-            return np.array(result, dtype=float)
+            result = func(*args)
         except Exception:
-            # fallback row-by-row
-            rows = []
-            for row in X:
-                args = [row[i] for i in range(min(len(var_names), len(row)))]
-                rows.append(float(fn(*args)))
-            return np.array(rows, dtype=float)
+            result = np.array([func(*row) for row in X], dtype=float)
+
+        result = np.asarray(result, dtype=float)
+        if result.ndim == 0:
+            result = np.full(X.shape[0], float(result))
+        elif result.ndim != 1:
+            return None
+
+        if result.shape != (X.shape[0],) or not np.all(np.isfinite(result)):
+            return None
+        return result
     except Exception:
         return None
 
-
-# ---------------------------------------------------------------------------
-# Stage 2 — Nonlinear parameter fitting via scipy.optimize
-# ---------------------------------------------------------------------------
+# -----------------------------------------------
 
 def _parametrize_formula(python_code: str, var_names: list[str]) -> tuple:
     """
@@ -372,300 +317,49 @@ def fit_formula_params(
     variable_names: list[str],
     verbose: bool = False,
 ) -> tuple[str | None, float]:
-    """
-    Stage 2: parametrize the LLM formula and fit numeric constants to data.
+    """Evaluate a formula through the restricted AST gate.
 
-    Works regardless of what naming convention the LLM used.
-    Tries curve_fit (fast, local) then differential_evolution (slow, global).
-    Returns (fitted_code, r2_on_train).
+    Parameter fitting is intentionally disabled: the previous implementation
+    executed parametrized generated Python with exec/compile, bypassing the
+    formula safety gate.
     """
     try:
-        from scipy.optimize import curve_fit as _curve_fit
-        from scipy.optimize import differential_evolution as _de
-    except ImportError:
-        preds = _safe_exec_formula(python_code, X_train, variable_names)
-        r2 = r2_score(y_train, preds) if (preds is not None
-                                          and np.isfinite(preds).all()) else 0.0
-        return python_code, r2
+        X = np.asarray(X_train, dtype=float)
+        y = np.asarray(y_train, dtype=float)
 
-    # ── Early-exit gate ────────────────────────────────────────────────
-    # Evaluate the raw (un-parametrized) formula first.  If it already
-    # fits well there is nothing to gain from freeing its constants —
-    # doing so only adds noise dimensions that confuse curve_fit and can
-    # trigger the expensive differential_evolution fallback.  Threshold
-    # 0.95 is deliberately conservative: a formula scoring R²=0.97 on
-    # training data almost certainly has the right structure, and any
-    # remaining gap is better closed by the NN / ensemble leg.
-    raw_preds = _safe_exec_formula(python_code, X_train, variable_names)
-    raw_r2 = (
-        r2_score(y_train, raw_preds)
-        if raw_preds is not None and np.isfinite(raw_preds).all()
-        else -np.inf
-    )
-    if raw_r2 >= 0.95:
-        if verbose:
-            print(f"  [Stage2] raw R²={raw_r2:.4f} ≥ 0.95 — skipping param fitting")
-        return python_code, raw_r2
+        if (
+            X.ndim != 2
+            or X.shape[0] == 0
+            or X.shape[1] == 0
+            or y.ndim != 1
+            or y.shape[0] != X.shape[0]
+            or len(variable_names) != X.shape[1]
+            or not np.isfinite(X).all()
+            or not np.isfinite(y).all()
+        ):
+            return None, -np.inf
 
-    parametrized, init_vals, param_names = _parametrize_formula(
-        python_code, variable_names
-    )
+        preds = _safe_exec_formula(python_code, X, variable_names)
+        if preds is None:
+            return None, -np.inf
 
-    if not init_vals:
-        # Formula has no tunable constants — evaluate as-is
-        return python_code, raw_r2 if np.isfinite(raw_r2) else 0.0
+        preds = np.asarray(preds, dtype=float)
+        if preds.shape != y.shape or not np.isfinite(preds).all():
+            return None, -np.inf
 
-    # ── Strategy B dimension cap ───────────────────────────────────────
-    # Strategy B (inline literal replacement) is the fallback path: it
-    # can produce many free parameters from a formula with many embedded
-    # numbers.  Beyond ~4 free dimensions curve_fit's local Jacobian
-    # search becomes unreliable, the R²<0.90 guard triggers, and the
-    # 500-iteration differential_evolution fallback runs — costing ~10 s
-    # and often degrading quality.  If B produced too many parameters,
-    # return the raw formula rather than attempting a doomed fit.
-    _MAX_INLINE_PARAMS = 4
-    if not param_names and len(init_vals) > _MAX_INLINE_PARAMS:
+        score = float(r2_score(y, preds))
+        if not np.isfinite(score):
+            return None, -np.inf
+
         if verbose:
             print(
-                f"  [Stage2] Strategy B found {len(init_vals)} inline params "
-                f"(> {_MAX_INLINE_PARAMS}) — skipping to avoid over-parametrization"
+                "  [Stage2] parameter fitting disabled; "
+                f"restricted raw-formula R²={score:.4f}"
             )
-        return python_code, raw_r2 if np.isfinite(raw_r2) else 0.0
+        return python_code, score
 
-    if verbose:
-        print(f"  [Stage2] fitting {len(init_vals)} param(s): {param_names or '(inline)'}")
-
-    import math as _math
-    import warnings as _warnings
-
-    _NS_BASE = {
-        "np": np, "numpy": np, "math": _math,
-        "pi": np.pi, "e": np.e,
-        "exp":    lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-        "log":    np.log, "sqrt": np.sqrt,
-        "sin":    np.sin, "cos":  np.cos, "tan": np.tan,
-        "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-        "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-        "arctan": np.arctan, "arctan2": np.arctan2,
-        "abs":    np.abs, "sign": np.sign,
-        "tanh":   np.tanh, "sinh": np.sinh, "cosh": np.cosh,
-    }
-
-    def _make_fn(P):
-        ns = dict(_NS_BASE)
-        ns["_P"] = list(P)
-        try:
-            pre_keys = set(ns.keys())
-            exec(compile(parametrized, "<formula>", "exec"), ns)
-            # Prefer a callable literally named 'formula' so that helper
-            # functions defined above the main formula are never mistakenly
-            # used as the entry-point (Bug #2 / #1: old code used next()
-            # without a default and iterated in dict order, picking the first
-            # callable found — often a helper — and raising StopIteration
-            # silently when exec added nothing callable at all).
-            new_callables = {
-                k: v for k, v in ns.items()
-                if k not in pre_keys and callable(v) and not isinstance(v, type)
-            }
-            return new_callables.get("formula") or next(
-                iter(new_callables.values()), None
-            )
-        except Exception:
-            return None
-
-    def _predict(P):
-        fn = _make_fn(P)
-        if fn is None:
-            return None
-        try:
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                args = [X_train[:, i] for i in range(X_train.shape[1])]
-                r = fn(*args)
-            r = np.array(
-                r if not np.isscalar(r) else np.full(len(y_train), float(r)),
-                dtype=float,
-            )
-            return r if np.isfinite(r).all() else None
-        except Exception:
-            return None
-
-    def _wrapper(X_flat, *P):
-        fn = _make_fn(P)
-        if fn is None:
-            return np.full(len(X_flat), 1e30)
-        try:
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                args = [X_flat[:, i] for i in range(X_train.shape[1])]
-                r = fn(*args)
-            r = np.array(r, dtype=float)
-            return np.where(np.isfinite(r), r, 1e30)
-        except Exception:
-            return np.full(len(X_flat), 1e30)
-
-    import time as _time
-
-    y_scale = max(abs(float(y_train.mean())), float(y_train.std()), 1.0)
-    n       = len(init_vals)
-    rng     = np.random.default_rng(42)
-
-    # FIX-ISSUE2B-WALLCLOCK-NONDETERMINISM: the number of curve_fit
-    # candidates tried, and whether/how-long differential_evolution ran,
-    # used to be gated on `time.monotonic()` elapsed since Stage 2 started.
-    # That makes the *algorithm path actually executed* depend on real
-    # wall-clock time, which varies run-to-run on a shared/variably-loaded
-    # CI runner even for bit-identical code, seeds, and inputs -- confirmed
-    # directly in the Item 2b logs, where the SAME equation's total
-    # evaluation time varied by several seconds across otherwise-identical
-    # phaseA_run1/run2/run3 invocations. On a loaded runner this could mean
-    # curve_fit only gets 2 of 3 candidates tried, or DE gets skipped or
-    # cut short, in one run but not another -- producing a different
-    # fitted_code / fitted_train_r2 despite everything else being
-    # identical. That is real, load-dependent nondeterminism, not fixable
-    # by seeding.
-    #
-    # Fix: bound the fitting work by deterministic, data-independent
-    # quantities only (fixed candidate count, maxfev, maxiter) so the same
-    # sequence of optimizer calls always runs regardless of machine speed.
-    # A generous *absolute* wall-clock safety valve is kept only to catch
-    # genuine runaway formulas; it is set high enough to essentially never
-    # fire under normal load, and if it ever does, it is logged loudly
-    # (not silently swallowed) so an affected run is visibly flagged
-    # rather than quietly producing a non-reproducible result.
-    _ABS_SAFETY_CAP_S = 45.0
-    _t_stage2_start = _time.monotonic()
-    _safety_tripped = [False]
-
-    def _safety_cap_exceeded() -> bool:
-        if _time.monotonic() - _t_stage2_start > _ABS_SAFETY_CAP_S:
-            if not _safety_tripped[0]:
-                _safety_tripped[0] = True
-                print(
-                    f"  ⚠️  [Stage2] absolute safety cap ({_ABS_SAFETY_CAP_S}s) "
-                    f"exceeded -- aborting remaining fit attempts early. This "
-                    f"run's Stage 2 result may not match a run that did not hit "
-                    f"this cap; treat it as suspect for reproducibility "
-                    f"comparisons.",
-                    flush=True,
-                )
-            return True
-        return False
-
-    # Bounds tied to y_scale rather than ±1e9 so curve_fit's Jacobian
-    # search starts in a sensible region and converges faster.
-    _fit_bounds = (-y_scale * 100, y_scale * 100)
-
-    candidates = [
-        np.array(init_vals),                              # LLM's own guess
-        np.ones(n),
-        np.full(n, y_scale),
-        np.full(n, y_scale / 10),
-        np.full(n, float(np.abs(y_train).max())),
-        rng.uniform(0.5, 2.0, n),
-    ]
-    scored: list[tuple] = []
-    for c in candidates:
-        p = _predict(c)
-        r = r2_score(y_train, p) if p is not None else -np.inf
-        scored.append((r, c))
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    best_r2   = -np.inf
-    best_code = python_code
-
-    def _record(P):
-        nonlocal best_r2, best_code
-        preds = _predict(P)
-        if preds is None:
-            return
-        r2 = r2_score(y_train, preds)
-        if r2 > best_r2:
-            best_r2 = r2
-            if param_names:
-                # Rewrite the named assignment lines with fitted values
-                fc = python_code
-                for name, val in zip(param_names, P):
-                    fc = re.sub(
-                        rf'(?<![_\w]){re.escape(name)}\s*=\s*[^\n]+',
-                        f"{name} = {val:.8g}",
-                        fc,
-                    )
-                best_code = fc
-            else:
-                # Inline literals: write the parametrized form with _P values
-                # substituted back as literals
-                fc = parametrized
-                for i, val in enumerate(P):
-                    fc = fc.replace(f"_P[{i}]", f"{val:.8g}")
-                # Remove _P bookkeeping lines
-                fc = re.sub(r'[ \t]*_P\s*=.*\n?', '', fc)
-                best_code = fc
-
-    # ── curve_fit from best candidates ────────────────────────────────
-    # Always attempt the same fixed number of candidates (3) regardless of
-    # elapsed wall-clock time -- each individual curve_fit call is already
-    # cost-bounded via maxfev=3000, so trying all 3 is safe and, crucially,
-    # deterministic: the exact same optimizer calls run every time given
-    # the same inputs. Only the absolute safety valve can still cut this
-    # short, and it logs when it does.
-    for _, p0 in scored[:3]:
-        if best_r2 >= 0.95:
-            break
-        if _safety_cap_exceeded():
-            break
-        try:
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                popt, _ = _curve_fit(
-                    _wrapper, X_train, y_train,
-                    p0=p0, maxfev=3000, bounds=_fit_bounds,
-                )
-            _record(popt)
-        except Exception:
-            continue
-
-    # ── differential_evolution fallback ───────────────────────────────
-    # Only run if curve_fit left a meaningful gap. maxiter=100 already
-    # bounds the worst-case cost deterministically (a fixed iteration
-    # count, not a wall-clock budget) -- no per-run timing dependence.
-    # The absolute safety valve remains as a runaway-formula backstop only.
-    if best_r2 < 0.90 and not _safety_cap_exceeded():
-        try:
-            bounds_de = [(-y_scale * 100, y_scale * 100)] * n
-
-            def _obj(P):
-                pr = _predict(P)
-                return float(np.mean((y_train - pr) ** 2)) if pr is not None else 1e30
-
-            def _de_callback(xk, convergence=None):
-                # Purely a runaway-formula backstop now -- not part of the
-                # normal-path determinism story, since it will not fire
-                # under normal load (cap is 45s, DE itself is bounded by
-                # maxiter=100 with a fixed seed).
-                return _safety_cap_exceeded()
-
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                res = _de(
-                    _obj, bounds_de,
-                    maxiter=100, seed=42, polish=False,
-                    callback=_de_callback,
-                )
-            _record(res.x)
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    if verbose:
-        print(f"  [Stage2] best R²={best_r2:.4f}")
-
-    # Return the true best_r2 — do NOT clamp to 0.  Clamping masked cases
-    # where fitting diverged (best_r2 << 0) but the clamped 0.0 was still
-    # larger than a negative llm_train_r2, causing hybrid_predict to adopt
-    # the broken formula and produce predictions in the ~10^41 range.
-    return best_code, best_r2 if np.isfinite(best_r2) else -np.inf
+    except Exception:
+        return None, -np.inf
 
 
 # ---------------------------------------------------------------------------

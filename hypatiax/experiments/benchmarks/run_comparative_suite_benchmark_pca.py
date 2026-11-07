@@ -189,15 +189,9 @@ def _nulls(o):
     return o
 
 def _dump_json_null(obj, fp, **kw):
-    """json.dump with non-finite -> null. Serialises to a string first, so a
-    failure never leaves a half-written file; if strict encoding still fails
-    it warns loudly and falls back rather than losing a long run's results."""
+    """Serialize non-finite values as null; reject any remaining invalid JSON."""
     kw.setdefault("default", str)
-    try:
-        s = json.dumps(_nulls(obj), allow_nan=False, **kw)
-    except ValueError as _e:
-        print(f"WARNING: strict JSON encoding failed ({_e}); writing with allow_nan=True")
-        s = json.dumps(obj, **kw)
+    s = json.dumps(_nulls(obj), allow_nan=False, **kw)
     fp.write(s)
 # --- END null-json helpers -----------------------------------------------------
 
@@ -364,151 +358,103 @@ def _runner_eval_formula(
     X: np.ndarray,
     var_names: List[str],
 ) -> Optional[np.ndarray]:
-    """
-    Evaluate *python_code* as a numpy expression that maps X columns to a 1-D
-    prediction array.
+    """Evaluate a formula through the restricted AST interpreters."""
+    from hypatiax.safe_formula import parse_formula, evaluate_expression
 
-    Supports three surface forms:
-      • Bare expression:   ``(x0 * 50.0) / (x0 + 10.0)``
-      • Assignment form:   ``y = (x0 * 50.0) / (x0 + 10.0)``
-      • Def form:          ``def formula(x0, k): return x0 * k / (x0 + k)``
-
-    Returns a numpy array of length len(X), or None on any failure.
-    """
     try:
-        import scipy.special as _spsp
-    except ImportError:
-        _spsp = None
+        X = np.asarray(X, dtype=float)
+        if (
+            X.ndim != 2
+            or X.shape[0] == 0
+            or X.shape[1] == 0
+            or len(var_names) != X.shape[1]
+            or len(set(var_names)) != len(var_names)
+            or not np.isfinite(X).all()
+        ):
+            return None
 
-    safe_globals: Dict[str, Any] = {
-        "__builtins__": {},
-        "np": np,
-        "numpy": np,
-        "math": math,
-        "pi": np.pi,
-        "e":  np.e,
-        "inf": np.inf,
-        "nan": np.nan,
-        # common numpy ufuncs as bare names
-        "exp":    lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-        "log":    np.log,
-        "log10":  np.log10,
-        "log2":   np.log2,
-        "sqrt":   np.sqrt,
-        "sin":    np.sin,
-        "cos":    np.cos,
-        "tan":    np.tan,
-        "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-        "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-        "arctan": np.arctan,
-        "arctan2": np.arctan2,
-        "abs":    np.abs,
-        "fabs":   np.abs,
-        "floor":  np.floor,
-        "ceil":   np.ceil,
-        "sign":   np.sign,
-        "power":  np.power,
-        "tanh":   np.tanh,
-        "sinh":   np.sinh,
-        "cosh":   np.cosh,
-        "erf":    (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
-        "erfc":   (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
-        # FIX (2026-07-25): safe_asin/safe_acos are injected into the
-        # DISCOVERY-time namespace by SymbolicEngineWithLLM.auto_inject_trig
-        # for optics/waves domains (symbolic_engine.py), but were never
-        # added to this SCORING-time namespace. Reuse the same clipped
-        # implementation as arcsin/arccos so the two cannot drift apart
-        # again. Same fix as applied to run_comparative_suite_benchmark_v2.py.
-        "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-        "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-        "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
-        # FIX (2026-07-27): acos_of_cos/atan_of_tan were named alongside
-        # asin_of_sin in the paper's fix description but never actually
-        # added here. Same composition-bypass pattern as asin_of_sin.
-        "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
-        "atan_of_tan": lambda x: np.arctan(np.tan(x)),
-    }
-    if _spsp is not None:
-        safe_globals["scipy"]   = type("m", (), {"special": _spsp})()
-        safe_globals["special"] = _spsp
+        code = python_code.strip()
+        code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+        code = code.replace("^", "**")
 
-    # Inject each variable as the corresponding X column.
-    local_ns: Dict[str, Any] = {}
-    for i, vn in enumerate(var_names):
-        local_ns[vn] = X[:, i] if X.ndim == 2 else X
+        if not code:
+            return None
 
-    code   = python_code.strip()
-
-    # FIX (2026-07-25), applied to ALL THREE strategies below since they
-    # all operate on `code`. Same fix as applied to
-    # run_comparative_suite_benchmark_v2.py.
-    #
-    # FIX-2: strip a leading bracketed human-readable annotation, e.g.
-    # "[X-normalised: q÷3.958e-18] 1.194902e-10 * (...)" -- upstream
-    # normalisation metadata that was never stripped before being handed
-    # to eval()/exec(), causing an immediate SyntaxError.
-    code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
-
-    # FIX-1: '^' is used as a conventional power operator by the formula
-    # generator (a PySR/Julia-style convention) but is bitwise XOR in
-    # Python, undefined for float operands (TypeError). No formula in
-    # this pipeline intends genuine bitwise XOR.
-    code = code.replace("^", "**")
-
-    y_pred = None
-
-    # Strategy 1: bare expression
-    try:
-        y_pred = eval(code, safe_globals, local_ns)  # noqa: S307
-    except (SyntaxError, Exception):
-        pass
-
-    # Strategy 2: assignment form — execute and grab last assigned var
-    if y_pred is None:
-        try:
-            exec_ns = {**safe_globals, **local_ns}  # noqa: S102
-            exec(code, exec_ns)                      # noqa: S102
-            for candidate in ("y", "result", "output", "pred", "f"):
-                if candidate in exec_ns and isinstance(
-                    exec_ns[candidate], (np.ndarray, float, int)
-                ):
-                    y_pred = exec_ns[candidate]
-                    break
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    # Strategy 3: def form — find the first callable and call it
-    if y_pred is None and "def " in code:
-        try:
-            exec_ns: Dict[str, Any] = dict(safe_globals)
-            exec(code, exec_ns)  # noqa: S102
-            fn = next(
-                (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                None,
+        if code.startswith("def "):
+            func = parse_formula(code)
+            fn_args = [X[:, i] for i in range(X.shape[1])]
+            y_pred = func(*fn_args)
+        else:
+            # Permit only a single simple assignment; never execute a block.
+            assignment = re.fullmatch(
+                r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                code,
+                flags=re.DOTALL,
             )
-            if fn is not None:
-                fn_args = [local_ns[vn] for vn in var_names]
-                y_pred  = fn(*fn_args)
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+            expression = assignment.group(1) if assignment else code
 
-    if y_pred is None:
+            namespace = {
+                name: X[:, i] for i, name in enumerate(var_names)
+            }
+            namespace.update({
+                "pi": np.pi,
+                "e": np.e,
+                "inf": np.inf,
+                "nan": np.nan,
+                "exp": lambda x: np.exp(np.clip(x, -500.0, 500.0)),
+                "log": np.log,
+                "log10": np.log10,
+                "log2": np.log2,
+                "sqrt": np.sqrt,
+                "sin": np.sin,
+                "cos": np.cos,
+                "tan": np.tan,
+                "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+                "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+                "arctan": np.arctan,
+                "arctan2": np.arctan2,
+                "abs": np.abs,
+                "fabs": np.abs,
+                "floor": np.floor,
+                "ceil": np.ceil,
+                "sign": np.sign,
+                "power": np.power,
+                "square": np.square,
+                "clip": np.clip,
+                "tanh": np.tanh,
+                "sinh": np.sinh,
+                "cosh": np.cosh,
+                "erf": lambda x: np.vectorize(math.erf)(x),
+                "erfc": lambda x: np.vectorize(math.erfc)(x),
+                "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+                "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+                "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
+                "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
+                "atan_of_tan": lambda x: np.arctan(np.tan(x)),
+            })
+
+            # Allow only known safe namespace prefixes, then evaluate names
+            # and direct function calls through the restricted AST interpreter.
+            for prefix in ("np.", "numpy.", "math."):
+                code = code.replace(prefix, "")
+            expression = expression.replace("np.", "").replace(
+                "numpy.", ""
+            ).replace("math.", "")
+
+            y_pred = evaluate_expression(expression, namespace)
+
+        arr = np.asarray(y_pred, dtype=float)
+        if arr.ndim == 0:
+            arr = np.full(X.shape[0], float(arr))
+        if arr.ndim != 1 or arr.shape != (X.shape[0],):
+            return None
+        if not np.isfinite(arr).all():
+            return None
+        return arr
+
+    except Exception:
         return None
 
-    arr = np.asarray(y_pred, dtype=float).flatten()
-    if len(arr) != len(X):
-        return None
-    return arr
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 3.  COMPUTE extrap_r2_far
-#     Source: run_test() inner block, lines ~2868-2981
-# ──────────────────────────────────────────────────────────────────────────────
 
 def _finite(x) -> bool:
     """True only for a real, finite number. None-safe: np.isfinite(None) raises
@@ -1115,133 +1061,76 @@ class BaseMethod:
         X: np.ndarray,
         var_names: List[str],
     ) -> Optional[np.ndarray]:
-        """
-        Try to evaluate *python_code* as a numpy expression that maps X
-        columns to a 1-D prediction array.
+        """Evaluate generated formulas using the restricted AST interpreters."""
+        from hypatiax.safe_formula import parse_formula, evaluate_expression
 
-        Supports:
-          • bare expression:   np.exp(-x**2 / (2*s**2)) / (np.sqrt(2*np.pi)*s)
-          • assignment form:   y = np.exp(-x**2 / (2*s**2)) / ...
-          • def form:          def formula(x, s): return ...
-
-        Returns y_pred array or None on any failure.
-        """
-        import math
         try:
-            import scipy.special as _spsp
-        except ImportError:
-            _spsp = None
+            X = np.asarray(X, dtype=float)
+            if (
+                X.ndim != 2
+                or X.shape[0] == 0
+                or X.shape[1] == 0
+                or len(var_names) != X.shape[1]
+                or len(set(var_names)) != len(var_names)
+                or not np.all(np.isfinite(X))
+            ):
+                return None
 
-        safe_globals: Dict[str, Any] = {
-            "__builtins__": {},
-            "np": np,
-            "numpy": np,
-            "math": math,
-            "pi": np.pi,
-            "e":  np.e,
-            "inf": np.inf,
-            "nan": np.nan,
-            # common numpy ufuncs as bare names
-            "exp":   lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-            "log":   np.log,
-            "log10": np.log10,
-            "log2":  np.log2,
-            "sqrt":  np.sqrt,
-            "sin":   np.sin,
-            "cos":   np.cos,
-            "tan":   np.tan,
-            "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-            "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-            "arctan": np.arctan,
-            "arctan2": np.arctan2,
-            "abs":   np.abs,
-            "fabs":  np.abs,
-            "floor": np.floor,
-            "ceil":  np.ceil,
-            "sign":  np.sign,
-            "power": np.power,
-            "tanh":  np.tanh,
-            "sinh":  np.sinh,
-            "cosh":  np.cosh,
-            "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
-            "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
-            # FIX (2026-07-27): this safe_globals construction (BaseMethod,
-            # used by Hybrid/SymbolicEngine/HybridSystemV50_2 methods) was
-            # missing safe_asin/safe_acos/asin_of_sin/acos_of_cos/atan_of_tan
-            # entirely -- same defect already fixed in
-            # run_comparative_suite_benchmark_v2.py, ported over here.
-            # Formulas using these names (e.g. Snell's law) raised NameError
-            # here, silently returning None via the broad except below.
-            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
-            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
-            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
-        }
-        if _spsp is not None:
-            safe_globals["scipy"] = type("m", (), {"special": _spsp})()
-            safe_globals["special"] = _spsp
+            code = str(python_code).strip()
+            if not code:
+                return None
 
-        # Inject each variable as the corresponding X column (broadcast-safe)
-        local_ns: Dict[str, Any] = {}
-        for i, vn in enumerate(var_names):
-            local_ns[vn] = X[:, i] if X.ndim == 2 else X
+            # Remove optional metadata and normalize exponent notation.
+            code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+            code = code.replace("^", "**")
 
-        code = python_code.strip()
-        y_pred = None
-
-        # Strategy 1: try as a bare expression
-        try:
-            y_pred = eval(code, safe_globals, local_ns)  # noqa: S307
-        except SyntaxError:
-            pass
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-        # Strategy 2: assignment form — execute and grab last assigned var
-        if y_pred is None:
-            try:
-                exec_ns = {**safe_globals, **local_ns}  # noqa: S102
-                exec(code, exec_ns)  # noqa: S102
-                # Look for 'y', 'result', 'output', or 'pred' first, then
-                # any newly assigned non-input name
-                for candidate in ("y", "result", "output", "pred", "f"):
-                    if candidate in exec_ns and isinstance(
-                        exec_ns[candidate], (np.ndarray, float, int)
-                    ):
-                        y_pred = exec_ns[candidate]
-                        break
-            except Exception as _e:
-                import logging as _lg, os as _os
-                _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-        # Strategy 3: def form — find the first def and call it
-        if y_pred is None and "def " in code:
-            try:
-                exec_ns: Dict[str, Any] = dict(safe_globals)
-                exec(code, exec_ns)  # noqa: S102
-                fn = next(
-                    (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                    None,
+            if code.startswith("def "):
+                func = parse_formula(code)
+                y_pred = func(*(X[:, i] for i in range(X.shape[1])))
+            else:
+                assignment = re.fullmatch(
+                    r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                    code,
+                    flags=re.DOTALL,
                 )
-                if fn is not None:
-                    args = [local_ns[vn] for vn in var_names]
-                    y_pred = fn(*args)
-            except Exception as _e:
-                import logging as _lg, os as _os
-                _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+                expression = assignment.group(1) if assignment else code
 
-        if y_pred is None:
-            return None
+                namespace = {
+                    name: X[:, i] for i, name in enumerate(var_names)
+                }
+                namespace.update({
+                    "pi": np.pi,
+                    "e": np.e,
+                    "exp": lambda x: np.exp(np.clip(x, -500.0, 500.0)),
+                    "log": np.log, "log10": np.log10, "log2": np.log2,
+                    "sqrt": np.sqrt, "sin": np.sin, "cos": np.cos,
+                    "tan": np.tan, "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+                    "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+                    "arctan": np.arctan, "arctan2": np.arctan2,
+                    "abs": np.abs, "fabs": np.abs,
+                    "floor": np.floor, "ceil": np.ceil,
+                    "sign": np.sign, "power": np.power,
+                    "minimum": np.minimum, "maximum": np.maximum,
+                    "tanh": np.tanh, "sinh": np.sinh, "cosh": np.cosh,
+                    "square": np.square, "clip": np.clip,
+                })
 
-        arr = np.asarray(y_pred, dtype=float).flatten()
-        if len(arr) != len(X):
+                for prefix in ("np.", "numpy.", "math."):
+                    expression = expression.replace(prefix, "")
+
+                y_pred = evaluate_expression(expression, namespace)
+
+            arr = np.asarray(y_pred, dtype=float)
+            if arr.ndim == 0:
+                arr = np.full(X.shape[0], float(arr))
+            if arr.ndim != 1 or arr.shape != (X.shape[0],):
+                return None
+            if not np.all(np.isfinite(arr)):
+                return None
+            return arr
+
+        except Exception:
             return None
-        return arr
 
 
     @staticmethod
@@ -1461,134 +1350,65 @@ class PureLLMBaselineMethod(BaseMethod):
         X: np.ndarray,
         var_names: List[str],
     ) -> Optional[np.ndarray]:
-        """
-        Try to evaluate *python_code* as a numpy expression that maps X
-        columns to a 1-D prediction array.
+        """Evaluate generated formulas using restricted AST interpreters."""
+        from hypatiax.safe_formula import parse_formula, evaluate_expression
 
-        Supports:
-          • bare expression:   np.exp(-x**2 / (2*s**2)) / (np.sqrt(2*np.pi)*s)
-          • assignment form:   y = np.exp(-x**2 / (2*s**2)) / ...
-          • def form:          def formula(x, s): return ...
-
-        Returns y_pred array or None on any failure.
-        """
-        import math
         try:
-            import scipy.special as _spsp
-        except ImportError:
-            _spsp = None
+            X = np.asarray(X, dtype=float)
+            if (
+                X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0
+                or len(var_names) != X.shape[1]
+                or len(set(var_names)) != len(var_names)
+                or not np.all(np.isfinite(X))
+            ):
+                return None
 
-        safe_globals: Dict[str, Any] = {
-            "__builtins__": {},
-            "np": np,
-            "numpy": np,
-            "math": math,
-            "pi": np.pi,
-            "e":  np.e,
-            "inf": np.inf,
-            "nan": np.nan,
-            # common numpy ufuncs as bare names
-            "exp":   lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-            "log":   np.log,
-            "log10": np.log10,
-            "log2":  np.log2,
-            "sqrt":  np.sqrt,
-            "sin":   np.sin,
-            "cos":   np.cos,
-            "tan":   np.tan,
-            "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-            "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-            "arctan": np.arctan,
-            "arctan2": np.arctan2,
-            "abs":   np.abs,
-            "fabs":  np.abs,
-            "floor": np.floor,
-            "ceil":  np.ceil,
-            "sign":  np.sign,
-            "power": np.power,
-            "tanh":  np.tanh,
-            "sinh":  np.sinh,
-            "cosh":  np.cosh,
-            "erf":   (np.vectorize(math.erf) if _spsp is None else _spsp.erf),
-            "erfc":  (np.vectorize(math.erfc) if _spsp is None else _spsp.erfc),
-            # FIX (2026-07-27): this safe_globals construction
-            # (PureLLMBaselineMethod, the pure-LLM baseline's main scoring
-            # path) was missing safe_asin/safe_acos/asin_of_sin/acos_of_cos/
-            # atan_of_tan entirely. Any LLM-generated formula using these
-            # names raised NameError here, silently returning None via the
-            # broad except below -- this is the primary in-range Rsq scoring
-            # path for the LLM baseline, not just the far-extrapolation
-            # recheck.
-            "safe_asin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-            "safe_acos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-            "asin_of_sin": lambda x: np.arcsin(np.clip(np.sin(x), -1.0, 1.0)),
-            "acos_of_cos": lambda x: np.arccos(np.clip(np.cos(x), -1.0, 1.0)),
-            "atan_of_tan": lambda x: np.arctan(np.tan(x)),
-        }
-        if _spsp is not None:
-            safe_globals["scipy"] = type("m", (), {"special": _spsp})()
-            safe_globals["special"] = _spsp
+            code = str(python_code).strip()
+            code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+            code = code.replace("^", "**")
+            if not code:
+                return None
 
-        # Inject each variable as the corresponding X column (broadcast-safe)
-        local_ns: Dict[str, Any] = {}
-        for i, vn in enumerate(var_names):
-            local_ns[vn] = X[:, i] if X.ndim == 2 else X
-
-        code = python_code.strip()
-        y_pred = None
-
-        # Strategy 1: try as a bare expression
-        try:
-            y_pred = eval(code, safe_globals, local_ns)  # noqa: S307
-        except SyntaxError:
-            pass
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-        # Strategy 2: assignment form — execute and grab last assigned var
-        if y_pred is None:
-            try:
-                exec_ns = {**safe_globals, **local_ns}  # noqa: S102
-                exec(code, exec_ns)  # noqa: S102
-                # Look for 'y', 'result', 'output', or 'pred' first, then
-                # any newly assigned non-input name
-                for candidate in ("y", "result", "output", "pred", "f"):
-                    if candidate in exec_ns and isinstance(
-                        exec_ns[candidate], (np.ndarray, float, int)
-                    ):
-                        y_pred = exec_ns[candidate]
-                        break
-            except Exception as _e:
-                import logging as _lg, os as _os
-                _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-        # Strategy 3: def form — find the first def and call it
-        if y_pred is None and "def " in code:
-            try:
-                exec_ns: Dict[str, Any] = dict(safe_globals)
-                exec(code, exec_ns)  # noqa: S102
-                fn = next(
-                    (v for k, v in exec_ns.items() if callable(v) and k != "__builtins__"),
-                    None,
+            if code.startswith("def "):
+                func = parse_formula(code)
+                y_pred = func(*(X[:, i] for i in range(X.shape[1])))
+            else:
+                assignment = re.fullmatch(
+                    r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                    code, flags=re.DOTALL,
                 )
-                if fn is not None:
-                    args = [local_ns[vn] for vn in var_names]
-                    y_pred = fn(*args)
-            except Exception as _e:
-                import logging as _lg, os as _os
-                _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+                expression = assignment.group(1) if assignment else code
+                namespace = {
+                    name: X[:, i] for i, name in enumerate(var_names)
+                }
+                namespace.update({
+                    "pi": np.pi, "e": np.e,
+                    "exp": lambda x: np.exp(np.clip(x, -500.0, 500.0)),
+                    "log": np.log, "log10": np.log10, "log2": np.log2,
+                    "sqrt": np.sqrt, "sin": np.sin, "cos": np.cos,
+                    "tan": np.tan,
+                    "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
+                    "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
+                    "arctan": np.arctan, "arctan2": np.arctan2,
+                    "abs": np.abs, "fabs": np.abs,
+                    "floor": np.floor, "ceil": np.ceil,
+                    "sign": np.sign, "power": np.power,
+                    "minimum": np.minimum, "maximum": np.maximum,
+                    "tanh": np.tanh, "sinh": np.sinh, "cosh": np.cosh,
+                    "square": np.square, "clip": np.clip,
+                })
+                for prefix in ("np.", "numpy.", "math."):
+                    expression = expression.replace(prefix, "")
+                y_pred = evaluate_expression(expression, namespace)
 
-        if y_pred is None:
+            arr = np.asarray(y_pred, dtype=float)
+            if arr.ndim == 0:
+                arr = np.full(X.shape[0], float(arr))
+            if arr.ndim != 1 or arr.shape != (X.shape[0],):
+                return None
+            return arr if np.all(np.isfinite(arr)) else None
+        except Exception:
             return None
-
-        arr = np.asarray(y_pred, dtype=float).flatten()
-        if len(arr) != len(X):
-            return None
-        return arr
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._baseline is None:

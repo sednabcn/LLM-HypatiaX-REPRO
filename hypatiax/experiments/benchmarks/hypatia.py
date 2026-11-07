@@ -442,10 +442,14 @@ def _parse_response(raw: str, var_names: list[str]) -> list[str]:
     candidates.sort(key=lambda c: float(c.get("confidence", 0)), reverse=True)
 
     valid_exprs: list[str] = []
-    allowed_names = set(var_names) | {
-        "np", "sin", "cos", "log", "exp", "sqrt", "abs",
-        "True", "False", "None",
+    import re
+    from hypatiax.safe_formula import evaluate_expression
+
+    safe_functions = {
+        "sin": np.sin, "cos": np.cos, "log": np.log,
+        "exp": np.exp, "sqrt": np.sqrt, "abs": np.abs,
     }
+    safe_constants = {"pi": np.pi, "e": np.e}
 
     for item in candidates:
         if not isinstance(item, dict):
@@ -454,23 +458,31 @@ def _parse_response(raw: str, var_names: list[str]) -> list[str]:
         if not expr:
             continue
 
-        # Safety: reject expressions referencing undeclared names
         try:
-            import ast
-            tree = ast.parse(expr, mode="eval")
-            names_used = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
-            # Allow numpy attribute access (np.sin etc.) — handled at eval time
-            unexpected = names_used - allowed_names
-            if unexpected:
-                continue  # references an undefined symbol
-        except SyntaxError:
-            continue
+            # Normalize only explicitly approved NumPy names.
+            expr = re.sub(
+                r"\\bnp\\.(sin|cos|log|exp|sqrt|abs|pi|e)\\b",
+                lambda match: match.group(1),
+                expr,
+            )
+            namespace = dict(safe_functions)
+            namespace.update(safe_constants)
 
-        # Smoke-test: evaluate with dummy arrays to catch runtime errors
-        try:
-            dummy = {vn: np.ones(5) for vn in var_names}
-            dummy["np"] = np
-            eval(compile(ast.parse(expr, mode="eval"), "<expr>", "eval"), dummy)
+            if any(
+                not isinstance(vn, str)
+                or not vn.isidentifier()
+                or vn.startswith("_")
+                or vn in namespace
+                for vn in var_names
+            ):
+                continue
+
+            namespace.update({vn: np.ones(5) for vn in var_names})
+            result = np.asarray(evaluate_expression(expr, namespace))
+            if result.ndim > 1 or (result.ndim == 1 and result.shape != (5,)):
+                continue
+            if not np.all(np.isfinite(result)):
+                continue
         except Exception:
             continue
 

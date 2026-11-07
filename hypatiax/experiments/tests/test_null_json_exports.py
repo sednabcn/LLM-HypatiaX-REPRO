@@ -1,22 +1,40 @@
 """AUDIT L37: result exports write null + status, never bare -Infinity; the
 resume checkpoint stays float-typed. Helper block is exec'd from each suite."""
+import ast
 import io
 import json
-import re
 from pathlib import Path
 
 import pytest
 
 BENCH = Path(__file__).resolve().parents[1] / "benchmarks"
 SUITES = ["run_comparative_suite_benchmark_v2.py", "run_comparative_suite_benchmark_pca.py"]
-_RX = re.compile(r"# --- BEGIN null-json helpers.*?# --- END null-json helpers[^\n]*\n", re.S)
-
-
 def _ns(name):
-    m = _RX.search((BENCH / name).read_text(encoding="utf-8"))
-    assert m, f"{name}: helper block missing"
+    lines = (BENCH / name).read_text(encoding="utf-8").splitlines(keepends=True)
+    starts = [i for i, line in enumerate(lines)
+              if "# --- BEGIN null-json helpers" in line]
+    ends = [i for i, line in enumerate(lines)
+            if "# --- END null-json helpers" in line]
+    assert len(starts) == 1 and len(ends) == 1 and starts[0] < ends[0], (
+        f"{name}: helper markers are missing, duplicated, or misordered"
+    )
+
+    tree = ast.parse("".join(lines[starts[0] + 1:ends[0]]), filename=name)
+    nodes = tree.body
+    expected_names = ["_status_of", "_nulls", "_dump_json_null"]
+    valid = (
+        len(nodes) == 5
+        and isinstance(nodes[0], ast.Import)
+        and [(a.name, a.asname) for a in nodes[0].names] == [("math", "_jmath")]
+        and isinstance(nodes[1], ast.Import)
+        and [(a.name, a.asname) for a in nodes[1].names] == [("numbers", "_jnum")]
+        and all(isinstance(n, ast.FunctionDef) for n in nodes[2:])
+        and [n.name for n in nodes[2:]] == expected_names
+    )
+    assert valid, f"{name}: unexpected statements or imports in helper block"
+
     ns = {"json": json}
-    exec(m.group(0), ns)
+    exec(compile(tree, name, "exec"), ns)
     return ns
 
 

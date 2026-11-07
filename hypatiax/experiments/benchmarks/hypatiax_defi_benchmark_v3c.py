@@ -492,47 +492,42 @@ _EXEC_GLOBALS = {
 
 def _execute_formula(llm_code: str, X: np.ndarray,
                      constants: dict = None) -> np.ndarray | None:
-    """
-    Fix 5 — unified formula execution.
-    ALL LLM formula calls go through this function.
-    Returns np.ndarray of predictions, or None on any failure.
-    constants: dict of scalar values to inject (e.g. {"K": 100.0}) so
-               formulas that reference protocol constants don't NameError.
-    """
-    exec_globals = _EXEC_GLOBALS.copy()
-    if constants:
-        exec_globals.update(constants)
-    local = {}
-    try:
-        exec(llm_code, exec_globals, local)
-    except Exception:
-        return None
-
-    func = next((v for v in local.values() if callable(v)), None)
-    if func is None:
-        return None
+    """Evaluate an LLM formula through the restricted AST interpreter."""
+    from hypatiax.safe_formula import parse_formula
 
     try:
-        if X.ndim == 1 or X.shape[1] == 1:
-            preds = func(X[:, 0] if X.ndim > 1 else X)
-        else:
-            args = [X[:, i] for i in range(X.shape[1])]
-            try:
-                preds = func(*args)
-            except Exception:
-                preds = np.array([func(*X[i]) for i in range(len(X))])
-        preds = np.asarray(preds, dtype=float).flatten()
-        # v3c2-fix2: allow up to 10% NaN/inf (e.g. log(0) at domain boundaries)
-        nan_frac = np.mean(np.isnan(preds) | np.isinf(preds))
-        if nan_frac > 0.1:
+        X = np.asarray(X, dtype=float)
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
+        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
             return None
-        # Replace remaining boundary NaN/inf with median for partial evaluation
-        if nan_frac > 0:
-            med = float(np.nanmedian(preds))
-            preds = np.where(np.isfinite(preds), preds, med)
-        # FIX 6: reject degenerate constant functions → useless predictions
-        # Applied AFTER NaN replacement so we don't reject partially-valid formulas.
-        if np.std(preds) < 1e-12:
+        if not np.all(np.isfinite(X)):
+            return None
+
+        func = parse_formula(llm_code, constants=constants)
+        args = [X[:, i] for i in range(X.shape[1])]
+        try:
+            preds = func(*args)
+        except Exception:
+            preds = np.asarray([func(*row) for row in X], dtype=float)
+
+        preds = np.asarray(preds, dtype=float)
+        if preds.ndim == 0:
+            preds = np.full(X.shape[0], float(preds))
+        if preds.ndim != 1 or preds.shape != (X.shape[0],):
+            return None
+
+        invalid = ~np.isfinite(preds)
+        invalid_fraction = float(np.mean(invalid))
+        if invalid_fraction > 0.1:
+            return None
+        if invalid_fraction:
+            finite_values = preds[~invalid]
+            if finite_values.size == 0:
+                return None
+            preds[invalid] = float(np.median(finite_values))
+
+        if not np.all(np.isfinite(preds)) or np.std(preds) < 1e-12:
             return None
         return preds
     except Exception:

@@ -24,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 import numpy as np
+from hypatiax.safe_formula import parse_formula
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
@@ -814,22 +815,7 @@ CRITICAL REQUIREMENTS:
             # B2: ONE namespace. With separate globals/locals dicts, any
             # module-level constant or helper the LLM wrote landed in locals,
             # but formula() resolves names in globals -> spurious NameError.
-            _before = set(_exec_globals)
-            exec(python_code, _exec_globals)
-
-            # Find the function
-            func = _exec_globals.get("formula")
-            if not callable(func):
-                func = next(
-                    (
-                        v
-                        for k, v in _exec_globals.items()
-                        if k not in _before and callable(v) and not k.startswith("_")
-                    ),
-                    None,
-                )
-            if not func:
-                return {"error": "No function found", "success": False}
+            func = parse_formula(python_code)
 
             if verbose:
                 print(f"  DEBUG - Found function: {func.__name__}")
@@ -939,6 +925,7 @@ CRITICAL REQUIREMENTS:
 def _r2_checked_call(y_true, y_pred):
     """Thin wrapper around the canonical R^2 so it is imported lazily (and in
     one place). Returns (r2, status)."""
+    # HYPATIAX_R2_CANONICAL_MIGRATION_V1
     from hypatiax.core.r2_canonical import r2_checked as _r2_checked
     return _r2_checked(y_true, y_pred)
 

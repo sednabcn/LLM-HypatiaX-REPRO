@@ -398,47 +398,40 @@ _EXEC_GLOBALS = {
 
 def _execute_formula(llm_code: str, X: np.ndarray,
                      constants: dict = None) -> np.ndarray | None:
-    """
-    Fix 5 — unified formula execution.
-    ALL LLM formula calls go through this function.
-    Returns np.ndarray of predictions, or None on any failure.
-    constants: dict of scalar values to inject (e.g. {"K": 100.0}) so
-               formulas that reference protocol constants don't NameError.
-    """
-    exec_globals = _EXEC_GLOBALS.copy()
-    if constants:
-        exec_globals.update(constants)
-    local = {}
-    try:
-        exec(llm_code, exec_globals, local)
-    except Exception:
-        return None
-
-    func = next((v for v in local.values() if callable(v)), None)
-    if func is None:
-        return None
+    """Evaluate an LLM formula through the restricted AST interpreter."""
+    from hypatiax.safe_formula import parse_formula
 
     try:
-        if X.ndim == 1 or X.shape[1] == 1:
-            preds = func(X[:, 0] if X.ndim > 1 else X)
-        else:
-            args = [X[:, i] for i in range(X.shape[1])]
-            try:
-                preds = func(*args)
-            except Exception:
-                preds = np.array([func(*X[i]) for i in range(len(X))])
-        preds = np.asarray(preds, dtype=float).flatten()
-        # v3c2-fix2: allow up to 10% NaN/inf (e.g. log(0) at domain boundaries)
-        nan_frac = np.mean(np.isnan(preds) | np.isinf(preds))
-        if nan_frac > 0.1:
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
             return None
-        # Replace remaining boundary NaN/inf with median for partial evaluation
-        if nan_frac > 0:
-            med = float(np.nanmedian(preds))
-            preds = np.where(np.isfinite(preds), preds, med)
-        # FIX 6: reject degenerate constant functions → useless predictions
-        # Applied AFTER NaN replacement so we don't reject partially-valid formulas.
-        if np.std(preds) < 1e-12:
+        if not np.all(np.isfinite(X)):
+            return None
+
+        func = parse_formula(llm_code, constants=constants)
+        args = [X[:, i] for i in range(X.shape[1])]
+        try:
+            preds = func(*args)
+        except Exception:
+            preds = np.asarray([func(*row) for row in X], dtype=float)
+
+        preds = np.asarray(preds, dtype=float)
+        if preds.ndim == 0:
+            preds = np.full(X.shape[0], float(preds))
+        if preds.ndim != 1 or preds.shape != (X.shape[0],):
+            return None
+
+        invalid = ~np.isfinite(preds)
+        invalid_fraction = float(np.mean(invalid))
+        if invalid_fraction > 0.1:
+            return None
+        if invalid_fraction:
+            finite_values = preds[~invalid]
+            if finite_values.size == 0:
+                return None
+            preds[invalid] = float(np.median(finite_values))
+
+        if not np.all(np.isfinite(preds)) or np.std(preds) < 1e-12:
             return None
         return preds
     except Exception:
@@ -1019,130 +1012,190 @@ _STANDARD_TOTAL = len(_get_test_cases()) - len(_INTRACTABLE_NAMES)  # = 66 + adj
 
 
 def _generate_report(results: list):
-    CLIP_LO    = -10.0
-    standard   = [r for r in results if r["equation_id"] not in _INTRACTABLE_NAMES]
+    CLIP_LO = -10.0
+    standard = [r for r in results if r["equation_id"] not in _INTRACTABLE_NAMES]
     intractable = [r for r in results if r["equation_id"] in _INTRACTABLE_NAMES]
+    planned = max(int(_STANDARD_TOTAL), 0)
+    executed = len(standard)
+    executed_denom = max(executed, 1)
+
+    def _valid_score(value):
+        if value is None:
+            return False
+        try:
+            return bool(np.isfinite(float(value)))
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def _r2s(rlist, method):
         out = []
         for r in rlist:
-            v = r["results"].get(method, {}).get("test_r2")
-            if v is not None and not (isinstance(v, float) and np.isnan(v)):
-                out.append(float(v))
+            value = r["results"].get(method, {}).get("test_r2")
+            if _valid_score(value):
+                out.append(float(value))
         return out
 
     def _stats(scores, denom):
-        arr     = np.array(scores, dtype=float)
+        arr = np.asarray(scores, dtype=float)
         clipped = np.clip(arr, CLIP_LO, 1.0)
         return {
-            "n":             len(arr),
-            "median":        float(np.median(clipped)) if len(clipped) else float("nan"),
-            "mean_clip":     float(np.mean(clipped))   if len(clipped) else float("nan"),
-            "pct_09":        100 * int(np.sum(arr > 0.9))  / denom,
-            "pct_099":       100 * int(np.sum(arr > 0.99)) / denom,
-            "catastrophic":  int(np.sum(arr < CLIP_LO)),
+            "n": len(arr),
+            "median": float(np.median(clipped)) if len(clipped) else float("nan"),
+            "mean_clip": float(np.mean(clipped)) if len(clipped) else float("nan"),
+            "pct_09": 100 * int(np.sum(arr > 0.9)) / denom,
+            "pct_099": 100 * int(np.sum(arr > 0.99)) / denom,
+            "catastrophic": int(np.sum(arr < CLIP_LO)),
         }
 
-    # Fixed denominator = number of STANDARD cases run so far
-    denom = max(len(standard), 1)
+    def _positive_time(record, method):
+        value = record["results"].get(method, {}).get("time_s")
+        if not _valid_score(value):
+            return None
+        value = float(value)
+        return value if value > 0 else None
 
-    print("\n" + "=" * 80)
+    def _paired_times(records, left_method, right_method, predicate=None):
+        pairs = []
+        for record in records:
+            if predicate is not None and not predicate(record):
+                continue
+            left = _positive_time(record, left_method)
+            right = _positive_time(record, right_method)
+            if left is not None and right is not None:
+                pairs.append((record["equation_id"], left, right))
+        return pairs
+
+    print("\\n" + "=" * 80)
     print("STATISTICAL REPORT — HypatiaX DeFi Benchmark v3.0")
     print("=" * 80)
     print(f"Total cases run : {len(results)}")
-    print(f"  Standard      : {len(standard)}  (used in aggregate, denominator = {denom})")
-    print(f"  Intractable   : {len(intractable)}  (reported separately, excluded from aggregate)")
+    print(f"  Planned standard catalogue : {planned}")
+    print(f"  Executed standard cases    : {executed}")
+    print(f"  Intractable cases          : {len(intractable)} (excluded from standard aggregates)")
     print()
-    print("NOTE: All percentages use FIXED denominator (standard cases only).")
-    print("      NaN / failure counts as 0 toward the denominator. This makes")
-    print("      LLM, NN, and Hybrid rates directly comparable.\n")
+    print("Threshold percentages use executed standard cases as denominator.")
+    print("Unstarted planned cases are not silently counted as failures.")
+    print("Score coverage below is valid finite scores / planned standard cases.\\n")
 
     for method in ["pure_llm", "neural_network", "hybrid"]:
-        s = _stats(_r2s(standard, method), denom)
-        label = {"pure_llm": "Pure LLM      ", "neural_network": "Neural Network",
-                 "hybrid":   "Hybrid        "}[method]
-        print(f"  {label}: median={s['median']:.4f}, "
-              f"mean(clip-{abs(CLIP_LO):.0f})={s['mean_clip']:.4f}, "
-              f">0.9: {s['pct_09']:.1f}%, "
-              f">0.99: {s['pct_099']:.1f}%  "
-              f"(catastrophic R²<{CLIP_LO}: {s['catastrophic']})")
+        scores = _r2s(standard, method)
+        stats = _stats(scores, executed_denom)
+        coverage = 100 * len(scores) / planned if planned else float("nan")
+        label = {
+            "pure_llm": "Pure LLM      ",
+            "neural_network": "Neural Network",
+            "hybrid": "Hybrid        ",
+        }[method]
+        print(
+            f"  {label}: median={stats['median']:.4f}, "
+            f"mean(clip-{abs(CLIP_LO):.0f})={stats['mean_clip']:.4f}, "
+            f">0.9: {stats['pct_09']:.1f}%, "
+            f">0.99: {stats['pct_099']:.1f}% "
+            f"(valid={stats['n']}/{executed}, coverage vs planned={coverage:.1f}%, "
+            f"catastrophic R²<{CLIP_LO}: {stats['catastrophic']})"
+        )
 
     if intractable:
-        print(f"\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
-        for r in intractable:
-            hy = r["results"].get("hybrid", {}).get("test_r2")
-            print(f"  {r['test_case'][:55]:<55}  hybrid test R² = "
-                  f"{'nan' if hy is None or (isinstance(hy, float) and np.isnan(hy)) else f'{hy:.4f}'}")
+        print(f"\\n── Intractable cases ({len(intractable)}) ─────────────────────────────────────")
+        for record in intractable:
+            hybrid_score = record["results"].get("hybrid", {}).get("test_r2")
+            display = (
+                "nan" if not _valid_score(hybrid_score)
+                else f"{float(hybrid_score):.4f}"
+            )
+            print(
+                f"  {record['equation_id'][:55]:<55}  "
+                f"hybrid test R² = {display}"
+            )
 
-    # By-difficulty breakdown
-    print("\n── By difficulty ─────────────────────────────────────────────────────────")
-    for diff in ["easy", "medium", "hard"]:
-        subset = [r for r in standard if r.get("difficulty") == diff]
+    print("\\n── By difficulty ─────────────────────────────────────────────────────────")
+    for difficulty in ["easy", "medium", "hard"]:
+        subset = [r for r in standard if r.get("difficulty") == difficulty]
         if not subset:
             continue
         for method in ["pure_llm", "hybrid"]:
-            s = _stats(_r2s(subset, method), max(len(subset), 1))
-            print(f"  {diff:6s} | {method:14s}: median={s['median']:.4f}, "
-                  f">0.99: {s['pct_099']:.1f}%  (n={len(subset)})")
+            scores = _r2s(subset, method)
+            stats = _stats(scores, max(len(subset), 1))
+            print(
+                f"  {difficulty:6s} | {method:14s}: "
+                f"median={stats['median']:.4f}, "
+                f">0.99: {stats['pct_099']:.1f}% "
+                f"(valid={len(scores)}/{len(subset)})"
+            )
 
-    # ── Timing and speedup ─────────────────────────────────────────────────
-    print("\n── Timing summary (per-case mean) ────────────────────────────────────────")
-
-    # Identify timed-out NN cases (Issue 2)
+    print("\\n── Timing summary (per-case mean) ────────────────────────────────────────")
     timed_out_cases = [
         r["equation_id"] for r in results
         if r["results"].get("neural_network", {}).get("timed_out", False)
     ]
     if timed_out_cases:
-        print(f"  ⚠️  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
-              f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}")
+        print(
+            f"  NN wall-clock limit hit ({_NN_MAX_TIME_S}s) in "
+            f"{len(timed_out_cases)} case(s): {', '.join(timed_out_cases)}"
+        )
 
     for method in ["pure_llm", "neural_network", "hybrid"]:
         times = [
-            r["results"].get(method, {}).get("time_s", 0.0)
-            for r in results
-            if r["results"].get(method, {}).get("time_s") is not None
+            value for record in results
+            if (value := _positive_time(record, method)) is not None
         ]
-        times = [t for t in times if t and t > 0]
         if times:
-            label = {"pure_llm": "Pure LLM      ", "neural_network": "Neural Network",
-                     "hybrid":   "Hybrid        "}[method]
-            print(f"  {label}: mean={np.mean(times):.1f}s, "
-                  f"median={np.median(times):.1f}s  (n={len(times)})")
+            label = {
+                "pure_llm": "Pure LLM      ",
+                "neural_network": "Neural Network",
+                "hybrid": "Hybrid        ",
+            }[method]
+            print(
+                f"  {label}: mean={np.mean(times):.1f}s, "
+                f"median={np.median(times):.1f}s (n={len(times)})"
+            )
 
-    nn_times  = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0 for r in results]
-    hyb_times = [r["results"].get("hybrid",         {}).get("time_s", 0.0) or 0.0 for r in results]
-    nn_times  = [t for t in nn_times  if t > 0]
-    hyb_times = [t for t in hyb_times if t > 0]
-    if nn_times and hyb_times and len(nn_times) == len(hyb_times):
-        speedup_mean   = np.mean(nn_times) / np.mean(hyb_times)
-        speedup_median = np.median(nn_times) / np.median(hyb_times)
-        verdict = (f"Hybrid {speedup_mean:.2f}× faster than NN (mean)"
-                   if speedup_mean > 1 else f"Hybrid {1/speedup_mean:.2f}× slower than NN (mean)")
-        print(f"  Hybrid vs NN speedup: {verdict}")
-        print(f"  Hybrid vs NN speedup (median): {speedup_median:.2f}×")
+    # Pair each NN and hybrid timing using the same equation_id/result record.
+    paired = _paired_times(results, "neural_network", "hybrid")
+    if paired:
+        nn_times = np.asarray([item[1] for item in paired], dtype=float)
+        hybrid_times = np.asarray([item[2] for item in paired], dtype=float)
+        ratios = nn_times / hybrid_times
+        speedup_mean = float(np.mean(ratios))
+        speedup_median = float(np.median(ratios))
+        reduction_mean = float(np.mean(1 - hybrid_times / nn_times) * 100)
+        reduction_median = float(np.median(1 - hybrid_times / nn_times) * 100)
+        verdict = (
+            f"Hybrid {speedup_mean:.2f}× faster than NN (mean paired speedup)"
+            if speedup_mean > 1
+            else f"Hybrid {1 / speedup_mean:.2f}× slower than NN (mean paired speedup)"
+        )
+        print(f"  Hybrid vs NN: {verdict}")
+        print(f"  Median paired speedup: {speedup_median:.2f}×")
+        print(
+            f"  Paired cases: {len(paired)}; mean reduction={reduction_mean:.1f}%, "
+            f"median reduction={reduction_median:.1f}%"
+        )
         print("  (Paper claims 73% reduction = 3.7×)")
-        reduction_mean   = (1 - np.mean(hyb_times) / np.mean(nn_times)) * 100
-        reduction_median = (1 - np.median(hyb_times) / np.median(nn_times)) * 100
-        print(f"  This run: mean-based {reduction_mean:.1f}% reduction, "
-              f"median-based {reduction_median:.1f}% reduction")
+    else:
+        print("  Hybrid vs NN paired speedup: unavailable (no complete positive-time pairs)")
 
-        # Issue 3: also report hybrid speedup excluding NN-fallback cases
-        # (these are the only fair comparison — pure LLM call vs NN)
-        llm_only_nn   = [r["results"].get("neural_network", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("neural_network")]
-        llm_only_hyb  = [r["results"].get("hybrid", {}).get("time_s", 0.0) or 0.0
-                          for r in results
-                          if r["results"].get("hybrid", {}).get("decision", "") not in
-                          ("nn", "nn_fallback", "fail") and r["results"].get("hybrid")]
-        if llm_only_nn and llm_only_hyb and len(llm_only_nn) == len(llm_only_hyb):
-            sp_llm = np.mean(llm_only_nn) / np.mean(llm_only_hyb)
-            print(f"  Hybrid vs NN speedup (LLM-routed cases only, n={len(llm_only_nn)}): "
-                  f"{sp_llm:.2f}× — this is the cleanest comparison for the paper")
+    # Compare only LLM-routed hybrid cases, paired to NN on the same equation_id.
+    def _llm_routed(record):
+        decision = record["results"].get("hybrid", {}).get("decision", "")
+        return decision not in ("nn", "nn_fallback", "fail")
 
-    print("\n" + "=" * 80)
+    llm_pairs = _paired_times(
+        results, "neural_network", "hybrid", predicate=_llm_routed
+    )
+    if llm_pairs:
+        nn_times = np.asarray([item[1] for item in llm_pairs], dtype=float)
+        hybrid_times = np.asarray([item[2] for item in llm_pairs], dtype=float)
+        ratios = nn_times / hybrid_times
+        print(
+            f"  LLM-routed paired comparison: n={len(llm_pairs)}, "
+            f"mean paired speedup={np.mean(ratios):.2f}×, "
+            f"median paired speedup={np.median(ratios):.2f}×"
+        )
+    else:
+        print("  LLM-routed paired comparison: unavailable (no complete positive-time pairs)")
+
+    print("\\n" + "=" * 80)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

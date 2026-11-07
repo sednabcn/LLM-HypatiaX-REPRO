@@ -167,6 +167,8 @@ import importlib
 import inspect
 import multiprocessing as mp
 import os
+import hashlib
+import subprocess
 import pathlib
 import random
 import re
@@ -642,7 +644,8 @@ def _score_expr(expr_py, X, y, variable_names):
                    # with a fractional/negative-base exponent, so the eval
                    # namespace has to know them too.
                    "square": np.square, "cube": lambda z: z ** 3})
-        y_pred = eval(expr_py, {"__builtins__": {}}, ns)
+        from hypatiax.safe_formula import evaluate_expression
+        y_pred = evaluate_expression(expr_py, ns)
         # PHASE1-FIX: canonical R^2
         from hypatiax.core.r2_canonical import r2_checked
         return float(r2_checked(y, y_pred)[0])
@@ -852,7 +855,8 @@ def _validate_llm_pysr_guesses(guesses, X, y, X_buffer, y_buffer,
         ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
                    "sqrt": np.sqrt, "exp": np.exp,
                    "square": np.square, "cube": lambda z: z ** 3})
-        pred = eval(expr, {"__builtins__": {}}, ns)
+        from hypatiax.safe_formula import evaluate_expression
+        pred = evaluate_expression(expr, ns)
         pred = np.asarray(pred, dtype=float)
         if pred.ndim == 0:
             pred = np.full(Xv.shape[0], float(pred))
@@ -1144,7 +1148,8 @@ def _build_boundary_buffer(X, y, meta, variable_names,
         ns = {v: X_buf[:, i] for i, v in enumerate(variable_names)}
         ns.update({"sin": np.sin, "cos": np.cos, "log": np.log,
                    "sqrt": np.sqrt, "exp": np.exp})
-        y_buf = eval(formula, {"__builtins__": {}}, ns)
+        from hypatiax.safe_formula import evaluate_expression
+        y_buf = evaluate_expression(formula, ns)
         y_buf = np.asarray(y_buf, dtype=float)
         if not np.all(np.isfinite(y_buf)):
             return X, y  # ground truth itself is singular in the buffer band
@@ -1398,7 +1403,43 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
         _modes = {r.get("sparse_seed_mode", "off") for r in results_hypatia}
         _cfg_sparse_mode = (next(iter(_modes)) if len(_modes) == 1
                             else ("mixed" if _modes else _sparse_seed_mode))
+        _script_file = pathlib.Path(__file__).resolve()
+        _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
+        _source_revision = None
+        _git_dirty = None
+        _script_tracked = False
+        _git_dirty_scope = "unavailable"
+        try:
+            _git_root = pathlib.Path(subprocess.run(
+                ["git", "rev-parse", "--show-toplevel"],
+                cwd=_script_file.parent, check=True, capture_output=True, text=True
+            ).stdout.strip())
+            _source_revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=_git_root,
+                check=True, capture_output=True, text=True
+            ).stdout.strip()
+            _git_dirty = bool(subprocess.run(
+                ["git", "status", "--porcelain", "--untracked-files=no"],
+                cwd=_git_root, check=True, capture_output=True, text=True
+            ).stdout.strip())
+            _script_rel = _script_file.relative_to(_git_root).as_posix()
+            _script_tracked = subprocess.run(
+                ["git", "ls-files", "--error-unmatch", _script_rel],
+                cwd=_git_root, capture_output=True, text=True
+            ).returncode == 0
+            _git_dirty_scope = "tracked_worktree_only"
+        except (OSError, ValueError, subprocess.SubprocessError):
+            pass
+        _source_meta = {
+            "source_revision": _source_revision,
+            "benchmark_script_sha256": _script_hash,
+            "benchmark_script_path": str(_script_file),
+            "benchmark_script_tracked": _script_tracked,
+            "git_dirty": _git_dirty,
+            "git_dirty_scope": _git_dirty_scope,
+        }
         payload = {
+            "provenance": _source_meta,
             "config": {
                 "name": "nguyen12_exp3", "seed": seed, "n_tasks": n_total,
                 "niterations": _niter, "populations": _pops,

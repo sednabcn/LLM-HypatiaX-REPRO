@@ -41,6 +41,8 @@ import importlib.util as _ilu
 import inspect
 import json
 import os
+import hashlib
+import subprocess
 import pathlib as _pl
 import random
 import re
@@ -444,19 +446,49 @@ except ImportError:
 def evaluate_formula_ood(eq, X_ood):
     """
     Returns (y_true_ood, eval_mode).
-    Mode A: evaluates formula_sympy string with numpy (genuine OOD).
-    Mode B: falls back to eq['fn'] (precomputed proxy, same as generate_extrap_data).
+    Mode A: safely evaluates formula_sympy using the restricted AST interpreter.
+    Mode B: falls back to eq['fn'] if safe evaluation is unavailable.
     """
     formula = eq.get("formula_sympy")
     if formula and SYMPY_AVAILABLE:
         try:
-            n_vars   = len(eq["vars"])
-            var_vals = {eq["vars"][i]: X_ood[:, i] for i in range(n_vars)}
-            y_true   = eval(formula, {"np": np, **var_vals})
-            if np.all(np.isfinite(y_true)):
+            from hypatiax.safe_formula import evaluate_expression
+
+            n_vars = len(eq["vars"])
+            X_ood = np.asarray(X_ood, dtype=float)
+            if X_ood.ndim != 2 or X_ood.shape[1] != n_vars:
+                raise ValueError("OOD feature shape does not match variables")
+            if not np.all(np.isfinite(X_ood)):
+                raise ValueError("OOD features contain non-finite values")
+
+            namespace = {
+                "pi": np.pi, "e": np.e,
+                "exp": np.exp, "log": np.log, "log2": np.log2,
+                "log10": np.log10, "sqrt": np.sqrt,
+                "sin": np.sin, "cos": np.cos, "tan": np.tan,
+                "arcsin": np.arcsin, "arccos": np.arccos,
+                "arctan": np.arctan, "arctan2": np.arctan2,
+                "abs": np.abs, "sign": np.sign,
+                "sinh": np.sinh, "cosh": np.cosh, "tanh": np.tanh,
+                "minimum": np.minimum, "maximum": np.maximum,
+                "clip": np.clip, "square": np.square, "power": np.power,
+            }
+            namespace.update({
+                eq["vars"][i]: X_ood[:, i] for i in range(n_vars)
+            })
+
+            expression = formula.replace("^", "**").replace("np.", "")
+            y_true = np.asarray(
+                evaluate_expression(expression, namespace), dtype=float
+            )
+            if y_true.ndim == 0:
+                y_true = np.full(X_ood.shape[0], float(y_true))
+            if y_true.shape == (X_ood.shape[0],) and np.all(np.isfinite(y_true)):
                 return y_true, "sympy"
+            raise ValueError("Formula returned invalid OOD predictions")
         except Exception as e:
-            dbg(f"evaluate_formula_ood sympy failed for {eq['name']}: {e} — falling back")
+            dbg(f"evaluate_formula_ood safe parser failed for {eq['name']}: {e} — falling back")
+
     n_vars = len(eq["vars"])
     y_true = eq["fn"](*[X_ood[:, i] for i in range(n_vars)])
     return y_true, "precomputed"
@@ -1788,6 +1820,41 @@ def run_portfolio_seed_sweep(n_iter=300, timeout_secs=90):
 
 def write_provenance(all_results: dict) -> None:
     from hypatiax.core.flags import flag_state
+    _script_file = Path(__file__).resolve()
+    _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
+    _source_revision = None
+    _git_dirty = None
+    _script_tracked = False
+    _git_dirty_scope = "unavailable"
+    try:
+        _git_root = Path(subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=_script_file.parent, check=True, capture_output=True, text=True
+        ).stdout.strip())
+        _source_revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=_git_root,
+            check=True, capture_output=True, text=True
+        ).stdout.strip()
+        _git_dirty = bool(subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=_git_root, check=True, capture_output=True, text=True
+        ).stdout.strip())
+        _script_rel = _script_file.relative_to(_git_root).as_posix()
+        _script_tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", _script_rel],
+            cwd=_git_root, capture_output=True, text=True
+        ).returncode == 0
+        _git_dirty_scope = "tracked_worktree_only"
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    _source_meta = {
+        "source_revision": _source_revision,
+        "benchmark_script_sha256": _script_hash,
+        "benchmark_script_path": str(_script_file),
+        "benchmark_script_tracked": _script_tracked,
+        "git_dirty": _git_dirty,
+        "git_dirty_scope": _git_dirty_scope,
+    }
     provenance = {
         "family":                "ablation_exp1",
         "flags":                 flag_state(),
@@ -1830,8 +1897,14 @@ def write_provenance(all_results: dict) -> None:
             "FIX-RESTORE: VariableNameSanitizer.restore() sorts keys longest-first",
         ],
     }
-    with open(PROV_PATH, "w") as f:
+    provenance.update(_source_meta)
+    _prov_path = Path(PROV_PATH)
+    _prov_tmp = _prov_path.with_name(_prov_path.name + f".{os.getpid()}.tmp")
+    with open(_prov_tmp, "w", encoding="utf-8") as f:
         json.dump(provenance, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(_prov_tmp, _prov_path)
     print(f"✅ Provenance → {PROV_PATH}")
 
 # =============================================================================

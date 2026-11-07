@@ -119,95 +119,12 @@ def extract_clean_expression_string(
         return str(expression_input)
 
 
-def safe_sympify(
-    expression_str: str,
-    variable_names: list[str] | None = None,
-) -> sp.Expr:
-    """Parse *expression_str* into a SymPy expression with Pint isolation.
+def safe_sympify(expression_str: str, variable_names: list[str] | None = None) -> sp.Expr:
+    """Clean and parse an expression using the restricted AST parser."""
+    from .safe_sympy_parser import parse_sympy_expression
+    cleaned = extract_clean_expression_string(expression_str, variable_names)
+    return parse_sympy_expression(cleaned, variable_names)
 
-    Tries three strategies in order:
-
-    1. ``sp.sympify(..., evaluate=False)`` — preserves expression structure.
-    2. ``sp.sympify(..., evaluate=True)`` — for expressions SymPy auto-simplifies.
-    3. ``parse_expr`` with implicit-multiplication transformations.
-
-    Args:
-        expression_str: Cleaned Python-syntax expression string.
-        variable_names: Pre-declared as real SymPy symbols to prevent Pint leakage.
-
-    Returns:
-        Parsed SymPy expression.
-
-    Raises:
-        ValueError: If all three strategies fail.
-    """
-    expression_str = extract_clean_expression_string(expression_str, variable_names)
-
-    local_dict: dict[str, object] = {}
-    if variable_names:
-        for var in variable_names:
-            local_dict[var] = sp.Symbol(var, real=True)
-
-    local_dict.update(
-        {
-            "exp": sp.exp,
-            "log": sp.log,
-            "ln": sp.log,
-            "sqrt": sp.sqrt,
-            "sin": sp.sin,
-            "cos": sp.cos,
-            "tan": sp.tan,
-            "abs": sp.Abs,
-            # PySR custom operator aliases — map Julia operator names to their
-            # SymPy equivalents so expressions like safe_asin((n1/n2)*sin(theta1))
-            # parse correctly without NameError in the validator layers.
-            "safe_asin":   sp.asin,
-            "safe_acos":   sp.acos,
-            # FIX (asin_of_sin audit): was aliased to plain sp.asin, a different
-            # function restricted to [-1, 1]. asin_of_sin(x) = asin(sin(x)),
-            # composed and defined for all real x, matching the domain-safe
-            # numeric definition used at scoring time (symbolic_engine.py,
-            # hybrid_system_v50_2.py, run_comparative_suite_benchmark_v2/_pca.py,
-            # and this file's own lambdify block at line ~865 below).
-            "asin_of_sin": lambda x: sp.asin(sp.Max(-1, sp.Min(1, sp.sin(x)))),
-            "acos_of_cos": lambda x: sp.acos(sp.Max(-1, sp.Min(1, sp.cos(x)))),
-            "atan_of_tan": sp.atan,
-            # Standard inverse trig (sometimes used directly in expressions)
-            "asin":  sp.asin,
-            "acos":  sp.acos,
-            "atan":  sp.atan,
-            "arcsin": sp.asin,
-            "arccos": sp.acos,
-            "arctan": sp.atan,
-        }
-    )
-
-    try:
-        return sp.sympify(expression_str, locals=local_dict, evaluate=False)
-    except Exception as _e:
-        import logging as _lg, os as _os
-        _lg.getLogger(__name__).warning('swallowed: %r', _e)
-        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    try:
-        return sp.sympify(expression_str, locals=local_dict, evaluate=True)
-    except Exception as _e:
-        import logging as _lg, os as _os
-        _lg.getLogger(__name__).warning('swallowed: %r', _e)
-        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    try:
-        from sympy.parsing.sympy_parser import (
-            implicit_multiplication_application,
-            parse_expr,
-            standard_transformations,
-        )
-        transformations = standard_transformations + (implicit_multiplication_application,)
-        return parse_expr(expression_str, local_dict=local_dict, transformations=transformations)
-    except Exception as exc:
-        raise ValueError(
-            f"Could not parse expression '{expression_str}': {exc}"
-        ) from exc
 
 
 def clean_expression_string(

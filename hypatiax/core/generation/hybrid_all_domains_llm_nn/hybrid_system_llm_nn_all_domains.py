@@ -23,6 +23,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from hypatiax.safe_formula import parse_formula
 import torch.nn as nn
 from anthropic import Anthropic
 from sklearn.preprocessing import StandardScaler  # FIX: was imported only inside train_nn(); _train_nn_inner() raised NameError on every call
@@ -82,6 +83,7 @@ def _r2_rule_a(y_true, y_pred):
     non-finite value or bad shape is UNDEFINED -> (nan, status), never recovered.
     Replaces three local guards of the form ss_tot > max(1e-10*max|y|^2*n, 1e-300)
     that returned 0.0 for undefined cases (offset-relative, not spread-relative)."""
+    # HYPATIAX_R2_CANONICAL_MIGRATION_V1
     with np.errstate(over="ignore", invalid="ignore"):
         val, status = _r2_checked(np.asarray(y_true, float), np.asarray(y_pred, float))
     ok = status == "ok" and val is not None and np.isfinite(val)
@@ -586,42 +588,8 @@ NO markdown code blocks, individual parameters NOT dict."""
             if not code or code == "N/A":
                 return {"error": "No code generated", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
 
-            import math as _math
             import warnings as _warnings
-            local_vars = {}
-            _exec_ns = {
-                "np":      np,
-                "numpy":   np,
-                "math":    _math,
-                "pi":      np.pi,
-                "e":       np.e,
-                "exp":     lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-                "log":     np.log,
-                "sqrt":    np.sqrt,
-                "sin":     np.sin,
-                "cos":     np.cos,
-                "tan":     np.tan,
-                "arcsin":  lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-                "arccos":  lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-                "arctan":  np.arctan,
-                "arctan2": np.arctan2,
-                "abs":     np.abs,
-                "tanh":    np.tanh,
-                "sinh":    np.sinh,
-                "cosh":    np.cosh,
-            }
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                exec(code, _exec_ns, local_vars)
-
-            func = next(
-                (
-                    v
-                    for v in local_vars.values()
-                    if callable(v) and not v.__name__.startswith("_")
-                ),
-                None,
-            )
+            func = parse_formula(code)
 
             if not func:
                 return {"error": "No function found", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
@@ -630,16 +598,24 @@ NO markdown code blocks, individual parameters NOT dict."""
                 _warnings.simplefilter("ignore")
                 y_pred = self._evaluate_function(func, X, var_names)
 
-            if len(y_pred) != len(y_true):
+            y_true = np.asarray(y_true, dtype=float)
+            y_pred = np.asarray(y_pred, dtype=float)
+
+            if y_true.ndim != 1 or y_pred.ndim != 1 or y_pred.shape != y_true.shape:
                 return {
-                    "error": f"Shape mismatch: {len(y_pred)} vs {len(y_true)}",
+                    "error": f"Shape mismatch: predictions {y_pred.shape}, targets {y_true.shape}",
                     "success": False,
-                    "r2": None, "reason": "nonfinite_metric",  # PHASE1-FIX: failure, not a score
+                    "r2": None,
+                    "reason": "shape_mismatch",
                 }
 
-            # Handle inf/nan values
-            if not np.all(np.isfinite(y_pred)):
-                return {"error": "Non-finite predictions", "success": False, "r2": None, "reason": "nonfinite_metric"}  # PHASE1-FIX: failure, not a score
+            if not np.all(np.isfinite(y_true)) or not np.all(np.isfinite(y_pred)):
+                return {
+                    "error": "Non-finite targets or predictions",
+                    "success": False,
+                    "r2": None,
+                    "reason": "nonfinite_metric",
+                }
 
             mse = np.mean((y_pred - y_true) ** 2)
             r2, r2_status = _r2_rule_a(y_true, y_pred)   # rule A: nan when undefined
@@ -742,36 +718,34 @@ NO markdown code blocks, individual parameters NOT dict."""
         )
 
     def _get_llm_predictions(self, formula_dict: dict, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
-        """Re-run the LLM formula to obtain raw predictions for blending."""
+        """Safely re-evaluate an LLM formula for hybrid blending."""
         try:
-            import math as _math
-            import warnings as _warnings
-            code = formula_dict.get("python_code", "")
+            code = formula_dict.get("python_code", "") if isinstance(formula_dict, dict) else ""
             if not code or code == "N/A":
                 return None
-            _exec_ns = {
-                "np": np, "numpy": np, "math": _math,
-                "pi": np.pi, "e": np.e,
-                "exp":    lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-                "log":    np.log,   "sqrt":  np.sqrt,
-                "sin":    np.sin,   "cos":   np.cos,   "tan": np.tan,
-                "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-                "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-                "arctan": np.arctan, "arctan2": np.arctan2,
-                "abs": np.abs, "tanh": np.tanh, "sinh": np.sinh, "cosh": np.cosh,
-            }
-            local_vars: dict = {}
-            with _warnings.catch_warnings():
-                _warnings.simplefilter("ignore")
-                exec(code, _exec_ns, local_vars)
-            func = next((v for v in local_vars.values()
-                         if callable(v) and not v.__name__.startswith("_")), None)
+
+            X = np.asarray(X, dtype=float)
+            if X.ndim != 2 or X.shape[1] != len(var_names):
+                return None
+            if not np.all(np.isfinite(X)):
+                return None
+
+            func = parse_formula(code)
             if func is None:
                 return None
+
+            import warnings as _warnings
             with _warnings.catch_warnings():
                 _warnings.simplefilter("ignore")
-                preds = self._evaluate_function(func, X, var_names)
-            return preds if np.all(np.isfinite(preds)) else None
+                preds = np.asarray(
+                    self._evaluate_function(func, X, var_names),
+                    dtype=float,
+                )
+
+            preds = preds.reshape(-1)
+            if preds.shape != (X.shape[0],) or not np.all(np.isfinite(preds)):
+                return None
+            return preds
         except Exception as e:
             return _m5_record_failure("_get_llm_predictions", e)
 

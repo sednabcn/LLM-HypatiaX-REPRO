@@ -119,6 +119,7 @@ def compute_r2(y_true: ArrayLike, y_pred: ArrayLike) -> float:
     >>> round(compute_r2([1e-6, 2e-6, 3e-6], [1e-6, 2e-6, 4e-6]), 4)
     0.5
     """
+    # HYPATIAX_R2_CANONICAL_MIGRATION_V1
     yt, yp = _validate_pair(y_true, y_pred)
     if not np.all(np.isfinite(yt)):
         raise ValueError("y_true contains NaN or inf")
