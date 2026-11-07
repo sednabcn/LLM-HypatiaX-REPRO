@@ -296,6 +296,42 @@ class TestPortfolioPcaSplitProtocol:
         assert index == 1
         assert selected is cases[1]
 
+    def test_legacy_first_feature_split_is_preserved_and_not_transductive(self):
+        from hypatiax.tools.utils.pca_split_utils import first_feature_percentile_split
+
+        X = np.column_stack([np.arange(100, dtype=float), np.arange(100, dtype=float)[::-1]])
+        y = np.arange(100) * 5
+        X_train, y_train, X_test, y_test, audit = first_feature_percentile_split(
+            X, y, return_metadata=True
+        )
+
+        assert len(X_train) == 40 and len(X_test) == 60
+        assert X_train[:, 0].max() == 39
+        assert X_test[:, 0].min() == 40
+        np.testing.assert_array_equal(y_train, X_train[:, 0] * 5)
+        np.testing.assert_array_equal(y_test, X_test[:, 0] * 5)
+        assert audit["split_protocol"] == "first_feature_percentile_40_60"
+        assert audit["split_is_transductive"] is False
+
+    def test_protocol_contains_the_exact_portfolio_var_case(self):
+        from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
+        from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
+
+        protocol = DeFiExperimentProtocol()
+        rows = [
+            {
+                "domain": "risk_var",
+                "name": row[0],
+                "description": row[0],
+            }
+            for row in protocol.load_test_data("risk_var", num_samples=200)
+        ]
+        index, selected = select_case_by_identity(
+            rows, "risk_var", "Portfolio VaR for two correlated assets"
+        )
+        assert index >= 0
+        assert selected["name"] == "Portfolio VaR for two correlated assets"
+
     def test_exact_case_identity_rejects_missing_or_duplicate_cases(self):
         from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
 
