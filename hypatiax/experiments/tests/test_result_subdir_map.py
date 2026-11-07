@@ -141,3 +141,10 @@ def test_contract_gate_triggers_for_runner_changes_on_push_and_pull_request():
             '".github/workflows/ci_pipeline_validate.yml"',
         ):
             assert path in block, (trigger, path)
+
+def test_workflow_cleanup_retains_history_for_90_days_by_default():
+    cleanup = (ROOT / ".github/workflows/clean-old-workflows.yml").read_text()
+    assert "default: '2160'" in cleanup
+    assert "HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '2160' }}" in cleanup
+    assert "const rawHours = process.env.HOURS_THRESHOLD || '2160'" in cleanup
+    assert "const KEEP_HOURS = Number(rawHours)" in cleanup
