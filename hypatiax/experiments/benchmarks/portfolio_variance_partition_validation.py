@@ -108,21 +108,26 @@ def main():
             "model_seed": MODEL_SEED,
             "n_train": int(len(train_idx)),
             "n_test": int(len(test_idx)),
-            "train_r2": float(result["train_r2"]),
+            # The benchmark helper's train_r2 is specifically the LLM formula
+            # training score, not the neural-network training score.
+            "llm_train_r2": float(result["llm_train_r2"]),
+            "llm_formula_train_r2_available": bool(np.isfinite(result["llm_train_r2"])),
             "test_r2": float(result["test_r2"]),
-            "success": bool(result["test_r2"] > 0.99),
-            "decision": result.get("decision"),
+            "test_r2_source": result.get("decision"),
+            "success_test_r2_gt_0_99": bool(result["test_r2"] > 0.99),
             "time_s": float(time.time() - started),
         })
         print(
             f"partition={partition_seed} model={MODEL_SEED} "
-            f"train_r2={result['train_r2']:.5f} "
+            f"decision={result.get('decision')} "
+            f"llm_train_r2={result['llm_train_r2']:.5f} "
             f"test_r2={result['test_r2']:.5f}"
         )
 
     test_scores = [row["test_r2"] for row in records]
     output = {
         "report_type": "portfolio_variance_random_holdout_partition_validation",
+        "schema_version": 2,
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "case_identity": {
             "domain": case["domain"],
@@ -142,12 +147,22 @@ def main():
                 "Random-holdout interpolation/control; not the PC1-directed "
                 "far-range extrapolation protocol."
             ),
+            "score_semantics": {
+                "llm_train_r2": (
+                    "LLM formula training R2 only; NaN means the LLM formula "
+                    "was unavailable or invalid. It is not neural-network "
+                    "training R2."
+                ),
+                "test_r2": "Test R2 from the selected route in test_r2_source.",
+                "test_r2_source": "Benchmark decision, e.g. nn, llm, or ensemble.",
+                "success_test_r2_gt_0_99": "Whether test R2 exceeds 0.99.",
+            },
         },
         "results": records,
         "aggregate": {
             "n_partitions": len(records),
-            "n_success": sum(row["success"] for row in records),
-            "success_rate": sum(row["success"] for row in records) / len(records),
+            "n_success_test_r2_gt_0_99": sum(row["success_test_r2_gt_0_99"] for row in records),
+            "success_rate_test_r2_gt_0_99": sum(row["success_test_r2_gt_0_99"] for row in records) / len(records),
             "test_r2_mean": float(np.mean(test_scores)),
             "test_r2_sample_std": float(np.std(test_scores, ddof=1)) if len(test_scores) > 1 else 0.0,
             "test_r2_min": float(np.min(test_scores)),
