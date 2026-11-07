@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.decomposition import PCA
 
 
-def pca_directed_split(X, y, test_size=0.6, random_state=None):
+def pca_directed_split(X, y, test_size=0.6, random_state=None, feature_names=None, return_metadata=False):
     """
     Create a deterministic PCA-directed train/test split.
 
@@ -24,6 +24,11 @@ def pca_directed_split(X, y, test_size=0.6, random_state=None):
         Fraction of samples assigned to the test split; must be in (0, 1).
     random_state : int or None, default=None
         Random state passed to PCA.
+    feature_names : sequence of str or None, default=None
+        Optional feature names used in the audit metadata.
+    return_metadata : bool, default=False
+        If True, append a JSON-serializable split audit dictionary to the
+        four arrays returned by default.
 
     Returns
     -------
@@ -101,9 +106,70 @@ def pca_directed_split(X, y, test_size=0.6, random_state=None):
     train_idx = order[:split_point]
     test_idx = order[split_point:]
 
-    return (
+    result = (
         X_array[train_idx],
         X_array[test_idx],
         y_array[train_idx],
         y_array[test_idx],
     )
+    if not return_metadata:
+        return result
+
+    if feature_names is None:
+        names = [f"x{i}" for i in range(n_features)]
+    else:
+        names = [str(name) for name in feature_names]
+        if len(names) != n_features:
+            raise ValueError(
+                f"feature_names has {len(names)} entries for {n_features} features."
+            )
+
+    feature_summary = {}
+    for column, name in enumerate(names):
+        values = X_array[:, column]
+        feature_summary[name] = {
+            "mean": float(np.mean(values)),
+            "std": float(np.std(values)),
+            "min": float(np.min(values)),
+            "max": float(np.max(values)),
+        }
+
+    metadata = {
+        "split_protocol": "pca_40_60_pc1",
+        "split_method": "PCA(n_components=1) on raw, unstandardized features",
+        "feature_scaling": "none",
+        "n_samples": int(n_samples),
+        "n_train": int(len(train_idx)),
+        "n_test": int(len(test_idx)),
+        "test_size": float(test_size),
+        "random_state": random_state,
+        "split_is_transductive": True,
+        "pc1_explained_variance_ratio": float(pca.explained_variance_ratio_[0]),
+        "pc1_loadings": {
+            name: float(loading)
+            for name, loading in zip(names, component)
+        },
+        "feature_summary": feature_summary,
+        "pc1_score_min": float(np.min(pc1_scores)),
+        "pc1_score_max": float(np.max(pc1_scores)),
+    }
+    return result + (metadata,)
+
+
+def select_case_by_identity(case_rows, domain, name):
+    """Select exactly one protocol case by its stable domain/name identity.
+
+    Returns the (index, case) pair. Missing or duplicate identities fail
+    loudly instead of silently choosing a fuzzy substring match.
+    """
+    matches = [
+        (index, case)
+        for index, case in enumerate(case_rows)
+        if case.get("domain") == domain
+        and (case.get("name") or case.get("description")) == name
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected exactly one case {domain!r}/{name!r}; found {len(matches)}."
+        )
+    return matches[0]
