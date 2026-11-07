@@ -164,8 +164,8 @@ def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
     start = runner.index('run gt_leak_guard "')
     end = runner.find("\nrun ", start + 1)
     block = runner[start: end if end >= 0 else len(runner)]
-    assert block.count("Required gt_leak_guard target missing") == 2
-    assert "Required gt_leak_guard target hybrid_system_nn_defi_domain.py not found" in block
+    assert block.count("Required gt_leak_guard target missing") == 3
+    assert "Required gt_leak_guard target missing: hybrid_system_nn_defi_domain.py" in block
     assert "_FAIL=1" in block
 
 
