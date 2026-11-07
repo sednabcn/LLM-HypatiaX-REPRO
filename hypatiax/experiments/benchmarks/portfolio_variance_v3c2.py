@@ -517,8 +517,8 @@ def _iter_protocol_cases(proto):
     return records
 
 
-def _split_case_data(X, y):
-    """Return the legacy split, or an explicit PCA-directed 40/60 split."""
+def _split_case_data(X, y, feature_names=None, return_metadata=False):
+    """Return the legacy split by default, or an explicit audited PCA split."""
     X = np.asarray(X)
     y = np.asarray(y)
     if X.ndim == 1:
@@ -529,10 +529,13 @@ def _split_case_data(X, y):
 
     if PCA_PORTFOLIO_SWEEP:
         from hypatiax.tools.utils.pca_split_utils import pca_directed_split
-        X_train, X_test, y_train, y_test = pca_directed_split(
-            X, y, test_size=0.6, random_state=42
+        X_train, X_test, y_train, y_test, metadata = pca_directed_split(
+            X, y, test_size=0.6, random_state=42,
+            feature_names=feature_names, return_metadata=True
         )
-        return X_train, y_train, X_test, y_test
+        return (X_train, y_train, X_test, y_test, metadata) if return_metadata else (
+            X_train, y_train, X_test, y_test
+        )
 
     order = np.arange(len(X))
     vals = X[:, 0] if X.ndim > 1 and X.shape[1] > 0 else X.flatten()
@@ -544,32 +547,43 @@ def _split_case_data(X, y):
         train_mask = order < int(0.4 * len(order))
         test_mask = ~train_mask
 
-    return X[train_mask], y[train_mask], X[test_mask], y[test_mask]
+    result = (X[train_mask], y[train_mask], X[test_mask], y[test_mask])
+    if not return_metadata:
+        return result
+    metadata = {
+        'split_protocol': 'first_feature_percentile_40_60',
+        'split_method': '40th percentile threshold on first feature',
+        'feature_scaling': 'none',
+        'n_samples': int(len(X)),
+        'n_train': int(len(result[0])),
+        'n_test': int(len(result[2])),
+        'split_is_transductive': False,
+    }
+    return result + (metadata,)
 
 
 def find_portfolio_variance_case(proto):
-    """Return (index, config) for Portfolio Variance in the DeFi protocol.
+    """Return the explicitly designated Portfolio VaR protocol case.
 
-    Compatible with both the historical `get_cases()` API and the current
-    `load_test_data()` protocol implementation used in this repository.
+    The audit title historically says Portfolio Variance, but the actual
+    protocol case is Portfolio VaR for two correlated assets. Exact identity
+    prevents domain-order changes from silently selecting a different case.
     """
+    from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
+
     case_rows = _iter_protocol_cases(proto)
     if not case_rows:
-        raise RuntimeError('Portfolio Variance case not found: protocol catalogue is empty.')
-
-    for idx, cfg in enumerate(case_rows):
-        name = (cfg.get('name') or cfg.get('description') or '').lower()
-        if 'portfolio' in name or 'variance' in name:
-            return idx, cfg
-
-    # Fallback: if the current protocol names the case slightly differently,
-    # prefer a variance/risk case rather than crashing on the stale API.
-    for idx, cfg in enumerate(case_rows):
-        name = (cfg.get('name') or cfg.get('description') or '').lower()
-        if 'var' in name or 'risk' in name:
-            return idx, cfg
-
-    raise RuntimeError('Portfolio Variance case not found in the current DeFi protocol catalogue.')
+        raise RuntimeError('Portfolio VaR case not found: protocol catalogue is empty.')
+    try:
+        return select_case_by_identity(
+            case_rows, domain='risk_var',
+            name='Portfolio VaR for two correlated assets'
+        )
+    except ValueError as exc:
+        raise RuntimeError(
+            'Expected exactly one risk_var case named '
+            '"Portfolio VaR for two correlated assets"; verify the protocol catalogue.'
+        ) from exc
 
 
 print('Helper functions defined')
@@ -577,7 +591,11 @@ print('Helper functions defined')
 # ── 3c: Strategy A — single-case rerun at SEED=42 ────────────────────────────
 strategy_a_result = None
 
-if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and _run_case_full is None:
+if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and PCA_PORTFOLIO_SWEEP:
+    print('Strategy A single-case rerun (3c) skipped — _run_case_full uses its own split; '
+          'the PCA protocol is applied only to the audited seed sweep (3d).')
+
+elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE and _run_case_full is None:
     print('Strategy A single-case rerun (3c) skipped — _run_case_full unavailable.')
 
 elif RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
@@ -603,12 +621,18 @@ elif RERUN_STRATEGY == 'A' and not HYPATIA_AVAILABLE:
 if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
     proto = DeFiExperimentProtocol()
     case_idx, case_cfg = find_portfolio_variance_case(proto)
-    print(f'Case [{case_idx}]: "{case_cfg["name"]}"\n')
+    print(f'Case [{case_idx}] ({case_cfg["domain"]}): "{case_cfg["name"]}"\n')
+
+    X_train, y_train, X_test, y_test, split_details = _split_case_data(
+        case_cfg['X'], case_cfg['y'],
+        feature_names=case_cfg.get('variables'), return_metadata=True
+    )
+    print('Split audit:')
+    print(json.dumps(split_details, indent=2, default=str))
 
     for seed in SEEDS:
         print(f'-- Seed {seed} --')
         set_all_seeds(seed)
-        X_train, y_train, X_test, y_test = _split_case_data(case_cfg['X'], case_cfg['y'])
         t0 = time.time()
         hybrid = _hybrid_predict_and_eval(
             case_cfg['description'], case_cfg.get('domain', 'DeFi'),
@@ -631,9 +655,17 @@ if RERUN_STRATEGY == 'A' and HYPATIA_AVAILABLE:
     with open(SWEEP_JSON_DEFI, 'w') as f:
         json.dump({
             'case': case_cfg['name'],
+            'case_identity': {
+                'domain': case_cfg['domain'],
+                'name': case_cfg['name'],
+                'protocol_index': int(case_idx),
+                'ground_truth': case_cfg.get('metadata', {}).get('ground_truth'),
+                'variables': case_cfg.get('variables', []),
+            },
             'benchmark_version': 'v3c3-pca' if PCA_PORTFOLIO_SWEEP else 'v3c3',
-            'split_protocol': 'pca_40_60_pc1' if PCA_PORTFOLIO_SWEEP else 'first_feature_percentile_40_60',
-            'split_is_transductive': bool(PCA_PORTFOLIO_SWEEP),
+            'split_protocol': split_details['split_protocol'],
+            'split_is_transductive': bool(split_details['split_is_transductive']),
+            'split_details': split_details,
             'seeds_run': SEEDS,
             'results': defi_sweep_results,
             'summary': {'n_seeds': len(SEEDS), 'n_success': n_ok,
