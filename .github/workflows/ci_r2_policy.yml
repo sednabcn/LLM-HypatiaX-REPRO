@@ -9,7 +9,6 @@ on:
       - "scripts/migrate_r2_repro.py"
       - ".github/workflows/ci_r2_policy.yml"
       - ".github/workflows/clean-old-workflows.yml"
-            hypatiax/experiments/tests/test_workflow_cleanup_policy.py \
   pull_request:
     paths:
       - "hypatiax/core/**"
@@ -50,5 +49,5 @@ jobs:
             hypatiax/experiments/tests/test_r2_policy.py \
             hypatiax/experiments/tests/test_core_metrics_compat.py \
             hypatiax/experiments/tests/test_recovery_evaluator.py \
-            hypatiax/experiments/tests/test_workflow_cleanup_policy.py \\
+            hypatiax/experiments/tests/test_workflow_cleanup_policy.py \
             hypatiax/experiments/tests/test_result_subdir_map.py
