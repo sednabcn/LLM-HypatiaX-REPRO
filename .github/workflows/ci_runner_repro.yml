@@ -1637,6 +1637,12 @@ jobs:
               dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
             fi
             if [[ -e "$dest_f" ]]; then
+              if [[ "${EXP:-}" == "exp1b" && "$fname" =~ ^portfolio_variance_defi_seed_sweep_seed[0-9]+\.json$ ]]; then
+                echo "  REPLACE: refreshing tracked exp1b per-seed portfolio artifact ${fname}"
+                cp -f "$f" "${dest_f}"
+                copied=$((copied + 1))
+                continue
+              fi
               if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                 echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
                 continue
