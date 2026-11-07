@@ -392,7 +392,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
         dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
 
         if [ -f \"\$src\" ]; then
-            mv -v \"\$src\" \"\$dst\" || true
+            mv -v \"\$src\" \"\$dst\"
         fi
     done
   done
@@ -1019,7 +1019,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
         stem=\"\${fname%.*}\"
         ext=\"\${fname##*.}\"
         dst=\"\${_PCA15_DIR}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
-        [ -f \"\$src\" ] && mv -v \"\$src\" \"\$dst\" || true
+        if [ -f \"\$src\" ]; then mv -v \"\$src\" \"\$dst\"; fi
     done
   done
 
