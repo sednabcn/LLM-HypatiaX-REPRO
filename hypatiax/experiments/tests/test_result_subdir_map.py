@@ -85,7 +85,11 @@ def test_required_run_all_benchmark_domains_do_not_swallow_failures():
         next_run = runner.find("\nrun ", start + 1)
         block = runner[start: next_run if next_run >= 0 else len(runner)]
         assert "exited non-zero — continuing" not in block, step
-    start = runner.index("run audit_nb06_fixc3_rerun \\\")\n    end = runner.find("\\nrun ", start + 1)\n    block = runner[start: end if end >= 0 else len(runner)]\n    assert "exited non-zero — continuing" not in block\n    assert "exp1_pca worker(s) failed" in runner
+    start = runner.index("run audit_nb06_fixc3_rerun")
+    end = runner.find("\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert "exited non-zero — continuing" not in block
+    assert "exp1_pca worker(s) failed" in runner
 
 def test_pipeline_forwards_force_rerun_to_runner():
     validate = (ROOT / ".github/workflows/ci_pipeline_validate.yml").read_text()
