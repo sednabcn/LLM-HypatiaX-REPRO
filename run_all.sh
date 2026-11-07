@@ -984,8 +984,8 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # a fixed filename/location, pass that explicitly here.
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '
-    exit 1\"\${_PCA15_DIR}\"'.'
+    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '"\${_PCA15_DIR}"'.'
+    exit 1
     echo '         hypatiax_defi_benchmark_pca.py did not produce a results file at the'
     echo '         expected --output-dir; portfolio-variance table/figure inputs will be missing.'
   else
