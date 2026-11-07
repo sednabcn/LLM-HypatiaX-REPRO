@@ -80,7 +80,7 @@ def test_pipeline_self_dispatch_preserves_fail_closed_default():
 
 def test_required_run_all_benchmark_domains_do_not_swallow_failures():
     runner = (ROOT / "run_all.sh").read_text()
-    for step in ("exp2_feynman", "exp2_feynman_pca_4060", "exp2_feynman_extrap", "exp2", "exp2_five", "extrap", "fixc3_rerun"):
+    for step in ("exp2_feynman", "exp2_feynman_pca_4060", "exp2_feynman_extrap", "exp2", "exp2_five", "extrap", "audit_nb06_fixc3_rerun"):
         start = runner.index(f'run {step} "')
         next_run = runner.find("\nrun ", start + 1)
         block = runner[start: next_run if next_run >= 0 else len(runner)]
@@ -156,7 +156,7 @@ def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_
     assert "::error::[instability]" in runner
     assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
     assert "::error::benchmark_results_extrap.json not found" in runner
-    assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" not in runner
+    assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" in runner
 
 
 def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
