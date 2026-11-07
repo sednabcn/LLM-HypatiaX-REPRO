@@ -167,3 +167,9 @@ def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
     assert block.count("Required gt_leak_guard target missing") == 2
     assert "Required gt_leak_guard target hybrid_system_nn_defi_domain.py not found" in block
     assert "_FAIL=1" in block
+
+
+def test_exp1b_artifact_rescue_moves_do_not_suppress_failures():
+    runner = (ROOT / "run_all.sh").read_text()
+    assert 'mv -v \\"\\$src\\" \\"\\$dst\\" || true' not in runner
+    assert 'if [ -f \\"\\$src\\" ]; then mv -v \\"\\$src\\" \\"\\$dst\\"; fi' in runner
