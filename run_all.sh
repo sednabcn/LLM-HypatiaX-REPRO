@@ -309,17 +309,16 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   fi
 
   # FIX-exp1b-OUTPUT-DIR: write straight into the exp1b/portfolio result dir
-  # (comparison_results/noise-noiseless/defi), not into exp1's own
+  # (comparison_results/noise-noiseless/15), not into exp1's own
   # noiseless/defi dir. hypatiax_defi_benchmark_v3c.py supports --output-dir,
   # so pointing it at dest15 directly means the primary results never need a
   # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
-  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/defi'
+  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
   mkdir -p \"\${dest15}\"
 
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --output-dir \"\${dest15}\" \
-      --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
 
   # FIX-exp1b-PORTFOLIO-RUN: run the portfolio sweep for THIS shard's seed(s) only.
