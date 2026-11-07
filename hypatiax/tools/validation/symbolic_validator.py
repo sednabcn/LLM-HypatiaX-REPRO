@@ -45,7 +45,7 @@ from typing import Any
 
 import numpy as np
 import sympy as sp
-from sympy import simplify, sympify
+from sympy import simplify
 
 # ---------------------------------------------------------------------------
 # Module-level reproducibility seeds.
@@ -73,83 +73,12 @@ logger = logging.getLogger(__name__)
 # Module-level helpers
 # ---------------------------------------------------------------------------
 
-def safe_sympify(
-    expression_str: str,
-    variable_names: list[str] | None = None,
-) -> sp.Expr:
-    """Parse *expression_str* into a SymPy expression with Pint isolation.
-
-    Builds an isolated local symbol dictionary so that any Pint unit symbols
-    registered in the global SymPy namespace do not corrupt parsing.
-
-    Args:
-        expression_str: Mathematical expression as a Python-syntax string.
-        variable_names: Variable names to pre-declare as real SymPy symbols.
-
-    Returns:
-        Parsed SymPy expression.
-
-    Raises:
-        ValueError: If the expression cannot be parsed by any strategy.
-    """
-    if not isinstance(expression_str, str):
-        expression_str = str(expression_str)
-
-    local_dict: dict[str, Any] = {}
-    if variable_names:
-        for var in variable_names:
-            local_dict[var] = sp.Symbol(var, real=True)
-
-    local_dict.update(
-        {
-            "exp": sp.exp,
-            "log": sp.log,
-            "ln": sp.log,
-            "sqrt": sp.sqrt,
-            "sin": sp.sin,
-            "cos": sp.cos,
-            "tan": sp.tan,
-            # PySR custom operator aliases — map Julia operator names to their
-            # SymPy equivalents so expressions like safe_asin((n1/n2)*sin(theta1))
-            # parse correctly without NameError in the validator layers.
-            "safe_asin":   sp.asin,
-            "safe_acos":   sp.acos,
-            # FIX (asin_of_sin audit): was aliased to plain sp.asin, a different
-            # function restricted to [-1, 1]. asin_of_sin(x) = asin(sin(x)),
-            # composed and defined for all real x, matching the domain-safe
-            # numeric definition used at scoring time (symbolic_engine.py,
-            # hybrid_system_v50_2.py, run_comparative_suite_benchmark_v2/_pca.py).
-            "asin_of_sin": lambda x: sp.asin(sp.Max(-1, sp.Min(1, sp.sin(x)))),
-            "acos_of_cos": lambda x: sp.acos(sp.Max(-1, sp.Min(1, sp.cos(x)))),
-            "atan_of_tan": sp.atan,
-            # Standard inverse trig (sometimes used directly in expressions)
-            "asin":  sp.asin,
-            "acos":  sp.acos,
-            "atan":  sp.atan,
-            "arcsin": sp.asin,
-            "arccos": sp.acos,
-            "arctan": sp.atan,
-        }
-    )
-
-    try:
-        return sp.sympify(expression_str, locals=local_dict, evaluate=False)
-    except Exception as _e:
-        import logging as _lg, os as _os
-        _lg.getLogger(__name__).warning('swallowed: %r', _e)
-        if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    try:
-        return sp.sympify(expression_str, locals=local_dict, evaluate=True)
-    except Exception as exc:
-        raise ValueError(
-            f"Could not parse expression '{expression_str}': {exc}"
-        ) from exc
+def safe_sympify(expression_str: str, variable_names: list[str] | None = None) -> sp.Expr:
+    """Parse an expression using the restricted AST parser."""
+    from .safe_sympy_parser import parse_sympy_expression
+    return parse_sympy_expression(expression_str, variable_names)
 
 
-# ---------------------------------------------------------------------------
-# Validator class
-# ---------------------------------------------------------------------------
 
 class SymbolicValidator:
     """Layer 3 symbolic validator — rejects mathematically unsound expressions.
@@ -301,20 +230,26 @@ class SymbolicValidator:
                 results["warnings"].append(f"Simplification failed: {exc}")
                 results["canonical_form"] = str(expr)
 
-            # 5. Dimensional consistency (placeholder) ----------------------
-            # Full unit analysis is owned by DimensionalValidator (Layer 1).
-            # This check always passes; it exists as a named flag so callers
-            # can distinguish "not checked here" from "checked and passed".
-            results["dimensionally_consistent"] = True
+            # 5. Dimensional consistency -----------------------------------
+            # This validator does not perform unit analysis. None means
+            # "not checked"; use DimensionalValidator for an actual result.
+            results["dimensionally_consistent"] = None
 
             # 6. Domain rules -----------------------------------------------
-            rule_fn = self.domain_rules.get(domain, self._default_rules)
-            domain_check = rule_fn(expr, variable_definitions)
-            results["domain_valid"] = domain_check["valid"]
-            results["errors"].extend(domain_check["errors"])
-            results["warnings"].extend(domain_check.get("warnings", []))
-            if not domain_check["valid"]:
+            rule_fn = self.domain_rules.get(domain)
+            if rule_fn is None:
+                results["domain_valid"] = False
+                results["errors"].append(
+                    f"Unsupported validation domain: {domain!r}"
+                )
                 results["valid"] = False
+            else:
+                domain_check = rule_fn(expr, variable_definitions)
+                results["domain_valid"] = domain_check["valid"]
+                results["errors"].extend(domain_check["errors"])
+                results["warnings"].extend(domain_check.get("warnings", []))
+                if not domain_check["valid"]:
+                    results["valid"] = False
 
             # 7. Numerical stability ----------------------------------------
             stability = self._check_numerical_stability(expr)
@@ -352,8 +287,8 @@ class SymbolicValidator:
         """Parse a LaTeX expression, returning None on failure.
 
         Uses a lazy import of parse_latex so the module can be loaded without
-        antlr4.  Falls back to plain sympify if parse_latex fails or is absent.
-        Returns None rather than raising so callers emit a structured error.
+        antlr4. Returns None if parsing is unavailable or fails, allowing
+        callers to emit a structured error.
         """
         try:
             parse_latex = _get_parse_latex()
@@ -362,13 +297,12 @@ class SymbolicValidator:
         except ImportError as exc:
             logger.warning("parse_latex unavailable (antlr4 missing?): %s", exc)
         except Exception as exc:
-            logger.debug("parse_latex failed ('%s'): %s — trying sympify", latex_str, exc)
+            logger.debug("parse_latex failed ('%s'): %s", latex_str, exc)
 
-        try:
-            return sympify(latex_str)
-        except Exception as exc:
-            logger.debug("sympify fallback also failed ('%s'): %s", latex_str, exc)
-            return None
+        # Fail closed: never pass untrusted LaTeX to SymPy's general
+        # string parser as a fallback.
+        logger.debug("No safe LaTeX parser available for: %s", latex_str)
+        return None
 
     # ------------------------------------------------------------------
     # Internal — numerical stability
@@ -808,19 +742,20 @@ class SymbolicValidator:
     def _calculate_score(self, results: dict[str, Any]) -> int:
         """Compute a score in [0, 100] from the sub-check flags.
 
-        Each of the four boolean checks (syntactically_valid,
-        dimensionally_consistent, domain_valid, numerically_stable) contributes
-        25 points.  Each error deducts 15 points; each warning deducts 2 points.
+        The three checks performed here (syntactically_valid, domain_valid,
+        numerically_stable) contribute equally. Dimensional consistency is
+        not checked here and is excluded. Each error deducts 15 points;
+        each warning deducts 2 points.
         """
         score = 0
-        if results["syntactically_valid"]:
-            score += 25
-        if results["dimensionally_consistent"]:
-            score += 25
-        if results["domain_valid"]:
-            score += 25
-        if results["numerically_stable"]:
-            score += 25
+        points_per_check = 100 / 3
+        for key in (
+            "syntactically_valid",
+            "domain_valid",
+            "numerically_stable",
+        ):
+            if results[key]:
+                score += points_per_check
 
         score -= len(results["errors"]) * 15
         score -= len(results.get("warnings", [])) * 2

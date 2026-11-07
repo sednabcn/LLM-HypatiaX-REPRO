@@ -42,6 +42,7 @@ import os
 import types
 
 import numpy as np
+from hypatiax.safe_formula import parse_formula
 
 # Import your LLM baseline and NN baseline implementations
 from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
@@ -121,23 +122,16 @@ def execute_python_code_get_predictions(python_code: str, X: np.ndarray):
         "maximum": np.maximum,
         "clip":    np.clip,
     }
-    preloaded = set(ns)
     try:
-        # Single namespace (globals only): module-level constants and helper
-        # functions defined by the LLM stay visible inside ``formula``.
-        exec(python_code, ns)
-    except Exception as e:
-        raise RuntimeError(f"Exec failed: {e}\nCode preview:\n{python_code[:400]}")
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+            raise ValueError("X must be a non-empty 2D feature matrix")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X contains non-finite values")
 
-    func = ns.get("formula") if callable(ns.get("formula")) else None
-    if func is None:
-        defined = [
-            v for k, v in ns.items()
-            if k not in preloaded and isinstance(v, types.FunctionType)
-        ]
-        func = defined[-1] if defined else None
-    if func is None:
-        raise RuntimeError("No function found in executed LLM code")
+        func = parse_formula(python_code)
+    except Exception as e:
+        raise RuntimeError(f"Unsafe or invalid LLM formula/input: {e}") from e
 
     n = X.shape[0]
     with np.errstate(all="ignore"):
@@ -151,7 +145,11 @@ def execute_python_code_get_predictions(python_code: str, X: np.ndarray):
                 # fallback row-by-row
                 y_pred = np.array([func(*X[i, :]) for i in range(n)])
 
-    y_pred = np.asarray(y_pred, dtype=float).flatten()
+    y_pred = np.asarray(y_pred, dtype=float)
+    if y_pred.ndim == 0:
+        y_pred = y_pred.reshape(1)
+    elif y_pred.ndim != 1:
+        raise RuntimeError(f"Predictions must be 1D, got shape {y_pred.shape}")
     if y_pred.size == 1 and n > 1:  # constant formula -> broadcast
         y_pred = np.full(n, y_pred[0])
     if y_pred.size != n:

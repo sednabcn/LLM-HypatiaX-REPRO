@@ -119,6 +119,7 @@ def compute_r2(y_true: ArrayLike, y_pred: ArrayLike) -> float:
     >>> round(compute_r2([1e-6, 2e-6, 3e-6], [1e-6, 2e-6, 4e-6]), 4)
     0.5
     """
+    # HYPATIAX_R2_CANONICAL_MIGRATION_V1
     yt, yp = _validate_pair(y_true, y_pred)
     if not np.all(np.isfinite(yt)):
         raise ValueError("y_true contains NaN or inf")
@@ -207,7 +208,7 @@ def compute_near_perfect_rate(
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
-        return float("nan")
+        return None  # audit-M3: was float('nan')
     return float(np.mean(np.isfinite(arr) & (arr >= threshold)))  # PHASE1-FIX: >=, as is_recovered
 
 
@@ -252,7 +253,7 @@ def compute_catastrophic_rate(
     """
     arr = _to_array(scores, "scores")
     if len(arr) == 0:
-        return float("nan")
+        return None  # audit-M3: was float('nan')
     fails = arr < threshold
     if nan_as_failure:
         fails = fails | np.isnan(arr)
@@ -285,7 +286,7 @@ def compute_speedup(t_baseline: float, t_system: float) -> float:
     if t_system < 0 or t_baseline < 0:
         raise ValueError("Times must be non-negative")
     if t_system == 0.0:
-        return float("inf")
+        return None  # audit-M3: was float('inf')
     return float(t_baseline / t_system)
 
 

@@ -19,6 +19,7 @@ prompt field. Neutral cases carry names x0.. and a generic description.
 from __future__ import annotations
 
 import contextlib
+import ast
 import importlib
 import json
 import math
@@ -83,9 +84,67 @@ def _data_override(m, Xtr, ytr, Xte, yte):
         m.generate_data, m.generate_extrap_data = og, oe
 
 
-_NS = {k: getattr(np, k) for k in
-       ("sqrt", "exp", "log", "sin", "cos", "tan", "abs", "tanh", "arctan", "power")}
+_NS_FUNCTIONS = (
+    "sqrt", "exp", "log", "sin", "cos", "tan",
+    "abs", "tanh", "arctan", "power",
+)
+_NS = {k: getattr(np, k) for k in _NS_FUNCTIONS}
 _NS.update(np=np, math=math, pi=math.pi, e=math.e)
+
+# Explicit allowlists: never resolve arbitrary module attributes.
+_QUALIFIED_FUNCTIONS = {
+    "np": frozenset(_NS_FUNCTIONS),
+    "math": frozenset(("sqrt", "exp", "log", "sin", "cos", "tan", "tanh")),
+}
+_QUALIFIED_CONSTANTS = {
+    ("np", "pi"): "pi",
+    ("np", "e"): "e",
+    ("math", "pi"): "pi",
+    ("math", "e"): "e",
+}
+
+
+class _QualifiedCallNormalizer(ast.NodeTransformer):
+    """Rewrite only approved np.function/math.function calls and constants."""
+
+    def visit_Call(self, node):
+        func = node.func
+        if (
+            isinstance(func, ast.Attribute)
+            and isinstance(func.value, ast.Name)
+            and func.attr in _QUALIFIED_FUNCTIONS.get(func.value.id, ())
+        ):
+            node.func = ast.copy_location(
+                ast.Name(id=func.attr, ctx=ast.Load()), func
+            )
+        else:
+            node.func = self.visit(func)
+
+        node.args = [self.visit(arg) for arg in node.args]
+        node.keywords = [self.visit(keyword) for keyword in node.keywords]
+        return node
+
+    def visit_Attribute(self, node):
+        if isinstance(node.value, ast.Name):
+            replacement = _QUALIFIED_CONSTANTS.get(
+                (node.value.id, node.attr)
+            )
+            if replacement is not None:
+                return ast.copy_location(
+                    ast.Name(id=replacement, ctx=ast.Load()), node
+                )
+        node.value = self.visit(node.value)
+        return node
+
+
+def _evaluate_candidate_expression(source, namespace):
+    """Normalise approved qualified names, then use the shared safe evaluator."""
+    from hypatiax.safe_formula import evaluate_expression
+
+    tree = ast.parse(source, mode="eval")
+    tree = _QualifiedCallNormalizer().visit(tree)
+    ast.fix_missing_locations(tree)
+    return evaluate_expression(ast.unparse(tree), namespace)
 
 
 def _pure_llm(eq, Xtr, ytr, Xte, yte):
@@ -95,7 +154,8 @@ def _pure_llm(eq, Xtr, ytr, Xte, yte):
     for ex in exprs or []:
         try:
             ns = dict(_NS, **{v: Xtr[:, i] for i, v in enumerate(eq["vars"])})
-            tr = _r2(ytr, eval(ex, {"__builtins__": {}}, ns))   # noqa: S307  (restricted namespace)
+            tr_pred = _evaluate_candidate_expression(ex, ns)
+            tr = _r2(ytr, tr_pred)
             if tr is not None and (best is None or tr > best[0]):
                 best = (tr, ex)
         except Exception:
@@ -105,7 +165,8 @@ def _pure_llm(eq, Xtr, ytr, Xte, yte):
         return dict(out, error="no valid candidate expression", train_r2=None, extrap_r2=None)
     ns = dict(_NS, **{v: Xte[:, i] for i, v in enumerate(eq["vars"])})
     try:
-        te = _r2(yte, eval(best[1], {"__builtins__": {}}, ns))   # noqa: S307
+        te_pred = _evaluate_candidate_expression(best[1], ns)
+        te = _r2(yte, te_pred)
     except Exception:
         te = None
     return dict(out, error=None, best_expr=best[1], train_r2=best[0], extrap_r2=te)
