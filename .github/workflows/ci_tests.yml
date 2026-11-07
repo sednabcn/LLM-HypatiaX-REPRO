@@ -1,202 +1,145 @@
-name: ci_tests
+name: Unit tests (full pytest)
 
-# Offloads testing from a low-spec PC to GitHub-hosted runners.
-# - push / pull_request: fast tests (no torch, no API key)
-# - manual (workflow_dispatch): torch tests, and optionally a 1-equation smoke run
+# Runs the whole hypatiax/experiments/tests suite in an environment that has the
+# heavy dependencies (torch CPU, anthropic, sympy, pysr).  No API key is provided
+# (do NOT define ANTHROPIC_API_KEY here, not even empty: some tests rely on setdefault);
+# tests must not spend API budget.  Julia is NOT installed by default; tests that
+# need it will fail loudly -- tick `with_julia` to include it.
 
 on:
   push:
-    branches: [audit-main, audit-master, "fix/**", "audit-merge"]
+    branches: [audit-main, master]
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/ci_tests.yml"
   pull_request:
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/ci_tests.yml"
   workflow_dispatch:
     inputs:
-      run_torch_tests:
-        description: "Run torch-dependent tests (test_nonfinite_paths, test_force_llm_branch, test_no_bypass, ...)"
-        type: boolean
-        default: true
-      run_smoke:
-        description: "Run exp1_ablation smoke (1 equation, needs ANTHROPIC_API_KEY secret, slow)"
+      with_julia:
+        description: "Install Julia 1.11 + precompile PySR (slow; only if tests need it)"
         type: boolean
         default: false
+      pytest_args:
+        description: "Extra pytest arguments, e.g. -k noise_sweep or -x"
+        required: false
+        default: ""
 
 concurrency:
-  group: ci-tests-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 env:
-  PYTHONUNBUFFERED: "1"
-  HYPATIAX_HOLDOUT: "1"
-  LLM_TEMPERATURE: "0.25"
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
   HYPATIAX_STRICT: "1"
+  PYTHONHASHSEED: "0"
 
 jobs:
-  fast-tests:
-    name: Fast tests (no torch, no API)
+  preflight:
+    name: "Preflight (shell syntax, YAML)"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
-          cache: pip
-
-      - name: Install light dependencies
+      - name: bash -n run_all.sh and parse workflows/config
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest numpy scipy pandas pyyaml sympy
-          # Install project requirements except heavy ones; tolerate failures here,
-          # tests that need a missing package are skipped by the next step's selection.
-          grep -viE '^(torch|pysr|julia|tensorflow)' requirements.txt > /tmp/req_light.txt || true
-          python -m pip install -r /tmp/req_light.txt || echo "::warning::some light requirements failed to install"
+          bash -n run_all.sh
+          pip install -q pyyaml
+          python - <<'PY'
+          import glob, yaml
+          for f in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml"]:
+              yaml.safe_load(open(f))
+              print("ok", f)
+          PY
 
-      - name: Syntax check run_all.sh
-        run: bash -n run_all.sh
-
-      - name: Run fast tests
-        run: |
-          python -m pytest hypatiax/experiments/tests \
-            -m "not torch and not api" \
-            --ignore-glob='*nonfinite_paths*' \
-            --ignore-glob='*force_llm_branch*' \
-            --ignore-glob='*no_bypass*' \
-            -q -x --maxfail=20 -p no:cacheprovider \
-            --junitxml=fast-tests.xml || true
-          # Hard-fail only on tests that must never break:
-          python -m pytest -q -p no:cacheprovider \
-            hypatiax/experiments/tests/test_extrap_far_agreement.py \
-            hypatiax/experiments/tests/test_provenance_gate.py \
-            hypatiax/experiments/tests/test_clear_checkpoint_exp1.py
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: fast-tests-junit
-          path: fast-tests.xml
-          if-no-files-found: ignore
-
-  torch-tests:
-    name: Torch tests (CPU)
-    if: github.event_name == 'workflow_dispatch' && inputs.run_torch_tests
+  pytest:
+    name: "pytest (py3.12, torch CPU, anthropic, sympy)"
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      # Tests that call the API are mocked or skipped; a dummy key avoids import-time failures.
-      ANTHROPIC_API_KEY: "dummy-key-for-offline-tests"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.3.0
         with:
           python-version: "3.12"
           cache: pip
-
-      - name: Install CPU torch and project requirements
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-          grep -viE '^(torch|pysr|julia)' requirements.txt > /tmp/req_nt.txt || true
-          python -m pip install -r /tmp/req_nt.txt
-
-      - name: Hybrid-path and policy tests
-        run: |
-          python -m pytest -q -p no:cacheprovider --maxfail=50 \
-            hypatiax/experiments/tests/test_nonfinite_paths.py \
-            hypatiax/experiments/tests/test_force_llm_branch.py \
-            hypatiax/experiments/tests/test_no_bypass.py \
-            hypatiax/experiments/tests/test_r2_policy.py \
-            $(ls hypatiax/experiments/tests/*sign_flip* 2>/dev/null) \
-            --junitxml=torch-tests.xml
-
-      - name: Full suite (informational, does not fail the job)
-        continue-on-error: true
-        run: python -m pytest hypatiax/experiments/tests -q -p no:cacheprovider --junitxml=full-suite.xml
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: torch-tests-junit
-          path: "*.xml"
-          if-no-files-found: ignore
-
-  smoke-exp1:
-    name: Smoke run (1 equation)
-    if: github.event_name == 'workflow_dispatch' && inputs.run_smoke
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      CLEAR_CHECKPOINT: "1"
-      N_CORE15_TASKS: "1"
-    steps:
-      - name: Fail closed if the API key secret is missing
-        run: |
-          if [ -z "${ANTHROPIC_API_KEY}" ]; then
-            echo "::error::ANTHROPIC_API_KEY secret not set - the LLM arm would be skipped. Refusing."
-            exit 1
-          fi
-
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - uses: julia-actions/setup-julia@v2
-        with:
-          version: "1.10"
+          cache-dependency-path: .github/workflows/ci_tests.yml
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-          grep -viE '^torch' requirements.txt > /tmp/req_smoke.txt || true
-          python -m pip install -r /tmp/req_smoke.txt
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            "anthropic==0.73.0" \
+            scikit-learn \
+            pyyaml \
+            python-dotenv \
+            matplotlib \
+            seaborn \
+            pint \
+            psutil \
+            pytest pytest-timeout
 
-      - name: Run exp1_ablation smoke
-        run: bash run_all.sh --step exp1_ablation 2>&1 | tee smoke.txt
-
-      - name: Check result rows
-        if: always()
-        run: |
-          python - <<'EOF'
-          import json, glob
-          fs = glob.glob("hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json")
-          if not fs:
-              raise SystemExit("::error::exp1_ablation_results.json not produced")
-          d = json.load(open(fs[0]))
-          want = ("formula", "seed", "llm_called", "bypass_kind", "llm_model",
-                  "llm_temperature", "r2_holdout")
-          found = {}
-          def walk(o):
-              if isinstance(o, dict):
-                  for k, v in o.items():
-                      for w in want:
-                          if w in k.lower():
-                              found.setdefault(w, str(v)[:60])
-                      walk(v)
-              elif isinstance(o, list):
-                  for v in o[:20]:
-                      walk(v)
-          walk(d)
-          for w in want:
-              print(f"{w:18s}", found.get(w, "MISSING"))
-          missing = [w for w in want if w not in found]
-          if missing:
-              raise SystemExit(f"::error::missing row fields: {missing}")
-          EOF
-
-      - uses: actions/upload-artifact@v4
-        if: always()
+      - name: Set up Julia 1.11
+        if: ${{ github.event.inputs.with_julia == 'true' }}
+        uses: julia-actions/setup-julia@v2.6.1
         with:
-          name: smoke-exp1
-          path: |
-            smoke.txt
-            hypatiax/data/results/ablation/exp1_ablation/
-          if-no-files-found: ignore
+          version: "1.11"
+
+      - name: Install PySR Julia backend
+        if: ${{ github.event.inputs.with_julia == 'true' }}
+        run: python -c "import pysr; pysr.install()"
+
+      - name: Dependency gate (fails with ONE clear message instead of hundreds of collection errors)
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          missing = []
+          for m in ("torch", "anthropic", "sympy", "numpy", "scipy", "sklearn", "pandas", "yaml"):
+              try:
+                  mod = importlib.import_module(m)
+                  print(f"{m:10s} {getattr(mod, '__version__', '?')}")
+              except Exception as e:
+                  missing.append(f"{m}: {e}")
+          if missing:
+              sys.exit("MISSING DEPENDENCIES:\n  " + "\n  ".join(missing))
+          PY
+
+      - name: Run full pytest
+        run: |
+          python -m pytest -q -ra --timeout=600 \
+            --junitxml=pytest-report.xml \
+            ${{ github.event.inputs.pytest_args }}
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: pytest-report.xml
+          retention-days: 30
