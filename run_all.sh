@@ -234,7 +234,8 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"WARNING: \${_T1} not found — skipping that half of gt_leak_guard.\"
+    echo \"::error::Required gt_leak_guard target missing: ${_T1}\"
+    _FAIL=1
   fi
 
   _T2='hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py'
@@ -245,7 +246,8 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"WARNING: \${_T2} not found — skipping that part of gt_leak_guard.\"
+    echo \"::error::Required gt_leak_guard target missing: ${_T2}\"
+    _FAIL=1
   fi
 
   _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
