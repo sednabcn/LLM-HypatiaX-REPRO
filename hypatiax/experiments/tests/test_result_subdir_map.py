@@ -85,7 +85,7 @@ def test_required_run_all_benchmark_domains_do_not_swallow_failures():
         next_run = runner.find("\nrun ", start + 1)
         block = runner[start: next_run if next_run >= 0 else len(runner)]
         assert "exited non-zero — continuing" not in block, step
-    start = runner.index("run audit_nb06_fixc3_rerun")
+    start = runner.index("\nrun audit_nb06_fixc3_rerun")
     end = runner.find("\nrun ", start + 1)
     block = runner[start: end if end >= 0 else len(runner)]
     assert "exited non-zero — continuing" not in block
