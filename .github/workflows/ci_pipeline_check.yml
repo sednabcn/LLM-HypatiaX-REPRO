@@ -439,7 +439,7 @@ jobs:
           EXPERIMENT:        ${{ github.event.inputs.experiment || 'all' }}
           SEEDS:             ${{ env.SEEDS }}
           NOISE_LEVELS:      ${{ env.NOISE_LEVELS }}
-          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'false' }}
+          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}
           OUT_BASE:          ${{ env.OUT_BASE }}
         run: |
           python3 - <<'PYEOF'
