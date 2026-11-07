@@ -1,0 +1,46 @@
+✅ API key found in environment
+populations : 30  (paper-quality, FIX-POP)
+niterations : 1000
+timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
+wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
+seed        : 42  (source: PYSR_SEED)
+✅ Parameters ready
+   [MEM] start: RSS=0.81 GB
+✅ HybridDiscoverySystem (v5.1) imported from /home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
+✅ PySR 2.0.0a1 ready
+  [    0.0s] Imports complete
+✅ Core-15 loaded: 15 equations, 5 domains
+  [00] Arrhenius                    (Chemistry)
+  [01] Henderson-Hasselbalch        (Chemistry)
+  [02] Rate Law                     (Chemistry)
+  [03] Allometric Scaling           (Biology)
+  [04] Michaelis-Menten             (Biology)
+  [05] Logistic Growth              (Biology)
+  [06] Kinetic Energy               (Physics)
+  [07] Gravitational Force          (Physics)
+  [08] Ideal Gas Law                (Physics)
+  [09] Impermanent Loss             (DeFi AMM)
+  [10] Price Impact                 (DeFi AMM)
+  [11] Constant Product             (DeFi AMM)
+  [12] Value at Risk                (DeFi Risk)
+  [13] Liquidation Price            (DeFi Risk)
+  [14] Portfolio Std Dev            (DeFi Risk)
+✅ sympy available — true OOD evaluation (Mode A) enabled
+✅ run_condition ready — hypatia → HybridDiscoverySystem v5.1 | pysr_only → raw PySR
+⚠  Smoke-test: running 1/15 equations
+=================================================================
+EXPERIMENT 1: LLM ABLATION  (§10.6 Core-15)
+Engine      : hybrid_system_v50_2 (v5.1)
+Equations   : 1  |  Conditions: ['pysr_only', 'hypatia', 'hypatia_nollm']
+populations : 30  |  iterations: 1000  |  timeout: 900s
+Resuming    : 0 checkpointed entries
+=================================================================
+
+────────────────────────────────────────────────────────────
+▶  [00] Arrhenius  [Chemistry]
+   NOTE: Known LLM failure mode: correct prior constrains PySR search space incompatibly with data scale → pr
+────────────────────────────────────────────────────────────
+  [    0.1s] run_condition START: Arrhenius [pysr_only]  seed=42  wall_clock=1400s
+  [    0.1s] generate_data: Arrhenius  N=200  noise=0.05  seed=42
+  [    0.5s] generate_data done: X_train=(160, 1)
+  [    0.5s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
