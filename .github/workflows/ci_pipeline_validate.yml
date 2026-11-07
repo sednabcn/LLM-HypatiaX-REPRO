@@ -604,7 +604,7 @@ jobs:
         env:
           GH_TOKEN:           ${{ secrets.PAT_TOKEN }}
           EXP:                ${{ needs.resolve.outputs.experiment }}
-          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'false' }}
+          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}
           SEEDS:              ${{ github.event.inputs.seeds || '42,99,123,777,2024' }}
           NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           REPO:               ${{ github.repository }}
@@ -721,6 +721,6 @@ jobs:
             --field seeds="${SEEDS}" \
             --field n_samples="${SAMPLES}" \
             --field noise_levels="${NOISE}" \
-            --field fail_on_incomplete="${{ github.event.inputs.fail_on_incomplete || 'false' }}" \
+            --field fail_on_incomplete="${{ github.event.inputs.fail_on_incomplete || 'true' }}" \
             --field dry_run="${{ github.event.inputs.dry_run || 'false' }}"
           echo "Self-dispatch succeeded — slot ${NEXT_SLOT} queued."
