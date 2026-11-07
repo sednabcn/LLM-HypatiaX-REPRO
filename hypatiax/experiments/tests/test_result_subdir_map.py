@@ -108,3 +108,22 @@ def test_exp1b_pca_analysis_uses_the_actual_pca_benchmark_file():
     analyzer = (ROOT / "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py").read_text()
     assert 'HYPATIAX_V3C3_RESULTS=' in runner
     assert "'HYPATIAX_V3C3_RESULTS'" in analyzer
+
+def test_pipeline_check_defaults_to_fail_closed():
+    check = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
+    assert "FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}" in check
+
+
+def test_required_exp1_pca_and_five_system_steps_fail_on_missing_outputs():
+    runner = (ROOT / "run_all.sh").read_text()
+    for step in ("exp1_pca", "exp1_five"):
+        start = runner.index(f'run {step} "')
+        end = runner.find("\nrun ", start + 1)
+        block = runner[start: end if end >= 0 else len(runner)]
+        assert "set -euo pipefail" in block
+    assert "::error::exp1_pca produced no result JSON" in runner
+    assert "::error::split_protocol_disclosure.json not found" in runner
+    assert "::error::exp1_pca_summary.json not found" in runner
+    assert "::error::exp1_five_results.json not produced" in runner
+    assert "::error::performance/extrapolation sub-table source JSON missing" in runner
+    assert "statistical_analysis.py exited non-zero" not in runner
