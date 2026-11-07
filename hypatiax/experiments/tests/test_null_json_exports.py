@@ -1,5 +1,6 @@
 """AUDIT L37: result exports write null + status, never bare -Infinity; the
 resume checkpoint stays float-typed. Helper block is exec'd from each suite."""
+import re
 import ast
 import io
 import json
