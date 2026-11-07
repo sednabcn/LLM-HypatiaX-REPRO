@@ -296,6 +296,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
 "
 
 run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
@@ -343,7 +344,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
-  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
+  )
   if [[ -s \"\${_PV_FILE}\" ]]; then
     echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
   else
