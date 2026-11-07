@@ -99,7 +99,7 @@ jobs:
                   await new Promise(resolve => setTimeout(resolve, 100));
                 } catch (error) {
                   console.log(`    ❌ Error fetching page ${page}: ${error.message}`);
-                  break;
+                  throw error;
                 }
               }
 
