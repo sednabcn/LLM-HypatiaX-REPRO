@@ -91,10 +91,11 @@ def pca_directed_split(X, y, test_size=0.6, random_state=None, feature_names=Non
     pc1_scores = pca.fit_transform(X_array).ravel()
 
     # Orient PC1 consistently: its largest-absolute loading is positive.
-    component = pca.components_[0]
+    component = pca.components_[0].copy()
     anchor = int(np.argmax(np.abs(component)))
     if component[anchor] < 0:
         pc1_scores = -pc1_scores
+        component = -component
 
     # Stable sort; original row position breaks equal-score ties.
     original_positions = np.arange(n_samples)
