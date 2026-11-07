@@ -978,7 +978,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
     # would not be one. Offline analysis only.
     RERUN_STRATEGY=skip PV_SWEEP_ONLY= \\
-    RESULTS_DIR=\"\${_PCA15_DIR}\" \\
+    HYPATIAX_RESULTS_DIR=\"\${_PCA15_DIR}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
       || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
