@@ -52,7 +52,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: pip install numpy pytest
+        run: pip install numpy pytest pandas scipy scikit-learn
       - name: Run R2 policy tests
         run: |
           python -m pytest -q \
@@ -61,6 +61,10 @@ jobs:
             hypatiax/experiments/tests/test_recovery_evaluator.py \
             hypatiax/experiments/tests/test_workflow_cleanup_policy.py \
             hypatiax/experiments/tests/test_result_subdir_map.py
+      - name: Run portfolio PCA split regressions
+        run: >-
+          python -m pytest -q
+          hypatiax/experiments/tests/test_extrapolation_helpers.py::TestPortfolioPcaSplitProtocol
 
   experiment-contract:
     name: "Experiment artifact and workflow contracts"
