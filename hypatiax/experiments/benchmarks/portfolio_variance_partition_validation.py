@@ -10,6 +10,12 @@ import random
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+import sys
+
+# Make direct execution from any working directory resolve the repository package.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 import numpy as np
 from sklearn.model_selection import train_test_split
