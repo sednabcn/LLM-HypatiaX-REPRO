@@ -47,11 +47,19 @@ jobs:
             if (!Number.isSafeInteger(KEEP_HOURS) || KEEP_HOURS < 24 || KEEP_HOURS > 8760) throw new Error('hours_threshold must be an integer from 24 to 8760');
             const APPLY_DELETIONS = context.eventName === 'workflow_dispatch' && process.env.APPLY_DELETIONS === 'true';
             const PROTECTED_BRANCHES = new Set(['audit-master', 'audit-main', 'master']);
+            // Preserve scientific/reproducibility history regardless of age or branch.
+            // IDs are the current GitHub workflow IDs; name patterns are a fallback
+            // if a workflow is recreated and receives a new ID.
+            const PRESERVED_WORKFLOW_IDS = new Set([400368487, 315086159]);
+            const PRESERVED_WORKFLOW_NAME_PATTERNS = [
+              /phase\s*3\s*ablation/i,
+              /runner\s*\(repro\)/i
+            ];
             const MAX_PAGES = 30;
 
             console.log('🧹 Starting conservative workflow-run cleanup...');
             console.log(`Mode: ${APPLY_DELETIONS ? 'APPLY' : 'DRY RUN (no runs will be deleted)'}`);
-            console.log('Preserving protected branches, failed runs, and all runs newer than the threshold');
+            console.log('Preserving protected branches, experiment/repro workflows, failed runs, and all runs newer than the threshold');
             console.log(`Deleting runs older than ${KEEP_HOURS} hours`);
             console.log(`Repository: ${owner}/${repo}`);
             console.log('================================');
@@ -119,7 +127,9 @@ jobs:
                 const oldEnough = new Date(run.created_at) <= cutoffDate;
                 const successful = run.status === 'completed' && run.conclusion === 'success';
                 const protectedBranch = PROTECTED_BRANCHES.has(run.head_branch);
-                if (oldEnough && successful && !protectedBranch) runsToDelete.push(run);
+                const protectedWorkflow = PRESERVED_WORKFLOW_IDS.has(run.workflow_id) ||
+                  PRESERVED_WORKFLOW_NAME_PATTERNS.some(pattern => pattern.test(run.workflow_name || run.name || ''));
+                if (oldEnough && successful && !protectedBranch && !protectedWorkflow) runsToDelete.push(run);
                 else runsToKeep.push(run);
               }
 
@@ -179,6 +189,7 @@ jobs:
                 `- Mode: ${APPLY_DELETIONS ? 'apply' : 'dry-run'}`,
                 `- Eligible: completed successful runs older than ${KEEP_HOURS} hours on unprotected branches`,
                 '- Protected branches: master, audit-main, audit-master',
+                '- Preserved workflows: Phase 3 ablation and runner reproduction',
                 '- Failed, cancelled, queued, and in-progress runs are preserved',
                 '',
                 '### Status',
