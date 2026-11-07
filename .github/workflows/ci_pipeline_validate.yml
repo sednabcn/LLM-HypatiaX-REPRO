@@ -145,7 +145,7 @@ on:
       fail_on_incomplete:
         description: "Fail pipeline if checkpoint finds missing tasks (true/false)"
         required: false
-        default: "false"
+        default: "true"
 
       force_rerun:
         description: >
