@@ -70,3 +70,19 @@ def test_exp1b_contract_requires_seed_outputs_and_shared_baseline():
     assert "hypatiax_defi_benchmark_v3_results.json" in checker
     assert "contract_missing" in checker
     assert "portfolio_variance_defi_seed_sweep_seed{seed}.json" in checker
+
+
+def test_pipeline_self_dispatch_preserves_fail_closed_default():
+    validate = (ROOT / ".github/workflows/ci_pipeline_validate.yml").read_text()
+    assert "FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}" in validate
+    assert "--field fail_on_incomplete=\"${{ github.event.inputs.fail_on_incomplete || 'true' }}\"" in validate
+
+
+def test_required_run_all_benchmark_domains_do_not_swallow_failures():
+    runner = (ROOT / "run_all.sh").read_text()
+    for step in ("exp2_feynman", "exp2_feynman_pca_4060", "exp2_feynman_extrap", "exp2", "exp2_five", "extrap", "fixc3_rerun"):
+        start = runner.index(f'run {step} "')
+        next_run = runner.find("\\nrun ", start + 1)
+        block = runner[start: next_run if next_run >= 0 else len(runner)]
+        assert "exited non-zero — continuing" not in block, step
+    assert "exp1_pca worker(s) failed" in runner
