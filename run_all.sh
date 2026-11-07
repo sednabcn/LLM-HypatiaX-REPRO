@@ -977,11 +977,9 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # be produced under 15_pca/ no matter what the benchmark step did. There is
   # no PCA-specific portfolio-variance script in the repo (only
   # portfolio_variance_v3c2.py exists) — reuse it here against the PCA
-  # benchmark JSON, mirroring the plain exp1b step above. NOTE: this assumes
-  # portfolio_variance_v3c2.py discovers its input benchmark JSON via the
-  # RESULTS_DIR env var (as exp1b's own call relies on) — verify this against
-  # the script's actual source before trusting it in CI; if it instead expects
-  # a fixed filename/location, pass that explicitly here.
+  # benchmark JSON. The audit script normally resolves v3c3 from the standard
+  # non-PCA results tree, so pass the PCA benchmark file explicitly;
+  # HYPATIAX_RESULTS_DIR independently selects the analysis output directory.
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
     echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '"\${_PCA15_DIR}"'.'
@@ -993,6 +991,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
     # would not be one. Offline analysis only.
     RERUN_STRATEGY=skip PV_SWEEP_ONLY= \\
     HYPATIAX_RESULTS_DIR=\"\${_PCA15_DIR}\" \\
+    HYPATIAX_V3C3_RESULTS=\\\"\${_BENCH_JSON_PCA}\\\" \\\\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
       || { echo "::error::exp1b_pca portfolio analysis failed"; exit 1; }
