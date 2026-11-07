@@ -42,3 +42,9 @@ def test_deletion_gate_remains_conservative():
     assert "if (oldEnough && successful && !protectedBranch && !protectedWorkflow) runsToDelete.push(run);" in source
     assert "run.status === 'completed' && run.conclusion === 'success'" in source
     assert "PROTECTED_BRANCHES.has(run.head_branch)" in source
+
+def test_pagination_limit_fails_closed_instead_of_using_partial_run_list():
+    source = _source()
+    assert "if (runsPage.workflow_runs.length < 100) break;" in source
+    assert "if (page > MAX_PAGES)" in source
+    assert "refusing to delete from an incomplete run list" in source
