@@ -75,8 +75,17 @@ jobs:
           data = json.loads(path.read_text())
           assert data["protocol"]["split_protocol"] == "independent_random_holdout_40_60"
           assert data["protocol"]["split_is_transductive"] is False
+          assert data["schema_version"] == 2
           assert data["aggregate"]["n_partitions"] == len(data["results"])
           assert data["aggregate"]["n_partitions"] > 0
+          for row in data["results"]:
+              assert "train_r2" not in row, "Ambiguous legacy train_r2 field found"
+              assert "llm_train_r2" in row
+              assert row["test_r2_source"] in {"nn", "llm", "ensemble"}
+              assert isinstance(row["success_test_r2_gt_0_99"], bool)
+          assert data["aggregate"]["n_success_test_r2_gt_0_99"] == sum(
+              row["success_test_r2_gt_0_99"] for row in data["results"]
+          )
           print(json.dumps(data["aggregate"], indent=2))
           PY
       - name: Upload validation JSON
