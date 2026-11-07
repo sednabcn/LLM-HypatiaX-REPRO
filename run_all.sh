@@ -984,7 +984,8 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # a fixed filename/location, pass that explicitly here.
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in '\"\${_PCA15_DIR}\"'.'
+    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '
+    exit 1\"\${_PCA15_DIR}\"'.'
     echo '         hypatiax_defi_benchmark_pca.py did not produce a results file at the'
     echo '         expected --output-dir; portfolio-variance table/figure inputs will be missing.'
   else
@@ -1176,13 +1177,16 @@ PYEOF_FINGERPRINT_1B
   echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
   echo \"  Summary file    : \${_NSUMMARY} (exp1b_pca_summary.json)\"
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
-    echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+    echo '::error::exp1b_pca generated no files'
+    exit 1
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
+    echo '::error::split_protocol_disclosure.json not found in 15_pca/'
+    exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
-    echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
+    echo '::error::exp1b_pca_summary.json not found'
+    exit 1
   fi
   echo '=== end exp1b_pca ==='
 "
