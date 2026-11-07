@@ -53,7 +53,7 @@ jobs:
             const PRESERVED_WORKFLOW_IDS = new Set([400368487, 315086159]);
             const PRESERVED_WORKFLOW_NAME_PATTERNS = [
               /phase\s*3\s*ablation/i,
-              /runner\s*\(repro\)/i
+              /runner.*repro|repro.*runner/i
             ];
             const MAX_PAGES = 30;
 
