@@ -252,10 +252,11 @@ class TestPortfolioPcaSplitProtocol:
 
         assert len(X_train) == 40
         assert len(X_test) == 60
-        np.testing.assert_array_equal(y_train, X_train[:, 0].astype(int) * 0 + y_train)
         # Targets encode original row positions; reconstruct them from the first feature.
-        np.testing.assert_allclose(y_train, np.rint((X_train[:, 0] - 1000) / 40) * 7)
-        np.testing.assert_allclose(y_test, np.rint((X_test[:, 0] - 1000) / 40) * 7)
+        train_rows = np.rint((X_train[:, 0] - 1000) * 99 / 4000).astype(int)
+        test_rows = np.rint((X_test[:, 0] - 1000) * 99 / 4000).astype(int)
+        np.testing.assert_array_equal(y_train, train_rows * 7)
+        np.testing.assert_array_equal(y_test, test_rows * 7)
         assert audit["split_protocol"] == "pca_40_60_pc1"
         assert audit["split_is_transductive"] is True
         assert audit["feature_scaling"] == "none"
