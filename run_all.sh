@@ -467,7 +467,7 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
     exit 1
   fi
   for _f in appendix_table_portfolio_variance.tex paper_numbers_v3c3.json; do
-    [[ -s \"\${_PVA_DIR}/\${_f}\" ]] || echo \"WARNING: \${_f} not produced — the ablation input portfolio_variance_seed_sweep.json is probably missing\"
+    [[ -s \"\${_PVA_DIR}/\${_f}\" ]] || { echo \"::error::required portfolio artifact \${_f} not produced\"; exit 1; }
   done
   echo '=== end portfolio ==='
 "
@@ -1323,7 +1323,7 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
   if [[ ! -s \"\${_CANON_CSV}\" ]]; then
-    echo \"[instability] WARNING: \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
+    echo \"::error::[instability] \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
     _STRAY_CSV=\$(find '${REPO_ROOT}' -maxdepth 6 -name 'instability_analysis.csv' \
                    -not -path \"\${_CANON_CSV}\" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
     if [[ -n \"\${_STRAY_CSV}\" && -s \"\${_STRAY_CSV}\" ]]; then
@@ -1894,12 +1894,12 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo \"WARNING: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'
+    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'\n    exit 1
   else
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/ — ci_analysis.yml merge step will find nothing'
+    echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'\n    exit 1
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
     echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
