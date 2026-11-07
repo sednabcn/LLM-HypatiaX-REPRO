@@ -148,7 +148,7 @@ on:
       noise_levels:
         description: "Noise levels used (required for suppB; comma-separated)"
         required: false
-        default: "0.0,0.5,1.0,5.0,10.0"
+        default: "0.0,0.05,0.1,0.5,1.0"
 
       fail_on_incomplete:
         description: "Fail the job if any experiment has missing tasks"
@@ -168,7 +168,7 @@ env:
   OUT_BASE: "hypatiax/data/results"
   # Default seeds / noise levels — overridden by workflow_dispatch inputs.
   SEEDS:        ${{ github.event.inputs.seeds        || '42,99,123,777,2024' }}
-  NOISE_LEVELS: ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+  NOISE_LEVELS: ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
 
 
 # ==============================================================================
