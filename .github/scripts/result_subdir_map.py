@@ -36,7 +36,7 @@ from __future__ import annotations
 
 RESULT_SUBDIR_MAP: dict[str, str] = {
     "exp1":                "comparison_results/noise-noiseless/noiseless/defi",
-    "exp1b":               "comparison_results/noise-noiseless/15",
+    "exp1b":               "comparison_results/noise-noiseless/defi",
     "exp1_pca":            "comparison_results/noise-noiseless/noiseless/defi_pca",
     "exp1b_pca":           "comparison_results/noise-noiseless/15_pca",
     "exp1_ablation":       "ablation/exp1_ablation",
