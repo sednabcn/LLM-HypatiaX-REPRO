@@ -60,6 +60,8 @@ Output files (RESULTS_DIR/five_systems/exp1_five/):
 import importlib.util as _ilu
 import json
 import os
+import hashlib
+import subprocess
 import pathlib as _pl
 import sys
 import time
@@ -261,6 +263,11 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
     # extrapolation numbers are computed identically to exp2/exp2_five's,
     # not by a second, possibly-divergent implementation.
     extrap_r2, extrap_rmse = {}, {}
+    def _finite(x):
+        try:
+            return x is not None and bool(np.isfinite(x))
+        except (TypeError, ValueError):
+            return False
     _predict_fn = getattr(result, "_predict_fn", None)
     for regime_name, (X_e, y_e) in extrap_sets.items():
         if _predict_fn is not None:
@@ -275,7 +282,7 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
                 print(f"  [{method_name}] extrap predict_fn failed ({regime_name}): {_pred_exc}")
                 y_pred = None
         else:
-            y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])
+            y_pred = _runner_eval_formula(result.formula_full or result.formula, X_e, eq["vars"])  # audit: ignore[L2] method OUTPUT, not ground truth
         if y_pred is None:
             extrap_r2[regime_name] = None
             extrap_rmse[regime_name] = None
@@ -284,7 +291,7 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
             extrap_rmse[regime_name] = _far_rmse(y_e, y_pred)
 
     print(
-        f"  [{method_name}] {result.formula[:50]!r}  R²={result.r2:.4f}  "
+        f"  [{method_name}] {result.formula[:50]!r}  R²={(f'{result.r2:.4f}' if _finite(result.r2) else 'n/a')}  "
         f"extrap(near={extrap_r2.get('near')}, medium={extrap_r2.get('medium')}, "
         f"far={extrap_r2.get('far')})  {elapsed:.1f}s"
     )
@@ -461,6 +468,41 @@ def build_extrapolation_table(all_results: dict, method_names: list[str]) -> dic
 
 def write_provenance(all_results: dict) -> None:
     from hypatiax.core.flags import flag_state
+    _script_file = Path(__file__).resolve()
+    _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
+    _source_revision = None
+    _git_dirty = None
+    _script_tracked = False
+    _git_dirty_scope = "unavailable"
+    try:
+        _git_root = Path(subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=_script_file.parent, check=True, capture_output=True, text=True
+        ).stdout.strip())
+        _source_revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=_git_root,
+            check=True, capture_output=True, text=True
+        ).stdout.strip()
+        _git_dirty = bool(subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=_git_root, check=True, capture_output=True, text=True
+        ).stdout.strip())
+        _script_rel = _script_file.relative_to(_git_root).as_posix()
+        _script_tracked = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", _script_rel],
+            cwd=_git_root, capture_output=True, text=True
+        ).returncode == 0
+        _git_dirty_scope = "tracked_worktree_only"
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    _source_meta = {
+        "source_revision": _source_revision,
+        "benchmark_script_sha256": _script_hash,
+        "benchmark_script_path": str(_script_file),
+        "benchmark_script_tracked": _script_tracked,
+        "git_dirty": _git_dirty,
+        "git_dirty_scope": _git_dirty_scope,
+    }
     provenance = {
         "family":         "five_systems_exp1_five",
         "flags":          flag_state(),
@@ -493,8 +535,14 @@ def write_provenance(all_results: dict) -> None:
             "discover()/LLM-enabled there). See module docstring."
         ),
     }
-    with open(PROV_PATH, "w") as f:
+    provenance.update(_source_meta)
+    _prov_path = Path(PROV_PATH)
+    _prov_tmp = _prov_path.with_name(_prov_path.name + f".{os.getpid()}.tmp")
+    with open(_prov_tmp, "w", encoding="utf-8") as f:
         json.dump(provenance, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(_prov_tmp, _prov_path)
     print(f"✅ Provenance → {PROV_PATH}")
 
 

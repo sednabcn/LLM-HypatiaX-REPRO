@@ -19,6 +19,14 @@ from dataclasses import dataclass
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
 
+M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
+
+
+def _m5_record_failure(where, exc):
+    """Record a swallowed failure and return None: a failed run must never enter the statistics as a number."""
+    M5_FAILURES.append({"where": where, "error": f"{type(exc).__name__}: {exc}"})
+    return None
+
 # ---------------------------------------------------------------------------
 # Module-level reproducibility seeds.
 # ---------------------------------------------------------------------------
@@ -184,8 +192,8 @@ class SmartStructureDetector:
             r2 = lr.score(log_X, log_y)
 
             return r2 > 0.85
-        except Exception:
-            return False
+        except Exception as e:
+            return _m5_record_failure("_test_multiplicative_structure", e)
 
     def _detect_term_forms(
         self, X: np.ndarray, y: np.ndarray, var_names: list[str]

@@ -1,5 +1,5 @@
 {
-  "note": "legacy files that still compute ss_tot; may only shrink",
+  "note": "legacy files that still contain the historical R2 token; may only shrink",
   "files": [
     "hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py",
     "hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py",
