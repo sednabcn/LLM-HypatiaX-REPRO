@@ -82,7 +82,7 @@ def test_required_run_all_benchmark_domains_do_not_swallow_failures():
     runner = (ROOT / "run_all.sh").read_text()
     for step in ("exp2_feynman", "exp2_feynman_pca_4060", "exp2_feynman_extrap", "exp2", "exp2_five", "extrap", "fixc3_rerun"):
         start = runner.index(f'run {step} "')
-        next_run = runner.find("\\nrun ", start + 1)
+        next_run = runner.find("\nrun ", start + 1)
         block = runner[start: next_run if next_run >= 0 else len(runner)]
         assert "exited non-zero — continuing" not in block, step
     assert "exp1_pca worker(s) failed" in runner
