@@ -338,7 +338,26 @@ jobs:
                       )
               data_files = list(set(data_files))  # deduplicate
 
-              present = len(data_files) > 0
+              # exp1b is complete only when every configured seed has both its
+              # own benchmark and portfolio artifact, and the shared seed-42
+              # benchmark baseline is present. A single arbitrary JSON is not
+              # sufficient evidence of a complete reproducibility run.
+              contract_missing = []
+              if exp_id == "exp1b":
+                  baseline = result_dir / "hypatiax_defi_benchmark_v3_results.json"
+                  if not baseline.is_file() or baseline.stat().st_size == 0:
+                      contract_missing.append(str(baseline.relative_to(OUT_BASE)))
+                  for seed in SEEDS:
+                      tag = "" if str(seed) == "42" else f"_seed{seed}"
+                      benchmark = result_dir / f"hypatiax_defi_benchmark_v3_results{tag}.json"
+                      portfolio = result_dir / f"portfolio_variance_defi_seed_sweep_seed{seed}.json"
+                      for required in (benchmark, portfolio):
+                          if not required.is_file() or required.stat().st_size == 0:
+                              contract_missing.append(str(required.relative_to(OUT_BASE)))
+                  if contract_missing:
+                      print(f"  ::error::exp1b artifact contract incomplete: {contract_missing}")
+
+              present = len(data_files) > 0 and not contract_missing
               valid   = present
               n_tasks = len(data_files)
 
