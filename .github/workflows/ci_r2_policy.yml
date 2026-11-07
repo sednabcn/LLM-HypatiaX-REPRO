@@ -50,4 +50,5 @@ jobs:
             hypatiax/experiments/tests/test_r2_policy.py \
             hypatiax/experiments/tests/test_core_metrics_compat.py \
             hypatiax/experiments/tests/test_recovery_evaluator.py \
-            hypatiax/experiments/tests/test_workflow_cleanup_policy.py
+            hypatiax/experiments/tests/test_workflow_cleanup_policy.py \\
+            hypatiax/experiments/tests/test_result_subdir_map.py
