@@ -7,7 +7,7 @@ rng = np.random.default_rng(0)
 X = rng.uniform(0.5, 3.0, size=(200, 2))
 y = X[:, 0] ** 2 * X[:, 1]
 
-GOOD = {"formula": "a**2*b", "python_code": "def f(a, b):\n    return a**2 * b\n",
+GOOD = {"formula": "a**2*b", "python_code": "def formula(a, b):\n    return a**2 * b\n",
         "llm_source": "stub", "llm_called": False, "bypass_kind": "stub"}
 BAD = {"error": "stub failure", "formula": "", "python_code": "",
        "llm_source": "stub", "llm_called": False, "bypass_kind": "stub"}
