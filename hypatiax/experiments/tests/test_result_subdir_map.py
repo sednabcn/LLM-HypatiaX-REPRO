@@ -127,3 +127,17 @@ def test_required_exp1_pca_and_five_system_steps_fail_on_missing_outputs():
     assert "::error::exp1_five_results.json not produced" in runner
     assert "::error::performance/extrapolation sub-table source JSON missing" in runner
     assert "statistical_analysis.py exited non-zero" not in runner
+
+def test_contract_gate_triggers_for_runner_changes_on_push_and_pull_request():
+    workflow = (ROOT / ".github/workflows/ci_r2_policy.yml").read_text()
+    for trigger in ("push:", "pull_request:"):
+        start = workflow.index(trigger)
+        end = workflow.find("\n  workflow_dispatch:", start)
+        block = workflow[start: end if end >= 0 else len(workflow)]
+        for path in (
+            '"run_all.sh"',
+            '".github/workflows/ci_runner_repro.yml"',
+            '".github/workflows/ci_pipeline_check.yml"',
+            '".github/workflows/ci_pipeline_validate.yml"',
+        ):
+            assert path in block, (trigger, path)
