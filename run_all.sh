@@ -345,13 +345,11 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
   )
-  if [[ -s \"\${_PV_FILE}\" ]]; then
-    echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
-  else
-    echo \"::warning::exp1b: expected portfolio sweep file was not produced: \${_PV_FILE}\"
-    echo '         Strategy A needs torch, hypatiax, ANTHROPIC_API_KEY and an importable'
-    echo '         _hybrid_predict_and_eval; the import error is in the output above.'
+  if [[ ! -s \"\${_PV_FILE}\" ]]; then
+    echo \"::error::exp1b portfolio artifact missing or empty: \${_PV_FILE}\"
+    exit 1
   fi
+  echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
 
@@ -393,10 +391,9 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
   echo \"Files produced: \${count}\"
 
-  if [[ \"\${count}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != \"true\" ]]; then
-      echo 'WARNING: exp1b generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
-  elif [[ \"\${count}\" -eq 0 ]]; then
-      echo 'NOTE: exp1b produced no files (step was skipped — SKIP_ALLOWED=true)'
+  if [[ \"\${count}\" -eq 0 ]]; then
+    echo "::error::exp1b produced no output files"
+    exit 1
   fi
 "
 
