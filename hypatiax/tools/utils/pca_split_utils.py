@@ -157,6 +157,48 @@ def pca_directed_split(X, y, test_size=0.6, random_state=None, feature_names=Non
     return result + (metadata,)
 
 
+def first_feature_percentile_split(X, y, return_metadata=False):
+    """Reproduce the historical first-feature 40/60 split without PCA."""
+    X_array = np.asarray(X, dtype=float)
+    y_array = np.asarray(y)
+    if X_array.ndim == 1:
+        X_array = X_array.reshape(-1, 1)
+    if X_array.ndim != 2:
+        raise ValueError(f"X must be a 2D feature matrix; got {X_array.ndim} dimensions.")
+    if y_array.ndim == 2 and y_array.shape[1] == 1:
+        y_array = y_array.ravel()
+    if y_array.ndim != 1 or y_array.shape[0] != len(X_array):
+        raise ValueError("y must be a 1D target vector with one value per sample.")
+    if len(X_array) == 0 or X_array.shape[1] == 0:
+        raise ValueError("X must contain at least one sample and one feature.")
+
+    values = X_array[:, 0]
+    threshold = np.percentile(values, 40)
+    train_mask = values <= threshold
+    test_mask = values > threshold
+    if train_mask.sum() < 20 or test_mask.sum() < 20:
+        positions = np.arange(len(X_array))
+        train_mask = positions < int(0.4 * len(positions))
+        test_mask = ~train_mask
+
+    result = (
+        X_array[train_mask], y_array[train_mask],
+        X_array[test_mask], y_array[test_mask],
+    )
+    if not return_metadata:
+        return result
+    metadata = {
+        "split_protocol": "first_feature_percentile_40_60",
+        "split_method": "40th percentile threshold on first feature",
+        "feature_scaling": "none",
+        "n_samples": int(len(X_array)),
+        "n_train": int(len(result[0])),
+        "n_test": int(len(result[2])),
+        "split_is_transductive": False,
+    }
+    return result + (metadata,)
+
+
 def select_case_by_identity(case_rows, domain, name):
     """Select exactly one protocol case by its stable domain/name identity.
 
