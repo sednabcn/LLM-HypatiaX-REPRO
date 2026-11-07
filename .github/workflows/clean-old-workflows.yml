@@ -42,7 +42,7 @@ jobs:
 
             // Configuration
             const rawHours = process.env.HOURS_THRESHOLD || '72';
-            if (!/^\\d+$/.test(rawHours)) throw new Error('hours_threshold must be numeric');
+            if (!/^\d+$/.test(rawHours)) throw new Error('hours_threshold must be numeric');
             const KEEP_HOURS = Number(rawHours);
             if (!Number.isSafeInteger(KEEP_HOURS) || KEEP_HOURS < 24 || KEEP_HOURS > 8760) throw new Error('hours_threshold must be an integer from 24 to 8760');
             const APPLY_DELETIONS = context.eventName === 'workflow_dispatch' && process.env.APPLY_DELETIONS === 'true';
