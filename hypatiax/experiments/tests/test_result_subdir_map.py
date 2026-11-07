@@ -102,3 +102,9 @@ def test_exp1b_pca_fails_closed_on_missing_required_inputs_and_outputs():
     assert "::error::split_protocol_disclosure.json not found" in block
     assert "::error::exp1b_pca_summary.json not found" in block
     assert "HYPATIAX_RESULTS_DIR=" in block
+
+def test_exp1b_pca_analysis_uses_the_actual_pca_benchmark_file():
+    runner = (ROOT / "run_all.sh").read_text()
+    analyzer = (ROOT / "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py").read_text()
+    assert 'HYPATIAX_V3C3_RESULTS=' in runner
+    assert "'HYPATIAX_V3C3_RESULTS'" in analyzer
