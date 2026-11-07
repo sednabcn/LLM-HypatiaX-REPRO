@@ -383,7 +383,7 @@ def _create_message_deterministic(client, **kwargs):
     parameters (Claude Sonnet 4.6+, Opus 4.7+), and that exception was
     swallowed by generate_llm_formula's bare except into an N/A/error
     result rather than retried, unlike HSL's equivalent fallback. Tries
-    temperature=0.0 first and retries once without it only on that
+    a fixed temperature first and retries once without it only on that
     specific deprecation error, so determinism is preserved wherever the
     model still supports it, and the fallback degrades the same way HSL's
     does instead of going silently dark.

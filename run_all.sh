@@ -2335,7 +2335,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       --results-dir "${_SEED_DIR}" \
       --output-dir  "${_SEED_DIR}" \
       2>&1 | tee "${_SEED_DIR}/symbolic_equivalence_run.log" \
-    || echo "WARNING: check_symbolic_equivalence.py exited non-zero — continuing (non-fatal reporting step)"
+    || { echo "WARNING: check_symbolic_equivalence.py exited non-zero — continuing"; record_failure exp3_symbolic_equivalence; }
     if [[ -f "${_REPORT}" ]]; then
       _NR=$(wc -l < "${_REPORT}" || echo "?")
       echo "[exp3_sym] symbolic_equivalence_report.csv: ${_NR} line(s) → ${_REPORT}"
@@ -2343,7 +2343,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       echo "[WARN] symbolic_equivalence_report.csv was not produced — check script output above."
     fi
   fi
-) || echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing (non-fatal reporting step)"
+) || { echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing"; record_failure exp3_symbolic_equivalence_block; }
 
 run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routing)" bash -c "
   cd '${REPO_ROOT}'
