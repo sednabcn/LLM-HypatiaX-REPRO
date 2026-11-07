@@ -668,7 +668,7 @@ PYMERGE
     return "${rc}"
   fi
   for f in exp1_ablation_results.json exp1_rf01_mannwhitney.json exp1_llm_contribution.json; do
-    if [[ -s "${abl_dir}/${f}" ]]; then echo "OK: ${f}"; else echo "WARNING: ${f} not produced"; fi
+    if [[ -s "${abl_dir}/${f}" ]]; then echo "OK: ${f}"; else echo "::error::required ablation artifact ${f} not produced"; return 1; fi
   done
   echo '=== LLM-CONTRIBUTION ==='
   grep -A6 "LLM-CONTRIBUTION" "${logf}" | tee /tmp/llm_contribution.txt || echo "(no LLM-CONTRIBUTION block in log)"
@@ -1333,6 +1333,7 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
     else
       echo '[instability] No stray instability_analysis.csv found anywhere under REPO_ROOT either.'
       echo '              run_instability_suite.py likely failed internally before writing the CSV'
+      exit 1
       echo '              (e.g. \"Loaded 0 cases\") -- check instability_run.log above for the real cause.'
     fi
   fi
@@ -1891,7 +1892,8 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   if [[ \"\${COUNT_EXTRAP}\" -eq 0 && \"\${COUNT_SAVED}\" -gt 0 ]]; then
-    echo \"WARNING: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
+    echo \"::error:: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
+    exit 1
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
     echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'\n    exit 1
