@@ -7,7 +7,7 @@ on:
       hours_threshold:
         description: 'Delete workflow runs older than this many hours'
         required: false
-        default: '72'
+        default: '2160'
         type: string
       apply_deletions:
         description: 'Actually delete eligible runs (manual dispatch only; scheduled runs are always dry-run)'
@@ -32,7 +32,7 @@ jobs:
       - name: Cleanup Old Workflow Runs
         uses: actions/github-script@v8
         env:
-          HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '72' }}
+          HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '2160' }}
           APPLY_DELETIONS: ${{ inputs.apply_deletions || false }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN}}
@@ -41,7 +41,7 @@ jobs:
             const repo = context.repo.repo;
 
             // Configuration
-            const rawHours = process.env.HOURS_THRESHOLD || '72';
+            const rawHours = process.env.HOURS_THRESHOLD || '2160';
             if (!/^\d+$/.test(rawHours)) throw new Error('hours_threshold must be numeric');
             const KEEP_HOURS = Number(rawHours);
             if (!Number.isSafeInteger(KEEP_HOURS) || KEEP_HOURS < 24 || KEEP_HOURS > 8760) throw new Error('hours_threshold must be an integer from 24 to 8760');
