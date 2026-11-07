@@ -1931,7 +1931,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --benchmark-dir        "${_BENCHMARK_DIR}" \
         --output               "${_PAIRED}" \
         2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"
+      || { echo "::error:: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"
       if [[ -f "${_PAIRED}" ]]; then
         _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
         echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
