@@ -193,7 +193,8 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 # ---------------------------------------------------------------------------
 # Formula evaluation helpers
-# -----------------------------def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
+# ---------------------------------------------------------------------------
+def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
     """Safely evaluate a restricted LLM formula against a feature matrix."""
     try:
         X = np.asarray(X, dtype=float)
@@ -377,7 +378,7 @@ def _create_message_deterministic(client, **kwargs):
     per-file copies rather than cross-module imports for this helper.
     Without this, EnhancedHybridSystemDeFi's local fallback (both the
     initial call and its max_tokens/malformed-response retry) called
-    client.messages.create(temperature=0.0, ...) directly -- which raises
+    client.messages.create with a hard-coded temperature directly -- which raises
     on any model that has deprecated the temperature/top_p/top_k sampling
     parameters (Claude Sonnet 4.6+, Opus 4.7+), and that exception was
     swallowed by generate_llm_formula's bare except into an N/A/error
@@ -387,13 +388,9 @@ def _create_message_deterministic(client, **kwargs):
     model still supports it, and the fallback degrades the same way HSL's
     does instead of going silently dark.
     """
-    try:
-        return client.messages.create(temperature=0.0, **kwargs)
-    except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
-        raise
+    # UNIFIED-TEMPERATURE: shared wrapper (LLM_TEMPERATURE, default 0.25, one fallback).
+    from hypatiax.core.llm_call import create_message
+    return create_message(client, **kwargs)
 
 
 class EnhancedHybridSystemDeFi:

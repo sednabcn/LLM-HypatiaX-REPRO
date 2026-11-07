@@ -55,6 +55,7 @@ export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
 # AUDIT C1: one LLM sampling temperature for every experiment (config/repro.yaml llm_temperature).
 export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
 export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
+export HYPATIAX_HOLDOUT="${HYPATIAX_HOLDOUT:-1}"   # held-out R2 per case (adds one NN fit; budget runtime)
 [[ "${HYPATIAX_STRICT}" == "1" ]] || { echo "ERROR: HYPATIAX_STRICT must be 1" >&2; exit 1; }
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run

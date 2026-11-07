@@ -149,7 +149,8 @@ def _create_message(client, **kwargs):
         f"messages={len(kwargs.get('messages', []))}"
     )
     try:
-        response = client.messages.create(**kwargs)
+        from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
+        response = create_message(client, **kwargs)
     except Exception as e:
         dt = time.perf_counter() - t0
         print(
@@ -457,7 +458,8 @@ class PureLLMBaseline:
             # constants are sent verbatim ("task spec"); record exactly which
             "prompt_constants": dict(metadata.get("constants") or {}),
             "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-            "temperature_sent": False,
+            "temperature_sent": bool(__import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info().get("temperature_sent", False)),
+            "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info().get("temperature_requested"),
             "model_source": self.model_source,
         }
         _llm_attempted = False
