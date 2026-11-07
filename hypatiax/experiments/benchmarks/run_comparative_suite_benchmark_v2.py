@@ -988,6 +988,25 @@ class MethodResult:
 # BASE METHOD
 # ============================================================================
 
+def _extract_formula(result) -> str:
+    """Formula string from a hybrid result dict.
+
+    The hybrids return the formula nested at result['llm_result']['formula']; the harness
+    used to read only top-level keys and stored 'N/A' (M4 rows had no formula, so they could
+    not be audited or re-scored).  Looks at top level first, then llm_result.
+    """
+    if not isinstance(result, dict):
+        return "N/A"
+    cands = [result.get("formula"), result.get("best_formula")]
+    lr = result.get("llm_result")
+    if isinstance(lr, dict):
+        cands += [lr.get("formula"), lr.get("best_formula")]
+    for c in cands:
+        if isinstance(c, str) and c.strip() and c.strip().upper() != "N/A":
+            return c.strip()
+    return "N/A"
+
+
 class BaseMethod:
     """Shared helpers for all wrapper methods."""
 
@@ -2379,10 +2398,13 @@ class HybridAllDomainsMethod(BaseMethod):
 
             if y_pred_llm is None:
                 # Strategy 2: re-evaluate the formula string.
+                _lr = result.get("llm_result") if isinstance(result.get("llm_result"), dict) else {}
                 formula_str = (
                     result.get("python_code")
+                    or _lr.get("python_code")
                     or result.get("formula")
                     or result.get("best_formula")
+                    or (_extract_formula(result) if _extract_formula(result) != "N/A" else "")
                     or ""
                 )
                 if formula_str:
@@ -2558,7 +2580,7 @@ class HybridAllDomainsMethod(BaseMethod):
                             f"{r2v:.4f} to {r2_hybrid:.4f})"
                         )
 
-            _fstr_2534 = str(result.get("formula", result.get("best_formula", "N/A")))
+            _fstr_2534 = _extract_formula(result)  # B2/B3: formula is nested under llm_result
             return MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
