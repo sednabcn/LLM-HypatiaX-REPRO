@@ -1179,7 +1179,7 @@ jobs:
         env:
           GH_TOKEN:          ${{ secrets.GITHUB_TOKEN }}
           COMPLETION_REPORT: ${{ needs.complete.outputs.completion_report }}
-          WORKFLOW_FILE:     ci_runner.yml
+          WORKFLOW_FILE:     ci_runner_repro.yml
           # Pass through repro params so dispatched runs use the same config
           PYSR_GENERATIONS:  ${{ github.event.inputs.pysr_generations || '10000' }}
           PYSR_POPULATIONS:  ${{ github.event.inputs.pysr_populations || '30' }}
@@ -1201,12 +1201,13 @@ jobs:
           # Dispatch order matters for dependency: exp1 before instability.
           # exp1_five/exp2_five added (previously absent — never auto-dispatched
           # even when 0 done tasks were reported for them).
-          ORDER = ["exp1", "exp1b", "exp1_five", "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
+          ORDER = ["exp1", "exp1b", "exp1_pca", "exp1b_pca", "exp1_five", "exp2_feynman", "exp2_feynman_extrap", "exp2_feynman_pca",
                    "exp2", "exp2_five", "exp3", "exp3b",
                    "suppA", "suppB", "suppB_sc", "hybrid_all_domains", "extrap"]
 
           dispatched = []
           skipped    = []
+          failed     = []
 
           for exp_id in ORDER:
               info = report.get(exp_id, {})
@@ -1248,11 +1249,16 @@ jobs:
                   dispatched.append(exp_id)
               else:
                   print(f"       ✗ FAILED: {result.stderr.strip()[:200]}")
+                  failed.append(exp_id)
               time.sleep(3)   # avoid GitHub API rate limits
 
           print()
           print(f"  Dispatched : {dispatched}")
           print(f"  Skipped    : {skipped}")
+          print(f"  Failed     : {failed}")
+          if failed:
+              print("::error::One or more experiment dispatches failed.")
+              sys.exit(1)
           if not dispatched:
               print("  Nothing dispatched — all experiments either complete or partial.")
           PYEOF

@@ -176,7 +176,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds exp1c_pca \
+          VALID_IDS="exp1 exp1b exp1b_seeds portfolio exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -239,7 +239,7 @@ jobs:
           set -euo pipefail
           # exp1_pca is intentionally NOT listed: it now goes through plan/worker as a
           # multi-seed matrix (one worker per seed), see the exp1_pca case in plan/meta.
-          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp1c_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
+          if [[ "$EXP" == "exp1b_pca" || "$EXP" == "exp2_feynman_pca" ]]; then
             echo "is_pca=true"    >> "$GITHUB_OUTPUT"
             echo "skip_plan=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${EXP} is a PCA experiment — pca_run_* jobs will handle it."
