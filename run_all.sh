@@ -322,7 +322,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     rm -f \"\${dest15}/hypatiax_defi_benchmark_v3_checkpoint\${_TAG}.json\" \"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
   done
 
-  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
+  PYSR_SEED=\"\${_SEEDS[0]}\" DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --output-dir \"\${dest15}\" \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
