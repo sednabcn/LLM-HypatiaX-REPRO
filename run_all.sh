@@ -520,8 +520,19 @@ _exp1_ablation_step() {
   fi
 
   log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
-  if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
-    log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
+  # CLEAR_CHECKPOINT now also applies here (it used to cover exp2_feynman only, so a "clean"
+  # rerun silently resumed stale exp1_ablation rows). Stale files are MOVED to a dated
+  # backup dir, not deleted, so nothing is lost and --resume cannot pick them up.
+  if [[ -n "${CLEAR_CHECKPOINT:-}" ]]; then
+    local _stale="${abl_dir}/stale_$(date +%Y%m%dT%H%M%S)" _moved=0 _f
+    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json "${abl_dir}"/_checkpoint_shard*.json \
+              "${abl_dir}"/exp1_ablation_results*.json; do
+      [[ -f "${_f}" ]] || continue
+      mkdir -p "${_stale}" && mv "${_f}" "${_stale}/" && _moved=$((_moved+1))
+    done
+    log "exp1_ablation: CLEAR_CHECKPOINT set -> moved ${_moved} stale checkpoint/result file(s) to ${_stale}"
+  elif [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
+    log "exp1_ablation: RESUMING from existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json (set CLEAR_CHECKPOINT=1 for a clean run)"
   fi
 
   # Generation-time provenance (same fields as Phase 3 rows). Written BEFORE the run so the
