@@ -234,7 +234,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"::error::Required gt_leak_guard target missing: ${_T1}\"
+    echo \"::error::Required gt_leak_guard target missing: \${_T1}\"
     _FAIL=1
   fi
 
@@ -246,7 +246,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"::error::Required gt_leak_guard target missing: ${_T2}\"
+    echo \"::error::Required gt_leak_guard target missing: \${_T2}\"
     _FAIL=1
   fi
 
