@@ -47,6 +47,12 @@ on:
         required: false
         default: "1"
 
+      pca_portfolio_sweep:
+        description: "portfolio experiment only: opt in to the transductive raw-feature PC1 40/60 split. Default false preserves the historical first-feature split."
+        required: false
+        type: boolean
+        default: false
+
       seeds:
         description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default"
         required: false
@@ -123,6 +129,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
+  PCA_PORTFOLIO_SWEEP: "${{ github.event.inputs.pca_portfolio_sweep || 'false' }}"
   PYSR_POPULATION:     "100"
   PYSR_TOURNAMENT_SIZE: "3"
   PYSR_CROSSOVER:      "0.9"
@@ -173,6 +180,7 @@ jobs:
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
           CLEAN_RERUN:        ${{ github.event.inputs.clean_llm_rerun }}
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
+          PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
         run: |
           set -euo pipefail
 
@@ -217,7 +225,8 @@ jobs:
               -f dry_run="$DRY_RUN" \
               -f force_rerun="$FORCE_RERUN" \
               -f clean_llm_rerun="${CLEAN_RERUN:-false}" \
-              -f sparse_seed="${SPARSE_SEED_IN:-fallback}"
+              -f sparse_seed="${SPARSE_SEED_IN:-fallback}" \
+              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}"
           done
 
   pca_runner:
