@@ -315,11 +315,23 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
   mkdir -p \"\${dest15}\"
+  # Remove only this shard's expected seed output/checkpoint so stale files cannot pass.
+  for _SEED in \"\${_SHARD_SEEDS//,/ }\"; do :; done
+  IFS=',' read -r -a _SEEDS <<< \"\${_SHARD_SEEDS}\"
+  for _SEED in \"\${_SEEDS[@]}\"; do
+    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
+    rm -f \"\${dest15}/hypatiax_defi_benchmark_v3_checkpoint\${_TAG}.json\" \"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
+  done
 
   DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --output-dir \"\${dest15}\" \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
+  for _SEED in \"\${_SEEDS[@]}\"; do
+    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
+    _BENCH=\"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
+    [[ -s \"\${_BENCH}\" ]] || { echo \"::error::exp1b missing benchmark JSON for seed \${_SEED}\"; exit 1; }
+  done
 
   # FIX-exp1b-PORTFOLIO-RUN: run the portfolio sweep for THIS shard's seed(s) only.
   #  Before: gated on the benchmark JSON existing; passed RESULTS_DIR (the script ignores
@@ -333,6 +345,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   mkdir -p \"\${_PVA_DIR}\"
   _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
   _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
+  rm -f \"\${_PV_FILE}\"
   echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
   (
     set -o pipefail
