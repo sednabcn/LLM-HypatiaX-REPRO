@@ -1,0 +1,138 @@
+{
+  "rf01_mann_whitney": {
+    "n_pairs": 13,
+    "n_skipped": 2,
+    "skipped_equations": [
+      "Arrhenius",
+      "Impermanent Loss"
+    ],
+    "U_greater": 100.0,
+    "p_greater": 0.21754246693315044,
+    "U_two_sided": 100.0,
+    "p_two_sided": 0.43508493386630087,
+    "wilcoxon_W": 16.0,
+    "wilcoxon_p_two": 0.1474609375,
+    "wilcoxon_p_greater": 0.07373046875,
+    "rank_biserial_r": 0.18343195266272194,
+    "H_median_far_r2": 0.9999415252297555,
+    "P_median_far_r2": 0.999959618273736,
+    "H_mean_far_r2": 0.9365800071502991,
+    "P_mean_far_r2": -0.8754014256554371,
+    "h_wins": 3,
+    "p_wins": 0,
+    "ties": 10,
+    "significant_p05": false,
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Mann-Whitney $U=100$, $p=0.2175$, $n=13$; rank-biserial $r=+0.18$; 2 equation(s) excluded for non-finite or missing far $R^2$: Arrhenius, Impermanent Loss). The directional improvement is concentrated in 3 domain(s) \u2014 Chemistry, Biology, Physics, suggesting benefit is domain-selective.",
+    "equations_included": [
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Price Impact",
+      "Constant Product",
+      "Value at Risk",
+      "Liquidation Price",
+      "Portfolio Std Dev"
+    ],
+    "H_far_r2_vector": [
+      0.9989601876288976,
+      0.9949981343922909,
+      1.0,
+      0.18315853126826487,
+      0.9997158099719406,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      0.9995675125967294,
+      0.9999415252297555,
+      0.9991983918660088,
+      1.0
+    ],
+    "P_far_r2_vector": [
+      -11.911506684575679,
+      0.999959618273736,
+      0.9999737825391088,
+      -0.5878504086990965,
+      0.9999850588495923,
+      0.9999812552142863,
+      -8.879253202888437,
+      0.999985074022955,
+      1.0,
+      0.9995609985063537,
+      0.9999463543659406,
+      0.998999620870554,
+      1.0
+    ],
+    "subdomain_breakdown": {
+      "Chemistry": {
+        "n": 2,
+        "h_wins": 1,
+        "ties": 1,
+        "p_wins": 0,
+        "mean_delta": 6.452752694161566,
+        "equations": [
+          "Henderson-Hasselbalch",
+          "Rate Law"
+        ]
+      },
+      "Biology": {
+        "n": 3,
+        "h_wins": 1,
+        "ties": 2,
+        "p_wins": 0,
+        "mean_delta": 0.25692196951686697,
+        "equations": [
+          "Allometric Scaling",
+          "Michaelis-Menten",
+          "Logistic Growth"
+        ]
+      },
+      "Physics": {
+        "n": 3,
+        "h_wins": 1,
+        "ties": 2,
+        "p_wins": 0,
+        "mean_delta": 3.293095624550398,
+        "equations": [
+          "Kinetic Energy",
+          "Gravitational Force",
+          "Ideal Gas Law"
+        ]
+      },
+      "DeFi AMM": {
+        "n": 2,
+        "h_wins": 0,
+        "ties": 2,
+        "p_wins": 0,
+        "mean_delta": 3.257045187832208e-06,
+        "equations": [
+          "Price Impact",
+          "Constant Product"
+        ]
+      },
+      "DeFi Risk": {
+        "n": 3,
+        "h_wins": 0,
+        "ties": 3,
+        "p_wins": 0,
+        "mean_delta": 6.464728642322874e-05,
+        "equations": [
+          "Value at Risk",
+          "Liquidation Price",
+          "Portfolio Std Dev"
+        ]
+      }
+    },
+    "driving_domains": [
+      "Chemistry",
+      "Biology",
+      "Physics"
+    ],
+    "p_dominant_domains": []
+  }
+}

@@ -59,3 +59,4 @@ phase3_closure_out/
 **/llm_replay/
 **/llm_cache/
 tree_cleanup.txt
+hypatiax/data/results/ablation/exp1_ablation/stale_*/
