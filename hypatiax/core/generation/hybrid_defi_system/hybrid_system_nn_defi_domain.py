@@ -892,14 +892,17 @@ EXPLANATION:
             residuals = y_train - best_preds
             with np.errstate(over="ignore", invalid="ignore"):
                 mse = float(np.mean(residuals ** 2))
-            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else 0.0
+            # L54: a non-finite MSE is a failure, never a perfect (0.0) RMSE
+            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else None
             mae  = float(np.mean(np.abs(residuals)))
         else:
-            final_r2 = 0.0
+            # L54: no predictions is a failure, not a score. None + status, never 0.0
+            # (0.0 R2 / 0.0 RMSE is indistinguishable from a genuine mean-predictor fit).
+            final_r2 = None
             final_r2_status = "no_predictions"
-            mse  = 0.0
-            rmse = 0.0
-            mae  = 0.0
+            mse  = None
+            rmse = None
+            mae  = None
 
 
         # =====================================================
@@ -925,7 +928,7 @@ EXPLANATION:
 
             "evaluation": {
                 "llm_source": llm_result.get("llm_source", "unknown"),
-                "r2":   float(final_r2),
+                "r2":   (float(final_r2) if final_r2 is not None else None),
                 "r2_status": final_r2_status,   # ok | degenerate_target | nonfinite_pred | ...
                 "rmse": rmse,
                 "mse":  mse,

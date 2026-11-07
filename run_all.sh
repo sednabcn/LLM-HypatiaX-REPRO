@@ -131,9 +131,19 @@ mkdir -p "$(dirname "${HYPATIAX_FAILED_LOG}")"; : > "${HYPATIAX_FAILED_LOG}"
 record_failure() { echo "$*" >> "${HYPATIAX_FAILED_LOG}"; }
 export -f record_failure
 
+# L18 / L28 (owner decision 2026-11-03): the instability suite is NOT run in this study. It stays
+# a valid step name (so `--step instability` still works for an explicit, deliberate run) but is
+# skipped in full runs and --from runs unless RUN_DEFERRED=1. Paper claims that depend on it
+# (multi-run Instability Index, Regime A/B/C) must be dropped or qualified.
+_DEFERRED_STEPS="instability"
+
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
+  if [[ " ${_DEFERRED_STEPS} " == *" ${step} "* && "$ONLY_STEP" != "$step" && "${RUN_DEFERRED:-0}" != "1" ]]; then
+    log "--- SKIP (deferred by owner decision, L18/L28): ${step}; run with --step ${step} or RUN_DEFERRED=1 ---"
+    return 0
+  fi
   if [[ -n "$FROM_STEP" ]]; then
     local skip=true
     for s in $_STEP_ORDER; do
@@ -2539,8 +2549,12 @@ _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] hybrid_llm_nn/all_domains/: {len(had)} JSON file(s)")
 
 inst_csv = os.path.isfile(f"{RESULTS}/figures/instability_analysis.csv")
-checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
-_tag = "OK" if inst_csv else "FAIL"
+if inst_csv or os.environ.get("RUN_DEFERRED") == "1":
+    checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
+    _tag = "OK" if inst_csv else "FAIL"
+else:
+    # L18/L28: instability suite deferred by owner decision; absence is expected, not a failure.
+    _tag = "SKIP (deferred L18/L28)"
 print(f"  [{_tag}] instability_analysis.csv")
 
 sc = (glob.glob(f"{RESULTS}/comparison_results/feynman-tests/sample-complexity/*.json") +
