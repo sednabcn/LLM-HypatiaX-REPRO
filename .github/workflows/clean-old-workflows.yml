@@ -103,12 +103,19 @@ jobs:
                   allRunsAcrossWorkflows = allRunsAcrossWorkflows.concat(runsWithWorkflow);
                   console.log(`    📈 Total runs collected so far: ${allRunsAcrossWorkflows.length}`);
 
+                  // A short page is the final page. If page 30 is full, fail closed
+                  // rather than making deletion decisions from a truncated run list.
+                  if (runsPage.workflow_runs.length < 100) break;
+
                   page++;
                   await new Promise(resolve => setTimeout(resolve, 100));
                 } catch (error) {
                   console.log(`    ❌ Error fetching page ${page}: ${error.message}`);
                   throw error;
                 }
+              }
+              if (page > MAX_PAGES) {
+                throw new Error(`Pagination exceeded the safety limit of ${MAX_PAGES} full pages; refusing to delete from an incomplete run list.`);
               }
 
               workflowCount = new Set(allRunsAcrossWorkflows.map(r => r.workflow_id)).size;
