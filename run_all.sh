@@ -268,6 +268,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
 "
 
 run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _DEFI_TARGET='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
   mkdir -p \"\${_DEFI_TARGET}\"
@@ -288,7 +289,8 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
   COUNT_DEFI=\$(find \"\${_DEFI_TARGET}\" -name 'hypatiax_defi_benchmark_*results*.json' 2>/dev/null | wc -l)
   if [[ \"\${COUNT_DEFI}\" -eq 0 ]]; then
-    echo 'WARNING: exp1 produced no result JSON in canonical target — check log above.'
+    echo '::error::exp1 produced no result JSON in canonical target — check log above.'
+    exit 1
   else
     echo \"OK: \${COUNT_DEFI} result file(s) confirmed in \${_DEFI_TARGET}\"
   fi
@@ -770,7 +772,8 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
     done < <(find \"\${_SCRATCH_ROOT}/seed\${_s}\" -maxdepth 1 -type f -name '*.json' | sort)
   done
   if [[ -n \"\${_FAILED_SEEDS}\" ]]; then
-    echo \"WARNING: exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
+    echo \"::error::exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
+    exit 1
   fi
 
   python3 - <<'PYEOF'
@@ -948,6 +951,7 @@ PYEOF_FINGERPRINT_1
 "
 
 run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with PCA split)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
@@ -1212,7 +1216,7 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
         --output-dir '${RESULTS_DIR}/comparison_results/extrapolation' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/extrap_run.log' \
-      || echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
   echo 'extrap output: ${RESULTS_DIR}/comparison_results/extrapolation/'
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
@@ -1356,7 +1360,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
         --resume \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
-    || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -1540,7 +1544,7 @@ PYEOF
         --output-dir \"\${_PCA_DIR}\" \
         --force-fresh \
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
-    || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::pca_4060 domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
 
     mkdir -p \"\${_PCA_DIR}/_saved\"
     while IFS= read -r _pf; do
@@ -1841,7 +1845,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --output-dir \"\${_EXT_DIR}\" \
         --resume \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
-    || echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 
   mkdir -p \"\${_EXT_DIR}/_saved\"
@@ -1996,7 +2000,7 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -2028,7 +2032,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -3787,7 +3791,7 @@ run audit_nb06_fixc3_rerun \
         --output-dir "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3 \
         --resume \
       2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log \
-    || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
+    || { echo "::error::fixc3_rerun domain ${DOMAIN_ID} exited non-zero"; exit 1; }
   done
 
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log
