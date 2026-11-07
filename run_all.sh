@@ -316,7 +316,6 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
   mkdir -p \"\${dest15}\"
   # Remove only this shard's expected seed output/checkpoint so stale files cannot pass.
-  for _SEED in \"\${_SHARD_SEEDS//,/ }\"; do :; done
   IFS=',' read -r -a _SEEDS <<< \"\${_SHARD_SEEDS}\"
   for _SEED in \"\${_SEEDS[@]}\"; do
     _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
