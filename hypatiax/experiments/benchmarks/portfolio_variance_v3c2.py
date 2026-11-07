@@ -112,7 +112,10 @@ def _find_input(filename):
 
 SWEEP_JSON_ORIGINAL = _find_input('portfolio_variance_seed_sweep.json')
 SWEEP_JSON_DEFI     = RESULTS_DIR / 'portfolio_variance_defi_seed_sweep.json'
-V3C3_RESULTS        = _find_input('hypatiax_defi_benchmark_v3c3_results.json')
+V3C3_RESULTS        = Path(os.environ.get(
+    'HYPATIAX_V3C3_RESULTS',
+    str(_find_input('hypatiax_defi_benchmark_v3c3_results.json')),
+))
 V3C2_RESULTS        = _find_input('hypatiax_defi_benchmark_v3c2_results.json')
 
 # ── Output paths ──────────────────────────────────────────────────────────────
