@@ -4,7 +4,7 @@ import importlib.util
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 MODULE = ROOT / ".github" / "scripts" / "result_subdir_map.py"
 SPEC = importlib.util.spec_from_file_location("result_subdir_map", MODULE)
 assert SPEC and SPEC.loader
