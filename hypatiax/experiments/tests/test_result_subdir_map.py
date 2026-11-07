@@ -86,3 +86,8 @@ def test_required_run_all_benchmark_domains_do_not_swallow_failures():
         block = runner[start: next_run if next_run >= 0 else len(runner)]
         assert "exited non-zero — continuing" not in block, step
     assert "exp1_pca worker(s) failed" in runner
+
+def test_pipeline_forwards_force_rerun_to_runner():
+    validate = (ROOT / ".github/workflows/ci_pipeline_validate.yml").read_text()
+    assert 'FORCE_RERUN: ${{ github.event.inputs.force_rerun || \'false\' }}' in validate
+    assert '--field force_rerun="${FORCE_RERUN}"' in validate
