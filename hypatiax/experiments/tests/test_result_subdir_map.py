@@ -59,3 +59,14 @@ def test_pipeline_noise_schedule_defaults_match_runner():
         text = workflow.read_text()
         assert expected in text
         assert "0.0,0.5,1.0,5.0,10.0" not in text
+
+
+def test_exp1b_contract_requires_seed_outputs_and_shared_baseline():
+    runner = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    checker = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
+    assert "PYSR_SEED=" in (ROOT / "run_all.sh").read_text()
+    assert "portfolio_variance_defi_seed_sweep_seed" in runner
+    assert "REPLACE: refreshing tracked exp1b per-seed portfolio artifact" in runner
+    assert "hypatiax_defi_benchmark_v3_results.json" in checker
+    assert "contract_missing" in checker
+    assert "portfolio_variance_defi_seed_sweep_seed{seed}.json" in checker
