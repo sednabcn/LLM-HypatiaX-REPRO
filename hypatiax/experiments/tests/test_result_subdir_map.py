@@ -148,3 +148,12 @@ def test_workflow_cleanup_retains_history_for_90_days_by_default():
     assert "HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '2160' }}" in cleanup
     assert "const rawHours = process.env.HOURS_THRESHOLD || '2160'" in cleanup
     assert "const KEEP_HOURS = Number(rawHours)" in cleanup
+
+def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_closed():
+    runner = (ROOT / "run_all.sh").read_text()
+    assert "::error::required portfolio artifact" in runner
+    assert "::error::required ablation artifact" in runner
+    assert "::error::[instability]" in runner
+    assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
+    assert "::error::benchmark_results_extrap.json not found" in runner
+    assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" not in runner
