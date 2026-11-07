@@ -1,0 +1,82 @@
+name: Portfolio bootstrap PCA validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      bootstrap_pca_seeds:
+        description: "Comma-separated bootstrap PCA seeds"
+        required: false
+        default: "11,23,42,77,101"
+      model_seed:
+        description: "Fixed model seed"
+        required: false
+        default: "42"
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-pca-validation:
+    name: Bootstrap-estimated PC1 tail validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      BOOTSTRAP_PCA_SEEDS: ${{ inputs.bootstrap_pca_seeds || '11,23,42,77,101' }}
+      MODEL_SEED: ${{ inputs.model_seed || '42' }}
+      PCA_PARTITION_VALIDATION_OUTPUT: ${{ github.workspace }}/portfolio_variance_bootstrap_pca_validation.json
+      HYPOTIAX_DISABLE_HARDCODED: "1"
+      HYPOTIAX_DISABLE_PROMPT_HINTS: "1"
+      HYPOTIAX_STRICT: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scipy scikit-learn pandas torch python-dotenv anthropic
+      - name: Verify package imports
+        run: |
+          python -c "import hypatiax; from sklearn.decomposition import PCA; print('HypatiaX and PCA imports OK')"
+      - name: Run bootstrap PCA validation
+        run: |
+          python hypatiax/experiments/benchmarks/portfolio_variance_bootstrap_pca_validation.py
+      - name: Validate result artifact
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["PCA_PARTITION_VALIDATION_OUTPUT"])
+          if not path.is_file():
+              raise SystemExit(f"Missing validation output: {path}")
+          data = json.loads(path.read_text())
+          protocol = data["protocol"]
+          aggregate = data["aggregate"]
+          rows = data["results"]
+          assert protocol["split_protocol"] == "bootstrap_estimated_pc1_tail_40_60"
+          assert protocol["split_is_transductive"] is True
+          assert len(rows) == len(protocol["bootstrap_pca_seeds"]) > 0
+          assert aggregate["n_partitions"] == len(rows)
+          assert aggregate["n_success_tail_test_r2_gt_0_99"] == sum(
+              row["success_tail_test_r2_gt_0_99"] for row in rows
+          )
+          assert all(row["test_r2_source"] in {"nn", "llm", "ensemble"} for row in rows)
+          assert all(row["n_train"] + row["n_test"] == protocol["n_samples"] for row in rows)
+          assert len({tuple(row["pc1_loadings"]) for row in rows}) >= 1
+          print(json.dumps(aggregate, indent=2))
+          PY
+      - name: Upload validation JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: portfolio-bootstrap-pca-validation
+          path: ${{ github.workspace }}/portfolio_variance_bootstrap_pca_validation.json
+          if-no-files-found: error
