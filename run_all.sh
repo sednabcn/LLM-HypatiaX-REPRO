@@ -91,7 +91,11 @@ with open(sys.argv[1], encoding="utf-8") as stream:
 print(cfg.get("llm_temperature", 0.25))
 print(cfg.get("llm_model", "claude-sonnet-4-6"))
 PY
-  ) || { echo "ERROR: could not read LLM settings from ${REPRO_CFG}" >&2; exit 1; }
+  )
+  if [[ "${#_LLM_PROTOCOL_VALUES[@]}" -lt 2 ]]; then
+    echo "ERROR: could not read LLM settings from ${REPRO_CFG}; PyYAML must be installed" >&2
+    exit 1
+  fi
   _CFG_LLM_TEMPERATURE="${_LLM_PROTOCOL_VALUES[0]:-0.25}"
   _CFG_LLM_MODEL="${_LLM_PROTOCOL_VALUES[1]:-claude-sonnet-4-6}"
 else
