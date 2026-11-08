@@ -847,6 +847,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             f"far={_f(extrap_r2.get('far'))})  {sr_time:.1f}s"
             f"  scale_log={scale_log}  llm={res.get('llm_mode','none')}"
         )
+        from hypatiax.core.llm_meta import llm_meta
+        _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
         return {
             "condition":             condition,
             "success":               res.get("success", False),
@@ -861,12 +863,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
             "sr_time_s":             sr_time,
-            "llm_time_s":            0.0,
+            "llm_time_s":            _llm_m["llm_time_s"],
             "total_time_s":          sr_time,
             "best_expression":       best_expr_raw,
             "complexity":            complexity,
-            "llm_expression":        None,
-            "llm_confidence":        None,
+            "llm_expression":        _llm_m["llm_expression"],
+            "llm_confidence":        _llm_m["llm_confidence"],
             # v5.4 provenance extras
             "engine_version":        HybridDiscoverySystem.VERSION,
             "scale_log":             scale_log,
