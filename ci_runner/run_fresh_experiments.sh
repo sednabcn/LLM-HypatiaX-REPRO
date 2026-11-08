@@ -112,8 +112,8 @@ if [[ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all)" ]]; t
   exit 2
 fi
 
-# Force the clean live-LLM path. Do not inherit replay/cache locations from
-# earlier runs: both cache roots are new and empty inside this run namespace.
+# Force the clean live-LLM path. Remove any inherited replay/cache configuration:
+# every LLM request in this run must be a live API call, not a historical replay.
 export HYPATIAX_DISABLE_HARDCODED=1
 export HYPATIAX_DISABLE_PROMPT_HINTS=1
 export HYPATIAX_R2_SIGN_FLIP=0
@@ -123,9 +123,9 @@ export RESULTS_DIR
 export HYPATIAX_RESULTS_DIR="$RESULTS_DIR"
 export OUT_BASE="$RESULTS_DIR"
 export REPRO_CFG="$PROTOCOL"
-export HYPATIAX_LLM_CACHE_DIR="$RESULTS_DIR/llm_cache"
-export HYPATIAX_LLM_REPLAY_DIR="$RESULTS_DIR/llm_replay"
-mkdir -p "$HYPATIAX_LLM_CACHE_DIR" "$HYPATIAX_LLM_REPLAY_DIR" "$RESULTS_DIR/logs"
+unset HYPATIAX_LLM_CACHE_DIR HYPATIAX_LLM_REPLAY_DIR HYPATIAX_LLM_FREEZE_CACHE
+unset LLM_TEMPERATURE HYPATIAX_LLM_MODEL
+mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
 
 MANIFEST="$RESULTS_DIR/run_manifest.json"
@@ -136,6 +136,8 @@ import yaml
 
 manifest_path, repo, protocol, results_dir = map(Path, sys.argv[1:])
 cfg = yaml.safe_load(protocol.read_text(encoding="utf-8")) or {}
+if any("expected" in section for section in (cfg.get("benchmarks") or {}).values()):
+    raise SystemExit("fresh protocol must not contain historical expected-result targets")
 def git(*args):
     return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
 
@@ -171,6 +173,9 @@ manifest = {
         "HYPATIAX_LLM_CACHE_DIR": os.environ.get("HYPATIAX_LLM_CACHE_DIR"),
         "HYPATIAX_LLM_REPLAY_DIR": os.environ.get("HYPATIAX_LLM_REPLAY_DIR"),
     },
+    "historical_result_comparison": False,
+    "historical_cache_reuse": False,
+    "excluded_stages": ["validate", "qualify", "audit_paper", "audit_setup", "audit_nb01", "audit_nb02", "audit_nb03", "audit_nb04", "audit_nb05", "audit_nb06_fixc3_disclosure", "audit_nb06_fixc3_rerun", "audit_guard", "audit_print_verify", "audit_print_findings", "audit_figures_tables", "audit_final_gate"],
     "stages": [],
 }
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
