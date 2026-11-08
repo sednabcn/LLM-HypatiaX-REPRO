@@ -539,3 +539,14 @@ The safe path is a new promotion branch based on the current `master` head, foll
 The current branch graph and the 30-commit delta between `audit-main` and the tested candidate suggest the promotion work should be a deliberate patch port, not a merge operation. No source branch was modified and `master` remains untouched by this promotion audit.
 
 **Updated decision:** the candidate is still approved for a controlled rerun as an isolated tested snapshot. A rerun from `master` or from a newly promoted branch is not approved until that exact resulting SHA passes the required checks.
+
+
+### File-level spot check against current `master`
+
+The following source-file check confirms that the differences are not confined to workflow metadata:
+
+- New on candidate only: `hypatiax/core/llm_call.py` (54 lines) and `.github/workflows/ci_runner_smoke.yml` (103 lines).
+- Modified between master and candidate: Pure-LLM DeFi baseline (1,055 vs 1,057 lines); all-domain hybrid (1,243 vs 1,239); DeFi hybrid (1,110 vs 1,109); DeFi and Nguyen-12 protocol files; and `run_all.sh` (4,184 vs 4,367 lines).
+- Unchanged in the spot check: `hypatiax/core/metrics.py` and `hypatiax/core/recovery_eval.py` have identical blob SHAs on master and candidate. These do not need to be ported.
+
+This is a spot check, not a complete patch review. It identifies a useful first-pass promotion set, but line counts alone are not sufficient to select safe hunks. In particular, `run_all.sh` and the two hybrid implementation files need semantic diff review before porting. The next promotion operation should be file/hunk-level and based on a branch created from the then-current master head; no cherry-pick or merge is justified solely by the branch comparison.
