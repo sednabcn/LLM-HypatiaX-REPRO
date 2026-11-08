@@ -3,23 +3,23 @@
     {
       "equation": "Arrhenius",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.8743795195458479,
+      "extrap_r2_near": -5.635701876803356,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989601876288976,
-      "extrap_r2_far": 0.9989601876288976,
+      "extrap_r2_near": 0.9989626940194151,
+      "extrap_r2_far": 0.9989626940194151,
       "instability_index": 0.0
     },
     {
       "equation": "Rate Law",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.999474905882653,
-      "extrap_r2_far": 0.9949981343922909,
-      "instability_index": 0.004476771490362075
+      "extrap_r2_near": 0.9994694545262378,
+      "extrap_r2_far": 0.9948759885332809,
+      "instability_index": 0.004593465992956958
     },
     {
       "equation": "Allometric Scaling",
@@ -31,16 +31,16 @@
     {
       "equation": "Michaelis-Menten",
       "domain": "Biology",
-      "extrap_r2_near": 0.9804938819887545,
-      "extrap_r2_far": 0.18315853126826487,
-      "instability_index": 0.7973353507204897
+      "extrap_r2_near": 0.9765467380885161,
+      "extrap_r2_far": 0.030910430973959513,
+      "instability_index": 0.9456363071145566
     },
     {
       "equation": "Logistic Growth",
       "domain": "Biology",
-      "extrap_r2_near": 0.9998318385530143,
-      "extrap_r2_far": 0.9997158099719406,
-      "instability_index": 0.0001160285810736239
+      "extrap_r2_near": 0.9998265950226501,
+      "extrap_r2_far": 0.9997116057386041,
+      "instability_index": 0.00011498928404607422
     },
     {
       "equation": "Kinetic Energy",
@@ -66,7 +66,7 @@
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7159846105022467,
+      "extrap_r2_near": 0.7160042526263906,
       "extrap_r2_far": null,
       "instability_index": null
     },
@@ -80,23 +80,23 @@
     {
       "equation": "Constant Product",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9995675125967294,
-      "extrap_r2_far": 0.9995675125967294,
+      "extrap_r2_near": 0.9995755153024841,
+      "extrap_r2_far": 0.9995755153024841,
       "instability_index": 0.0
     },
     {
       "equation": "Value at Risk",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9999415252297555,
-      "extrap_r2_far": 0.9999415252297555,
+      "extrap_r2_near": 0.9999409544066139,
+      "extrap_r2_far": 0.9999409544066139,
       "instability_index": 0.0
     },
     {
       "equation": "Liquidation Price",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9996940355898299,
-      "extrap_r2_far": 0.9991983918660088,
-      "instability_index": 0.0004956437238211597
+      "extrap_r2_near": 0.99997089603558,
+      "extrap_r2_far": 0.9999986404554436,
+      "instability_index": 2.774441986364007e-05
     },
     {
       "equation": "Portfolio Std Dev",
