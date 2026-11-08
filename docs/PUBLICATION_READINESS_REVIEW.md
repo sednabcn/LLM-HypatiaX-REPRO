@@ -446,3 +446,61 @@ The supplementary source points to the public repository sednabcn/LLM-HypatiaX-D
 - DEV contains the source PDFs and TeX files, generated paper tables, and a 4.4 MB submission archive at submissions/HypatiaX_JMLR_submission.zip (blob SHA fd8ec1eb6b7dbaaf5afcba70bcb179a5e2a4dd8c). The archive is binary and its contents were not inspected in this pass.
 
 **Updated B1 assessment:** the evidence now supports that synthetic records were used for generator regression tests and that the post-submission audit says no synthetic value entered the paper. The S1–S8 files advertised by the supplement are nevertheless absent from both searchable repository trees, and the actual submission ZIP remains uninspected. Remove the ambiguous sentence, then inspect the ZIP before making a definitive statement about what ships. Do not label the paper's numerical results synthetic on the basis of test fixtures alone.
+
+
+## 17. Code-package readiness decision — rerun before rewriting claims
+
+This is a separate decision from manuscript submission readiness. The package is assessed as a research execution system, not as evidence that any historical paper claim is correct.
+
+### Decision
+
+<code-package-status>READY FOR A CONTROLLED, INSTRUMENTED RERUN</code-package-status>
+
+The strongest current candidate is the tested code state at commit `f4336f14b224820690f119e50c09dac8e64e3b7c` on branch `fix/rerun-blockers`. It is **not** the current `master` checkout. Do not cite the test results below as validation of master until the candidate is promoted or its changes are reconciled and the checks rerun on the promoted SHA.
+
+### Evidence supporting rerun readiness
+
+All checks below completed successfully on the same candidate SHA, 2026-11-08:
+
+| Gate | Evidence | Result |
+|---|---|---|
+| Full Python test suite | 593 tests, Python 3.12, torch CPU, Anthropic SDK, SymPy | PASS |
+| Shell/YAML preflight | runner syntax and workflow validation | PASS |
+| run_all smoke | shell syntax, step registry, required files, failure ledger, dry-run-all, CLI contract, clean-run guards, ground-truth leak guard, Python preflight, Phase 2 closure | PASS |
+| Bypass audit | 103 DeFi tasks and 30 Feynman tasks; 0 bypasses in either suite | PASS for invariant I1 only |
+| Exp3 strict/fallback smoke | N5, N9, N10, N11, N12 at seed 42; strict/fallback paths exercised | PASS; fallback recovers four strict-gate failures, N11 passes both |
+| R² policy / metrics / recovery evaluator | dedicated policy workflow | PASS |
+
+Workflow evidence:
+- Full tests: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42492526303 (593 passed in 13.29 s; artifact 13622600671).
+- Bypass audit: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42492526662 (103 DeFi + 30 Feynman, 0 bypass; artifact 13622202617).
+- Runner smoke: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42492526468 (10 wiring/guard stages passed; script-help and live-LLM stages intentionally skipped; artifact 13622455851).
+- Exp3 gate smoke: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42492526298 (five named Nguyen tasks; smoke settings, not production budgets).
+- R² policy: https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42492526472.
+
+The bypass-audit workflow explicitly reports that no baseline CSV was available; it therefore checked only invariant I1. Its pass must not be represented as a complete comparison against a historical baseline. The smoke workflows validate wiring and selected control paths, not full benchmark performance.
+
+### Scope of the declaration
+
+The package is ready to start a controlled rerun under the tested CI environment and clean-run safeguards. This does **not** mean:
+- the full DeFi, Core-15, Nguyen-12, Protocol-30, noise, instability, or Feynman experiment matrix has been rerun;
+- the historical result files have passed the new provenance gate;
+- all bypass or fallback questions are closed;
+- the package is already a frozen, portable release;
+- any prior manuscript table or claim has been validated.
+
+### Promotion and environment controls before the first headline rerun
+
+1. **Promote one exact source revision.** PR #95 currently targets `audit-main`, not `master`; PR #92 is separately open to bring the runner-smoke pipeline from `audit-main` into `master`. These branches have substantial divergence. Do not merge either branch wholesale without a deliberate three-way reconciliation. The tested SHA must be the SHA actually used for the rerun.
+2. **Freeze the Python environment.** The package metadata says Python `>=3.8`, while the verified CI test environment is Python 3.12 and the pinned requirements include dependencies that may not support 3.8. The experiment workflow installs a different dependency set from `requirements.txt` (for example, it pins pandas 2.2.3 while requirements pins pandas 2.3.3, and leaves several core packages unpinned). Produce one authoritative lock/constraints file and use it in both local setup and CI. Until then, the verified environment is Python 3.12 in the workflow, not a generic Python 3.8+ install.
+3. **Freeze Julia/PySR.** The experiment workflow uses Julia 1.11 and `pysr==2.0.0a1`, but the Julia `SymbolicRegression.jl` environment is installed/precompiled dynamically. Record the resolved Julia package version/manifest and runtime platform in each result manifest.
+4. **Run a real live-LLM preflight.** The run_all smoke deliberately skipped the live API round-trip. Before any headline rerun, perform one explicitly budgeted live call using the intended model ID, temperature behavior, retries, and provenance fields. Store the provider/model identifiers and whether a request was actually sent; never store credentials.
+5. **Use a clean output namespace.** New runs must write to a fresh, commit-tagged results directory. Do not resume from old checkpoints or mix historical result shards. Keep `HYPATIAX_DISABLE_HARDCODED=1`, `HYPATIAX_DISABLE_PROMPT_HINTS=1`, `HYPATIAX_R2_SIGN_FLIP=0`, and strict exception handling enabled. Preserve the exact seeds, split indices/fingerprints, timeout budgets, route decisions, formula strings, and per-task failures.
+6. **Run a staged reproduction, not the whole suite at once.** First run one representative task per method/route with full provenance; then the Core-15 and Nguyen-12 targeted reruns; then the 74-task DeFi suite; then the benchmark-specific noise/sample-complexity and Feynman/Protocol-30 suites. Apply the same frozen protocol to all arms being compared.
+7. **Qualify artifacts before analysis.** Every task must have an explicit status (success, failure, timeout, skipped/intractable), source/model provenance, formula/prediction artifact where applicable, evaluator version, and input/split fingerprint. A missing formula or unknown LLM source is an audit failure, not an inferred success.
+
+### Recommended claim-writing rule
+
+Do not revise the manuscript by trying to make old claims fit old tables. Freeze the rerun protocol first; execute it; compute all metrics from the new raw outputs; then write a new claim set from those results. Retain historical numbers only when they are explicitly labelled as historical and their provenance is recoverable. The manuscript should not determine the rerun outcome or the thresholds after seeing the data.
+
+**Final code-package judgment:** HypatiaX is ready for a controlled rerun on the tested candidate revision, subject to source promotion/reconciliation and the environment/live-call controls above. It is not yet a fully frozen release and the current master branch is not certified by the candidate-branch test results.
