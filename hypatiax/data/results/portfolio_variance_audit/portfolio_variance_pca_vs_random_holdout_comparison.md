@@ -2,7 +2,7 @@
 
 **Branch:** `audit-master`  
 **Case:** `risk_var` / Portfolio VaR for two correlated assets  
-**Prepared:** 2026-11-07  
+**Prepared:** 2026-11-08  
 **Purpose:** Consolidate the existing PCA-directed seed sweep and independent random-holdout validation without conflating their protocols or score semantics.
 
 ## Executive summary
@@ -12,7 +12,7 @@ Two separate validation experiments are complete:
 1. The PCA-directed sweep completed for five model/experiment seeds on **one fixed, transductive PC1-directed partition**. Every run reported `train_r2=1.0` and `far_r2=1.0`.
 2. The random-holdout control completed for five independently sampled 40/60 partitions with the model seed fixed at 42. The selected neural-network route achieved mean test R² **0.999709** (sample SD **0.000121**); all five partitions exceeded 0.99.
 
-The results support strong performance under each experiment's stated evaluation protocol. They do not establish equivalence between random-holdout interpolation and PC1-directed tail extrapolation, nor do they establish robustness across multiple independent PCA partitions.
+The random-holdout control shows excellent NN interpolation performance (mean test R² = 0.999709 across five partitions). The standalone NN-only evaluation on the PCA-directed tail partition has test R² = -3.151808 and MAE = 25,335.68, despite NN train R² = 0.999740. The NN underpredicts throughout the test region, with error increasing across PC1 deciles. It beats the training-mean baseline (MAE ratio 0.693; R² improvement 3.015), but its tail test R² remains strongly negative. The original seed-2024 JSON and remote code-path audit now resolve the apparent score conflict: the seed sweep selected the **LLM formula route**, not the NN route. Its `far_r2 = 1.0` is the analytical formula's test R²; the standalone diagnostic's -3.151808 is the NN's test R². These are different predictors evaluated on the same stated PCA partition, not contradictory measurements of one model. The PCA ranking diagnostic further shows that any one feature alone reproduces the PC1 order and exact partition.
 
 ## Experiment A — PCA-directed seed sweep
 
@@ -83,16 +83,107 @@ The reported `test_r2` is the test score from the selected route, recorded as `t
 
 **Do not pool or average the PCA `far_r2` values with random-holdout `test_r2` values.** They come from different partition protocols and have different evaluation meanings. The PCA results are not five independent partition replications, while the random-holdout results are not evidence of PC1-tail extrapolation.
 
+
+## Experiment C — feature-ranking and PCA cutoff diagnostic
+
+**Diagnostic:** `portfolio_variance_feature_ranking_diagnostic.py`  
+**Output:** `portfolio_variance_feature_ranking_diagnostic.json`  
+**Generated:** 2026-11-08 11:28:42 UTC
+
+This descriptive diagnostic fits one-component PCA on all 200 raw, unstandardized feature rows and compares the PC1 ordering and lower-40% training membership with the ordering produced by each feature individually. It does not train a model or alter the benchmark split.
+
+| Feature | Spearman correlation with PC1 score | Train-membership Jaccard | Rows differing from PC1 split |
+|---|---:|---:|---:|
+| `var_asset1` | 1.000 | 1.000 | 0 |
+| `var_asset2` | 1.000 | 1.000 | 0 |
+| `correlation` | 1.000 | 1.000 | 0 |
+
+All three individual feature rankings reproduce the PC1 ranking exactly, including exactly the same 80 training rows. PC1 explains 100% of the variance in the supplied feature matrix. Its oriented loadings are 0.857493 (`var_asset1`), 0.514496 (`var_asset2`), and 0.00002668 (`correlation`). Although the correlation loading is negligible, the correlation feature itself is also perfectly rank-aligned with PC1 in this dataset.
+
+The PC1 cutoff is between scores -5406.0835 (last training row) and -5142.3722 (first test row), a gap of 263.7114. The displayed rows on either side progress smoothly; no obvious discontinuity is visible at this boundary.
+
+**Interpretation:** for this generated dataset, the PCA split does not create a distinct multivariate ordering. Each single feature independently induces exactly the same partition. The data therefore behave as a one-dimensional ordered trajectory for ranking purposes. This is a property of this dataset, not a general conclusion about PCA. The analysis is descriptive and transductive because PCA and feature rankings use all rows.
+
+## Experiment D — NN tail prediction-error diagnostic
+
+**Runner:** `portfolio_variance_pca_tail_error_diagnostic.py`  
+**Output:** `portfolio_variance_pca_tail_error_diagnostic.json`  
+**Generated:** 2026-11-08 11:41:28 UTC
+
+This diagnostic evaluates the benchmark NN helper on the existing PCA 40/60 partition. It uses the same 200 raw feature rows, with 80 training rows and 120 upper-tail test rows. The NN seed was 2024. No LLM call was made and no benchmark source was modified. The result is NN-only and does not independently reproduce LLM/hybrid routing.
+
+| Metric | NN | Training-target-mean baseline |
+|---|---:|---:|
+| Train R² | 0.999740 | — |
+| Test R² | -3.151808 | -6.167132 |
+| Test MAE | 25,335.68 | 36,551.54 |
+| Test RMSE | 29,990.43 | 39,403.67 |
+| Mean signed error (prediction − actual) | -25,335.68 | -36,551.54 |
+| Median absolute error | 24,771.58 | 35,871.31 |
+
+The NN improves on the baseline: its R² is higher by 3.015323 and its MAE is 69.3% of baseline MAE (a 30.7% reduction). However, its test R² remains substantially below zero, so the model still performs poorly on this tail test. The equality of MAE and mean signed error indicates systematic underprediction in the aggregate; the signed error is negative.
+
+### Error progression across PC1 test deciles
+
+| Test decile | Target mean | Prediction mean | MAE |
+|---:|---:|---:|---:|
+| 1 | 29,629.80 | 27,763.18 | 1,866.62 |
+| 2 | 34,039.58 | 28,195.65 | 5,843.93 |
+| 3 | 38,633.12 | 27,735.59 | 10,897.53 |
+| 4 | 43,403.62 | 27,056.24 | 16,347.38 |
+| 5 | 48,344.99 | 26,400.52 | 21,944.47 |
+| 6 | 53,451.71 | 25,829.45 | 27,622.26 |
+| 7 | 58,718.76 | 25,346.19 | 33,372.57 |
+| 8 | 64,141.52 | 24,938.96 | 39,202.57 |
+| 9 | 69,715.77 | 24,594.12 | 45,121.64 |
+| 10 | 75,437.58 | 24,299.75 | 51,137.82 |
+
+The target mean rises steadily from approximately 29,630 in the first test decile to 75,438 in the tenth. In contrast, the NN prediction mean declines from approximately 27,763 to 24,300. MAE rises monotonically from approximately 1,867 to 51,138. This is a clear systematic failure to track the target trend across the ordered tail, not merely a few isolated outliers.
+
+### Score-route clarification
+
+The apparent difference between seed-sweep `far_r2 = 1.0` and NN-only `test_r2 = -3.151808` is resolved by the route audit in Experiment E. For seed 2024, the seed sweep selected `decision = "llm"`; its `far_r2` is the analytical formula route's test R², not the NN's. The standalone diagnostic calls the NN helper directly. These are different predictors and must be reported separately, not treated as a same-model discrepancy.
+
+**Interpretation:** the current diagnostic provides strong evidence that this NN configuration does not extrapolate the upper PC1-ordered tail, despite near-perfect training fit. It is better than the training-mean baseline but remains poor in absolute predictive terms. Given the feature-ranking result, this is a tail extrapolation test along an ordering that any single feature already reproduces; it does not demonstrate a special benefit of PCA as a multivariate split.
+
+## Experiment E — seed-sweep route and metric audit
+
+**Evidence:** seed-2024 sweep JSON supplied by the user; remote source inspected on `audit-master`.
+
+The apparent discrepancy between seed-sweep `far_r2 = 1.0` and NN-only `test_r2 = -3.151808` is **resolved**. The two values are produced by different prediction routes:
+
+1. In `portfolio_variance_v3c2.py` (seed-sweep section 3d, approximately lines 605–625), the runner constructs the PCA train/test arrays once, calls `set_all_seeds(seed)`, then passes those arrays to `_hybrid_predict_and_eval`. It stores `hybrid['test_r2']` as `far_r2`, `hybrid['train_r2']` as `train_r2`, and records the selected `decision`.
+2. In `hypatiax_defi_benchmark_v3c.py` (approximately lines 819–847), the hybrid function first evaluates the generated formula on training rows. A formula with training R² at least 0.95 locks the route to `decision = "llm"`.
+3. For that LLM route (approximately lines 867–877), the formula is evaluated on `X_test` against `y_test`. `_eval_formula_r2` calls `_execute_formula` on the supplied feature rows and computes R² against the supplied target values (approximately lines 516–591). The result returned as `test_r2` is therefore the formula's test score.
+4. The seed-2024 record confirms `decision = "llm"`, `llm_train_r2 = 1.0`, and the exact analytical expression `sqrt(var_asset1**2 + var_asset2**2 + 2*correlation*var_asset1*var_asset2)`. This matches the case ground truth.
+
+The field semantics need to be explicit: in the hybrid result, `train_r2` is the LLM formula's training R² (the returned value is derived from `llm_train_r2`); `far_r2` is the selected route's test R². For seed 2024, the selected route is LLM. It is **not** an NN training/test score.
+
+The separate tail-error diagnostic intentionally bypasses formula generation and hybrid routing and calls `_train_and_eval_nn` directly. Its `train_r2 = 0.999740` and `test_r2 = -3.151808` are NN-only metrics. Thus:
+
+| Record | Predictor evaluated | Train R² | PCA-tail test R² |
+|---|---|---:|---:|
+| Seed sweep, seed 2024 | LLM-generated analytical formula | 1.000000 | 1.000000 |
+| Direct tail diagnostic | Neural network | 0.999740 | -3.151808 |
+
+**Conclusion:** the seed sweep supports successful recovery and evaluation of the known analytical formula on this generated case. It does not establish that the NN extrapolates successfully. The NN-only diagnostic establishes the opposite for this configuration: despite a close training fit, it fails to track the upper-tail target trend. The prior wording that treated these scores as a same-model discrepancy has been corrected.
+
+**Scope caveat:** the seed sweep JSON does not store the per-row formula predictions. The remote code path establishes that `far_r2` is computed by evaluating the selected LLM formula on the runner's `X_test, y_test` arrays. The stored PCA metadata and direct diagnostic identify the same case and 80/120 `pca_40_60_pc1` protocol. The PCA fit remains transductive because it uses all feature rows before the ordered split.
+
 ## Interpretation and limitations
 
-- Both experiment suites report very high performance for this one selected Portfolio VaR case.
+- The random-holdout interpolation control is excellent, but the direct NN PCA-tail diagnostic reports poor upper-tail extrapolation; these are different evaluation regimes.
 - The random-holdout results demonstrate stability across the five tested random partitions for a fixed model seed, under the selected NN route.
-- The PCA sweep demonstrates consistent reported train/far scores across five experiment seeds on one fixed transductive PCA split.
-- The PCA protocol uses raw feature scales. Its first component is effectively dominated by the two variance features, with negligible correlation loading.
+- The PCA seed sweep's far R² = 1.0 reflects the LLM-generated analytical formula route, not the NN. The direct NN-only tail diagnostic reports test R² = -3.151808. These route-specific results are compatible and must be reported separately.
+- The PCA protocol uses raw feature scales. Its first component is effectively dominated by the two variance features, with negligible correlation loading. The feature-ranking diagnostic further shows that all three individual feature rankings exactly reproduce the PC1 ranking and the same 80/120 partition.
 - The random-holdout protocol is a control for interpolation, not a substitute for the PCA-directed tail test.
 - These results concern one case and should not be generalized to other domains or cases without additional experiments.
 - The PCA workflow ran in sweep-only mode; these results do not imply downstream paper tables, LaTeX exports, or figures were generated.
-- No claim is made here about independent PCA partitions, NN training R², or statistical significance.
+- The bootstrap PCA sensitivity run previously produced five identical partitions despite distinct bootstrap samples, with tail test R² = -3.151809 for all five replicates; this is a negative sensitivity result, not successful validation.
+- In hybrid seed-sweep records, `train_r2`/`llm_train_r2` describe the LLM formula's training fit; they are not NN training R². The NN-only tail diagnostic exposes its own NN training R² (0.999740).
+- No claim is made here about independent PCA partitions or statistical significance.
+
+- The exact-formula LLM route is a formula-recovery result on this synthetic/generated case; it is not evidence of neural-network extrapolation capability.
 
 ## Reproducibility sources
 
@@ -101,3 +192,6 @@ The reported `test_r2` is the test score from the selected route, recorded as `t
 - PCA aggregate: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_seed_aggregate.json`
 - Random-holdout results: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_random_holdout_validation.json`
 - Random-holdout protocol notes: `hypatiax/experiments/benchmarks/PORTFOLIO_PARTITION_VALIDATION.md`
+- Feature-ranking diagnostic: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_feature_ranking_diagnostic.json`
+- Tail-error diagnostic runner: `hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py`
+- Tail-error diagnostic output: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_tail_error_diagnostic.json`

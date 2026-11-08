@@ -1,7 +1,7 @@
 {
   "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
-  "schema_version": 1,
-  "generated_at": "2026-11-07T22:46:00Z",
+  "schema_version": 2,
+  "generated_at": "2026-11-08T11:48:00Z",
   "branch": "audit-master",
   "case_identity": {
     "domain": "risk_var",
@@ -75,12 +75,267 @@
       "test_r2_max": 0.999801792332363,
       "llm_train_r2_semantics": "LLM formula training R2 only; NaN means unavailable/invalid and is not NN training R2.",
       "partition_independence": "Five independent random partitions; model seed held fixed."
+    },
+    "feature_ranking_diagnostic": {
+      "protocol": "full_data_raw_feature_pc1_vs_individual_feature_rankings",
+      "generated_at": "2026-11-08T11:28:42Z",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "pca_fit_scope": "All 200 raw, unstandardized feature rows; descriptive and transductive",
+      "pc1_explained_variance_ratio": 1,
+      "pc1_loadings": {
+        "var_asset1": 0.8574929254074085,
+        "var_asset2": 0.5144957552444456,
+        "correlation": 0.000026677557679341606
+      },
+      "individual_feature_rankings": [
+        {
+          "feature": "var_asset1",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        },
+        {
+          "feature": "var_asset2",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        },
+        {
+          "feature": "correlation",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        }
+      ],
+      "cutoff": {
+        "last_train_pc1_score": -5406.083542622026,
+        "first_test_pc1_score": -5142.372150299003,
+        "score_gap": 263.71139232302266,
+        "qualitative_boundary_assessment": "Displayed adjacent rows progress smoothly; no obvious discontinuity."
+      },
+      "interpretation": "Every individual feature ranking exactly reproduces the PC1 ordering and the same 80-row training membership. For this dataset, the PCA split does not add a distinct multivariate ordering; the feature rows behave as a one-dimensional ordered trajectory for ranking purposes."
+    },
+    "bootstrap_pca_sensitivity": {
+      "protocol": "m_out_of_n_bootstrap_estimated_pc1_tail_40_60",
+      "sample_fraction": 0.7,
+      "n_replicates": 5,
+      "n_unique_bootstrap_samples": 5,
+      "n_unique_partitions": 1,
+      "duplicate_partition_replicates": 4,
+      "all_replicates_same_partition": true,
+      "tail_test_r2_mean": -3.1518085064529027,
+      "tail_test_r2_sample_std": 0,
+      "n_success_tail_test_r2_gt_0_99": 0,
+      "interpretation": "Distinct bootstrap samples yielded identical PC1 ranking and identical train/test membership. Negative tail R2 indicates poor tail prediction, not successful validation."
+    },
+    "nn_pca_tail_error_diagnostic": {
+      "protocol": "pca_40_60_pc1",
+      "diagnostic_generated_at": "2026-11-08T11:41:28Z",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "test_size": 0.6,
+      "model": "benchmark _train_and_eval_nn helper with training-derived augmentation and scaling",
+      "nn_seed": 2024,
+      "llm_called": false,
+      "benchmark_modified": false,
+      "scope": "NN-only diagnostic; does not reproduce LLM/hybrid routing",
+      "train_r2": 0.9997403374487227,
+      "test_metrics": {
+        "r2": -3.151808393762967,
+        "mae": 25335.67958740281,
+        "rmse": 29990.428354324984,
+        "mean_signed_error_prediction_minus_actual": -25335.67958740281,
+        "median_absolute_error": 24771.578984569987
+      },
+      "training_mean_baseline": {
+        "prediction_value": 15000.108953246765,
+        "test_metrics": {
+          "r2": -6.167131634880697,
+          "mae": 36551.535559286254,
+          "rmse": 39403.67315687113,
+          "mean_signed_error_prediction_minus_actual": -36551.535559286254,
+          "median_absolute_error": 35871.30792194822
+        },
+        "model_minus_baseline_r2": 3.0153232411177298,
+        "model_mae_divided_by_baseline_mae": 0.6931495270919212
+      },
+      "test_error_by_pc1_decile": [
+        {
+          "decile": 1,
+          "n": 12,
+          "target_mean": 29629.796321300866,
+          "prediction_mean": 27763.179850260418,
+          "mae": 1866.6164710404519,
+          "rmse": 2069.6179485465627,
+          "mean_signed_error": -1866.6164710404519,
+          "r2": -1.7790293279731832
+        },
+        {
+          "decile": 2,
+          "n": 12,
+          "target_mean": 34039.583539907755,
+          "prediction_mean": 28195.6533203125,
+          "mae": 5843.9302195952505,
+          "rmse": 5998.0641690488965,
+          "mean_signed_error": -5843.9302195952505,
+          "r2": -20.439743063175495
+        },
+        {
+          "decile": 3,
+          "n": 12,
+          "target_mean": 38633.116853871696,
+          "prediction_mean": 27735.588704427082,
+          "mae": 10897.528149444604,
+          "rmse": 11004.698542798456,
+          "mean_signed_error": -10897.528149444604,
+          "r2": -65.7220980816021
+        },
+        {
+          "decile": 4,
+          "n": 12,
+          "target_mean": 43403.61826840438,
+          "prediction_mean": 27056.235026041668,
+          "mae": 16347.383242362712,
+          "rmse": 16425.033314018066,
+          "mean_signed_error": -16347.383242362712,
+          "r2": -137.18963151185315
+        },
+        {
+          "decile": 5,
+          "n": 12,
+          "target_mean": 48344.99104195423,
+          "prediction_mean": 26400.521647135418,
+          "mae": 21944.469394818818,
+          "rmse": 22004.402929229273,
+          "mean_signed_error": -21944.469394818818,
+          "r2": -230.71006710631997
+        },
+        {
+          "decile": 6,
+          "n": 12,
+          "target_mean": 53451.71446637193,
+          "prediction_mean": 25829.449544270832,
+          "mae": 27622.26492210111,
+          "rmse": 27671.118870179733,
+          "mean_signed_error": -27622.26492210111,
+          "r2": -342.79037793798847
+        },
+        {
+          "decile": 7,
+          "n": 12,
+          "target_mean": 58718.75983413574,
+          "prediction_mean": 25346.18994140625,
+          "mae": 33372.56989272947,
+          "rmse": 33414.08637732768,
+          "mean_signed_error": -33372.56989272947,
+          "r2": -471.11699425824804
+        },
+        {
+          "decile": 8,
+          "n": 12,
+          "target_mean": 64141.52244802905,
+          "prediction_mean": 24938.95654296875,
+          "mae": 39202.565905060306,
+          "rmse": 39238.953308893375,
+          "mean_signed_error": -39202.565905060306,
+          "r2": -614.2199530263862
+        },
+        {
+          "decile": 9,
+          "n": 12,
+          "target_mean": 69715.76596851712,
+          "prediction_mean": 24594.123046875,
+          "mae": 45121.64292164212,
+          "rmse": 45154.274525855064,
+          "mean_signed_error": -45121.64292164212,
+          "r2": -771.1486363610896
+        },
+        {
+          "decile": 10,
+          "n": 12,
+          "target_mean": 75437.57638283745,
+          "prediction_mean": 24299.751627604168,
+          "mae": 51137.82475523327,
+          "rmse": 51167.5974243539,
+          "mean_signed_error": -51137.82475523327,
+          "r2": -941.2657078391011
+        }
+      ],
+      "interpretation": "Train fit is near-perfect but PCA-tail test performance is poor (negative R2). NN outperforms training-mean baseline (MAE ratio 0.693), yet systematically underpredicts and MAE rises from 1,866.62 in decile 1 to 51,137.82 in decile 10."
+    },
+    "seed_sweep_route_audit": {
+      "status": "resolved",
+      "source_branch": "audit-master",
+      "source_files": {
+        "seed_sweep_runner": {
+          "path": "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py",
+          "relevant_lines": "approximately 605-625",
+          "role": "Builds the PCA train/test arrays, calls _hybrid_predict_and_eval, stores hybrid.test_r2 as far_r2 and hybrid.train_r2 as train_r2."
+        },
+        "hybrid_evaluator": {
+          "path": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+          "relevant_lines": "approximately 819-877 and 941-951",
+          "role": "Evaluates the LLM formula on training rows; locks decision to llm when formula training R2 >= 0.95; evaluates that formula on X_test against y_test; returns the formula test R2 as test_r2."
+        },
+        "formula_metric_helpers": {
+          "path": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+          "relevant_lines": "approximately 516-591",
+          "role": "_execute_formula applies the parsed formula to feature rows; _eval_formula_r2 computes _compute_metrics(y_true, predictions).r2."
+        },
+        "nn_tail_diagnostic": {
+          "path": "hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py",
+          "relevant_lines": "approximately 100-120",
+          "role": "Calls _train_and_eval_nn directly, without LLM generation or hybrid routing."
+        }
+      },
+      "seed_2024_record": {
+        "decision": "llm",
+        "train_r2": 1,
+        "llm_train_r2": 1,
+        "far_r2": 1,
+        "formula": "sqrt(var_asset1**2 + var_asset2**2 + 2*correlation*var_asset1*var_asset2)",
+        "formula_matches_case_ground_truth": true
+      },
+      "metric_semantics": {
+        "hybrid_train_r2": "LLM formula training R2 in this hybrid return path; the value is populated from llm_train_r2.",
+        "hybrid_far_r2": "Test R2 from the selected hybrid route; for seed 2024 the route is LLM formula.",
+        "nn_diagnostic_train_r2": "Neural-network training R2 from _train_and_eval_nn.",
+        "nn_diagnostic_test_r2": "Neural-network test R2 from _train_and_eval_nn."
+      },
+      "comparison": {
+        "seed_sweep_seed_2024": {
+          "predictor": "LLM-generated analytical formula",
+          "train_r2": 1,
+          "pca_tail_test_r2": 1
+        },
+        "direct_nn_tail_diagnostic": {
+          "predictor": "Neural network",
+          "train_r2": 0.9997403374487227,
+          "pca_tail_test_r2": -3.151808393762967
+        },
+        "same_metric_same_predictor": false,
+        "discrepancy_explanation": "Different predictors/routes were evaluated. The seed sweep score is not the NN score."
+      },
+      "caveat": "The seed-sweep JSON does not retain row-level formula predictions. The remote source path confirms evaluation on the runner-provided X_test/y_test arrays. The recorded case and PCA metadata match the direct diagnostic's 80/120 pca_40_60_pc1 protocol; PCA remains transductive."
     }
   },
   "comparison_rules": [
     "Do not pool or average PCA far_r2 with random-holdout test_r2.",
     "PCA results are five seed runs on one fixed transductive partition, not five independent partitions.",
     "Random-holdout results measure interpolation/control, not PC1-directed far-range extrapolation.",
-    "Claims are limited to the selected Portfolio VaR case and tested configurations."
-  ]
+    "Claims are limited to the selected Portfolio VaR case and tested configurations.",
+    "Feature-ranking diagnostic: each of the three individual feature rankings exactly reproduces the PCA PC1 ranking and train membership for this dataset.",
+    "Bootstrap PCA sensitivity result is negative (tail test R2 approximately -3.1518) and all five replicates shared one partition; do not describe it as successful validation.",
+    "The direct NN-only PCA-tail diagnostic reports test R2=-3.151808 (train R2=0.999740), with systematic underprediction and increasing MAE across PC1 deciles.",
+    "The NN beats the training-mean baseline on the PCA tail test (MAE ratio 0.693), but its test R2 remains strongly negative.",
+    "Never label the PCA seed-sweep far_r2 as NN extrapolation performance when decision='llm'.",
+    "In hybrid evaluator outputs, train_r2 is the LLM formula training score; NN training performance must come from the NN-specific result fields.",
+    "Report formula-recovery and learned-NN extrapolation as separate evaluation routes, even when evaluated on the same PCA-tail partition."
+  ],
+  "pending": null,
+  "unresolved_score_discrepancy": null,
+  "status": "PCA diagnostics and seed-sweep route audit completed; route-score discrepancy resolved. Branch reconciliation and PR review remain."
 }
