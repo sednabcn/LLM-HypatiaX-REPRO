@@ -323,8 +323,14 @@ def main(argv=None):
     if not a.p_rows_glob or not glob.glob(a.p_rows_glob):
         print("ERROR: provide --p-rows-glob matching fresh Pure-LLM rows; historical p2/ defaults are forbidden.")
         return 2
-    if Path(a.phase2_manifest).as_posix() == "phase2_out/phase2_closure.json" or a.p_rows_glob == "p2/pure_llm_seed*.jsonl":
-        print("ERROR: historical Phase 2 paths are forbidden for fresh Phase 3 runs.")
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest_path = Path(a.phase2_manifest).resolve()
+    rows_prefix = a.p_rows_glob.split("*", 1)[0].rstrip("/") or "."
+    rows_root = Path(rows_prefix).resolve()
+    historical_manifest_root = (repo_root / "phase2_out").resolve()
+    historical_rows_root = (repo_root / "p2").resolve()
+    if manifest_path.is_relative_to(historical_manifest_root) or rows_root.is_relative_to(historical_rows_root):
+        print("ERROR: historical phase2_out/ manifests and p2/ rows are forbidden for fresh Phase 3 runs.")
         return 2
     a.seeds = [int(s) for s in a.seeds.split(",") if s.strip()]
 
