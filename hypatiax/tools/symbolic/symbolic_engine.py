@@ -534,7 +534,7 @@ class LLMConfig:
     model: str = field(default_factory=lambda: os.environ.get("HYPATIAX_LLM_MODEL", "claude-sonnet-4-6"))
     max_tokens: int = 2000
     # AUDIT C1: shared setting. CI/run_all.sh export LLM_TEMPERATURE=0.25; default unchanged outside CI.
-    temperature: float = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
+    temperature: float = field(default_factory=lambda: float(os.environ.get("LLM_TEMPERATURE", "0.3")))
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
     api_key: str | None = None
