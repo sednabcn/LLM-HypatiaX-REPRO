@@ -13,7 +13,6 @@ CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
 ANALYSIS_DIR="${ANALYSIS_DIR:-${REPO_ROOT}/hypatiax/analysis}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 
-export PYSR_GENERATIONS=10000
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
@@ -81,38 +80,127 @@ export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
 export REPRO_CFG="${REPRO_CFG:-${REPO_ROOT}/config/repro.yaml}"
 
-# The protocol file is the single source of truth for LLM model and temperature.
-# Fail on conflicting caller overrides instead of silently running mixed settings.
+# The protocol file is the single source of truth for LLM and PySR runtime settings.
+# Conflicting caller overrides fail closed instead of silently creating mixed protocols.
 if [[ -f "${REPRO_CFG}" ]]; then
-  mapfile -t _LLM_PROTOCOL_VALUES < <(python3 - "${REPRO_CFG}" <<'PY'
+  mapfile -t _RUN_PROTOCOL_VALUES < <(python3 - "${REPRO_CFG}" <<'PY'
 import sys, yaml
 with open(sys.argv[1], encoding="utf-8") as stream:
     cfg = yaml.safe_load(stream) or {}
-print(cfg.get("llm_temperature", 0.25))
-print(cfg.get("llm_model", "claude-sonnet-4-6"))
+pysr = cfg.get("pysr") or {}
+seeds = cfg.get("seeds") or {}
+timeouts = cfg.get("timeouts") or {}
+ci = cfg.get("ci_env") or {}
+values = [
+    cfg.get("llm_temperature", 0.25),
+    cfg.get("llm_model", "claude-sonnet-4-6"),
+    pysr.get("niterations", 1000),
+    pysr.get("populations", 30),
+    pysr.get("population_size", 33),
+    seeds.get("pysr_seed", 42),
+    timeouts.get("method_seconds", 900),
+    timeouts.get("pysr_attempt_seconds", 1100),
+    timeouts.get("fit_wall_timeout", 1200),
+    timeouts.get("fit_grace_secs", 120),
+    timeouts.get("feynman_pysr_seconds", 1100),
+    ci.get("FEYNMAN_SAMPLES", 200),
+    ci.get("JOB_DEADLINE", 19800),
+    ci.get("JULIA_NUM_THREADS", 4),
+    ci.get("JULIA_EXCLUSIVE", 0),
+    ci.get("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes"),
+    ci.get("LLM_METHOD_TIMEOUT", 120),
+]
+if "PYSR_GENERATIONS" in ci and int(ci["PYSR_GENERATIONS"]) != int(values[2]):
+    raise SystemExit("ci_env.PYSR_GENERATIONS must equal pysr.niterations")
+if "PYSR_POPULATION" in ci and int(ci["PYSR_POPULATION"]) != int(values[4]):
+    raise SystemExit("ci_env.PYSR_POPULATION must equal pysr.population_size")
+if "PYSR_POPULATIONS" in ci and int(ci["PYSR_POPULATIONS"]) != int(values[3]):
+    raise SystemExit("ci_env.PYSR_POPULATIONS must equal pysr.populations")
+for value in values:
+    print(value)
 PY
   )
-  if [[ "${#_LLM_PROTOCOL_VALUES[@]}" -lt 2 ]]; then
-    echo "ERROR: could not read LLM settings from ${REPRO_CFG}; PyYAML must be installed" >&2
+  if [[ "${#_RUN_PROTOCOL_VALUES[@]}" -lt 17 ]]; then
+    echo "ERROR: could not read runtime settings from ${REPRO_CFG}; PyYAML must be installed" >&2
     exit 1
   fi
-  _CFG_LLM_TEMPERATURE="${_LLM_PROTOCOL_VALUES[0]:-0.25}"
-  _CFG_LLM_MODEL="${_LLM_PROTOCOL_VALUES[1]:-claude-sonnet-4-6}"
 else
-  _CFG_LLM_TEMPERATURE="0.25"
-  _CFG_LLM_MODEL="claude-sonnet-4-6"
-fi
-if [[ -n "${LLM_TEMPERATURE:-}" && "${LLM_TEMPERATURE}" != "${_CFG_LLM_TEMPERATURE}" ]]; then
-  echo "ABORT: LLM_TEMPERATURE=${LLM_TEMPERATURE} conflicts with REPRO_CFG value ${_CFG_LLM_TEMPERATURE}" >&2
+  echo "ERROR: runtime protocol file not found: ${REPRO_CFG}" >&2
   exit 1
 fi
-if [[ -n "${HYPATIAX_LLM_MODEL:-}" && "${HYPATIAX_LLM_MODEL}" != "${_CFG_LLM_MODEL}" ]]; then
-  echo "ABORT: HYPATIAX_LLM_MODEL=${HYPATIAX_LLM_MODEL} conflicts with REPRO_CFG value ${_CFG_LLM_MODEL}" >&2
-  exit 1
-fi
-export LLM_TEMPERATURE="${_CFG_LLM_TEMPERATURE}"
-export HYPATIAX_LLM_MODEL="${_CFG_LLM_MODEL}"
-unset _LLM_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL
+
+_CFG_LLM_TEMPERATURE="${_RUN_PROTOCOL_VALUES[0]}"
+_CFG_LLM_MODEL="${_RUN_PROTOCOL_VALUES[1]}"
+_CFG_N_ITERATIONS="${_RUN_PROTOCOL_VALUES[2]}"
+_CFG_POPULATIONS="${_RUN_PROTOCOL_VALUES[3]}"
+_CFG_POPULATION_SIZE="${_RUN_PROTOCOL_VALUES[4]}"
+_CFG_PYSR_SEED="${_RUN_PROTOCOL_VALUES[5]}"
+_CFG_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[6]}"
+_CFG_PYSR_TIMEOUT="${_RUN_PROTOCOL_VALUES[7]}"
+_CFG_FIT_WALL_TIMEOUT="${_RUN_PROTOCOL_VALUES[8]}"
+_CFG_FIT_GRACE_SECS="${_RUN_PROTOCOL_VALUES[9]}"
+_CFG_FEYNMAN_TIMEOUT="${_RUN_PROTOCOL_VALUES[10]}"
+_CFG_FEYNMAN_SAMPLES="${_RUN_PROTOCOL_VALUES[11]}"
+_CFG_JOB_DEADLINE="${_RUN_PROTOCOL_VALUES[12]}"
+_CFG_JULIA_THREADS="${_RUN_PROTOCOL_VALUES[13]}"
+_CFG_JULIA_EXCLUSIVE="${_RUN_PROTOCOL_VALUES[14]}"
+_CFG_JULIACALL_SIGNALS="${_RUN_PROTOCOL_VALUES[15]}"
+_CFG_LLM_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[16]}"
+
+check_protocol_override() {
+  local name="$1" expected="$2" current="${!1:-}"
+  if [[ -n "$current" && "$current" != "$expected" ]]; then
+    echo "ABORT: ${name}=${current} conflicts with ${REPRO_CFG} value ${expected}" >&2
+    exit 1
+  fi
+}
+check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"
+check_protocol_override LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override HYPATIAX_LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override N_ITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_NITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_GENERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATION "$_CFG_POPULATION_SIZE"
+check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"
+check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"
+check_protocol_override METHOD_TIMEOUT "$_CFG_METHOD_TIMEOUT"
+check_protocol_override PYSR_TIMEOUT "$_CFG_PYSR_TIMEOUT"
+check_protocol_override PYSR_FIT_WALL_TIMEOUT "$_CFG_FIT_WALL_TIMEOUT"
+check_protocol_override PYSR_FIT_GRACE_SECS "$_CFG_FIT_GRACE_SECS"
+check_protocol_override FEYNMAN_TIMEOUT "$_CFG_FEYNMAN_TIMEOUT"
+check_protocol_override FEYNMAN_SAMPLES "$_CFG_FEYNMAN_SAMPLES"
+check_protocol_override JOB_DEADLINE "$_CFG_JOB_DEADLINE"
+check_protocol_override JULIA_NUM_THREADS "$_CFG_JULIA_THREADS"
+check_protocol_override JULIA_EXCLUSIVE "$_CFG_JULIA_EXCLUSIVE"
+check_protocol_override PYTHON_JULIACALL_HANDLE_SIGNALS "$_CFG_JULIACALL_SIGNALS"
+check_protocol_override LLM_METHOD_TIMEOUT "$_CFG_LLM_METHOD_TIMEOUT"
+
+export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"
+export LLM_MODEL="$_CFG_LLM_MODEL"
+export HYPATIAX_LLM_MODEL="$_CFG_LLM_MODEL"
+export N_ITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_NITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_GENERATIONS="$_CFG_N_ITERATIONS"
+export POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATION="$_CFG_POPULATION_SIZE"
+export PYSR_POPULATION_SIZE="$_CFG_POPULATION_SIZE"
+export PYSR_SEED="$_CFG_PYSR_SEED"
+export HYPATIAX_ENGINE_SEED="$_CFG_PYSR_SEED"
+export METHOD_TIMEOUT="$_CFG_METHOD_TIMEOUT"
+export PYSR_TIMEOUT="$_CFG_PYSR_TIMEOUT"
+export PYSR_FIT_WALL_TIMEOUT="$_CFG_FIT_WALL_TIMEOUT"
+export PYSR_FIT_GRACE_SECS="$_CFG_FIT_GRACE_SECS"
+export FEYNMAN_TIMEOUT="$_CFG_FEYNMAN_TIMEOUT"
+export FEYNMAN_SAMPLES="$_CFG_FEYNMAN_SAMPLES"
+export JOB_DEADLINE="$_CFG_JOB_DEADLINE"
+export JULIA_NUM_THREADS="$_CFG_JULIA_THREADS"
+export JULIA_EXCLUSIVE="$_CFG_JULIA_EXCLUSIVE"
+export PYTHON_JULIACALL_HANDLE_SIGNALS="$_CFG_JULIACALL_SIGNALS"
+export LLM_METHOD_TIMEOUT="$_CFG_LLM_METHOD_TIMEOUT"
+unset _RUN_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL _CFG_N_ITERATIONS _CFG_POPULATIONS _CFG_POPULATION_SIZE _CFG_PYSR_SEED _CFG_METHOD_TIMEOUT _CFG_PYSR_TIMEOUT _CFG_FIT_WALL_TIMEOUT _CFG_FIT_GRACE_SECS _CFG_FEYNMAN_TIMEOUT _CFG_FEYNMAN_SAMPLES _CFG_JOB_DEADLINE _CFG_JULIA_THREADS _CFG_JULIA_EXCLUSIVE _CFG_JULIACALL_SIGNALS _CFG_LLM_METHOD_TIMEOUT
 
 export JOB_DEADLINE="${JOB_DEADLINE:-19800}"
 
