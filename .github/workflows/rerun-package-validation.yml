@@ -113,16 +113,11 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: .github/workflows/rerun-package-validation.yml
-      - name: Install test dependencies
+      - name: Install pinned rerun environment
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install "pandas==2.2.3"
-          pip install "pysr==2.0.0a1" \
-            numpy scipy sympy \
-            "anthropic==0.73.0" \
-            scikit-learn pyyaml python-dotenv matplotlib seaborn pint psutil \
-            pytest pytest-timeout
+          python -m pip install -r requirements.txt
+          python -m pip check
       - name: Dependency gate
         run: |
           python - <<'PY'
@@ -135,7 +130,24 @@ jobs:
               except Exception as exc:
                   missing.append(f"{module}: {exc}")
           if missing:
-              sys.exit("MISSING DEPENDENCIES:\n  " + "\n  ".join(missing))
+              sys.exit("MISSING DEPENDENCIES:\\n  " + "\\n  ".join(missing))
+          from importlib.metadata import version
+          expected = {
+              "torch": "2.12.1+cpu",
+              "anthropic": "0.73.0",
+              "numpy": "2.3.5",
+              "scipy": "1.16.3",
+              "sympy": "1.14.0",
+              "pandas": "2.3.3",
+              "scikit-learn": "1.7.2",
+              "pysr": "2.0.0a1",
+              "PyYAML": "6.0.3",
+          }
+          for package, wanted in expected.items():
+              actual = version(package)
+              print(f"locked {package}: {actual}")
+              if actual != wanted:
+                  sys.exit(f"{package} version mismatch: expected {wanted}, got {actual}")
           PY
       - name: Record exact Python test environment
         run: |
@@ -149,7 +161,7 @@ jobs:
           } > environment-provenance.txt
       - name: Run complete test suite (no LLM API key supplied)
         run: |
-          python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+          timeout 600s python -m pytest -q -ra --junitxml=pytest-report.xml
       - name: Run offline runner smoke and clean-run guards
         run: |
           SMOKE_HELP=0 SMOKE_LIVE=0 RUN_ALL=run_all.sh \
