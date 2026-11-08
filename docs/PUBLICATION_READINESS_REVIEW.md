@@ -190,8 +190,8 @@ This pass inspected the current `master` implementation and workflow sources. It
 
 **Unresolved evidence gap:** the repository tree contains the main-paper TeX and Supplement B TeX, but no Supplement A source file. The reported Supplement A Listing 8 cannot therefore be checked line-for-line against the current source from this checkout. The PDF-level contradiction remains a manuscript packaging/reconciliation task until the exact Supplement A source used to generate the PDF is supplied or restored.
 
-**Test-harness issue found:** `test_recovery_evaluator.py` requires the environment variable `RECOVERY_EVAL=module:function`; without it, its tests deliberately fail. The tracked `.github/workflows/ci_r2_policy.yml` invokes that test file but does not set `RECOVERY_EVAL`. Unless a separate runner-level environment injection exists (not established by the workflow source), this CI step is not self-contained. Set the variable to the intended canonical function or change the test to import the canonical scorer directly, then verify the workflow run. Do not describe this gate as passing until the actual run is checked.
-
+**Test-harness configuration checked:** the initial concern that `RECOVERY_EVAL` was unset in CI was incorrect. `hypatiax/experiments/tests/conftest.py` sets the default to `hypatiax.core.recovery_eval:recovery_r2`, while still allowing an override. The workflow invokes `test_recovery_evaluator.py`, and the test resolves to the repository's canonical evaluator through that fixture. Do not treat a missing environment-variable setting in the workflow YAML alone as a defect. A successful R2-policy run observed during this pass was PR-triggered on branch `fix/rerun-blockers` (run #201), not a master-branch run, so it is not evidence of a master CI result.
+ 
 **A4 disposition:** current principal benchmark code is migrated to the canonical relative scorer, but the PDF listing discrepancy, stale Supplement B explanation, absent Supplement A source, and non-self-contained recovery-test invocation still need closure. Do not rerun the DeFi benchmark solely on the basis of the old listing until the exact historical Listing 8 and the result-producing code revision are matched.
 
 ### B4 — Fix 4 test-information claim: code confirms input-dependent use of the test batch
@@ -394,3 +394,19 @@ Required sequence:
 - `hypatiax/data/results/five_systems/exp1_five/provenance_map_exp1_five.json` and `exp1_five_run.log`.
 - `hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json`.
 - `hypatiax/experiments/benchmarks/exp1_ablation.py` and `exp1_five_system.py` (experiment-path distinction).
+
+
+## 15. A4 follow-up — evaluator policy and CI harness correction
+
+A second, exact comparison of the tracked Supplement B TeX and current scorer sharpens the A4 finding.
+
+- Supplement B Section 8.4 prints an evaluator using
+  `_tol = 1e-10 * max(abs(y_true))**2 * len(y_true)`, and assigns `0` when `ss_tot` is below that tolerance.
+- The current `hypatiax/core/r2_canonical.py` instead sets `REL_TOL = 1e-24`, compares `ss_tot` with `REL_TOL * max(sum(y_true**2), 1e-300)`, and returns `(NaN, "degenerate_target")` for a constant or near-constant target. It returns `-inf` for non-finite predictions or a bad shape.
+- The current 74-task v3c runner imports `r2_checked` from this canonical module. Thus the current principal runner no longer uses the absolute `ss_tot > 1e-10` gate described in the older Listing 8 claim, but the Supplement B printed implementation is not the current canonical policy either. Calling both simply “the relative threshold” hides a material difference in tolerance and degenerate-target semantics.
+- `hypatiax/experiments/tests/conftest.py` supplies the `RECOVERY_EVAL` default. The previous note that the test was not self-contained is withdrawn. A successful workflow run #201 was found, but it was a pull-request run on `fix/rerun-blockers`, not a master run.
+
+**A4 revised disposition:** the current v3c benchmark's use of the canonical scorer is verified. The manuscript and both supplements still need to print the exact canonical policy, including `REL_TOL=1e-24`, the relative scale definition, and NaN/`-inf` status semantics. The exact Supplement A Listing 8 source is still absent from the tracked repository, so its historical implementation cannot be compared line-for-line. Match the exact result-producing commit and evaluator to each DeFi result family before deciding whether any historical table requires rerunning.
+
+**Required manuscript correction:** replace the Supplement B Section 8.4 pseudocode with the actual canonical implementation or a faithful concise specification. Do not retain the older `1e-10` formula or claim that below-threshold variance returns zero. Explain that near-constant targets have undefined R² and are excluded from recovery counts, while failed predictions are treated as failures.
+
