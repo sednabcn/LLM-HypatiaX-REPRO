@@ -60,6 +60,14 @@ jobs:
             echo "runner accepted an LLM temperature that conflicts with the protocol" >&2
             exit 1
           fi
+          if N_ITERATIONS=25 bash run_all.sh --dry-run --step env_check >/tmp/iterations-mismatch.log 2>&1; then
+            echo "runner accepted an iteration budget that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if POPULATIONS=10 bash run_all.sh --dry-run --step env_check >/tmp/populations-mismatch.log 2>&1; then
+            echo "runner accepted a population count that conflicts with the protocol" >&2
+            exit 1
+          fi
           python - <<'PY'
           import glob, yaml
           for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml", "config/fresh_rerun.yaml"]:
@@ -69,6 +77,11 @@ jobs:
           cfg = yaml.safe_load(open("config/fresh_rerun.yaml", encoding="utf-8"))
           assert cfg["llm_temperature"] == 0.25
           assert cfg["llm_model"] == "claude-sonnet-4-6"
+          assert cfg["pysr"]["niterations"] == 1000
+          assert cfg["pysr"]["populations"] == 30
+          assert cfg["ci_env"]["PYSR_GENERATIONS"] == str(cfg["pysr"]["niterations"])
+          assert cfg["ci_env"]["PYSR_POPULATIONS"] == str(cfg["pysr"]["populations"])
+          assert cfg["ci_env"]["PYSR_POPULATION"] == str(cfg["pysr"]["population_size"])
           assert all("expected" not in section for section in cfg["benchmarks"].values())
           print("fresh protocol contains inputs only; no historical expected-result targets")
           PY
