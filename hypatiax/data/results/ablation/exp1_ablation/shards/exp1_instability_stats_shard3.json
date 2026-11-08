@@ -4,8 +4,8 @@
       "equation": "Arrhenius",
       "domain": "Chemistry",
       "extrap_r2_near": 0.8743795195458479,
-      "extrap_r2_far": -Infinity,
-      "instability_index": Infinity
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Henderson-Hasselbalch",
@@ -67,8 +67,8 @@
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
       "extrap_r2_near": 0.7159846105022467,
-      "extrap_r2_far": -Infinity,
-      "instability_index": Infinity
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Price Impact",

@@ -21,8 +21,10 @@
     "h_wins": 3,
     "p_wins": 0,
     "ties": 10,
+    "primary_test": "wilcoxon_signed_rank",
+    "primary_p_greater": 0.07373046875,
     "significant_p05": false,
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Mann-Whitney $U=100$, $p=0.2175$, $n=13$; rank-biserial $r=+0.18$; 2 equation(s) excluded for non-finite or missing far $R^2$: Arrhenius, Impermanent Loss). The directional improvement is concentrated in 3 domain(s) \u2014 Chemistry, Biology, Physics, suggesting benefit is domain-selective.",
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=16$, $p_{H>P}=0.0737$; Mann-Whitney sensitivity $U=100$, $p=0.2175$, $n=13$; rank-biserial $r=+0.18$). The directional improvement is concentrated in 3 domain(s) \u2014 Chemistry, Biology, Physics, suggesting benefit is domain-selective.",
     "equations_included": [
       "Henderson-Hasselbalch",
       "Rate Law",
