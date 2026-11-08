@@ -288,3 +288,17 @@ The all-domains M4 implementation delegates formula generation to `PureLLMBaseli
 - The current `run_all.sh` configures PySR with 10,000 generations and 30 populations by default, while the main/supplement descriptions and historical experiment configs cite different budgets. Tie each published result to the exact run configuration rather than presenting one global PySR setting.
 
 **C2/C3 disposition:** confirmed open blockers. A single authoritative method/version map is required before manuscript rewriting or additional reruns; otherwise reruns may simply generate another incompatible result family.
+
+
+## 12. Code inspection round 4 — B3 attribution correction
+
+The tracked DeFi benchmark code and main-paper source clarify the correction mechanism:
+
+- `run_comparative_suite_benchmark_v2.py` maps the hybrid decision `"llm"` to the separate `pure_llm` result, and `"nn"`/`"nn_fallback"` to the separate `neural_network` result.
+- When the hybrid reports success but its named sub-method reports failure, the code sets `decision_attribution_corrected=True`, preserves the raw status in `success_raw`, records a correction reason, and downgrades the hybrid success flag. It does **not** re-evaluate the hybrid's own formula or replace the hybrid's numeric R² with a new score.
+- The main-paper source says the hybrid and Pure-LLM arms make independent LLM calls, so their formulas for a task are independent samples. It also says the original hybrid formulas were not stored and that the paired Pure-LLM checker rerun used re-sampled formulas rather than the original formulas.
+- The main-paper text itself says all corrected near-perfect successes in the relevant seed route through `decision="llm"`, making the corrected count equal the Pure-LLM count by construction under this corroboration rule.
+
+**Interpretation:** the code correction is an internal-consistency/provenance filter, not a same-formula validation of the hybrid's own LLM output. A Pure-LLM success flag from an independent LLM call cannot establish that the hybrid's independently generated formula was the same or valid. Conversely, a Pure-LLM failure does not prove the hybrid's own formula failed. The 23 cases should therefore be described as **unverifiable from the stored records**, not as confirmed hybrid formula failures or as successes rescued by the Pure-LLM arm.
+
+**B3 disposition:** the report's requested rewrite is warranted. Keep the conservative corrected count only if it is explicitly labelled as a decision-aligned corroboration proxy, not an independently validated hybrid score. Remove “bug” as a causal label unless the paper narrows it to a bookkeeping/attribution inconsistency; remove “masked failures” and the tier-by-tier tie as a scientific performance finding. The decisive remedy remains to persist the hybrid formula, its predictions, decision provenance, and exact data split, then re-score that formula on the same split used for the hybrid result.
