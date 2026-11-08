@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+# Run the experiment stages against a fresh, isolated output directory.
+# Deliberately excludes validate/qualify/audit_* stages that compare against
+# historical paper targets. New results are assessed separately after the run.
+set -Eeuo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+RUN_ALL="${RUN_ALL:-${REPO_ROOT}/run_all.sh}"
+PROTOCOL="${REPRO_CFG:-${REPO_ROOT}/config/fresh_rerun.yaml}"
+
+STAGES=(
+  env_check
+  gt_leak_guard
+  exp1
+  exp1b
+  portfolio
+  portfolio_random_holdout
+  portfolio_bootstrap_pca
+  portfolio_feature_ranking
+  portfolio_pca_tail_error
+  exp1_ablation
+  exp1_ablation_aggregate
+  exp1_five
+  exp1_pca
+  exp1b_pca
+  extrap
+  hybrid_all_domains
+  instability
+  exp2_feynman
+  exp2_feynman_pca_4060
+  exp2_feynman_extrap
+  exp2
+  exp2_five
+  exp3
+  exp3b
+  suppA
+  suppB
+  suppB_sc
+)
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  bash ci_runner/run_fresh_experiments.sh --list
+  bash ci_runner/run_fresh_experiments.sh --dry-run
+  RESULTS_DIR=/absolute/path/outside/repo bash ci_runner/run_fresh_experiments.sh
+
+The real run requires the experiment dependencies, Julia/PySR, and
+ANTHROPIC_API_KEY. RESULTS_DIR must be a new or empty directory outside the
+repository. Outputs and logs are kept there; nothing is committed.
+
+Historical comparison stages (validate, qualify, audit_paper, audit_*) are
+intentionally excluded. They must not gate or steer fresh scientific results.
+USAGE
+}
+
+case "${1:-}" in
+  --help|-h) usage; exit 0 ;;
+  --list)
+    printf '%s\n' "${STAGES[@]}"
+    exit 0
+    ;;
+  --dry-run)
+    [[ -f "$RUN_ALL" ]] || { echo "ERROR: run_all.sh not found: $RUN_ALL" >&2; exit 2; }
+    for stage in "${STAGES[@]}"; do
+      echo "===== DRY RUN: $stage ====="
+      bash "$RUN_ALL" --dry-run --step "$stage"
+    done
+    exit 0
+    ;;
+  "") ;;
+  *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
+esac
+
+[[ -f "$RUN_ALL" ]] || { echo "ERROR: run_all.sh not found: $RUN_ALL" >&2; exit 2; }
+[[ -f "$PROTOCOL" ]] || { echo "ERROR: fresh protocol not found: $PROTOCOL" >&2; exit 2; }
+[[ "${HYPATIAX_ALLOW_LEGACY:-0}" != "1" ]] || {
+  echo "ERROR: legacy mode is forbidden for fresh reruns" >&2
+  exit 2
+}
+[[ -n "${RESULTS_DIR:-}" ]] || {
+  echo "ERROR: set RESULTS_DIR to a new absolute path outside the repository" >&2
+  exit 2
+}
+[[ "$RESULTS_DIR" == /* ]] || {
+  echo "ERROR: RESULTS_DIR must be an absolute path: $RESULTS_DIR" >&2
+  exit 2
+}
+
+mkdir -p "$(dirname "$RESULTS_DIR")"
+if [[ -e "$RESULTS_DIR" ]]; then
+  [[ -d "$RESULTS_DIR" ]] || { echo "ERROR: RESULTS_DIR exists and is not a directory" >&2; exit 2; }
+  if find "$RESULTS_DIR" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
+    echo "ERROR: RESULTS_DIR is not empty; refusing to reuse old results/checkpoints: $RESULTS_DIR" >&2
+    exit 2
+  fi
+else
+  mkdir -p "$RESULTS_DIR"
+fi
+RESULTS_DIR="$(cd "$RESULTS_DIR" && pwd -P)"
+REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
+case "$RESULTS_DIR/" in
+  "$REPO_ROOT/"*)
+    echo "ERROR: RESULTS_DIR must be outside the repository to prevent output contamination" >&2
+    exit 2
+    ;;
+esac
+
+if [[ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all)" ]]; then
+  echo "ERROR: repository checkout is not clean; refusing to start" >&2
+  git -C "$REPO_ROOT" status --short
+  exit 2
+fi
+
+# Force the clean live-LLM path. Do not inherit replay/cache locations from
+# earlier runs: both cache roots are new and empty inside this run namespace.
+export HYPATIAX_DISABLE_HARDCODED=1
+export HYPATIAX_DISABLE_PROMPT_HINTS=1
+export HYPATIAX_R2_SIGN_FLIP=0
+export HYPATIAX_STRICT=1
+export PYTHONHASHSEED="${PYTHONHASHSEED:-0}"
+export RESULTS_DIR
+export HYPATIAX_RESULTS_DIR="$RESULTS_DIR"
+export OUT_BASE="$RESULTS_DIR"
+export REPRO_CFG="$PROTOCOL"
+export HYPATIAX_LLM_CACHE_DIR="$RESULTS_DIR/llm_cache"
+export HYPATIAX_LLM_REPLAY_DIR="$RESULTS_DIR/llm_replay"
+mkdir -p "$HYPATIAX_LLM_CACHE_DIR" "$HYPATIAX_LLM_REPLAY_DIR" "$RESULTS_DIR/logs"
+cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
+
+MANIFEST="$RESULTS_DIR/run_manifest.json"
+python3 - "$MANIFEST" "$REPO_ROOT" "$PROTOCOL" "$RESULTS_DIR" <<'PY'
+import datetime, hashlib, json, os, platform, subprocess, sys
+from pathlib import Path
+import yaml
+
+manifest_path, repo, protocol, results_dir = map(Path, sys.argv[1:])
+cfg = yaml.safe_load(protocol.read_text(encoding="utf-8")) or {}
+def git(*args):
+    return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
+
+manifest = {
+    "status": "started",
+    "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "repository_commit": git("rev-parse", "HEAD"),
+    "repository_branch": git("branch", "--show-current"),
+    "repository_clean_at_start": True,
+    "python": sys.version,
+    "platform": platform.platform(),
+    "protocol_file": str(protocol.relative_to(repo)),
+    "protocol_sha256": hashlib.sha256(protocol.read_bytes()).hexdigest(),
+    "protocol": {
+        "run_id": cfg.get("run_id"),
+        "seeds": cfg.get("seeds"),
+        "llm_model": cfg.get("llm_model"),
+        "llm_temperature": cfg.get("llm_temperature"),
+        "llm_retries": cfg.get("llm_retries"),
+        "llm_k_runs": cfg.get("llm_k_runs"),
+        "timeouts": cfg.get("timeouts"),
+        "pysr": cfg.get("pysr"),
+    },
+    "results_dir": str(results_dir),
+    "api_key_present": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    "clean_run_flags": {
+        "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
+        "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
+        "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
+        "HYPATIAX_STRICT": os.environ.get("HYPATIAX_STRICT"),
+    },
+    "cache_roots": {
+        "HYPATIAX_LLM_CACHE_DIR": os.environ.get("HYPATIAX_LLM_CACHE_DIR"),
+        "HYPATIAX_LLM_REPLAY_DIR": os.environ.get("HYPATIAX_LLM_REPLAY_DIR"),
+    },
+    "stages": [],
+}
+manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+PY
+
+record_stage() {
+  python3 - "$MANIFEST" "$1" "$2" <<'PY'
+import datetime, json, sys
+path, stage, status = sys.argv[1:]
+data = json.load(open(path, encoding="utf-8"))
+data.setdefault("stages", []).append({
+    "stage": stage,
+    "status": status,
+    "recorded_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+})
+data["status"] = "failed" if status == "failed" else data["status"]
+if status == "failed":
+    data["failed_stage"] = stage
+json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
+with open(path, "a", encoding="utf-8") as stream:
+    stream.write("\n")
+PY
+}
+
+for stage in "${STAGES[@]}"; do
+  echo "===== FRESH EXPERIMENT STAGE: $stage ====="
+  if bash "$RUN_ALL" --step "$stage" 2>&1 | tee "$RESULTS_DIR/logs/$stage.log"; then
+    record_stage "$stage" "passed"
+  else
+    record_stage "$stage" "failed"
+    echo "ERROR: stage '$stage' failed; partial outputs retained in $RESULTS_DIR" >&2
+    exit 1
+  fi
+
+  if [[ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all)" ]]; then
+    record_stage "$stage" "failed"
+    echo "ERROR: stage '$stage' wrote files into the repository checkout; stopping to protect source/history" >&2
+    git -C "$REPO_ROOT" status --short
+    exit 1
+  fi
+done
+
+python3 - "$MANIFEST" <<'PY'
+import datetime, json, sys
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["status"] = "completed"
+data["completed_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
+with open(path, "a", encoding="utf-8") as stream:
+    stream.write("\n")
+PY
+
+echo "Fresh experiment stages completed. Outputs: $RESULTS_DIR"
+echo "Manifest: $MANIFEST"
