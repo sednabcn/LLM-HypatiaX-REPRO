@@ -305,8 +305,8 @@ def main(argv=None):
     ap.add_argument("--seeds", default="42,99,123")
     ap.add_argument("--timeout-s", type=float, default=3600.0)
     ap.add_argument("--model-id", default="claude-sonnet-4-6", help="from your smoke log; written to every row")
-    ap.add_argument("--p-rows-glob", default="p2/pure_llm_seed*.jsonl")
-    ap.add_argument("--phase2-manifest", default="phase2_out/phase2_closure.json")
+    ap.add_argument("--p-rows-glob", default=None, help="glob for fresh Pure-LLM rows from this rerun; historical p2/ defaults are forbidden")
+    ap.add_argument("--phase2-manifest", default=None, help="fresh Phase 2 closure manifest from this rerun; historical phase2_out/ defaults are forbidden")
     ap.add_argument("--apply-engine-patch", action="store_true")
     ap.add_argument("--allow-dirty", action="store_true")
     ap.add_argument("--retry-errors", action="store_true")
@@ -316,6 +316,15 @@ def main(argv=None):
     if a.selftest:
         selftest()
         return 0
+    if not a.phase2_manifest or not Path(a.phase2_manifest).is_file():
+        print("ERROR: provide an existing fresh --phase2-manifest; historical phase2_out defaults are forbidden.")
+        return 2
+    if not a.p_rows_glob or not glob.glob(a.p_rows_glob):
+        print("ERROR: provide --p-rows-glob matching fresh Pure-LLM rows; historical p2/ defaults are forbidden.")
+        return 2
+    if Path(a.phase2_manifest).as_posix() == "phase2_out/phase2_closure.json" or a.p_rows_glob == "p2/pure_llm_seed*.jsonl":
+        print("ERROR: historical Phase 2 paths are forbidden for fresh Phase 3 runs.")
+        return 2
     a.seeds = [int(s) for s in a.seeds.split(",") if s.strip()]
 
     git = None
