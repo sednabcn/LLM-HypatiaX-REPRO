@@ -1,7 +1,7 @@
 {
   "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
-  "schema_version": 1,
-  "generated_at": "2026-11-08T11:41:28Z",
+  "schema_version": 2,
+  "generated_at": "2026-11-08T11:48:00Z",
   "branch": "audit-master",
   "case_identity": {
     "domain": "risk_var",
@@ -265,6 +265,61 @@
         }
       ],
       "interpretation": "Train fit is near-perfect but PCA-tail test performance is poor (negative R2). NN outperforms training-mean baseline (MAE ratio 0.693), yet systematically underpredicts and MAE rises from 1,866.62 in decile 1 to 51,137.82 in decile 10."
+    },
+    "seed_sweep_route_audit": {
+      "status": "resolved",
+      "source_branch": "audit-master",
+      "source_files": {
+        "seed_sweep_runner": {
+          "path": "hypatiax/experiments/benchmarks/portfolio_variance_v3c2.py",
+          "relevant_lines": "approximately 605-625",
+          "role": "Builds the PCA train/test arrays, calls _hybrid_predict_and_eval, stores hybrid.test_r2 as far_r2 and hybrid.train_r2 as train_r2."
+        },
+        "hybrid_evaluator": {
+          "path": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+          "relevant_lines": "approximately 819-877 and 941-951",
+          "role": "Evaluates the LLM formula on training rows; locks decision to llm when formula training R2 >= 0.95; evaluates that formula on X_test against y_test; returns the formula test R2 as test_r2."
+        },
+        "formula_metric_helpers": {
+          "path": "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py",
+          "relevant_lines": "approximately 516-591",
+          "role": "_execute_formula applies the parsed formula to feature rows; _eval_formula_r2 computes _compute_metrics(y_true, predictions).r2."
+        },
+        "nn_tail_diagnostic": {
+          "path": "hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py",
+          "relevant_lines": "approximately 100-120",
+          "role": "Calls _train_and_eval_nn directly, without LLM generation or hybrid routing."
+        }
+      },
+      "seed_2024_record": {
+        "decision": "llm",
+        "train_r2": 1,
+        "llm_train_r2": 1,
+        "far_r2": 1,
+        "formula": "sqrt(var_asset1**2 + var_asset2**2 + 2*correlation*var_asset1*var_asset2)",
+        "formula_matches_case_ground_truth": true
+      },
+      "metric_semantics": {
+        "hybrid_train_r2": "LLM formula training R2 in this hybrid return path; the value is populated from llm_train_r2.",
+        "hybrid_far_r2": "Test R2 from the selected hybrid route; for seed 2024 the route is LLM formula.",
+        "nn_diagnostic_train_r2": "Neural-network training R2 from _train_and_eval_nn.",
+        "nn_diagnostic_test_r2": "Neural-network test R2 from _train_and_eval_nn."
+      },
+      "comparison": {
+        "seed_sweep_seed_2024": {
+          "predictor": "LLM-generated analytical formula",
+          "train_r2": 1,
+          "pca_tail_test_r2": 1
+        },
+        "direct_nn_tail_diagnostic": {
+          "predictor": "Neural network",
+          "train_r2": 0.9997403374487227,
+          "pca_tail_test_r2": -3.151808393762967
+        },
+        "same_metric_same_predictor": false,
+        "discrepancy_explanation": "Different predictors/routes were evaluated. The seed sweep score is not the NN score."
+      },
+      "caveat": "The seed-sweep JSON does not retain row-level formula predictions. The remote source path confirms evaluation on the runner-provided X_test/y_test arrays. The recorded case and PCA metadata match the direct diagnostic's 80/120 pca_40_60_pc1 protocol; PCA remains transductive."
     }
   },
   "comparison_rules": [
@@ -276,19 +331,12 @@
     "Bootstrap PCA sensitivity result is negative (tail test R2 approximately -3.1518) and all five replicates shared one partition; do not describe it as successful validation.",
     "The direct NN-only PCA-tail diagnostic reports test R2=-3.151808 (train R2=0.999740), with systematic underprediction and increasing MAE across PC1 deciles.",
     "The NN beats the training-mean baseline on the PCA tail test (MAE ratio 0.693), but its test R2 remains strongly negative.",
-    "The earlier seed-sweep far_r2=1.0 conflicts with the direct NN-only tail diagnostic for seed 2024; reconcile score semantics, route, transforms, and seed mapping before relying on the sweep result."
+    "The earlier seed-sweep far_r2=1.0 conflicts with the direct NN-only tail diagnostic for seed 2024; reconcile score semantics, route, transforms, and seed mapping before relying on the sweep result.",
+    "Never label the PCA seed-sweep far_r2 as NN extrapolation performance when decision='llm'.",
+    "In hybrid evaluator outputs, train_r2 is the LLM formula training score; NN training performance must come from the NN-specific result fields.",
+    "Report formula-recovery and learned-NN extrapolation as separate evaluation routes, even when evaluated on the same PCA-tail partition."
   ],
   "pending": null,
-  "unresolved_score_discrepancy": {
-    "description": "Earlier PCA seed-sweep records far_r2=1.0 for all five seeds, including 2024, while the standalone NN-only diagnostic on the stated same PCA 40/60 split and NN seed 2024 reports test R2=-3.151808.",
-    "required_audit": [
-      "score calculation and metric semantics",
-      "target/prediction transforms and inverse transforms",
-      "route-specific evaluation path",
-      "exact model seed mapping",
-      "data and partition identity"
-    ],
-    "status": "Must reconcile before treating seed-sweep far_r2 as evidence of successful tail prediction."
-  },
-  "status": "PCA diagnostics completed; seed-sweep versus direct NN tail-score discrepancy requires audit before final publication/merge"
+  "unresolved_score_discrepancy": null,
+  "status": "PCA diagnostics and seed-sweep route audit completed; LLM formula recovery and NN tail extrapolation results are distinguished. Branch reconciliation and PR review remain."
 }
