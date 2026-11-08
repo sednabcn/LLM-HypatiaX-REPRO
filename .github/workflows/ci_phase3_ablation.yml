@@ -26,15 +26,23 @@ on:
           - run
           - all
         default: preflight
+      phase2_manifest:
+        description: "Path to the fresh Phase 2 closure manifest produced by this rerun; historical phase2_out files are forbidden."
+        required: true
+        type: string
+      p_rows_glob:
+        description: "Glob matching fresh Pure-LLM rows produced by this rerun; historical p2/ rows are forbidden."
+        required: true
+        type: string
       seeds:
-        description: "Comma-separated seeds. One parallel job per seed."
+        description: "Comma-separated seeds matching the fresh Phase 2 rows. One parallel job per seed."
         required: true
       max_cases:
         description: "Stop each seed job after N new cases (smoke test, e.g. 3). Blank or 0 = no limit."
         required: false
         default: ""
       timeout_s:
-        description: "Per-case wall clock; 3600 matches the Phase 2 HDS runs the full config must reproduce."
+        description: "Per-case wall clock from the frozen fresh-run protocol; must match the new Phase 2 budget."
         required: true
 
 concurrency:
