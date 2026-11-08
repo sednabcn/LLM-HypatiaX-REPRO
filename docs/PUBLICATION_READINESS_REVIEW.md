@@ -550,3 +550,34 @@ The following source-file check confirms that the differences are not confined t
 - Unchanged in the spot check: `hypatiax/core/metrics.py` and `hypatiax/core/recovery_eval.py` have identical blob SHAs on master and candidate. These do not need to be ported.
 
 This is a spot check, not a complete patch review. It identifies a useful first-pass promotion set, but line counts alone are not sufficient to select safe hunks. In particular, `run_all.sh` and the two hybrid implementation files need semantic diff review before porting. The next promotion operation should be file/hunk-level and based on a branch created from the then-current master head; no cherry-pick or merge is justified solely by the branch comparison.
+
+
+## 19. Repository-wide branch comparison and selective promotion PR
+
+A repository-wide branch inventory and comparison against `master` was completed on 2026-11-08. Eight branches were present, including `master`; the seven non-master branches compare as follows.
+
+| Branch | Ahead / behind master | Changed paths | Assessment |
+|---|---:|---:|---|
+| `audit-main` | 102 / 167 | 175 | Broad audit and code branch, heavily diverged; 67 changed paths are generated results/checkpoints/logs. Not suitable for wholesale merge. |
+| `audit-master` | 0 / 13 | 0 | Old ancestor/snapshot behind master; nothing to port. |
+| `ci/update-smoke` | 4 / 167 | 4 | Narrow CI/smoke work: runner workflow, smoke script, and `run_all.sh`. Useful as reference, but branch itself is heavily behind master and not mergeable as a branch. |
+| `fix/rerun-blockers` | 131 / 167 | 211 | Tested candidate. Contains useful package/runner fixes, but also 93 generated-result paths plus archive/audit/manuscript and broad workflow changes. Do not merge wholesale. |
+| `integration/ci-workflow-fixes` | 16 / 167 | 4 | Four workflow-only changes; branch is old/diverged. Inspect individual workflow intent rather than merge. |
+| `publication-readiness-review` | 15 / 0 | 1 | Documentation-only branch, cleanly ahead of master; contains the readiness review, not experiment code. |
+| `sync/hypatiax-package-to-master` | 4 / 165 | 115 | Package sync attempt, but 65 paths are generated results/checkpoints/logs and the rest mix package changes. Not safe to merge wholesale. |
+
+### Promotion branch created
+
+Created `promotion/rerun-code-review` from exact master SHA `bf8f0d2c0d0b6ce5e2122e42ac84a056631ed8a0`. It selectively takes the candidate blobs for 94 source/test/runner/audit-support paths from `fix/rerun-blockers`; 67 of those paths differ from master and therefore appear in the PR diff. The branch contains no `hypatiax/data/results/**` outputs, historical checkpoints, logs, archive material, or manuscript edits.
+
+- Promotion commit: `eb860b2da97a0787484c943f7a4dad672d371ac2`.
+- Draft PR #100: https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/100.
+- PR head is based directly on master; master has not been modified.
+- The candidate GitHub Actions workflows were deliberately not copied. The main experiment workflow has a broad dispatch surface and permissions to commit/push generated baseline artifacts; it needs separate review before being enabled on the promotion branch. The smoke script itself is included.
+- Some selected candidate files are byte-identical to master and therefore produce no diff. The resulting PR reports 67 changed files, 3,133 additions and 601 deletions.
+
+### Validation and merge status
+
+PR #100 is intentionally **draft / not approved to merge**. The 593-pass test and smoke evidence belongs to candidate SHA `f4336f1...`, not promotion commit `eb860b2...`. The promotion branch must independently pass the full suite and relevant smoke/audit gates. The environment lock, Julia/PySR resolution, live-LLM preflight, and workflow dispatch review remain outstanding. No new experiment has been launched and no manuscript claims have been changed.
+
+**Branch-management decision:** PR #100 is the selective integration vehicle. Keep PR #95, PR #92, `audit-main`, `sync/hypatiax-package-to-master`, and `integration/ci-workflow-fixes` unmerged until their unique changes are either explicitly ported and tested or deliberately retired. Do not merge the broad branches just to reduce the open-PR count.
