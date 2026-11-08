@@ -92,6 +92,16 @@ jobs:
           if missing:
               sys.exit("MISSING DEPENDENCIES:\n  " + "\n  ".join(missing))
           PY
+      - name: Record exact Python test environment
+        run: |
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "python=$(python -VV 2>&1)"
+            echo "platform=$(uname -a)"
+            echo "pip=$(python -m pip --version)"
+            echo
+            python -m pip freeze --all
+          } > environment-provenance.txt
       - name: Run complete test suite (no LLM API key supplied)
         run: |
           python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
@@ -105,5 +115,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: promotion-pytest-report
-          path: pytest-report.xml
+          path: |\n            pytest-report.xml\n            environment-provenance.txt
           retention-days: 30
