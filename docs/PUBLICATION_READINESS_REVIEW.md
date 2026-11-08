@@ -302,3 +302,47 @@ The tracked DeFi benchmark code and main-paper source clarify the correction mec
 **Interpretation:** the code correction is an internal-consistency/provenance filter, not a same-formula validation of the hybrid's own LLM output. A Pure-LLM success flag from an independent LLM call cannot establish that the hybrid's independently generated formula was the same or valid. Conversely, a Pure-LLM failure does not prove the hybrid's own formula failed. The 23 cases should therefore be described as **unverifiable from the stored records**, not as confirmed hybrid formula failures or as successes rescued by the Pure-LLM arm.
 
 **B3 disposition:** the report's requested rewrite is warranted. Keep the conservative corrected count only if it is explicitly labelled as a decision-aligned corroboration proxy, not an independently validated hybrid score. Remove “bug” as a causal label unless the paper narrows it to a bookkeeping/attribution inconsistency; remove “masked failures” and the tier-by-tier tie as a scientific performance finding. The decisive remedy remains to persist the hybrid formula, its predictions, decision provenance, and exact data split, then re-score that formula on the same split used for the hybrid result.
+
+
+## 13. Nguyen-12 reconciliation — R2 resolved at the result-file level
+
+The apparent conflict between the 51/60 aggregate and the N-12 gate-abort note is resolved: **the gate-abort statement is specific to equation N-12, not to the entire 12-equation suite.** The five seed result files independently support both statements.
+
+### Recomputed directly from the five result JSONs
+
+| Seed | HypatiaX recovered | PySR-only recovered | HypatiaX N-12 | PySR-only N-12 |
+|---:|---:|---:|---|---|
+| 42 | 10/12 | 10/12 | gate abort | passes |
+| 99 | 10/12 | 9/12 | gate abort | passes |
+| 123 | 11/12 | 10/12 | gate abort | passes |
+| 777 | 10/12 | 12/12 | gate abort | passes |
+| 2024 | 10/12 | 8/12 | gate abort | passes |
+| **Total** | **51/60** | **49/60** | **0/5** | **5/5** |
+
+The recovery criterion is `evaluation.r2_extrap >= 0.9999`, matching the manuscript's table note. The five files carry the same run configuration: 1,000 PySR iterations, 30 populations, 1,100-second timeout, LLM temperature 0.25, eight LLM candidates, LLM gate minimum R² 0.95, `llm_require_valid_guess=true`, sparse-seed mode off, run index 1.
+
+For HypatiaX N-12 in each file:
+- `llm_gate_failed=true`;
+- stored expression is `FAILED`;
+- `evaluation.r2_extrap` is null;
+- elapsed time is approximately 10–13 microseconds, consistent with abort before PySR search.
+
+PySR-only's N-12 result passes the 0.9999 threshold in all five files. The per-seed totals and per-equation pattern therefore agree with the main-paper table and the October PDF audit's arithmetic check.
+
+### Exact result files inspected
+
+- `hypatiax/data/results/extrapolation/exp3_nguyen12_seed42.json` — blob `a3c7e4e959600435c7dc385fd8f289b954a95372`
+- `hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed99_nshards01.json` — blob `033934812df4f471556181b5c4a7dca0d6a7fb80`
+- `hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed123_nshards02.json` — blob `c39b9b6c7f03deae674706ab0c42a04952c9604d`
+- `hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed777_nshards03.json` — blob `5a4893fb09fb9d5f4c68e28ab8c3eab98e2575f1`
+- `hypatiax/data/results/extrapolation/multi_seed/exp3_nguyen12_seed2024_nshards04.json` — blob `23e151f668c01f4995f1925bcb8e99aa6801fb9a`
+
+### Manuscript wording correction
+
+No result rerun is required to resolve this particular ambiguity. Make the scope explicit wherever the note appears:
+
+> Across five seeds, HypatiaX recovers 51/60 equation–seed cases versus 49/60 for PySR-only. However, HypatiaX's LLM warm-start gate aborts before search on N-12 in all five seeds, while PySR-only recovers N-12 in all five. The five-seed aggregate is descriptive and has not been tested for statistical significance.
+
+Do not say that HypatiaX fails the entire Nguyen-12 suite. Do not imply that the 51/60 aggregate demonstrates a statistically significant advantage. The N-12 gate failure is a genuine, repeatable limitation and should remain visible.
+
+**R2 disposition:** result-file arithmetic and the N-12-specific gate behavior are reconciled. Remaining release work is to ensure the manuscript, supplement, and provenance manifest all cite these exact five files and the same configuration.
