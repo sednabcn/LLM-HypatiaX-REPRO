@@ -237,10 +237,26 @@ for stage in "${STAGES[@]}"; do
     python3 - <<'PY' > "$RESULTS_DIR/python-runtime-versions.txt"
 from importlib.metadata import version
 import platform, sys
+if sys.version_info[:2] != (3, 12):
+    raise SystemExit(f"fresh rerun requires Python 3.12.x, got {sys.version}")
 print("python", sys.version)
 print("platform", platform.platform())
-for package in ("pysr", "anthropic", "torch", "numpy", "scipy", "sympy", "pandas", "scikit-learn", "PyYAML"):
-    print(package, version(package))
+expected = {
+    "pysr": "2.0.0a1",
+    "anthropic": "0.73.0",
+    "torch": "2.12.1+cpu",
+    "numpy": "2.3.5",
+    "scipy": "1.16.3",
+    "sympy": "1.14.0",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.7.2",
+    "PyYAML": "6.0.3",
+}
+for package, wanted in expected.items():
+    actual = version(package)
+    print(package, actual)
+    if actual != wanted:
+        raise SystemExit(f"{package} version mismatch: expected {wanted}, got {actual}")
 PY
     if ! command -v julia >/dev/null 2>&1; then
       echo "ERROR: Julia is not on PATH; the fresh run requires Julia 1.11.x" >&2
