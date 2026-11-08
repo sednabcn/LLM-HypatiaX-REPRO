@@ -142,6 +142,10 @@ run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
   if [[ " ${_DEFERRED_STEPS} " == *" ${step} "* && "$ONLY_STEP" != "$step" && "${RUN_DEFERRED:-0}" != "1" ]]; then
+    # Still announce the step (banner marked DEFERRED) so the dry-run contract in
+    # ci_runner/run_smoke_all.sh ("every step in _STEP_ORDER is announced") stays strict.
+    echo ""
+    log "=== STEP: ${step} -- ${desc} [DEFERRED: not run] ==="
     log "--- SKIP (deferred by owner decision, L18/L28): ${step}; run with --step ${step} or RUN_DEFERRED=1 ---"
     return 0
   fi
