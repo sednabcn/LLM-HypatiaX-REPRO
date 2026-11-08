@@ -5,6 +5,7 @@ feature matrix onto that direction, and holds out the upper 60% of PC1 scores.
 The model seed is fixed while bootstrap seeds vary. Because all feature rows
 are projected and ranked, this split design remains transductive.
 """
+import hashlib
 import json
 import os
 import random
@@ -48,6 +49,16 @@ def set_all_seeds(seed):
         pass
 
 
+def partition_fingerprint(train_idx, test_idx):
+    """Hash partition membership independent of ordering within each side."""
+    membership = {
+        "train": np.sort(np.asarray(train_idx, dtype=np.int64)).tolist(),
+        "test": np.sort(np.asarray(test_idx, dtype=np.int64)).tolist(),
+    }
+    payload = json.dumps(membership, separators=(",", ":"), sort_keys=True)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def bootstrap_pc1_partition(X, seed, test_size, feature_names):
     """Estimate PC1 on a row bootstrap, then rank all rows on that axis."""
     rng = np.random.default_rng(seed)
@@ -73,6 +84,7 @@ def bootstrap_pc1_partition(X, seed, test_size, feature_names):
         "bootstrap_unique_rows": int(len(np.unique(bootstrap_idx))),
         "n_train": int(len(train_idx)),
         "n_test": int(len(test_idx)),
+        "partition_fingerprint": partition_fingerprint(train_idx, test_idx),
         "pc1_explained_variance_ratio_on_bootstrap": float(pca.explained_variance_ratio_[0]),
         "pc1_loadings": {name: float(value) for name, value in zip(feature_names, component)},
         "pc1_score_min": float(np.min(scores)),
@@ -139,10 +151,12 @@ def main():
         })
         print(
             f"bootstrap_pca_seed={bootstrap_seed} model={MODEL_SEED} "
+            f"partition={split_meta['partition_fingerprint'][:12]} "
             f"decision={result.get('decision')} tail_test_r2={test_r2:.5f}"
         )
 
     scores = [row["tail_test_r2"] for row in records]
+    unique_fingerprints = {row["partition_fingerprint"] for row in records}
     output = {
         "report_type": "portfolio_variance_bootstrap_pca_partition_validation",
         "schema_version": 1,
@@ -176,10 +190,17 @@ def main():
                 "tail_test_r2": "Test R2 from the selected route in test_r2_source.",
                 "test_r2_source": "Selected benchmark route, e.g. nn, llm, or ensemble.",
             },
+            "partition_fingerprint_semantics": (
+                "SHA-256 of sorted train and test row indices; equal fingerprints "
+                "mean identical partition membership, regardless of index order."
+            },
         },
         "results": records,
         "aggregate": {
-            "n_partitions": len(records),
+            "n_bootstrap_replicates": len(records),
+            "n_unique_partitions": len(unique_fingerprints),
+            "n_duplicate_partition_replicates": len(records) - len(unique_fingerprints),
+            "all_replicates_same_partition": len(unique_fingerprints) == 1,
             "n_success_tail_test_r2_gt_0_99": sum(
                 row["success_tail_test_r2_gt_0_99"] for row in records
             ),
@@ -190,14 +211,15 @@ def main():
             "tail_test_r2_sample_std": float(np.std(scores, ddof=1)) if len(scores) > 1 else 0.0,
             "tail_test_r2_min": float(np.min(scores)),
             "tail_test_r2_max": float(np.max(scores)),
-            "unique_partition_count": len({
-                tuple(sorted((row["bootstrap_seed"], row["n_train"], row["n_test"])))
-                for row in records
-            }),
+
         },
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(output, indent=2, allow_nan=False) + "\n")
+    print(
+        f"Unique partitions: {len(unique_fingerprints)}/{len(records)} "
+        f"(duplicate replicates: {len(records) - len(unique_fingerprints)})"
+    )
     print(f"Saved bootstrap PCA validation: {OUTPUT}")
 
 
