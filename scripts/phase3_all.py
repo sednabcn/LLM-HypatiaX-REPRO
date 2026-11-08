@@ -28,6 +28,7 @@ CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned 
 
 Exit codes: 0 closed, 1 not closed / preflight failed, 2 bad usage.
 """
+import glob
 import os
 import sys
 
