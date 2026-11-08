@@ -447,6 +447,7 @@ run portfolio_bootstrap_pca "Portfolio variance bootstrap-estimated PCA tail val
 
 run portfolio_feature_ranking "Portfolio VaR feature-ranking diagnostic (PC1 vs individual features)" bash -c "
   cd '${REPO_ROOT}'
+  set -euo pipefail
   _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/feature_ranking_diagnostic'
   mkdir -p \"\${_OUT_DIR}\"
   FEATURE_RANKING_DIAGNOSTIC_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_feature_ranking_diagnostic.json\" \
@@ -458,6 +459,7 @@ run portfolio_feature_ranking "Portfolio VaR feature-ranking diagnostic (PC1 vs 
 
 run portfolio_pca_tail_error "Portfolio VaR PCA-tail NN prediction-error diagnostic" bash -c "
   cd '${REPO_ROOT}'
+  set -euo pipefail
   _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/pca_tail_error_diagnostic'
   mkdir -p \"\${_OUT_DIR}\"
   PCA_ERROR_DIAGNOSTIC_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_pca_tail_error_diagnostic.json\" \
