@@ -435,3 +435,14 @@ The Supplement B source was checked against the current reproduction repository.
 **The sentence should be removed from the journal supplement now.** It is ambiguous about whether “synthetic versions” are simulated data, fabricated table replicas, or test fixtures, and “matching reported statistics exactly” is particularly damaging to reviewer confidence.
 
 Before release, inspect results.zip and the actual DEV/release bundle; inventory every synthetic or fixture file; trace every table and figure to its source; and record whether any synthetic data entered reported results. If synthetic fixtures are retained for software tests, place them in a clearly labelled test-fixture directory and state that they are not used in reported experiments. Do not claim that no synthetic material ships until the binary archive and intended release bundle have been checked.
+
+
+### DEV-repository cross-check
+
+The supplementary source points to the public repository sednabcn/LLM-HypatiaX-DEV; its master branch was inspected as well.
+
+- Exact-name searches in DEV also found none of the listed S1–S8 data files. DEV's audit_report.md specifically records S3_validation_logs.json as a missing path.
+- DEV's paper/post_submission_report.tex states that synthetic records were used for table-generator layout/regression testing only and that no synthetic value entered the paper. This is useful corroboration for the generator-test fixtures, but it does not explain the separate supplement sentence claiming that full synthetic and real S1–S8 material is provided.
+- DEV contains the source PDFs and TeX files, generated paper tables, and a 4.4 MB submission archive at submissions/HypatiaX_JMLR_submission.zip (blob SHA fd8ec1eb6b7dbaaf5afcba70bcb179a5e2a4dd8c). The archive is binary and its contents were not inspected in this pass.
+
+**Updated B1 assessment:** the evidence now supports that synthetic records were used for generator regression tests and that the post-submission audit says no synthetic value entered the paper. The S1–S8 files advertised by the supplement are nevertheless absent from both searchable repository trees, and the actual submission ZIP remains uninspected. Remove the ambiguous sentence, then inspect the ZIP before making a definitive statement about what ships. Do not label the paper's numerical results synthetic on the basis of test fixtures alone.
