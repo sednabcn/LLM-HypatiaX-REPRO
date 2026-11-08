@@ -48,9 +48,12 @@ Usage:
   bash ci_runner/run_fresh_experiments.sh --dry-run
   RESULTS_DIR=/absolute/path/outside/repo bash ci_runner/run_fresh_experiments.sh
 
-The real run requires the experiment dependencies, Julia/PySR, and
-ANTHROPIC_API_KEY. RESULTS_DIR must be a new or empty directory outside the
-repository. Outputs and logs are kept there; nothing is committed.
+The real run requires the pinned experiment dependencies, Julia 1.11/PySR,
+and ANTHROPIC_API_KEY. It performs one live LLM API preflight call and a tiny
+synthetic PySR warm-up before benchmarks; neither is counted as experiment data.
+RESULTS_DIR must be a new or empty directory outside the repository. Outputs,
+logs, Python freeze, Julia status, and Julia manifests are kept there; nothing
+is committed.
 
 Historical comparison stages (validate, qualify, audit_paper, audit_*) are
 intentionally excluded. Pure-LLM Phase 2 and Phase 3 are also deferred until their
