@@ -932,7 +932,7 @@ jobs:
             echo "ANTHROPIC_API_KEY: not required for this offline diagnostic"
           else
             [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
-            echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)
+            echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
           fi
           echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
           echo "FEYNMAN_SAMPLES:   ${FEYNMAN_SAMPLES}"
@@ -1242,7 +1242,7 @@ jobs:
           else
             export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
             [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
-            echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)
+            echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
           fi
 
           if [[ "${DRY_RUN}" == "true" ]]; then
