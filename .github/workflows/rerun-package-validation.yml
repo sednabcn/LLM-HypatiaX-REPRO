@@ -86,6 +86,9 @@ jobs:
               with open(path, encoding="utf-8") as stream:
                   yaml.safe_load(stream)
               print("ok", path)
+          import tomllib
+          project = tomllib.load(open("pyproject.toml", "rb"))
+          assert project["project"]["requires-python"] == ">=3.12"
           cfg = yaml.safe_load(open("config/fresh_rerun.yaml", encoding="utf-8"))
           assert cfg["llm_temperature"] == 0.25
           assert cfg["llm_model"] == "claude-sonnet-4-6"
