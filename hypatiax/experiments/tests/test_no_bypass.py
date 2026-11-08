@@ -18,7 +18,6 @@ def test_hardcoded_formula_is_noop(monkeypatch):
         assert b._try_hardcoded_formula(d, d.lower(), v, {}) is None
 
 def test_no_bypass_fingerprints():
-    src_path = pathlib.Path(__file__).resolve().parents[3] / "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py"
-    src = src_path.read_text(encoding="utf-8")
+    src = pathlib.Path("hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py").read_text()
     for s in ("pure_llm_hardcoded", "exact formula bypass", "_make_formula_dict", "_ols_"):
         assert s not in src, s

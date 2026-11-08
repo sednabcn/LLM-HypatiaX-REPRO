@@ -115,7 +115,11 @@ except ImportError:
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
-# PySRRegressor is imported lazily inside SymbolicEngine.discover().
+# Lazy loading for PySR
+try:
+    from pysr import PySR
+except ImportError:
+    PySR = None
 
 M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
 

@@ -2,8 +2,6 @@
 and record llm provenance. Static + behavioural, no engine/API needed."""
 import ast, pathlib, re
 
-import pytest
-
 SRC = pathlib.Path(__file__).resolve().parents[1] / "benchmarks" / "exp1_ablation.py"
 
 
@@ -59,17 +57,12 @@ def test_extract_eval_is_decision_aware():
 def test_single_temperature_setting_is_wired():
     """Audit C1: 0.25 is set once per entry point and read from LLM_TEMPERATURE."""
     root = SRC.parents[3]
-    workflow = root / ".github/workflows/ci_runner_repro.yml"
-    run_all = root / "run_all.sh"
-    repro_config = root / "config/repro.yaml"
-    if not all(path.is_file() for path in (workflow, run_all, repro_config)):
-        pytest.skip("reproduction workflow, run_all.sh, and config are not included in this source archive")
-    wf = workflow.read_text(encoding="utf-8", errors="replace")
+    wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
     assert 'LLM_TEMPERATURE:  "0.25"' in wf and 'LLM_MODEL:        "claude-sonnet-4-6"' in wf
-    sh = run_all.read_text(encoding="utf-8", errors="replace")
+    sh = (root / "run_all.sh").read_text(encoding="utf-8", errors="replace")
     assert 'export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in sh
     assert "--temperature 0.25" not in sh and sh.count("LLM_TEMPERATURE:-0.25") >= 3
-    assert re.search(r"^llm_temperature:\s*0\.25", repro_config.read_text(encoding="utf-8"), re.M)
+    assert re.search(r"^llm_temperature:\s*0\.25", (root / "config/repro.yaml").read_text(encoding="utf-8"), re.M)
     for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
         assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
 

@@ -15,7 +15,6 @@ for _root in (_here.parent, *_here.parents):
 @pytest.fixture()
 def mod(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    monkeypatch.delenv("HYPATIAX_LLM_MODEL", raising=False)
     for k in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_ALLOW_LEGACY"):
         monkeypatch.delenv(k, raising=False)
     stub = types.ModuleType("hypatiax.protocols.experiment_protocol_defi")

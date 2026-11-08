@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# audit: ignore[F1] cleanup/migration utility, writes no new result rows
 """Flag stored HybridSystemLLMNN (M4) rows that report a score but no formula.
 
     python scripts/mark_m4_unverified.py            # dry run: count rows/files
