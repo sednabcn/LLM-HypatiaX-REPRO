@@ -2242,7 +2242,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
-    --temperature 0.25 \
+    --temperature "$LLM_TEMPERATURE" \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || _EXP3_RC=$?
   if [ "$_EXP3_RC" -ne 0 ]; then
@@ -2323,7 +2323,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
-      --temperature 0.25 \
+      --temperature ${LLM_TEMPERATURE} \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
       || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done
