@@ -15,6 +15,8 @@ on:
           - exp1b
           - exp1b_seeds
           - portfolio
+          - portfolio_random_holdout
+          - portfolio_bootstrap_pca
 #         - exp1c
           - exp1_ablation
           - exp1_five
@@ -46,6 +48,12 @@ on:
         description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
+
+      pca_portfolio_sweep:
+        description: "portfolio experiment only: opt in to the transductive raw-feature PC1 40/60 split. Default false preserves the historical first-feature split."
+        required: false
+        type: boolean
+        default: false
 
       seeds:
         description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default"
@@ -123,6 +131,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
+  PCA_PORTFOLIO_SWEEP: "${{ github.event.inputs.pca_portfolio_sweep || 'false' }}"
   PYSR_POPULATION:     "100"
   PYSR_TOURNAMENT_SIZE: "3"
   PYSR_CROSSOVER:      "0.9"
@@ -173,10 +182,11 @@ jobs:
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
           CLEAN_RERUN:        ${{ github.event.inputs.clean_llm_rerun }}
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
+          PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+          VALID_IDS="exp1 exp1b exp1b_seeds portfolio portfolio_random_holdout portfolio_bootstrap_pca exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -217,7 +227,8 @@ jobs:
               -f dry_run="$DRY_RUN" \
               -f force_rerun="$FORCE_RERUN" \
               -f clean_llm_rerun="${CLEAN_RERUN:-false}" \
-              -f sparse_seed="${SPARSE_SEED_IN:-fallback}"
+              -f sparse_seed="${SPARSE_SEED_IN:-fallback}" \
+              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}"
           done
 
   pca_runner:
@@ -303,6 +314,20 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/15"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
+              ;;
+
+            portfolio_random_holdout)
+              SCRIPT="hypatiax/experiments/benchmarks/portfolio_variance_partition_validation.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="portfolio_variance_audit/random_holdout_validation"
+              DEFAULT_SEEDS="${SEEDS_IN:-11,23,42,77,101}"
+              ;;
+
+            portfolio_bootstrap_pca)
+              SCRIPT="hypatiax/experiments/benchmarks/portfolio_variance_bootstrap_pca_validation.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="portfolio_variance_audit/bootstrap_pca_validation"
+              DEFAULT_SEEDS="${SEEDS_IN:-11,23,42,77,101}"
               ;;
 
             portfolio)
@@ -531,6 +556,8 @@ jobs:
               "exp1":               1,
               "exp1b":              5,
               "portfolio":          5,   # one shard per seed, same rule as exp1b
+              "portfolio_random_holdout": 1, # five partitions are evaluated inside one validation runner
+              "portfolio_bootstrap_pca":  1, # bootstrap replicates are evaluated inside one validation runner
               "exp1b_seeds":        4,   # documented default; enforced below as one shard per seed
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
@@ -633,6 +660,8 @@ jobs:
               "exp1":              DEFI_TASKS,
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio":         [f"portfolio_seed{s}" for s in SEEDS],
+              "portfolio_random_holdout": ["validation"],
+              "portfolio_bootstrap_pca":  ["validation"],
               # seed-major order so the block partition gives exactly one seed per shard
               "exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
@@ -1620,50 +1649,10 @@ jobs:
           _SHARD_SEEDS_LIST="$(echo "${SHARD_IDS:-[]}" | grep -oE '_seed[0-9]+' | sed 's/_seed//' | sort -u | tr '\n' ' ' || true)"
 
           _extrap_dest="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-          if [[ "${EXP:-}" == "exp1_ablation" ]]; then
-            echo "Store results: skipping store-prune for exp1_ablation (committed master checkpoint/results must survive shard runs)."
-          elif [[ "$(realpath "${DEST}" 2>/dev/null || echo "${DEST}")" != "$(realpath "${_extrap_dest}" 2>/dev/null || echo "${_extrap_dest}")" ]]; then
-            RUN_START_MARKER="${RESULTS_DIR}/.run_start_marker_shard${SHARD_INDEX}"
-            if [[ -f "${RUN_START_MARKER}" ]]; then
-              RUN_START_EPOCH=$(stat -c %Y "${RUN_START_MARKER}" 2>/dev/null || stat -f %m "${RUN_START_MARKER}" 2>/dev/null || echo 0)
-            else
-              echo "  store prune: WARNING - run start marker not found (${RUN_START_MARKER}); treating all files as prunable by git status only."
-              RUN_START_EPOCH=0
-            fi
-            pruned_store=0
-            while IFS= read -r f; do
-              [[ -f "$f" ]] || continue
-              fname=$(basename "$f")
-              [[ "$fname" == _merged* || "$fname" == _stats* || "$fname" == _checkpoint* ]] && continue
-              [[ "$fname" =~ _shard[0-9]+\.(json|csv)$ ]] && continue
-              if [[ "${EXP:-}" == "exp1b_seeds" || "${EXP:-}" == "exp1_pca_seeds" || "${EXP:-}" == "portfolio" ]]; then
-                # only ever prune THIS shard's own seed: a rerun of one seed must not delete
-                # the other seeds' committed results from multi-seeds/
-                _mine=false
-                for _s in ${_SHARD_SEEDS_LIST}; do
-                  [[ "$fname" == *seed${_s}[!0-9]* ]] && _mine=true
-                done
-                if [[ "${_mine}" != "true" ]]; then
-                  echo "  store prune: SKIP (exp1b_seeds: not this shard's seed): $f"
-                  continue
-                fi
-              fi
-              f_mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null || echo 0)
-              if [[ "$f_mtime" -ge "$RUN_START_EPOCH" ]]; then
-                echo "  store prune: SKIP (written this run, mtime >= run-start marker): $f"
-                continue
-              fi
-              if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
-                echo "  store prune: removing stale committed file: $f"
-                git rm --cached --quiet "$f" 2>/dev/null || true
-                rm -f "$f"
-                pruned_store=$((pruned_store + 1))
-              fi
-            done < <(find "${DEST}" -maxdepth 1 -type f \( -name "*.json" -o -name "*.csv" \) 2>/dev/null)
-            [[ $pruned_store -gt 0 ]] && echo "Store results: pruned ${pruned_store} stale committed file(s) from ${DEST}" || true
-          else
-            echo "Store results: skipping store-prune for exp2_extrap dir (protocol_core_extrap_* and benchmark_results_extrap.json must not be pruned)."
-          fi
+          # Result directories are append/replace-only by default. Never remove committed
+          # JSON/CSV results based on mtimes: resumed shards may skip older outputs, and
+          # absence from this runner is not evidence that a committed result is stale.
+          echo "Store results: destructive stale-result pruning disabled for ${DEST}."
 
           copied=0
           while IFS= read -r f; do
@@ -1677,6 +1666,12 @@ jobs:
               dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
             fi
             if [[ -e "$dest_f" ]]; then
+              if [[ "${EXP:-}" == "exp1b" && "$fname" =~ ^portfolio_variance_defi_seed_sweep_seed[0-9]+\.json$ ]]; then
+                echo "  REPLACE: refreshing tracked exp1b per-seed portfolio artifact ${fname}"
+                cp -f "$f" "${dest_f}"
+                copied=$((copied + 1))
+                continue
+              fi
               if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                 echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
                 continue
@@ -1713,6 +1708,12 @@ jobs:
                   dest_f="${DEST}/${stem}_shard${SHARD_INDEX}.${ext}"
                 fi
                 if [[ -e "$dest_f" ]]; then
+                  if [[ "${EXP:-}" == "exp1b" && "$fname" =~ ^portfolio_variance_defi_seed_sweep_seed[0-9]+\.json$ ]]; then
+                    echo "  REPLACE: refreshing tracked exp1b per-seed portfolio artifact ${fname}"
+                    cp -f "$f" "${dest_f}"
+                    pva_copied=$((pva_copied + 1))
+                    continue
+                  fi
                   if git ls-files --error-unmatch "${dest_f}" >/dev/null 2>&1; then
                     echo "  SKIP: ${fname} is git-tracked in dest — committed prior result, skipping."
                     continue
@@ -2693,7 +2694,7 @@ jobs:
           retention-days: 30
 
       - name: Commit and push shard results to repo
-        if: always()
+        if: ${{ success() }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -2812,13 +2813,9 @@ jobs:
               fi
             fi
 
-            # exp1_ablation: a shard must only ADD/MODIFY its own files.  With the default
-            # `git add <dir>` the shard also stages DELETIONS of every committed file that is
-            # missing in its runner (clean_llm_rerun deletes *checkpoint* files there), which
-            # wiped other shards' checkpoints and the committed master from the repo.
-            ADD_FLAGS=(-f)
-            [[ "${EXP}" == "exp1_ablation" ]] && ADD_FLAGS+=(--ignore-removal)
-            git add "${ADD_FLAGS[@]}" "${TARGET}"
+            # Shards may publish additions and modifications only. A file absent from
+            # this runner is not an instruction to delete its committed counterpart.
+            git add -f --ignore-removal "${TARGET}"
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2899,7 +2896,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: always()
+        if: ${{ success() }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3190,7 +3187,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp2.outputs.already_done != 'true'
         env:
@@ -3352,7 +3349,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1.outputs.already_done != 'true'
         env:
@@ -3512,7 +3509,7 @@ jobs:
 
       - name: Commit and push results
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true' &&
           steps.check_exp1b.outputs.already_done != 'true'
         env:
@@ -4184,7 +4181,7 @@ jobs:
 
       - name: Commit and push corrected baseline
         if: |
-          always() &&
+          success() &&
           github.event.inputs.dry_run != 'true'
         env:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}

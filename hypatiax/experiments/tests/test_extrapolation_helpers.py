@@ -231,3 +231,117 @@ class TestGetTestCases:
             assert split_type in ("high", "low"), (
                 f"case {case['name']!r} has invalid split_type={split_type!r}"
             )
+
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Portfolio PCA split protocol — opt-in audit metadata and exact case identity
+# ─────────────────────────────────────────────────────────────────────────
+
+class TestPortfolioPcaSplitProtocol:
+    def test_pca_split_keeps_feature_target_rows_aligned_and_reports_metadata(self):
+        from hypatiax.tools.utils.pca_split_utils import pca_directed_split
+
+        n = 100
+        X = np.column_stack([np.linspace(1000, 5000, n), np.linspace(-1, 1, n)])
+        y = np.arange(n) * 7
+        X_train, X_test, y_train, y_test, audit = pca_directed_split(
+            X, y, test_size=0.6, random_state=42,
+            feature_names=["notional", "correlation"], return_metadata=True,
+        )
+
+        assert len(X_train) == 40
+        assert len(X_test) == 60
+        # Targets encode original row positions; reconstruct them from the first feature.
+        train_rows = np.rint((X_train[:, 0] - 1000) * 99 / 4000).astype(int)
+        test_rows = np.rint((X_test[:, 0] - 1000) * 99 / 4000).astype(int)
+        np.testing.assert_array_equal(y_train, train_rows * 7)
+        np.testing.assert_array_equal(y_test, test_rows * 7)
+        assert audit["split_protocol"] == "pca_40_60_pc1"
+        assert audit["split_is_transductive"] is True
+        assert audit["feature_scaling"] == "none"
+        assert audit["n_train"] == 40 and audit["n_test"] == 60
+        assert set(audit["pc1_loadings"]) == {"notional", "correlation"}
+        assert audit["pc1_explained_variance_ratio"] > 0.99
+
+    def test_default_return_shape_remains_backward_compatible(self):
+        from hypatiax.tools.utils.pca_split_utils import pca_directed_split
+
+        X = np.arange(40, dtype=float).reshape(20, 2)
+        y = np.arange(20)
+        result = pca_directed_split(X, y, test_size=0.6, random_state=42)
+        assert len(result) == 4
+
+    def test_feature_name_count_is_validated_when_auditing(self):
+        from hypatiax.tools.utils.pca_split_utils import pca_directed_split
+
+        X = np.arange(40, dtype=float).reshape(20, 2)
+        y = np.arange(20)
+        with pytest.raises(ValueError, match="feature_names"):
+            pca_directed_split(
+                X, y, feature_names=["only_one"], return_metadata=True
+            )
+
+    def test_exact_case_identity_selects_portfolio_var_not_a_fuzzy_match(self):
+        from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
+
+        cases = [
+            {"domain": "risk_var", "name": "Annualised Portfolio tracking error"},
+            {"domain": "risk_var", "name": "Portfolio VaR for two correlated assets"},
+            {"domain": "risk", "name": "Portfolio VaR for two correlated assets"},
+        ]
+        index, selected = select_case_by_identity(
+            cases, "risk_var", "Portfolio VaR for two correlated assets"
+        )
+        assert index == 1
+        assert selected is cases[1]
+
+    def test_legacy_first_feature_split_is_preserved_and_not_transductive(self):
+        from hypatiax.tools.utils.pca_split_utils import first_feature_percentile_split
+
+        X = np.column_stack([np.arange(100, dtype=float), np.arange(100, dtype=float)[::-1]])
+        y = np.arange(100) * 5
+        X_train, y_train, X_test, y_test, audit = first_feature_percentile_split(
+            X, y, return_metadata=True
+        )
+
+        assert len(X_train) == 40 and len(X_test) == 60
+        assert X_train[:, 0].max() == 39
+        assert X_test[:, 0].min() == 40
+        np.testing.assert_array_equal(y_train, X_train[:, 0] * 5)
+        np.testing.assert_array_equal(y_test, X_test[:, 0] * 5)
+        assert audit["split_protocol"] == "first_feature_percentile_40_60"
+        assert audit["split_is_transductive"] is False
+
+    def test_protocol_contains_the_exact_portfolio_var_case(self):
+        from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
+        from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
+
+        protocol = DeFiExperimentProtocol()
+        rows = [
+            {
+                "domain": "risk_var",
+                "name": row[0],
+                "description": row[0],
+            }
+            for row in protocol.load_test_data("risk_var", num_samples=200)
+        ]
+        index, selected = select_case_by_identity(
+            rows, "risk_var", "Portfolio VaR for two correlated assets"
+        )
+        assert index >= 0
+        assert selected["name"] == "Portfolio VaR for two correlated assets"
+
+    def test_exact_case_identity_rejects_missing_or_duplicate_cases(self):
+        from hypatiax.tools.utils.pca_split_utils import select_case_by_identity
+
+        with pytest.raises(ValueError, match="found 0"):
+            select_case_by_identity([], "risk_var", "Portfolio VaR for two correlated assets")
+        duplicate = [
+            {"domain": "risk_var", "name": "Portfolio VaR for two correlated assets"},
+            {"domain": "risk_var", "name": "Portfolio VaR for two correlated assets"},
+        ]
+        with pytest.raises(ValueError, match="found 2"):
+            select_case_by_identity(
+                duplicate, "risk_var", "Portfolio VaR for two correlated assets"
+            )

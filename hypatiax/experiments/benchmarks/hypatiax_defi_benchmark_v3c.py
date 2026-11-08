@@ -352,28 +352,49 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # PySR timeout_in_seconds used in Experiments 1–3.
 
 
-def _augment_features(X: np.ndarray) -> np.ndarray:
+def _augment_features(
+    X: np.ndarray,
+    feature_schema: dict | None = None,
+    return_schema: bool = False,
+):
     """
-    Physics-informed feature augmentation for NN extrapolation (v3c2-fix4).
-    Adds log, sqrt, and ratio features — common in DeFi formula families
-    (exponential compounding, AMM sqrt, rational collateral ratios).
-    This gives the MLP structural hooks beyond raw linear inputs.
+    Physics-informed feature augmentation with a reusable train-derived schema.
+
+    When no schema is supplied, transformation eligibility is determined from
+    X (normally the training partition). Pass that schema when augmenting the
+    test partition so both matrices have identical columns without inspecting
+    test values to choose transformations.
     """
+    X = np.asarray(X, dtype=float)
+    if feature_schema is None:
+        log_columns = [bool(np.all(X[:, i] > 0)) for i in range(X.shape[1])]
+        sqrt_columns = [bool(np.all(X[:, i] >= 0)) for i in range(X.shape[1])]
+        feature_schema = {
+            "n_input_features": int(X.shape[1]),
+            "log_columns": log_columns,
+            "sqrt_columns": sqrt_columns,
+            "pairwise_ratios": bool(X.shape[1] == 2),
+        }
+    elif int(feature_schema["n_input_features"]) != X.shape[1]:
+        raise ValueError(
+            "Feature schema input dimension mismatch: "
+            f"expected {feature_schema['n_input_features']}, got {X.shape[1]}"
+        )
+
     cols = [X]
     eps = 1e-8
     for i in range(X.shape[1]):
-        xi = X[:, i]
-        # log-transform for positive columns (rates, prices, liquidity)
-        if np.all(xi > 0):
-            cols.append(np.log(xi + eps).reshape(-1, 1))
-        # sqrt for non-negative columns
-        if np.all(xi >= 0):
-            cols.append(np.sqrt(xi + eps).reshape(-1, 1))
-    # Pairwise ratios for 2-column inputs (common: collateral/borrowed, S/K)
-    if X.shape[1] == 2:
+        if feature_schema["log_columns"][i]:
+            cols.append(np.log(np.clip(X[:, i], eps, None) + eps).reshape(-1, 1))
+        if feature_schema["sqrt_columns"][i]:
+            # Clip tiny negative test values to zero only for the engineered
+            # sqrt feature; the original raw feature remains unchanged.
+            cols.append(np.sqrt(np.clip(X[:, i], 0.0, None) + eps).reshape(-1, 1))
+    if feature_schema["pairwise_ratios"]:
         cols.append((X[:, 0] / (X[:, 1] + eps)).reshape(-1, 1))
         cols.append((X[:, 1] / (X[:, 0] + eps)).reshape(-1, 1))
-    return np.hstack(cols)
+    augmented = np.hstack(cols)
+    return (augmented, feature_schema) if return_schema else augmented
 
 
 def _train_and_eval_nn(
@@ -399,8 +420,10 @@ def _train_and_eval_nn(
 
     # v3c2-fix4: augment features BEFORE scaling
     if augment:
-        X_train = _augment_features(X_train)
-        X_test  = _augment_features(X_test)
+        # Derive transformation eligibility from training data only, then
+        # reuse the same feature schema for the held-out test partition.
+        X_train, feature_schema = _augment_features(X_train, return_schema=True)
+        X_test = _augment_features(X_test, feature_schema=feature_schema)
 
     sx, sy = StandardScaler(), StandardScaler()
     Xtr = sx.fit_transform(X_train)

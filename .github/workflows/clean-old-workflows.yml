@@ -7,8 +7,13 @@ on:
       hours_threshold:
         description: 'Delete workflow runs older than this many hours'
         required: false
-        default: '72'
+        default: '2160'
         type: string
+      apply_deletions:
+        description: 'Actually delete eligible runs (manual dispatch only; scheduled runs are always dry-run)'
+        required: false
+        default: false
+        type: boolean
 
 env:
   HYPATIAX_DISABLE_HARDCODED: "1"
@@ -18,7 +23,7 @@ env:
 
 jobs:
   cleanup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       issues: write
       actions: write
@@ -27,7 +32,8 @@ jobs:
       - name: Cleanup Old Workflow Runs
         uses: actions/github-script@v8
         env:
-          HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '72' }}
+          HOURS_THRESHOLD: ${{ github.event.inputs.hours_threshold || '2160' }}
+          APPLY_DELETIONS: ${{ inputs.apply_deletions || false }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN}}
           script: |
@@ -35,13 +41,25 @@ jobs:
             const repo = context.repo.repo;
 
             // Configuration
-            const KEEP_RECENT_RUNS = 3;   // Keep only 3 runs per workflow MAX
-            const KEEP_HOURS = parseInt(process.env.HOURS_THRESHOLD || '72', 10);
-            const MAX_TOTAL_RUNS = 25;    // STRICT global limit
+            const rawHours = process.env.HOURS_THRESHOLD || '2160';
+            if (!/^\d+$/.test(rawHours)) throw new Error('hours_threshold must be numeric');
+            const KEEP_HOURS = Number(rawHours);
+            if (!Number.isSafeInteger(KEEP_HOURS) || KEEP_HOURS < 24 || KEEP_HOURS > 8760) throw new Error('hours_threshold must be an integer from 24 to 8760');
+            const APPLY_DELETIONS = context.eventName === 'workflow_dispatch' && process.env.APPLY_DELETIONS === 'true';
+            const PROTECTED_BRANCHES = new Set(['audit-master', 'audit-main', 'master']);
+            // Preserve scientific/reproducibility history regardless of age or branch.
+            // IDs are the current GitHub workflow IDs; name patterns are a fallback
+            // if a workflow is recreated and receives a new ID.
+            const PRESERVED_WORKFLOW_IDS = new Set([400368487, 315086159]);
+            const PRESERVED_WORKFLOW_NAME_PATTERNS = [
+              /phase\s*3\s*ablation/i,
+              /runner.*repro|repro.*runner/i
+            ];
             const MAX_PAGES = 30;
 
-            console.log('🧹 Starting ULTRA aggressive workflow cleanup...');
-            console.log(`Policy: STRICT limit of ${MAX_TOTAL_RUNS} runs total (max ${KEEP_RECENT_RUNS} per workflow)`);
+            console.log('🧹 Starting conservative workflow-run cleanup...');
+            console.log(`Mode: ${APPLY_DELETIONS ? 'APPLY' : 'DRY RUN (no runs will be deleted)'}`);
+            console.log('Preserving protected branches, experiment/repro workflows, failed runs, and all runs newer than the threshold');
             console.log(`Deleting runs older than ${KEEP_HOURS} hours`);
             console.log(`Repository: ${owner}/${repo}`);
             console.log('================================');
@@ -85,12 +103,19 @@ jobs:
                   allRunsAcrossWorkflows = allRunsAcrossWorkflows.concat(runsWithWorkflow);
                   console.log(`    📈 Total runs collected so far: ${allRunsAcrossWorkflows.length}`);
 
+                  // A short page is the final page. If page 30 is full, fail closed
+                  // rather than making deletion decisions from a truncated run list.
+                  if (runsPage.workflow_runs.length < 100) break;
+
                   page++;
                   await new Promise(resolve => setTimeout(resolve, 100));
                 } catch (error) {
                   console.log(`    ❌ Error fetching page ${page}: ${error.message}`);
-                  break;
+                  throw error;
                 }
+              }
+              if (page > MAX_PAGES) {
+                throw new Error(`Pagination exceeded the safety limit of ${MAX_PAGES} full pages; refusing to delete from an incomplete run list.`);
               }
 
               workflowCount = new Set(allRunsAcrossWorkflows.map(r => r.workflow_id)).size;
@@ -100,84 +125,44 @@ jobs:
               // Sort ALL runs by creation date (newest first)
               allRunsAcrossWorkflows.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-              // Apply policies
+              // Only old, completed successful runs on unprotected branches are eligible.
+              // Caps are not deletion criteria: they must never evict recent history.
               const runsToKeep = [];
               const runsToDelete = [];
-              const workflowRunCounts = {};
 
               for (const run of allRunsAcrossWorkflows) {
-                const runDate = new Date(run.created_at);
-                const workflowId = run.workflow_id;
-
-                if (!workflowRunCounts[workflowId]) {
-                  workflowRunCounts[workflowId] = 0;
-                }
-
-                const isWithinHours = runDate > cutoffDate;
-                const isWithinWorkflowLimit = workflowRunCounts[workflowId] < KEEP_RECENT_RUNS;
-                const isWithinGlobalLimit = runsToKeep.length < MAX_TOTAL_RUNS;
-
-                // Hours threshold is the PRIMARY filter.
-                // Only keep a run if it is within the hours window AND within both caps.
-                if (isWithinHours && isWithinWorkflowLimit && isWithinGlobalLimit) {
-                  runsToKeep.push(run);
-                  workflowRunCounts[workflowId]++;
-                } else {
-                  runsToDelete.push(run);
-                }
+                const oldEnough = new Date(run.created_at) <= cutoffDate;
+                const successful = run.status === 'completed' && run.conclusion === 'success';
+                const protectedBranch = PROTECTED_BRANCHES.has(run.head_branch);
+                const protectedWorkflow = PRESERVED_WORKFLOW_IDS.has(run.workflow_id) ||
+                  PRESERVED_WORKFLOW_NAME_PATTERNS.some(pattern => pattern.test(run.workflow_name || run.name || ''));
+                if (oldEnough && successful && !protectedBranch && !protectedWorkflow) runsToDelete.push(run);
+                else runsToKeep.push(run);
               }
 
-              console.log(`\n📊 Final decision:`);
-              console.log(`  📦 Will keep: ${runsToKeep.length} runs`);
-              console.log(`  🗑️  Will delete: ${runsToDelete.length} runs`);
-
-              // Group deletions by workflow for organised processing
-              const deletesByWorkflow = {};
-              for (const run of runsToDelete) {
-                if (!deletesByWorkflow[run.workflow_id]) {
-                  deletesByWorkflow[run.workflow_id] = [];
+              console.log(`\n📊 Will preserve: ${runsToKeep.length}; eligible: ${runsToDelete.length}`);
+              if (!APPLY_DELETIONS) {
+                console.log('🛡️ Dry-run only: no workflow runs will be deleted.');
+              } else {
+                const deletesByWorkflow = {};
+                for (const run of runsToDelete) {
+                  if (!deletesByWorkflow[run.workflow_id]) deletesByWorkflow[run.workflow_id] = [];
+                  deletesByWorkflow[run.workflow_id].push(run);
                 }
-                deletesByWorkflow[run.workflow_id].push(run);
-              }
-
-              for (const [workflowId, runs] of Object.entries(deletesByWorkflow)) {
-                const workflowName = runs[0].workflow_name;
-                console.log(`\n🗑️  Deleting ${runs.length} runs from: ${workflowName}`);
-
-                const BATCH_SIZE = 5;
-                let workflowDeleted = 0;
-
-                for (let i = 0; i < runs.length; i += BATCH_SIZE) {
-                  const batch = runs.slice(i, i + BATCH_SIZE);
-                  console.log(`    🗑️  Batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(runs.length/BATCH_SIZE)} (${batch.length} runs)`);
-
-                  const deletePromises = batch.map(async (run) => {
-                    try {
-                      await github.rest.actions.deleteWorkflowRun({
-                        owner,
-                        repo,
-                        run_id: run.id
-                      });
-                      return true;
-                    } catch (error) {
-                      console.log(`      ❌ Failed to delete run ${run.id}: ${error.message}`);
-                      return false;
-                    }
-                  });
-
-                  const results = await Promise.allSettled(deletePromises);
-                  const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
-                  workflowDeleted += successful;
-
-                  if (i + BATCH_SIZE < runs.length) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                for (const [workflowId, runs] of Object.entries(deletesByWorkflow)) {
+                  const workflowName = runs[0].workflow_name;
+                  console.log(`\nDeleting ${runs.length} old successful runs from ${workflowName}`);
+                  for (let i = 0; i < runs.length; i += 5) {
+                    const batch = runs.slice(i, i + 5);
+                    const results = await Promise.allSettled(batch.map(async run => {
+                      try { await github.rest.actions.deleteWorkflowRun({ owner, repo, run_id: run.id }); return true; }
+                      catch (error) { console.log(`Failed to delete run ${run.id}: ${error.message}`); return false; }
+                    }));
+                    totalDeleted += results.filter(r => r.status === 'fulfilled' && r.value).length;
+                    if (i + 5 < runs.length) await new Promise(resolve => setTimeout(resolve, 1000));
                   }
                 }
-
-                console.log(`  📊 Deleted ${workflowDeleted}/${runs.length} runs from ${workflowName}`);
-                totalDeleted += workflowDeleted;
               }
-
               totalKept = runsToKeep.length;
 
             } catch (error) {
@@ -186,7 +171,7 @@ jobs:
             }
 
             console.log('\n=================================');
-            console.log('🎉 Cleanup completed!');
+            console.log(APPLY_DELETIONS ? '🎉 Cleanup completed!' : '🔎 Dry-run completed; no runs were deleted.');
             console.log('📊 Total summary:');
             console.log(`  • Workflows processed: ${workflowCount}`);
             console.log(`  • Total runs processed: ${totalProcessed}`);
@@ -208,9 +193,11 @@ jobs:
                 `- **Runs deleted:** ${totalDeleted}`,
                 '',
                 '### Policy Applied',
-                `- Hours threshold: runs older than ${KEEP_HOURS} hours are deleted`,
-                `- Per-workflow limit: max ${KEEP_RECENT_RUNS} runs kept per workflow`,
-                `- Global limit: max ${MAX_TOTAL_RUNS} runs kept across all workflows`,
+                `- Mode: ${APPLY_DELETIONS ? 'apply' : 'dry-run'}`,
+                `- Eligible: completed successful runs older than ${KEEP_HOURS} hours on unprotected branches`,
+                '- Protected branches: master, audit-main, audit-master',
+                '- Preserved workflows: Phase 3 ablation and runner reproduction',
+                '- Failed, cancelled, queued, and in-progress runs are preserved',
                 '',
                 '### Status',
                 '✅ Cleanup completed successfully'

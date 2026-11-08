@@ -1,0 +1,86 @@
+{
+  "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
+  "schema_version": 1,
+  "generated_at": "2026-11-07T22:46:00Z",
+  "branch": "audit-master",
+  "case_identity": {
+    "domain": "risk_var",
+    "name": "Portfolio VaR for two correlated assets",
+    "protocol_index": 18,
+    "variables": [
+      "var_asset1",
+      "var_asset2",
+      "correlation"
+    ]
+  },
+  "sources": {
+    "pca_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42410055833",
+    "pca_aggregate": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_seed_aggregate.json",
+    "random_holdout_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42421397598",
+    "random_holdout_results": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_random_holdout_validation.json"
+  },
+  "experiments": {
+    "pca_directed_seed_sweep": {
+      "protocol": "pca_40_60_pc1",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "test_size": 0.6,
+      "model_seeds": [
+        42,
+        99,
+        123,
+        777,
+        2024
+      ],
+      "split_random_state": 42,
+      "feature_scaling": "none",
+      "pca_fit_scope": "all 200 feature rows before partitioning",
+      "split_is_transductive": true,
+      "pc1_explained_variance_ratio": 1,
+      "pc1_loadings": {
+        "var_asset1": 0.8574929254074083,
+        "var_asset2": 0.5144957552444459,
+        "correlation": 0.000026677557679341714
+      },
+      "n_success": 5,
+      "n_runs": 5,
+      "train_r2_mean": 1,
+      "far_r2_mean": 1,
+      "partition_independence": "All five runs share one fixed partition; varying model/experiment seed only."
+    },
+    "independent_random_holdout": {
+      "protocol": "independent_random_holdout_40_60",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "test_size": 0.6,
+      "partition_seeds": [
+        11,
+        23,
+        42,
+        77,
+        101
+      ],
+      "model_seed_fixed": 42,
+      "split_method": "shuffled row-index train_test_split",
+      "split_is_transductive": false,
+      "selected_test_score_route": "nn",
+      "n_partitions": 5,
+      "n_success_test_r2_gt_0_99": 5,
+      "success_rate_test_r2_gt_0_99": 1,
+      "test_r2_mean": 0.9997085530342801,
+      "test_r2_sample_std": 0.00012075792420443894,
+      "test_r2_min": 0.9995299487207652,
+      "test_r2_max": 0.999801792332363,
+      "llm_train_r2_semantics": "LLM formula training R2 only; NaN means unavailable/invalid and is not NN training R2.",
+      "partition_independence": "Five independent random partitions; model seed held fixed."
+    }
+  },
+  "comparison_rules": [
+    "Do not pool or average PCA far_r2 with random-holdout test_r2.",
+    "PCA results are five seed runs on one fixed transductive partition, not five independent partitions.",
+    "Random-holdout results measure interpolation/control, not PC1-directed far-range extrapolation.",
+    "Claims are limited to the selected Portfolio VaR case and tested configurations."
+  ]
+}

@@ -148,12 +148,12 @@ on:
       noise_levels:
         description: "Noise levels used (required for suppB; comma-separated)"
         required: false
-        default: "0.0,0.5,1.0,5.0,10.0"
+        default: "0.0,0.05,0.1,0.5,1.0"
 
       fail_on_incomplete:
         description: "Fail the job if any experiment has missing tasks"
         required: false
-        default: "false"
+        default: "true"
 
 permissions:
   contents: write  # write needed by qualify job to commit moved figures/tables
@@ -168,7 +168,7 @@ env:
   OUT_BASE: "hypatiax/data/results"
   # Default seeds / noise levels — overridden by workflow_dispatch inputs.
   SEEDS:        ${{ github.event.inputs.seeds        || '42,99,123,777,2024' }}
-  NOISE_LEVELS: ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+  NOISE_LEVELS: ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
 
 
 # ==============================================================================
@@ -338,7 +338,26 @@ jobs:
                       )
               data_files = list(set(data_files))  # deduplicate
 
-              present = len(data_files) > 0
+              # exp1b is complete only when every configured seed has both its
+              # own benchmark and portfolio artifact, and the shared seed-42
+              # benchmark baseline is present. A single arbitrary JSON is not
+              # sufficient evidence of a complete reproducibility run.
+              contract_missing = []
+              if exp_id == "exp1b":
+                  baseline = result_dir / "hypatiax_defi_benchmark_v3_results.json"
+                  if not baseline.is_file() or baseline.stat().st_size == 0:
+                      contract_missing.append(str(baseline.relative_to(OUT_BASE)))
+                  for seed in SEEDS:
+                      tag = "" if str(seed) == "42" else f"_seed{seed}"
+                      benchmark = result_dir / f"hypatiax_defi_benchmark_v3_results{tag}.json"
+                      portfolio = result_dir / f"portfolio_variance_defi_seed_sweep_seed{seed}.json"
+                      for required in (benchmark, portfolio):
+                          if not required.is_file() or required.stat().st_size == 0:
+                              contract_missing.append(str(required.relative_to(OUT_BASE)))
+                  if contract_missing:
+                      print(f"  ::error::exp1b artifact contract incomplete: {contract_missing}")
+
+              present = len(data_files) > 0 and not contract_missing
               valid   = present
               n_tasks = len(data_files)
 
@@ -420,7 +439,7 @@ jobs:
           EXPERIMENT:        ${{ github.event.inputs.experiment || 'all' }}
           SEEDS:             ${{ env.SEEDS }}
           NOISE_LEVELS:      ${{ env.NOISE_LEVELS }}
-          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'false' }}
+          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}
           OUT_BASE:          ${{ env.OUT_BASE }}
         run: |
           python3 - <<'PYEOF'

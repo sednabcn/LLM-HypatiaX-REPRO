@@ -91,7 +91,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -234,7 +234,8 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"WARNING: \${_T1} not found — skipping that half of gt_leak_guard.\"
+    echo \"::error::Required gt_leak_guard target missing: \${_T1}\"
+    _FAIL=1
   fi
 
   _T2='hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py'
@@ -245,7 +246,8 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo \"WARNING: \${_T2} not found — skipping that part of gt_leak_guard.\"
+    echo \"::error::Required gt_leak_guard target missing: \${_T2}\"
+    _FAIL=1
   fi
 
   _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
@@ -258,7 +260,8 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
       _FAIL=1
     fi
   else
-    echo 'WARNING: hybrid_system_nn_defi_domain.py not found — skipping that part of gt_leak_guard.'
+    echo '::error::Required gt_leak_guard target missing: hybrid_system_nn_defi_domain.py'
+    _FAIL=1
   fi
 
   if [[ \"\${_FAIL}\" == '1' ]]; then
@@ -268,6 +271,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
 "
 
 run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _DEFI_TARGET='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi'
   mkdir -p \"\${_DEFI_TARGET}\"
@@ -282,13 +286,14 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   cd '${ANALYSIS_DIR}'
   python3 statistical_analysis.py \
     2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
-  || echo 'WARNING: statistical_analysis.py exited non-zero — primary results already saved, continuing'
+
 
   echo '=== exp1 verification ==='
   find \"\${_DEFI_TARGET}\" -type f 2>/dev/null | sort || echo '  (directory empty)'
   COUNT_DEFI=\$(find \"\${_DEFI_TARGET}\" -name 'hypatiax_defi_benchmark_*results*.json' 2>/dev/null | wc -l)
   if [[ \"\${COUNT_DEFI}\" -eq 0 ]]; then
-    echo 'WARNING: exp1 produced no result JSON in canonical target — check log above.'
+    echo '::error::exp1 produced no result JSON in canonical target — check log above.'
+    exit 1
   else
     echo \"OK: \${COUNT_DEFI} result file(s) confirmed in \${_DEFI_TARGET}\"
   fi
@@ -296,6 +301,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
 "
 
 run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
@@ -308,18 +314,28 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   fi
 
   # FIX-exp1b-OUTPUT-DIR: write straight into the exp1b/portfolio result dir
-  # (comparison_results/noise-noiseless/defi), not into exp1's own
+  # (comparison_results/noise-noiseless/15), not into exp1's own
   # noiseless/defi dir. hypatiax_defi_benchmark_v3c.py supports --output-dir,
   # so pointing it at dest15 directly means the primary results never need a
   # post-hoc move — mirrors how exp1b_pca already uses --output-dir below.
-  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/defi'
+  dest15='${RESULTS_DIR}/comparison_results/noise-noiseless/15'
   mkdir -p \"\${dest15}\"
+  # Remove only this shard's expected seed output/checkpoint so stale files cannot pass.
+  IFS=',' read -r -a _SEEDS <<< \"\${_SHARD_SEEDS}\"
+  for _SEED in \"\${_SEEDS[@]}\"; do
+    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
+    rm -f \"\${dest15}/hypatiax_defi_benchmark_v3_checkpoint\${_TAG}.json\" \"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
+  done
 
-  DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
+  PYSR_SEED=\"\${_SEEDS[0]}\" DEFI_SEEDS=\"\${_SHARD_SEEDS}\" \
     python3 '${EXPERIMENTS_DIR}/hypatiax_defi_benchmark_v3c.py' \
       --output-dir \"\${dest15}\" \
-      --resume \
       2>&1 | tee '${RESULTS_DIR}'/exp1b_run.log
+  for _SEED in \"\${_SEEDS[@]}\"; do
+    _TAG=''; [[ \"\${_SEED}\" == '42' ]] || _TAG=\"_seed\${_SEED}\"
+    _BENCH=\"\${dest15}/hypatiax_defi_benchmark_v3_results\${_TAG}.json\"
+    [[ -s \"\${_BENCH}\" ]] || { echo \"::error::exp1b missing benchmark JSON for seed \${_SEED}\"; exit 1; }
+  done
 
   # FIX-exp1b-PORTFOLIO-RUN: run the portfolio sweep for THIS shard's seed(s) only.
   #  Before: gated on the benchmark JSON existing; passed RESULTS_DIR (the script ignores
@@ -333,6 +349,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   mkdir -p \"\${_PVA_DIR}\"
   _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
   _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
+  rm -f \"\${_PV_FILE}\"
   echo \"[exp1b] Running portfolio_variance_v3c2.py (Strategy A, sweep-only) for seed(s): \${_SHARD_SEEDS}\"
   (
     set -o pipefail
@@ -343,14 +360,12 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
     HYPATIAX_RESULTS_DIR=\"\${_PVA_DIR}\" \
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \
         2>&1 | tee -a '${RESULTS_DIR}'/exp1b_run.log
-  ) || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — see output above, continuing'
-  if [[ -s \"\${_PV_FILE}\" ]]; then
-    echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
-  else
-    echo \"::warning::exp1b: expected portfolio sweep file was not produced: \${_PV_FILE}\"
-    echo '         Strategy A needs torch, hypatiax, ANTHROPIC_API_KEY and an importable'
-    echo '         _hybrid_predict_and_eval; the import error is in the output above.'
+  )
+  if [[ ! -s \"\${_PV_FILE}\" ]]; then
+    echo \"::error::exp1b portfolio artifact missing or empty: \${_PV_FILE}\"
+    exit 1
   fi
+  echo \"[exp1b] OK portfolio sweep written: \${_PV_FILE}\"
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
 
@@ -379,7 +394,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
         dst=\"\${dest15}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
 
         if [ -f \"\$src\" ]; then
-            mv -v \"\$src\" \"\$dst\" || true
+            mv -v \"\$src\" \"\$dst\"
         fi
     done
   done
@@ -392,14 +407,43 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 
   echo \"Files produced: \${count}\"
 
-  if [[ \"\${count}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != \"true\" ]]; then
-      echo 'WARNING: exp1b generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
-  elif [[ \"\${count}\" -eq 0 ]]; then
-      echo 'NOTE: exp1b produced no files (step was skipped — SKIP_ALLOWED=true)'
+  if [[ \"\${count}\" -eq 0 ]]; then
+    echo "::error::exp1b produced no output files"
+    exit 1
   fi
 "
 
 
+
+run portfolio_random_holdout "Portfolio variance independent random-holdout validation (interpolation control)" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/random_holdout_validation'
+  mkdir -p \"\${_OUT_DIR}\"
+  _SEEDS=\"\${PARTITION_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\"
+  _MODEL_SEED=\"\${MODEL_SEED:-42}\"
+  PARTITION_SEEDS=\"\${_SEEDS}\" \\
+  MODEL_SEED=\"\${_MODEL_SEED}\" \\
+  PARTITION_VALIDATION_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\" \\
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_partition_validation.py'
+  [[ -s \"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\" ]] || {
+    echo 'ERROR: random-holdout validation output missing'; exit 1;
+  }
+"
+
+run portfolio_bootstrap_pca "Portfolio variance bootstrap-estimated PCA tail validation (sensitivity analysis)" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/bootstrap_pca_validation'
+  mkdir -p \"\${_OUT_DIR}\"
+  _SEEDS=\"\${BOOTSTRAP_PCA_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\"
+  _MODEL_SEED=\"\${MODEL_SEED:-42}\"
+  BOOTSTRAP_PCA_SEEDS=\"\${_SEEDS}\" \\
+  MODEL_SEED=\"\${_MODEL_SEED}\" \\
+  PCA_PARTITION_VALIDATION_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\" \\
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_bootstrap_pca_validation.py'
+  [[ -s \"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\" ]] || {
+    echo 'ERROR: bootstrap PCA validation output missing'; exit 1;
+  }
+"
 
 run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
   cd '${REPO_ROOT}'
@@ -456,7 +500,7 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
     exit 1
   fi
   for _f in appendix_table_portfolio_variance.tex paper_numbers_v3c3.json; do
-    [[ -s \"\${_PVA_DIR}/\${_f}\" ]] || echo \"WARNING: \${_f} not produced — the ablation input portfolio_variance_seed_sweep.json is probably missing\"
+    [[ -s \"\${_PVA_DIR}/\${_f}\" ]] || { echo \"::error::required portfolio artifact \${_f} not produced\"; exit 1; }
   done
   echo '=== end portfolio ==='
 "
@@ -657,7 +701,7 @@ PYMERGE
     return "${rc}"
   fi
   for f in exp1_ablation_results.json exp1_rf01_mannwhitney.json exp1_llm_contribution.json; do
-    if [[ -s "${abl_dir}/${f}" ]]; then echo "OK: ${f}"; else echo "WARNING: ${f} not produced"; fi
+    if [[ -s "${abl_dir}/${f}" ]]; then echo "OK: ${f}"; else echo "::error::required ablation artifact ${f} not produced"; return 1; fi
   done
   echo '=== LLM-CONTRIBUTION ==='
   grep -A6 "LLM-CONTRIBUTION" "${logf}" | tee /tmp/llm_contribution.txt || echo "(no LLM-CONTRIBUTION block in log)"
@@ -670,6 +714,7 @@ PYMERGE
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
 
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _FIVE_DIR='${RESULTS_DIR}/five_systems/exp1_five'
   mkdir -p \"\${_FIVE_DIR}\"
@@ -684,7 +729,7 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   JOB_DEADLINE='${JOB_DEADLINE}' \
     python3 '${EXPERIMENTS_DIR}/exp1_five_system.py' \
     2>&1 | tee \"\${_FIVE_DIR}/exp1_five_run.log\" \
-  || echo 'WARNING: exp1_five_system.py exited non-zero (or is not yet present) — check exp1_five_run.log'
+  # strict mode above propagates the Python/tee failure.
 
   echo '=== exp1_five verification ==='
   find \"\${_FIVE_DIR}\" -maxdepth 1 \( -name '*.json' -o -name '*.csv' \) 2>/dev/null | sort
@@ -692,18 +737,21 @@ run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R²
   _NPERF=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_performance*.json' 2>/dev/null | wc -l)
   _NEXTRAP=\$(find \"\${_FIVE_DIR}\" -maxdepth 1 -name 'exp1_five_extrapolation*.json' 2>/dev/null | wc -l)
   if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_five_results.json not produced'
+    echo '::error::exp1_five_results.json not produced'
+    exit 1
   else
     echo \"OK: \${_NRESULT} exp1_five_results*.json produced\"
   fi
   if [[ \"\${_NPERF}\" -eq 0 || \"\${_NEXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: performance/extrapolation sub-table source JSON missing — five_system.tex sub-tables will be incomplete'
+    echo '::error::performance/extrapolation sub-table source JSON missing'
+    exit 1
   fi
   echo '=== end exp1_five ==='
 "
 
 
 run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 with PCA split)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _PCA_DEFI_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/noiseless/defi_pca'
   mkdir -p \"\${_PCA_DEFI_DIR}\"
@@ -761,7 +809,8 @@ run exp1_pca "DeFi benchmark: all 74 cases with PCA 40/60 split (mirrors exp1 wi
     done < <(find \"\${_SCRATCH_ROOT}/seed\${_s}\" -maxdepth 1 -type f -name '*.json' | sort)
   done
   if [[ -n \"\${_FAILED_SEEDS}\" ]]; then
-    echo \"WARNING: exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
+    echo \"::error::exp1_pca worker(s) failed for seed(s):\${_FAILED_SEEDS} — see \${_SCRATCH_ROOT}/seed<N>.log and exp1_pca_run.log\"
+    exit 1
   fi
 
   python3 - <<'PYEOF'
@@ -927,18 +976,22 @@ PYEOF_FINGERPRINT_1
   echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
   echo \"  Summary file    : \${_NSUMMARY} (exp1_pca_summary.json)\"
   if [[ \"\${_NRESULT}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_pca produced no result JSON — check exp1_pca_run.log'
+    echo '::error::exp1_pca produced no result JSON'
+    exit 1
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found — Gate B in ci_runner_disclosure.yml will FAIL'
+    echo '::error::split_protocol_disclosure.json not found'
+    exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
-    echo 'WARNING: exp1_pca_summary.json not found — qualify/audit steps will not see DeFi PCA solve rate'
+    echo '::error::exp1_pca_summary.json not found'
+    exit 1
   fi
   echo '=== end exp1_pca ==='
 "
 
 run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with PCA split)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   _PCA15_DIR='${RESULTS_DIR}/comparison_results/noise-noiseless/15_pca'
   mkdir -p \"\${_PCA15_DIR}\"
@@ -964,26 +1017,24 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   # be produced under 15_pca/ no matter what the benchmark step did. There is
   # no PCA-specific portfolio-variance script in the repo (only
   # portfolio_variance_v3c2.py exists) — reuse it here against the PCA
-  # benchmark JSON, mirroring the plain exp1b step above. NOTE: this assumes
-  # portfolio_variance_v3c2.py discovers its input benchmark JSON via the
-  # RESULTS_DIR env var (as exp1b's own call relies on) — verify this against
-  # the script's actual source before trusting it in CI; if it instead expects
-  # a fixed filename/location, pass that explicitly here.
+  # benchmark JSON. The audit script normally resolves v3c3 from the standard
+  # non-PCA results tree, so pass the PCA benchmark file explicitly;
+  # HYPATIAX_RESULTS_DIR independently selects the analysis output directory.
   _BENCH_JSON_PCA=\$(ls -t \"\${_PCA15_DIR}\"/hypatiax_defi_benchmark_*results*.json 2>/dev/null | head -1 || true)
   if [[ -z \"\${_BENCH_JSON_PCA}\" ]]; then
-    echo 'WARNING: portfolio_variance_v3c2.py skipped — benchmark JSON not found in '\"\${_PCA15_DIR}\"'.'
-    echo '         hypatiax_defi_benchmark_pca.py did not produce a results file at the'
-    echo '         expected --output-dir; portfolio-variance table/figure inputs will be missing.'
+    echo '::error::portfolio_variance_v3c2.py skipped — benchmark JSON not found in '"\${_PCA15_DIR}"'.'
+    exit 1
   else
     echo '[exp1b_pca] Running portfolio_variance_v3c2.py against: '\"\${_BENCH_JSON_PCA}\"
     # Strategy A is deliberately NOT enabled here: portfolio_variance_v3c2.py has no PCA split
     # (it uses the standard DeFi protocol split), so a sweep run here would be labelled PCA but
     # would not be one. Offline analysis only.
     RERUN_STRATEGY=skip PV_SWEEP_ONLY= \\
-    RESULTS_DIR=\"\${_PCA15_DIR}\" \\
+    HYPATIAX_RESULTS_DIR=\"\${_PCA15_DIR}\" \\
+    HYPATIAX_V3C3_RESULTS=\"\${_BENCH_JSON_PCA}\" \\
       python3 '${EXPERIMENTS_DIR}/portfolio_variance_v3c2.py' \\
         2>&1 | tee -a '${RESULTS_DIR}/exp1b_pca_run.log' \\
-      || echo 'WARNING: portfolio_variance_v3c2.py exited non-zero — primary benchmark results already saved, continuing'
+      || { echo "::error::exp1b_pca portfolio analysis failed"; exit 1; }
   fi
 
   _SHARD=\${SHARD_INDEX:-0}
@@ -1000,7 +1051,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
         stem=\"\${fname%.*}\"
         ext=\"\${fname##*.}\"
         dst=\"\${_PCA15_DIR}/\${stem}_shard\${_SHARD}_seed\${_SEED_TAG}.\${ext}\"
-        [ -f \"\$src\" ] && mv -v \"\$src\" \"\$dst\" || true
+        if [ -f \"\$src\" ]; then mv -v \"\$src\" \"\$dst\"; fi
     done
   done
 
@@ -1163,13 +1214,16 @@ PYEOF_FINGERPRINT_1B
   echo \"  Disclosure file : \${_NDISC} (split_protocol_disclosure.json)\"
   echo \"  Summary file    : \${_NSUMMARY} (exp1b_pca_summary.json)\"
   if [[ \"\${_COUNT}\" -eq 0 && \"\${SKIP_ALLOWED:-false}\" != 'true' ]]; then
-    echo 'WARNING: exp1b_pca generated no files — set SKIP_ALLOWED=true if this step was intentionally skipped'
+    echo '::error::exp1b_pca generated no files'
+    exit 1
   fi
   if [[ \"\${_NDISC}\" -eq 0 ]]; then
-    echo 'WARNING: split_protocol_disclosure.json not found in 15_pca/ — Gate B will FAIL'
+    echo '::error::split_protocol_disclosure.json not found in 15_pca/'
+    exit 1
   fi
   if [[ \"\${_NSUMMARY}\" -eq 0 ]]; then
-    echo 'WARNING: exp1b_pca_summary.json not found — qualify/audit steps will not see the DeFi PCA portfolio seed-sweep solve rate'
+    echo '::error::exp1b_pca_summary.json not found'
+    exit 1
   fi
   echo '=== end exp1b_pca ==='
 "
@@ -1203,7 +1257,7 @@ run extrap "OOD extrapolation comparative run (Tab 9 OOD columns)" bash -c "
         --output-dir '${RESULTS_DIR}/comparison_results/extrapolation' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/extrap_run.log' \
-      || echo 'WARNING: extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
   echo 'extrap output: ${RESULTS_DIR}/comparison_results/extrapolation/'
   ls '${RESULTS_DIR}/comparison_results/extrapolation/' 2>/dev/null || true
@@ -1302,7 +1356,7 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
   if [[ ! -s \"\${_CANON_CSV}\" ]]; then
-    echo \"[instability] WARNING: \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
+    echo \"::error::[instability] \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
     _STRAY_CSV=\$(find '${REPO_ROOT}' -maxdepth 6 -name 'instability_analysis.csv' \
                    -not -path \"\${_CANON_CSV}\" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
     if [[ -n \"\${_STRAY_CSV}\" && -s \"\${_STRAY_CSV}\" ]]; then
@@ -1312,6 +1366,7 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
     else
       echo '[instability] No stray instability_analysis.csv found anywhere under REPO_ROOT either.'
       echo '              run_instability_suite.py likely failed internally before writing the CSV'
+      exit 1
       echo '              (e.g. \"Loaded 0 cases\") -- check instability_run.log above for the real cause.'
     fi
   fi
@@ -1347,7 +1402,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
         --resume \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
-    || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -1531,7 +1586,7 @@ PYEOF
         --output-dir \"\${_PCA_DIR}\" \
         --force-fresh \
       2>&1 | tee -a \"\${_PCA_DIR}/exp2_pca_4060_run.log\" \
-    || echo 'WARNING: pca_4060 domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::pca_4060 domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
 
     mkdir -p \"\${_PCA_DIR}/_saved\"
     while IFS= read -r _pf; do
@@ -1832,7 +1887,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --output-dir \"\${_EXT_DIR}\" \
         --resume \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
-    || echo 'WARNING: exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero — continuing'
+    || { echo '::error::exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 
   mkdir -p \"\${_EXT_DIR}/_saved\"
@@ -1870,15 +1925,16 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   if [[ \"\${COUNT_EXTRAP}\" -eq 0 && \"\${COUNT_SAVED}\" -gt 0 ]]; then
-    echo \"WARNING: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
+    echo \"::error:: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
+    exit 1
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'
+    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'\n    exit 1
   else
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo 'WARNING: benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/ — ci_analysis.yml merge step will find nothing'
+    echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'\n    exit 1
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
     echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
@@ -1908,7 +1964,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --benchmark-dir        "${_BENCHMARK_DIR}" \
         --output               "${_PAIRED}" \
         2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || echo "WARNING: merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"
+      || { echo "::error::merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"; exit 1; }
       if [[ -f "${_PAIRED}" ]]; then
         _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
         echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
@@ -1987,7 +2043,7 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -2019,7 +2075,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
         --resume \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
-      || echo 'WARNING: domain '\${DOMAIN_ID}' exited non-zero — continuing'
+      || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
@@ -3778,7 +3834,7 @@ run audit_nb06_fixc3_rerun \
         --output-dir "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3 \
         --resume \
       2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log \
-    || echo "WARNING: fixc3_rerun domain ${DOMAIN_ID} exited non-zero — continuing"
+    || { echo "::error::fixc3_rerun domain ${DOMAIN_ID} exited non-zero"; exit 1; }
   done
 
   python3 - <<'"'"'PYEOF'"'"' 2>&1 | tee -a "'"${RESULTS_DIR}"'"/comparison_results/feynman-tests/exp2_fixc3/fixc3_run.log

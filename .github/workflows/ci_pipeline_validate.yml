@@ -145,7 +145,7 @@ on:
       fail_on_incomplete:
         description: "Fail pipeline if checkpoint finds missing tasks (true/false)"
         required: false
-        default: "false"
+        default: "true"
 
       force_rerun:
         description: >
@@ -485,9 +485,10 @@ jobs:
           N_SHARDS:  ${{ github.event.inputs.n_shards || '1' }}
           SEEDS:     ${{ github.event.inputs.seeds || '' }}
           SAMPLES:   ${{ github.event.inputs.n_samples || '200' }}
-          NOISE:     ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
-          DRY_RUN:   ${{ github.event.inputs.dry_run || 'false' }}
-          REPO:      ${{ github.repository }}
+          NOISE:     ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
+          DRY_RUN:     ${{ github.event.inputs.dry_run || 'false' }}
+          FORCE_RERUN: ${{ github.event.inputs.force_rerun || 'false' }}
+          REPO:        ${{ github.repository }}
         run: |
           set -euo pipefail
           echo "Dispatching ci_runner_repro.yml for experiment=${EXP}"
@@ -498,6 +499,7 @@ jobs:
               --field experiment="${EXP}" --field n_shards="${N_SHARDS}" \
               --field seeds="${SEEDS}" --field n_samples="${SAMPLES}" \
               --field noise_levels="${NOISE}" --field dry_run="${DRY_RUN}" \
+              --field force_rerun="${FORCE_RERUN}" \
               2>&1
           )"
           echo "${RUN_OUTPUT}"
@@ -604,9 +606,9 @@ jobs:
         env:
           GH_TOKEN:           ${{ secrets.PAT_TOKEN }}
           EXP:                ${{ needs.resolve.outputs.experiment }}
-          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'false' }}
+          FAIL_ON_INCOMPLETE: ${{ github.event.inputs.fail_on_incomplete || 'true' }}
           SEEDS:              ${{ github.event.inputs.seeds || '42,99,123,777,2024' }}
-          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+          NOISE_LEVELS:       ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           REPO:               ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -702,7 +704,7 @@ jobs:
           N_SHARDS:     ${{ github.event.inputs.n_shards || '1' }}
           SEEDS:        ${{ github.event.inputs.seeds || '' }}
           SAMPLES:      ${{ github.event.inputs.n_samples || '200' }}
-          NOISE:        ${{ github.event.inputs.noise_levels || '0.0,0.5,1.0,5.0,10.0' }}
+          NOISE:        ${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}
           REPO:         ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -721,6 +723,6 @@ jobs:
             --field seeds="${SEEDS}" \
             --field n_samples="${SAMPLES}" \
             --field noise_levels="${NOISE}" \
-            --field fail_on_incomplete="${{ github.event.inputs.fail_on_incomplete || 'false' }}" \
+            --field fail_on_incomplete="${{ github.event.inputs.fail_on_incomplete || 'true' }}" \
             --field dry_run="${{ github.event.inputs.dry_run || 'false' }}"
           echo "Self-dispatch succeeded — slot ${NEXT_SLOT} queued."
