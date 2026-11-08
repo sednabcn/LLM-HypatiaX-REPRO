@@ -193,6 +193,7 @@ def main():
             "partition_fingerprint_semantics": (
                 "SHA-256 of sorted train and test row indices; equal fingerprints "
                 "mean identical partition membership, regardless of index order."
+            ),
             },
         },
         "results": records,
