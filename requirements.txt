@@ -247,6 +247,7 @@ pyparsing==3.2.5
 pyproject_hooks==1.2.0
 pysr==2.0.0a1
 pytest==9.0.3
+pytest-timeout==2.4.0
 pytest-asyncio==1.3.0
 pytest-cov==7.0.0
 pytest-html==4.2.0
