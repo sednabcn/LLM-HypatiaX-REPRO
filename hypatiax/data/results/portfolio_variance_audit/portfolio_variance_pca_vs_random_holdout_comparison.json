@@ -1,7 +1,7 @@
 {
   "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
   "schema_version": 1,
-  "generated_at": "2026-11-08T11:28:42Z",
+  "generated_at": "2026-11-08T11:41:28Z",
   "branch": "audit-master",
   "case_identity": {
     "domain": "risk_var",
@@ -129,6 +129,142 @@
       "tail_test_r2_sample_std": 0,
       "n_success_tail_test_r2_gt_0_99": 0,
       "interpretation": "Distinct bootstrap samples yielded identical PC1 ranking and identical train/test membership. Negative tail R2 indicates poor tail prediction, not successful validation."
+    },
+    "nn_pca_tail_error_diagnostic": {
+      "protocol": "pca_40_60_pc1",
+      "diagnostic_generated_at": "2026-11-08T11:41:28Z",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "test_size": 0.6,
+      "model": "benchmark _train_and_eval_nn helper with training-derived augmentation and scaling",
+      "nn_seed": 2024,
+      "llm_called": false,
+      "benchmark_modified": false,
+      "scope": "NN-only diagnostic; does not reproduce LLM/hybrid routing",
+      "train_r2": 0.9997403374487227,
+      "test_metrics": {
+        "r2": -3.151808393762967,
+        "mae": 25335.67958740281,
+        "rmse": 29990.428354324984,
+        "mean_signed_error_prediction_minus_actual": -25335.67958740281,
+        "median_absolute_error": 24771.578984569987
+      },
+      "training_mean_baseline": {
+        "prediction_value": 15000.108953246765,
+        "test_metrics": {
+          "r2": -6.167131634880697,
+          "mae": 36551.535559286254,
+          "rmse": 39403.67315687113,
+          "mean_signed_error_prediction_minus_actual": -36551.535559286254,
+          "median_absolute_error": 35871.30792194822
+        },
+        "model_minus_baseline_r2": 3.0153232411177298,
+        "model_mae_divided_by_baseline_mae": 0.6931495270919212
+      },
+      "test_error_by_pc1_decile": [
+        {
+          "decile": 1,
+          "n": 12,
+          "target_mean": 29629.796321300866,
+          "prediction_mean": 27763.179850260418,
+          "mae": 1866.6164710404519,
+          "rmse": 2069.6179485465627,
+          "mean_signed_error": -1866.6164710404519,
+          "r2": -1.7790293279731832
+        },
+        {
+          "decile": 2,
+          "n": 12,
+          "target_mean": 34039.583539907755,
+          "prediction_mean": 28195.6533203125,
+          "mae": 5843.9302195952505,
+          "rmse": 5998.0641690488965,
+          "mean_signed_error": -5843.9302195952505,
+          "r2": -20.439743063175495
+        },
+        {
+          "decile": 3,
+          "n": 12,
+          "target_mean": 38633.116853871696,
+          "prediction_mean": 27735.588704427082,
+          "mae": 10897.528149444604,
+          "rmse": 11004.698542798456,
+          "mean_signed_error": -10897.528149444604,
+          "r2": -65.7220980816021
+        },
+        {
+          "decile": 4,
+          "n": 12,
+          "target_mean": 43403.61826840438,
+          "prediction_mean": 27056.235026041668,
+          "mae": 16347.383242362712,
+          "rmse": 16425.033314018066,
+          "mean_signed_error": -16347.383242362712,
+          "r2": -137.18963151185315
+        },
+        {
+          "decile": 5,
+          "n": 12,
+          "target_mean": 48344.99104195423,
+          "prediction_mean": 26400.521647135418,
+          "mae": 21944.469394818818,
+          "rmse": 22004.402929229273,
+          "mean_signed_error": -21944.469394818818,
+          "r2": -230.71006710631997
+        },
+        {
+          "decile": 6,
+          "n": 12,
+          "target_mean": 53451.71446637193,
+          "prediction_mean": 25829.449544270832,
+          "mae": 27622.26492210111,
+          "rmse": 27671.118870179733,
+          "mean_signed_error": -27622.26492210111,
+          "r2": -342.79037793798847
+        },
+        {
+          "decile": 7,
+          "n": 12,
+          "target_mean": 58718.75983413574,
+          "prediction_mean": 25346.18994140625,
+          "mae": 33372.56989272947,
+          "rmse": 33414.08637732768,
+          "mean_signed_error": -33372.56989272947,
+          "r2": -471.11699425824804
+        },
+        {
+          "decile": 8,
+          "n": 12,
+          "target_mean": 64141.52244802905,
+          "prediction_mean": 24938.95654296875,
+          "mae": 39202.565905060306,
+          "rmse": 39238.953308893375,
+          "mean_signed_error": -39202.565905060306,
+          "r2": -614.2199530263862
+        },
+        {
+          "decile": 9,
+          "n": 12,
+          "target_mean": 69715.76596851712,
+          "prediction_mean": 24594.123046875,
+          "mae": 45121.64292164212,
+          "rmse": 45154.274525855064,
+          "mean_signed_error": -45121.64292164212,
+          "r2": -771.1486363610896
+        },
+        {
+          "decile": 10,
+          "n": 12,
+          "target_mean": 75437.57638283745,
+          "prediction_mean": 24299.751627604168,
+          "mae": 51137.82475523327,
+          "rmse": 51167.5974243539,
+          "mean_signed_error": -51137.82475523327,
+          "r2": -941.2657078391011
+        }
+      ],
+      "interpretation": "Train fit is near-perfect but PCA-tail test performance is poor (negative R2). NN outperforms training-mean baseline (MAE ratio 0.693), yet systematically underpredicts and MAE rises from 1,866.62 in decile 1 to 51,137.82 in decile 10."
     }
   },
   "comparison_rules": [
@@ -138,14 +274,21 @@
     "Claims are limited to the selected Portfolio VaR case and tested configurations.",
     "Feature-ranking diagnostic: each of the three individual feature rankings exactly reproduces the PCA PC1 ranking and train membership for this dataset.",
     "Bootstrap PCA sensitivity result is negative (tail test R2 approximately -3.1518) and all five replicates shared one partition; do not describe it as successful validation.",
-    "The PCA conclusion remains provisional until the NN tail-error diagnostic is reviewed."
+    "The direct NN-only PCA-tail diagnostic reports test R2=-3.151808 (train R2=0.999740), with systematic underprediction and increasing MAE across PC1 deciles.",
+    "The NN beats the training-mean baseline on the PCA tail test (MAE ratio 0.693), but its test R2 remains strongly negative.",
+    "The earlier seed-sweep far_r2=1.0 conflicts with the direct NN-only tail diagnostic for seed 2024; reconcile score semantics, route, transforms, and seed mapping before relying on the sweep result."
   ],
-  "pending": {
-    "diagnostic": "portfolio_variance_pca_tail_error_diagnostic",
-    "runner": "hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py",
-    "output": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_tail_error_diagnostic.json",
-    "status": "runner committed to audit-master; user execution/results review pending",
-    "purpose": "Explain NN tail errors by PC1 decile and compare against training-target-mean baseline",
-    "scope": "NN-only diagnostic; does not reproduce LLM/hybrid routing"
-  }
+  "pending": null,
+  "unresolved_score_discrepancy": {
+    "description": "Earlier PCA seed-sweep records far_r2=1.0 for all five seeds, including 2024, while the standalone NN-only diagnostic on the stated same PCA 40/60 split and NN seed 2024 reports test R2=-3.151808.",
+    "required_audit": [
+      "score calculation and metric semantics",
+      "target/prediction transforms and inverse transforms",
+      "route-specific evaluation path",
+      "exact model seed mapping",
+      "data and partition identity"
+    ],
+    "status": "Must reconcile before treating seed-sweep far_r2 as evidence of successful tail prediction."
+  },
+  "status": "PCA diagnostics completed; seed-sweep versus direct NN tail-score discrepancy requires audit before final publication/merge"
 }
