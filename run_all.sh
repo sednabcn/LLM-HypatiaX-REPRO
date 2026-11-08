@@ -109,9 +109,9 @@ values = [
     ci.get("JULIA_EXCLUSIVE", 0),
     ci.get("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes"),
     ci.get("LLM_METHOD_TIMEOUT", 120),
-    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_NOLLM_ARM", 0),
-    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_HOLDOUT", 0),
-    (cfg.get("fresh_run_controls") or {}).get("SPARSE_SEED", "fallback"),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_NOLLM_ARM", ci.get("HYPATIAX_NOLLM_ARM", 1)),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_HOLDOUT", ""),
+    (cfg.get("fresh_run_controls") or {}).get("SPARSE_SEED", (cfg.get("ci_env_set_by_workflow") or {}).get("SPARSE_SEED", "fallback")),
 ]
 if "PYSR_GENERATIONS" in ci and int(ci["PYSR_GENERATIONS"]) != int(values[2]):
     raise SystemExit("ci_env.PYSR_GENERATIONS must equal pysr.niterations")
@@ -184,7 +184,7 @@ check_protocol_override JULIA_EXCLUSIVE "$_CFG_JULIA_EXCLUSIVE"
 check_protocol_override PYTHON_JULIACALL_HANDLE_SIGNALS "$_CFG_JULIACALL_SIGNALS"
 check_protocol_override LLM_METHOD_TIMEOUT "$_CFG_LLM_METHOD_TIMEOUT"
 check_protocol_override HYPATIAX_NOLLM_ARM "$_CFG_NOLLM_ARM"
-check_protocol_override HYPATIAX_HOLDOUT "$_CFG_HOLDOUT"
+if [[ -n "$_CFG_HOLDOUT" ]]; then check_protocol_override HYPATIAX_HOLDOUT "$_CFG_HOLDOUT"; fi
 check_protocol_override SPARSE_SEED "$_CFG_SPARSE_SEED"
 
 export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"
@@ -211,7 +211,7 @@ export JULIA_EXCLUSIVE="$_CFG_JULIA_EXCLUSIVE"
 export PYTHON_JULIACALL_HANDLE_SIGNALS="$_CFG_JULIACALL_SIGNALS"
 export LLM_METHOD_TIMEOUT="$_CFG_LLM_METHOD_TIMEOUT"
 export HYPATIAX_NOLLM_ARM="$_CFG_NOLLM_ARM"
-export HYPATIAX_HOLDOUT="$_CFG_HOLDOUT"
+if [[ -n "$_CFG_HOLDOUT" ]]; then export HYPATIAX_HOLDOUT="$_CFG_HOLDOUT"; fi
 export SPARSE_SEED="$_CFG_SPARSE_SEED"
 unset _RUN_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL _CFG_N_ITERATIONS _CFG_POPULATIONS _CFG_POPULATION_SIZE _CFG_PYSR_SEED _CFG_METHOD_TIMEOUT _CFG_PYSR_TIMEOUT _CFG_FIT_WALL_TIMEOUT _CFG_FIT_GRACE_SECS _CFG_FEYNMAN_TIMEOUT _CFG_FEYNMAN_SAMPLES _CFG_JOB_DEADLINE _CFG_JULIA_THREADS _CFG_JULIA_EXCLUSIVE _CFG_JULIACALL_SIGNALS _CFG_LLM_METHOD_TIMEOUT _CFG_NOLLM_ARM _CFG_HOLDOUT _CFG_SPARSE_SEED
 
