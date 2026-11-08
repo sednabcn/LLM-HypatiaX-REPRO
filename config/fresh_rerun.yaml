@@ -169,11 +169,12 @@ ci_env:
   JULIA_EXCLUSIVE:                "0"
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
 
-# Set only on dispatches meant as evidence for the audit ledger; not in the
-# workflows' global env so older results stay comparable.
-ci_env_evidence_runs:
-  HYPATIAX_HOLDOUT:  "1"   # L06: adds r2_in_sample + held-out llm/nn/blend R2. Add to ci_runner_repro.yml env before the rerun.
-  CLEAR_CHECKPOINT:  "1"   # L03: clean live-LLM rerun (workflow input; run_all.sh reads it)
+# Fresh-run controls: enable holdout diagnostics and the no-LLM ablation arm.
+# A new empty RESULTS_DIR is used, so old checkpoints are never deleted or resumed.
+fresh_run_controls:
+  HYPATIAX_NOLLM_ARM: 1
+  HYPATIAX_HOLDOUT: 1
+  SPARSE_SEED: "fallback"
 
 # Set per dispatch/shard by the plan job or by workflow inputs, not fixed values.
 ci_env_set_by_workflow:
