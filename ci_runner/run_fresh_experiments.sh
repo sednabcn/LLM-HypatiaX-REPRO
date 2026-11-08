@@ -231,6 +231,43 @@ for stage in "${STAGES[@]}"; do
     exit 1
   fi
 
+  if [[ "$stage" == "env_check" ]]; then
+    echo "Capturing exact Python and Julia runtime provenance..."
+    python3 -m pip freeze --all > "$RESULTS_DIR/python-environment-freeze.txt"
+    python3 - <<'PY' > "$RESULTS_DIR/python-runtime-versions.txt"
+from importlib.metadata import version
+import platform, sys
+print("python", sys.version)
+print("platform", platform.platform())
+for package in ("pysr", "anthropic", "torch", "numpy", "scipy", "sympy", "pandas", "scikit-learn", "PyYAML"):
+    print(package, version(package))
+PY
+    if ! command -v julia >/dev/null 2>&1; then
+      echo "ERROR: Julia is not on PATH; the fresh run requires Julia 1.11.x" >&2
+      record_stage "$stage" "failed"
+      exit 1
+    fi
+    julia --version | tee "$RESULTS_DIR/julia-version.txt"
+    if ! grep -Eq '1\.11\.' "$RESULTS_DIR/julia-version.txt"; then
+      echo "ERROR: fresh rerun requires Julia 1.11.x" >&2
+      record_stage "$stage" "failed"
+      exit 1
+    fi
+    julia -e 'using Pkg; Pkg.status()' > "$RESULTS_DIR/julia-package-status.txt" 2>&1
+    mkdir -p "$RESULTS_DIR/julia-manifests"
+    while IFS= read -r -d '' manifest; do
+      rel="${manifest#"$HOME/.julia/"}"
+      dest="$RESULTS_DIR/julia-manifests/${rel//\//_}"
+      cp "$manifest" "$dest"
+    done < <(find "$HOME/.julia" -maxdepth 5 -type f -name Manifest.toml -print0 2>/dev/null)
+    if ! find "$RESULTS_DIR/julia-manifests" -type f -name '*Manifest.toml' -print -quit | grep -q .; then
+      echo "ERROR: no Julia Manifest.toml found after environment preflight" >&2
+      record_stage "$stage" "failed"
+      exit 1
+    fi
+    (cd "$RESULTS_DIR/julia-manifests" && sha256sum *Manifest.toml > SHA256SUMS)
+  fi
+
   if [[ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all)" ]]; then
     record_stage "$stage" "failed"
     echo "ERROR: stage '$stage' wrote files into the repository checkout; stopping to protect source/history" >&2
