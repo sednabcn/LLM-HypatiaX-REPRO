@@ -2,10 +2,10 @@
 """
 phase3_all.py - ONE command for Option 3 / Phase 3 (leave-one-gate-out ablation).
 
-    python scripts/phase3_all.py                 # preflight -> run -> close
-    python scripts/phase3_all.py --stage preflight   # only the checks (no API spend)
-    python scripts/phase3_all.py --stage run         # resume the runs
-    python scripts/phase3_all.py --stage close       # only the closure gate
+    python scripts/phase3_all.py --phase2-manifest fresh/phase2_closure.json --p-rows-glob 'fresh/pure_llm_seed*.jsonl'
+    python scripts/phase3_all.py --stage preflight --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage run --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage close --phase2-manifest ... --p-rows-glob ...
 
 Put it in scripts/ next to phase3_engine_adapter.py, run_phase3_ablation.py, phase3_close.py.
 Run from the repo root. It needs no edits to those three files: it patches the adapter
@@ -17,12 +17,12 @@ PREFLIGHT (blocking unless marked warn) - everything that would otherwise invali
   P3  clean-run flags: HYPATIAX_DISABLE_PROMPT_HINTS=1, HYPATIAX_DISABLE_HARDCODED=1 are forced,
       HYPATIAX_LLM_MODEL is unset, an API key is present
   P4  git tree clean (or --allow-dirty, recorded as a caveat)
-  P5  P rows + Phase 2 manifest exist; equations come from the P rows
+  P5  explicit fresh P rows + Phase 2 manifest exist; historical p2/ and phase2_out/ defaults are forbidden
   P6  G1 dry check: regenerate train/far data for every (equation, seed) in the P rows with
       the P-arm hash scheme and require equality with the P rows' hashes. This is what
       decides whether G1 can pass; it costs seconds, not hours.
 RUN    leave-one-out for llm_acceptance and pysr_prior (the only gates wired in v50_2),
-       full config first per (seed, equation); resumable.
+       full config first per (seed, equation); outputs are per-run only, with no cross-run cache.
 CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned evaluator,
        and --omit reasons for the four gates that have no switch in the v50_2 path.
 
