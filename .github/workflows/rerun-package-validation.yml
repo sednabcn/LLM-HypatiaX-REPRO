@@ -1,0 +1,104 @@
+name: Rerun package validation
+
+on:
+  push:
+    branches: [promotion/rerun-code-review]
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/rerun-package-validation.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "hypatiax/**"
+      - "scripts/**"
+      - "run_all.sh"
+      - "config/**"
+      - "requirements*.txt"
+      - ".github/workflows/rerun-package-validation.yml"
+
+concurrency:
+  group: rerun-package-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  HYPATIAX_STRICT: "1"
+  PYTHONHASHSEED: "0"
+
+jobs:
+  preflight:
+    name: "Preflight (shell syntax and config)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+      - name: Validate shell and configuration
+        run: |
+          bash -n run_all.sh
+          pip install -q pyyaml
+          python - <<'PY'
+          import glob, yaml
+          for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml"]:
+              with open(path, encoding="utf-8") as stream:
+                  yaml.safe_load(stream)
+              print("ok", path)
+          PY
+
+  pytest:
+    name: "Full pytest (Python 3.12, CPU torch, PySR, Anthropic SDK)"
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/rerun-package-validation.yml
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3"
+          pip install "pysr==2.0.0a1" \
+            numpy scipy sympy \
+            "anthropic==0.73.0" \
+            scikit-learn pyyaml python-dotenv matplotlib seaborn pint psutil \
+            pytest pytest-timeout
+      - name: Dependency gate
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          missing = []
+          for module in ("torch", "anthropic", "sympy", "numpy", "scipy", "sklearn", "pandas", "yaml"):
+              try:
+                  imported = importlib.import_module(module)
+                  print(f"{module:10s} {getattr(imported, '__version__', '?')}")
+              except Exception as exc:
+                  missing.append(f"{module}: {exc}")
+          if missing:
+              sys.exit("MISSING DEPENDENCIES:\n  " + "\n  ".join(missing))
+          PY
+      - name: Run complete test suite (no LLM API key supplied)
+        run: |
+          python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-pytest-report
+          path: pytest-report.xml
+          retention-days: 30
