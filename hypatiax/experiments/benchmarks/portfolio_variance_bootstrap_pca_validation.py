@@ -31,6 +31,7 @@ BOOTSTRAP_SEEDS = [
 ]
 MODEL_SEED = int(os.environ.get("MODEL_SEED", "42"))
 TEST_SIZE = float(os.environ.get("PCA_PARTITION_TEST_SIZE", "0.6"))
+BOOTSTRAP_SAMPLE_FRACTION = float(os.environ.get("BOOTSTRAP_PCA_SAMPLE_FRACTION", "1.0"))
 OUTPUT = Path(os.environ.get(
     "PCA_PARTITION_VALIDATION_OUTPUT",
     "hypatiax/data/results/portfolio_variance_audit/"
@@ -59,11 +60,23 @@ def partition_fingerprint(train_idx, test_idx):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def bootstrap_pc1_partition(X, seed, test_size, feature_names):
-    """Estimate PC1 on a row bootstrap, then rank all rows on that axis."""
+def rank_correlation(scores, reference_scores):
+    """Spearman correlation without requiring a separate statistics dependency."""
+    ranks = np.empty(len(scores), dtype=float)
+    reference_ranks = np.empty(len(reference_scores), dtype=float)
+    ranks[np.argsort(scores, kind="mergesort")] = np.arange(len(scores), dtype=float)
+    reference_ranks[np.argsort(reference_scores, kind="mergesort")] = np.arange(len(reference_scores), dtype=float)
+    if np.std(ranks) == 0 or np.std(reference_ranks) == 0:
+        return 1.0 if np.array_equal(ranks, reference_ranks) else 0.0
+    return float(np.corrcoef(ranks, reference_ranks)[0, 1])
+
+
+def bootstrap_pc1_partition(X, seed, test_size, feature_names, sample_fraction):
+    """Fit PC1 on a row bootstrap, then rank every original row on that axis."""
     rng = np.random.default_rng(seed)
     n_samples = len(X)
-    bootstrap_idx = rng.integers(0, n_samples, size=n_samples)
+    bootstrap_size = max(2, int(round(n_samples * sample_fraction)))
+    bootstrap_idx = rng.integers(0, n_samples, size=bootstrap_size)
     pca = PCA(n_components=1, svd_solver="full")
     pca.fit(X[bootstrap_idx])
     scores = pca.transform(X).ravel()
@@ -78,10 +91,13 @@ def bootstrap_pc1_partition(X, seed, test_size, feature_names):
     order = np.lexsort((np.arange(n_samples), scores))
     split_point = max(1, min(int(n_samples * (1.0 - test_size)), n_samples - 1))
     train_idx, test_idx = order[:split_point], order[split_point:]
+    bootstrap_payload = np.sort(np.asarray(bootstrap_idx, dtype=np.int64)).tobytes()
     metadata = {
         "bootstrap_seed": int(seed),
         "bootstrap_sample_size": int(len(bootstrap_idx)),
+        "bootstrap_sample_fraction": float(sample_fraction),
         "bootstrap_unique_rows": int(len(np.unique(bootstrap_idx))),
+        "bootstrap_sample_fingerprint": hashlib.sha256(bootstrap_payload).hexdigest(),
         "n_train": int(len(train_idx)),
         "n_test": int(len(test_idx)),
         "partition_fingerprint": partition_fingerprint(train_idx, test_idx),
@@ -90,7 +106,7 @@ def bootstrap_pc1_partition(X, seed, test_size, feature_names):
         "pc1_score_min": float(np.min(scores)),
         "pc1_score_max": float(np.max(scores)),
     }
-    return train_idx, test_idx, metadata
+    return train_idx, test_idx, metadata, scores, component
 
 
 def main():
@@ -100,6 +116,8 @@ def main():
         raise ValueError("BOOTSTRAP_PCA_SEEDS must not contain duplicates.")
     if not 0.0 < TEST_SIZE < 1.0:
         raise ValueError("PCA_PARTITION_TEST_SIZE must be between 0 and 1.")
+    if not 0.0 < BOOTSTRAP_SAMPLE_FRACTION <= 1.0:
+        raise ValueError("BOOTSTRAP_PCA_SAMPLE_FRACTION must be in (0, 1].")
 
     from hypatiax.experiments.benchmarks import hypatiax_defi_benchmark_v3c as benchmark
     predict_and_eval = benchmark._hybrid_predict_and_eval
@@ -127,9 +145,28 @@ def main():
         raise ValueError("Case features contain NaN or infinite values.")
 
     records = []
+    reference_scores = None
+    reference_component = None
+    reference_train = None
     for bootstrap_seed in BOOTSTRAP_SEEDS:
-        train_idx, test_idx, split_meta = bootstrap_pc1_partition(
-            X, bootstrap_seed, TEST_SIZE, case["variables"]
+        train_idx, test_idx, split_meta, scores_for_rank, component = bootstrap_pc1_partition(
+            X, bootstrap_seed, TEST_SIZE, case["variables"], BOOTSTRAP_SAMPLE_FRACTION
+        )
+        if reference_scores is None:
+            reference_scores = scores_for_rank.copy()
+            reference_component = component.copy()
+            reference_train = set(train_idx.tolist())
+        split_meta["pc1_rank_spearman_vs_first_replicate"] = rank_correlation(
+            scores_for_rank, reference_scores
+        )
+        current_train = set(train_idx.tolist())
+        union_train = current_train | reference_train
+        split_meta["train_membership_jaccard_vs_first_replicate"] = (
+            float(len(current_train & reference_train) / len(union_train))
+            if union_train else 1.0
+        )
+        split_meta["pc1_loading_l2_distance_vs_first_replicate"] = float(
+            np.linalg.norm(component - reference_component)
         )
         set_all_seeds(MODEL_SEED)
         started = time.time()
@@ -157,19 +194,31 @@ def main():
 
     scores = [row["tail_test_r2"] for row in records]
     unique_fingerprints = {row["partition_fingerprint"] for row in records}
+    unique_bootstrap_samples = {row["bootstrap_sample_fingerprint"] for row in records}
+    split_protocol = (
+        "bootstrap_estimated_pc1_tail_40_60"
+        if BOOTSTRAP_SAMPLE_FRACTION == 1.0
+        else "m_out_of_n_bootstrap_estimated_pc1_tail_40_60"
+    )
     output = {
         "report_type": "portfolio_variance_bootstrap_pca_partition_validation",
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "case_identity": {
             "domain": case["domain"], "name": case["name"],
             "protocol_index": int(case_idx), "variables": case["variables"],
         },
         "protocol": {
-            "split_protocol": "bootstrap_estimated_pc1_tail_40_60",
+            "split_protocol": split_protocol,
             "split_method": (
-                "Fit PC1 on a size-n row bootstrap with replacement; project all "
-                "feature rows; sort by oriented PC1 score; lower 40% train, upper 60% test."
+                f"Fit PC1 on a row bootstrap of size round(n * {BOOTSTRAP_SAMPLE_FRACTION}) "
+                "with replacement; project all original feature rows; sort by oriented "
+                "PC1 score; lower 40% train, upper 60% test."
+            ),
+            "bootstrap_sample_fraction": BOOTSTRAP_SAMPLE_FRACTION,
+            "bootstrap_sample_fraction_note": (
+                "1.0 is the standard size-n bootstrap; values below 1.0 are an "
+                "explicit m-out-of-n bootstrap sensitivity variant."
             ),
             "test_size": TEST_SIZE,
             "bootstrap_pca_seeds": BOOTSTRAP_SEEDS,
@@ -194,10 +243,21 @@ def main():
                 "SHA-256 of sorted train and test row indices; equal fingerprints "
                 "mean identical partition membership, regardless of index order."
             ),
+            "bootstrap_sample_fingerprint_semantics": (
+                "SHA-256 of sorted bootstrap row indices including multiplicity; "
+                "different fingerprints confirm different bootstrap multisets."
+            ),
+            "replicate_comparison_semantics": (
+                "PC1 rank correlation, loading L2 distance, and train-membership "
+                "Jaccard are measured against the first replicate. These diagnose "
+                "whether different bootstrap samples alter the PC1 ranking or tail split."
+            ),
         },
         "results": records,
         "aggregate": {
             "n_bootstrap_replicates": len(records),
+            "n_unique_bootstrap_samples": len(unique_bootstrap_samples),
+            "n_duplicate_bootstrap_samples": len(records) - len(unique_bootstrap_samples),
             "n_unique_partitions": len(unique_fingerprints),
             "n_duplicate_partition_replicates": len(records) - len(unique_fingerprints),
             "all_replicates_same_partition": len(unique_fingerprints) == 1,
