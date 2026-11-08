@@ -44,7 +44,7 @@ concurrency:
 permissions:
   contents: read
 
-# Same environment as ci_runner_repro.yml (the runs that produced the Phase 2 HDS rows).
+# Fresh-run settings from config/fresh_rerun.yaml. Phase 2 inputs must be newly generated; no historical cache is restored.
 env:
   HYPATIAX_R2_SIGN_FLIP: "0"
   HYPATIAX_STRICT: "1"
@@ -208,8 +208,8 @@ jobs:
             MC="${MAX_CASES// /}"
             if [[ -n "$MC" && "$MC" != "0" ]]; then ARGS+=(--max-cases "$MC"); fi
           fi
-          # 19500 s ends the step cleanly before the 350-min job limit, so the cache and
-          # artifact steps below still run. Finished cases are kept; re-dispatch to resume.
+          # 19500 s ends the step cleanly before the 350-min job limit so the artifact step still runs.
+          # There is deliberately no cross-run cache; a new dispatch starts from an empty output tree.
           timeout 19500 python3 scripts/phase3_all.py "${ARGS[@]}" \
             --seeds "${{ matrix.seed }}" --timeout-s "$TIMEOUT_S" \
             --phase2-manifest "$PHASE2_MANIFEST" --p-rows-glob "$P_ROWS_GLOB" \
