@@ -928,8 +928,12 @@ jobs:
           python3 -c "import sympy;       print('SymPy:        ', sympy.__version__)"
           python3 -c "import scipy;       print('SciPy:        ', scipy.__version__)"
           python3 -c "import sklearn;     print('scikit-learn: ', sklearn.__version__)"
-          [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
-          echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)"
+          if [[ "${EXP}" == "portfolio_feature_ranking" || "${EXP}" == "portfolio_pca_tail_error" ]]; then
+            echo "ANTHROPIC_API_KEY: not required for this offline diagnostic"
+          else
+            [[ -n "${ANTHROPIC_API_KEY:-}" ]] || { echo "ERROR: ANTHROPIC_API_KEY not set"; exit 1; }
+            echo "ANTHROPIC_API_KEY: set (${#ANTHROPIC_API_KEY} chars)
+          fi
           echo "JULIA_NUM_THREADS: ${JULIA_NUM_THREADS}"
           echo "FEYNMAN_SAMPLES:   ${FEYNMAN_SAMPLES}"
           echo "FEYNMAN_TIMEOUT:   ${FEYNMAN_TIMEOUT}"
@@ -943,6 +947,7 @@ jobs:
           fi
 
       - name: Validate ANTHROPIC_API_KEY (live round-trip)
+        if: ${{ needs.plan.outputs.exp_id != 'portfolio_feature_ranking' && needs.plan.outputs.exp_id != 'portfolio_pca_tail_error' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -1231,9 +1236,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}"
-          [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
-          echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
+          if [[ "${EXP}" == "portfolio_feature_ranking" || "${EXP}" == "portfolio_pca_tail_error" ]]; then
+            export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+            echo "ANTHROPIC_API_KEY: not required for this offline diagnostic"
+          else
+            export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
+            [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
+            echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)
+          fi
 
           if [[ "${DRY_RUN}" == "true" ]]; then
             echo "=== DRY RUN - shard ${SHARD} | experiment: ${EXP} ==="
