@@ -68,6 +68,18 @@ jobs:
             echo "runner accepted a population count that conflicts with the protocol" >&2
             exit 1
           fi
+          if LLM_MODEL=wrong-model bash ci_runner/run_fresh_experiments.sh --dry-run >/tmp/llm-model-mismatch.log 2>&1; then
+            echo "fresh launcher accepted an LLM_MODEL override" >&2
+            exit 1
+          fi
+          if PYSR_POPULATION_SIZE=50 bash run_all.sh --dry-run --step env_check >/tmp/popsize-mismatch.log 2>&1; then
+            echo "runner accepted a population-size override" >&2
+            exit 1
+          fi
+          if HYPATIAX_HOLDOUT=0 bash ci_runner/run_fresh_experiments.sh --dry-run >/tmp/holdout-mismatch.log 2>&1; then
+            echo "fresh launcher accepted a holdout-control override" >&2
+            exit 1
+          fi
           python - <<'PY'
           import glob, yaml
           for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml", "config/fresh_rerun.yaml"]:
@@ -82,6 +94,9 @@ jobs:
           assert cfg["ci_env"]["PYSR_GENERATIONS"] == str(cfg["pysr"]["niterations"])
           assert cfg["ci_env"]["PYSR_POPULATIONS"] == str(cfg["pysr"]["populations"])
           assert cfg["ci_env"]["PYSR_POPULATION"] == str(cfg["pysr"]["population_size"])
+          assert cfg["fresh_run_controls"]["HYPATIAX_NOLLM_ARM"] == 1
+          assert cfg["fresh_run_controls"]["HYPATIAX_HOLDOUT"] == 1
+          assert cfg["fresh_run_controls"]["SPARSE_SEED"] == "fallback"
           assert all("expected" not in section for section in cfg["benchmarks"].values())
           print("fresh protocol contains inputs only; no historical expected-result targets")
           PY
