@@ -81,6 +81,35 @@ export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
 export REPRO_CFG="${REPRO_CFG:-${REPO_ROOT}/config/repro.yaml}"
 
+# The protocol file is the single source of truth for LLM model and temperature.
+# Fail on conflicting caller overrides instead of silently running mixed settings.
+if [[ -f "${REPRO_CFG}" ]]; then
+  mapfile -t _LLM_PROTOCOL_VALUES < <(python3 - "${REPRO_CFG}" <<'PY'
+import sys, yaml
+with open(sys.argv[1], encoding="utf-8") as stream:
+    cfg = yaml.safe_load(stream) or {}
+print(cfg.get("llm_temperature", 0.25))
+print(cfg.get("llm_model", "claude-sonnet-4-6"))
+PY
+  ) || { echo "ERROR: could not read LLM settings from ${REPRO_CFG}" >&2; exit 1; }
+  _CFG_LLM_TEMPERATURE="${_LLM_PROTOCOL_VALUES[0]:-0.25}"
+  _CFG_LLM_MODEL="${_LLM_PROTOCOL_VALUES[1]:-claude-sonnet-4-6}"
+else
+  _CFG_LLM_TEMPERATURE="0.25"
+  _CFG_LLM_MODEL="claude-sonnet-4-6"
+fi
+if [[ -n "${LLM_TEMPERATURE:-}" && "${LLM_TEMPERATURE}" != "${_CFG_LLM_TEMPERATURE}" ]]; then
+  echo "ABORT: LLM_TEMPERATURE=${LLM_TEMPERATURE} conflicts with REPRO_CFG value ${_CFG_LLM_TEMPERATURE}" >&2
+  exit 1
+fi
+if [[ -n "${HYPATIAX_LLM_MODEL:-}" && "${HYPATIAX_LLM_MODEL}" != "${_CFG_LLM_MODEL}" ]]; then
+  echo "ABORT: HYPATIAX_LLM_MODEL=${HYPATIAX_LLM_MODEL} conflicts with REPRO_CFG value ${_CFG_LLM_MODEL}" >&2
+  exit 1
+fi
+export LLM_TEMPERATURE="${_CFG_LLM_TEMPERATURE}"
+export HYPATIAX_LLM_MODEL="${_CFG_LLM_MODEL}"
+unset _LLM_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL
+
 export JOB_DEADLINE="${JOB_DEADLINE:-19800}"
 
 HYBRID_ALL_DOMAINS_EXPECTED="biology,chemistry,economics,electromagnetism,fluid_dynamics,mathematics,mechanics,optics,quantum,thermodynamics"
@@ -181,6 +210,8 @@ SDKCHECK
     [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]] || exit 1
   fi
   echo "REPRO_CFG: ${REPRO_CFG}"
+  echo "LLM model: ${HYPATIAX_LLM_MODEL}"
+  echo "LLM temperature: ${LLM_TEMPERATURE}"
   if [ -f "${REPRO_CFG}" ]; then
     echo "repro.yaml found -- printing key values:"
     python3 -c "
