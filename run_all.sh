@@ -91,7 +91,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -414,6 +414,36 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
 "
 
 
+
+run portfolio_random_holdout "Portfolio variance independent random-holdout validation (interpolation control)" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/random_holdout_validation'
+  mkdir -p \"\${_OUT_DIR}\"
+  _SEEDS=\\"\${PARTITION_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\\"
+  _MODEL_SEED=\\"\${MODEL_SEED:-42}\\"
+  PARTITION_SEEDS=\\"\${_SEEDS}\\" \\
+  MODEL_SEED=\\"\${_MODEL_SEED}\\" \\
+  PARTITION_VALIDATION_OUTPUT=\\"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\\" \\
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_partition_validation.py'
+  [[ -s \"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\" ]] || {
+    echo 'ERROR: random-holdout validation output missing'; exit 1;
+  }
+"
+
+run portfolio_bootstrap_pca "Portfolio variance bootstrap-estimated PCA tail validation (sensitivity analysis)" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/bootstrap_pca_validation'
+  mkdir -p \"\${_OUT_DIR}\"
+  _SEEDS=\\"\${BOOTSTRAP_PCA_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\\"
+  _MODEL_SEED=\\"\${MODEL_SEED:-42}\\"
+  BOOTSTRAP_PCA_SEEDS=\\"\${_SEEDS}\\" \\
+  MODEL_SEED=\\"\${_MODEL_SEED}\\" \\
+  PCA_PARTITION_VALIDATION_OUTPUT=\\"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\\" \\
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_bootstrap_pca_validation.py'
+  [[ -s \"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\" ]] || {
+    echo 'ERROR: bootstrap PCA validation output missing'; exit 1;
+  }
+"
 
 run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
   cd '${REPO_ROOT}'
