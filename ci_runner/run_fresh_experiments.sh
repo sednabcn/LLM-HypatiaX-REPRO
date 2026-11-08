@@ -232,6 +232,29 @@ for stage in "${STAGES[@]}"; do
   fi
 
   if [[ "$stage" == "env_check" ]]; then
+    echo "Warming PySR/Julia with a tiny synthetic fit (not a benchmark result)..."
+    timeout 900s python3 - "$RESULTS_DIR" <<'PY' > "$RESULTS_DIR/logs/pysr-warmup.log" 2>&1
+import sys
+from pathlib import Path
+import numpy as np
+from pysr import PySRRegressor
+
+out = Path(sys.argv[1]) / "pysr_warmup"
+out.mkdir(parents=True, exist_ok=True)
+rng = np.random.default_rng(0)
+X = rng.normal(size=(20, 1))
+y = 2.0 * X[:, 0] + 1.0
+model = PySRRegressor(
+    niterations=5,
+    populations=1,
+    maxsize=5,
+    verbosity=0,
+    progress=False,
+    tempdir=str(out),
+)
+model.fit(X, y)
+print("PySR/Julia warm-up OK; this synthetic fit is excluded from experiment outputs.")
+PY
     echo "Capturing exact Python and Julia runtime provenance..."
     python3 -m pip freeze --all > "$RESULTS_DIR/python-environment-freeze.txt"
     python3 - <<'PY' > "$RESULTS_DIR/python-runtime-versions.txt"
