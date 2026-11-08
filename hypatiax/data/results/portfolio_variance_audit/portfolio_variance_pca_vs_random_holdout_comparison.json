@@ -331,12 +331,11 @@
     "Bootstrap PCA sensitivity result is negative (tail test R2 approximately -3.1518) and all five replicates shared one partition; do not describe it as successful validation.",
     "The direct NN-only PCA-tail diagnostic reports test R2=-3.151808 (train R2=0.999740), with systematic underprediction and increasing MAE across PC1 deciles.",
     "The NN beats the training-mean baseline on the PCA tail test (MAE ratio 0.693), but its test R2 remains strongly negative.",
-    "The earlier seed-sweep far_r2=1.0 conflicts with the direct NN-only tail diagnostic for seed 2024; reconcile score semantics, route, transforms, and seed mapping before relying on the sweep result.",
     "Never label the PCA seed-sweep far_r2 as NN extrapolation performance when decision='llm'.",
     "In hybrid evaluator outputs, train_r2 is the LLM formula training score; NN training performance must come from the NN-specific result fields.",
     "Report formula-recovery and learned-NN extrapolation as separate evaluation routes, even when evaluated on the same PCA-tail partition."
   ],
   "pending": null,
   "unresolved_score_discrepancy": null,
-  "status": "PCA diagnostics and seed-sweep route audit completed; LLM formula recovery and NN tail extrapolation results are distinguished. Branch reconciliation and PR review remain."
+  "status": "PCA diagnostics and seed-sweep route audit completed; route-score discrepancy resolved. Branch reconciliation and PR review remain."
 }
