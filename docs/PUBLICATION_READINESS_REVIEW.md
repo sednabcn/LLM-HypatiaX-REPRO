@@ -346,3 +346,51 @@ No result rerun is required to resolve this particular ambiguity. Make the scope
 Do not say that HypatiaX fails the entire Nguyen-12 suite. Do not imply that the 51/60 aggregate demonstrates a statistically significant advantage. The N-12 gate failure is a genuine, repeatable limitation and should remain visible.
 
 **R2 disposition:** result-file arithmetic and the N-12-specific gate behavior are reconciled. Remaining release work is to ensure the manuscript, supplement, and provenance manifest all cite these exact five files and the same configuration.
+
+
+## 14. Code inspection round 5 — C4 Core-15 source reconciliation
+
+The October audit's C4 finding was checked against the tracked Core-15 result families and the main-paper source.
+
+### What the manuscript actually reports
+
+The main-paper Core-15 table says five HypatiaX far-extrapolation cells are non-finite or unavailable: Gravitational Force (`-inf`), Henderson–Hasselbalch, Logistic Growth, Michaelis–Menten, and Rate Law (`nan`). It separately reports a finite but extreme Constant Product far-`R^2` of approximately `-4.46e4`.
+
+This is more precise than saying that five whole equations never completed: the table contains training metrics and some near/medium extrapolation metrics. The failure is specifically in the reported far-extrapolation outputs (and in some cases earlier extrapolation regimes), not necessarily in the entire task execution.
+
+### Two tracked result families do not reproduce the manuscript table
+
+1. `hypatiax/data/results/five_systems/exp1_five/exp1_five_results.json`
+   - The accompanying provenance map dates the run to 2026-08-12, seed 42, 30 populations, 900-second method timeout, and 1,100-second PySR timeout.
+   - Its runner log says all 15 equations completed for all five methods.
+   - The `Hybrid v50_2` far-`R^2` values differ materially from the manuscript table. Examples: Arrhenius is `-inf`, Allometric Scaling is about `0.9707`, Logistic Growth about `0.9840`, Michaelis–Menten about `0.2415`, and Constant Product about `0.9451`; several other rows are null/non-finite.
+   - This file therefore cannot be treated as the exact source for the manuscript's reported Arrhenius `0.9028`, Allometric Scaling `-0.7001`, Logistic Growth `nan`, and Constant Product `-44589.6` values.
+
+2. `hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json`
+   - This is a separate direct `HybridDiscoverySystem v5.4` ablation path, not the five-system `exp1_five` path. It stores the HypatiaX condition under a different schema.
+   - Its per-equation far scores also differ from the manuscript table; for example Henderson–Hasselbalch and Rate Law have finite far scores, while Gravitational Force is finite and Constant Product is about `0.9996`.
+   - It is not a substitute for the missing table-source artifact.
+
+The manuscript says the table values come from an underlying `_merged.json` file, but the exact merged source matching the printed table was not located among the tracked result files inspected in this pass. The two files above must not be silently substituted for it.
+
+### C4 disposition
+
+**Still a submission blocker; exact source reconciliation comes before rerunning.**
+
+Required sequence:
+
+1. Recover the exact `_merged.json` (or the source shards and merge procedure) used to produce the printed Core-15 table. Record its path, blob SHA, generating workflow/run, commit, method implementation, seed, split, and evaluator.
+2. Recompute the manuscript's Table 10 values directly from that source and verify all 15 equations, all extrapolation regimes, and the Constant Product extreme score.
+3. Compare the recovered table source with both tracked result families above. Explain whether they represent different methods, versions, seeds, or splits; do not pool them.
+4. Only after identifying the authoritative method and protocol, run a clean Core-15 reproduction with per-equation formulas, predictions, evaluation status, timeout status, and provenance persisted. Include the five problematic far-extrapolation cases and Constant Product.
+5. If the exact historical source cannot be recovered, withdraw the table's unreproducible values and replace the Core-15 comparison with a clearly labelled new run; retain the old numbers only as historical exploratory results if their provenance can be established.
+
+**Important interpretation:** the October audit's concern remains valid. The current repository contains different Core-15 result families, and the one that should support the manuscript table has not yet been identified. The newer v5.4 ablation's 15/15 task completion does not repair or invalidate the separate five-system table; it is a different experiment path.
+
+### Evidence inspected
+
+- `archive/patches/fix_out/patched/jmlr_paper_main_cleaned.tex`, Core-15 table and explanatory text (around lines 1,830–1,875).
+- `hypatiax/data/results/five_systems/exp1_five/exp1_five_results.json` and `exp1_five_extrapolation.json`.
+- `hypatiax/data/results/five_systems/exp1_five/provenance_map_exp1_five.json` and `exp1_five_run.log`.
+- `hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json`.
+- `hypatiax/experiments/benchmarks/exp1_ablation.py` and `exp1_five_system.py` (experiment-path distinction).
