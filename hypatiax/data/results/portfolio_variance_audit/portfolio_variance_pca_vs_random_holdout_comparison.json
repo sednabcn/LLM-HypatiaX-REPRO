@@ -496,5 +496,50 @@
       "result_path": "hypatiax/data/results/portfolio_variance_audit/pca_tail_error_diagnostic/portfolio_variance_pca_tail_error_diagnostic.json"
     },
     "interpretation": "Both integrated workflow reruns succeeded. The feature ranking result again shows each individual feature exactly reproduces PC1 ranking and train membership. The NN-only tail result reproduces the strongly negative test R2 and monotonically increasing MAE across PC1 deciles. These are reproducibility reruns, not independent partitions."
+  },
+  "publication_boundary": {
+    "decision": "freeze_current_portfolio_case_evidence_for_current_publication_cycle",
+    "scope": "This boundary applies to the Portfolio VaR case and this experiment set only; it is not a whole-project publication-readiness determination.",
+    "publish_now": [
+      {
+        "item": "random_holdout_interpolation_control",
+        "result": "Five independent 40/60 partitions; NN test R2 mean 0.999708553, sample SD 0.000120758, all five above 0.99.",
+        "qualification": "Model seed fixed; evidence concerns random-holdout interpolation, not tail extrapolation."
+      },
+      {
+        "item": "pca_directed_seed_sweep",
+        "result": "Five model/experiment seeds on one fixed transductive PCA partition; selected route was the LLM-generated analytical formula with far/test R2 1.0.",
+        "qualification": "Formula-route score, not NN extrapolation performance; not five independent partitions."
+      },
+      {
+        "item": "direct_nn_pca_tail_diagnostic",
+        "result": "NN train R2 approximately 0.999740 and tail test R2 approximately -3.151809, with systematic underprediction.",
+        "qualification": "NN beats the training-mean baseline but remains poor in absolute tail prediction."
+      },
+      {
+        "item": "feature_ordering_characterization",
+        "result": "Each individual feature reproduces the PC1 ranking and exact training membership for this generated case.",
+        "qualification": "Do not claim PCA provides a uniquely multivariate ordering in this case."
+      },
+      {
+        "item": "reproducibility_and_limitations",
+        "result": "Integrated CI reruns succeeded and outputs are retained.",
+        "qualification": "State transductive, single-case, fixed-model-seed, and route-specific metric limitations."
+      }
+    ],
+    "defer_to_post_investigation": [
+      "Find or construct cases with genuinely non-collinear, independently varying features and test whether PCA adds a distinct ordering.",
+      "Evaluate alternative tail definitions and non-transductive protocols with preprocessing/PCA fitted only on training data.",
+      "Investigate NN extrapolation methods and compare them with the current NN and known analytical-formula route.",
+      "Extend bootstrap sensitivity only when it produces meaningfully different partitions or rankings.",
+      "Expand evaluation across other cases and domains to assess generalization."
+    ],
+    "defensible_case_conclusion": "The NN performs very well on the tested random-holdout interpolation partitions but fails on the tested upper-tail PCA partition; the hybrid seed sweep recovers and evaluates the known analytical formula successfully. The PCA ordering is not uniquely multivariate for this dataset.",
+    "prohibited_overclaims": [
+      "General PCA superiority",
+      "General NN extrapolation ability",
+      "Broad cross-domain generalization"
+    ],
+    "blocker_policy": "Deferred investigations are future work, not publication blockers, unless a central manuscript claim elsewhere depends on them."
   }
 }
