@@ -237,3 +237,14 @@ ci_runner:
   triggers:
     spend_api_on_dispatch_only: [ci_runner_repro.yml, ci_phase3_ablation.yml]
     offline_on_push_and_pr:     [ci_bypass_audit.yml, ci_r2_policy.yml]   # ANTHROPIC_API_KEY=dummy-offline
+
+
+# These comparison arms are deliberately not part of the core fresh launcher yet.
+# Do not import historical p2/ or phase2_out/ rows to make them appear complete.
+deferred_experiments:
+  pure_llm_phase2:
+    status: deferred
+    reason: "config/phase2_pure_llm_config.yaml is still a proposal with unresolved DECIDE/VERIFY fields, including candidate-count matching, timeout policy, and evaluator/prompt provenance. Existing run_pure_llm_arm.py defaults point at historical p2 paths."
+  phase3_ablation:
+    status: deferred
+    reason: "Phase 3 requires a fresh Phase 2 closure manifest and fresh Pure-LLM rows plus engine/adapter gates. Its workflow now requires explicit fresh inputs and has no cross-run cache, but it is not part of the core run until Phase 2 is completed and Phase 3 preflight passes."
