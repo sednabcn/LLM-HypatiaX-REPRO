@@ -185,6 +185,36 @@ The separate tail-error diagnostic intentionally bypasses formula generation and
 
 - The exact-formula LLM route is a formula-recovery result on this synthetic/generated case; it is not evidence of neural-network extrapolation capability.
 
+## Publication boundary — current paper vs. post-investigation work
+
+**Decision for this experiment set:** freeze the current portfolio-case evidence for the present publication cycle. The remaining portfolio investigations are follow-up research, not publication blockers, provided the manuscript keeps the claims within the evidence summarized here. This is a scope decision for this case; it is not a declaration that the full HypatiaX paper is ready without reviewing its other experiments and claims.
+
+### Include in the current publication
+
+- **Random-holdout interpolation control:** report the five independent 40/60 partitions and their NN test-R² summary (mean 0.999709; sample SD 0.000121; all five above 0.99). State that the model seed was fixed and that this is interpolation/control evidence, not tail extrapolation.
+- **PCA-directed seed sweep:** report five model/experiment seeds on one fixed, transductive partition. Identify the selected route as the LLM-generated analytical formula; its reported far/test R² of 1.0 is formula-route performance, not NN performance.
+- **Direct NN tail diagnostic:** report the near-perfect training fit alongside the negative tail test R² (-3.151809), MAE (25,335.68), and systematic underprediction. Note that the NN beats the training-mean baseline but remains poor in absolute tail prediction.
+- **Dataset/split characterization:** state that each individual feature reproduces the PC1 ranking and exact training membership in this generated case. This limits any claim that PCA supplied a uniquely multivariate ordering here.
+- **Reproducibility and limitations:** cite the successful integrated CI reruns and preserve the transductive-split, single-case, fixed-model-seed, and route-specific metric caveats.
+
+### Defer to post-investigation work
+
+The following are worthwhile follow-ups, but are not required to publish this bounded case study:
+
+1. Identify or construct additional cases with genuinely non-collinear, independently varying features, then test whether PCA adds a distinct ordering.
+2. Evaluate alternative tail definitions and non-transductive protocols, including a split where all preprocessing/PCA fitting is restricted to training data.
+3. Investigate NN extrapolation methods and compare them with the current NN and the known analytical-formula route.
+4. Extend bootstrap/sensitivity analysis only where it produces meaningfully different partitions or ordering; repeating identical partitions adds little evidence.
+5. Expand the evaluation across other domains/cases and assess whether the observed interpolation/tail behavior generalizes.
+
+### Claim boundary
+
+For this case, the defensible conclusion is that the selected NN performs very well on the tested random-holdout interpolation partitions but fails on the tested upper-tail PCA partition, while the hybrid seed sweep recovers and evaluates the known analytical formula successfully. The PCA ordering is not uniquely multivariate for this dataset. Do **not** claim general PCA superiority, general NN extrapolation ability, or broad cross-domain generalization from these results.
+
+These deferred questions should be tracked as future work unless a separate result elsewhere in the project makes one of them necessary to support a central manuscript claim.
+
+---
+
 ## Reproducibility sources
 
 - PCA workflow run: [42410055833](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42410055833)
