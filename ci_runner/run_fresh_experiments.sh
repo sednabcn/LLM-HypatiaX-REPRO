@@ -7,6 +7,9 @@ set -Eeuo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 RUN_ALL="${RUN_ALL:-${REPO_ROOT}/run_all.sh}"
 PROTOCOL="${REPRO_CFG:-${REPO_ROOT}/config/fresh_rerun.yaml}"
+[[ -f "$PROTOCOL" ]] || { echo "ERROR: fresh protocol not found: $PROTOCOL" >&2; exit 2; }
+PROTOCOL="$(cd "$(dirname "$PROTOCOL")" && pwd -P)/$(basename "$PROTOCOL")"
+export REPRO_CFG="$PROTOCOL"
 
 STAGES=(
   env_check
@@ -124,7 +127,7 @@ export HYPATIAX_RESULTS_DIR="$RESULTS_DIR"
 export OUT_BASE="$RESULTS_DIR"
 export REPRO_CFG="$PROTOCOL"
 unset HYPATIAX_LLM_CACHE_DIR HYPATIAX_LLM_REPLAY_DIR HYPATIAX_LLM_FREEZE_CACHE
-unset LLM_TEMPERATURE HYPATIAX_LLM_MODEL
+unset LLM_TEMPERATURE LLM_MODEL HYPATIAX_LLM_MODEL
 mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
 
