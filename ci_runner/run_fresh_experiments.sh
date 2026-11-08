@@ -140,6 +140,7 @@ export HYPATIAX_RESULTS_DIR="$RESULTS_DIR"
 export OUT_BASE="$RESULTS_DIR"
 export REPRO_CFG="$PROTOCOL"
 unset HYPATIAX_LLM_CACHE_DIR HYPATIAX_LLM_REPLAY_DIR HYPATIAX_LLM_FREEZE_CACHE
+unset CLEAR_CHECKPOINT
 unset LLM_TEMPERATURE LLM_MODEL HYPATIAX_LLM_MODEL
 mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
@@ -176,6 +177,7 @@ manifest = {
         "llm_k_runs": cfg.get("llm_k_runs"),
         "timeouts": cfg.get("timeouts"),
         "pysr": cfg.get("pysr"),
+        "fresh_run_controls": cfg.get("fresh_run_controls"),
     },
     "results_dir": str(results_dir),
     "api_key_present": bool(os.environ.get("ANTHROPIC_API_KEY")),
