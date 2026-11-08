@@ -40,6 +40,15 @@ import csv
 import importlib.util as _ilu
 import inspect
 import json
+try:
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
+except ImportError:  # run as a bare script, package not on sys.path
+    import pathlib as _pl, sys as _sys
+    for _up in _pl.Path(__file__).resolve().parents:
+        if (_up / "hypatiax" / "core" / "json_strict.py").is_file():
+            _sys.path.insert(0, str(_up))
+            break
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
 import os
 import hashlib
 import subprocess
