@@ -52,6 +52,14 @@ jobs:
           bash ci_runner/run_fresh_experiments.sh --list > fresh-stage-list.txt
           ! grep -E '^(validate|qualify|audit_)' fresh-stage-list.txt
           bash ci_runner/run_fresh_experiments.sh --dry-run > fresh-dry-run.log
+          if HYPATIAX_LLM_MODEL=wrong-model bash run_all.sh --dry-run --step env_check >/tmp/model-mismatch.log 2>&1; then
+            echo "runner accepted an LLM model that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if LLM_TEMPERATURE=0.3 bash run_all.sh --dry-run --step env_check >/tmp/temperature-mismatch.log 2>&1; then
+            echo "runner accepted an LLM temperature that conflicts with the protocol" >&2
+            exit 1
+          fi
           python - <<'PY'
           import glob, yaml
           for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml", "config/fresh_rerun.yaml"]:
