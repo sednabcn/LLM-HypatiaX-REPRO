@@ -249,3 +249,42 @@ This pass inspected the current `master` implementation and workflow sources. It
 
 **B5 disposition:** current implementation contains an explicit injection/scoring protocol and a ceiling audit, but the old headline outputs do not carry the metadata needed to verify the protocol and their scores exceed the noisy-target ceiling. Do not use those historical numbers as noisy-target recovery results. Regenerate the noise sweep with the current runner and archive the resulting protocol metadata. For sample complexity, either report the current pipeline's noiseless protocol consistently or deliberately run a noisy sample-size sweep; do not mix the two descriptions. Recompute recovery rates under the single 0.99 policy after the rerun.
 
+
+
+## 11. Code inspection round 3 — C2 and C3 method/system identity
+
+### C2 — the tracked DeFi implementation does not match the manuscript's five-stage description
+
+The current 74-task runner `hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py` was compared with the main-paper routing description.
+
+| Component | Main-paper description | Current v3c implementation |
+|---|---|---|
+| Stage 2 token set | `exp, log, Phi, sin, cos, erf`; triggers ensemble mode | `exp, log, sqrt, norm.cdf, norm.pdf, scipy.stats, maximum/minimum, max/min, sin/cos, fractional powers`; if formula is trustworthy, decision is changed to **LLM** |
+| Stage 3 degradation | LLM formula train R² minus LLM formula edge R²; large degradation triggers ensemble | Trains an MLP on the first 85% of the ordered training rows and probes the last 15%; computes MLP train R² minus probe R²; threshold is hard-coded at 0.15; if exceeded, decision is changed to **LLM** |
+| Stage 4 OOD | KDE on training projections estimates OOD probability | `_distance_llm_weight` uses the fraction of `X_test` rows outside the per-feature min/max training range |
+| Stage 5 ensemble | Main-paper equations describe OOD-probability weighting and confidence-normalised weights | Current code first derives an input-range LLM weight from the test batch, then combines LLM and NN using training residual uncertainty and training R² values |
+
+This is a substantive method mismatch, not just a wording difference. The same route cannot simultaneously use the paper's LLM-formula edge score/KDE/ensemble trigger and the code's MLP probe/range-based test-batch gate/LLM override.
+
+**Required:** decide whether the manuscript is intended to describe the current v3c runner or another historical implementation. If v3c is authoritative, rewrite the method, pseudocode, equations, figures, and ablation interpretations to match it. If the paper's five-stage method is authoritative, implement that method in a pinned runner and rerun all affected results. Do not combine descriptions from different versions.
+
+### C3 — the repository contains several distinct system implementations
+
+The current tree and benchmark sources distinguish at least:
+- the 74-task DeFi runner in `hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py`;
+- `EnhancedHybridSystemDeFi (core)`;
+- `HybridSystemLLMNN all-domains (core)`;
+- `HybridDiscoverySystem v50_2 (tools)`;
+- `SymbolicEngineWithLLM (tools)`.
+
+The all-domains M4 implementation delegates formula generation to `PureLLMBaseline`, has a `force_llm` branch that can skip NN training, and has its own fallback prompt and ensemble/refinement path. That is not interchangeable with the self-contained v3c DeFi cascade. The method names in result files are therefore not cosmetic labels.
+
+**Required:** name one system/version as the paper's primary contribution, map each result table to the exact implementation and commit, and describe M3/M4 and other engines as separate systems or baselines where appropriate. Algorithm 1 and Figure 2 must describe the same implementation used to produce the reported results.
+
+### Additional implementation details to pin
+
+- The current v3c MLP defaults to hidden layers [128, 64, 32], LayerNorm + SiLU, Adam learning rate 0.001, and a 120-second wall-clock cap; the Stage 3 probe explicitly overrides the network to [64, 32] for 200 epochs. These are not the same as the Supplement B M4 [64, 32, 1] ReLU / 0.01 / 200-epoch description. State which implementation each table uses.
+- The v3c built-in formula call explicitly sends temperature 0.0. The Nguyen-12 path in the main paper describes a different model and temperature (Sonnet 5, 0.25, unseeded sampling). “Deterministic prompting” cannot be a global statement; specify model, temperature, cache, and seed policy per experiment.
+- The current `run_all.sh` configures PySR with 10,000 generations and 30 populations by default, while the main/supplement descriptions and historical experiment configs cite different budgets. Tie each published result to the exact run configuration rather than presenting one global PySR setting.
+
+**C2/C3 disposition:** confirmed open blockers. A single authoritative method/version map is required before manuscript rewriting or additional reruns; otherwise reruns may simply generate another incompatible result family.
