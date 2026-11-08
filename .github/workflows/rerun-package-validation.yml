@@ -95,6 +95,11 @@ jobs:
       - name: Run complete test suite (no LLM API key supplied)
         run: |
           python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+      - name: Run offline runner smoke and clean-run guards
+        run: |
+          SMOKE_HELP=0 SMOKE_LIVE=0 RUN_ALL=run_all.sh \
+            SMOKE_OUT="${RUNNER_TEMP}/hypatiax-smoke" \
+            bash ci_runner/run_smoke_all.sh
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
