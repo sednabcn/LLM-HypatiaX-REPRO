@@ -1833,6 +1833,7 @@ def write_provenance(all_results: dict) -> None:
     _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
     _source_revision = None
     _git_dirty = None
+    _git_dirty_files = None
     _script_tracked = False
     _git_dirty_scope = "unavailable"
     try:
@@ -1844,16 +1845,21 @@ def write_provenance(all_results: dict) -> None:
             ["git", "rev-parse", "HEAD"], cwd=_git_root,
             check=True, capture_output=True, text=True
         ).stdout.strip()
-        _git_dirty = bool(subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+        # Result files are outputs the run itself rewrites; only code/config
+        # changes make a run non-reproducible from source_revision.
+        _status_out = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no",
+             "--", ".", ":(exclude)hypatiax/data/results"],
             cwd=_git_root, check=True, capture_output=True, text=True
-        ).stdout.strip())
+        ).stdout.strip()
+        _git_dirty = bool(_status_out)
+        _git_dirty_files = _status_out.splitlines()[:20]
         _script_rel = _script_file.relative_to(_git_root).as_posix()
         _script_tracked = subprocess.run(
             ["git", "ls-files", "--error-unmatch", _script_rel],
             cwd=_git_root, capture_output=True, text=True
         ).returncode == 0
-        _git_dirty_scope = "tracked_worktree_only"
+        _git_dirty_scope = "tracked_worktree_excl_data_results"
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
     _source_meta = {
@@ -1863,6 +1869,7 @@ def write_provenance(all_results: dict) -> None:
         "benchmark_script_tracked": _script_tracked,
         "git_dirty": _git_dirty,
         "git_dirty_scope": _git_dirty_scope,
+        "git_dirty_files": _git_dirty_files,
     }
     provenance = {
         "family":                "ablation_exp1",
