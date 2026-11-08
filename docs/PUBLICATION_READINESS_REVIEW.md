@@ -214,3 +214,38 @@ This pass inspected the current `master` implementation and workflow sources. It
 2. B3 — inspect the corrected attribution calculation and whether hybrid formulas/predictions can be recovered for same-split rescoring.
 3. B5/A3 — trace noise injection, target arrays used for R², and threshold configuration across noise and sample-size runners.
 4. C2/C3 — map the actual runner implementation to the paper's Stage 2/3, ensemble, NN, PySR, and system-identity descriptions.
+
+
+## 10. Code inspection round 2 — B2 and B5
+
+### B2 — bypass removal is present in current generator code; historical M4 headline remains unusable
+
+**Verified in current source:**
+
+- `hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py` documents an input-parity prompt with no equation-specific ground-truth formula, code template, or data-derived hints.
+- Its `_try_hardcoded_formula(...)` is an explicit no-op returning `None`; the prior hardcoded and OLS-fit branches are deleted.
+- The generator removes metadata keys such as `ground_truth`, `formula`, `hint`, and data-statistic fields before prompt construction. It records `bypass_kind="live"`, prompt hash, model source, and bypass flags.
+- The disable switches are fail-closed: unset means clean mode unless legacy mode is explicitly allowed. `run_all.sh` exports both hardcoded and prompt-hint disable flags as enabled by default and blocks legacy mode in GitHub Actions.
+- `HybridSystemLLMNN` delegates to `PureLLMBaseline`; the `force_llm` guard skips NN training when a valid LLM formula is available. That is an LLM-versus-NN routing decision, not itself evidence that the LLM call was bypassed.
+- The stored M4 records in the inspected Protocol-30 files have `formula="N/A"`, R²=1.0, and no `llm_called` field. They are marked `provenance_status="unverified_no_formula"` and `exclude_from_reported_results=true`. In the inspected `exp2_multi` JSON, all three M4 rows are excluded and the per-test comparison score/ranking fields no longer include M4.
+- The repository contains `mark_m4_unverified.py`, `close_m4_exclusion.py`, and a regression test for excluding M4 from comparisons.
+
+**Remaining gap:** exclusion is not yet complete for all derived outputs. The inspected sample-complexity JSON (`sample_complexity_20260812_180007_nshards02.json`) still reports M4 aggregate recovery of 100% and carries per-equation M4 values without formulas or the exclusion flag. The current `close_m4_exclusion.py` updates per-test comparison fields and adds exclusion columns to noise/sample-complexity CSVs, but it does not rewrite the JSON `method_summary` / `per_n` aggregates. The current sample-complexity and noise-sweep orchestrators also still list M4 among the methods they can run; no fresh bypass-off M4 rerun artifact was established in this pass.
+
+**B2 disposition:** current generator-side hardcoded/prompt bypasses have been removed, and several old M4 rows are correctly excluded. That does not validate the old M4 100% headline. Until every M4-derived table/JSON aggregate is either recomputed excluding unverified rows or replaced by a fresh run that stores formulas and per-row provenance, remove the M4 exact/zero-variance/READY claims and the M3-vs-M4 win-rate narrative. Treat M4 as unverified, not as a failed or successful model, where its formula/provenance is absent.
+
+### B5 — current noise protocol is explicit, but the historical headline files do not prove it was followed
+
+**Verified in current source:**
+
+- `run_comparative_suite_benchmark_v2.py` reads `HYPATIAX_NOISE_LEVEL` and, for positive sigma in noisy mode, adds Gaussian noise with standard deviation `sigma * std(y)` to each target vector before the train/test split.
+- The noise stream is derived from the equation description and, when supplied, `EXPERIMENT_SEED`; the runner records the number of perturbed equations and noise seed.
+- The output protocol declares the noise definition and `scored_on="noisy targets (train and test)"` for positive sigma; it also records the theoretical R² ceiling.
+- `run_noise_sweep_benchmark.py` now specifies a single default recovery threshold of 0.99 (plus exact recovery at 0.999999), checks that selected result files match the launched sigma/seed, and flags scores above the noisy-target R² ceiling.
+- `run_sample_complexity_benchmark.py` also has a single default 0.99 threshold, an optional exact threshold, result matching by sigma and sample size, and a noise-ceiling check.
+- The current `run_all.sh` `suppB_sc` step explicitly passes `--noiseless`. The stored sample-complexity JSON inspected (`sample_complexity_20260812_180007_nshards02.json`) declares `mode="noiseless"`; its threshold map is the old per-sample ladder (0.999, 0.9995, 0.9999, ...), not the current unified threshold policy.
+
+**Historical output problem:** the inspected 1%-noise sweep JSON from 2026-08-12 reports median R² around 0.9999998 for M3/M4, above the theoretical ceiling for scoring against targets perturbed at 1% of their standard deviation (approximately 0.99990001). That file has no per-run protocol block showing `noise_definition`, `scored_on`, `noise_injected_equations`, or `noise_seed`. It therefore cannot establish that noise was applied and that R² was scored against noisy targets. The current code's audit logic does not retroactively validate this older file.
+
+**B5 disposition:** current implementation contains an explicit injection/scoring protocol and a ceiling audit, but the old headline outputs do not carry the metadata needed to verify the protocol and their scores exceed the noisy-target ceiling. Do not use those historical numbers as noisy-target recovery results. Regenerate the noise sweep with the current runner and archive the resulting protocol metadata. For sample complexity, either report the current pipeline's noiseless protocol consistently or deliberately run a noisy sample-size sweep; do not mix the two descriptions. Recompute recovery rates under the single 0.99 policy after the rerun.
+
