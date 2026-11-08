@@ -9,7 +9,9 @@ the model seed fixed.
 
 For each bootstrap seed:
 
-1. Draw a bootstrap sample of size n from the n feature rows, with replacement.
+1. Draw a bootstrap sample with replacement. By default its size is n; set
+   `BOOTSTRAP_PCA_SAMPLE_FRACTION` below 1 to run an explicitly labeled
+   m-out-of-n bootstrap sensitivity variant.
 2. Fit one-component PCA on that bootstrap sample, using raw unstandardized features.
 3. Project all n feature rows onto the fitted PC1 direction.
 4. Orient PC1 so its largest-absolute loading is positive, then stably sort all rows.
@@ -26,6 +28,27 @@ From the repository root on `audit-master`:
 MODEL_SEED=42 BOOTSTRAP_PCA_SEEDS=11,23,42,77,101 \
   python hypatiax/experiments/benchmarks/portfolio_variance_bootstrap_pca_validation.py
 ```
+
+To keep the standard size-n bootstrap:
+
+```bash
+MODEL_SEED=42 BOOTSTRAP_PCA_SEEDS=11,23,42,77,101 \
+  BOOTSTRAP_PCA_SAMPLE_FRACTION=1.0 \
+  python hypatiax/experiments/benchmarks/portfolio_variance_bootstrap_pca_validation.py
+```
+
+To test a smaller m-out-of-n resample (for example, 70% of the rows):
+
+```bash
+MODEL_SEED=42 BOOTSTRAP_PCA_SEEDS=11,23,42,77,101 \
+  BOOTSTRAP_PCA_SAMPLE_FRACTION=0.7 \
+  python hypatiax/experiments/benchmarks/portfolio_variance_bootstrap_pca_validation.py
+```
+
+The output records both the bootstrap-sample fingerprint and final partition
+fingerprint, plus PC1 rank correlation, loading distance, and train-membership
+Jaccard similarity against the first replicate. Thus different bootstrap draws
+can be distinguished from genuinely different PC1 rankings and partitions.
 
 Output:
 
