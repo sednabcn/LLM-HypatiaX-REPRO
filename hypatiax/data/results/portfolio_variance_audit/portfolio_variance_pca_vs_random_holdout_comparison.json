@@ -1,7 +1,7 @@
 {
   "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
   "schema_version": 1,
-  "generated_at": "2026-11-07T22:46:00Z",
+  "generated_at": "2026-11-08T11:28:42Z",
   "branch": "audit-master",
   "case_identity": {
     "domain": "risk_var",
@@ -75,12 +75,77 @@
       "test_r2_max": 0.999801792332363,
       "llm_train_r2_semantics": "LLM formula training R2 only; NaN means unavailable/invalid and is not NN training R2.",
       "partition_independence": "Five independent random partitions; model seed held fixed."
+    },
+    "feature_ranking_diagnostic": {
+      "protocol": "full_data_raw_feature_pc1_vs_individual_feature_rankings",
+      "generated_at": "2026-11-08T11:28:42Z",
+      "n_samples": 200,
+      "n_train": 80,
+      "n_test": 120,
+      "pca_fit_scope": "All 200 raw, unstandardized feature rows; descriptive and transductive",
+      "pc1_explained_variance_ratio": 1,
+      "pc1_loadings": {
+        "var_asset1": 0.8574929254074085,
+        "var_asset2": 0.5144957552444456,
+        "correlation": 0.000026677557679341606
+      },
+      "individual_feature_rankings": [
+        {
+          "feature": "var_asset1",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        },
+        {
+          "feature": "var_asset2",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        },
+        {
+          "feature": "correlation",
+          "spearman_with_pc1": 1,
+          "train_membership_jaccard": 1,
+          "n_train_rows_different": 0
+        }
+      ],
+      "cutoff": {
+        "last_train_pc1_score": -5406.083542622026,
+        "first_test_pc1_score": -5142.372150299003,
+        "score_gap": 263.71139232302266,
+        "qualitative_boundary_assessment": "Displayed adjacent rows progress smoothly; no obvious discontinuity."
+      },
+      "interpretation": "Every individual feature ranking exactly reproduces the PC1 ordering and the same 80-row training membership. For this dataset, the PCA split does not add a distinct multivariate ordering; the feature rows behave as a one-dimensional ordered trajectory for ranking purposes."
+    },
+    "bootstrap_pca_sensitivity": {
+      "protocol": "m_out_of_n_bootstrap_estimated_pc1_tail_40_60",
+      "sample_fraction": 0.7,
+      "n_replicates": 5,
+      "n_unique_bootstrap_samples": 5,
+      "n_unique_partitions": 1,
+      "duplicate_partition_replicates": 4,
+      "all_replicates_same_partition": true,
+      "tail_test_r2_mean": -3.1518085064529027,
+      "tail_test_r2_sample_std": 0,
+      "n_success_tail_test_r2_gt_0_99": 0,
+      "interpretation": "Distinct bootstrap samples yielded identical PC1 ranking and identical train/test membership. Negative tail R2 indicates poor tail prediction, not successful validation."
     }
   },
   "comparison_rules": [
     "Do not pool or average PCA far_r2 with random-holdout test_r2.",
     "PCA results are five seed runs on one fixed transductive partition, not five independent partitions.",
     "Random-holdout results measure interpolation/control, not PC1-directed far-range extrapolation.",
-    "Claims are limited to the selected Portfolio VaR case and tested configurations."
-  ]
+    "Claims are limited to the selected Portfolio VaR case and tested configurations.",
+    "Feature-ranking diagnostic: each of the three individual feature rankings exactly reproduces the PCA PC1 ranking and train membership for this dataset.",
+    "Bootstrap PCA sensitivity result is negative (tail test R2 approximately -3.1518) and all five replicates shared one partition; do not describe it as successful validation.",
+    "The PCA conclusion remains provisional until the NN tail-error diagnostic is reviewed."
+  ],
+  "pending": {
+    "diagnostic": "portfolio_variance_pca_tail_error_diagnostic",
+    "runner": "hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py",
+    "output": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_tail_error_diagnostic.json",
+    "status": "runner committed to audit-master; user execution/results review pending",
+    "purpose": "Explain NN tail errors by PC1 decile and compare against training-target-mean baseline",
+    "scope": "NN-only diagnostic; does not reproduce LLM/hybrid routing"
+  }
 }
