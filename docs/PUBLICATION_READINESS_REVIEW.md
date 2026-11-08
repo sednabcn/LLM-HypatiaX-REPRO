@@ -504,3 +504,38 @@ The package is ready to start a controlled rerun under the tested CI environment
 Do not revise the manuscript by trying to make old claims fit old tables. Freeze the rerun protocol first; execute it; compute all metrics from the new raw outputs; then write a new claim set from those results. Retain historical numbers only when they are explicitly labelled as historical and their provenance is recoverable. The manuscript should not determine the rerun outcome or the thresholds after seeing the data.
 
 **Final code-package judgment:** HypatiaX is ready for a controlled rerun on the tested candidate revision, subject to source promotion/reconciliation and the environment/live-call controls above. It is not yet a fully frozen release and the current master branch is not certified by the candidate-branch test results.
+
+
+## 18. Promotion-path audit — no wholesale merge approved
+
+A fresh GitHub compare was performed before changing any source branch. The results confirm that the tested rerun candidate cannot safely be promoted by merging either existing long-lived branch wholesale.
+
+### Current graph facts
+
+- `master...audit-main`: diverged; `audit-main` is 102 commits ahead and 167 commits behind `master`, with 175 changed paths in the comparison.
+- `master...fix/rerun-blockers`: diverged; candidate is 131 commits ahead and 167 commits behind `master`, with 211 changed paths.
+- `audit-main...fix/rerun-blockers`: diverged; candidate is 30 commits ahead and 1 commit behind `audit-main`, with 88 changed paths.
+- The tested candidate remains exact SHA `f4336f14b224820690f119e50c09dac8e64e3b7c`. The earlier successful CI evidence applies to this SHA only.
+
+### What the diff says
+
+The candidate includes genuine rerun-relevant code and tests: unified LLM-call wrapper, hybrid/Pure-LLM path changes, checkpoint-clearing behavior, provenance/bypass tests, protocol/runner changes, and runner workflows. However, the branch comparisons also include many historical experiment outputs, checkpoints, logs, audit artifacts, manuscript-adjacent files, and unrelated workflow changes. The compare API reports many generated/result paths with zero text-line changes because these are structured/binary or metadata changes; they still count as changed paths and must not be treated as harmless.
+
+The candidate workflow also carries a broad experiment-dispatch surface and CI behavior, including automatic commits/pushes of generated baseline artifacts. Those behaviors need an explicit review before a production rerun is dispatched. The candidate is therefore a valid tested source snapshot, not a clean promotion patch.
+
+### Promotion decision
+
+**Do not merge PR #95 or PR #92 wholesale into `master`. Do not retarget PR #95 directly to `master`. Do not move `master` to the candidate SHA.**
+
+The safe path is a new promotion branch based on the current `master` head, followed by a selective, file-level port of only the code, tests, and minimal CI wiring required for the rerun. Exclude committed result/checkpoint/log trees and unrelated paper/audit changes. Preserve the candidate SHA and its CI run links as the evidence baseline. Then:
+
+1. Create a promotion branch from the current `master` SHA.
+2. Port the minimum code/test set from the candidate, reviewing each file against both current `master` and the tested candidate.
+3. Add only the required runner smoke/preflight workflow wiring; remove or disable automatic result/baseline commits unless explicitly required and reviewed.
+4. Resolve dependency/lockfile and Julia/PySR environment pinning on that branch.
+5. Run the full tests, runner smoke, bypass audit with its baseline limitation addressed, Exp3 smoke, and R² policy checks on the promotion branch's resulting SHA.
+6. Run the live-LLM preflight and verify a fresh output namespace before launching the full staged experiment matrix.
+
+The current branch graph and the 30-commit delta between `audit-main` and the tested candidate suggest the promotion work should be a deliberate patch port, not a merge operation. No source branch was modified and `master` remains untouched by this promotion audit.
+
+**Updated decision:** the candidate is still approved for a controlled rerun as an isolated tested snapshot. A rerun from `master` or from a newly promoted branch is not approved until that exact resulting SHA passes the required checks.
