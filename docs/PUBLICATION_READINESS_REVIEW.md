@@ -454,7 +454,7 @@ This is a separate decision from manuscript submission readiness. The package is
 
 ### Decision
 
-<code-package-status>READY FOR A CONTROLLED, INSTRUMENTED RERUN</code-package-status>
+**READY FOR A CONTROLLED, INSTRUMENTED RERUN**
 
 The strongest current candidate is the tested code state at commit `f4336f14b224820690f119e50c09dac8e64e3b7c` on branch `fix/rerun-blockers`. It is **not** the current `master` checkout. Do not cite the test results below as validation of master until the candidate is promoted or its changes are reconciled and the checks rerun on the promoted SHA.
 
