@@ -419,11 +419,11 @@ run portfolio_random_holdout "Portfolio variance independent random-holdout vali
   cd '${REPO_ROOT}'
   _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/random_holdout_validation'
   mkdir -p \"\${_OUT_DIR}\"
-  _SEEDS=\\"\${PARTITION_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\\"
-  _MODEL_SEED=\\"\${MODEL_SEED:-42}\\"
-  PARTITION_SEEDS=\\"\${_SEEDS}\\" \\
-  MODEL_SEED=\\"\${_MODEL_SEED}\\" \\
-  PARTITION_VALIDATION_OUTPUT=\\"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\\" \\
+  _SEEDS=\"\${PARTITION_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\"
+  _MODEL_SEED=\"\${MODEL_SEED:-42}\"
+  PARTITION_SEEDS=\"\${_SEEDS}\" \\
+  MODEL_SEED=\"\${_MODEL_SEED}\" \\
+  PARTITION_VALIDATION_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\" \\
     python3 '${EXPERIMENTS_DIR}/portfolio_variance_partition_validation.py'
   [[ -s \"\${_OUT_DIR}/portfolio_variance_random_holdout_validation.json\" ]] || {
     echo 'ERROR: random-holdout validation output missing'; exit 1;
@@ -434,11 +434,11 @@ run portfolio_bootstrap_pca "Portfolio variance bootstrap-estimated PCA tail val
   cd '${REPO_ROOT}'
   _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/bootstrap_pca_validation'
   mkdir -p \"\${_OUT_DIR}\"
-  _SEEDS=\\"\${BOOTSTRAP_PCA_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\\"
-  _MODEL_SEED=\\"\${MODEL_SEED:-42}\\"
-  BOOTSTRAP_PCA_SEEDS=\\"\${_SEEDS}\\" \\
-  MODEL_SEED=\\"\${_MODEL_SEED}\\" \\
-  PCA_PARTITION_VALIDATION_OUTPUT=\\"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\\" \\
+  _SEEDS=\"\${BOOTSTRAP_PCA_SEEDS:-\${EFFECTIVE_SEEDS:-11,23,42,77,101}}\"
+  _MODEL_SEED=\"\${MODEL_SEED:-42}\"
+  BOOTSTRAP_PCA_SEEDS=\"\${_SEEDS}\" \\
+  MODEL_SEED=\"\${_MODEL_SEED}\" \\
+  PCA_PARTITION_VALIDATION_OUTPUT=\"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\" \\
     python3 '${EXPERIMENTS_DIR}/portfolio_variance_bootstrap_pca_validation.py'
   [[ -s \"\${_OUT_DIR}/portfolio_variance_bootstrap_pca_validation.json\" ]] || {
     echo 'ERROR: bootstrap PCA validation output missing'; exit 1;
