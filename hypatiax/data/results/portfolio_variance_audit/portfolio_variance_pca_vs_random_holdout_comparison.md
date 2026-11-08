@@ -1,6 +1,6 @@
 # Portfolio VaR: PCA sweep and random-holdout comparison
 
-**Branch:** `audit-master`  
+**Branch:** `master`  
 **Case:** `risk_var` / Portfolio VaR for two correlated assets  
 **Prepared:** 2026-11-08  
 **Purpose:** Consolidate the existing PCA-directed seed sweep and independent random-holdout validation without conflating their protocols or score semantics.
@@ -194,4 +194,20 @@ The separate tail-error diagnostic intentionally bypasses formula generation and
 - Random-holdout protocol notes: `hypatiax/experiments/benchmarks/PORTFOLIO_PARTITION_VALIDATION.md`
 - Feature-ranking diagnostic: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_feature_ranking_diagnostic.json`
 - Tail-error diagnostic runner: `hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py`
-- Tail-error diagnostic output: `hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_tail_error_diagnostic.json`
+- Tail-error diagnostic output: `hypatiax/data/results/portfolio_variance_audit/pca_tail_error_diagnostic/portfolio_variance_pca_tail_error_diagnostic.json` (integrated CI rerun: [42484246269](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42484246269))
+
+
+## Experiment F — integrated GitHub Actions diagnostic reruns
+
+Both diagnostics were rerun through the integrated `ci_runner_repro.yml` pipeline on `master` on 2026-11-08. Both workflow runs and worker jobs completed successfully and uploaded result artifacts.
+
+| Diagnostic | Workflow run | Result artifact |
+|---|---|---|
+| Feature ranking | [Run #42482940938](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42482940938) | [Feature-ranking JSON](feature_ranking_diagnostic/portfolio_variance_feature_ranking_diagnostic.json) |
+| PCA tail error | [Run #42484246269](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42484246269) | [PCA tail-error JSON](pca_tail_error_diagnostic/portfolio_variance_pca_tail_error_diagnostic.json) |
+
+The rerun feature-ranking output, generated at 2026-11-08 13:05:17 UTC, again reports Spearman correlation 1.0 and train-membership Jaccard 1.0 for each of the three features, with zero differing training rows. It confirms the earlier conclusion that every individual feature induces exactly the same ordering and split as PC1.
+
+The rerun NN tail-error output, generated at 2026-11-08 13:20:53 UTC, confirms the same result within numerical precision: train R² = 0.999740, test R² = -3.151809, MAE = 25,335.68, RMSE = 29,990.43, and mean signed error = -25,335.68. The training-mean baseline has test R² = -6.167132 and MAE = 36,551.54; the NN improves on that baseline but remains poor on the ordered tail. Across the ten PC1 test deciles, MAE increases from 1,866.61 to 51,137.82 while target means increase and prediction means decline.
+
+These reruns are reproducibility confirmation of Experiments C and D, not new independent datasets or partitions. The PCA protocol remains transductive and the tail diagnostic remains NN-only; it does not evaluate the LLM/hybrid formula route.
