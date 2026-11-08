@@ -53,7 +53,9 @@ ANTHROPIC_API_KEY. RESULTS_DIR must be a new or empty directory outside the
 repository. Outputs and logs are kept there; nothing is committed.
 
 Historical comparison stages (validate, qualify, audit_paper, audit_*) are
-intentionally excluded. They must not gate or steer fresh scientific results.
+intentionally excluded. Pure-LLM Phase 2 and Phase 3 are also deferred until their
+fresh-input protocols and gates are complete; historical p2/ or phase2_out/ rows
+must never be substituted.
 USAGE
 }
 
@@ -178,6 +180,7 @@ manifest = {
         "timeouts": cfg.get("timeouts"),
         "pysr": cfg.get("pysr"),
         "fresh_run_controls": cfg.get("fresh_run_controls"),
+        "deferred_experiments": cfg.get("deferred_experiments"),
     },
     "results_dir": str(results_dir),
     "api_key_present": bool(os.environ.get("ANTHROPIC_API_KEY")),
@@ -193,7 +196,7 @@ manifest = {
     },
     "historical_result_comparison": False,
     "historical_cache_reuse": False,
-    "excluded_stages": ["validate", "qualify", "audit_paper", "audit_setup", "audit_nb01", "audit_nb02", "audit_nb03", "audit_nb04", "audit_nb05", "audit_nb06_fixc3_disclosure", "audit_nb06_fixc3_rerun", "audit_guard", "audit_print_verify", "audit_print_findings", "audit_figures_tables", "audit_final_gate"],
+    "excluded_stages": ["validate", "qualify", "audit_paper", "pure_llm_phase2", "phase3_ablation", "audit_setup", "audit_nb01", "audit_nb02", "audit_nb03", "audit_nb04", "audit_nb05", "audit_nb06_fixc3_disclosure", "audit_nb06_fixc3_rerun", "audit_guard", "audit_print_verify", "audit_print_findings", "audit_figures_tables", "audit_final_gate"],
     "stages": [],
 }
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
