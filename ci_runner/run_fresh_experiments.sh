@@ -115,6 +115,19 @@ if [[ -n "$(git -C "$REPO_ROOT" status --porcelain --untracked-files=all)" ]]; t
   exit 2
 fi
 
+# Results are git-ignored in this repository, so also fingerprint the historical
+# results tree and refuse to continue if any old file is added, removed or changed.
+historical_results_fingerprint() {
+  local historical_dir="$REPO_ROOT/hypatiax/data/results"
+  if [[ -d "$historical_dir" ]]; then
+    find "$historical_dir" -type f -printf '%P\t%s\t%T@\n' | LC_ALL=C sort | sha256sum | awk '{print $1}'
+  else
+    printf 'absent\n'
+  fi
+}
+HISTORICAL_RESULTS_BASELINE="$(historical_results_fingerprint)"
+printf '%s\n' "$HISTORICAL_RESULTS_BASELINE" > "$RESULTS_DIR/historical-results-baseline.sha256"
+
 # Force the clean live-LLM path. Remove any inherited replay/cache configuration:
 # every LLM request in this run must be a live API call, not a historical replay.
 export HYPATIAX_DISABLE_HARDCODED=1
@@ -219,6 +232,11 @@ for stage in "${STAGES[@]}"; do
     git -C "$REPO_ROOT" status --short
     exit 1
   fi
+  if [[ "$(historical_results_fingerprint)" != "$HISTORICAL_RESULTS_BASELINE" ]]; then
+    record_stage "$stage" "failed"
+    echo "ERROR: stage '$stage' touched hypatiax/data/results; stopping to protect historical outputs/checkpoints" >&2
+    exit 1
+  fi
 done
 
 python3 - "$MANIFEST" <<'PY'
@@ -226,6 +244,7 @@ import datetime, json, sys
 path = sys.argv[1]
 data = json.load(open(path, encoding="utf-8"))
 data["status"] = "completed"
+data["historical_results_unchanged"] = True
 data["completed_utc"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
 json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
 with open(path, "a", encoding="utf-8") as stream:
