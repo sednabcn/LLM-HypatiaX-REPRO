@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-11-02T23:10:06.702669+00:00",
+  "generated_at_utc": "2026-11-08T09:25:49.710060+00:00",
   "step": "exp2_feynman_extrap",
-  "extrap_dir": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap",
+  "extrap_dir": "/workspaces/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap",
   "protocol_core_extrap_files": [
     "protocol_core_extrap_20260812_064848.json",
     "protocol_core_extrap_20260812_070705.json",
@@ -16,7 +16,7 @@
     "benchmark_results_extrap_shard0.json"
   ],
   "ablation_paired_json": {
-    "path": "/home/agagora/Downloads/GITHUB/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/ablation_paired.json",
+    "path": "/workspaces/LLM-HypatiaX-REPRO/hypatiax/data/results/comparison_results/feynman-tests/exp2_extrap/ablation_paired.json",
     "present": false,
     "record_count": null
   },
