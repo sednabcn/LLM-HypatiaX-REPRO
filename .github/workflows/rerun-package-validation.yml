@@ -100,6 +100,8 @@ jobs:
           assert cfg["fresh_run_controls"]["HYPATIAX_NOLLM_ARM"] == 1
           assert cfg["fresh_run_controls"]["HYPATIAX_HOLDOUT"] == 1
           assert cfg["fresh_run_controls"]["SPARSE_SEED"] == "fallback"
+          assert cfg["deferred_experiments"]["pure_llm_phase2"]["status"] == "deferred"
+          assert cfg["deferred_experiments"]["phase3_ablation"]["status"] == "deferred"
           assert all("expected" not in section for section in cfg["benchmarks"].values())
           print("fresh protocol contains inputs only; no historical expected-result targets")
           PY
