@@ -1,8 +1,8 @@
 {
   "report_type": "portfolio_variance_pca_vs_random_holdout_comparison",
   "schema_version": 2,
-  "generated_at": "2026-11-08T11:48:00Z",
-  "branch": "audit-master",
+  "generated_at": "2026-11-08T13:21:00Z",
+  "branch": "master",
   "case_identity": {
     "domain": "risk_var",
     "name": "Portfolio VaR for two correlated assets",
@@ -17,7 +17,9 @@
     "pca_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42410055833",
     "pca_aggregate": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_pca_seed_aggregate.json",
     "random_holdout_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42421397598",
-    "random_holdout_results": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_random_holdout_validation.json"
+    "random_holdout_results": "hypatiax/data/results/portfolio_variance_audit/portfolio_variance_random_holdout_validation.json",
+    "integrated_feature_ranking_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42482940938",
+    "integrated_pca_tail_error_workflow": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42484246269"
   },
   "experiments": {
     "pca_directed_seed_sweep": {
@@ -78,7 +80,7 @@
     },
     "feature_ranking_diagnostic": {
       "protocol": "full_data_raw_feature_pc1_vs_individual_feature_rankings",
-      "generated_at": "2026-11-08T11:28:42Z",
+      "generated_at": "2026-11-08T13:05:17Z",
       "n_samples": 200,
       "n_train": 80,
       "n_test": 120,
@@ -115,7 +117,9 @@
         "score_gap": 263.71139232302266,
         "qualitative_boundary_assessment": "Displayed adjacent rows progress smoothly; no obvious discontinuity."
       },
-      "interpretation": "Every individual feature ranking exactly reproduces the PC1 ordering and the same 80-row training membership. For this dataset, the PCA split does not add a distinct multivariate ordering; the feature rows behave as a one-dimensional ordered trajectory for ranking purposes."
+      "interpretation": "Every individual feature ranking exactly reproduces the PC1 ordering and the same 80-row training membership. For this dataset, the PCA split does not add a distinct multivariate ordering; the feature rows behave as a one-dimensional ordered trajectory for ranking purposes.",
+      "ci_workflow_run": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42482940938",
+      "result_path": "hypatiax/data/results/portfolio_variance_audit/feature_ranking_diagnostic/portfolio_variance_feature_ranking_diagnostic.json"
     },
     "bootstrap_pca_sensitivity": {
       "protocol": "m_out_of_n_bootstrap_estimated_pc1_tail_40_60",
@@ -264,7 +268,142 @@
           "r2": -941.2657078391011
         }
       ],
-      "interpretation": "Train fit is near-perfect but PCA-tail test performance is poor (negative R2). NN outperforms training-mean baseline (MAE ratio 0.693), yet systematically underpredicts and MAE rises from 1,866.62 in decile 1 to 51,137.82 in decile 10."
+      "interpretation": "Train fit is near-perfect but PCA-tail test performance is poor (negative R2). NN outperforms training-mean baseline (MAE ratio 0.693), yet systematically underpredicts and MAE rises from 1,866.62 in decile 1 to 51,137.82 in decile 10.",
+      "integrated_ci_rerun": {
+        "generated_at": "2026-11-08T13:20:53Z",
+        "workflow_run": "https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/42484246269",
+        "result_path": "hypatiax/data/results/portfolio_variance_audit/pca_tail_error_diagnostic/portfolio_variance_pca_tail_error_diagnostic.json",
+        "protocol": "pca_40_60_pc1",
+        "split_is_transductive": true,
+        "n_samples": 200,
+        "n_train": 80,
+        "n_test": 120,
+        "nn_seed": 2024,
+        "llm_called": false,
+        "benchmark_modified": false,
+        "train_r2": 0.999740337380828,
+        "test_metrics": {
+          "r2": -3.1518085489465575,
+          "mae": 25335.68017334031,
+          "rmse": 29990.42891480633,
+          "mean_signed_error_prediction_minus_actual": -25335.68017334031,
+          "median_absolute_error": 24771.580937694987
+        },
+        "training_mean_baseline": {
+          "prediction_value": 15000.108953246765,
+          "test_metrics": {
+            "r2": -6.167131634880697,
+            "mae": 36551.535559286254,
+            "rmse": 39403.67315687113,
+            "mean_signed_error_prediction_minus_actual": -36551.535559286254,
+            "median_absolute_error": 35871.30792194822
+          },
+          "model_minus_baseline_r2": 3.0153230859341393,
+          "model_mae_divided_by_baseline_mae": 0.6931495431223695
+        },
+        "test_error_by_pc1_decile": [
+          {
+            "decile": 1,
+            "n": 12,
+            "target_mean": 29629.796321300866,
+            "prediction_mean": 27763.181640625,
+            "mae": 1866.6146806758686,
+            "rmse": 2069.6179485465627,
+            "mean_signed_error": -1866.6164710404519,
+            "r2": -1.7790293279731832
+          },
+          {
+            "decile": 2,
+            "n": 12,
+            "target_mean": 34039.583539907755,
+            "prediction_mean": 28195.652506510418,
+            "mae": 5843.9310333973335,
+            "rmse": 5998.0641690488965,
+            "mean_signed_error": -5843.9302195952505,
+            "r2": -20.439743063175495
+          },
+          {
+            "decile": 3,
+            "n": 12,
+            "target_mean": 38633.116853871696,
+            "prediction_mean": 27735.587727864582,
+            "mae": 10897.529126007104,
+            "rmse": 11004.698542798456,
+            "mean_signed_error": -10897.528149444604,
+            "r2": -65.7220980816021
+          },
+          {
+            "decile": 4,
+            "n": 12,
+            "target_mean": 43403.61826840438,
+            "prediction_mean": 27056.23388671875,
+            "mae": 16347.38438168563,
+            "rmse": 16425.033314018066,
+            "mean_signed_error": -16347.383242362712,
+            "r2": -137.18963151185315
+          },
+          {
+            "decile": 5,
+            "n": 12,
+            "target_mean": 48344.99104195423,
+            "prediction_mean": 26400.519856770832,
+            "mae": 21944.4711851834,
+            "rmse": 22004.402929229273,
+            "mean_signed_error": -21944.469394818818,
+            "r2": -230.71006710631997
+          },
+          {
+            "decile": 6,
+            "n": 12,
+            "target_mean": 53451.71446637193,
+            "prediction_mean": 25829.448404947918,
+            "mae": 27622.266061424027,
+            "rmse": 27671.118870179733,
+            "mean_signed_error": -27622.26492210111,
+            "r2": -342.79037793798847
+          },
+          {
+            "decile": 7,
+            "n": 12,
+            "target_mean": 58718.75983413574,
+            "prediction_mean": 25346.18896484375,
+            "mae": 33372.57086929197,
+            "rmse": 33414.08637732768,
+            "mean_signed_error": -33372.56989272947,
+            "r2": -471.11699425824804
+          },
+          {
+            "decile": 8,
+            "n": 12,
+            "target_mean": 64141.52244802905,
+            "prediction_mean": 24938.955729166668,
+            "mae": 39202.566718862385,
+            "rmse": 39238.953308893375,
+            "mean_signed_error": -39202.565905060306,
+            "r2": -614.2199530263862
+          },
+          {
+            "decile": 9,
+            "n": 12,
+            "target_mean": 69715.76596851712,
+            "prediction_mean": 24594.122721354168,
+            "mae": 45121.64324716295,
+            "rmse": 45154.274525855064,
+            "mean_signed_error": -45121.64292164212,
+            "r2": -771.1486363610896
+          },
+          {
+            "decile": 10,
+            "n": 12,
+            "target_mean": 75437.57638283745,
+            "prediction_mean": 24299.751953125,
+            "mae": 51137.82442971243,
+            "rmse": 51167.5974243539,
+            "mean_signed_error": -51137.82475523327,
+            "r2": -941.2657078391011
+          }
+        ]
+      }
     },
     "seed_sweep_route_audit": {
       "status": "resolved",
@@ -337,5 +476,25 @@
   ],
   "pending": null,
   "unresolved_score_discrepancy": null,
-  "status": "PCA diagnostics and seed-sweep route audit completed; route-score discrepancy resolved. Branch reconciliation and PR review remain."
+  "status": "PCA diagnostics, seed-sweep route audit, and integrated CI reruns completed successfully on master; feature-order redundancy and NN upper-tail extrapolation failure are confirmed for this case.",
+  "integrated_pipeline_reruns": {
+    "status": "success",
+    "branch": "master",
+    "date": "2026-11-08",
+    "feature_ranking": {
+      "run_id": 42482940938,
+      "conclusion": "success",
+      "artifact": "results-portfolio_feature_ranking-shard0",
+      "artifact_id": 13618755612,
+      "result_path": "hypatiax/data/results/portfolio_variance_audit/feature_ranking_diagnostic/portfolio_variance_feature_ranking_diagnostic.json"
+    },
+    "pca_tail_error": {
+      "run_id": 42484246269,
+      "conclusion": "success",
+      "artifact": "results-portfolio_pca_tail_error-shard0",
+      "artifact_id": 13618457431,
+      "result_path": "hypatiax/data/results/portfolio_variance_audit/pca_tail_error_diagnostic/portfolio_variance_pca_tail_error_diagnostic.json"
+    },
+    "interpretation": "Both integrated workflow reruns succeeded. The feature ranking result again shows each individual feature exactly reproduces PC1 ranking and train membership. The NN-only tail result reproduces the strongly negative test R2 and monotonically increasing MAE across PC1 deciles. These are reproducibility reruns, not independent partitions."
+  }
 }
