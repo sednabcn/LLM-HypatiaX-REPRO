@@ -46,12 +46,12 @@ jobs:
           python-version: "3.12"
       - name: Validate shell and configuration
         run: |
+          pip install -q pyyaml
           bash -n run_all.sh
           bash -n ci_runner/run_fresh_experiments.sh
           bash ci_runner/run_fresh_experiments.sh --list > fresh-stage-list.txt
           ! grep -E '^(validate|qualify|audit_)' fresh-stage-list.txt
           bash ci_runner/run_fresh_experiments.sh --dry-run > fresh-dry-run.log
-          pip install -q pyyaml
           python - <<'PY'
           import glob, yaml
           for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml", "config/fresh_rerun.yaml"]:
