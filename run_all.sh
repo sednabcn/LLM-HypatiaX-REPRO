@@ -91,7 +91,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -445,6 +445,27 @@ run portfolio_bootstrap_pca "Portfolio variance bootstrap-estimated PCA tail val
   }
 "
 
+run portfolio_feature_ranking "Portfolio VaR feature-ranking diagnostic (PC1 vs individual features)" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/feature_ranking_diagnostic'
+  mkdir -p "\${_OUT_DIR}"
+  FEATURE_RANKING_DIAGNOSTIC_OUTPUT="\${_OUT_DIR}/portfolio_variance_feature_ranking_diagnostic.json" \
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_feature_ranking_diagnostic.py'
+  [[ -s "\${_OUT_DIR}/portfolio_variance_feature_ranking_diagnostic.json" ]] || {
+    echo 'ERROR: feature-ranking diagnostic output missing'; exit 1;
+  }
+"
+
+run portfolio_pca_tail_error "Portfolio VaR PCA-tail NN prediction-error diagnostic" bash -c "
+  cd '${REPO_ROOT}'
+  _OUT_DIR='${RESULTS_DIR}/portfolio_variance_audit/pca_tail_error_diagnostic'
+  mkdir -p "\${_OUT_DIR}"
+  PCA_ERROR_DIAGNOSTIC_OUTPUT="\${_OUT_DIR}/portfolio_variance_pca_tail_error_diagnostic.json" \
+    python3 '${EXPERIMENTS_DIR}/portfolio_variance_pca_tail_error_diagnostic.py'
+  [[ -s "\${_OUT_DIR}/portfolio_variance_pca_tail_error_diagnostic.json" ]] || {
+    echo 'ERROR: PCA-tail error diagnostic output missing'; exit 1;
+  }
+"
 run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfolio_variance_v3c2.py" bash -c "
   cd '${REPO_ROOT}'
   _PVA_DIR='${RESULTS_DIR}/portfolio_variance_audit'
