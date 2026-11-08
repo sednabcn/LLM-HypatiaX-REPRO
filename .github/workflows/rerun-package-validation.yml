@@ -115,5 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: promotion-pytest-report
-          path: |\n            pytest-report.xml\n            environment-provenance.txt
+          path: |
+            pytest-report.xml
+            environment-provenance.txt
           retention-days: 30
