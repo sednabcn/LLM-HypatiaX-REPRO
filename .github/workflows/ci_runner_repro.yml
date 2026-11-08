@@ -17,6 +17,8 @@ on:
           - portfolio
           - portfolio_random_holdout
           - portfolio_bootstrap_pca
+          - portfolio_feature_ranking
+          - portfolio_pca_tail_error
 #         - exp1c
           - exp1_ablation
           - exp1_five
@@ -186,7 +188,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio portfolio_random_holdout portfolio_bootstrap_pca exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+          VALID_IDS="exp1 exp1b exp1b_seeds portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -328,6 +330,20 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="portfolio_variance_audit/bootstrap_pca_validation"
               DEFAULT_SEEDS="${SEEDS_IN:-11,23,42,77,101}"
+              ;;
+
+            portfolio_feature_ranking)
+              SCRIPT="hypatiax/experiments/benchmarks/portfolio_variance_feature_ranking_diagnostic.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="portfolio_variance_audit/feature_ranking_diagnostic"
+              DEFAULT_SEEDS="42"
+              ;;
+
+            portfolio_pca_tail_error)
+              SCRIPT="hypatiax/experiments/benchmarks/portfolio_variance_pca_tail_error_diagnostic.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="portfolio_variance_audit/pca_tail_error_diagnostic"
+              DEFAULT_SEEDS="42"
               ;;
 
             portfolio)
@@ -558,6 +574,8 @@ jobs:
               "portfolio":          5,   # one shard per seed, same rule as exp1b
               "portfolio_random_holdout": 1, # five partitions are evaluated inside one validation runner
               "portfolio_bootstrap_pca":  1, # bootstrap replicates are evaluated inside one validation runner
+              "portfolio_feature_ranking": 1, # one descriptive diagnostic report
+              "portfolio_pca_tail_error": 1, # one NN tail-error diagnostic report
               "exp1b_seeds":        4,   # documented default; enforced below as one shard per seed
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
@@ -662,6 +680,8 @@ jobs:
               "portfolio":         [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio_random_holdout": ["validation"],
               "portfolio_bootstrap_pca":  ["validation"],
+              "portfolio_feature_ranking": ["diagnostic"],
+              "portfolio_pca_tail_error": ["diagnostic"],
               # seed-major order so the block partition gives exactly one seed per shard
               "exp1b_seeds":       [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
@@ -1771,6 +1791,52 @@ jobs:
           fi
 
           find "${DEST}" -type f | sort || true
+
+      - name: Verify Portfolio VaR diagnostic artifacts
+        if: ${{ (needs.plan.outputs.exp_id == 'portfolio_feature_ranking' || needs.plan.outputs.exp_id == 'portfolio_pca_tail_error') && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          EXP: ${{ needs.plan.outputs.exp_id }}
+          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, os
+          from pathlib import Path
+
+          exp = os.environ['EXP']
+          target = Path(os.environ['TARGET'])
+          specs = {
+              'portfolio_feature_ranking': (
+                  'portfolio_variance_feature_ranking_diagnostic.json',
+                  'portfolio_variance_feature_ranking_diagnostic',
+              ),
+              'portfolio_pca_tail_error': (
+                  'portfolio_variance_pca_tail_error_diagnostic.json',
+                  'portfolio_variance_pca_tail_error_diagnostic',
+              ),
+          }
+          filename, expected_type = specs[exp]
+          path = target / filename
+          if not path.is_file() or path.stat().st_size == 0:
+              raise SystemExit(f'::error::{exp}: missing or empty artifact {path}')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          if data.get('report_type') != expected_type:
+              raise SystemExit(f'::error::{exp}: unexpected report_type {data.get("report_type")!r}')
+          if data.get('case_identity', {}).get('domain') != 'risk_var':
+              raise SystemExit(f'::error::{exp}: expected risk_var case identity')
+          if exp == 'portfolio_feature_ranking':
+              if not data.get('feature_comparisons'):
+                  raise SystemExit('::error::feature-ranking report has no feature comparisons')
+          else:
+              protocol = data.get('protocol', {})
+              if protocol.get('split_protocol') != 'pca_40_60_pc1':
+                  raise SystemExit('::error::PCA-tail report has an unexpected split protocol')
+              if protocol.get('llm_called') is not False:
+                  raise SystemExit('::error::PCA-tail diagnostic must remain NN-only (no LLM call)')
+              if not data.get('test_predictions_sorted_by_pc1'):
+                  raise SystemExit('::error::PCA-tail report has no row-level test predictions')
+          print(f'Verified {exp}: {path} ({path.stat().st_size} bytes)')
+          PYEOF
 
       - name: Verify exp1 output files exist
         if: ${{ needs.plan.outputs.exp_id == 'exp1' && steps.resolve_ids.outputs.has_work == 'true' }}
