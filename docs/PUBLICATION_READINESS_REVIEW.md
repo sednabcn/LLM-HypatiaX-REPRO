@@ -170,3 +170,47 @@ Repository-level review:
 October PDF audit supplied by the user:
 - Main paper PDF, Supplement A (routing improvements), Supplement B (benchmark, noise, sample complexity), read in full by the report author.
 - Scope: cross-document consistency and arithmetic recomputation from printed PDF tables; no result JSONs or repository access were available to that audit author. Findings requiring code/data inspection are therefore retained as FIX/RERUN items, not marked verified.
+
+
+## 9. Code inspection round 1 — A4 and B4
+
+This pass inspected the current `master` implementation and workflow sources. It does not modify `master`.
+
+### A4 — R² evaluator contradiction: current implementation mostly resolves the runtime side; manuscript provenance remains open
+
+**Verified in current source:**
+
+- `hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py` imports `r2_checked` from `hypatiax.core.r2_canonical`. Its `_compute_metrics` and `_eval_formula_r2` route reported formula/NN scores through that canonical scorer.
+- `hypatiax/core/r2_canonical.py` uses a spread-relative degeneracy test: `ss_tot <= 1e-24 * max(sum(y_true**2), 1e-300)` is undefined (NaN/status `degenerate_target`). It does not use the old absolute `ss_tot > 1e-10` gate.
+- `hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py` delegates its checked R² function to the same canonical helper.
+- `hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py` also delegates to the canonical helper.
+- `hypatiax/experiments/tests/test_r2_policy.py` tests tiny-scale varying targets, degenerate targets, failure handling, migration of central scorers, and guards against new local R² implementations.
+
+**Important distinction:** Supplement B's tracked TeX still documents an older Fix 5 implementation using an offset/magnitude-relative tolerance, while the current canonical scorer uses a spread-relative degeneracy rule. Both avoid the original absolute floor, but they are not the same policy. The manuscript and supplement must describe the current policy precisely, including the treatment of constant/near-constant targets as undefined rather than assigning 0 or 1.
+
+**Unresolved evidence gap:** the repository tree contains the main-paper TeX and Supplement B TeX, but no Supplement A source file. The reported Supplement A Listing 8 cannot therefore be checked line-for-line against the current source from this checkout. The PDF-level contradiction remains a manuscript packaging/reconciliation task until the exact Supplement A source used to generate the PDF is supplied or restored.
+
+**Test-harness issue found:** `test_recovery_evaluator.py` requires the environment variable `RECOVERY_EVAL=module:function`; without it, its tests deliberately fail. The tracked `.github/workflows/ci_r2_policy.yml` invokes that test file but does not set `RECOVERY_EVAL`. Unless a separate runner-level environment injection exists (not established by the workflow source), this CI step is not self-contained. Set the variable to the intended canonical function or change the test to import the canonical scorer directly, then verify the workflow run. Do not describe this gate as passing until the actual run is checked.
+
+**A4 disposition:** current principal benchmark code is migrated to the canonical relative scorer, but the PDF listing discrepancy, stale Supplement B explanation, absent Supplement A source, and non-self-contained recovery-test invocation still need closure. Do not rerun the DeFi benchmark solely on the basis of the old listing until the exact historical Listing 8 and the result-producing code revision are matched.
+
+### B4 — Fix 4 test-information claim: code confirms input-dependent use of the test batch
+
+**Verified in current source:**
+
+- `hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py` defines `_distance_llm_weight(X_test, X_train, base_weight=0.3)`.
+- It calculates the fraction of test rows with at least one feature outside the per-feature training min/max range, then returns `base_weight + (1 - base_weight) * outside`.
+- In the ensemble route, `_hybrid_predict_and_eval` calls this helper with `X_test`; if every test row is outside at least one training feature range, the returned LLM blend weight is 1.0.
+- The source comments explicitly acknowledge that the final blend weight uses `X_test` inputs and no `y_test` labels, and that the manuscript's “training data only” statement must be amended.
+- The same function uses training residuals for uncertainty estimation; that does not remove the separate test-covariate dependence in the distance gate.
+
+**Interpretation:** this is not target-label leakage because the code does not read `y_test` to set the blend weight. It is nevertheless test-batch/covariate-aware routing, so the stronger manuscript claim that routing uses training data only is false for this implementation. If the benchmark is intended to simulate a batch of known query inputs, describe the method as transductive/input-range-aware and disclose the batch-level dependence. If a strictly inductive protocol is required, replace the test-batch statistic with a per-query rule or a training-only threshold and rerun affected results.
+
+**B4 disposition:** confirmed manuscript/specification mismatch. The reported “rho approximately 1” behavior should be recomputed from the exact pinned run outputs before stating how often the weight reached 1.0; the source formula alone establishes the possibility, not the observed frequency.
+
+### Next code-audit targets
+
+1. B2 — inspect generator bypass flags, formula persistence, and M4 result schema; determine exactly which stored rows can be audited.
+2. B3 — inspect the corrected attribution calculation and whether hybrid formulas/predictions can be recovered for same-split rescoring.
+3. B5/A3 — trace noise injection, target arrays used for R², and threshold configuration across noise and sample-size runners.
+4. C2/C3 — map the actual runner implementation to the paper's Stage 2/3, ensemble, NN, PySR, and system-identity descriptions.
