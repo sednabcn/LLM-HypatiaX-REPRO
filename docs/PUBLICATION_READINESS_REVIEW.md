@@ -410,3 +410,28 @@ A second, exact comparison of the tracked Supplement B TeX and current scorer sh
 
 **Required manuscript correction:** replace the Supplement B Section 8.4 pseudocode with the actual canonical implementation or a faithful concise specification. Do not retain the older `1e-10` formula or claim that below-threshold variance returns zero. Explain that near-constant targets have undefined R² and are excluded from recovery counts, while failed predictions are treated as failures.
 
+
+
+## 16. Code inspection round 6 — B1 synthetic supplementary-material claim
+
+The Supplement B source was checked against the current reproduction repository.
+
+### What is established
+
+- Supplement B contains the sentence: “All supplementary materials are provided in both synthetic versions (matching reported statistics exactly) and real experimental versions (direct from JSON logs).”
+- The same section lists S1–S8 files, including per-equation results, validation logs, discovered expressions, timing data, domain analysis, failure taxonomy, and figure source CSVs.
+- Exact-name repository searches in LLM-HypatiaX-REPRO found none of the listed S1–S8 artifacts.
+- The supplementary source directs readers to the separate LLM-HypatiaX-DEV post-processing/pre-submission repository for processed results and tables; raw benchmark runs are said to live in this reproduction repository.
+- The current v2 and PCA comparative runners explicitly log that synthetic reconstruction of missing y_pred has been disabled. The Phase 1 closure record also describes removal of the prior algebraic reconstruction path. Synthetic fixtures used to test audit scripts are separately identified as fixtures, not experimental observations.
+
+### What cannot yet be certified
+
+- The reproduction repository contains a binary hypatiax/data/results.zip; its contents were not inspectable through the text-only repository-file interface in this pass.
+- The separate LLM-HypatiaX-DEV repository was not inspected here. The current repository therefore does not establish whether synthetic S1–S8 variants exist there, whether they were used in any manuscript table/figure, or whether they are included in the intended release bundle.
+- Absence of the named S1–S8 files from the searchable text tree is not proof that no such files exist inside the binary archive or the separate DEV repository.
+
+### B1 disposition
+
+**The sentence should be removed from the journal supplement now.** It is ambiguous about whether “synthetic versions” are simulated data, fabricated table replicas, or test fixtures, and “matching reported statistics exactly” is particularly damaging to reviewer confidence.
+
+Before release, inspect results.zip and the actual DEV/release bundle; inventory every synthetic or fixture file; trace every table and figure to its source; and record whether any synthetic data entered reported results. If synthetic fixtures are retained for software tests, place them in a clearly labelled test-fixture directory and state that they are not used in reported experiments. Do not claim that no synthetic material ships until the binary archive and intended release bundle have been checked.
