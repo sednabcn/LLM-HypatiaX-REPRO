@@ -140,9 +140,9 @@ The NN improves on the baseline: its R² is higher by 3.015323 and its MAE is 69
 
 The target mean rises steadily from approximately 29,630 in the first test decile to 75,438 in the tenth. In contrast, the NN prediction mean declines from approximately 27,763 to 24,300. MAE rises monotonically from approximately 1,867 to 51,138. This is a clear systematic failure to track the target trend across the ordered tail, not merely a few isolated outliers.
 
-### Important score discrepancy to resolve
+### Score-route clarification
 
-The earlier PCA seed-sweep report records `far_r2 = 1.0` for all five seeds, including seed 2024. This standalone NN-only diagnostic, using the benchmark NN helper and NN seed 2024 on the same stated PCA 40/60 partition, reports `test_r2 = -3.151808`. These results are materially inconsistent. They must not be silently combined or treated as equivalent metrics. Before publication or final claims, inspect the seed-sweep score calculation, data/target transformations, route-specific evaluation, and exact model-seed mapping to establish why the reported values differ.
+The apparent difference between seed-sweep `far_r2 = 1.0` and NN-only `test_r2 = -3.151808` is resolved by the route audit in Experiment E. For seed 2024, the seed sweep selected `decision = "llm"`; its `far_r2` is the analytical formula route's test R², not the NN's. The standalone diagnostic calls the NN helper directly. These are different predictors and must be reported separately, not treated as a same-model discrepancy.
 
 **Interpretation:** the current diagnostic provides strong evidence that this NN configuration does not extrapolate the upper PC1-ordered tail, despite near-perfect training fit. It is better than the training-mean baseline but remains poor in absolute predictive terms. Given the feature-ranking result, this is a tail extrapolation test along an ordering that any single feature already reproduces; it does not demonstrate a special benefit of PCA as a multivariate split.
 
