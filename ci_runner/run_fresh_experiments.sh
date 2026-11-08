@@ -144,6 +144,21 @@ export REPRO_CFG="$PROTOCOL"
 unset HYPATIAX_LLM_CACHE_DIR HYPATIAX_LLM_REPLAY_DIR HYPATIAX_LLM_FREEZE_CACHE
 unset CLEAR_CHECKPOINT
 unset LLM_TEMPERATURE LLM_MODEL HYPATIAX_LLM_MODEL
+mapfile -t _FRESH_LLM_SETTINGS < <(python3 - "$PROTOCOL" <<'PY'
+import sys, yaml
+cfg = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
+print(cfg.get("llm_model", "claude-sonnet-4-6"))
+print(cfg.get("llm_temperature", 0.25))
+PY
+)
+if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 2 ]]; then
+  echo "ERROR: could not read model/temperature from fresh protocol" >&2
+  exit 2
+fi
+export HYPATIAX_LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
+export LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
+export LLM_TEMPERATURE="${_FRESH_LLM_SETTINGS[1]}"
+unset _FRESH_LLM_SETTINGS
 mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
 
@@ -232,6 +247,14 @@ for stage in "${STAGES[@]}"; do
   fi
 
   if [[ "$stage" == "env_check" ]]; then
+    echo "Performing a live API round-trip with the protocol model/temperature..."
+    if python3 "$REPO_ROOT/config/check_key_status.py" 2>&1 | tee "$RESULTS_DIR/logs/live-llm-preflight.log"; then
+      record_stage "live_llm_preflight" "passed"
+    else
+      record_stage "live_llm_preflight" "failed"
+      echo "ERROR: live LLM preflight failed; no benchmark stages will run" >&2
+      exit 1
+    fi
     echo "Warming PySR/Julia with a tiny synthetic fit (not a benchmark result)..."
     timeout 900s python3 - "$RESULTS_DIR" <<'PY' > "$RESULTS_DIR/logs/pysr-warmup.log" 2>&1
 import sys
