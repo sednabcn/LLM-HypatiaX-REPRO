@@ -1,0 +1,246 @@
+# =============================================================================
+# HypatiaX — fresh rerun protocol (inputs only; no expected result values)
+# =============================================================================
+
+run_id:       "fresh_rerun_2026_11"
+# This file defines run inputs only. Historical result values and success targets are intentionally omitted.
+# All outputs must go to a new empty RESULTS_DIR outside the repository; no historical checkpoints or caches may be reused.
+run_version:  "1.0"
+date:         "2026-11"
+
+paths:
+  root:       "${HYPATIAX_ROOT}"
+  results:    "hypatiax/data/results"
+  patched:    "hypatiax/data/patched"
+  paper:      "paper"
+  figures:    "paper/figures"
+  tables:     "paper/tables"
+  patches:    "patches/generated"
+  logs:       "logs"
+
+seeds:
+  default:    42
+  pysr_seed:  42
+  validation: [123]
+  portfolio_variance: [42, 99, 123, 777, 2024]
+
+llm_model:     "claude-sonnet-4-6"
+# AUDIT C1: single research setting for the LLM sampling temperature. Exported as LLM_TEMPERATURE by
+# ci_runner_repro.yml and run_all.sh. It only takes effect on code paths that send a temperature
+# (symbolic_engine / HybridDiscoverySystem, exp1_ablation, exp3). PureLLMBaseline sends none under
+# SDK>=1.0 (rows carry temperature_sent: false), so report it as "API default", not 0.25.
+llm_temperature: 0.25
+llm_retries:   3
+llm_k_runs:    30
+
+# Clean live-LLM run (documentation; enforced via env, not read by Python):
+# run_all.sh and ci_runner_repro.yml export both flags as "1"; PureLLMBaseline
+# reads them. Results carry llm_source (delegate | local_fallback |
+# frozen_cache_unknown_origin | v3c_builtin | canonical_fallback); expect no
+# local_fallback in a clean run.
+llm_provenance:
+  disable_hardcoded:    1
+  disable_prompt_hints: 1
+  no_llm_cache_steps:   [exp2_feynman, exp2_feynman_pca_4060, extrap]
+
+n_tasks_defi:       74
+n_tasks_instability: 70
+pca_train_frac:     0.40
+nn_time_limit:      120
+
+timeouts:
+  # Julia-internal timeout: passed as timeout_in_seconds to PySRRegressor.
+  # Julia honours this between iterations only — not during hall-of-fame refinement.
+  pysr_attempt_seconds:      1100   # → env PYSR_TIMEOUT        → DiscoveryConfig.pysr_timeout
+  feynman_pysr_seconds:      1100   # → env PYSR_TIMEOUT (feynman jobs)
+  instability_pysr_seconds:   300   # → env PYSR_TIMEOUT (instability jobs)
+
+  # Hard wall-clock cap on the entire model.fit() call (thread guard).
+  # fit_wall_timeout > 0 overrides pysr_attempt_seconds + fit_grace_secs.
+  # equation_wall_clock was the original intent for this; now wired via
+  # PYSR_FIT_WALL_TIMEOUT → DiscoveryConfig.fit_wall_timeout.
+  equation_wall_clock:       1200   # kept for reference / paper notation
+  fit_wall_timeout:          1200   # → env PYSR_FIT_WALL_TIMEOUT → DiscoveryConfig.fit_wall_timeout
+  fit_grace_secs:             120   # → env PYSR_FIT_GRACE_SECS  → DiscoveryConfig.fit_grace_secs
+                                    #   (used only when fit_wall_timeout=0)
+  kill_grace_seconds:         300   # → --kill-grace in run_all_checkpoint.py exp2 runner  [NEW]
+
+  # Outer per-method runner budget (enforced by experiment protocol callers).
+  method_seconds:             900   # → env METHOD_TIMEOUT
+
+pysr:
+  niterations: 1000
+  populations: 30
+  population_size: 33
+  parsimony: 0.01
+  maxsize: 30
+  binary_operators: ["+", "-", "*", "/"]
+  unary_operators: ["exp", "log", "sin", "cos", "sqrt"]
+  use_transcendental_compositions: true
+  deterministic: true
+  parallelism: "multithreading"
+  # Wall-clock guard — mirrors DiscoveryConfig.fit_wall_timeout / fit_grace_secs.
+  # fit_wall_timeout: 0 means derive from pysr_attempt_seconds + fit_grace_secs.
+  # Set to timeouts.fit_wall_timeout above so both stay in sync.
+  fit_wall_timeout: 1200   # → DiscoveryConfig.fit_wall_timeout
+  fit_grace_secs:    120   # → DiscoveryConfig.fit_grace_secs
+
+engine:
+  name: "hybrid_system_v50_2"
+  version: "5.4"
+  max_retries: 3
+  allow_nondeterministic: false
+
+benchmarks:
+  defi:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+    output_subdir: "defi"
+    split: "pca_40_60"
+    train_frac: 0.40
+  core15:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/exp1_ablation.py"
+    output_subdir: "exp1_ablation"
+  feynman:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    output_subdir: "feynman"
+    split: "random_80_20"
+    extrap_mult: 2.0
+  nguyen12:
+    enabled: true
+    output_subdir: "nguyen12"
+  noise_sweep:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/run_noise_sweep_benchmark.py"
+    output_subdir: "noise"
+    fast_skip: true
+  routing:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/run_hybrid_system_benchmark.py"
+    output_subdir: "routing"
+  instability:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/run_instability_suite.py"
+    output_subdir: "instability"
+    fast_skip: true
+    k_runs: 30
+    total_tasks: 70
+  extrapolation:
+    enabled: true
+    output_subdir: "extrapolation"
+    regimes: ["near", "medium", "far"]
+    extrap_mults: [1.2, 2.0, 5.0]
+
+# CI / RUNNER PARAMETERS (documentation; enforced via env in the workflows)
+# Source of truth for the values: .github/workflows/ci_runner_repro.yml.
+# ci_phase3_ablation.yml mirrors the same block. Nothing in Python reads this
+# section; scripts/check_ci_env_sync.py (see below) compares it to the workflows.
+# Secrets (ANTHROPIC_API_KEY) are repo secrets and never belong in this file.
+# =============================================================================
+ci_env:
+  # -- audit / strictness flags (all workflows) --
+  HYPATIAX_STRICT:                "1"
+  HYPATIAX_R2_SIGN_FLIP:          "0"
+  HYPATIAX_DISABLE_HARDCODED:     "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS:  "1"
+  HYPATIAX_NOLLM_ARM:             "1"    # ci_runner_repro.yml only; exp1_ablation third (no-LLM) arm
+  # -- LLM replay/cache (ci_phase3_ablation.yml only) --
+  HYPATIAX_LLM_REPLAY_DIR:        "phase3_out/llm_replay"   # one LLM sample per prompt, shared by all arms
+  HYPATIAX_LLM_CACHE_DIR:         "phase3_out/llm_cache"
+  # -- PySR search (CI values; see pysr_ci_vs_config_note below) --
+  PYSR_GENERATIONS:               "10000"   # runner: workflow input pysr_generations overrides
+  PYSR_POPULATION:                "100"
+  PYSR_POPULATIONS:               "30"      # runner: workflow input pysr_populations overrides
+  PYSR_TOURNAMENT_SIZE:           "3"
+  PYSR_CROSSOVER:                 "0.9"
+  PYSR_MUTATION:                  "0.1"
+  PYSR_PARETO_PRESSURE:           "0.001"
+  PYSR_SEED:                      "42"      # per-seed job / exp1_ablation dispatch seed overrides
+  PYSR_FIT_WALL_TIMEOUT:          "1200"    # = timeouts.fit_wall_timeout
+  PYSR_FIT_GRACE_SECS:            "120"     # = timeouts.fit_grace_secs
+  # -- timeouts and sample sizes --
+  METHOD_TIMEOUT:                 "900"     # = timeouts.method_seconds
+  LLM_METHOD_TIMEOUT:             "120"     # LLM/NN-only runs (methods 1-4, no PySR)
+  FEYNMAN_TIMEOUT:                "1100"    # = timeouts.feynman_pysr_seconds
+  FEYNMAN_SAMPLES:                "200"     # runner: workflow input n_samples overrides
+  FEYNMAN_NOISELESS_THRESHOLD:    "0.999999"
+  JOB_DEADLINE:                   "19800"   # seconds; runner job clock guard (330 min)
+  # -- paths / runtime --
+  OUT_BASE:                       "hypatiax/data/results"
+  REPRO_CFG:                      "config/repro.yaml"
+  JULIA_NUM_THREADS:              "4"
+  JULIA_EXCLUSIVE:                "0"
+  PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+
+# Set only on dispatches meant as evidence for the audit ledger; not in the
+# workflows' global env so older results stay comparable.
+ci_env_evidence_runs:
+  HYPATIAX_HOLDOUT:  "1"   # L06: adds r2_in_sample + held-out llm/nn/blend R2. Add to ci_runner_repro.yml env before the rerun.
+  CLEAR_CHECKPOINT:  "1"   # L03: clean live-LLM rerun (workflow input; run_all.sh reads it)
+
+# Set per dispatch/shard by the plan job or by workflow inputs, not fixed values.
+ci_env_set_by_workflow:
+  SPARSE_SEED:             "fallback"   # exp3/exp3b only: fallback | off | always (workflow input sparse_seed)
+  HYPATIAX_SHARD_ID:       "per shard"
+  HYPATIAX_NSHARDS_SUFFIX: "per shard"
+  HYPATIAX_RESULTS_DIR:    "per experiment (RESULT_SUBDIR)"
+  HYPATIAX_NOISE_LEVEL:    "per noise shard (suppB)"
+
+# Read by code with a default; not set in any workflow. Defaults as found in source.
+code_env_defaults:
+  HYPATIAX_ENGINE_SEED:  "42"      # hybrid_system_v50_2.py: seed + attempt index
+  HYPATIAX_LLM_MODEL:    ""        # baseline_pure_llm_defi_discovery.py: empty -> llm_model above
+  PYSR_NITERATIONS:      "1000"    # exp1_ablation.py default (also N_ITERATIONS)
+  # Not yet documented (needs a look at the source): HYPATIAX_ALLOW_LEGACY,
+  # HYPATIAX_LLM_FREEZE_CACHE, METHOD_FILTER, METHOD_REGISTRY, METHOD_TIMEOUT_SECS,
+  # PYSR_ONLY_WALL_CLOCK, PYSR_POST_PROC_BUDGET, PYSR_RESERVED, PYSR_TIMEOUT_SECS,
+  # PYSR_TRAJECTORY_OUTPUT_DIR, PYSR_TRAJECTORY_POLL_SECONDS.
+
+# CI uses much larger PySR budgets than the pysr: block above. Reconcile before
+# citing either in the paper: pysr.niterations=1000 / population_size=33 versus
+# CI PYSR_GENERATIONS=10000 / PYSR_POPULATION=100. They may be different knobs.
+pysr_ci_vs_config_note: "unreconciled"
+
+ci_runner:
+  seeds:
+    pipeline_default:        [42, 99, 123, 777, 2024]
+    exp1b_seeds_default:     [99, 123, 777, 2024]    # 42 is exp1; one runner per seed
+    exp1_pca_seeds_default:  [99, 123, 777, 2024]
+    exp1_ablation:
+      one_seed_per_dispatch: true
+      canonical_seed:        42
+      other_seed_dir:        "ablation/exp1_ablation_seed<N>"
+      required_for_paper:    [42, 99, 123, 777, 2024]   # 777 and 2024 still missing (L03)
+    phase3_ablation:
+      one_job_per_seed:      true
+      smoke_seed:            42
+  shards:                    # forced by the plan job regardless of the input
+    exp1b: 5
+    exp1c: 5
+    portfolio: 5
+    exp1_ablation: 5
+    exp1b_seeds: 4
+    exp1_pca_seeds: 4
+    exp3b_min: 4
+    suppB: 5
+    suppB_sc: 6
+    exp1_llm_sens: 6
+    default: 1
+  timeout_minutes:
+    plan: 15
+    worker: 330              # one shard = one runner
+    phase3_plan: 5
+    phase3_seed_job: 350
+    phase3_closure: 60
+    ablation_aggregate: 60
+  phase3:
+    replay_glob: "archive/phase2/p2/pure_llm_seed*.jsonl"
+    smoke: {equations: 1, arms: [full, llm_acceptance], cases: 2}
+  clean_rerun:
+    requires: "scripts/bypass_audit.py reports 0 bypassed"
+    deletes_stale_checkpoints: true
+  triggers:
+    spend_api_on_dispatch_only: [ci_runner_repro.yml, ci_phase3_ablation.yml]
+    offline_on_push_and_pr:     [ci_bypass_audit.yml, ci_r2_policy.yml]   # ANTHROPIC_API_KEY=dummy-offline
