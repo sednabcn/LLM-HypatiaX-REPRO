@@ -70,7 +70,8 @@
       "n_tied": 9,
       "tie_tol": 0.01,
       "wilcoxon_W": 6.0,
-      "wilcoxon_p_greater": 0.125
+      "wilcoxon_p_greater": 0.125,
+      "wilcoxon_p_greater_holm": 0.375
     },
     "N_vs_P": {
       "median_a": 0.9993829522313691,
@@ -85,7 +86,8 @@
       "n_tied": 8,
       "tie_tol": 0.01,
       "wilcoxon_W": 6.0,
-      "wilcoxon_p_greater": 0.4375
+      "wilcoxon_p_greater": 0.4375,
+      "wilcoxon_p_greater_holm": 0.5
     },
     "H_vs_N": {
       "median_a": 0.9998286676008481,
@@ -100,7 +102,24 @@
       "n_tied": 10,
       "tie_tol": 0.01,
       "wilcoxon_W": 3.0,
-      "wilcoxon_p_greater": 0.25
+      "wilcoxon_p_greater": 0.25,
+      "wilcoxon_p_greater_holm": 0.5
     }
-  }
+  },
+  "failures_per_arm": {
+    "P": [
+      "Arrhenius"
+    ],
+    "H": [
+      "Arrhenius",
+      "Impermanent Loss"
+    ],
+    "N": [
+      "Arrhenius",
+      "Impermanent Loss",
+      "Portfolio Std Dev"
+    ]
+  },
+  "primary_test": "wilcoxon_signed_rank",
+  "multiplicity": "holm_across_3_comparisons"
 }
