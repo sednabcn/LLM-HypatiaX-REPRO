@@ -14,6 +14,10 @@ CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
 ANALYSIS_DIR="${ANALYSIS_DIR:-${REPO_ROOT}/hypatiax/analysis}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 
+# env_check runs in a child bash process and reads these paths directly.
+# Export them so it cannot silently resolve repository-relative paths as "/...".
+export REPO_ROOT EXPERIMENTS_DIR GENERATION_DIR CORE_DIR ANALYSIS_DIR SCRIPTS_DIR
+
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
