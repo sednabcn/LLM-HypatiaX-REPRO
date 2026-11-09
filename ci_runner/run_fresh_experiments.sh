@@ -214,7 +214,7 @@ manifest = {
     },
     "historical_result_comparison": False,
     "historical_cache_reuse": False,
-    "excluded_stages": ["validate", "qualify", "audit_paper", "pure_llm_phase2", "phase3_ablation", "audit_setup", "audit_nb01", "audit_nb02", "audit_nb03", "audit_nb04", "audit_nb05", "audit_nb06_fixc3_disclosure", "audit_nb06_fixc3_rerun", "audit_guard", "audit_print_verify", "audit_print_findings", "audit_figures_tables", "audit_final_gate"],
+    "excluded_stages": ["validate", "qualify", "audit_paper", "pure_llm_phase2", "phase3_ablation", "instability", "audit_setup", "audit_nb01", "audit_nb02", "audit_nb03", "audit_nb04", "audit_nb05", "audit_nb06_fixc3_disclosure", "audit_nb06_fixc3_rerun", "audit_guard", "audit_print_verify", "audit_print_findings", "audit_figures_tables", "audit_final_gate"],
     "stages": [],
 }
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
