@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Fresh rerun stage scope is enforced by ci_runner/run_fresh_experiments.sh.
 
 set -euo pipefail
 
