@@ -176,7 +176,7 @@ def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
 def test_ground_truth_leak_guard_resolves_deep_defi_source_by_explicit_repo_path():
     runner = (ROOT / "run_all.sh").read_text()
     start = runner.index('run gt_leak_guard "')
-    end = runner.find("\\nrun ", start + 1)
+    end = runner.find("\nrun ", start + 1)
     block = runner[start: end if end >= 0 else len(runner)]
     assert "_T3='${REPO_ROOT}/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py'" in block
     assert "-maxdepth 4" not in block
