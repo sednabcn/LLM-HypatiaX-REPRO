@@ -58,18 +58,7 @@ def test_single_temperature_setting_is_wired():
     """Audit C1: model/temperature have one protocol source, exported by run_all."""
     root = SRC.parents[3]
     cfg = (root / "config/repro.yaml").read_text(encoding="utf-8", errors="replace")
-    assert re.search(r'^llm_model:\s*"claude-sonnet-4-6"\s*
-
-
-def test_no_silent_zero_r2_defaults():
-    """Audit L36/L38: a missing r2 must become 'unavailable', never a 0.0 score."""
-    base = SRC.parent
-    for name in ("run_comparative_suite_benchmark_v2.py", "run_comparative_suite_benchmark_pca.py"):
-        t = (base / name).read_text(encoding="utf-8", errors="replace")
-        assert not re.search(r'get\("r2",\s*0\.0\)', t), name
-        assert "AUDIT L36" in t or 'evaluation has no r2' in t
-    assert 'res.get("rmse", float("inf"))' not in _text()
-, cfg, re.M)
+    assert re.search(r'^llm_model:\s*"claude-sonnet-4-6"\s*$', cfg, re.M)
     assert re.search(r"^llm_temperature:\s*0\.25\s*$", cfg, re.M)
 
     wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
