@@ -49,6 +49,7 @@ provenance:
   require_repro_config_sha256: true
   require_commit_sha: true
   require_workflow_run_id_and_attempt: true
+  artifact_retention_days: 90
   require_clean_run_flags:
     HYPATIAX_DISABLE_HARDCODED: "1"
     HYPATIAX_DISABLE_PROMPT_HINTS: "1"
