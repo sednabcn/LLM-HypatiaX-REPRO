@@ -31,16 +31,16 @@
     {
       "equation": "Michaelis-Menten",
       "domain": "Biology",
-      "extrap_r2_near": 0.9765467380885161,
-      "extrap_r2_far": 0.030910430973959513,
-      "instability_index": 0.9456363071145566
+      "extrap_r2_near": 0.9803926773822415,
+      "extrap_r2_far": 0.18074325787221002,
+      "instability_index": 0.7996494195100314
     },
     {
       "equation": "Logistic Growth",
       "domain": "Biology",
-      "extrap_r2_near": 0.9998265950226501,
-      "extrap_r2_far": 0.9997116057386041,
-      "instability_index": 0.00011498928404607422
+      "extrap_r2_near": 0.9998297561096181,
+      "extrap_r2_far": 0.9997140874104319,
+      "instability_index": 0.00011566869918622213
     },
     {
       "equation": "Kinetic Energy",
