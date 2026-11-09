@@ -12,6 +12,27 @@ mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 
 
+
+def test_exp1_provenance_has_an_isolated_result_directory():
+    assert mod.resolve_result_subdir("exp1-provenance") == (
+        "comparison_results/noise-noiseless/noiseless/defi/exp1-provenance"
+    )
+
+
+def test_exp1_provenance_is_one_fixed_five_seed_experiment():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "- exp1-provenance" in workflow
+    assert '"exp1-provenance":    5' in workflow
+    assert 'required_seeds = ["42", "99", "123", "777", "2024"]' in workflow
+    assert '"exp1-provenance":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+    assert 'if [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1-provenance" ]]' in workflow
+    assert 'exp1-provenance shard and write provenance manifest' in workflow
+    assert 'Aggregate and gate exp1-provenance five-seed run' in workflow
+    assert 'validated_shard_count' in workflow
+    assert 'expected_cases_per_seed' in workflow
+    assert 'RUN_ID isolation' not in workflow  # run-ID is encoded in RESULT_SUBDIR, not a cache hint
+
+
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
     assert mod.resolve_result_subdir("exp1b") == (
         "comparison_results/noise-noiseless/15"
