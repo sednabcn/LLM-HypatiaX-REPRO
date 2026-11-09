@@ -35,6 +35,8 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert "(github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false'" in workflow
     assert 'expected_domains = {"amm"' in workflow
     assert "result_sha256" in workflow and "protocol_config_sha256" in workflow
+    assert '"expected_nshards": 5' in workflow
+    assert "runtime_package_versions" in workflow
     protocol = (ROOT / "config/exp1_provenance.yaml").read_text()
     assert "id: exp1-provenance" in protocol
     assert "ordered: [42, 99, 123, 777, 2024]" in protocol
@@ -173,6 +175,8 @@ def test_contract_gate_triggers_for_runner_changes_on_push_and_pull_request():
         for path in (
             '"run_all.sh"',
             '".github/workflows/ci_runner_repro.yml"',
+            '"config/exp1_provenance.yaml"',
+            '".github/scripts/result_subdir_map.py"',
             '".github/workflows/ci_pipeline_check.yml"',
             '".github/workflows/ci_pipeline_validate.yml"',
         ):
