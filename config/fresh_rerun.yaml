@@ -248,3 +248,6 @@ deferred_experiments:
   phase3_ablation:
     status: deferred
     reason: "Phase 3 requires a fresh Phase 2 closure manifest and fresh Pure-LLM rows plus engine/adapter gates. Its workflow now requires explicit fresh inputs and has no cross-run cache, but it is not part of the core run until Phase 2 is completed and Phase 3 preflight passes."
+  instability_diagnostic:
+    status: deferred
+    reason: "The instability diagnostic is a valid explicit run_all step but is deferred from the standard full-run sequence by the L18 control. Run it separately with --step instability when it is specifically needed."
