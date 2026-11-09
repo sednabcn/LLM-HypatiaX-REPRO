@@ -59,8 +59,8 @@
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
+      "extrap_r2_near": 0.9999999046806634,
+      "extrap_r2_far": 0.9999999046806634,
       "instability_index": 0.0
     },
     {
