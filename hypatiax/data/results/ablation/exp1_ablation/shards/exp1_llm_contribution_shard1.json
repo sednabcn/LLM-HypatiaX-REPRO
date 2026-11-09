@@ -16,40 +16,42 @@
     0.9995978770210254
   ],
   "P_far": [
-    0.9999391304844533,
-    0.9999981487696318,
-    1.0
+    0.9999427103324033,
+    0.999998639579782,
+    -71.30822534123661
   ],
   "tests": {
     "H_vs_P": {
       "median_a": 0.9999986404554436,
-      "median_b": 0.9999981487696318,
-      "wins": 0,
-      "ties": 3,
+      "median_b": 0.9999427103324033,
+      "wins": 1,
+      "ties": 2,
       "losses": 0,
-      "U_greater": 4.5,
-      "p_greater": 0.5902615116112394,
-      "p_two_sided": 1.0,
-      "rank_biserial_r": 0.0,
-      "n_tied": 3,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
       "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)",
-      "wilcoxon_p_greater_holm": null
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
     },
     "N_vs_P": {
       "median_a": 0.9999409544066139,
-      "median_b": 0.9999981487696318,
-      "wins": 0,
-      "ties": 3,
+      "median_b": 0.9999427103324033,
+      "wins": 1,
+      "ties": 2,
       "losses": 0,
-      "U_greater": 4.5,
-      "p_greater": 0.5902615116112394,
+      "U_greater": 5.0,
+      "p_greater": 0.5,
       "p_two_sided": 1.0,
-      "rank_biserial_r": 0.0,
-      "n_tied": 3,
+      "rank_biserial_r": 0.11111111111111116,
+      "n_tied": 2,
       "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)",
-      "wilcoxon_p_greater_holm": null
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
     },
     "H_vs_N": {
       "median_a": 0.9999986404554436,
