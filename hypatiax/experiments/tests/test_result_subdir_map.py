@@ -32,6 +32,13 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert 'expected_cases_per_seed' in workflow
     assert "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}" in workflow
     assert workflow.count("github.event.inputs.experiment != 'exp1-provenance'") == 2
+    protocol = (ROOT / "config/exp1_provenance.yaml").read_text()
+    assert "id: exp1-provenance" in protocol
+    assert "ordered: [42, 99, 123, 777, 2024]" in protocol
+    assert "nshards: 5" in protocol
+    assert "case_count_per_seed: 74" in protocol
+    assert "total_expected_case_records: 370" in protocol
+    assert "append_workflow_run_id_and_attempt: true" in protocol
 
 
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
