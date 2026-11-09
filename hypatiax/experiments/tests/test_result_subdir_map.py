@@ -242,7 +242,10 @@ def test_exp1_optional_analysis_script_does_not_fail_when_absent():
     end = runner.find("\nrun ", start + 1)
     block = runner[start : end if end >= 0 else len(runner)]
 
-    assert '_ANALYSIS_SCRIPT="${ANALYSIS_DIR}/statistical_analysis.py"' in block
-    assert 'if [[ -f "${_ANALYSIS_SCRIPT}" ]]' in block
+    # The exp1 body is embedded in an outer double-quoted bash -c string.
+    # Escaping each dollar is required so expansion happens in the inner shell,
+    # where ANALYSIS_DIR and _ANALYSIS_SCRIPT are defined.
+    assert '_ANALYSIS_SCRIPT="\\${ANALYSIS_DIR}/statistical_analysis.py"' in block
+    assert 'if [[ -f "\\${_ANALYSIS_SCRIPT}" ]]' in block
     assert "optional statistical_analysis.py not found" in block
     assert 'cd "${ANALYSIS_DIR}"' not in block
