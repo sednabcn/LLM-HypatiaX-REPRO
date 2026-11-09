@@ -2896,6 +2896,7 @@ jobs:
             ADD_FLAGS=(-f)
             [[ "${EXP}" == "exp1_ablation" ]] && ADD_FLAGS+=(--ignore-removal)
             git add "${ADD_FLAGS[@]}" "${TARGET}"
+            git reset -q -- "${TARGET%/}"/stale_* 2>/dev/null || true
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2914,6 +2915,12 @@ jobs:
             fi
 
             if ! git diff --cached --quiet; then
+              DELREN=$(git diff --cached --name-status | grep -E '^[DR]' || true)
+              if [[ "${EXP}" == "exp1_ablation" && -n "${DELREN}" ]]; then
+                echo "::error::shard ${SHARD}: refusing to commit deletions/renames of committed files:"
+                echo "${DELREN}"
+                exit 1
+              fi
               # Only this shard's own output dir is subject to the guard (a stray staged
               # file elsewhere is not a shard-isolation problem), and per-shard run logs
               # are legitimately rewritten on every rerun.
@@ -2949,7 +2956,7 @@ jobs:
               fi
 
               STAGED=$(git diff --cached --name-only | wc -l)
-              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)" -- "${TARGET}"
+              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             else
               echo "Shard ${SHARD}: nothing newly staged, but HEAD is ${AHEAD} commit(s) ahead of upstream (a prior push in this job likely failed) — skipping commit, retrying push only."
               STAGED=0
