@@ -37,6 +37,8 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert "result_sha256" in workflow and "protocol_config_sha256" in workflow
     assert '"expected_nshards": 5' in workflow
     assert "runtime_package_versions" in workflow
+    assert "expected_tasks = {f\"{domain}_seed{seed}\" for domain in expected_domains}" in workflow
+    assert "shards used different runtime package versions" in workflow
     protocol = (ROOT / "config/exp1_provenance.yaml").read_text()
     assert "id: exp1-provenance" in protocol
     assert "ordered: [42, 99, 123, 777, 2024]" in protocol
