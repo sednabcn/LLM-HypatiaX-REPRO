@@ -226,6 +226,8 @@ FROM_STEP=""
 DRY_RUN=false
 
 _STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_DEFERRED_STEPS="instability"
+RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -254,6 +256,10 @@ die()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
+  if [[ -z "$ONLY_STEP" && "$RUN_DEFERRED" != "1" && " $_DEFERRED_STEPS " == *" $step "* ]]; then
+    log "Skipping deferred step '$step' in full runs; set RUN_DEFERRED=1 or invoke --step '$step' explicitly."
+    return 0
+  fi
   if [[ -n "$FROM_STEP" ]]; then
     local skip=true
     for s in $_STEP_ORDER; do
@@ -693,6 +699,18 @@ _exp1_ablation_step() {
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
   mkdir -p "${abl_dir}"
 
+  if [[ "${CLEAR_CHECKPOINT:-0}" == "1" ]]; then
+    local backup_dir="${abl_dir}/checkpoint_backups/$(date -u +%Y%m%dT%H%M%SZ)"
+    mkdir -p "${backup_dir}"
+    shopt -s nullglob
+    local _f
+    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
+      mv "${_f}" "${backup_dir}"/
+    done
+    shopt -u nullglob
+    log "exp1_ablation: checkpoint files moved to ${backup_dir}"
+  fi
+
   export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
   export HYPATIAX_STRICT=1
 
@@ -741,6 +759,7 @@ _exp1_ablation_step() {
   echo '=== end exp1_ablation ==='
 }
 
+# PYPROV: exp1_ablation checkpoint policy is complete.
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
 
 # ---------------------------------------------------------------------------
