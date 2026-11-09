@@ -44,6 +44,8 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert "case_count_per_seed: 74" in protocol
     assert "total_expected_case_records: 370" in protocol
     assert "append_workflow_run_id_and_attempt: true" in protocol
+    assert "artifact_retention_days: 90" in protocol
+    assert "retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}" in workflow
 
 
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
