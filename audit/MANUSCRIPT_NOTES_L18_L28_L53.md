@@ -31,3 +31,15 @@ identical in both regimes and RMSE scales by 4^k (observed ratios 1, 0.25, 4, 16
 In run 42483985513, 23 of 45 arm-rows show identical finite near/far R2: 14 non-saturated
 rows across 7 of the 15 equations, and 9 saturated at 1.0. For those equations far is not
 independent evidence; it only separates models that are not scale-equivariant.
+
+## Arrhenius - extrapolation fails in all three arms (run 42536373088)
+Train window T in 300-500 K (k = 0.002-6); the true law 1e6*exp(-50000/(8.314*T)) spans
+6.6-312 (near), 7.3-2300 (medium) and 5e4-1.3e5 (far). All arms fit train with R2 ~ 0.997
+but recover a different functional family: PySR-only 4.58e-8*exp(sqrt(T-149.6)); LLM and
+no-LLM arms 3.329^(sqrt(T)-20.85). Raw R2 (recomputed offline from the recorded expressions;
+the run records -inf for medium/far under the R2 < -100 floor): near -24.3 / -42.9,
+medium -4.4e3 / -1.6e4, far -3.2e21 / -1.5e25 (PySR-only / LLM arms). The narrow window does
+not identify the exponential form, so this is an identifiability failure, not a scoring bug.
+CORE_15's own note lists it as a known failure mode. Arrhenius is therefore excluded from the
+far-R2 paired tests (non-finite under the floor), and the exclusion should be reported with
+these numbers.
