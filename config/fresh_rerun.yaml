@@ -121,7 +121,9 @@ benchmarks:
     script: "hypatiax/experiments/benchmarks/run_hybrid_system_benchmark.py"
     output_subdir: "routing"
   instability:
-    enabled: true
+    enabled: false
+    status: deferred
+    reason: "L18 instability diagnostic is deferred from the standard fresh rerun until its independent protocol and runtime budget are frozen. It remains available as an explicit diagnostic step, not part of the primary claim-generating run."
     script: "hypatiax/experiments/benchmarks/run_instability_suite.py"
     output_subdir: "instability"
     fast_skip: true
