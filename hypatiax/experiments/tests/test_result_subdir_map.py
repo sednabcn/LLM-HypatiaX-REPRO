@@ -248,6 +248,7 @@ def test_exp1_optional_analysis_script_does_not_fail_when_absent():
     assert '_ANALYSIS_SCRIPT="\\${ANALYSIS_DIR}/statistical_analysis.py"' in block
     assert 'if [[ -f "\\${_ANALYSIS_SCRIPT}" ]]' in block
     assert "optional statistical_analysis.py not found" in block
-    # The exp1 command is nested in bash -c "..." so inner double quotes must be escaped.
-    assert 'echo \\"INFO: optional statistical_analysis.py not found at \\${_ANALYSIS_SCRIPT}; using benchmark JSON/report.\\"' in block
+    # Keep the fallback echo single-quoted so the outer bash -c string
+    # does not reinterpret words or expand variables from the message.
+    assert "echo 'INFO: optional statistical_analysis.py not found; using benchmark JSON/report.'" in block
     assert 'cd "${ANALYSIS_DIR}"' not in block
