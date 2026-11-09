@@ -73,9 +73,9 @@ on:
         default: "0.0,0.05,0.1,0.5,1.0"
 
       pysr_generations:
-        description: "PySR generations (PYSR_GENERATIONS)"
+        description: "PySR generations (PYSR_GENERATIONS); must match config/repro.yaml (1000), otherwise run_all.sh rejects the override."
         required: false
-        default: "10000"
+        default: "1000"
 
       pysr_populations:
         description: "PySR parallel populations (PYSR_POPULATIONS) — repro.yaml uses 30"
@@ -132,14 +132,17 @@ env:
   HYPATIAX_NOLLM_ARM: "1"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
-  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
+  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '1000' }}"
   PCA_PORTFOLIO_SWEEP: "${{ github.event.inputs.pca_portfolio_sweep || 'false' }}"
-  PYSR_POPULATION:     "100"
+  PYSR_POPULATION:     "33"
   PYSR_TOURNAMENT_SIZE: "3"
   PYSR_CROSSOVER:      "0.9"
   PYSR_MUTATION:       "0.1"
   PYSR_PARETO_PRESSURE: "0.001"
   PYSR_SEED:           "42"
+  LLM_TEMPERATURE:  "0.25"
+  LLM_MODEL:        "claude-sonnet-4-6"
+  HYPATIAX_LLM_MODEL: "claude-sonnet-4-6"
   PYSR_POPULATIONS:    "${{ github.event.inputs.pysr_populations || '30' }}"  # repro.yaml pysr.populations
   FEYNMAN_SAMPLES:     "${{ github.event.inputs.n_samples || '200' }}"
   FEYNMAN_TIMEOUT:     "1100"  # repro.yaml timeouts.feynman_pysr_seconds
