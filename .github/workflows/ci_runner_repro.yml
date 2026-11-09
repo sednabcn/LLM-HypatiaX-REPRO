@@ -14,6 +14,7 @@ on:
           - exp1
           - exp1b
           - exp1b_seeds
+          - exp1-provenance
           - portfolio
           - portfolio_random_holdout
           - portfolio_bootstrap_pca
@@ -188,7 +189,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -309,6 +310,15 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
+              ;;
+
+            exp1-provenance)
+              # Independent five-seed DeFi experiment; one seed per worker, all 74 cases.
+              # Run-ID isolation prevents checkpoint/result reuse across dispatches.
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/exp1-provenance/run-${{ github.run_id }}"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
             exp1b)
@@ -570,6 +580,7 @@ jobs:
 
           EXP_SHARD_TABLE = {
               "exp1":               1,
+              "exp1-provenance":    5,   # fixed five-seed protocol: one seed per worker
               "exp1b":              5,
               "portfolio":          5,   # one shard per seed, same rule as exp1b
               "portfolio_random_holdout": 1, # five partitions are evaluated inside one validation runner
@@ -617,7 +628,13 @@ jobs:
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
-          if EXP in ("exp1b_seeds", "exp1_pca_seeds"):
+          if EXP == "exp1-provenance":
+              required_seeds = ["42", "99", "123", "777", "2024"]
+              if SEEDS != required_seeds:
+                  print(f"ERROR: exp1-provenance requires the fixed seed set {required_seeds}; got {SEEDS}", file=sys.stderr)
+                  sys.exit(1)
+              N_SHARDS = 5
+          elif EXP in ("exp1b_seeds", "exp1_pca_seeds"):
               # One shard == one runner == one seed (each runs all 74 tasks for that seed).
               # Anything else means several seeds share one 330-min job.
               _is_pca = EXP == "exp1_pca_seeds"
@@ -676,6 +693,8 @@ jobs:
 
           registry = {
               "exp1":              DEFI_TASKS,
+              # Seed-major order gives exactly 10 domain tasks (all 74 cases) to each seed shard.
+              "exp1-provenance":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio":         [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio_random_holdout": ["validation"],
@@ -1278,7 +1297,7 @@ jobs:
             # exp3/exp3b only: no other experiment ever sees SPARSE_SEED from CI.
             export SPARSE_SEED="${SPARSE_SEED_INPUT:-fallback}"
             echo "  [exp3/exp3b] SPARSE_SEED=${SPARSE_SEED}"
-          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" ]]; then
+          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" || "${EXP}" == "exp1-provenance" ]]; then
             # pending IDs are "<domain>_seed<N>"; exp1's benchmark filters on the bare domain keys.
             TASK_IDS="$(sed -E 's/_seed[0-9]+$//' /tmp/pending_ids.txt | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="$(sed -nE 's/.*_seed([0-9]+)$/\1/p' /tmp/pending_ids.txt | sort -un | paste -sd, -)"
@@ -1322,7 +1341,9 @@ jobs:
             RUN_STEP="exp1"
           fi
 
-          if [[ "${EXP}" == "exp1b_seeds" ]]; then
+          if [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1-provenance" ]]; then
+            # exp1-provenance is a standalone five-seed run; call the benchmark directly
+            # so the seed and run-isolated output directory are explicit and auditable.
             # FIX: run_all.sh's exp1 step hard-codes seed 42 and --output-dir .../defi
             # (log: "🎲 SEED=42", "Output dir overridden ... /noiseless/defi"), so the seed
             # env vars were ignored and nothing landed in multi-seeds/. Call the patched
@@ -1517,7 +1538,7 @@ jobs:
 
               rescued = 0
               EXP = os.environ.get("EXP", "")
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1-provenance", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
               shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
 
               if EXP in COMBINED_OUTPUT_EXPS:
@@ -1599,7 +1620,7 @@ jobs:
                               f"*defi_pca_v4_*seed{s}.json",
                               f"*defi_pca_v4_*seed{s}_*.json",
                           ]
-                  elif EXP == "exp1b_seeds":
+                  elif EXP in ("exp1b_seeds", "exp1-provenance"):
                       # a shard may only ever rescue ITS OWN seed's files: no seed-less and no
                       # recursive globs (those would drag seed-42 / other seeds' files in here)
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
