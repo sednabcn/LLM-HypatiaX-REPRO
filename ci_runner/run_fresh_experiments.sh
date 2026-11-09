@@ -11,6 +11,7 @@ PROTOCOL="${REPRO_CFG:-${REPO_ROOT}/config/fresh_rerun.yaml}"
 PROTOCOL="$(cd "$(dirname "$PROTOCOL")" && pwd -P)/$(basename "$PROTOCOL")"
 export REPRO_CFG="$PROTOCOL"
 
+# Primary fresh run: deferred instability diagnostics and Phase 2/3 ablations are excluded.
 STAGES=(
   env_check
   gt_leak_guard
