@@ -1,14 +1,15 @@
 {
  "experiment": "exp1_ablation",
- "written_utc": "2026-11-08T23:44:48+00:00",
- "git_commit": "72748a72e637e6eed96a2676a7240d5d38d317d5",
+ "written_utc": "2026-11-09T16:14:40+00:00",
+ "git_commit": "fea104de8c5e8cb8b8dc1ef7c32e37885e93d040",
  "code_dirty": true,
  "dirty_files": [
-  "D hypatiax/data/results/ablation/exp1_ablation/_checkpoint_shard0.json",
+  "D hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json",
+  "?? bypass_audit.csv",
   "?? checkpoint_worker_shard4.json"
  ],
  "evaluator_path": "hypatiax/core/r2_canonical.py",
- "evaluator_sha256": "7d5395ed728323d8db8b0a5e9e6804a2b142a401c8d7fe4d19d54b32973b7971",
+ "evaluator_sha256": "2456d7055b8696fe458954a89895a4f017ba317948d41ffa3b007a2a11b48409",
  "flags": {
   "HYPATIAX_DISABLE_HARDCODED": "1",
   "HYPATIAX_DISABLE_PROMPT_HINTS": "1",
@@ -42,7 +43,7 @@
   "generations": "10000"
  },
  "github": {
-  "run_id": "42536373088",
+  "run_id": "42651993929",
   "ref": "fix/rerun-blockers",
   "workflow": "HypatiaX - runner (repro)"
  }
