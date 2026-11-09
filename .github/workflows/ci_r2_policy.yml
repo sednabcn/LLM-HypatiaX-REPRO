@@ -15,6 +15,7 @@ on:
       - "scripts/migrate_r2_repro.py"
       - ".github/workflows/ci_r2_policy.yml"
       - ".github/workflows/ci_fresh_rerun.yml"
+      - ".github/workflows/ci_fresh_rerun.yml"
       - ".github/workflows/clean-old-workflows.yml"
   pull_request:
     paths:
@@ -29,6 +30,7 @@ on:
       - ".github/workflows/ci_pipeline_validate.yml"
       - "scripts/migrate_r2_repro.py"
       - ".github/workflows/ci_r2_policy.yml"
+      - ".github/workflows/ci_fresh_rerun.yml"
   workflow_dispatch:
 
 permissions:
