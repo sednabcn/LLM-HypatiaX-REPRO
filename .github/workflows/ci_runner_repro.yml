@@ -2069,6 +2069,7 @@ jobs:
               raise SystemExit(f"::error::exp1-provenance seed {seed}: missing or inconsistent seed stamps: {sorted(set(map(str, stamped)))}")
 
           script = Path(os.environ["SCRIPT_PATH"])
+          protocol = Path("config/exp1_provenance.yaml")
           config = Path("config/repro.yaml")
           def sha256(path):
               return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -2090,6 +2091,7 @@ jobs:
               "result_sha256": sha256(result_path),
               "script_path": str(script),
               "script_sha256": sha256(script),
+              "protocol_config_sha256": sha256(protocol),
               "repro_config_sha256": sha256(config),
               "python_version": platform.python_version(),
               "anthropic_sdk_version": __import__("anthropic").__version__,
@@ -3249,6 +3251,7 @@ jobs:
 
           root = Path("provenance-shards")
           expected = [42, 99, 123, 777, 2024]
+          expected_domains = {"amm", "risk_var", "liquidity", "expected_shortfall", "liquidation", "risk", "lending", "staking", "trading", "derivatives"}
           manifests = sorted(root.glob("exp1-provenance_seed*_manifest.json"))
           errors = []
           if len(manifests) != 5:
@@ -3281,8 +3284,10 @@ jobs:
                   errors.append(f"{path.name}: shards came from different commits")
               if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
                   errors.append(f"{path.name}: incomplete 74-case shard")
-              if len(m.get("assigned_domains", [])) != 10 or len(m.get("assigned_task_ids", [])) != 10:
-                  errors.append(f"{path.name}: shard did not receive all 10 domain tasks")
+              if set(m.get("assigned_domains", [])) != expected_domains or len(m.get("assigned_task_ids", [])) != 10:
+                  errors.append(f"{path.name}: shard did not receive the exact 10-domain task set")
+              if m.get("shard_index") != expected.index(seed) or m.get("shard_id") != expected.index(seed) + 1:
+                  errors.append(f"{path.name}: seed {seed} is assigned to the wrong shard index/id")
               result = root / str(m.get("result_file", ""))
               if not result.is_file():
                   errors.append(f"{path.name}: missing result file {result.name}")
@@ -3303,6 +3308,12 @@ jobs:
 
           if sorted(int(s) for s in by_seed) != expected:
               errors.append(f"expected seeds {expected}, found {sorted(by_seed)}")
+          if len({m.get("protocol_config_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different exp1-provenance protocol configuration hashes")
+          if len({m.get("repro_config_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different repro.yaml configuration hashes")
+          if len({m.get("result_file") for m in by_seed.values()}) != len(by_seed):
+              errors.append("two seed shards claim the same result filename")
           if os.environ.get("WORKER_RESULT") != "success":
               errors.append(f"worker matrix result is {os.environ.get('WORKER_RESULT')!r}, not success")
 
@@ -3315,6 +3326,9 @@ jobs:
               "expected_seeds": expected,
               "validated_seeds": sorted(int(s) for s in by_seed),
               "expected_cases_per_seed": 74,
+              "expected_total_case_records": 370,
+              "protocol_config_sha256": next(iter({m.get("protocol_config_sha256") for m in by_seed.values()}), None),
+              "repro_config_sha256": next(iter({m.get("repro_config_sha256") for m in by_seed.values()}), None),
               "validated_shard_count": len(by_seed),
               "worker_matrix_result": os.environ.get("WORKER_RESULT"),
               "errors": errors,
