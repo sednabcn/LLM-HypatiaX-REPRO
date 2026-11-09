@@ -3270,7 +3270,14 @@ jobs:
               except Exception as exc:
                   errors.append(f"{path.name}: invalid manifest: {exc}")
                   continue
-              seed = m.get("seed")
+              try:
+                  seed = int(m.get("seed"))
+              except (TypeError, ValueError):
+                  errors.append(f"{path.name}: missing or invalid seed value")
+                  continue
+              if seed not in expected:
+                  errors.append(f"{path.name}: unexpected seed {seed}")
+                  continue
               if seed in by_seed:
                   errors.append(f"duplicate manifest for seed {seed}")
                   continue
@@ -3288,13 +3295,20 @@ jobs:
               elif m.get("commit_sha") != common_commit:
                   errors.append(f"{path.name}: shards came from different commits")
               if m.get("n_shards") != 5:
-                  errors.append(f"{path.name}: expected NSHARDS=5, got {m.get(chr(110)+chr(95)+chr(115)+chr(104)+chr(97)+chr(114)+chr(100)+chr(115))}")
+                  errors.append(f"{path.name}: expected NSHARDS=5, got " + repr(m.get("n_shards")))
               if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
                   errors.append(f"{path.name}: incomplete 74-case shard")
               if set(m.get("assigned_domains", [])) != expected_domains or len(m.get("assigned_task_ids", [])) != 10:
                   errors.append(f"{path.name}: shard did not receive the exact 10-domain task set")
               if m.get("shard_index") != expected.index(seed) or m.get("shard_id") != expected.index(seed) + 1:
                   errors.append(f"{path.name}: seed {seed} is assigned to the wrong shard index/id")
+              flags = m.get("clean_run_flags", {})
+              required_flags = {"HYPATIAX_DISABLE_HARDCODED": "1", "HYPATIAX_DISABLE_PROMPT_HINTS": "1", "HYPATIAX_STRICT": "1", "HYPATIAX_R2_SIGN_FLIP": "0"}
+              if flags != required_flags:
+                  errors.append(f"{path.name}: clean-run flags do not match required policy: {flags}")
+              for field in ("script_sha256", "protocol_config_sha256", "repro_config_sha256"):
+                  if not m.get(field):
+                      errors.append(f"{path.name}: missing {field}")
               result = root / str(m.get("result_file", ""))
               if not result.is_file():
                   errors.append(f"{path.name}: missing result file {result.name}")
@@ -3310,8 +3324,11 @@ jobs:
                   errors.append(f"{result.name}: invalid result JSON: {exc}")
                   continue
               stamps = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+              case_ids = [r.get("equation_id") for r in records if isinstance(r, dict)]
               if len(records) != 74 or len(stamps) != 74 or any(str(x) != str(seed) for x in stamps):
                   errors.append(f"{result.name}: records/count/seed stamps do not validate for seed {seed}")
+              if len(case_ids) != 74 or len(set(case_ids)) != 74:
+                  errors.append(f"{result.name}: expected 74 unique equation IDs, found {len(set(case_ids))}")
 
           if sorted(int(s) for s in by_seed) != expected:
               errors.append(f"expected seeds {expected}, found {sorted(by_seed)}")
@@ -3319,6 +3336,11 @@ jobs:
               errors.append("shards used different exp1-provenance protocol configuration hashes")
           if len({m.get("repro_config_sha256") for m in by_seed.values()}) > 1:
               errors.append("shards used different repro.yaml configuration hashes")
+          if len({m.get("script_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different benchmark script hashes")
+          total_records = sum(int(m.get("observed_case_count", 0)) for m in by_seed.values())
+          if total_records != 370:
+              errors.append(f"expected 370 total case records, found {total_records}")
           if len({m.get("result_file") for m in by_seed.values()}) != len(by_seed):
               errors.append("two seed shards claim the same result filename")
           if os.environ.get("WORKER_RESULT") != "success":
@@ -3335,6 +3357,7 @@ jobs:
               "expected_nshards": 5,
               "expected_cases_per_seed": 74,
               "expected_total_case_records": 370,
+              "validated_total_case_records": sum(int(m.get("observed_case_count", 0)) for m in by_seed.values()),
               "protocol_config_sha256": next(iter({m.get("protocol_config_sha256") for m in by_seed.values()}), None),
               "repro_config_sha256": next(iter({m.get("repro_config_sha256") for m in by_seed.values()}), None),
               "validated_shard_count": len(by_seed),
