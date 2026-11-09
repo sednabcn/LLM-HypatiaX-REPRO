@@ -31,16 +31,16 @@
     {
       "equation": "Michaelis-Menten",
       "domain": "Biology",
-      "extrap_r2_near": 0.9803926773822415,
-      "extrap_r2_far": 0.18074325787221002,
-      "instability_index": 0.7996494195100314
+      "extrap_r2_near": 0.9804439569406166,
+      "extrap_r2_far": 0.1832616385079764,
+      "instability_index": 0.7971823184326402
     },
     {
       "equation": "Logistic Growth",
       "domain": "Biology",
-      "extrap_r2_near": 0.9998297561096181,
-      "extrap_r2_far": 0.9997140874104319,
-      "instability_index": 0.00011566869918622213
+      "extrap_r2_near": 0.9998250654127449,
+      "extrap_r2_far": 0.999710888424446,
+      "instability_index": 0.00011417698829885303
     },
     {
       "equation": "Kinetic Energy",
@@ -59,14 +59,14 @@
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
+      "extrap_r2_near": 0.9999999046806634,
+      "extrap_r2_far": 0.9999999046806634,
       "instability_index": 0.0
     },
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7160050608369003,
+      "extrap_r2_near": 0.7160042526263906,
       "extrap_r2_far": null,
       "instability_index": null
     },
@@ -80,8 +80,8 @@
     {
       "equation": "Constant Product",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9995667912134206,
-      "extrap_r2_far": 0.9995667912134206,
+      "extrap_r2_near": 0.9995755153024841,
+      "extrap_r2_far": 0.9995755153024841,
       "instability_index": 0.0
     },
     {
@@ -94,9 +94,9 @@
     {
       "equation": "Liquidation Price",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.99997089603558,
-      "extrap_r2_far": 0.9999986404554436,
-      "instability_index": 2.774441986364007e-05
+      "extrap_r2_near": 0.9996941439922399,
+      "extrap_r2_far": 0.9991985391658774,
+      "instability_index": 0.0004956048263624613
     },
     {
       "equation": "Portfolio Std Dev",
