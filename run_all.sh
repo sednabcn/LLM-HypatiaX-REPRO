@@ -442,15 +442,15 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
   # Keep it optional: the benchmark's raw JSON and built-in statistical report
   # are the primary outputs, and this absent post-processing script must not
   # turn a completed experiment stage into a path-related failure.
-  _ANALYSIS_SCRIPT="${ANALYSIS_DIR}/statistical_analysis.py"
-  if [[ -f "${_ANALYSIS_SCRIPT}" ]]; then
+  _ANALYSIS_SCRIPT="\${ANALYSIS_DIR}/statistical_analysis.py"
+  if [[ -f "\${_ANALYSIS_SCRIPT}" ]]; then
     python3 -c 'import seaborn' 2>/dev/null || \
       python3 -m pip install --quiet seaborn || \
       { echo 'ERROR: seaborn install failed — optional statistical analysis cannot run'; exit 1; }
-    python3 "${_ANALYSIS_SCRIPT}" \
+    python3 "\${_ANALYSIS_SCRIPT}" \
       2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log'
   else
-    echo "INFO: optional statistical_analysis.py not found at ${_ANALYSIS_SCRIPT}; using benchmark JSON/report."
+    echo "INFO: optional statistical_analysis.py not found at \${_ANALYSIS_SCRIPT}; using benchmark JSON/report."
   fi
 
 
