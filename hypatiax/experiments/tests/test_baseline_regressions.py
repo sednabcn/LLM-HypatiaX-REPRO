@@ -21,6 +21,7 @@ def mod(monkeypatch):
     stub.DeFiExperimentProtocol = object
     for n in ("hypatiax", "hypatiax.protocols"):
         sys.modules.setdefault(n, types.ModuleType(n))
+    # This fixture deliberately stubs the protocol only while importing the baseline module.
     # Restore the real protocol module after each fixture. A direct
     # sys.modules assignment leaks this stub into later tests in the same
     # pytest process and can make unrelated protocol imports resolve to object.
