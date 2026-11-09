@@ -3217,6 +3217,131 @@ jobs:
           echo "::error::Failed to push merged exp1_ablation results after 5 attempts."
           exit 1
 
+  exp1_provenance_aggregate:
+    name: "Aggregate and gate exp1-provenance five-seed run"
+    needs: [plan, worker]
+    if: ${{ always() && needs.plan.outputs.exp_id == 'exp1-provenance' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download all seed-shard artifacts
+        id: download_seeds
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: results-exp1-provenance-shard*
+          path: provenance-shards
+          merge-multiple: true
+
+      - name: Validate complete five-seed experiment and write aggregate manifest
+        if: always()
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+          EXPECTED_RUN_ID: ${{ github.run_id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKER_RESULT: ${{ needs.worker.result }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import glob, hashlib, json, os, sys
+          from pathlib import Path
+
+          root = Path("provenance-shards")
+          expected = [42, 99, 123, 777, 2024]
+          manifests = sorted(root.glob("exp1-provenance_seed*_manifest.json"))
+          errors = []
+          if len(manifests) != 5:
+              errors.append(f"expected 5 per-seed manifests, found {len(manifests)}")
+
+          by_seed = {}
+          common_commit = None
+          for path in manifests:
+              try:
+                  m = json.loads(path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  errors.append(f"{path.name}: invalid manifest: {exc}")
+                  continue
+              seed = m.get("seed")
+              if seed in by_seed:
+                  errors.append(f"duplicate manifest for seed {seed}")
+                  continue
+              by_seed[seed] = m
+              if m.get("experiment_id") != "exp1-provenance" or m.get("status") != "passed":
+                  errors.append(f"{path.name}: wrong experiment identity or status")
+              if m.get("workflow_run_id") != os.environ["EXPECTED_RUN_ID"]:
+                  errors.append(f"{path.name}: run ID mismatch")
+              if str(m.get("workflow_run_attempt")) != os.environ["EXPECTED_RUN_ATTEMPT"]:
+                  errors.append(f"{path.name}: run attempt mismatch")
+              if m.get("commit_sha") != os.environ["EXPECTED_COMMIT"]:
+                  errors.append(f"{path.name}: commit SHA mismatch")
+              if common_commit is None:
+                  common_commit = m.get("commit_sha")
+              elif m.get("commit_sha") != common_commit:
+                  errors.append(f"{path.name}: shards came from different commits")
+              if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
+                  errors.append(f"{path.name}: incomplete 74-case shard")
+              if len(m.get("assigned_domains", [])) != 10 or len(m.get("assigned_task_ids", [])) != 10:
+                  errors.append(f"{path.name}: shard did not receive all 10 domain tasks")
+              result = root / str(m.get("result_file", ""))
+              if not result.is_file():
+                  errors.append(f"{path.name}: missing result file {result.name}")
+                  continue
+              digest = hashlib.sha256(result.read_bytes()).hexdigest()
+              if digest != m.get("result_sha256"):
+                  errors.append(f"{path.name}: result SHA-256 mismatch")
+                  continue
+              try:
+                  data = json.loads(result.read_text(encoding="utf-8"))
+                  records = data if isinstance(data, list) else data.get("results", [])
+              except Exception as exc:
+                  errors.append(f"{result.name}: invalid result JSON: {exc}")
+                  continue
+              stamps = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+              if len(records) != 74 or len(stamps) != 74 or any(str(x) != str(seed) for x in stamps):
+                  errors.append(f"{result.name}: records/count/seed stamps do not validate for seed {seed}")
+
+          if sorted(int(s) for s in by_seed) != expected:
+              errors.append(f"expected seeds {expected}, found {sorted(by_seed)}")
+          if os.environ.get("WORKER_RESULT") != "success":
+              errors.append(f"worker matrix result is {os.environ.get('WORKER_RESULT')!r}, not success")
+
+          aggregate = {
+              "experiment_id": "exp1-provenance",
+              "status": "passed" if not errors else "incomplete_or_failed",
+              "workflow_run_id": os.environ["EXPECTED_RUN_ID"],
+              "workflow_run_attempt": os.environ["EXPECTED_RUN_ATTEMPT"],
+              "commit_sha": os.environ["EXPECTED_COMMIT"],
+              "expected_seeds": expected,
+              "validated_seeds": sorted(int(s) for s in by_seed),
+              "expected_cases_per_seed": 74,
+              "validated_shard_count": len(by_seed),
+              "worker_matrix_result": os.environ.get("WORKER_RESULT"),
+              "errors": errors,
+              "shards": [by_seed[s] for s in sorted(by_seed)],
+          }
+          out = Path("exp1-provenance_aggregate_manifest.json")
+          out.write_text(json.dumps(aggregate, indent=2) + "\n", encoding="utf-8")
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              print("exp1-provenance aggregate gate FAILED; no complete five-seed result is declared.")
+              sys.exit(1)
+          print("PASS: exp1-provenance has all five seeds, each with 74/74 seed-stamped records.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## exp1-provenance aggregate gate\n\n")
+              summary.write("- Seeds: 42, 99, 123, 777, 2024\n- Shards: 5/5\n- Cases: 74 per seed (370 total)\n- Result: **PASS**\n")
+          PYEOF
+
+      - name: Upload aggregate provenance manifest
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: exp1-provenance-aggregate-run${{ github.run_id }}
+          path: exp1-provenance_aggregate_manifest.json
+          if-no-files-found: warn
+          retention-days: 90
+
   pca_run_exp2_feynman:
     name: "C5c-0 · Run exp2_feynman_pca (Feynman PCA 40/60)"
     needs: pca_runner
