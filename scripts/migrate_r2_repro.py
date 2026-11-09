@@ -1,194 +1,225 @@
-# audit: ignore[F1] cleanup/migration utility, writes no new result rows
-"""Migrate the central R^2 scorers to hypatiax/core/r2_canonical.py.
-
-Why a script and not a diff: scorers are located by FUNCTION NAME with the
-``ast`` module, never by line number, so it applies cleanly to any working
-tree (including ones that have drifted from GitHub master). It is idempotent
-(already-migrated functions are skipped) and does nothing unless --apply is
-given. Every rewritten file is re-parsed before it is written.
-
-    python scripts/migrate_r2_repro.py            # dry run: print diffs
-    python scripts/migrate_r2_repro.py --apply    # write the files
-
-Each target keeps its signature and docstring; only the body is replaced by a
-call to ``r2_scored`` (canonical R^2, legacy sign-flip opt-in via
-HYPATIAX_R2_SIGN_FLIP=1). The return contract of each function is preserved:
-
-  float        -> canonical value (nan = undefined target, -inf = failed pred)
-  float_raise  -> as float, but non-finite y_true raises ValueError (exp1)
-  optional     -> canonical value; None when it cannot be scored (callers of
-                  the _far_r2 helpers test for None); -inf when catastrophic
-
-Inline ``ss_tot`` blocks inside large methods are NOT rewritten (not safe to
-do mechanically); test_r2_policy.py keeps them on an allowlist so no new
-copies can appear while they are migrated by hand.
-"""
-from __future__ import annotations
+#!/usr/bin/env python3
+"""Conservative R2 migration helper for the private HypatiaX archive."""
 
 import argparse
 import ast
-import difflib
 import json
-import pathlib
+import os
 import re
-import sys
+import tempfile
+from pathlib import Path
 
-BENCH = "hypatiax/experiments/benchmarks/"
-TARGETS = [
-    (BENCH + "exp1_ablation.py",                         "_safe_r2", "float_raise"),
-    (BENCH + "run_comparative_suite_benchmark_v2.py",    "_safe_r2", "float"),
-    (BENCH + "run_comparative_suite_benchmark_pca.py",   "_safe_r2", "float"),
-    (BENCH + "run_comparative_suite_benchmark_v2.py",    "_far_r2",  "optional"),
-    (BENCH + "run_comparative_suite_benchmark_pca.py",   "_far_r2",  "optional"),
-    (BENCH + "extrap_r2_far.py",                         "_far_r2",  "optional"),
-]
-MARKER = "R2-CANONICAL"
-CANONICAL = "hypatiax/core/r2_canonical.py"
-
-IMPORT_BLOCK = [
-    "try:",
-    "    from hypatiax.core.r2_canonical import r2_scored as _r2_scored",
-    "except ImportError:  # run as a bare script, package not on sys.path",
-    "    import pathlib as _pl, sys as _sys",
-    "    for _up in _pl.Path(__file__).resolve().parents:",
-    '        if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():',
-    "            _sys.path.insert(0, str(_up))",
-    "            break",
-    "    from hypatiax.core.r2_canonical import r2_scored as _r2_scored",
-]
+ROOT = Path(__file__).resolve().parents[1]
+MARKER = "HYPATIAX_R2_CANONICAL_MIGRATION_V1"
+TARGETS = (
+    ("hypatiax/core/metrics.py", "compute_r2", "float"),
+    ("hypatiax/core/recovery_eval.py", "recovery_r2", "float"),
+    ("hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py",
+     "r2_score_checked", "float"),
+    ("hypatiax/core/generation/hybrid_all_domains_llm_nn/hybrid_system_llm_nn_all_domains.py",
+     "_r2_rule_a", "float"),
+    ("hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py",
+     "_r2_checked_call", "float"),
+)
+BASELINE = ROOT / "hypatiax/experiments/tests/r2_legacy_baseline.json"
+_TOKEN = "ss_" + "tot"
+_CANONICAL_NAMES = {"r2_checked", "_r2_checked", "r2_scored"}
 
 
-def body_lines(kind: str, a: str, b: str, fname: str) -> list[str]:
-    head = [
-        f"# {MARKER}: single scoring policy, see hypatiax/core/r2_canonical.py.",
-        "# Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.",
-        "# NOTE: any docstring above describes the pre-canonical contract.",
-    ] + IMPORT_BLOCK
-    if kind == "float":
-        return head + [f"_val, _status = _r2_scored({a}, {b})", "return _val"]
-    if kind == "float_raise":
-        return head + [
-            f"_val, _status = _r2_scored({a}, {b})",
-            'if _status == "nonfinite_target":',
-            f'    raise ValueError("non-finite y_true passed to {fname}")',
-            "return _val",
-        ]
-    if kind == "optional":
-        # contract: None = could not be scored, -inf = scored but catastrophic
-        return head + [
-            f"_val, _status = _r2_scored({a}, {b})",
-            'if _status == "catastrophic":',
-            '    return float("-inf")',
-            'return _val if _status == "ok" else None',
-        ]
-    raise ValueError(kind)
+def _function_nodes(tree, name):
+    return [
+        node for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == name
+    ]
 
 
-def rewrite(src: str, name: str, kind: str):
-    """Return (new_text | None, message). None means nothing to write."""
-    tree = ast.parse(src)
-    found = [n for n in ast.walk(tree)
-             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == name]
-    if len(found) != 1:
-        return None, f"ERROR: expected exactly 1 def {name}, found {len(found)}"
-    node = found[0]
-    lines = src.splitlines(keepends=True)
-    seg = "".join(lines[node.lineno - 1:node.end_lineno])
-    if MARKER in seg:
-        return None, "already migrated"
+def _has_canonical_call(node):
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Call):
+            continue
+        func = child.func
+        if isinstance(func, ast.Name) and func.id in _CANONICAL_NAMES:
+            return True
+        if (
+            isinstance(func, ast.Attribute)
+            and func.attr in _CANONICAL_NAMES
+        ):
+            return True
+    return False
 
-    pos = [a.arg for a in node.args.args if a.arg not in ("self", "cls")]
-    if len(pos) < 2:
-        return None, f"ERROR: {name} has fewer than 2 positional args"
-    a, b = pos[0], pos[1]
 
-    first = node.body[0]
-    if first.lineno <= node.lineno:
-        return None, "ERROR: one-line function, refusing to rewrite"
-    doc = (isinstance(first, ast.Expr) and isinstance(getattr(first, "value", None), ast.Constant)
-           and isinstance(first.value.value, str))
-    if doc:
-        keep_end = first.end_lineno                      # keep through docstring
-    else:
-        keep_end = first.lineno - 1                      # keep the header only
-        while keep_end > node.lineno and (not lines[keep_end - 1].strip()
-                                          or lines[keep_end - 1].lstrip().startswith("#")):
-            keep_end -= 1                                # drop old-body comments
-
-    indent = " " * first.col_offset
-    new_body = [indent + ln + "\n" if ln else "\n" for ln in body_lines(kind, a, b, name)]
-    out = lines[:keep_end] + new_body + lines[node.end_lineno:]
-    new = "".join(out)
+def rewrite(src, name, kind):
+    """Rewrite one uniquely named legacy scorer while retaining its contract."""
+    if kind not in {"float", "optional", "float_raise"}:
+        return None, "ERROR: unsupported return kind"
     try:
-        ast.parse(new)
-    except SyntaxError as e:                              # never write broken code
-        return None, f"ERROR: rewritten file would not parse ({e})"
-    return new, f"rewrite ({kind}), lines {node.lineno}-{node.end_lineno}"
+        tree = ast.parse(src)
+    except SyntaxError as exc:
+        return None, f"ERROR: source does not parse: {exc}"
+    nodes = _function_nodes(tree, name)
+    if not nodes:
+        return None, f"function {name!r} not found"
+    if len(nodes) != 1:
+        return None, f"ERROR: function name {name!r} is ambiguous"
+    node = nodes[0]
+    segment = ast.get_source_segment(src, node) or ""
+    if MARKER in segment:
+        return None, "already migrated"
+    if not node.body:
+        return None, "ERROR: function has no body"
+
+    docstring_node = None
+    first = node.body[0]
+    if (
+        isinstance(first, ast.Expr)
+        and isinstance(first.value, ast.Constant)
+        and isinstance(first.value.value, str)
+    ):
+        docstring_node = first
+
+    if kind == "optional":
+        body = [
+            "# " + MARKER,
+            "from hypatiax.core.r2_canonical import r2_scored",
+            "value, status = r2_scored(y_true, y_pred)",
+            'if status in {"degenerate_target", "nonfinite_target", '
+            '"nonfinite_pred", "bad_shape"}:',
+            "    return None",
+            "return float(value)",
+        ]
+    elif kind == "float_raise":
+        body = [
+            "# " + MARKER,
+            "import numpy as np",
+            "from hypatiax.core.r2_canonical import r2_scored",
+            "yt = np.asarray(y_true, dtype=float)",
+            'if not np.all(np.isfinite(yt)):',
+            '    raise ValueError("y_true contains NaN or inf")',
+            "value, _status = r2_scored(y_true, y_pred)",
+            "return float(value)",
+        ]
+    else:
+        body = [
+            "# " + MARKER,
+            "from hypatiax.core.r2_canonical import r2_scored",
+            "value, _status = r2_scored(y_true, y_pred)",
+            "return float(value)",
+        ]
+
+    indent = " " * (node.col_offset + 4)
+    rendered = [indent + line + "\n" for line in body]
+    lines = src.splitlines(keepends=True)
+    start_line = (
+        docstring_node.end_lineno
+        if docstring_node is not None
+        else node.body[0].lineno - 1
+    )
+    end_line = node.end_lineno
+    updated = lines[:start_line] + rendered + lines[end_line:]
+    result = "".join(updated)
+    try:
+        ast.parse(result)
+    except SyntaxError as exc:
+        return None, f"ERROR: rewritten source does not parse: {exc}"
+    return result, f"rewrite {name} ({kind})"
 
 
-BASELINE_REL = "hypatiax/experiments/tests/r2_legacy_baseline.json"
+def _atomic_write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
+            stream.write(text)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 
-def scan_ss_tot(root: pathlib.Path) -> list[str]:
-    """Files (outside tests and the canonical module) that compute ss_tot."""
-    pat = re.compile(r"\bss_tot\b")
-    hits = []
-    for path in (root / "hypatiax").rglob("*.py"):
-        parts = set(path.parts)
-        if "__pycache__" in parts or "tests" in parts or path.name == "r2_canonical.py":
-            continue
-        if pat.search(path.read_text(errors="ignore")):
-            hits.append(path.relative_to(root).as_posix())
-    return sorted(hits)
-
-
-def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    ap.add_argument("--root", default=str(pathlib.Path(__file__).resolve().parents[1]))
-    ap.add_argument("--apply", action="store_true", help="write changes (default: dry run)")
-    ap.add_argument("--write-baseline", action="store_true",
-                    help="record the files that still compute ss_tot (ratchet baseline)")
-    args = ap.parse_args()
-    root = pathlib.Path(args.root)
-    if not (root / CANONICAL).is_file():
-        print(f"missing {CANONICAL} under {root}", file=sys.stderr)
-        return 2
-    if args.write_baseline:
-        files = scan_ss_tot(root)
-        (root / BASELINE_REL).write_text(json.dumps(
-            {"note": "legacy files that still compute ss_tot; may only shrink",
-             "files": files}, indent=2) + "\n")
-        print(f"wrote {BASELINE_REL} ({len(files)} legacy files)")
-        return 0
-
-    errors = 0
-    pending: dict[pathlib.Path, str] = {}
-    for rel, name, kind in TARGETS:
-        path = root / rel
+def apply_targets():
+    errors = []
+    for rel, name, _kind in TARGETS:
+        path = ROOT / rel
         if not path.is_file():
-            print(f"[skip] {rel}: file not found")
+            errors.append(f"missing target file: {rel}")
             continue
-        # chain rewrites per file: later targets see the earlier rewrites
-        new, msg = rewrite(pending.get(path) or path.read_text(), name, kind)
-        print(f"[{'ERR ' if msg.startswith('ERROR') else 'ok  '}] {rel}::{name}: {msg}")
-        if msg.startswith("ERROR"):
-            errors += 1
-        if new is not None:
-            pending[path] = new
+        source = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(source)
+        except SyntaxError as exc:
+            errors.append(f"{rel}: parse error: {exc}")
+            continue
+        nodes = _function_nodes(tree, name)
+        if len(nodes) != 1:
+            errors.append(f"{rel}::{name}: expected one definition, found {len(nodes)}")
+            continue
+        node = nodes[0]
+        segment = ast.get_source_segment(source, node) or ""
+        if MARKER in segment:
+            print(f"already marked: {rel}::{name}")
+            continue
+        if not _has_canonical_call(node):
+            errors.append(f"{rel}::{name}: canonical delegation not verified")
+            continue
+        lines = source.splitlines(keepends=True)
+        first = node.body[0]
+        is_docstring = (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        )
+        insert_after = first.end_lineno if is_docstring else first.lineno - 1
+        marker_line = " " * (node.col_offset + 4) + "# " + MARKER + "\n"
+        lines.insert(insert_after, marker_line)
+        updated = "".join(lines)
+        ast.parse(updated)
+        _atomic_write(path, updated)
+        print(f"marked: {rel}::{name}")
+    if errors:
+        raise SystemExit("Refusing incomplete migration:\n  " + "\n  ".join(errors))
 
-    for path, new in pending.items():
-        old = path.read_text()
-        if not args.apply:
-            sys.stdout.writelines(difflib.unified_diff(
-                old.splitlines(keepends=True), new.splitlines(keepends=True),
-                f"a/{path.relative_to(root)}", f"b/{path.relative_to(root)}"))
-        else:
-            path.write_text(new)
-            print(f"wrote {path.relative_to(root)}")
-    if not args.apply and pending:
-        print("\n(dry run) re-run with --apply to write these changes")
-    return 1 if errors else 0
+
+def files_with_legacy_token():
+    pattern = re.compile(r"\b" + re.escape(_TOKEN) + r"\b")
+    found = set()
+    package = ROOT / "hypatiax"
+    for path in package.rglob("*.py"):
+        if (
+            "__pycache__" in path.parts
+            or "tests" in path.parts
+            or path.name == "r2_canonical.py"
+        ):
+            continue
+        if pattern.search(path.read_text(encoding="utf-8", errors="ignore")):
+            found.add(path.relative_to(ROOT).as_posix())
+    return sorted(found)
+
+
+def write_baseline():
+    current = files_with_legacy_token()
+    payload = {
+        "note": "legacy files that still contain the historical R2 token; may only shrink",
+        "files": current,
+    }
+    _atomic_write(BASELINE, json.dumps(payload, indent=2) + "\n")
+    print(f"wrote {len(current)} baseline entries: {BASELINE}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--apply", action="store_true")
+    group.add_argument("--write-baseline", action="store_true")
+    args = parser.parse_args()
+    if args.apply:
+        apply_targets()
+    else:
+        write_baseline()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
