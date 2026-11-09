@@ -1,10 +1,18 @@
 {
  "experiment": "exp1_ablation",
+<<<<<<< Updated upstream
  "written_utc": "2026-11-09T15:29:00+00:00",
+=======
+ "written_utc": "2026-11-09T16:14:12+00:00",
+>>>>>>> Stashed changes
  "git_commit": "fea104de8c5e8cb8b8dc1ef7c32e37885e93d040",
  "code_dirty": true,
  "dirty_files": [
   "D hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json",
+<<<<<<< Updated upstream
+=======
+  "?? bypass_audit.csv",
+>>>>>>> Stashed changes
   "?? checkpoint_worker_shard2.json"
  ],
  "evaluator_path": "hypatiax/core/r2_canonical.py",
@@ -42,7 +50,11 @@
   "generations": "10000"
  },
  "github": {
+<<<<<<< Updated upstream
   "run_id": "42644445925",
+=======
+  "run_id": "42651993929",
+>>>>>>> Stashed changes
   "ref": "fix/rerun-blockers",
   "workflow": "HypatiaX - runner (repro)"
  }
