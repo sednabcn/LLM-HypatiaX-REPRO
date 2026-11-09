@@ -60,8 +60,12 @@ def test_single_temperature_setting_is_wired():
     wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
     assert 'LLM_TEMPERATURE:  "0.25"' in wf and 'LLM_MODEL:        "claude-sonnet-4-6"' in wf
     sh = (root / "run_all.sh").read_text(encoding="utf-8", errors="replace")
-    assert 'export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in sh
-    assert "--temperature 0.25" not in sh and sh.count("LLM_TEMPERATURE:-0.25") >= 3
+    # run_all reads one temperature from the protocol, rejects conflicting
+    # caller overrides, and passes that same variable to every LLM entry point.
+    assert 'check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"' in sh
+    assert 'export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"' in sh
+    assert "--temperature 0.25" not in sh
+    assert sh.count("LLM_TEMPERATURE") >= 4
     assert re.search(r"^llm_temperature:\s*0\.25", (root / "config/repro.yaml").read_text(encoding="utf-8"), re.M)
     for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
         assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
