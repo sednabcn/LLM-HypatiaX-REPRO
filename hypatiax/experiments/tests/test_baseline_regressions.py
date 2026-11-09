@@ -21,8 +21,13 @@ def mod(monkeypatch):
     stub.DeFiExperimentProtocol = object
     for n in ("hypatiax", "hypatiax.protocols"):
         sys.modules.setdefault(n, types.ModuleType(n))
-    sys.modules["hypatiax.protocols.experiment_protocol_defi"] = stub
-    sys.modules.pop("baseline_pure_llm_defi_discovery", None)
+    # Restore the real protocol module after each fixture. A direct
+    # sys.modules assignment leaks this stub into later tests in the same
+    # pytest process and can make unrelated protocol imports resolve to object.
+    monkeypatch.setitem(
+        sys.modules, "hypatiax.protocols.experiment_protocol_defi", stub
+    )
+    monkeypatch.delitem(sys.modules, "baseline_pure_llm_defi_discovery", raising=False)
     return importlib.import_module("baseline_pure_llm_defi_discovery")
 
 def test_flags_fail_closed(mod):
