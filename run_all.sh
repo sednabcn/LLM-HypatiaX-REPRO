@@ -450,7 +450,7 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
     python3 "\${_ANALYSIS_SCRIPT}" \
       2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log'
   else
-    echo "INFO: optional statistical_analysis.py not found at \${_ANALYSIS_SCRIPT}; using benchmark JSON/report."
+    echo \"INFO: optional statistical_analysis.py not found at \${_ANALYSIS_SCRIPT}; using benchmark JSON/report.\"
   fi
 
 
