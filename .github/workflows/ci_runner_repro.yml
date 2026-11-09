@@ -1344,11 +1344,10 @@ jobs:
           if [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1-provenance" ]]; then
             # exp1-provenance is a standalone five-seed run; call the benchmark directly
             # so the seed and run-isolated output directory are explicit and auditable.
-            # FIX: run_all.sh's exp1 step hard-codes seed 42 and --output-dir .../defi
-            # (log: "🎲 SEED=42", "Output dir overridden ... /noiseless/defi"), so the seed
-            # env vars were ignored and nothing landed in multi-seeds/. Call the patched
-            # DeFi script directly with this shard's seed and the multi-seeds output dir.
-            # It tags outputs *_seed<N>.json and stamps every record with the seed.
+            # run_all.sh's exp1 step hard-codes seed 42 and the canonical exp1 output path.
+            # These one-seed-per-worker experiments call the benchmark directly so the shard
+            # seed and its isolated RESULT_SUBDIR are explicit; non-42 outputs are seed-tagged
+            # and every case record carries its seed.
             _EXTRA=()
             [[ "${RESUME}" == "true" ]] && _EXTRA+=(--resume)
             TASK_IDS="${TASK_IDS}" \
