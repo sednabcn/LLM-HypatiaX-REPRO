@@ -679,12 +679,12 @@ class NguYenProtocol:
         """
         successful = [
             r for r in results
-            if r.get("evaluation", {}).get("r2", -np.inf) >= threshold
+            if (r.get("evaluation", {}).get("r2") if r.get("evaluation", {}).get("r2") is not None else -np.inf) >= threshold   # L54: None = failed
         ]
         r2_all = [
             r["evaluation"]["r2"]
             for r in results
-            if "r2" in r.get("evaluation", {})
+            if r.get("evaluation", {}).get("r2") is not None   # L54
         ]
 
         by_category: Dict[str, Dict] = {}

@@ -15,15 +15,20 @@ for _root in (_here.parent, *_here.parents):
 @pytest.fixture()
 def mod(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    monkeypatch.delenv("HYPATIAX_LLM_MODEL", raising=False)
     for k in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_ALLOW_LEGACY"):
         monkeypatch.delenv(k, raising=False)
     stub = types.ModuleType("hypatiax.protocols.experiment_protocol_defi")
     stub.DeFiExperimentProtocol = object
     for n in ("hypatiax", "hypatiax.protocols"):
         sys.modules.setdefault(n, types.ModuleType(n))
-    sys.modules["hypatiax.protocols.experiment_protocol_defi"] = stub
-    sys.modules.pop("baseline_pure_llm_defi_discovery", None)
+    # This fixture deliberately stubs the protocol only while importing the baseline module.
+    # Restore the real protocol module after each fixture. This prevents cross-test state leaks.
+    # sys.modules assignment leaks this stub into later tests in the same
+    # pytest process and can make unrelated protocol imports resolve to object.
+    monkeypatch.setitem(
+        sys.modules, "hypatiax.protocols.experiment_protocol_defi", stub
+    )
+    monkeypatch.delitem(sys.modules, "baseline_pure_llm_defi_discovery", raising=False)
     return importlib.import_module("baseline_pure_llm_defi_discovery")
 
 def test_flags_fail_closed(mod):

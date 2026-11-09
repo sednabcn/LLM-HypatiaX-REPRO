@@ -1525,7 +1525,7 @@ class ImprovedNN(BaseMethod):
             X_train, X_test, y_train, y_test = pca_directed_split(
                 X, y, test_size=0.6, random_state=42
             )
-            from sklearn.model_selection import train_test_split as _tts_internal  # noqa
+            from sklearn.model_selection import train_test_split as _tts_internal  # noqa: kept for any subclass callers
 
             # ── Log-space detection ──────────────────────────────────────────
             # Equations like Coulomb (1/r²), Newton (G*m1*m2/r²), Ideal Gas

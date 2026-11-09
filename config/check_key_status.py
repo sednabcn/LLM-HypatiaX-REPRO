@@ -44,7 +44,17 @@ if not api_key:
     print("   Locally: set it in your shell or in hypatiax/.env")
     sys.exit(1)
 
-print(f"ANTHROPIC_API_KEY present: YES ({len(api_key)} chars, prefix={api_key[:7]}...)")
+print(f"ANTHROPIC_API_KEY present: YES ({len(api_key)} chars)")
+
+model_id = os.environ.get("HYPATIAX_LLM_MODEL") or os.environ.get("LLM_MODEL") or "claude-sonnet-4-6"
+try:
+    temperature = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
+except ValueError:
+    print("ERROR: LLM_TEMPERATURE must be numeric")
+    sys.exit(1)
+
+print(f"LLM preflight model: {model_id}")
+print(f"LLM preflight temperature: {temperature}")
 
 client = anthropic.Anthropic(api_key=api_key)
 
@@ -53,8 +63,9 @@ for attempt in range(1, MAX_RETRIES + 1):
         print(f"\nValidation attempt {attempt}/{MAX_RETRIES}...")
 
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=model_id,
             max_tokens=10,
+            temperature=temperature,
             messages=[{"role": "user", "content": "Hi"}],
         )
 

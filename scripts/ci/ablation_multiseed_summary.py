@@ -25,6 +25,17 @@ def load(root):
     return runs
 
 
+def _holm(pvals):
+    """Holm-Bonferroni step-down adjusted p-values (same order as input; None stays None)."""
+    idx = [i for i, p in enumerate(pvals) if p is not None]
+    order = sorted(idx, key=lambda i: pvals[i])
+    adj, run, m = [None] * len(pvals), 0.0, len(order)
+    for rank, i in enumerate(order):
+        run = max(run, min(1.0, (m - rank) * pvals[i]))
+        adj[i] = run
+    return adj
+
+
 def far(row, arm):
     v = (row.get(arm) or {}).get("extrap_r2_far")
     return -math.inf if v is None else float(v)
@@ -66,13 +77,17 @@ def main():
         print(f"{name[:24]:24s} " + "  ".join(cells))
 
     n_cells = len(per) * len(seeds)
+    fails = {arm: sum(not math.isfinite(v) for d in per.values() for v in d[arm].values()) for arm in ARMS}
+    print("failed cells (no finite far R2, of %d): " % n_cells + ", ".join(f"{k}={v}" for k, v in fails.items()))
     rec = {arm: sum(v >= 0.99 for d in per.values() for v in d[arm].values()) for arm in ARMS}
     print("\nfar R2 >= 0.99 (equation x seed cells, of %d): " % n_cells + ", ".join(f"{k}={v}" for k, v in rec.items()))
 
     meds = {name: {arm: med(list(d[arm].values())) for arm in ARMS} for name, d in per.items()}
     usable = [n for n, m in meds.items() if all(math.isfinite(m[arm]) for arm in ARMS)]
     print(f"\npaired on per-equation medians, n={len(usable)} (excluded: {sorted(set(per) - set(usable)) or 'none'})")
-    out = {"seeds": seeds, "n_equations": len(per), "recovered_ge_0.99": rec, "paired": {}}
+    out = {"seeds": seeds, "n_equations": len(per), "recovered_ge_0.99": rec, "failed_cells": fails,
+           "excluded_from_paired": sorted(set(per) - set(usable)),
+           "primary_test": "wilcoxon_signed_rank", "multiplicity": "holm_across_3_comparisons", "paired": {}}
     try:
         from scipy.stats import mannwhitneyu, wilcoxon
     except Exception:
@@ -82,14 +97,23 @@ def main():
         A = [meds[n][x] for n in usable]; B = [meds[n][y] for n in usable]
         w, t, l = wtl(A, B)
         rec_ = {"wins": w, "ties": t, "losses": l}
-        if mannwhitneyu and len(A) >= 3:
-            rec_["mwu_p_greater"] = float(mannwhitneyu(A, B, alternative="greater").pvalue)
-            rec_["mwu_p_two_sided"] = float(mannwhitneyu(A, B, alternative="two-sided").pvalue)
-            d = [p - q for p, q in zip(A, B) if p != q]
-            if d:
-                rec_["wilcoxon_p_two_sided"] = float(wilcoxon(d).pvalue)
+        if wilcoxon and len(A) >= 3:
+            # PRIMARY: paired Wilcoxon on within-tolerance-collapsed differences (|d|<=TOL -> tie)
+            d = [0.0 if abs(p - q) <= TOL else p - q for p, q in zip(A, B)]
+            if any(x != 0 for x in d):
+                rec_["wilcoxon_p_greater"] = float(wilcoxon(d, alternative="greater", zero_method="wilcox").pvalue)
+                rec_["wilcoxon_p_two_sided"] = float(wilcoxon(d, alternative="two-sided", zero_method="wilcox").pvalue)
+            # SENSITIVITY ONLY: unpaired test ignores the pairing
+            rec_["mwu_sensitivity_p_greater"] = float(mannwhitneyu(A, B, alternative="greater").pvalue)  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
+            rec_["mwu_sensitivity_p_two_sided"] = float(mannwhitneyu(A, B, alternative="two-sided").pvalue)  # audit: ignore[S1] sensitivity check only; primary test is paired Wilcoxon + Holm
         out["paired"][label] = rec_
-        print(f"  {label:18s} W/T/L {w}/{t}/{l}  " + "  ".join(f"{k}={v:.3f}" for k, v in rec_.items() if k.startswith(("mwu", "wil"))))
+    _labs = list(out["paired"])
+    _adj = _holm([out["paired"][l].get("wilcoxon_p_greater") for l in _labs])
+    for l, ap in zip(_labs, _adj):
+        out["paired"][l]["wilcoxon_p_greater_holm"] = ap
+        r_ = out["paired"][l]
+        print(f"  {l:18s} W/T/L {r_['wins']}/{r_['ties']}/{r_['losses']}  PRIMARY wilcoxon p(>)={r_.get('wilcoxon_p_greater')} "
+              f"holm={ap}  | sensitivity: " + "  ".join(f"{k}={v:.3f}" for k, v in r_.items() if k.startswith("mwu")))
     # per-seed W/T/L (stability of the headline count)
     print("\nper-seed W/T/L (hypatia vs pysr_only | hypatia vs nollm), ties within %.2f:" % TOL)
     for s in seeds:

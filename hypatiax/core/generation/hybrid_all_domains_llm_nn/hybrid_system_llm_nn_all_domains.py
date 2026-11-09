@@ -154,13 +154,9 @@ def _create_message_deterministic(client, **kwargs):
     specific deprecation error, so determinism is preserved wherever the
     model still supports it.
     """
-    try:
-        return client.messages.create(temperature=0.0, **kwargs)
-    except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
-        raise
+    # UNIFIED-TEMPERATURE: shared wrapper (LLM_TEMPERATURE, default 0.25, one fallback).
+    from hypatiax.core.llm_call import create_message
+    return create_message(client, **kwargs)
 
 
 class HybridSystemAllDomains:

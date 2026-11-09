@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Fresh rerun stage scope is enforced by ci_runner/run_fresh_experiments.sh.
 
 set -euo pipefail
 
@@ -13,7 +14,6 @@ CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
 ANALYSIS_DIR="${ANALYSIS_DIR:-${REPO_ROOT}/hypatiax/analysis}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 
-export PYSR_GENERATIONS=10000
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
@@ -61,8 +61,8 @@ case "${HYPATIAX_R2_SIGN_FLIP:-0},${HYPATIAX_ALLOW_LEGACY:-0}" in
   *) echo "ABORT: HYPATIAX_R2_SIGN_FLIP=${HYPATIAX_R2_SIGN_FLIP} needs HYPATIAX_ALLOW_LEGACY=1" >&2; exit 1 ;;
 esac
 
-# Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
-# running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
+# Set CLEAR_CHECKPOINT=1 to archive exp1_ablation and exp2_feynman checkpoints
+# before a deliberate rerun; old files are preserved under checkpoint_backups/.
 export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"
 
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
@@ -81,6 +81,141 @@ export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
 export REPRO_CFG="${REPRO_CFG:-${REPO_ROOT}/config/repro.yaml}"
 
+# The protocol file is the single source of truth for LLM and PySR runtime settings.
+# Conflicting caller overrides fail closed instead of silently creating mixed protocols.
+if [[ -f "${REPRO_CFG}" ]]; then
+  mapfile -t _RUN_PROTOCOL_VALUES < <(python3 - "${REPRO_CFG}" <<'PY'
+import sys, yaml
+with open(sys.argv[1], encoding="utf-8") as stream:
+    cfg = yaml.safe_load(stream) or {}
+pysr = cfg.get("pysr") or {}
+seeds = cfg.get("seeds") or {}
+timeouts = cfg.get("timeouts") or {}
+ci = cfg.get("ci_env") or {}
+values = [
+    cfg.get("llm_temperature", 0.25),
+    cfg.get("llm_model", "claude-sonnet-4-6"),
+    pysr.get("niterations", 1000),
+    pysr.get("populations", 30),
+    pysr.get("population_size", 33),
+    seeds.get("pysr_seed", 42),
+    timeouts.get("method_seconds", 900),
+    timeouts.get("pysr_attempt_seconds", 1100),
+    timeouts.get("fit_wall_timeout", 1200),
+    timeouts.get("fit_grace_secs", 120),
+    timeouts.get("feynman_pysr_seconds", 1100),
+    ci.get("FEYNMAN_SAMPLES", 200),
+    ci.get("JOB_DEADLINE", 19800),
+    ci.get("JULIA_NUM_THREADS", 4),
+    ci.get("JULIA_EXCLUSIVE", 0),
+    ci.get("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes"),
+    ci.get("LLM_METHOD_TIMEOUT", 120),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_NOLLM_ARM", ci.get("HYPATIAX_NOLLM_ARM", 1)),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_HOLDOUT", ""),
+    (cfg.get("fresh_run_controls") or {}).get("SPARSE_SEED", (cfg.get("ci_env_set_by_workflow") or {}).get("SPARSE_SEED", "fallback")),
+]
+if "PYSR_GENERATIONS" in ci and int(ci["PYSR_GENERATIONS"]) != int(values[2]):
+    raise SystemExit("ci_env.PYSR_GENERATIONS must equal pysr.niterations")
+if "PYSR_POPULATION" in ci and int(ci["PYSR_POPULATION"]) != int(values[4]):
+    raise SystemExit("ci_env.PYSR_POPULATION must equal pysr.population_size")
+if "PYSR_POPULATIONS" in ci and int(ci["PYSR_POPULATIONS"]) != int(values[3]):
+    raise SystemExit("ci_env.PYSR_POPULATIONS must equal pysr.populations")
+for value in values:
+    print(value)
+PY
+  )
+  if [[ "${#_RUN_PROTOCOL_VALUES[@]}" -lt 20 ]]; then
+    echo "ERROR: could not read runtime settings from ${REPRO_CFG}; PyYAML must be installed" >&2
+    exit 1
+  fi
+else
+  echo "ERROR: runtime protocol file not found: ${REPRO_CFG}" >&2
+  exit 1
+fi
+
+_CFG_LLM_TEMPERATURE="${_RUN_PROTOCOL_VALUES[0]}"
+_CFG_LLM_MODEL="${_RUN_PROTOCOL_VALUES[1]}"
+_CFG_N_ITERATIONS="${_RUN_PROTOCOL_VALUES[2]}"
+_CFG_POPULATIONS="${_RUN_PROTOCOL_VALUES[3]}"
+_CFG_POPULATION_SIZE="${_RUN_PROTOCOL_VALUES[4]}"
+_CFG_PYSR_SEED="${_RUN_PROTOCOL_VALUES[5]}"
+_CFG_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[6]}"
+_CFG_PYSR_TIMEOUT="${_RUN_PROTOCOL_VALUES[7]}"
+_CFG_FIT_WALL_TIMEOUT="${_RUN_PROTOCOL_VALUES[8]}"
+_CFG_FIT_GRACE_SECS="${_RUN_PROTOCOL_VALUES[9]}"
+_CFG_FEYNMAN_TIMEOUT="${_RUN_PROTOCOL_VALUES[10]}"
+_CFG_FEYNMAN_SAMPLES="${_RUN_PROTOCOL_VALUES[11]}"
+_CFG_JOB_DEADLINE="${_RUN_PROTOCOL_VALUES[12]}"
+_CFG_JULIA_THREADS="${_RUN_PROTOCOL_VALUES[13]}"
+_CFG_JULIA_EXCLUSIVE="${_RUN_PROTOCOL_VALUES[14]}"
+_CFG_JULIACALL_SIGNALS="${_RUN_PROTOCOL_VALUES[15]}"
+_CFG_LLM_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[16]}"
+_CFG_NOLLM_ARM="${_RUN_PROTOCOL_VALUES[17]}"
+_CFG_HOLDOUT="${_RUN_PROTOCOL_VALUES[18]}"
+_CFG_SPARSE_SEED="${_RUN_PROTOCOL_VALUES[19]}"
+
+check_protocol_override() {
+  local name="$1" expected="$2" current="${!1:-}"
+  if [[ -n "$current" && "$current" != "$expected" ]]; then
+    echo "ABORT: ${name}=${current} conflicts with ${REPRO_CFG} value ${expected}" >&2
+    exit 1
+  fi
+}
+check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"
+check_protocol_override LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override HYPATIAX_LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override N_ITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_NITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_GENERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATION "$_CFG_POPULATION_SIZE"
+check_protocol_override PYSR_POPULATION_SIZE "$_CFG_POPULATION_SIZE"
+check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"
+check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"
+check_protocol_override METHOD_TIMEOUT "$_CFG_METHOD_TIMEOUT"
+check_protocol_override PYSR_TIMEOUT "$_CFG_PYSR_TIMEOUT"
+check_protocol_override PYSR_FIT_WALL_TIMEOUT "$_CFG_FIT_WALL_TIMEOUT"
+check_protocol_override PYSR_FIT_GRACE_SECS "$_CFG_FIT_GRACE_SECS"
+check_protocol_override FEYNMAN_TIMEOUT "$_CFG_FEYNMAN_TIMEOUT"
+check_protocol_override FEYNMAN_SAMPLES "$_CFG_FEYNMAN_SAMPLES"
+check_protocol_override JOB_DEADLINE "$_CFG_JOB_DEADLINE"
+check_protocol_override JULIA_NUM_THREADS "$_CFG_JULIA_THREADS"
+check_protocol_override JULIA_EXCLUSIVE "$_CFG_JULIA_EXCLUSIVE"
+check_protocol_override PYTHON_JULIACALL_HANDLE_SIGNALS "$_CFG_JULIACALL_SIGNALS"
+check_protocol_override LLM_METHOD_TIMEOUT "$_CFG_LLM_METHOD_TIMEOUT"
+check_protocol_override HYPATIAX_NOLLM_ARM "$_CFG_NOLLM_ARM"
+if [[ -n "$_CFG_HOLDOUT" ]]; then check_protocol_override HYPATIAX_HOLDOUT "$_CFG_HOLDOUT"; fi
+check_protocol_override SPARSE_SEED "$_CFG_SPARSE_SEED"
+
+export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"
+export LLM_MODEL="$_CFG_LLM_MODEL"
+export HYPATIAX_LLM_MODEL="$_CFG_LLM_MODEL"
+export N_ITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_NITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_GENERATIONS="$_CFG_N_ITERATIONS"
+export POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATION="$_CFG_POPULATION_SIZE"
+export PYSR_POPULATION_SIZE="$_CFG_POPULATION_SIZE"
+export PYSR_SEED="$_CFG_PYSR_SEED"
+export HYPATIAX_ENGINE_SEED="$_CFG_PYSR_SEED"
+export METHOD_TIMEOUT="$_CFG_METHOD_TIMEOUT"
+export PYSR_TIMEOUT="$_CFG_PYSR_TIMEOUT"
+export PYSR_FIT_WALL_TIMEOUT="$_CFG_FIT_WALL_TIMEOUT"
+export PYSR_FIT_GRACE_SECS="$_CFG_FIT_GRACE_SECS"
+export FEYNMAN_TIMEOUT="$_CFG_FEYNMAN_TIMEOUT"
+export FEYNMAN_SAMPLES="$_CFG_FEYNMAN_SAMPLES"
+export JOB_DEADLINE="$_CFG_JOB_DEADLINE"
+export JULIA_NUM_THREADS="$_CFG_JULIA_THREADS"
+export JULIA_EXCLUSIVE="$_CFG_JULIA_EXCLUSIVE"
+export PYTHON_JULIACALL_HANDLE_SIGNALS="$_CFG_JULIACALL_SIGNALS"
+export LLM_METHOD_TIMEOUT="$_CFG_LLM_METHOD_TIMEOUT"
+export HYPATIAX_NOLLM_ARM="$_CFG_NOLLM_ARM"
+if [[ -n "$_CFG_HOLDOUT" ]]; then export HYPATIAX_HOLDOUT="$_CFG_HOLDOUT"; fi
+export SPARSE_SEED="$_CFG_SPARSE_SEED"
+unset _RUN_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL _CFG_N_ITERATIONS _CFG_POPULATIONS _CFG_POPULATION_SIZE _CFG_PYSR_SEED _CFG_METHOD_TIMEOUT _CFG_PYSR_TIMEOUT _CFG_FIT_WALL_TIMEOUT _CFG_FIT_GRACE_SECS _CFG_FEYNMAN_TIMEOUT _CFG_FEYNMAN_SAMPLES _CFG_JOB_DEADLINE _CFG_JULIA_THREADS _CFG_JULIA_EXCLUSIVE _CFG_JULIACALL_SIGNALS _CFG_LLM_METHOD_TIMEOUT _CFG_NOLLM_ARM _CFG_HOLDOUT _CFG_SPARSE_SEED
+
 export JOB_DEADLINE="${JOB_DEADLINE:-19800}"
 
 HYBRID_ALL_DOMAINS_EXPECTED="biology,chemistry,economics,electromagnetism,fluid_dynamics,mathematics,mechanics,optics,quantum,thermodynamics"
@@ -92,6 +227,8 @@ FROM_STEP=""
 DRY_RUN=false
 
 _STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_DEFERRED_STEPS="instability"
+RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -120,6 +257,10 @@ die()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
+  if [[ -z "$ONLY_STEP" && "$RUN_DEFERRED" != "1" && " $_DEFERRED_STEPS " == *" $step "* ]]; then
+    log "Skipping deferred step '$step' in full runs; set RUN_DEFERRED=1 or invoke --step '$step' explicitly."
+    return 0
+  fi
   if [[ -n "$FROM_STEP" ]]; then
     local skip=true
     for s in $_STEP_ORDER; do
@@ -181,6 +322,19 @@ SDKCHECK
     [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]] || exit 1
   fi
   echo "REPRO_CFG: ${REPRO_CFG}"
+  echo "LLM model: ${HYPATIAX_LLM_MODEL}"
+  echo "LLM temperature: ${LLM_TEMPERATURE}"
+  echo "HYPATIAX_NOLLM_ARM: ${HYPATIAX_NOLLM_ARM}"
+  echo "HYPATIAX_HOLDOUT: ${HYPATIAX_HOLDOUT}"
+  echo "SPARSE_SEED: ${SPARSE_SEED}"
+  echo "LLM_MODEL: ${LLM_MODEL}"
+  echo "N_ITERATIONS: ${N_ITERATIONS}"
+  echo "POPULATIONS: ${POPULATIONS}"
+  echo "PYSR_GENERATIONS: ${PYSR_GENERATIONS}"
+  echo "PYSR_POPULATION: ${PYSR_POPULATION}"
+  echo "PYSR_TIMEOUT: ${PYSR_TIMEOUT}"
+  echo "PYSR_FIT_WALL_TIMEOUT: ${PYSR_FIT_WALL_TIMEOUT}"
+  echo "PYSR_FIT_GRACE_SECS: ${PYSR_FIT_GRACE_SECS}"
   if [ -f "${REPRO_CFG}" ]; then
     echo "repro.yaml found -- printing key values:"
     python3 -c "
@@ -546,6 +700,18 @@ _exp1_ablation_step() {
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
   mkdir -p "${abl_dir}"
 
+  if [[ "${CLEAR_CHECKPOINT:-0}" == "1" ]]; then
+    local backup_dir="${abl_dir}/checkpoint_backups/$(date -u +%Y%m%dT%H%M%SZ)"
+    mkdir -p "${backup_dir}"
+    shopt -s nullglob
+    local _f
+    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
+      mv "${_f}" "${backup_dir}"/
+    done
+    shopt -u nullglob
+    log "exp1_ablation: checkpoint files moved to ${backup_dir}"
+  fi
+
   export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
   export HYPATIAX_STRICT=1
 
@@ -594,6 +760,7 @@ _exp1_ablation_step() {
   echo '=== end exp1_ablation ==='
 }
 
+# PYPROV: exp1_ablation checkpoint policy is complete.
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
 
 # ---------------------------------------------------------------------------
@@ -1402,7 +1569,11 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
     echo '=== exp2_feynman: domain='\${DOMAIN_ID}' ==='
     if [ -n '${CLEAR_CHECKPOINT}' ]; then
-      find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print -delete
+      _BACKUP_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2/checkpoint_backups/'\$(date -u +%Y%m%dT%H%M%SZ)
+      mkdir -p \"\${_BACKUP_DIR}\"
+      while IFS= read -r -d '' _f; do
+        mv \"\${_f}\" \"\${_BACKUP_DIR}/\"
+      done < <(find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -maxdepth 1 -type f -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print0)
     fi
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2111,7 +2282,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
-    --temperature 0.25 \
+    --temperature "$LLM_TEMPERATURE" \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || _EXP3_RC=$?
   if [ "$_EXP3_RC" -ne 0 ]; then
@@ -2192,7 +2363,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
-      --temperature 0.25 \
+      --temperature ${LLM_TEMPERATURE} \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
       || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done

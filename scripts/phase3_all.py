@@ -2,10 +2,10 @@
 """
 phase3_all.py - ONE command for Option 3 / Phase 3 (leave-one-gate-out ablation).
 
-    python scripts/phase3_all.py                 # preflight -> run -> close
-    python scripts/phase3_all.py --stage preflight   # only the checks (no API spend)
-    python scripts/phase3_all.py --stage run         # resume the runs
-    python scripts/phase3_all.py --stage close       # only the closure gate
+    python scripts/phase3_all.py --phase2-manifest fresh/phase2_closure.json --p-rows-glob 'fresh/pure_llm_seed*.jsonl'
+    python scripts/phase3_all.py --stage preflight --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage run --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage close --phase2-manifest ... --p-rows-glob ...
 
 Put it in scripts/ next to phase3_engine_adapter.py, run_phase3_ablation.py, phase3_close.py.
 Run from the repo root. It needs no edits to those three files: it patches the adapter
@@ -17,17 +17,18 @@ PREFLIGHT (blocking unless marked warn) - everything that would otherwise invali
   P3  clean-run flags: HYPATIAX_DISABLE_PROMPT_HINTS=1, HYPATIAX_DISABLE_HARDCODED=1 are forced,
       HYPATIAX_LLM_MODEL is unset, an API key is present
   P4  git tree clean (or --allow-dirty, recorded as a caveat)
-  P5  P rows + Phase 2 manifest exist; equations come from the P rows
+  P5  explicit fresh P rows + Phase 2 manifest exist; historical p2/ and phase2_out/ defaults are forbidden
   P6  G1 dry check: regenerate train/far data for every (equation, seed) in the P rows with
       the P-arm hash scheme and require equality with the P rows' hashes. This is what
       decides whether G1 can pass; it costs seconds, not hours.
 RUN    leave-one-out for llm_acceptance and pysr_prior (the only gates wired in v50_2),
-       full config first per (seed, equation); resumable.
+       full config first per (seed, equation); outputs are per-run only, with no cross-run cache.
 CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned evaluator,
        and --omit reasons for the four gates that have no switch in the v50_2 path.
 
 Exit codes: 0 closed, 1 not closed / preflight failed, 2 bad usage.
 """
+import glob
 import os
 import sys
 
@@ -305,8 +306,8 @@ def main(argv=None):
     ap.add_argument("--seeds", default="42,99,123")
     ap.add_argument("--timeout-s", type=float, default=3600.0)
     ap.add_argument("--model-id", default="claude-sonnet-4-6", help="from your smoke log; written to every row")
-    ap.add_argument("--p-rows-glob", default="p2/pure_llm_seed*.jsonl")
-    ap.add_argument("--phase2-manifest", default="phase2_out/phase2_closure.json")
+    ap.add_argument("--p-rows-glob", default=None, help="glob for fresh Pure-LLM rows from this rerun; historical p2/ defaults are forbidden")
+    ap.add_argument("--phase2-manifest", default=None, help="fresh Phase 2 closure manifest from this rerun; historical phase2_out/ defaults are forbidden")
     ap.add_argument("--apply-engine-patch", action="store_true")
     ap.add_argument("--allow-dirty", action="store_true")
     ap.add_argument("--retry-errors", action="store_true")
@@ -316,6 +317,21 @@ def main(argv=None):
     if a.selftest:
         selftest()
         return 0
+    if not a.phase2_manifest or not Path(a.phase2_manifest).is_file():
+        print("ERROR: provide an existing fresh --phase2-manifest; historical phase2_out defaults are forbidden.")
+        return 2
+    if not a.p_rows_glob or not glob.glob(a.p_rows_glob):
+        print("ERROR: provide --p-rows-glob matching fresh Pure-LLM rows; historical p2/ defaults are forbidden.")
+        return 2
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest_path = Path(a.phase2_manifest).resolve()
+    rows_prefix = a.p_rows_glob.split("*", 1)[0].rstrip("/") or "."
+    rows_root = Path(rows_prefix).resolve()
+    historical_manifest_root = (repo_root / "phase2_out").resolve()
+    historical_rows_root = (repo_root / "p2").resolve()
+    if manifest_path.is_relative_to(historical_manifest_root) or rows_root.is_relative_to(historical_rows_root):
+        print("ERROR: historical phase2_out/ manifests and p2/ rows are forbidden for fresh Phase 3 runs.")
+        return 2
     a.seeds = [int(s) for s in a.seeds.split(",") if s.strip()]
 
     git = None
