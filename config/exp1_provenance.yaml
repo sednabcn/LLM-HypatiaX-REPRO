@@ -1,0 +1,66 @@
+# exp1-provenance: independent five-seed DeFi benchmark experiment.
+# This protocol is separate from the historical exp1 (seed 42) and exp1b stages.
+experiment:
+  id: exp1-provenance
+  benchmark_script: hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py
+  protocol_config: config/repro.yaml
+  case_count_per_seed: 74
+  total_expected_case_records: 370
+
+seeds:
+  ordered: [42, 99, 123, 777, 2024]
+  nshards: 5
+  assignment: one_seed_per_shard
+  shard_map:
+    0: 42
+    1: 99
+    2: 123
+    3: 777
+    4: 2024
+
+task_partition:
+  strategy: seed_major_block_partition
+  domains:
+    - amm
+    - risk_var
+    - liquidity
+    - expected_shortfall
+    - liquidation
+    - risk
+    - lending
+    - staking
+    - trading
+    - derivatives
+  tasks_per_shard: 10
+  meaning: each seed shard receives all ten domain task IDs and therefore all 74 benchmark cases
+
+isolation:
+  result_subdirectory: comparison_results/noise-noiseless/noiseless/defi/exp1-provenance
+  append_workflow_run_id_and_attempt: true
+  restore_plan_checkpoint_cache: false
+  restore_worker_checkpoint_cache: false
+  reuse_historical_results: false
+  resume_from_prior_dispatch: false
+
+provenance:
+  require_per_record_seed_stamp: true
+  require_script_sha256: true
+  require_protocol_config_sha256: true
+  require_repro_config_sha256: true
+  require_commit_sha: true
+  require_workflow_run_id_and_attempt: true
+  require_clean_run_flags:
+    HYPATIAX_DISABLE_HARDCODED: "1"
+    HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+    HYPATIAX_STRICT: "1"
+    HYPATIAX_R2_SIGN_FLIP: "0"
+
+completion_gate:
+  require_all_seeds: [42, 99, 123, 777, 2024]
+  require_shards: 5
+  require_cases_per_seed: 74
+  require_total_case_records: 370
+  fail_on_missing_or_duplicate_seed: true
+  fail_on_seed_stamp_mismatch: true
+  fail_on_result_hash_mismatch: true
+  fail_on_commit_or_run_identity_mismatch: true
