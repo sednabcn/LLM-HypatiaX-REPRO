@@ -1,107 +1,43 @@
 {
-  "n": 13,
+  "n": 3,
   "equations": [
-    "Henderson-Hasselbalch",
-    "Rate Law",
-    "Allometric Scaling",
-    "Michaelis-Menten",
-    "Logistic Growth",
-    "Kinetic Energy",
-    "Gravitational Force",
-    "Ideal Gas Law",
-    "Price Impact",
-    "Constant Product",
     "Value at Risk",
     "Liquidation Price",
     "Portfolio Std Dev"
   ],
   "H_far": [
-    0.9989703498098388,
-    0.9949958398346882,
-    1.0,
-    0.18074325787221002,
-    0.9997140874104319,
-    1.0,
-    1.0,
-    1.0,
-    1.0,
-    0.9995667912134206,
     0.9999409544066139,
     0.9991985391658774,
     1.0
   ],
   "N_far": [
-    0.9989703498098388,
-    0.9948517318880359,
-    0.9839682186375126,
-    0.18074325787221002,
-    0.9997140874104319,
-    0.9999688764804265,
-    -4.346004194629145,
-    0.9999855366303543,
-    1.0,
-    0.9995667912134206,
     0.9999409544066139,
     0.9991985391658774,
     0.9999585687738671
   ],
   "P_far": [
-<<<<<<< Updated upstream
-    0.9989569570707353,
-    0.9999626334437329,
-    0.9999812520700742,
-    0.1528811993691096,
-    0.999738362557084,
-    0.9999743602201274,
-    0.9983772158751772,
-    0.9999999944130895,
-    1.0,
-    0.9995583428030279,
-    0.9999427103324033,
-    0.999998639579782,
-=======
     0.9999421684256078,
     0.9999984962581685,
->>>>>>> Stashed changes
     -71.30822534123661
   ],
   "tests": {
     "H_vs_P": {
-<<<<<<< Updated upstream
-      "median_a": 0.9999986404554436,
-      "median_b": 0.9999427103324033,
-      "wins": 2,
-      "ties": 11,
-=======
       "median_a": 0.9999409544066139,
       "median_b": 0.9999421684256078,
       "wins": 1,
       "ties": 2,
->>>>>>> Stashed changes
       "losses": 0,
-      "U_greater": 97.0,
-      "p_greater": 0.2686626659453116,
-      "p_two_sided": 0.5373253318906231,
-      "rank_biserial_r": 0.14792899408284033,
-      "n_tied": 11,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
+      "n_tied": 2,
       "tie_tol": 0.01,
-      "wilcoxon_W": 3.0,
-      "wilcoxon_p_greater": 0.25,
-      "wilcoxon_p_greater_holm": 0.75
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
     },
     "N_vs_P": {
-<<<<<<< Updated upstream
-      "median_a": 0.9995978770210254,
-      "median_b": 0.9999427103324033,
-      "wins": 2,
-      "ties": 9,
-      "losses": 2,
-      "U_greater": 80.5,
-      "p_greater": 0.5913911849221173,
-      "p_two_sided": 0.8573378842992686,
-      "rank_biserial_r": -0.047337278106508895,
-      "n_tied": 9,
-=======
       "median_a": 0.9999409544066139,
       "median_b": 0.9999421684256078,
       "wins": 1,
@@ -112,47 +48,69 @@
       "p_two_sided": 0.653095114932182,
       "rank_biserial_r": 0.33333333333333326,
       "n_tied": 2,
->>>>>>> Stashed changes
       "tie_tol": 0.01,
-      "wilcoxon_W": 6.0,
-      "wilcoxon_p_greater": 0.4375,
-      "wilcoxon_p_greater_holm": 0.75
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
     },
     "H_vs_N": {
-<<<<<<< Updated upstream
-      "median_a": 0.9999986404554436,
-      "median_b": 0.9995978770210254,
-      "wins": 2,
-      "ties": 11,
-=======
       "median_a": 0.9999409544066139,
       "median_b": 0.9999409544066139,
       "wins": 0,
       "ties": 3,
->>>>>>> Stashed changes
       "losses": 0,
-      "U_greater": 106.5,
-      "p_greater": 0.1342868813766015,
-      "p_two_sided": 0.268573762753203,
-      "rank_biserial_r": 0.2603550295857988,
-      "n_tied": 11,
+      "U_greater": 4.5,
+      "p_greater": 0.5902615116112394,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.0,
+      "n_tied": 3,
       "tie_tol": 0.01,
-      "wilcoxon_W": 3.0,
-      "wilcoxon_p_greater": 0.25,
-      "wilcoxon_p_greater_holm": 0.75
+      "wilcoxon_note": "all paired differences within tolerance (all ties)",
+      "wilcoxon_p_greater_holm": null
     }
   },
   "failures_per_arm": {
     "P": [
-      "Arrhenius"
+      "Arrhenius",
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product"
     ],
     "H": [
       "Arrhenius",
-      "Impermanent Loss"
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product"
     ],
     "N": [
       "Arrhenius",
-      "Impermanent Loss"
+      "Henderson-Hasselbalch",
+      "Rate Law",
+      "Allometric Scaling",
+      "Michaelis-Menten",
+      "Logistic Growth",
+      "Kinetic Energy",
+      "Gravitational Force",
+      "Ideal Gas Law",
+      "Impermanent Loss",
+      "Price Impact",
+      "Constant Product"
     ]
   },
   "primary_test": "wilcoxon_signed_rank",

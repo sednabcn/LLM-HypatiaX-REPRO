@@ -15,11 +15,7 @@
   "populations": 30,
   "niterations": 1000,
   "model_string": "claude-sonnet-4-6",
-<<<<<<< Updated upstream
-  "timestamp": "2026-11-09T01:03:05.287469",
-=======
   "timestamp": "2026-11-09T17:19:21.540220",
->>>>>>> Stashed changes
   "outputs": {
     "results_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json",
     "checkpoint_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json",

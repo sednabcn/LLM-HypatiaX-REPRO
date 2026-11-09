@@ -1,47 +1,21 @@
 {
   "rf01_mann_whitney": {
-    "n_pairs": 13,
-    "n_skipped": 2,
+    "n_pairs": 3,
+    "n_skipped": 12,
     "skipped_equations": [
       "Arrhenius",
-      "Impermanent Loss"
-    ],
-    "U_greater": 110.0,
-    "p_greater": 0.09774586832485899,
-    "U_two_sided": 110.0,
-    "p_two_sided": 0.19549173664971797,
-    "wilcoxon_W": 20.0,
-    "wilcoxon_p_two": 0.1513671875,
-    "wilcoxon_p_greater": 0.07568359375,
-    "rank_biserial_r": 0.30177514792899407,
-    "H_median_far_r2": 0.9999986404554436,
-    "P_median_far_r2": 0.9999427103324033,
-    "H_mean_far_r2": 0.9364561477694343,
-    "P_mean_far_r2": -4.627604128730943,
-    "h_wins": 2,
-    "p_wins": 0,
-    "ties": 11,
-    "primary_test": "wilcoxon_signed_rank",
-    "primary_p_greater": 0.07568359375,
-    "significant_p05": false,
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=20$, $p_{H>P}=0.0757$; Mann-Whitney sensitivity $U=110$, $p=0.0977$, $n=13$; rank-biserial $r=+0.30$). The directional improvement is concentrated in 2 domain(s) \u2014 Biology, DeFi Risk, suggesting benefit is domain-selective.",
-    "equations_included": [
       "Henderson-Hasselbalch",
       "Rate Law",
-      "Allometric Scaling",
-      "Michaelis-Menten",
-      "Logistic Growth",
       "Kinetic Energy",
       "Gravitational Force",
       "Ideal Gas Law",
+      "Impermanent Loss",
       "Price Impact",
       "Constant Product",
       "Value at Risk",
       "Liquidation Price",
       "Portfolio Std Dev"
     ],
-<<<<<<< Updated upstream
-=======
     "U_greater": 6.0,
     "p_greater": 0.35,
     "U_two_sided": 6.0,
@@ -66,38 +40,8 @@
       "Michaelis-Menten",
       "Logistic Growth"
     ],
->>>>>>> Stashed changes
     "H_far_r2_vector": [
-      0.9989703498098388,
-      0.9949958398346882,
       1.0,
-<<<<<<< Updated upstream
-      0.18074325787221002,
-      0.9997140874104319,
-      1.0,
-      1.0,
-      1.0,
-      1.0,
-      0.9995667912134206,
-      0.9999409544066139,
-      0.9999986404554436,
-      1.0
-    ],
-    "P_far_r2_vector": [
-      0.9989569570707353,
-      0.9999626334437329,
-      0.9999812520700742,
-      0.1528811993691096,
-      0.999738362557084,
-      0.9999743602201274,
-      0.9983772158751772,
-      0.9999999944130895,
-      1.0,
-      0.9995583428030279,
-      0.9999427103324033,
-      0.999998639579782,
-      -71.30822534123661
-=======
       0.1832616385079764,
       0.999710888424446
     ],
@@ -105,20 +49,8 @@
       0.9999742464705805,
       0.1371913777138396,
       0.9985766696008412
->>>>>>> Stashed changes
     ],
     "subdomain_breakdown": {
-      "Chemistry": {
-        "n": 2,
-        "h_wins": 0,
-        "ties": 2,
-        "p_wins": 0,
-        "mean_delta": -0.0024767004349706134,
-        "equations": [
-          "Henderson-Hasselbalch",
-          "Rate Law"
-        ]
-      },
       "Biology": {
         "n": 3,
         "h_wins": 1,
@@ -130,46 +62,10 @@
           "Michaelis-Menten",
           "Logistic Growth"
         ]
-      },
-      "Physics": {
-        "n": 3,
-        "h_wins": 0,
-        "ties": 3,
-        "p_wins": 0,
-        "mean_delta": 0.0005494764972019395,
-        "equations": [
-          "Kinetic Energy",
-          "Gravitational Force",
-          "Ideal Gas Law"
-        ]
-      },
-      "DeFi AMM": {
-        "n": 2,
-        "h_wins": 0,
-        "ties": 2,
-        "p_wins": 0,
-        "mean_delta": 4.224205196357023e-06,
-        "equations": [
-          "Price Impact",
-          "Constant Product"
-        ]
-      },
-      "DeFi Risk": {
-        "n": 3,
-        "h_wins": 1,
-        "ties": 2,
-        "p_wins": 0,
-        "mean_delta": 24.102741195395495,
-        "equations": [
-          "Value at Risk",
-          "Liquidation Price",
-          "Portfolio Std Dev"
-        ]
       }
     },
     "driving_domains": [
-      "Biology",
-      "DeFi Risk"
+      "Biology"
     ],
     "p_dominant_domains": []
   }
