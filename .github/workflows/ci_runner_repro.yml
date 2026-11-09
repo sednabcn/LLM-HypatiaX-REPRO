@@ -3298,8 +3298,9 @@ jobs:
                   errors.append(f"{path.name}: expected NSHARDS=5, got " + repr(m.get("n_shards")))
               if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
                   errors.append(f"{path.name}: incomplete 74-case shard")
-              if set(m.get("assigned_domains", [])) != expected_domains or len(m.get("assigned_task_ids", [])) != 10:
-                  errors.append(f"{path.name}: shard did not receive the exact 10-domain task set")
+              expected_tasks = {f"{domain}_seed{seed}" for domain in expected_domains}
+              if set(m.get("assigned_domains", [])) != expected_domains or set(m.get("assigned_task_ids", [])) != expected_tasks:
+                  errors.append(f"{path.name}: shard did not receive the exact 10-domain task set for seed {seed}")
               if m.get("shard_index") != expected.index(seed) or m.get("shard_id") != expected.index(seed) + 1:
                   errors.append(f"{path.name}: seed {seed} is assigned to the wrong shard index/id")
               flags = m.get("clean_run_flags", {})
@@ -3309,6 +3310,8 @@ jobs:
               for field in ("script_sha256", "protocol_config_sha256", "repro_config_sha256"):
                   if not m.get(field):
                       errors.append(f"{path.name}: missing {field}")
+              if not m.get("runtime_package_versions"):
+                  errors.append(f"{path.name}: missing runtime package versions")
               result = root / str(m.get("result_file", ""))
               if not result.is_file():
                   errors.append(f"{path.name}: missing result file {result.name}")
@@ -3338,6 +3341,10 @@ jobs:
               errors.append("shards used different repro.yaml configuration hashes")
           if len({m.get("script_sha256") for m in by_seed.values()}) > 1:
               errors.append("shards used different benchmark script hashes")
+          if len({json.dumps(m.get("runtime_package_versions", {}), sort_keys=True) for m in by_seed.values()}) > 1:
+              errors.append("shards used different runtime package versions")
+          if len({m.get("python_version") for m in by_seed.values()}) > 1:
+              errors.append("shards used different Python versions")
           total_records = sum(int(m.get("observed_case_count", 0)) for m in by_seed.values())
           if total_records != 370:
               errors.append(f"expected 370 total case records, found {total_records}")
