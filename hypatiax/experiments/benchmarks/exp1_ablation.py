@@ -794,6 +794,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # with discover()'s thresholds and never inverted a log-scaled y).
         # The formula is in *safe* variable names, so use res["formula"], not
         # the sanitizer-restored best_expr_raw.
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_r2, extrap_rmse = {}, {}
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
@@ -830,6 +832,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 y_pred = np.asarray(_predict(X_e), dtype=float)
                 extrap_r2[regime_name]   = _safe_r2(y_e, y_pred)
                 extrap_rmse[regime_name] = _safe_rmse(y_e, y_pred)
+                extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred)
             except Exception as ee:
                 dbg(f"extrap eval failed ({regime_name}): {ee}")
                 extrap_r2[regime_name]   = None
@@ -859,6 +862,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_r2_near":        extrap_r2.get("near"),
             "extrap_r2_medium":      extrap_r2.get("medium"),
             "extrap_r2_far":         extrap_r2.get("far"),
+            "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+            "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
             "extrap_rmse_near":      extrap_rmse.get("near"),
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
@@ -920,11 +925,14 @@ def run_condition(eq, condition, seed=42, niterations=None,
         train_r2     = _safe_r2(y_train, y_pred_train)
         train_rmse   = _safe_rmse(y_train, y_pred_train)
 
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_r2, extrap_rmse = {}, {}
         for regime_name, (X_e, y_e) in extrap_sets.items():
             y_pred_e                  = model.predict(X_e)
             extrap_r2[regime_name]    = _safe_r2(y_e, y_pred_e)
             extrap_rmse[regime_name]  = _safe_rmse(y_e, y_pred_e)
+            extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred_e)
 
         best_expr_raw = str(model.sympy())
         best_expr     = sanitizer.restore(best_expr_raw)
@@ -937,6 +945,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         traceback.print_exc()
         train_r2 = train_rmse = None
         extrap_r2   = {r: None for r, _ in EXTRAP_REGIMES}
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_rmse = {r: None for r, _ in EXTRAP_REGIMES}
         best_expr   = "evaluation_error"
         complexity  = None
@@ -959,6 +968,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "extrap_r2_near":        extrap_r2.get("near"),
         "extrap_r2_medium":      extrap_r2.get("medium"),
         "extrap_r2_far":         extrap_r2.get("far"),
+        "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+        "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
         "extrap_rmse_near":      extrap_rmse.get("near"),
         "extrap_rmse_medium":    extrap_rmse.get("medium"),
         "extrap_rmse_far":       extrap_rmse.get("far"),
