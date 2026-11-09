@@ -239,7 +239,7 @@ def test_defi_case_metrics_use_safe_conversion_and_preserve_failed_arms():
 def test_exp1_optional_analysis_script_does_not_fail_when_absent():
     runner = (ROOT / "run_all.sh").read_text(encoding="utf-8")
     start = runner.index('run exp1 "')
-    end = runner.find("\\nrun ", start + 1)
+    end = runner.find("\nrun ", start + 1)
     block = runner[start : end if end >= 0 else len(runner)]
 
     assert '_ANALYSIS_SCRIPT="${ANALYSIS_DIR}/statistical_analysis.py"' in block
