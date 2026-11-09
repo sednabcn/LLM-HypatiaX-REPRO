@@ -51,6 +51,141 @@ jobs:
           bash -n ci_runner/run_fresh_experiments.sh
           bash ci_runner/run_fresh_experiments.sh --list > fresh-stage-list.txt
           ! grep -E '^(validate|qualify|audit_)' fresh-stage-list.txt
+          ! grep -x 'instability' fresh-stage-list.txt
+          ! grep -E '^(phase2|phase3|phase3_ablation)          bash ci_runner/run_fresh_experiments.sh --dry-run > fresh-dry-run.log
+          if HYPATIAX_LLM_MODEL=wrong-model bash run_all.sh --dry-run --step env_check >/tmp/model-mismatch.log 2>&1; then
+            echo "runner accepted an LLM model that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if LLM_TEMPERATURE=0.3 bash run_all.sh --dry-run --step env_check >/tmp/temperature-mismatch.log 2>&1; then
+            echo "runner accepted an LLM temperature that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if N_ITERATIONS=25 bash run_all.sh --dry-run --step env_check >/tmp/iterations-mismatch.log 2>&1; then
+            echo "runner accepted an iteration budget that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if POPULATIONS=10 bash run_all.sh --dry-run --step env_check >/tmp/populations-mismatch.log 2>&1; then
+            echo "runner accepted a population count that conflicts with the protocol" >&2
+            exit 1
+          fi
+          if LLM_MODEL=wrong-model bash ci_runner/run_fresh_experiments.sh --dry-run >/tmp/llm-model-mismatch.log 2>&1; then
+            echo "fresh launcher accepted an LLM_MODEL override" >&2
+            exit 1
+          fi
+          if PYSR_POPULATION_SIZE=50 bash run_all.sh --dry-run --step env_check >/tmp/popsize-mismatch.log 2>&1; then
+            echo "runner accepted a population-size override" >&2
+            exit 1
+          fi
+          if HYPATIAX_HOLDOUT=0 bash ci_runner/run_fresh_experiments.sh --dry-run >/tmp/holdout-mismatch.log 2>&1; then
+            echo "fresh launcher accepted a holdout-control override" >&2
+            exit 1
+          fi
+          python - <<'PY'
+          import glob, yaml
+          for path in sorted(glob.glob(".github/workflows/*.yml")) + ["config/repro.yaml", "config/fresh_rerun.yaml"]:
+              with open(path, encoding="utf-8") as stream:
+                  yaml.safe_load(stream)
+              print("ok", path)
+          import tomllib
+          project = tomllib.load(open("pyproject.toml", "rb"))
+          assert project["project"]["requires-python"] == ">=3.12"
+          cfg = yaml.safe_load(open("config/fresh_rerun.yaml", encoding="utf-8"))
+          assert cfg["llm_temperature"] == 0.25
+          assert cfg["llm_model"] == "claude-sonnet-4-6"
+          assert cfg["pysr"]["niterations"] == 1000
+          assert cfg["pysr"]["populations"] == 30
+          assert cfg["ci_env"]["PYSR_GENERATIONS"] == str(cfg["pysr"]["niterations"])
+          assert cfg["ci_env"]["PYSR_POPULATIONS"] == str(cfg["pysr"]["populations"])
+          assert cfg["ci_env"]["PYSR_POPULATION"] == str(cfg["pysr"]["population_size"])
+          assert cfg["fresh_run_controls"]["HYPATIAX_NOLLM_ARM"] == 1
+          assert cfg["fresh_run_controls"]["HYPATIAX_HOLDOUT"] == 1
+          assert cfg["fresh_run_controls"]["SPARSE_SEED"] == "fallback"
+          assert cfg["benchmarks"]["instability"]["enabled"] is False
+          assert cfg["benchmarks"]["instability"]["status"] == "deferred"
+          assert cfg["deferred_experiments"]["pure_llm_phase2"]["status"] == "deferred"
+          assert cfg["deferred_experiments"]["phase3_ablation"]["status"] == "deferred"
+          assert all("expected" not in section for section in cfg["benchmarks"].values())
+          print("fresh protocol contains inputs only; deferred instability/Phase 2/3 are excluded")
+          PY
+
+  pytest:
+    name: "Full pytest (Python 3.12, CPU torch, PySR, Anthropic SDK)"
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/workflows/rerun-package-validation.yml
+      - name: Install pinned rerun environment
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Dependency gate
+        run: |
+          python - <<'PY'
+          import importlib, sys
+          missing = []
+          for module in ("torch", "anthropic", "sympy", "numpy", "scipy", "sklearn", "pandas", "yaml"):
+              try:
+                  imported = importlib.import_module(module)
+                  print(f"{module:10s} {getattr(imported, '__version__', '?')}")
+              except Exception as exc:
+                  missing.append(f"{module}: {exc}")
+          if missing:
+              sys.exit("MISSING DEPENDENCIES:\\n  " + "\\n  ".join(missing))
+          from importlib.metadata import version
+          expected = {
+              "torch": "2.12.1+cpu",
+              "anthropic": "0.73.0",
+              "numpy": "2.3.5",
+              "scipy": "1.16.3",
+              "sympy": "1.14.0",
+              "pandas": "2.3.3",
+              "scikit-learn": "1.7.2",
+              "pysr": "2.0.0a1",
+              "PyYAML": "6.0.3",
+              "pytest-timeout": "2.4.0",
+          }
+          for package, wanted in expected.items():
+              actual = version(package)
+              print(f"locked {package}: {actual}")
+              if actual != wanted:
+                  sys.exit(f"{package} version mismatch: expected {wanted}, got {actual}")
+          PY
+      - name: Record exact Python test environment
+        run: |
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "python=$(python -VV 2>&1)"
+            echo "platform=$(uname -a)"
+            echo "pip=$(python -m pip --version)"
+            echo
+            python -m pip freeze --all
+          } > environment-provenance.txt
+      - name: Run complete test suite (no LLM API key supplied)
+        run: |
+          timeout 600s python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+      - name: Run offline runner smoke and clean-run guards
+        run: |
+          SMOKE_HELP=0 SMOKE_LIVE=0 RUN_ALL=run_all.sh \
+            SMOKE_OUT="${RUNNER_TEMP}/hypatiax-smoke" \
+            bash ci_runner/run_smoke_all.sh
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-pytest-report
+          path: |
+            pytest-report.xml
+            environment-provenance.txt
+          retention-days: 30
+ fresh-stage-list.txt
           bash ci_runner/run_fresh_experiments.sh --dry-run > fresh-dry-run.log
           if HYPATIAX_LLM_MODEL=wrong-model bash run_all.sh --dry-run --step env_check >/tmp/model-mismatch.log 2>&1; then
             echo "runner accepted an LLM model that conflicts with the protocol" >&2
