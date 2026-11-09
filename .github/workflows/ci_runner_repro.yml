@@ -48,7 +48,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -289,7 +289,7 @@ jobs:
 
       - name: Restore shared checkpoint (plan)
         id: restore_plan
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -317,7 +317,7 @@ jobs:
               # Run-ID isolation prevents checkpoint/result reuse across dispatches.
               SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
               NEEDS_JULIA=false
-              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/exp1-provenance/run-${{ github.run_id }}"
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/exp1-provenance/run-${{ github.run_id }}-attempt-${{ github.run_attempt }}"
               DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
@@ -928,7 +928,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -3153,7 +3153,7 @@ jobs:
             psutil
 
       - name: Download shard artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.6
         with:
           pattern: results-exp1_ablation-shard*
           path: ${{ github.workspace }}/ablation_artifacts
