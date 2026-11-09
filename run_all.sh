@@ -60,8 +60,8 @@ case "${HYPATIAX_R2_SIGN_FLIP:-0},${HYPATIAX_ALLOW_LEGACY:-0}" in
   *) echo "ABORT: HYPATIAX_R2_SIGN_FLIP=${HYPATIAX_R2_SIGN_FLIP} needs HYPATIAX_ALLOW_LEGACY=1" >&2; exit 1 ;;
 esac
 
-# Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
-# running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
+# Set CLEAR_CHECKPOINT=1 to archive exp1_ablation and exp2_feynman checkpoints
+# before a deliberate rerun; old files are preserved under checkpoint_backups/.
 export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"
 
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
@@ -1568,7 +1568,11 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
     echo '=== exp2_feynman: domain='\${DOMAIN_ID}' ==='
     if [ -n '${CLEAR_CHECKPOINT}' ]; then
-      find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print -delete
+      _BACKUP_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2/checkpoint_backups/'\$(date -u +%Y%m%dT%H%M%SZ)
+      mkdir -p \"\${_BACKUP_DIR}\"
+      while IFS= read -r -d '' _f; do
+        mv \"\${_f}\" \"\${_BACKUP_DIR}/\"
+      done < <(find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -maxdepth 1 -type f -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print0)
     fi
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
