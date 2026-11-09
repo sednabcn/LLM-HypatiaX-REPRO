@@ -15,7 +15,7 @@
   "populations": 30,
   "niterations": 1000,
   "model_string": "claude-sonnet-4-6",
-  "timestamp": "2026-11-09T00:50:17.062363",
+  "timestamp": "2026-11-09T01:03:05.287469",
   "outputs": {
     "results_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json",
     "checkpoint_json": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json",
