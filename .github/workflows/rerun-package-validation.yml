@@ -6,6 +6,7 @@ on:
     paths:
       - "hypatiax/**"
       - "scripts/**"
+      - "ci_runner/**"
       - "run_all.sh"
       - "config/**"
       - "requirements*.txt"
