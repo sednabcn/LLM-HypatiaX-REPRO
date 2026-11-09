@@ -6,6 +6,7 @@ on:
       - "hypatiax/core/**"
       - "hypatiax/tools/utils/pca_split_utils.py"
       - "hypatiax/experiments/tests/**"
+      - "ci_runner/**"
       - "hypatiax/experiments/benchmarks/**"
       - "run_all.sh"
       - ".github/workflows/ci_runner_repro.yml"
@@ -80,11 +81,92 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install test dependencies
-        run: python -m pip install --upgrade pip pytest numpy
+        run: python -m pip install --upgrade pip pytest numpy pyyaml
       - name: Validate runner shell syntax
         run: bash -n run_all.sh
       - name: Run experiment contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
+      - name: Validate fresh-run launcher scope and dry-run
+        run: |
+          bash -n ci_runner/run_fresh_experiments.sh
+          bash ci_runner/run_fresh_experiments.sh --list > fresh-stage-list.txt
+          ! grep -E '^(validate|qualify|audit_|phase2|phase3|phase3_ablation)
+  full-pytest:
+    name: "Full test suite (pinned Python 3.12 environment)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install and verify pinned rerun environment
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+          python -m pip check
+          python - <<'PY'
+          from importlib.metadata import version
+          expected = {
+              "torch": "2.12.1+cpu",
+              "anthropic": "0.73.0",
+              "numpy": "2.3.5",
+              "scipy": "1.16.3",
+              "sympy": "1.14.0",
+              "pandas": "2.3.3",
+              "scikit-learn": "1.7.2",
+              "pysr": "2.0.0a1",
+              "PyYAML": "6.0.3",
+              "pytest-timeout": "2.4.0",
+          }
+          for package, wanted in expected.items():
+              actual = version(package)
+              print(f"{package}: {actual}")
+              if actual != wanted:
+                  raise SystemExit(f"{package}: expected {wanted}, got {actual}")
+          PY
+      - name: Record environment provenance
+        run: |
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            python -VV
+            uname -a
+            python -m pip freeze --all
+          } > environment-provenance.txt
+      - name: Run complete test suite without LLM API credentials
+        env:
+          HYPATIAX_DISABLE_HARDCODED: "1"
+          HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+          HYPATIAX_R2_SIGN_FLIP: "0"
+          HYPATIAX_STRICT: "1"
+          PYTHONHASHSEED: "0"
+        run: timeout 600s python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+      - name: Upload full test report and environment provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-pytest-report
+          path: |
+            pytest-report.xml
+            environment-provenance.txt
+          if-no-files-found: warn
+          retention-days: 30
+ fresh-stage-list.txt
+          ! grep -x 'instability' fresh-stage-list.txt
+          bash ci_runner/run_fresh_experiments.sh --dry-run > fresh-dry-run.log
+          python - <<'PY'
+          import yaml
+          cfg = yaml.safe_load(open("config/fresh_rerun.yaml", encoding="utf-8"))
+          assert cfg["benchmarks"]["instability"]["enabled"] is False
+          assert cfg["benchmarks"]["instability"]["status"] == "deferred"
+          assert cfg["deferred_experiments"]["pure_llm_phase2"]["status"] == "deferred"
+          assert cfg["deferred_experiments"]["phase3_ablation"]["status"] == "deferred"
+          print("fresh launcher dry-run and deferred-scope checks passed")
+          PY
 
   full-pytest:
     name: "Full test suite (pinned Python 3.12 environment)"
