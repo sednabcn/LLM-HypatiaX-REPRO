@@ -83,7 +83,8 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY is not configured; refusing to run."
             exit 1
           }
-          python3 config/check_key_status.py
+          # The launcher performs the single live API round-trip after env_check.
+          # Keep this step credential-presence-only to avoid a duplicate billable call.
 
       - name: Create isolated output location
         run: |
