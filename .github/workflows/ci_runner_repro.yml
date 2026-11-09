@@ -2869,7 +2869,7 @@ jobs:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
           path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
           if-no-files-found: error
-          retention-days: 30
+          retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
         if: ${{ success() }}
