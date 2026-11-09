@@ -22,7 +22,7 @@ def mod(monkeypatch):
     for n in ("hypatiax", "hypatiax.protocols"):
         sys.modules.setdefault(n, types.ModuleType(n))
     # This fixture deliberately stubs the protocol only while importing the baseline module.
-    # Restore the real protocol module after each fixture. A direct
+    # Restore the real protocol module after each fixture. This prevents cross-test state leaks.
     # sys.modules assignment leaks this stub into later tests in the same
     # pytest process and can make unrelated protocol imports resolve to object.
     monkeypatch.setitem(
