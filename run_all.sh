@@ -408,7 +408,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
     _FAIL=1
   fi
 
-  _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
+  _T3='${REPO_ROOT}/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py'
   if [[ -n \"\${_T3}\" && -f \"\${_T3}\" ]]; then
     if grep -n 'prompt = self\._specialized_prompt' \"\${_T3}\" | grep -v '^[0-9]*:# ' ; then
       echo '::error::_specialized_prompt call site reintroduced in hybrid_system_nn_defi_domain.py.'
