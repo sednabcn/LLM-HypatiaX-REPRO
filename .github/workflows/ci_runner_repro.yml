@@ -2041,7 +2041,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
-          import hashlib, json, os, platform
+          import hashlib, importlib.metadata, json, os, platform
           from datetime import datetime, timezone
           from pathlib import Path
 
@@ -2083,6 +2083,7 @@ jobs:
               "seed": seed,
               "shard_index": shard_index,
               "shard_id": int(os.environ["SHARD_ID"]),
+              "n_shards": int(os.environ["N_SHARDS"]),
               "assigned_task_ids": shard_ids,
               "assigned_domains": domains,
               "expected_case_count": 74,
@@ -2094,7 +2095,11 @@ jobs:
               "protocol_config_sha256": sha256(protocol),
               "repro_config_sha256": sha256(config),
               "python_version": platform.python_version(),
-              "anthropic_sdk_version": __import__("anthropic").__version__,
+              "platform": platform.platform(),
+              "runtime_package_versions": {
+                  name: importlib.metadata.version(name)
+                  for name in ("numpy", "torch", "pysr", "anthropic", "scipy", "scikit-learn")
+              },
               "clean_run_flags": {
                   "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
                   "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
@@ -3282,6 +3287,8 @@ jobs:
                   common_commit = m.get("commit_sha")
               elif m.get("commit_sha") != common_commit:
                   errors.append(f"{path.name}: shards came from different commits")
+              if m.get("n_shards") != 5:
+                  errors.append(f"{path.name}: expected NSHARDS=5, got {m.get(chr(110)+chr(95)+chr(115)+chr(104)+chr(97)+chr(114)+chr(100)+chr(115))}")
               if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
                   errors.append(f"{path.name}: incomplete 74-case shard")
               if set(m.get("assigned_domains", [])) != expected_domains or len(m.get("assigned_task_ids", [])) != 10:
@@ -3325,6 +3332,7 @@ jobs:
               "commit_sha": os.environ["EXPECTED_COMMIT"],
               "expected_seeds": expected,
               "validated_seeds": sorted(int(s) for s in by_seed),
+              "expected_nshards": 5,
               "expected_cases_per_seed": 74,
               "expected_total_case_records": 370,
               "protocol_config_sha256": next(iter({m.get("protocol_config_sha256") for m in by_seed.values()}), None),
