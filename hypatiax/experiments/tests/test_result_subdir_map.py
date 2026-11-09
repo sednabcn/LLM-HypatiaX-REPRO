@@ -32,6 +32,9 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert 'expected_cases_per_seed' in workflow
     assert "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}" in workflow
     assert workflow.count("github.event.inputs.experiment != 'exp1-provenance'") == 2
+    assert "(github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false'" in workflow
+    assert 'expected_domains = {"amm"' in workflow
+    assert "result_sha256" in workflow and "protocol_config_sha256" in workflow
     protocol = (ROOT / "config/exp1_provenance.yaml").read_text()
     assert "id: exp1-provenance" in protocol
     assert "ordered: [42, 99, 123, 777, 2024]" in protocol
