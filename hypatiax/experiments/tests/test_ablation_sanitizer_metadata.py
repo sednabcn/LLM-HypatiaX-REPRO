@@ -55,18 +55,35 @@ def test_extract_eval_is_decision_aware():
 
 
 def test_single_temperature_setting_is_wired():
-    """Audit C1: 0.25 is set once per entry point and read from LLM_TEMPERATURE."""
+    """Audit C1: model/temperature have one protocol source, exported by run_all."""
     root = SRC.parents[3]
+    cfg = (root / "config/repro.yaml").read_text(encoding="utf-8", errors="replace")
+    assert re.search(r'^llm_model:\s*"claude-sonnet-4-6"\s*
+
+
+def test_no_silent_zero_r2_defaults():
+    """Audit L36/L38: a missing r2 must become 'unavailable', never a 0.0 score."""
+    base = SRC.parent
+    for name in ("run_comparative_suite_benchmark_v2.py", "run_comparative_suite_benchmark_pca.py"):
+        t = (base / name).read_text(encoding="utf-8", errors="replace")
+        assert not re.search(r'get\("r2",\s*0\.0\)', t), name
+        assert "AUDIT L36" in t or 'evaluation has no r2' in t
+    assert 'res.get("rmse", float("inf"))' not in _text()
+, cfg, re.M)
+    assert re.search(r"^llm_temperature:\s*0\.25\s*$", cfg, re.M)
+
     wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
-    assert 'LLM_TEMPERATURE:  "0.25"' in wf and 'LLM_MODEL:        "claude-sonnet-4-6"' in wf
+    # The workflow must not shadow the protocol values; run_all owns the export.
+    assert not re.search(r"^\s*(?:LLM_TEMPERATURE|LLM_MODEL):", wf, re.M)
+
     sh = (root / "run_all.sh").read_text(encoding="utf-8", errors="replace")
-    # run_all reads one temperature from the protocol, rejects conflicting
-    # caller overrides, and passes that same variable to every LLM entry point.
     assert 'check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"' in sh
+    assert 'check_protocol_override LLM_MODEL "$_CFG_LLM_MODEL"' in sh
     assert 'export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"' in sh
+    assert 'export LLM_MODEL="$_CFG_LLM_MODEL"' in sh
+    assert 'cfg.get("llm_temperature", 0.25)' in sh
+    assert 'cfg.get("llm_model", "claude-sonnet-4-6")' in sh
     assert "--temperature 0.25" not in sh
-    assert sh.count("LLM_TEMPERATURE") >= 4
-    assert re.search(r"^llm_temperature:\s*0\.25", (root / "config/repro.yaml").read_text(encoding="utf-8"), re.M)
     for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
         assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
 
