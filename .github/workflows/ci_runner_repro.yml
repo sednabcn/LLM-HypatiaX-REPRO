@@ -59,7 +59,7 @@ on:
         default: false
 
       seeds:
-        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default"
+        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default; exp1-provenance requires exactly 42,99,123,777,2024"
         required: false
         default: ""
 
@@ -1247,7 +1247,7 @@ jobs:
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
           RESULTS_DIR:       ${{ github.workspace }}/${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ github.event.inputs.clean_llm_rerun == 'true' && 'false' || github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ (github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
@@ -3230,7 +3230,7 @@ jobs:
         id: download_seeds
         if: always()
         continue-on-error: true
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.6
         with:
           pattern: results-exp1-provenance-shard*
           path: provenance-shards
