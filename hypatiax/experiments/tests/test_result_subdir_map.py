@@ -30,7 +30,8 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert 'Aggregate and gate exp1-provenance five-seed run' in workflow
     assert 'validated_shard_count' in workflow
     assert 'expected_cases_per_seed' in workflow
-    assert 'RUN_ID isolation' not in workflow  # run-ID is encoded in RESULT_SUBDIR, not a cache hint
+    assert "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}" in workflow
+    assert workflow.count("github.event.inputs.experiment != 'exp1-provenance'") == 2
 
 
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
