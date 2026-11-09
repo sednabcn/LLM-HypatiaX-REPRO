@@ -532,6 +532,11 @@ _exp1_ablation_step() {
     for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json "${abl_dir}"/_checkpoint_shard*.json \
               "${abl_dir}"/exp1_ablation_results*.json; do
       [[ -f "${_f}" ]] || continue
+      # a shard job must not move another shard's suffixed files
+      if [[ -n "${sfx:-}" ]]; then
+        _b="${_f##*/}"
+        if [[ "${_b}" =~ _shard[0-9]+ && "${_b}" != *"${sfx}"[._]* ]]; then continue; fi
+      fi
       mkdir -p "${_stale}" && mv "${_f}" "${_stale}/" && _moved=$((_moved+1))
     done
     log "exp1_ablation: CLEAR_CHECKPOINT set -> moved ${_moved} stale checkpoint/result file(s) to ${_stale}"
