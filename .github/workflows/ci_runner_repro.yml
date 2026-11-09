@@ -1001,7 +1001,7 @@ jobs:
             [[ -d "$d" ]] || continue
             echo "[clean_llm_rerun] stale checkpoints under $d:"
             echo "[clean_llm_rerun] EXP=${EXP} d=${d}"
-            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation ]]; then
+            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation || "$d" == */exp1_ablation_seed* ]]; then
               echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
               # shard-scoped: never touch other shards' checkpoints or stale_* dirs
               find "$d" -type f -name "*checkpoint*_shard${{ matrix.shard }}.json" \
