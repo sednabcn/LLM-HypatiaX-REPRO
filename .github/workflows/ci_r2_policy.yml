@@ -175,7 +175,8 @@ jobs:
           import yaml
           path = ".github/workflows/ci_fresh_rerun.yml"
           workflow = yaml.safe_load(open(path, encoding="utf-8"))
-          assert "workflow_dispatch" in workflow["on"]
+          triggers = workflow.get("on", workflow.get(True, {}))
+          assert "workflow_dispatch" in triggers
           assert workflow["permissions"] == {"contents": "read"}
           job = workflow["jobs"]["fresh-rerun"]
           assert job["timeout-minutes"] <= 360
