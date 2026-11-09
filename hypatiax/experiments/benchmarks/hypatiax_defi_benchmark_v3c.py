@@ -1475,15 +1475,26 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 }
 
             # ── Augment with extrapolation gap and stability score ────────────
+            # Failed arms deliberately store None for unavailable metrics.  Do
+            # not pass None (or other non-numeric values) to np.isnan: doing so
+            # raises TypeError outside the arm-level handlers and drops the
+            # entire equation from the saved benchmark denominator.
+            def _finite_metric(value):
+                try:
+                    number = float(value)
+                except (TypeError, ValueError, OverflowError):
+                    return None
+                return number if _math.isfinite(number) else None
+
             for method, res in case_results.items():
-                tr_ = res.get("train_r2", float("nan"))
-                te_ = res.get("test_r2",  float("nan"))
+                tr_ = _finite_metric(res.get("train_r2"))
+                te_ = _finite_metric(res.get("test_r2"))
                 res["extrapolation_gap"] = (
-                    float(tr_ - te_) if not (np.isnan(tr_) or np.isnan(te_)) else float("nan")
+                    float(tr_ - te_) if tr_ is not None and te_ is not None else float("nan")
                 )
                 res["stability_score"] = (
                     float(te_ / tr_)
-                    if (not np.isnan(tr_) and not np.isnan(te_) and abs(tr_) > 1e-6)
+                    if tr_ is not None and te_ is not None and abs(tr_) > 1e-6
                     else float("nan")
                 )
 
