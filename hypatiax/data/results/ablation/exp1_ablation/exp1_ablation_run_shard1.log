@@ -43,6 +43,7 @@ Resuming    : 0 checkpointed entries
   [    0.0s] generate_data: Value at Risk  N=200  noise=0.05  seed=126
   [    0.0s] generate_data done: X_train=(160, 2)
   [    0.0s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+<<<<<<< Updated upstream
   [pysr_only] train_R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  time=1116.1s
   [ 1116.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ pysr_only saved to checkpoint
@@ -73,6 +74,38 @@ Resuming    : 0 checkpointed entries
 2026-11-09 15:47:39,884 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
 2026-11-09 15:47:45,995 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+=======
+  [pysr_only] train_R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  time=966.2s
+  [  966.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ pysr_only saved to checkpoint
+  [  966.2s] run_condition START: Value at Risk [hypatia]  seed=126  wall_clock=3600s
+  [  966.2s] generate_data: Value at Risk  N=200  noise=0.05  seed=126
+  [  966.2s] generate_data done: X_train=(160, 2)
+2026-11-09 16:30:07,459 - INFO - ======================================================================
+2026-11-09 16:30:07,459 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 16:30:07,459 - INFO - ======================================================================
+2026-11-09 16:30:07,459 - INFO - Domain: defi_risk
+2026-11-09 16:30:07,459 - INFO - Discovery mode: strict
+2026-11-09 16:30:07,459 - INFO - Primary LLM: anthropic
+2026-11-09 16:30:07,459 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-09 16:30:07,459 - INFO - Auto-config: True
+2026-11-09 16:30:07,459 - INFO - Max retries: 3
+2026-11-09 16:30:07,459 - INFO - PhysicsAware fallback: False
+2026-11-09 16:30:07,459 - INFO - Complexity threshold: 20
+2026-11-09 16:30:07,459 - INFO - Deterministic PySR: True
+2026-11-09 16:30:07,459 - INFO - ======================================================================
+2026-11-09 16:30:07,459 - INFO - Using provided iterations: 1000
+2026-11-09 16:30:07,459 - INFO - Parsimony: 0.01
+2026-11-09 16:30:07,459 - INFO - Transcendental compositions: False
+2026-11-09 16:30:07,459 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 16:30:07,575 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-09 16:30:07,675 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 16:30:07,675 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-09 16:30:07,676 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-11-09 16:30:13,107 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+>>>>>>> Stashed changes
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -92,7 +125,11 @@ Equation hint: Value at Risk
 [HYBRID MODE] LLM first, PySR refinement...
    LLM best: P * sigma
    LLM R²: 0.5311
+<<<<<<< Updated upstream
    LLM time: 6.12s
+=======
+   LLM time: 5.44s
+>>>>>>> Stashed changes
    → Seeding PySR operator set from LLM candidate: {'binary_operators': ['*'], 'unary_operators': []}
    → Refining with PySR...
 
@@ -111,6 +148,7 @@ Equation hint: Value at Risk
    [PySR] PySRRegressor constructed OK
    [MEM] before PySR: RSS=1.05 GB
    [MEM] after PySR: RSS=1.11 GB
+<<<<<<< Updated upstream
 2026-11-09 15:49:36,293 - INFO -    Result: (sigma * 1.6470225) * P
 2026-11-09 15:49:36,293 - INFO -    R2 = 0.9979
 2026-11-09 15:49:36,293 - INFO -    LLM mode: hybrid_pysr_better
@@ -119,6 +157,16 @@ Equation hint: Value at Risk
    ✅ Found: (sigma * 1.6470225) * P
    R²: 0.9979  (selected index 2/16 by pysr_default)
    PySR time: 110.21s
+=======
+2026-11-09 16:31:38,470 - INFO -    Result: (sigma * 1.6470225) * P
+2026-11-09 16:31:38,470 - INFO -    R2 = 0.9979
+2026-11-09 16:31:38,470 - INFO -    LLM mode: hybrid_pysr_better
+2026-11-09 16:31:38,470 - INFO -    [BEST] New best!
+2026-11-09 16:31:38,470 - INFO -    [EARLY STOP] Excellent result (R²=0.997937)
+   ✅ Found: (sigma * 1.6470225) * P
+   R²: 0.9979  (selected index 2/17 by pysr_default)
+   PySR time: 85.26s
+>>>>>>> Stashed changes
    PySR R²: 0.9979
    ✅ PySR refinement improved result
 
@@ -137,6 +185,7 @@ Equation hint: Value at Risk
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
+<<<<<<< Updated upstream
   [hypatia] (sigma * 1.6470225) * P  R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  116.5s  scale_log=False  llm=hybrid_pysr_better
   [ 1233.0s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia saved to checkpoint
@@ -165,6 +214,36 @@ Equation hint: Value at Risk
 
 2026-11-09 15:49:36,615 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
 2026-11-09 15:49:36,615 - INFO - 
+=======
+  [hypatia] (sigma * 1.6470225) * P  R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  90.9s  scale_log=False  llm=hybrid_pysr_better
+  [ 1057.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia saved to checkpoint
+  [ 1057.3s] run_condition START: Value at Risk [hypatia_nollm]  seed=126  wall_clock=3600s
+  [ 1057.3s] generate_data: Value at Risk  N=200  noise=0.05  seed=126
+  [ 1057.3s] generate_data done: X_train=(160, 2)
+2026-11-09 16:31:38,546 - INFO - ======================================================================
+2026-11-09 16:31:38,547 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 16:31:38,547 - INFO - ======================================================================
+2026-11-09 16:31:38,547 - INFO - Domain: defi_risk
+2026-11-09 16:31:38,547 - INFO - Discovery mode: strict
+2026-11-09 16:31:38,547 - INFO - Primary LLM: anthropic
+2026-11-09 16:31:38,547 - INFO - use_llm: False  |  llm_mode: none
+2026-11-09 16:31:38,547 - INFO - Auto-config: True
+2026-11-09 16:31:38,547 - INFO - Max retries: 3
+2026-11-09 16:31:38,547 - INFO - PhysicsAware fallback: False
+2026-11-09 16:31:38,547 - INFO - Complexity threshold: 20
+2026-11-09 16:31:38,547 - INFO - Deterministic PySR: True
+2026-11-09 16:31:38,547 - INFO - ======================================================================
+2026-11-09 16:31:38,547 - INFO - Using provided iterations: 1000
+2026-11-09 16:31:38,547 - INFO - Parsimony: 0.01
+2026-11-09 16:31:38,547 - INFO - Transcendental compositions: False
+2026-11-09 16:31:38,547 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 16:31:38,547 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-09 16:31:38,642 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 16:31:38,642 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-09 16:31:38,642 - INFO - 
+>>>>>>> Stashed changes
 [SYMBOLIC] Attempt 1/3 (seed=42)
 
 ======================================================================
@@ -194,12 +273,19 @@ Equation hint: Value at Risk
    [PySR] PySRRegressor constructed OK
    [MEM] before PySR: RSS=1.12 GB
    [MEM] after PySR: RSS=1.12 GB
+<<<<<<< Updated upstream
 2026-11-09 15:51:30,352 - INFO -    Result: (sigma * 1.6470225) * P
 2026-11-09 15:51:30,352 - INFO -    R2 = 0.9979
 2026-11-09 15:51:30,352 - INFO -    [BEST] New best!
 2026-11-09 15:51:30,353 - INFO -    [EARLY STOP] Excellent result (R²=0.997937)
+=======
+2026-11-09 16:33:04,434 - INFO -    Result: (sigma * 1.6470225) * P
+2026-11-09 16:33:04,434 - INFO -    R2 = 0.9979
+2026-11-09 16:33:04,434 - INFO -    [BEST] New best!
+2026-11-09 16:33:04,434 - INFO -    [EARLY STOP] Excellent result (R²=0.997937)
+>>>>>>> Stashed changes
    ✅ Found: (sigma * 1.6470225) * P
-   R²: 0.9979  (selected index 2/17 by pysr_default)
+   R²: 0.9979  (selected index 2/18 by pysr_default)
 
 [OK] Discovery complete
    Expression: (sigma * 1.6470225) * P
@@ -215,13 +301,19 @@ Equation hint: Value at Risk
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
+<<<<<<< Updated upstream
   [hypatia] (sigma * 1.6470225) * P  R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  113.8s  scale_log=False  llm=none
   [ 1346.9s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+=======
+  [hypatia] (sigma * 1.6470225) * P  R²=0.9979  extrap(near=0.9999 med=1.0000 far=0.9999)  85.8s  scale_log=False  llm=none
+  [ 1143.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+>>>>>>> Stashed changes
   ✓ hypatia_nollm saved to checkpoint
 
 ────────────────────────────────────────────────────────────
 ▶  [13] Liquidation Price  [DeFi Risk]
 ────────────────────────────────────────────────────────────
+<<<<<<< Updated upstream
   [ 1346.9s] run_condition START: Liquidation Price [pysr_only]  seed=133  wall_clock=1400s
   [ 1346.9s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
   [ 1346.9s] generate_data done: X_train=(160, 2)
@@ -256,6 +348,42 @@ Equation hint: Value at Risk
 2026-11-09 16:09:51,909 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
 2026-11-09 16:09:56,949 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+=======
+  [ 1143.2s] run_condition START: Liquidation Price [pysr_only]  seed=133  wall_clock=1400s
+  [ 1143.2s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
+  [ 1143.2s] generate_data done: X_train=(160, 2)
+  [ 1143.2s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9974  extrap(near=1.0000 med=1.0000 far=1.0000)  time=985.2s
+  [ 2128.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ pysr_only saved to checkpoint
+  [ 2128.3s] run_condition START: Liquidation Price [hypatia]  seed=133  wall_clock=3600s
+  [ 2128.3s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
+  [ 2128.3s] generate_data done: X_train=(160, 2)
+2026-11-09 16:49:29,611 - INFO - ======================================================================
+2026-11-09 16:49:29,611 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 16:49:29,611 - INFO - ======================================================================
+2026-11-09 16:49:29,611 - INFO - Domain: defi_risk
+2026-11-09 16:49:29,611 - INFO - Discovery mode: strict
+2026-11-09 16:49:29,611 - INFO - Primary LLM: anthropic
+2026-11-09 16:49:29,611 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-09 16:49:29,611 - INFO - Auto-config: True
+2026-11-09 16:49:29,611 - INFO - Max retries: 3
+2026-11-09 16:49:29,611 - INFO - PhysicsAware fallback: False
+2026-11-09 16:49:29,611 - INFO - Complexity threshold: 20
+2026-11-09 16:49:29,611 - INFO - Deterministic PySR: True
+2026-11-09 16:49:29,611 - INFO - ======================================================================
+2026-11-09 16:49:29,611 - INFO - Using provided iterations: 1000
+2026-11-09 16:49:29,611 - INFO - Parsimony: 0.01
+2026-11-09 16:49:29,611 - INFO - Transcendental compositions: False
+2026-11-09 16:49:29,611 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 16:49:29,615 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-09 16:49:29,705 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 16:49:29,706 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-09 16:49:29,706 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-11-09 16:49:34,681 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+>>>>>>> Stashed changes
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -275,7 +403,11 @@ Equation hint: Liquidation Price
 [HYBRID MODE] LLM first, PySR refinement...
    LLM best: p0 * L
    LLM R²: -74.6756
+<<<<<<< Updated upstream
    LLM time: 5.04s
+=======
+   LLM time: 4.98s
+>>>>>>> Stashed changes
    ⚠ LLM R²=-74.676 < 0.5 — discarding LLM prior, running pure PySR
    → Refining with PySR...
 
@@ -292,3 +424,405 @@ Equation hint: Liquidation Price
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
    [MEM] before PySR: RSS=1.13 GB
+<<<<<<< Updated upstream
+=======
+   [MEM] after PySR: RSS=1.12 GB
+2026-11-09 16:50:56,214 - INFO -    Result: p0 * ((-1.2370558 / L) + 0.99617404)
+2026-11-09 16:50:56,214 - INFO -    R2 = 0.9974
+2026-11-09 16:50:56,214 - INFO -    LLM mode: hybrid_pysr_better
+2026-11-09 16:50:56,215 - INFO -    [BEST] New best!
+2026-11-09 16:50:56,215 - INFO -    [EARLY STOP] Excellent result (R²=0.997406)
+   ✅ Found: p0 * ((-1.2370558 / L) + 0.99617404)
+   R²: 0.9974  (selected index 3/16 by pysr_default)
+   PySR time: 81.41s
+   PySR R²: 0.9974
+   ✅ PySR refinement improved result
+
+[OK] Discovery complete
+   Expression: p0 * ((-1.2370558 / L) + 0.99617404)
+   R2 Score: 0.9974
+   Engine: symbolic
+   LLM mode used: hybrid_pysr_better
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 84.0/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] p0 * ((-1.2370558 / L) + 0.99617404)  R²=0.9974  extrap(near=0.9997 med=0.9999 far=0.9992)  86.5s  scale_log=False  llm=hybrid_pysr_better
+  [ 2215.0s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia saved to checkpoint
+  [ 2215.0s] run_condition START: Liquidation Price [hypatia_nollm]  seed=133  wall_clock=3600s
+  [ 2215.0s] generate_data: Liquidation Price  N=200  noise=0.05  seed=133
+  [ 2215.0s] generate_data done: X_train=(160, 2)
+2026-11-09 16:50:56,246 - INFO - ======================================================================
+2026-11-09 16:50:56,246 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 16:50:56,246 - INFO - ======================================================================
+2026-11-09 16:50:56,246 - INFO - Domain: defi_risk
+2026-11-09 16:50:56,246 - INFO - Discovery mode: strict
+2026-11-09 16:50:56,246 - INFO - Primary LLM: anthropic
+2026-11-09 16:50:56,246 - INFO - use_llm: False  |  llm_mode: none
+2026-11-09 16:50:56,246 - INFO - Auto-config: True
+2026-11-09 16:50:56,246 - INFO - Max retries: 3
+2026-11-09 16:50:56,246 - INFO - PhysicsAware fallback: False
+2026-11-09 16:50:56,246 - INFO - Complexity threshold: 20
+2026-11-09 16:50:56,246 - INFO - Deterministic PySR: True
+2026-11-09 16:50:56,246 - INFO - ======================================================================
+2026-11-09 16:50:56,246 - INFO - Using provided iterations: 1000
+2026-11-09 16:50:56,247 - INFO - Parsimony: 0.01
+2026-11-09 16:50:56,247 - INFO - Transcendental compositions: False
+2026-11-09 16:50:56,247 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 16:50:56,247 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-09 16:50:56,342 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 16:50:56,342 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-09 16:50:56,342 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Liquidation Price
+Domain: DEFI_RISK
+Samples: 160
+Variables: ['p0', 'L']
+LLM mode: none
+Equation hint: Liquidation Price
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: p0, L
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/', 'pow']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=1.12 GB
+   [MEM] after PySR: RSS=1.12 GB
+2026-11-09 16:52:18,916 - INFO -    Result: p0 * ((-1.2370558 / L) + 0.99617404)
+2026-11-09 16:52:18,916 - INFO -    R2 = 0.9974
+2026-11-09 16:52:18,916 - INFO -    [BEST] New best!
+2026-11-09 16:52:18,916 - INFO -    [EARLY STOP] Excellent result (R²=0.997406)
+   ✅ Found: p0 * ((-1.2370558 / L) + 0.99617404)
+   R²: 0.9974  (selected index 3/16 by pysr_default)
+
+[OK] Discovery complete
+   Expression: p0 * ((-1.2370558 / L) + 0.99617404)
+   R2 Score: 0.9974
+   Engine: symbolic
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 84.0/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] p0 * ((-1.2370558 / L) + 0.99617404)  R²=0.9974  extrap(near=0.9997 med=0.9999 far=0.9992)  82.6s  scale_log=False  llm=none
+  [ 2297.6s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia_nollm saved to checkpoint
+
+────────────────────────────────────────────────────────────
+▶  [14] Portfolio Std Dev  [DeFi Risk]
+   NOTE: C4: run 5-seed sweep to report mean ± std. Seeds [42,99,123,777,2024].
+────────────────────────────────────────────────────────────
+  [ 2297.6s] run_condition START: Portfolio Std Dev [pysr_only]  seed=140  wall_clock=1400s
+  [ 2297.6s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=140
+  [ 2297.6s] generate_data done: X_train=(160, 3)
+  [ 2297.6s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9573  extrap(near=0.8818 med=0.9577 far=-71.3082)  time=901.5s
+  [ 3199.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ pysr_only saved to checkpoint
+  [ 3199.1s] run_condition START: Portfolio Std Dev [hypatia]  seed=140  wall_clock=3600s
+  [ 3199.1s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=140
+  [ 3199.1s] generate_data done: X_train=(160, 3)
+2026-11-09 17:07:20,407 - INFO - ======================================================================
+2026-11-09 17:07:20,407 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 17:07:20,407 - INFO - ======================================================================
+2026-11-09 17:07:20,407 - INFO - Domain: defi_risk
+2026-11-09 17:07:20,407 - INFO - Discovery mode: strict
+2026-11-09 17:07:20,407 - INFO - Primary LLM: anthropic
+2026-11-09 17:07:20,407 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-09 17:07:20,407 - INFO - Auto-config: True
+2026-11-09 17:07:20,407 - INFO - Max retries: 3
+2026-11-09 17:07:20,407 - INFO - PhysicsAware fallback: False
+2026-11-09 17:07:20,407 - INFO - Complexity threshold: 20
+2026-11-09 17:07:20,407 - INFO - Deterministic PySR: True
+2026-11-09 17:07:20,407 - INFO - ======================================================================
+2026-11-09 17:07:20,407 - INFO - Using provided iterations: 1000
+2026-11-09 17:07:20,407 - INFO - Parsimony: 0.01
+2026-11-09 17:07:20,407 - INFO - Transcendental compositions: False
+2026-11-09 17:07:20,407 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 17:07:20,411 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-09 17:07:20,506 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 17:07:20,506 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+2026-11-09 17:07:25,638 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-11-09 17:07:25,764 - INFO -    Result: (s1**2 + s2**2 + 2*rho*s1*s2)**0.5
+2026-11-09 17:07:25,764 - INFO -    R2 = 0.9975
+2026-11-09 17:07:25,764 - INFO -    LLM mode: hybrid_llm_only
+2026-11-09 17:07:25,764 - INFO -    [BEST] New best!
+2026-11-09 17:07:25,764 - INFO -    [EARLY STOP] Excellent result (R²=0.997546)
+   ✓ LLM engine initialized (claude-sonnet-4-6)
+   ✓ LLM mode: hybrid
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Portfolio Std Dev
+Domain: DEFI_RISK
+Samples: 160
+Variables: ['s1', 's2', 'rho']
+LLM mode: hybrid
+Equation hint: Portfolio Std Dev
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[HYBRID MODE] LLM first, PySR refinement...
+   LLM best: (s1**2 + s2**2 + 2*rho*s1*s2)**0.5
+   LLM R²: 0.9975
+   LLM time: 5.13s
+   ✅ LLM solution excellent, skipping PySR
+
+[OK] Discovery complete
+   Expression: (s1**2 + s2**2 + 2*rho*s1*s2)**0.5
+   R2 Score: 0.9975
+   Engine: symbolic
+   LLM mode used: hybrid_llm_only
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 84.9/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] (s1**2 + s2**2 + 2*rho*s1*s2)**0.5  R²=0.9975  extrap(near=1.0000 med=1.0000 far=1.0000)  5.3s  scale_log=False  llm=hybrid_llm_only
+  [ 3204.5s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia saved to checkpoint
+  [ 3204.5s] run_condition START: Portfolio Std Dev [hypatia_nollm]  seed=140  wall_clock=3600s
+  [ 3204.5s] generate_data: Portfolio Std Dev  N=200  noise=0.05  seed=140
+  [ 3204.5s] generate_data done: X_train=(160, 3)
+2026-11-09 17:07:25,791 - INFO - ======================================================================
+2026-11-09 17:07:25,791 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-09 17:07:25,791 - INFO - ======================================================================
+2026-11-09 17:07:25,791 - INFO - Domain: defi_risk
+2026-11-09 17:07:25,791 - INFO - Discovery mode: strict
+2026-11-09 17:07:25,791 - INFO - Primary LLM: anthropic
+2026-11-09 17:07:25,791 - INFO - use_llm: False  |  llm_mode: none
+2026-11-09 17:07:25,791 - INFO - Auto-config: True
+2026-11-09 17:07:25,791 - INFO - Max retries: 3
+2026-11-09 17:07:25,791 - INFO - PhysicsAware fallback: False
+2026-11-09 17:07:25,791 - INFO - Complexity threshold: 20
+2026-11-09 17:07:25,791 - INFO - Deterministic PySR: True
+2026-11-09 17:07:25,791 - INFO - ======================================================================
+2026-11-09 17:07:25,791 - INFO - Using provided iterations: 1000
+2026-11-09 17:07:25,791 - INFO - Parsimony: 0.01
+2026-11-09 17:07:25,791 - INFO - Transcendental compositions: False
+2026-11-09 17:07:25,791 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_risk', use_tc=False)
+2026-11-09 17:07:25,791 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-09 17:07:25,886 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+
+2026-11-09 17:07:25,887 - INFO - 
+[SYMBOLIC] Attempt 1/3 (seed=42)
+
+======================================================================
+DISCOVERY WORKFLOW v5.1
+======================================================================
+Description: Portfolio Std Dev
+Domain: DEFI_RISK
+Samples: 160
+Variables: ['s1', 's2', 'rho']
+LLM mode: none
+Equation hint: Portfolio Std Dev
+======================================================================
+
+[DISCOVER] Running symbolic regression...
+
+[DISCOVERY] Starting symbolic regression...
+   Variables: s1, s2, rho
+   Samples: 160
+   Iterations: 1000
+   [PySR] unary_operators   = ['sqrt']
+   [PySR] binary_operators  = ['+', '-', '*', '/']
+   [PySR] niterations       = 1000
+   [PySR] parsimony         = 0.01
+   [PySR] timeout_in_seconds= 1100
+   [PySR] loss kwarg        = []
+   [PySR] define_operators = NOT SET (old PySR path)
+   [PySR] PySRRegressor constructed OK
+   [MEM] before PySR: RSS=1.12 GB
+   [MEM] after PySR: RSS=1.12 GB
+2026-11-09 17:08:26,301 - INFO -    Result: sqrt(s2 * (s2 - ((s1 * ((s1 / (s2 / -0.4967928)) - rho)) * 2.0039918)))
+2026-11-09 17:08:26,301 - INFO -    R2 = 0.9976
+2026-11-09 17:08:26,301 - INFO -    [BEST] New best!
+2026-11-09 17:08:26,301 - INFO -    [EARLY STOP] Excellent result (R²=0.997565)
+   ✅ Found: sqrt(s2 * (s2 - ((s1 * ((s1 / (s2 / -0.4967928)) - rho)) * 2.0039918)))
+   R²: 0.9976  (selected index 13/21 by pysr_default)
+
+[OK] Discovery complete
+   Expression: sqrt(s2 * (s2 - ((s1 * ((s1 / (s2 / -0.4967928)) - rho)) * 2.0039918)))
+   R2 Score: 0.9976
+   Engine: symbolic
+   Attempt: 1/3
+
+[VALIDATE] Checking expression quality...
+[OK] Validation complete
+   Score: 84.9/100
+
+======================================================================
+[OK] WORKFLOW COMPLETE
+======================================================================
+
+  [hypatia] sqrt(s2 * (s2 - ((s1 * ((s1 / (s2 / -0.4967928)) - rho)  R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  60.5s  scale_log=False  llm=none
+  [ 3265.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  ✓ hypatia_nollm saved to checkpoint
+
+✅ Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json
+   Complete: 3/15 equations (both conditions)
+
+────────────────────────────────────────────────────────────────────────────────
+Eq                          P_near  H_near    P_med   H_med    P_far   H_far    P_time   H_time
+────────────────────────────────────────────────────────────────────────────────
+Arrhenius                      N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Henderson-Hasselbalch          N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Rate Law                       N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Allometric Scaling             N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Michaelis-Menten               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Logistic Growth                N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Kinetic Energy                 N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Gravitational Force            N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Ideal Gas Law                  N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Impermanent Loss               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Price Impact                   N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Constant Product               N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
+Value at Risk               0.9999  0.9999   1.0000  1.0000   0.9999  0.9999     966.2     90.9
+Liquidation Price           1.0000  0.9997   1.0000  0.9999   1.0000  0.9992     985.2     86.5
+Portfolio Std Dev           0.8818  1.0000   0.9577  1.0000  -71.3082  1.0000     901.5      5.3
+────────────────────────────────────────────────────────────────────────────────
+Mean (far OOD)                                               -23.1028  0.9997
+
+Speedup (PySR-time / HypatiaX-time):  mean=64.24×  median=11.38×  n=3
+
+RF-01 pairs: 3  skipped: ['Arrhenius', 'Henderson-Hasselbalch', 'Rate Law', 'Allometric Scaling', 'Michaelis-Menten', 'Logistic Growth', 'Kinetic Energy', 'Gravitational Force', 'Ideal Gas Law', 'Impermanent Loss', 'Price Impact', 'Constant Product']
+
+════════════════════════════════════════════════════════════════════════
+AGGREGATE STATISTICAL TESTS  (RF-01)
+════════════════════════════════════════════════════════════════════════
+  n (paired)                 : 3
+  H Far-R²  median/mean      : +0.9999 / +0.9997
+  P Far-R²  median/mean      : +0.9999 / -23.1028
+  H wins / ties / P wins     : 1 / 2 / 0
+  PRIMARY: Wilcoxon p(H>P)   : 0.6250   (Mann-Whitney below = sensitivity only)
+  Mann-Whitney U (H > P)     : U=5,  p=0.5000
+  Mann-Whitney U (two-sided) : U=5,  p=1.0000
+  Wilcoxon signed-rank       : W=3, p(2-sided)=1.0000, p(H>P)=0.6250
+  Rank-biserial r            : +0.111
+  Significant (α=0.05)       : NO ⚠
+  Paper targets              : U=126, p=0.295 (Run A / seed=42 / pops=30)
+
+  ⚠️  NOT SIGNIFICANT
+
+  Across Core-15, HypatiaX does not achieve statistically significant higher
+    far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=3$,
+    $p_{H>P}=0.6250$; Mann-Whitney sensitivity $U=5$, $p=0.5000$, $n=3$; rank-
+    biserial $r=+0.11$). The directional improvement is concentrated in 1
+    domain(s) — DeFi Risk, suggesting benefit is domain-selective.
+
+  📄  RF-01 JSON → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_rf01_mannwhitney.json
+  📄  RF-01 significance LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_rf01_significant.tex
+  📄  RF-01 sub-domain LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_rf01_subdomain.tex
+
+LLM-CONTRIBUTION (3-arm far-R2): 3 equation(s) with all arms
+  failures per arm (excluded from tests): P=12, H=12, N=12
+  H_vs_P: median +0.9999 vs +0.9999 | W/T/L 1/2/0 | MWU p(>)=0.1843 p(2s)=0.3687 | r_rb=+0.556
+  N_vs_P: median +0.9999 vs +0.9999 | W/T/L 1/2/0 | MWU p(>)=0.3265 p(2s)=0.6531 | r_rb=+0.333
+  H_vs_N: median +0.9999 vs +0.9999 | W/T/L 0/3/0 | MWU p(>)=0.5903 p(2s)=1.0000 | r_rb=+0.000
+  H_vs_P: PRIMARY Wilcoxon p(>)=0.5 Holm-adjusted=1.0  (Mann-Whitney = sensitivity only)
+  N_vs_P: PRIMARY Wilcoxon p(>)=0.5 Holm-adjusted=1.0  (Mann-Whitney = sensitivity only)
+  H_vs_N: PRIMARY Wilcoxon p(>)=None Holm-adjusted=None  (Mann-Whitney = sensitivity only)
+  📄  LLM-contribution JSON → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_llm_contribution.json
+✅ Table 5 LaTeX → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_table.tex
+✅ Instability stats → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_instability_stats.json
+✅ Instability CSV   → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/instability_extrapolation_v2.csv
+Equation                     Condition       timed_out  excl_timing   wall_s
+────────────────────────────────────────────────────────────────────────────
+  Arrhenius                  pysr_only           False        False      0.0
+  Arrhenius                  hypatia             False        False      0.0
+  Arrhenius                  hypatia_nollm       False        False      0.0
+  Henderson-Hasselbalch      pysr_only           False        False      0.0
+  Henderson-Hasselbalch      hypatia             False        False      0.0
+  Henderson-Hasselbalch      hypatia_nollm       False        False      0.0
+  Rate Law                   pysr_only           False        False      0.0
+  Rate Law                   hypatia             False        False      0.0
+  Rate Law                   hypatia_nollm       False        False      0.0
+  Allometric Scaling         pysr_only           False        False      0.0
+  Allometric Scaling         hypatia             False        False      0.0
+  Allometric Scaling         hypatia_nollm       False        False      0.0
+  Michaelis-Menten           pysr_only           False        False      0.0
+  Michaelis-Menten           hypatia             False        False      0.0
+  Michaelis-Menten           hypatia_nollm       False        False      0.0
+  Logistic Growth            pysr_only           False        False      0.0
+  Logistic Growth            hypatia             False        False      0.0
+  Logistic Growth            hypatia_nollm       False        False      0.0
+  Kinetic Energy             pysr_only           False        False      0.0
+  Kinetic Energy             hypatia             False        False      0.0
+  Kinetic Energy             hypatia_nollm       False        False      0.0
+  Gravitational Force        pysr_only           False        False      0.0
+  Gravitational Force        hypatia             False        False      0.0
+  Gravitational Force        hypatia_nollm       False        False      0.0
+  Ideal Gas Law              pysr_only           False        False      0.0
+  Ideal Gas Law              hypatia             False        False      0.0
+  Ideal Gas Law              hypatia_nollm       False        False      0.0
+  Impermanent Loss           pysr_only           False        False      0.0
+  Impermanent Loss           hypatia             False        False      0.0
+  Impermanent Loss           hypatia_nollm       False        False      0.0
+  Price Impact               pysr_only           False        False      0.0
+  Price Impact               hypatia             False        False      0.0
+  Price Impact               hypatia_nollm       False        False      0.0
+  Constant Product           pysr_only           False        False      0.0
+  Constant Product           hypatia             False        False      0.0
+  Constant Product           hypatia_nollm       False        False      0.0
+  Value at Risk              pysr_only           False        False    966.2
+  Value at Risk              hypatia             False        False     90.9
+  Value at Risk              hypatia_nollm       False        False     85.8
+  Liquidation Price          pysr_only           False        False    985.2
+  Liquidation Price          hypatia             False        False     86.5
+  Liquidation Price          hypatia_nollm       False        False     82.6
+  Portfolio Std Dev          pysr_only           False        False    901.5
+  Portfolio Std Dev          hypatia             False        False      5.3
+  Portfolio Std Dev          hypatia_nollm       False        False     60.5
+
+✅ C3: wall_clock_flags.json saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/wall_clock_flags.json
+  ℹ️  No equations flagged — all completed within wall-clock cap.
+✅ Provenance → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/provenance_map_exp1.json
+
+======================================================================
+SUBMISSION READINESS — BLOCKER CHECKLIST
+======================================================================
+  ✅  C1 True OOD eval (sympy)             sympy + formula_sympy on all 15 eqs
+  ✅  C2 instability CSV                   CSV exists + non-zero ii
+  ✅  C3 wall-clock dag tags               flags JSON present
+  ❌  C4 Portfolio seed sweep              run run_portfolio_seed_sweep()
+======================================================================
+  🔴  1 blocker(s) still open — do not submit yet.
+
+✅ exp1_ablation.py complete — all outputs written.
+>>>>>>> Stashed changes
