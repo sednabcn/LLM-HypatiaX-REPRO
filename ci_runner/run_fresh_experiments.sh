@@ -259,7 +259,7 @@ for stage in "${STAGES[@]}"; do
       exit 1
     fi
     echo "Warming PySR/Julia with a tiny synthetic fit (not a benchmark result)..."
-    timeout 900s python3 - "$RESULTS_DIR" <<'PY' > "$RESULTS_DIR/logs/pysr-warmup.log" 2>&1
+    if timeout 900s python3 - "$RESULTS_DIR" <<'PY' > "$RESULTS_DIR/logs/pysr-warmup.log" 2>&1
 import sys
 from pathlib import Path
 import numpy as np
@@ -273,7 +273,7 @@ y = 2.0 * X[:, 0] + 1.0
 model = PySRRegressor(
     niterations=5,
     populations=1,
-    maxsize=5,
+    maxsize=7,
     verbosity=0,
     progress=False,
     tempdir=str(out),
@@ -281,6 +281,14 @@ model = PySRRegressor(
 model.fit(X, y)
 print("PySR/Julia warm-up OK; this synthetic fit is excluded from experiment outputs.")
 PY
+    then
+      record_stage "pysr_warmup" "passed"
+    else
+      warmup_rc=$?
+      record_stage "pysr_warmup" "failed"
+      echo "ERROR: PySR/Julia warm-up failed (exit $warmup_rc); see $RESULTS_DIR/logs/pysr-warmup.log" >&2
+      exit "$warmup_rc"
+    fi
     echo "Capturing exact Python and Julia runtime provenance..."
     python3 -m pip freeze --all > "$RESULTS_DIR/python-environment-freeze.txt"
     python3 - <<'PY' > "$RESULTS_DIR/python-runtime-versions.txt"
