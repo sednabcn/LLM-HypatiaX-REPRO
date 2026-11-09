@@ -1000,7 +1000,16 @@ jobs:
           for d in "${DIRS[@]}"; do
             [[ -d "$d" ]] || continue
             echo "[clean_llm_rerun] stale checkpoints under $d:"
-            find "$d" -type f -name '*checkpoint*' -print -delete
+            echo "[clean_llm_rerun] EXP=${EXP} d=${d}"
+            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation ]]; then
+              echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
+              # shard-scoped: never touch other shards' checkpoints or stale_* dirs
+              find "$d" -type f -name "*checkpoint*_shard${{ matrix.shard }}.json" \
+                   -not -path '*/stale_*' -print -delete
+            else
+              echo "[clean_llm_rerun] UNSCOPED delete"
+              find "$d" -type f -name '*checkpoint*' -print -delete
+            fi
           done
 
       - name: Clean live-LLM rerun - bypass audit gate
