@@ -20,6 +20,7 @@ on:
       - "hypatiax/core/**"
       - "hypatiax/tools/utils/pca_split_utils.py"
       - "hypatiax/experiments/tests/**"
+      - "ci_runner/**"
       - "hypatiax/experiments/benchmarks/**"
       - "run_all.sh"
       - ".github/workflows/ci_runner_repro.yml"
