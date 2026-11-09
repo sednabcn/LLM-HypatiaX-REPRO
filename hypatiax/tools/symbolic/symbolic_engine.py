@@ -79,7 +79,7 @@ import re
 import subprocess
 import time
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, field
 from typing import ClassVar
 
 import numpy as np
@@ -115,11 +115,7 @@ except ImportError:
 # ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
-# Lazy loading for PySR
-try:
-    from pysr import PySR
-except ImportError:
-    PySR = None
+# PySRRegressor is imported lazily inside SymbolicEngine.discover().
 
 M5_FAILURES: list = []  # audit M5: one entry per swallowed fit/predict/metric failure; exclude these runs from statistics
 
@@ -530,11 +526,10 @@ class DiscoveryConfig:
 class LLMConfig:
     """Configuration for LLM hypothesis generation."""
 
-    # Shared with PureLLMBaseline via HYPATIAX_LLM_MODEL; the rerun protocol exports this value.
     model: str = field(default_factory=lambda: os.environ.get("HYPATIAX_LLM_MODEL", "claude-sonnet-4-6"))
     max_tokens: int = 2000
-    # AUDIT C1: shared setting. CI/run_all.sh export LLM_TEMPERATURE=0.25; default unchanged outside CI.
-    temperature: float = field(default_factory=lambda: float(os.environ.get("LLM_TEMPERATURE", "0.3")))
+    # Shared protocol setting; read at instance creation so environment overrides are honoured.
+    temperature: float = field(default_factory=lambda: float(os.environ.get("LLM_TEMPERATURE", "0.25")) )
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
     api_key: str | None = None
