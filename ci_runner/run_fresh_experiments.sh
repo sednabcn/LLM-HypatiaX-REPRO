@@ -28,7 +28,6 @@ STAGES=(
   exp1b_pca
   extrap
   hybrid_all_domains
-  instability
   exp2_feynman
   exp2_feynman_pca_4060
   exp2_feynman_extrap
