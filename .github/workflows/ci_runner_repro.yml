@@ -2032,6 +2032,80 @@ jobs:
           print(f"  OK exp1b_seeds seed {seed} verified.")
           PYEOF
 
+
+      - name: Verify exp1-provenance shard and write provenance manifest
+        if: ${{ needs.plan.outputs.exp_id == 'exp1-provenance' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SCRIPT_PATH: ${{ needs.plan.outputs.script_path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import hashlib, json, os, platform
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          target = Path(os.environ["OUT_BASE"]) / os.environ["RESULT_SUBDIR"]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds = sorted({int(t.rsplit("_seed", 1)[1]) for t in shard_ids if "_seed" in t})
+          domains = sorted({t.rsplit("_seed", 1)[0] for t in shard_ids if "_seed" in t})
+          expected_seeds = [42, 99, 123, 777, 2024]
+          shard_index = int(os.environ["SHARD_INDEX"])
+          if seeds != [expected_seeds[shard_index]]:
+              raise SystemExit(f"::error::exp1-provenance shard {shard_index} has unexpected seed assignment: {seeds}")
+          if len(domains) != 10:
+              raise SystemExit(f"::error::exp1-provenance requires all 10 domain tasks; got {domains}")
+          seed = seeds[0]
+          suffix = "" if seed == 42 else f"_seed{seed}"
+          result_path = target / f"hypatiax_defi_benchmark_v3_results{suffix}.json"
+          if not result_path.is_file() or result_path.stat().st_size == 0:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing result file {result_path}")
+          data = json.loads(result_path.read_text(encoding="utf-8"))
+          records = data if isinstance(data, list) else data.get("results", [])
+          if len(records) != 74:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: expected 74 case records, got {len(records)}")
+          stamped = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+          if len(stamped) != 74 or any(str(v) != str(seed) for v in stamped):
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing or inconsistent seed stamps: {sorted(set(map(str, stamped)))}")
+
+          script = Path(os.environ["SCRIPT_PATH"])
+          config = Path("config/repro.yaml")
+          def sha256(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          manifest = {
+              "experiment_id": "exp1-provenance",
+              "status": "passed",
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "commit_sha": os.environ["GITHUB_SHA"],
+              "git_ref": os.environ["GITHUB_REF"],
+              "seed": seed,
+              "shard_index": shard_index,
+              "shard_id": int(os.environ["SHARD_ID"]),
+              "assigned_task_ids": shard_ids,
+              "assigned_domains": domains,
+              "expected_case_count": 74,
+              "observed_case_count": len(records),
+              "result_file": result_path.name,
+              "result_sha256": sha256(result_path),
+              "script_path": str(script),
+              "script_sha256": sha256(script),
+              "repro_config_sha256": sha256(config),
+              "python_version": platform.python_version(),
+              "anthropic_sdk_version": __import__("anthropic").__version__,
+              "clean_run_flags": {
+                  "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
+                  "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
+                  "HYPATIAX_STRICT": os.environ.get("HYPATIAX_STRICT"),
+                  "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
+              },
+              "created_at_utc": datetime.now(timezone.utc).isoformat(),
+          }
+          manifest_path = target / f"exp1-provenance_seed{seed}_manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(f"Verified exp1-provenance seed {seed}: 74/74 records; manifest={manifest_path}")
+          PYEOF
+
       - name: Verify exp1_pca_seeds output (this shard's seed file exists, is stamped with that seed)
         if: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
