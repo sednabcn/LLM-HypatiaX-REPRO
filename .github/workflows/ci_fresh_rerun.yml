@@ -53,7 +53,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
+          # Install the repository package itself. Installing requirements alone
+          # does not make the local hypatiax/ package importable from script paths.
+          python -m pip install --no-deps -e .
           python -m pip check
+          python - <<'PY'
+          import hypatiax
+          from hypatiax.core.r2_canonical import r2_checked
+          print("hypatiax package import: OK", hypatiax.__file__)
+          print("canonical R2 import: OK", r2_checked.__module__)
+          PY
           python - <<'PY'
           from importlib.metadata import version
           expected = {
