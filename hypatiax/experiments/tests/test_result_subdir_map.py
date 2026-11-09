@@ -189,3 +189,60 @@ def test_exp1b_artifact_rescue_moves_do_not_suppress_failures():
         end = runner.find("\nrun ", start + 1)
         block = runner[start: end if end >= 0 else len(runner)]
         assert 'mv -v \\"\\$src\\" \\"\\$dst\\" || true' not in block
+
+
+
+def test_defi_metric_guard_handles_none_invalid_and_nonfinite_scores():
+    import ast
+    import math
+
+    source_path = (
+        ROOT / "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+    )
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    helper = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_finite_metric"
+    )
+    isolated = ast.Module(body=[helper], type_ignores=[])
+    namespace = {"_math": math}
+    exec(compile(isolated, str(source_path), "exec"), namespace)
+    finite_metric = namespace["_finite_metric"]
+
+    assert finite_metric(None) is None
+    assert finite_metric("not-a-score") is None
+    assert finite_metric(float("nan")) is None
+    assert finite_metric(float("inf")) is None
+    assert finite_metric("-inf") is None
+    assert finite_metric("0.875") == 0.875
+    assert finite_metric(-0.25) == -0.25
+
+
+def test_defi_case_metrics_use_safe_conversion_and_preserve_failed_arms():
+    source = (
+        ROOT / "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+    ).read_text(encoding="utf-8")
+    start = source.index("# ── Augment with extrapolation gap and stability score")
+    end = source.index("# ── Print per-case summary", start)
+    block = source[start:end]
+
+    assert "tr_ = _finite_metric(res.get(\"train_r2\"))" in block
+    assert "te_ = _finite_metric(res.get(\"test_r2\"))" in block
+    assert "np.isnan(tr_)" not in block
+    assert "np.isnan(te_)" not in block
+    assert 'res["extrapolation_gap"]' in block
+    assert 'res["stability_score"]' in block
+
+
+def test_exp1_optional_analysis_script_does_not_fail_when_absent():
+    runner = (ROOT / "run_all.sh").read_text(encoding="utf-8")
+    start = runner.index('run exp1 "')
+    end = runner.find("\\nrun ", start + 1)
+    block = runner[start : end if end >= 0 else len(runner)]
+
+    assert '_ANALYSIS_SCRIPT="${ANALYSIS_DIR}/statistical_analysis.py"' in block
+    assert 'if [[ -f "${_ANALYSIS_SCRIPT}" ]]' in block
+    assert "optional statistical_analysis.py not found" in block
+    assert 'cd "${ANALYSIS_DIR}"' not in block
