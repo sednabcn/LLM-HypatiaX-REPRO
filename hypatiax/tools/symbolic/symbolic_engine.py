@@ -79,7 +79,7 @@ import re
 import subprocess
 import time
 import warnings
-from dataclasses import dataclass, field, field
+from dataclasses import dataclass, field
 from typing import ClassVar
 
 import numpy as np
