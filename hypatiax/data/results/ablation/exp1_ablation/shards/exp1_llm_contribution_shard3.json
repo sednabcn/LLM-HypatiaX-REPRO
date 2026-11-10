@@ -11,50 +11,51 @@
     0.9999999046806634
   ],
   "N_far": [
-    0.9999688764804265,
-    -4.346004194629145,
-    0.9999855366303543
+    0.9993717471102254,
+    -1.4538338340006427,
+    0.9999849923369739
   ],
   "P_far": [
-    0.9999757432324381,
-    0.9996674415802347,
-    0.9999999901120057
+    0.9999614183203757,
+    -7.364461444164192,
+    0.9999776113379625
   ],
   "tests": {
     "H_vs_P": {
       "median_a": 1.0,
-      "median_b": 0.9999757432324381,
-      "wins": 0,
-      "ties": 3,
-      "losses": 0,
-      "U_greater": 4.5,
-      "p_greater": 0.5902615116112394,
-      "p_two_sided": 1.0,
-      "rank_biserial_r": 0.0,
-      "n_tied": 3,
-      "tie_tol": 0.01,
-      "wilcoxon_note": "all paired differences within tolerance (all ties)",
-      "wilcoxon_p_greater_holm": null
-    },
-    "N_vs_P": {
-      "median_a": 0.9999688764804265,
-      "median_b": 0.9999757432324381,
-      "wins": 0,
+      "median_b": 0.9999614183203757,
+      "wins": 1,
       "ties": 2,
-      "losses": 1,
-      "U_greater": 4.0,
-      "p_greater": 0.673452442533909,
-      "p_two_sided": 1.0,
-      "rank_biserial_r": -0.11111111111111116,
+      "losses": 0,
+      "U_greater": 7.0,
+      "p_greater": 0.18434413468089078,
+      "p_two_sided": 0.36868826936178156,
+      "rank_biserial_r": 0.5555555555555556,
       "n_tied": 2,
       "tie_tol": 0.01,
-      "wilcoxon_W": 0.0,
-      "wilcoxon_p_greater": 1.0,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
+      "wilcoxon_p_greater_holm": 1.0
+    },
+    "N_vs_P": {
+      "median_a": 0.9993717471102254,
+      "median_b": 0.9999614183203757,
+      "wins": 1,
+      "ties": 2,
+      "losses": 0,
+      "U_greater": 5.0,
+      "p_greater": 0.5,
+      "p_two_sided": 1.0,
+      "rank_biserial_r": 0.11111111111111116,
+      "n_tied": 2,
+      "tie_tol": 0.01,
+      "wilcoxon_W": 1.0,
+      "wilcoxon_p_greater": 0.5,
       "wilcoxon_p_greater_holm": 1.0
     },
     "H_vs_N": {
       "median_a": 1.0,
-      "median_b": 0.9999688764804265,
+      "median_b": 0.9993717471102254,
       "wins": 1,
       "ties": 2,
       "losses": 0,
