@@ -212,6 +212,22 @@ jobs:
             exit 1
           fi
 
+          # exp1-provenance is the complete five-seed DeFi benchmark (42,99,123,777,2024).
+          # Running it alongside exp1 (seed 42) or exp1b_seeds (the four non-42 seeds)
+          # repeats benchmark work already covered by the provenance run.
+          HAS_PROVENANCE=false
+          HAS_EXP1=false
+          HAS_EXP1B_SEEDS=false
+          for ID in $IDS; do
+            [[ "$ID" == "exp1-provenance" ]] && HAS_PROVENANCE=true
+            [[ "$ID" == "exp1" ]] && HAS_EXP1=true
+            [[ "$ID" == "exp1b_seeds" ]] && HAS_EXP1B_SEEDS=true
+          done
+          if [[ "$HAS_PROVENANCE" == true && ( "$HAS_EXP1" == true || "$HAS_EXP1B_SEEDS" == true ) ]]; then
+            echo "::error::Duplicate DeFi benchmark dispatch: exp1-provenance already runs seeds 42,99,123,777,2024. Do not combine it with exp1 or exp1b_seeds; choose the provenance run OR the split exp1 + exp1b_seeds route."
+            exit 1
+          fi
+
           echo "::notice::Fanning out ${IDS} as isolated dispatches on ref ${REF}."
           for ID in $IDS; do
             echo "::notice::Dispatching isolated run for experiment=${ID}"
