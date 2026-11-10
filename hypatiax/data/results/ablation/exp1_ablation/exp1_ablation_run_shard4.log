@@ -5,7 +5,7 @@ timeout_s   : METHOD_TIMEOUT=900s  PYSR_TIMEOUT=1100s
 wall-clock  : hypatia=3600s  pysr_only=1400s  (FIX-WALLCLOCK)
 seed        : 42  (source: PYSR_SEED)
 ✅ Parameters ready
-   [MEM] start: RSS=0.82 GB
+   [MEM] start: RSS=0.83 GB
 ✅ HybridDiscoverySystem (v5.1) imported from /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/tools/symbolic/hybrid_system_v50_2.py
 ✅ PySR 2.0.0a1 ready
   [    0.0s] Imports complete
@@ -43,36 +43,36 @@ Resuming    : 0 checkpointed entries
   [    0.0s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
   [    0.0s] generate_data done: X_train=(160, 1)
   [    0.0s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
-  [pysr_only] train_R²=0.9975  extrap(near=0.9088 med=-0.3172 far=-62.8478)  time=1116.0s
-  [ 1116.0s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [pysr_only] train_R²=0.9975  extrap(near=0.9085 med=-0.3183 far=-62.8933)  time=1116.6s
+  [ 1116.6s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ pysr_only saved to checkpoint
-  [ 1116.0s] run_condition START: Impermanent Loss [hypatia]  seed=105  wall_clock=3600s
-  [ 1116.0s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
-  [ 1116.0s] generate_data done: X_train=(160, 1)
-2026-11-09 16:33:23,251 - INFO - ======================================================================
-2026-11-09 16:33:23,251 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 16:33:23,251 - INFO - ======================================================================
-2026-11-09 16:33:23,251 - INFO - Domain: defi_amm
-2026-11-09 16:33:23,251 - INFO - Discovery mode: strict
-2026-11-09 16:33:23,251 - INFO - Primary LLM: anthropic
-2026-11-09 16:33:23,251 - INFO - use_llm: True  |  llm_mode: hybrid
-2026-11-09 16:33:23,251 - INFO - Auto-config: True
-2026-11-09 16:33:23,251 - INFO - Max retries: 3
-2026-11-09 16:33:23,251 - INFO - PhysicsAware fallback: False
-2026-11-09 16:33:23,251 - INFO - Complexity threshold: 20
-2026-11-09 16:33:23,251 - INFO - Deterministic PySR: True
-2026-11-09 16:33:23,251 - INFO - ======================================================================
-2026-11-09 16:33:23,251 - INFO - Using provided iterations: 1000
-2026-11-09 16:33:23,251 - INFO - Parsimony: 0.01
-2026-11-09 16:33:23,251 - INFO - Transcendental compositions: False
-2026-11-09 16:33:23,251 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 16:33:23,344 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
-2026-11-09 16:33:23,536 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 1116.6s] run_condition START: Impermanent Loss [hypatia]  seed=105  wall_clock=3600s
+  [ 1116.6s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
+  [ 1116.6s] generate_data done: X_train=(160, 1)
+2026-11-10 09:23:34,259 - INFO - ======================================================================
+2026-11-10 09:23:34,259 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 09:23:34,259 - INFO - ======================================================================
+2026-11-10 09:23:34,259 - INFO - Domain: defi_amm
+2026-11-10 09:23:34,259 - INFO - Discovery mode: strict
+2026-11-10 09:23:34,259 - INFO - Primary LLM: anthropic
+2026-11-10 09:23:34,259 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-10 09:23:34,259 - INFO - Auto-config: True
+2026-11-10 09:23:34,259 - INFO - Max retries: 3
+2026-11-10 09:23:34,259 - INFO - PhysicsAware fallback: False
+2026-11-10 09:23:34,260 - INFO - Complexity threshold: 20
+2026-11-10 09:23:34,260 - INFO - Deterministic PySR: True
+2026-11-10 09:23:34,260 - INFO - ======================================================================
+2026-11-10 09:23:34,260 - INFO - Using provided iterations: 1000
+2026-11-10 09:23:34,260 - INFO - Parsimony: 0.01
+2026-11-10 09:23:34,260 - INFO - Transcendental compositions: False
+2026-11-10 09:23:34,260 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 09:23:34,373 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-10 09:23:34,569 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 16:33:23,536 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 16:33:23,536 - INFO - 
+2026-11-10 09:23:34,570 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 09:23:34,570 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
-2026-11-09 16:33:29,386 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-11-10 09:23:40,412 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -92,7 +92,7 @@ Equation hint: Impermanent Loss
 [HYBRID MODE] LLM first, PySR refinement...
    LLM best: -0.5 * (r - 1)**2 / r
    LLM R²: -1.0287
-   LLM time: 5.86s
+   LLM time: 5.85s
    ⚠ LLM R²=-1.029 < 0.5 — discarding LLM prior, running pure PySR
    → Refining with PySR...
 
@@ -108,16 +108,16 @@ Equation hint: Impermanent Loss
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.04 GB
-   [MEM] after PySR: RSS=1.06 GB
-2026-11-09 16:36:55,264 - INFO -    Result: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
-2026-11-09 16:36:55,264 - INFO -    R2 = 0.9971
-2026-11-09 16:36:55,264 - INFO -    LLM mode: hybrid_pysr_better
-2026-11-09 16:36:55,264 - INFO -    [BEST] New best!
-2026-11-09 16:36:55,264 - INFO -    [EARLY STOP] Excellent result (R²=0.997117)
+   [MEM] before PySR: RSS=1.05 GB
+   [MEM] after PySR: RSS=1.07 GB
+2026-11-10 09:27:15,334 - INFO -    Result: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
+2026-11-10 09:27:15,334 - INFO -    R2 = 0.9971
+2026-11-10 09:27:15,334 - INFO -    LLM mode: hybrid_pysr_better
+2026-11-10 09:27:15,335 - INFO -    [BEST] New best!
+2026-11-10 09:27:15,335 - INFO -    [EARLY STOP] Excellent result (R²=0.997117)
    ✅ Found: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
    R²: 0.9971  (selected index 5/19 by pysr_default)
-   PySR time: 205.80s
+   PySR time: 214.82s
    PySR R²: 0.9971
    ✅ PySR refinement improved result
 
@@ -136,34 +136,34 @@ Equation hint: Impermanent Loss
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] ((-11.68438 / r) + (r * -11.676889)) - -23.330383  R²=0.9971  extrap(near=0.7160 med=-5.8992 far=N/A)  211.9s  scale_log=False  llm=hybrid_pysr_better
-  [ 1328.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] ((-11.68438 / r) + (r * -11.676889)) - -23.330383  R²=0.9971  extrap(near=0.7160 med=-5.8992 far=N/A)  220.9s  scale_log=False  llm=hybrid_pysr_better
+  [ 1337.9s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia saved to checkpoint
-  [ 1328.2s] run_condition START: Impermanent Loss [hypatia_nollm]  seed=105  wall_clock=3600s
-  [ 1328.2s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
-  [ 1328.2s] generate_data done: X_train=(160, 1)
-2026-11-09 16:36:55,431 - INFO - ======================================================================
-2026-11-09 16:36:55,431 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 16:36:55,432 - INFO - ======================================================================
-2026-11-09 16:36:55,432 - INFO - Domain: defi_amm
-2026-11-09 16:36:55,432 - INFO - Discovery mode: strict
-2026-11-09 16:36:55,432 - INFO - Primary LLM: anthropic
-2026-11-09 16:36:55,432 - INFO - use_llm: False  |  llm_mode: none
-2026-11-09 16:36:55,432 - INFO - Auto-config: True
-2026-11-09 16:36:55,432 - INFO - Max retries: 3
-2026-11-09 16:36:55,432 - INFO - PhysicsAware fallback: False
-2026-11-09 16:36:55,432 - INFO - Complexity threshold: 20
-2026-11-09 16:36:55,432 - INFO - Deterministic PySR: True
-2026-11-09 16:36:55,432 - INFO - ======================================================================
-2026-11-09 16:36:55,432 - INFO - Using provided iterations: 1000
-2026-11-09 16:36:55,432 - INFO - Parsimony: 0.01
-2026-11-09 16:36:55,432 - INFO - Transcendental compositions: False
-2026-11-09 16:36:55,432 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 16:36:55,432 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
-2026-11-09 16:36:55,622 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 1337.9s] run_condition START: Impermanent Loss [hypatia_nollm]  seed=105  wall_clock=3600s
+  [ 1337.9s] generate_data: Impermanent Loss  N=200  noise=0.05  seed=105
+  [ 1337.9s] generate_data done: X_train=(160, 1)
+2026-11-10 09:27:15,510 - INFO - ======================================================================
+2026-11-10 09:27:15,510 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 09:27:15,510 - INFO - ======================================================================
+2026-11-10 09:27:15,510 - INFO - Domain: defi_amm
+2026-11-10 09:27:15,510 - INFO - Discovery mode: strict
+2026-11-10 09:27:15,510 - INFO - Primary LLM: anthropic
+2026-11-10 09:27:15,510 - INFO - use_llm: False  |  llm_mode: none
+2026-11-10 09:27:15,510 - INFO - Auto-config: True
+2026-11-10 09:27:15,510 - INFO - Max retries: 3
+2026-11-10 09:27:15,510 - INFO - PhysicsAware fallback: False
+2026-11-10 09:27:15,510 - INFO - Complexity threshold: 20
+2026-11-10 09:27:15,510 - INFO - Deterministic PySR: True
+2026-11-10 09:27:15,510 - INFO - ======================================================================
+2026-11-10 09:27:15,511 - INFO - Using provided iterations: 1000
+2026-11-10 09:27:15,511 - INFO - Parsimony: 0.01
+2026-11-10 09:27:15,511 - INFO - Transcendental compositions: False
+2026-11-10 09:27:15,511 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 09:27:15,511 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-10 09:27:15,706 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 16:36:55,622 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 16:36:55,622 - INFO - 
+2026-11-10 09:27:15,706 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 09:27:15,706 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
 
 ======================================================================
@@ -192,11 +192,11 @@ Equation hint: Impermanent Loss
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
    [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-09 16:40:19,185 - INFO -    Result: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
-2026-11-09 16:40:19,185 - INFO -    R2 = 0.9971
-2026-11-09 16:40:19,185 - INFO -    [BEST] New best!
-2026-11-09 16:40:19,185 - INFO -    [EARLY STOP] Excellent result (R²=0.997117)
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-10 09:30:46,303 - INFO -    Result: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
+2026-11-10 09:30:46,303 - INFO -    R2 = 0.9971
+2026-11-10 09:30:46,303 - INFO -    [BEST] New best!
+2026-11-10 09:30:46,303 - INFO -    [EARLY STOP] Excellent result (R²=0.997117)
    ✅ Found: ((-11.68438 / r) + (r * -11.676889)) - -23.330383
    R²: 0.9971  (selected index 5/19 by pysr_default)
 
@@ -214,52 +214,52 @@ Equation hint: Impermanent Loss
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] ((-11.68438 / r) + (r * -11.676889)) - -23.330383  R²=0.9971  extrap(near=0.7160 med=-5.8992 far=N/A)  203.6s  scale_log=False  llm=none
-  [ 1532.0s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] ((-11.68438 / r) + (r * -11.676889)) - -23.330383  R²=0.9971  extrap(near=0.7160 med=-5.8992 far=N/A)  210.6s  scale_log=False  llm=none
+  [ 1548.7s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia_nollm saved to checkpoint
 
 ────────────────────────────────────────────────────────────
 ▶  [10] Price Impact  [DeFi AMM]
 ────────────────────────────────────────────────────────────
-  [ 1532.0s] run_condition START: Price Impact [pysr_only]  seed=112  wall_clock=1400s
-  [ 1532.0s] generate_data: Price Impact  N=200  noise=0.05  seed=112
-  [ 1532.0s] generate_data done: X_train=(160, 2)
-  [ 1532.0s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [ 1548.7s] run_condition START: Price Impact [pysr_only]  seed=112  wall_clock=1400s
+  [ 1548.7s] generate_data: Price Impact  N=200  noise=0.05  seed=112
+  [ 1548.7s] generate_data done: X_train=(160, 2)
+  [ 1548.7s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
   [pysr_only] train_R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  time=1101.4s
-  [ 2633.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [ 2650.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ pysr_only saved to checkpoint
-  [ 2633.3s] run_condition START: Price Impact [hypatia]  seed=112  wall_clock=3600s
-  [ 2633.3s] generate_data: Price Impact  N=200  noise=0.05  seed=112
-  [ 2633.3s] generate_data done: X_train=(160, 2)
-2026-11-09 16:58:40,604 - INFO - ======================================================================
-2026-11-09 16:58:40,604 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 16:58:40,605 - INFO - ======================================================================
-2026-11-09 16:58:40,605 - INFO - Domain: defi_amm
-2026-11-09 16:58:40,605 - INFO - Discovery mode: strict
-2026-11-09 16:58:40,605 - INFO - Primary LLM: anthropic
-2026-11-09 16:58:40,605 - INFO - use_llm: True  |  llm_mode: hybrid
-2026-11-09 16:58:40,605 - INFO - Auto-config: True
-2026-11-09 16:58:40,605 - INFO - Max retries: 3
-2026-11-09 16:58:40,605 - INFO - PhysicsAware fallback: False
-2026-11-09 16:58:40,605 - INFO - Complexity threshold: 20
-2026-11-09 16:58:40,605 - INFO - Deterministic PySR: True
-2026-11-09 16:58:40,605 - INFO - ======================================================================
-2026-11-09 16:58:40,605 - INFO - Using provided iterations: 1000
-2026-11-09 16:58:40,605 - INFO - Parsimony: 0.01
-2026-11-09 16:58:40,605 - INFO - Transcendental compositions: False
-2026-11-09 16:58:40,605 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 16:58:40,611 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
-2026-11-09 16:58:40,801 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 2650.1s] run_condition START: Price Impact [hypatia]  seed=112  wall_clock=3600s
+  [ 2650.1s] generate_data: Price Impact  N=200  noise=0.05  seed=112
+  [ 2650.1s] generate_data done: X_train=(160, 2)
+2026-11-10 09:49:07,716 - INFO - ======================================================================
+2026-11-10 09:49:07,716 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 09:49:07,716 - INFO - ======================================================================
+2026-11-10 09:49:07,716 - INFO - Domain: defi_amm
+2026-11-10 09:49:07,716 - INFO - Discovery mode: strict
+2026-11-10 09:49:07,716 - INFO - Primary LLM: anthropic
+2026-11-10 09:49:07,716 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-10 09:49:07,717 - INFO - Auto-config: True
+2026-11-10 09:49:07,717 - INFO - Max retries: 3
+2026-11-10 09:49:07,717 - INFO - PhysicsAware fallback: False
+2026-11-10 09:49:07,717 - INFO - Complexity threshold: 20
+2026-11-10 09:49:07,717 - INFO - Deterministic PySR: True
+2026-11-10 09:49:07,717 - INFO - ======================================================================
+2026-11-10 09:49:07,717 - INFO - Using provided iterations: 1000
+2026-11-10 09:49:07,717 - INFO - Parsimony: 0.01
+2026-11-10 09:49:07,717 - INFO - Transcendental compositions: False
+2026-11-10 09:49:07,717 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 09:49:07,723 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-10 09:49:07,913 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 16:58:40,801 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 16:58:40,801 - INFO - 
+2026-11-10 09:49:07,914 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 09:49:07,914 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
-2026-11-09 16:58:46,446 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
-2026-11-09 16:58:46,524 - INFO -    Result: dx / (x + dx)
-2026-11-09 16:58:46,525 - INFO -    R2 = 0.9976
-2026-11-09 16:58:46,525 - INFO -    LLM mode: hybrid_llm_only
-2026-11-09 16:58:46,525 - INFO -    [BEST] New best!
-2026-11-09 16:58:46,525 - INFO -    [EARLY STOP] Excellent result (R²=0.997575)
+2026-11-10 09:49:13,713 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-11-10 09:49:13,802 - INFO -    Result: dx / (x + dx)
+2026-11-10 09:49:13,802 - INFO -    R2 = 0.9976
+2026-11-10 09:49:13,802 - INFO -    LLM mode: hybrid_llm_only
+2026-11-10 09:49:13,802 - INFO -    [BEST] New best!
+2026-11-10 09:49:13,802 - INFO -    [EARLY STOP] Excellent result (R²=0.997575)
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -279,7 +279,7 @@ Equation hint: Price Impact
 [HYBRID MODE] LLM first, PySR refinement...
    LLM best: dx / (x + dx)
    LLM R²: 0.9976
-   LLM time: 5.65s
+   LLM time: 5.80s
    ✅ LLM solution excellent, skipping PySR
 
 [OK] Discovery complete
@@ -297,34 +297,34 @@ Equation hint: Price Impact
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] dx / (x + dx)  R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  5.7s  scale_log=False  llm=hybrid_llm_only
-  [ 2639.3s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] dx / (x + dx)  R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  5.9s  scale_log=False  llm=hybrid_llm_only
+  [ 2656.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia saved to checkpoint
-  [ 2639.3s] run_condition START: Price Impact [hypatia_nollm]  seed=112  wall_clock=3600s
-  [ 2639.3s] generate_data: Price Impact  N=200  noise=0.05  seed=112
-  [ 2639.3s] generate_data done: X_train=(160, 2)
-2026-11-09 16:58:46,549 - INFO - ======================================================================
-2026-11-09 16:58:46,550 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 16:58:46,550 - INFO - ======================================================================
-2026-11-09 16:58:46,550 - INFO - Domain: defi_amm
-2026-11-09 16:58:46,550 - INFO - Discovery mode: strict
-2026-11-09 16:58:46,550 - INFO - Primary LLM: anthropic
-2026-11-09 16:58:46,550 - INFO - use_llm: False  |  llm_mode: none
-2026-11-09 16:58:46,550 - INFO - Auto-config: True
-2026-11-09 16:58:46,550 - INFO - Max retries: 3
-2026-11-09 16:58:46,550 - INFO - PhysicsAware fallback: False
-2026-11-09 16:58:46,550 - INFO - Complexity threshold: 20
-2026-11-09 16:58:46,550 - INFO - Deterministic PySR: True
-2026-11-09 16:58:46,550 - INFO - ======================================================================
-2026-11-09 16:58:46,550 - INFO - Using provided iterations: 1000
-2026-11-09 16:58:46,550 - INFO - Parsimony: 0.01
-2026-11-09 16:58:46,550 - INFO - Transcendental compositions: False
-2026-11-09 16:58:46,550 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 16:58:46,550 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
-2026-11-09 16:58:46,738 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 2656.2s] run_condition START: Price Impact [hypatia_nollm]  seed=112  wall_clock=3600s
+  [ 2656.2s] generate_data: Price Impact  N=200  noise=0.05  seed=112
+  [ 2656.2s] generate_data done: X_train=(160, 2)
+2026-11-10 09:49:13,827 - INFO - ======================================================================
+2026-11-10 09:49:13,827 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 09:49:13,828 - INFO - ======================================================================
+2026-11-10 09:49:13,828 - INFO - Domain: defi_amm
+2026-11-10 09:49:13,828 - INFO - Discovery mode: strict
+2026-11-10 09:49:13,828 - INFO - Primary LLM: anthropic
+2026-11-10 09:49:13,828 - INFO - use_llm: False  |  llm_mode: none
+2026-11-10 09:49:13,828 - INFO - Auto-config: True
+2026-11-10 09:49:13,828 - INFO - Max retries: 3
+2026-11-10 09:49:13,828 - INFO - PhysicsAware fallback: False
+2026-11-10 09:49:13,828 - INFO - Complexity threshold: 20
+2026-11-10 09:49:13,828 - INFO - Deterministic PySR: True
+2026-11-10 09:49:13,828 - INFO - ======================================================================
+2026-11-10 09:49:13,828 - INFO - Using provided iterations: 1000
+2026-11-10 09:49:13,828 - INFO - Parsimony: 0.01
+2026-11-10 09:49:13,828 - INFO - Transcendental compositions: False
+2026-11-10 09:49:13,828 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 09:49:13,828 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-10 09:49:14,021 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 16:58:46,738 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 16:58:46,738 - INFO - 
+2026-11-10 09:49:14,021 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 09:49:14,021 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
 
 ======================================================================
@@ -352,12 +352,12 @@ Equation hint: Price Impact
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-09 17:00:14,316 - INFO -    Result: dx / (x + dx)
-2026-11-09 17:00:14,316 - INFO -    R2 = 0.9976
-2026-11-09 17:00:14,316 - INFO -    [BEST] New best!
-2026-11-09 17:00:14,316 - INFO -    [EARLY STOP] Excellent result (R²=0.997575)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-10 09:50:45,632 - INFO -    Result: dx / (x + dx)
+2026-11-10 09:50:45,632 - INFO -    R2 = 0.9976
+2026-11-10 09:50:45,632 - INFO -    [BEST] New best!
+2026-11-10 09:50:45,632 - INFO -    [EARLY STOP] Excellent result (R²=0.997575)
    ✅ Found: dx / (x + dx)
    R²: 0.9976  (selected index 2/19 by pysr_default)
 
@@ -375,47 +375,47 @@ Equation hint: Price Impact
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] dx / (x + dx)  R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  87.6s  scale_log=False  llm=none
-  [ 2727.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] dx / (x + dx)  R²=0.9976  extrap(near=1.0000 med=1.0000 far=1.0000)  91.6s  scale_log=False  llm=none
+  [ 2748.0s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia_nollm saved to checkpoint
 
 ────────────────────────────────────────────────────────────
 ▶  [11] Constant Product  [DeFi AMM]
 ────────────────────────────────────────────────────────────
-  [ 2727.1s] run_condition START: Constant Product [pysr_only]  seed=119  wall_clock=1400s
-  [ 2727.1s] generate_data: Constant Product  N=200  noise=0.05  seed=119
-  [ 2727.1s] generate_data done: X_train=(160, 1)
-  [ 2727.1s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
-  [pysr_only] train_R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  time=1101.1s
-  [ 3828.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [ 2748.0s] run_condition START: Constant Product [pysr_only]  seed=119  wall_clock=1400s
+  [ 2748.0s] generate_data: Constant Product  N=200  noise=0.05  seed=119
+  [ 2748.0s] generate_data done: X_train=(160, 1)
+  [ 2748.0s] make_pysr: pops=30  iter=1000  timeout=1100s  warm=False
+  [pysr_only] train_R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  time=1101.2s
+  [ 3849.2s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ pysr_only saved to checkpoint
-  [ 3828.2s] run_condition START: Constant Product [hypatia]  seed=119  wall_clock=3600s
-  [ 3828.2s] generate_data: Constant Product  N=200  noise=0.05  seed=119
-  [ 3828.2s] generate_data done: X_train=(160, 1)
-2026-11-09 17:18:35,427 - INFO - ======================================================================
-2026-11-09 17:18:35,427 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 17:18:35,428 - INFO - ======================================================================
-2026-11-09 17:18:35,428 - INFO - Domain: defi_amm
-2026-11-09 17:18:35,428 - INFO - Discovery mode: strict
-2026-11-09 17:18:35,428 - INFO - Primary LLM: anthropic
-2026-11-09 17:18:35,428 - INFO - use_llm: True  |  llm_mode: hybrid
-2026-11-09 17:18:35,428 - INFO - Auto-config: True
-2026-11-09 17:18:35,428 - INFO - Max retries: 3
-2026-11-09 17:18:35,428 - INFO - PhysicsAware fallback: False
-2026-11-09 17:18:35,428 - INFO - Complexity threshold: 20
-2026-11-09 17:18:35,428 - INFO - Deterministic PySR: True
-2026-11-09 17:18:35,428 - INFO - ======================================================================
-2026-11-09 17:18:35,428 - INFO - Using provided iterations: 1000
-2026-11-09 17:18:35,428 - INFO - Parsimony: 0.01
-2026-11-09 17:18:35,428 - INFO - Transcendental compositions: False
-2026-11-09 17:18:35,428 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 17:18:35,434 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
-2026-11-09 17:18:35,622 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 3849.2s] run_condition START: Constant Product [hypatia]  seed=119  wall_clock=3600s
+  [ 3849.2s] generate_data: Constant Product  N=200  noise=0.05  seed=119
+  [ 3849.2s] generate_data done: X_train=(160, 1)
+2026-11-10 10:09:06,816 - INFO - ======================================================================
+2026-11-10 10:09:06,816 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 10:09:06,816 - INFO - ======================================================================
+2026-11-10 10:09:06,816 - INFO - Domain: defi_amm
+2026-11-10 10:09:06,816 - INFO - Discovery mode: strict
+2026-11-10 10:09:06,816 - INFO - Primary LLM: anthropic
+2026-11-10 10:09:06,816 - INFO - use_llm: True  |  llm_mode: hybrid
+2026-11-10 10:09:06,816 - INFO - Auto-config: True
+2026-11-10 10:09:06,816 - INFO - Max retries: 3
+2026-11-10 10:09:06,816 - INFO - PhysicsAware fallback: False
+2026-11-10 10:09:06,816 - INFO - Complexity threshold: 20
+2026-11-10 10:09:06,816 - INFO - Deterministic PySR: True
+2026-11-10 10:09:06,816 - INFO - ======================================================================
+2026-11-10 10:09:06,816 - INFO - Using provided iterations: 1000
+2026-11-10 10:09:06,816 - INFO - Parsimony: 0.01
+2026-11-10 10:09:06,816 - INFO - Transcendental compositions: False
+2026-11-10 10:09:06,816 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 10:09:06,822 - INFO - [LLM] SymbolicEngineWithLLM instantiated (mode=hybrid, candidates=3)
+2026-11-10 10:09:07,011 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 17:18:35,622 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 17:18:35,622 - INFO - 
+2026-11-10 10:09:07,012 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 10:09:07,012 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
-2026-11-09 17:18:40,928 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-11-10 10:09:13,060 - INFO - HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
    ✓ LLM engine initialized (claude-sonnet-4-6)
    ✓ LLM mode: hybrid
 
@@ -435,7 +435,7 @@ Equation hint: Constant Product
 [HYBRID MODE] LLM first, PySR refinement...
    LLM best: (1 - x) / (x * (1 - x + x**2))
    LLM R²: -0.2326
-   LLM time: 5.31s
+   LLM time: 6.05s
    ⚠ LLM R²=-0.233 < 0.5 — discarding LLM prior, running pure PySR
    → Refining with PySR...
 
@@ -451,16 +451,16 @@ Equation hint: Constant Product
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-09 17:20:36,319 - INFO -    Result: 9976.232 / x
-2026-11-09 17:20:36,319 - INFO -    R2 = 0.9982
-2026-11-09 17:20:36,319 - INFO -    LLM mode: hybrid_pysr_better
-2026-11-09 17:20:36,319 - INFO -    [BEST] New best!
-2026-11-09 17:20:36,319 - INFO -    [EARLY STOP] Excellent result (R²=0.998228)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-10 10:11:14,684 - INFO -    Result: 9976.232 / x
+2026-11-10 10:11:14,684 - INFO -    R2 = 0.9982
+2026-11-10 10:11:14,684 - INFO -    LLM mode: hybrid_pysr_better
+2026-11-10 10:11:14,684 - INFO -    [BEST] New best!
+2026-11-10 10:11:14,684 - INFO -    [EARLY STOP] Excellent result (R²=0.998228)
    ✅ Found: 9976.232 / x
    R²: 0.9982  (selected index 1/16 by pysr_default)
-   PySR time: 115.30s
+   PySR time: 121.52s
    PySR R²: 0.9982
    ✅ PySR refinement improved result
 
@@ -479,34 +479,34 @@ Equation hint: Constant Product
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] 9976.232 / x  R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  120.7s  scale_log=False  llm=hybrid_pysr_better
-  [ 3949.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] 9976.232 / x  R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  127.7s  scale_log=False  llm=hybrid_pysr_better
+  [ 3977.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia saved to checkpoint
-  [ 3949.1s] run_condition START: Constant Product [hypatia_nollm]  seed=119  wall_clock=3600s
-  [ 3949.1s] generate_data: Constant Product  N=200  noise=0.05  seed=119
-  [ 3949.1s] generate_data done: X_train=(160, 1)
-2026-11-09 17:20:36,340 - INFO - ======================================================================
-2026-11-09 17:20:36,340 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
-2026-11-09 17:20:36,340 - INFO - ======================================================================
-2026-11-09 17:20:36,340 - INFO - Domain: defi_amm
-2026-11-09 17:20:36,341 - INFO - Discovery mode: strict
-2026-11-09 17:20:36,341 - INFO - Primary LLM: anthropic
-2026-11-09 17:20:36,341 - INFO - use_llm: False  |  llm_mode: none
-2026-11-09 17:20:36,341 - INFO - Auto-config: True
-2026-11-09 17:20:36,341 - INFO - Max retries: 3
-2026-11-09 17:20:36,341 - INFO - PhysicsAware fallback: False
-2026-11-09 17:20:36,341 - INFO - Complexity threshold: 20
-2026-11-09 17:20:36,341 - INFO - Deterministic PySR: True
-2026-11-09 17:20:36,341 - INFO - ======================================================================
-2026-11-09 17:20:36,341 - INFO - Using provided iterations: 1000
-2026-11-09 17:20:36,341 - INFO - Parsimony: 0.01
-2026-11-09 17:20:36,341 - INFO - Transcendental compositions: False
-2026-11-09 17:20:36,341 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
-2026-11-09 17:20:36,341 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
-2026-11-09 17:20:36,530 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
+  [ 3977.1s] run_condition START: Constant Product [hypatia_nollm]  seed=119  wall_clock=3600s
+  [ 3977.1s] generate_data: Constant Product  N=200  noise=0.05  seed=119
+  [ 3977.1s] generate_data done: X_train=(160, 1)
+2026-11-10 10:11:14,705 - INFO - ======================================================================
+2026-11-10 10:11:14,705 - INFO - HybridDiscoverySystem v5.4 — LLM WIRING + OUTPUT FIXES + NaN RMSE FIXES
+2026-11-10 10:11:14,706 - INFO - ======================================================================
+2026-11-10 10:11:14,706 - INFO - Domain: defi_amm
+2026-11-10 10:11:14,706 - INFO - Discovery mode: strict
+2026-11-10 10:11:14,706 - INFO - Primary LLM: anthropic
+2026-11-10 10:11:14,706 - INFO - use_llm: False  |  llm_mode: none
+2026-11-10 10:11:14,706 - INFO - Auto-config: True
+2026-11-10 10:11:14,706 - INFO - Max retries: 3
+2026-11-10 10:11:14,706 - INFO - PhysicsAware fallback: False
+2026-11-10 10:11:14,706 - INFO - Complexity threshold: 20
+2026-11-10 10:11:14,706 - INFO - Deterministic PySR: True
+2026-11-10 10:11:14,706 - INFO - ======================================================================
+2026-11-10 10:11:14,706 - INFO - Using provided iterations: 1000
+2026-11-10 10:11:14,706 - INFO - Parsimony: 0.01
+2026-11-10 10:11:14,706 - INFO - Transcendental compositions: False
+2026-11-10 10:11:14,706 - INFO - [AUTO-v5.1] Skipping safe_asin/safe_acos injection (domain='defi_amm', use_tc=False)
+2026-11-10 10:11:14,706 - INFO - [LLM] API key found but use_llm=False — running pure PySR. Pass use_llm=True to enable LLM guidance.
+2026-11-10 10:11:14,900 - INFO - [OK] HybridDiscoverySystem v5.1 initialized
 
-2026-11-09 17:20:36,530 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
-2026-11-09 17:20:36,530 - INFO - 
+2026-11-10 10:11:14,901 - INFO - [FIX-POW] X is non-negative — adding 'pow' to binary_operators (was: ['+', '-', '*', '/'])
+2026-11-10 10:11:14,901 - INFO - 
 [SYMBOLIC] Attempt 1/3 (seed=42)
 
 ======================================================================
@@ -534,12 +534,12 @@ Equation hint: Constant Product
    [PySR] loss kwarg        = []
    [PySR] define_operators = NOT SET (old PySR path)
    [PySR] PySRRegressor constructed OK
-   [MEM] before PySR: RSS=1.07 GB
-   [MEM] after PySR: RSS=1.07 GB
-2026-11-09 17:22:31,968 - INFO -    Result: 9976.232 / x
-2026-11-09 17:22:31,968 - INFO -    R2 = 0.9982
-2026-11-09 17:22:31,968 - INFO -    [BEST] New best!
-2026-11-09 17:22:31,969 - INFO -    [EARLY STOP] Excellent result (R²=0.998228)
+   [MEM] before PySR: RSS=1.08 GB
+   [MEM] after PySR: RSS=1.08 GB
+2026-11-10 10:13:17,746 - INFO -    Result: 9976.232 / x
+2026-11-10 10:13:17,746 - INFO -    R2 = 0.9982
+2026-11-10 10:13:17,746 - INFO -    [BEST] New best!
+2026-11-10 10:13:17,746 - INFO -    [EARLY STOP] Excellent result (R²=0.998228)
    ✅ Found: 9976.232 / x
    R²: 0.9982  (selected index 1/16 by pysr_default)
 
@@ -557,8 +557,8 @@ Equation hint: Constant Product
 [OK] WORKFLOW COMPLETE
 ======================================================================
 
-  [hypatia] 9976.232 / x  R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  115.5s  scale_log=False  llm=none
-  [ 4064.7s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
+  [hypatia] 9976.232 / x  R²=0.9982  extrap(near=0.9996 med=1.0000 far=0.9996)  122.9s  scale_log=False  llm=none
+  [ 4100.1s] Checkpoint saved: /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_checkpoint.json
   ✓ hypatia_nollm saved to checkpoint
 
 ✅ Results saved → /home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json
@@ -576,16 +576,16 @@ Logistic Growth                N/A     N/A      N/A     N/A      N/A     N/A    
 Kinetic Energy                 N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
 Gravitational Force            N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
 Ideal Gas Law                  N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
-Impermanent Loss            0.9088  0.7160  -0.3172 -5.8992  -62.8478     N/A    1116.0    211.9
-Price Impact                1.0000  1.0000   1.0000  1.0000   1.0000  1.0000    1101.4      5.7
-Constant Product            0.9996  0.9996   1.0000  1.0000   0.9996  0.9996    1101.1    120.7
+Impermanent Loss            0.9085  0.7160  -0.3183 -5.8992  -62.8933     N/A    1116.6    220.9
+Price Impact                1.0000  1.0000   1.0000  1.0000   1.0000  1.0000    1101.4      5.9
+Constant Product            0.9996  0.9996   1.0000  1.0000   0.9996  0.9996    1101.2    127.7
 Value at Risk                  N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
 Liquidation Price              N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
 Portfolio Std Dev              N/A     N/A      N/A     N/A      N/A     N/A       0.0      0.0
 ────────────────────────────────────────────────────────────────────────────────
-Mean (far OOD)                                               -20.2827    -inf
+Mean (far OOD)                                               -20.2979    -inf
 
-Speedup (PySR-time / HypatiaX-time):  mean=68.71×  median=9.12×  n=3
+Speedup (PySR-time / HypatiaX-time):  mean=66.68×  median=8.62×  n=3
 
 RF-01 pairs: 2  skipped: ['Arrhenius', 'Henderson-Hasselbalch', 'Rate Law', 'Allometric Scaling', 'Michaelis-Menten', 'Logistic Growth', 'Kinetic Energy', 'Gravitational Force', 'Ideal Gas Law', 'Impermanent Loss', 'Value at Risk', 'Liquidation Price', 'Portfolio Std Dev']
 ⚠  Only 2 pair(s) — need ≥ 3 to compute statistics.
@@ -625,15 +625,15 @@ Equation                     Condition       timed_out  excl_timing   wall_s
   Ideal Gas Law              pysr_only           False        False      0.0
   Ideal Gas Law              hypatia             False        False      0.0
   Ideal Gas Law              hypatia_nollm       False        False      0.0
-  Impermanent Loss           pysr_only           False        False   1116.0
-  Impermanent Loss           hypatia             False        False    211.9
-  Impermanent Loss           hypatia_nollm       False        False    203.6
+  Impermanent Loss           pysr_only           False        False   1116.6
+  Impermanent Loss           hypatia             False        False    220.9
+  Impermanent Loss           hypatia_nollm       False        False    210.6
   Price Impact               pysr_only           False        False   1101.4
-  Price Impact               hypatia             False        False      5.7
-  Price Impact               hypatia_nollm       False        False     87.6
-  Constant Product           pysr_only           False        False   1101.1
-  Constant Product           hypatia             False        False    120.7
-  Constant Product           hypatia_nollm       False        False    115.5
+  Price Impact               hypatia             False        False      5.9
+  Price Impact               hypatia_nollm       False        False     91.6
+  Constant Product           pysr_only           False        False   1101.2
+  Constant Product           hypatia             False        False    127.7
+  Constant Product           hypatia_nollm       False        False    122.9
   Value at Risk              pysr_only           False        False      0.0
   Value at Risk              hypatia             False        False      0.0
   Value at Risk              hypatia_nollm       False        False      0.0
