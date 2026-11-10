@@ -4,17 +4,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 979.2023589611053
+      "wall_secs": 939.2614591121674
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 110.29314923286438
+      "wall_secs": 104.08385372161865
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 107.24293160438538
+      "wall_secs": 97.89083623886108
     }
   },
   "1": {
@@ -22,17 +22,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 944.2816073894501
+      "wall_secs": 930.7734754085541
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 171.20013809204102
+      "wall_secs": 111.85938763618469
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 157.28523540496826
+      "wall_secs": 142.7180438041687
     }
   },
   "2": {
@@ -40,17 +40,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.041830778122
+      "wall_secs": 1101.0567064285278
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 118.35270929336548
+      "wall_secs": 119.50691890716553
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 132.68177580833435
+      "wall_secs": 106.7016613483429
     }
   },
   "3": {
@@ -58,17 +58,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1112.9193661212921
+      "wall_secs": 1112.9214968681335
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 3.924396514892578
+      "wall_secs": 4.168268918991089
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 129.0068325996399
+      "wall_secs": 166.65469098091125
     }
   },
   "4": {
@@ -76,17 +76,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.1195526123047
+      "wall_secs": 1101.041715145111
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 113.7953519821167
+      "wall_secs": 138.23871994018555
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 101.49972629547119
+      "wall_secs": 119.83901762962341
     }
   },
   "5": {
@@ -94,17 +94,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.4749102592468
+      "wall_secs": 1101.6136419773102
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 122.71617555618286
+      "wall_secs": 142.1157968044281
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 116.65242648124695
+      "wall_secs": 145.93960881233215
     }
   },
   "6": {
@@ -112,17 +112,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1097.186253786087
+      "wall_secs": 1113.4089121818542
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 4.981112241744995
+      "wall_secs": 4.79108452796936
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 141.5798373222351
+      "wall_secs": 111.42299604415894
     }
   },
   "7": {
@@ -130,17 +130,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1029.3164432048798
+      "wall_secs": 1100.9886138439178
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 247.05983138084412
+      "wall_secs": 276.1833860874176
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 398.13587975502014
+      "wall_secs": 419.32081604003906
     }
   },
   "8": {
@@ -148,17 +148,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1069.0485203266144
+      "wall_secs": 1101.0343363285065
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 4.99353551864624
+      "wall_secs": 5.226415395736694
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 98.84188151359558
+      "wall_secs": 121.53616523742676
     }
   },
   "9": {
@@ -166,17 +166,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1115.982722043991
+      "wall_secs": 1116.6087889671326
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 211.89034342765808
+      "wall_secs": 220.93375086784363
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 203.60069108009338
+      "wall_secs": 210.63414931297302
     }
   },
   "10": {
@@ -184,17 +184,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.3749380111694
+      "wall_secs": 1101.3681364059448
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 5.743797540664673
+      "wall_secs": 5.909631252288818
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 87.5927381515503
+      "wall_secs": 91.6271243095398
     }
   },
   "11": {
@@ -202,17 +202,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 1101.0888266563416
+      "wall_secs": 1101.1607060432434
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 120.71354556083679
+      "wall_secs": 127.68913745880127
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 115.45174288749695
+      "wall_secs": 122.8604896068573
     }
   },
   "12": {
@@ -220,17 +220,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 966.1596207618713
+      "wall_secs": 1114.433233499527
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 90.86366081237793
+      "wall_secs": 100.20277953147888
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 85.79973149299622
+      "wall_secs": 89.6417133808136
     }
   },
   "13": {
@@ -238,17 +238,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 985.1647107601166
+      "wall_secs": 1101.1874103546143
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 86.53718996047974
+      "wall_secs": 103.02148342132568
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 82.5927619934082
+      "wall_secs": 97.32665228843689
     }
   },
   "14": {
@@ -256,17 +256,17 @@
     "pysr_only": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 901.4662311077118
+      "wall_secs": 1101.0313148498535
     },
     "hypatia": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 5.2812299728393555
+      "wall_secs": 5.054696798324585
     },
     "hypatia_nollm": {
       "timed_out": false,
       "excluded_from_timing": false,
-      "wall_secs": 60.461050271987915
+      "wall_secs": 139.11278581619263
     }
   }
 }

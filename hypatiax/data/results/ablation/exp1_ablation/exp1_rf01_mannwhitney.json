@@ -6,25 +6,25 @@
       "Arrhenius",
       "Impermanent Loss"
     ],
-    "U_greater": 103.5,
-    "p_greater": 0.1699290941492051,
-    "U_two_sided": 103.5,
-    "p_two_sided": 0.3398581882984102,
-    "wilcoxon_W": 19.0,
-    "wilcoxon_p_two": 0.12939453125,
-    "wilcoxon_p_greater": 0.064697265625,
-    "rank_biserial_r": 0.2248520710059172,
-    "H_median_far_r2": 0.9999409544066139,
-    "P_median_far_r2": 0.9999421684256078,
-    "H_mean_far_r2": 0.9365887407794299,
-    "P_mean_far_r2": -4.630368476280444,
-    "h_wins": 3,
-    "p_wins": 0,
-    "ties": 10,
+    "U_greater": 100.0,
+    "p_greater": 0.21866736382689572,
+    "U_two_sided": 100.0,
+    "p_two_sided": 0.43733472765379144,
+    "wilcoxon_W": 31.0,
+    "wilcoxon_p_two": 0.8984375,
+    "wilcoxon_p_greater": 0.44921875,
+    "rank_biserial_r": 0.18343195266272194,
+    "H_median_far_r2": 0.9999986607412578,
+    "P_median_far_r2": 0.9999570089447964,
+    "H_mean_far_r2": 0.9366501053343176,
+    "P_mean_far_r2": 0.30407441574111443,
+    "h_wins": 1,
+    "p_wins": 1,
+    "ties": 11,
     "primary_test": "wilcoxon_signed_rank",
-    "primary_p_greater": 0.064697265625,
+    "primary_p_greater": 0.44921875,
     "significant_p05": false,
-    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=19$, $p_{H>P}=0.0647$; Mann-Whitney sensitivity $U=104$, $p=0.1699$, $n=13$; rank-biserial $r=+0.22$). The directional improvement is concentrated in 3 domain(s) \u2014 Chemistry, Biology, DeFi Risk, suggesting benefit is domain-selective.",
+    "paper_sentence": "Across Core-15, HypatiaX does not achieve statistically significant higher far-extrapolation $R^2$ than PySR-only (Wilcoxon signed-rank $W=31$, $p_{H>P}=0.4492$; Mann-Whitney sensitivity $U=100$, $p=0.2187$, $n=13$; rank-biserial $r=+0.18$). The directional improvement is concentrated in 1 domain(s) \u2014 Physics; PySR-only is superior in Biology, indicating HypatiaX's benefit is domain-selective rather than universal.",
     "equations_included": [
       "Henderson-Hasselbalch",
       "Rate Law",
@@ -41,7 +41,7 @@
       "Portfolio Std Dev"
     ],
     "H_far_r2_vector": [
-      0.9989703498098388,
+      0.9989680200095407,
       0.9949958398346882,
       1.0,
       0.1832616385079764,
@@ -51,32 +51,32 @@
       0.9999999046806634,
       1.0,
       0.9995755153024841,
-      0.9999409544066139,
-      0.9991985391658774,
+      0.9999409018450736,
+      0.9999986607412578,
       1.0
     ],
     "P_far_r2_vector": [
-      0.9785831846908286,
-      0.9999590042094278,
-      0.9999742464705805,
-      0.1371913777138396,
-      0.9985766696008412,
-      0.9999757432324381,
-      0.9996674415802347,
-      0.9999999901120057,
+      0.9979233127635221,
+      0.9999570089447964,
+      0.9999781660643643,
+      0.3203116424162056,
+      0.9997899992866696,
+      0.9999614183203757,
+      -7.364461444164192,
+      0.9999776113379625,
       1.0,
-      0.9995668272968629,
-      0.9999421684256078,
-      0.9999984962581685,
-      -71.30822534123661
+      0.9995854577143604,
+      0.9999457292219099,
+      0.9999985027285123,
+      1.0
     ],
     "subdomain_breakdown": {
       "Chemistry": {
         "n": 2,
-        "h_wins": 1,
-        "ties": 1,
+        "h_wins": 0,
+        "ties": 2,
         "p_wins": 0,
-        "mean_delta": 0.007712000372135264,
+        "mean_delta": -0.0019582309320448354,
         "equations": [
           "Henderson-Hasselbalch",
           "Rate Law"
@@ -84,10 +84,10 @@
       },
       "Biology": {
         "n": 3,
-        "h_wins": 1,
+        "h_wins": 0,
         "ties": 2,
-        "p_wins": 0,
-        "mean_delta": 0.015743411049053673,
+        "p_wins": 1,
+        "mean_delta": -0.04570242694493901,
         "equations": [
           "Allometric Scaling",
           "Michaelis-Menten",
@@ -96,10 +96,10 @@
       },
       "Physics": {
         "n": 3,
-        "h_wins": 0,
-        "ties": 3,
+        "h_wins": 1,
+        "ties": 2,
         "p_wins": 0,
-        "mean_delta": 0.00011890991866162863,
+        "mean_delta": 2.7881741063955054,
         "equations": [
           "Kinetic Energy",
           "Gravitational Force",
@@ -111,7 +111,7 @@
         "h_wins": 0,
         "ties": 2,
         "p_wins": 0,
-        "mean_delta": 4.3440028106300765e-06,
+        "mean_delta": -4.971205938120171e-06,
         "equations": [
           "Price Impact",
           "Constant Product"
@@ -119,10 +119,10 @@
       },
       "DeFi Risk": {
         "n": 3,
-        "h_wins": 1,
-        "ties": 2,
+        "h_wins": 0,
+        "ties": 3,
         "p_wins": 0,
-        "mean_delta": 24.102474723375106,
+        "mean_delta": -1.5564546969789224e-06,
         "equations": [
           "Value at Risk",
           "Liquidation Price",
@@ -131,10 +131,10 @@
       }
     },
     "driving_domains": [
-      "Chemistry",
-      "Biology",
-      "DeFi Risk"
+      "Physics"
     ],
-    "p_dominant_domains": []
+    "p_dominant_domains": [
+      "Biology"
+    ]
   }
 }

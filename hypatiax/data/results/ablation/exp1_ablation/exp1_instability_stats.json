@@ -10,8 +10,8 @@
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989703498098388,
-      "extrap_r2_far": 0.9989703498098388,
+      "extrap_r2_near": 0.9989680200095407,
+      "extrap_r2_far": 0.9989680200095407,
       "instability_index": 0.0
     },
     {
@@ -87,16 +87,16 @@
     {
       "equation": "Value at Risk",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9999409544066139,
-      "extrap_r2_far": 0.9999409544066139,
+      "extrap_r2_near": 0.9999409018450736,
+      "extrap_r2_far": 0.9999409018450736,
       "instability_index": 0.0
     },
     {
       "equation": "Liquidation Price",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9996941439922399,
-      "extrap_r2_far": 0.9991985391658774,
-      "instability_index": 0.0004956048263624613
+      "extrap_r2_near": 0.9999713302968996,
+      "extrap_r2_far": 0.9999986607412578,
+      "instability_index": 2.7330444358208972e-05
     },
     {
       "equation": "Portfolio Std Dev",
