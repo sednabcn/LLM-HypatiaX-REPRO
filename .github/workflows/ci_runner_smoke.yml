@@ -24,7 +24,6 @@ jobs:
     timeout-minutes: 20
     env:
       LLM_MODE: offline
-      SMOKE_LIVE: "0"
       SMOKE_HELP: "0"
       STAGE_TIMEOUT: "300"
       SMOKE_ONLY: ${{ github.event.inputs.only || '' }}
