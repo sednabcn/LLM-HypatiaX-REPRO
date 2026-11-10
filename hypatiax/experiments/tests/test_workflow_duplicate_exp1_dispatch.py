@@ -43,10 +43,10 @@ def test_split_seed_route_is_allowed_without_provenance_route() -> None:
 def test_provenance_route_cannot_repeat_seed_42_baseline() -> None:
     result = _run_duplicate_guard("exp1-provenance exp1")
     assert result.returncode != 0
-    assert "Duplicate DeFi benchmark dispatch" in result.stderr
+    assert "Duplicate DeFi benchmark dispatch" in (result.stdout + result.stderr)
 
 
 def test_provenance_route_cannot_repeat_other_four_seeds() -> None:
     result = _run_duplicate_guard("exp1-provenance exp1b_seeds")
     assert result.returncode != 0
-    assert "Duplicate DeFi benchmark dispatch" in result.stderr
+    assert "Duplicate DeFi benchmark dispatch" in (result.stdout + result.stderr)
