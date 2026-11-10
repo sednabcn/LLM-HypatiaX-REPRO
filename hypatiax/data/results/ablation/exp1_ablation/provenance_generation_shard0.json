@@ -1,7 +1,7 @@
 {
  "experiment": "exp1_ablation",
- "written_utc": "2026-11-09T20:18:47+00:00",
- "git_commit": "9cc634c70c11a732fa9432077b808c20cd23b936",
+ "written_utc": "2026-11-10T09:04:04+00:00",
+ "git_commit": "951a57a046b068e98e6cfb6efee4f92eb37125a9",
  "code_dirty": true,
  "dirty_files": [
   "D hypatiax/data/results/ablation/exp1_ablation/_checkpoint_shard0.json",
@@ -43,7 +43,7 @@
   "generations": "10000"
  },
  "github": {
-  "run_id": "42691230748",
+  "run_id": "42787109321",
   "ref": "fix/rerun-blockers",
   "workflow": "HypatiaX - runner (repro)"
  }
