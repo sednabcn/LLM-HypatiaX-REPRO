@@ -29,6 +29,8 @@ class FreshModeWorkflowContract(unittest.TestCase):
         self.assertIn("github.run_attempt", self.text)
         self.assertIn("Assert fresh output root is unused", self.text)
         self.assertIn('if [[ -e "${OUT_BASE}" ]]; then', self.text)
+        self.assertIn("RESULTS_DIR:       ${{ env.OUT_BASE }}", self.text)
+        self.assertNotIn("github.workspace }}/${{ env.OUT_BASE }}", self.text)
 
     def test_all_checkpoint_cache_actions_are_disabled_in_fresh_mode(self):
         lines = self.text.splitlines()
