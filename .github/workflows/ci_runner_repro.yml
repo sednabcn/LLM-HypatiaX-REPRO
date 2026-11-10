@@ -108,6 +108,15 @@ on:
         required: false
         default: "false"
 
+      fresh_mode:
+        description: "Artifact-only fresh mode, currently restricted to exp1-provenance. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
+        required: false
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+
       sparse_seed:
         description: "exp3/exp3b ONLY (ignored by every other experiment): SPARSE_SEED mode. fallback = sparse-basis seed only when no LLM candidate passes the gate (matches the script default). off = pure LLM-seeded H. always = sparse seed added on top of the LLM candidates. fallback keeps the normal exp3/exp3b results folders; off and always write to their own *_sparse_<mode> folders so they never overwrite each other."
         required: false
@@ -186,6 +195,7 @@ jobs:
           CLEAN_RERUN:        ${{ github.event.inputs.clean_llm_rerun }}
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
           PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
+          FRESH_MODE:         ${{ github.event.inputs.fresh_mode || 'false' }}
         run: |
           set -euo pipefail
 
@@ -194,6 +204,15 @@ jobs:
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
           IDS=$(echo "$EXPERIMENTS" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+
+          if [[ "$FRESH_MODE" == "true" ]]; then
+            for ID in $IDS; do
+              if [[ "$ID" != "exp1-provenance" ]]; then
+                echo "::error::fresh_mode currently supports only exp1-provenance; refusing unsupported experiment $ID."
+                exit 1
+              fi
+            done
+          fi
 
           if [[ -z "$IDS" ]]; then
             echo "::error::'experiments' was non-empty but contained no parseable IDs after splitting on ',' and ' '."
@@ -247,7 +266,8 @@ jobs:
               -f force_rerun="$FORCE_RERUN" \
               -f clean_llm_rerun="${CLEAN_RERUN:-false}" \
               -f sparse_seed="${SPARSE_SEED_IN:-fallback}" \
-              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}"
+              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}" \
+              -f fresh_mode="${FRESH_MODE:-false}"
           done
 
   pca_runner:
@@ -303,9 +323,21 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Validate fresh mode
+        if: ${{ github.event.inputs.fresh_mode == 'true' }}
+        env:
+          EXP: ${{ github.event.inputs.experiment }}
+        run: |
+          set -euo pipefail
+          if [[ "$EXP" != "exp1-provenance" ]]; then
+            echo "::error::fresh_mode currently supports only exp1-provenance; got $EXP."
+            exit 1
+          fi
+          echo "Fresh mode: planner and five seed-sharded workers retained; outputs are artifact-only."
+
       - name: Restore shared checkpoint (plan)
         id: restore_plan
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
+        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -819,7 +851,7 @@ jobs:
           PYEOF
 
       - name: Save plan checkpoint cache
-        if: always()
+        if: ${{ always() && github.event.inputs.fresh_mode != 'true' }}
         uses: actions/cache/save@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -944,7 +976,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
+        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -1021,7 +1053,7 @@ jobs:
             "${{ github.workspace }}/logs"
 
       - name: Seed shard checkpoint from committed results (cache miss only)
-        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.fresh_mode != 'true' }}
         env:
           SHARD_IDS_JSON: ${{ matrix.ids }}
           RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
@@ -1263,7 +1295,7 @@ jobs:
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
           RESULTS_DIR:       ${{ github.workspace }}/${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ (github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
@@ -2836,7 +2868,7 @@ jobs:
           PYEOF
 
       - name: Persist shard checkpoint to cache
-        if: always()
+        if: ${{ always() && github.event.inputs.fresh_mode != 'true' }}
         uses: actions/cache/save@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -2887,7 +2919,7 @@ jobs:
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3089,7 +3121,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: ${{ success() }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
