@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Phase 3 audit wiring check (no API spend, seconds). Fails loudly if any part of the seed-audit
-chain is missing from the checked-out tree, so a run can never start without it.
+"""Phase 3 code-path audit wiring check (no API spend, seconds).
+The Phase 3 dispatch workflow is intentionally deferred on this branch; this checks only
+its retained engine/adapter/closure code, not a dispatch entry point.
 
     python scripts/phase3_audit_wiring_check.py [--root .]
 
@@ -27,13 +28,10 @@ CHECKS = {
         "G9 llm_sample_sha256 (hash of the LLM response)", "G9 same LLM sample in every arm"],
     "scripts/phase3_all.py": [
         "NPY_DISABLE_CPU_FEATURES", "phase3_engine_adapter", "--require-phase2", "run_phase3_ablation"],
-    ".github/workflows/ci_phase3_ablation.yml": [
-        "HYPATIAX_LLM_REPLAY_DIR", "bypass_audit.csv", "phase3_all.py"],
 }
 # flags that would hide exactly what the audit guards: must NOT appear on the real path
 FORBIDDEN = {
     "scripts/phase3_all.py": ["--allow-legacy-seed-record"],
-    ".github/workflows/ci_phase3_ablation.yml": ["--allow-legacy-seed-record", "--allow-dirty"],
 }
 G9_FIELDS = ("guesses_requested", "guesses_used", "guesses_dropped", "guess_dropped_reasons",
              "guess_fit_fallback", "llm_sample_sha256", "llm_best_r2")
