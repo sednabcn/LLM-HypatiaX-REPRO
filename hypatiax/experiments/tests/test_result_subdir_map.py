@@ -292,3 +292,14 @@ def test_exp1_optional_analysis_script_does_not_fail_when_absent():
     # does not reinterpret words or expand variables from the message.
     assert "echo 'INFO: optional statistical_analysis.py not found; using benchmark JSON/report.'" in block
     assert 'cd "${ANALYSIS_DIR}"' not in block
+
+
+def test_all_portfolio_seed_parsers_allow_empty_unsharded_task_ids():
+    runner = (ROOT / "run_all.sh").read_text()
+    safe_parser = "sed -nE 's/^portfolio_seed([0-9]+)$/\\\\1/p'"
+    assert runner.count(safe_parser) == 3
+    exp1b_start = runner.index('run exp1b "')
+    exp1b_end = runner.index('run portfolio "', exp1b_start)
+    exp1b = runner[exp1b_start:exp1b_end]
+    assert "running full default seed list" in exp1b
+    assert "_SHARD_SEEDS='42,99,123,777,2024'" in exp1b
