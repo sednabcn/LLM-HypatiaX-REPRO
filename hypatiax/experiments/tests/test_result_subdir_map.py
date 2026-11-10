@@ -32,7 +32,7 @@ def test_exp1_provenance_is_one_fixed_five_seed_experiment():
     assert 'expected_cases_per_seed' in workflow
     assert "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}" in workflow
     assert workflow.count("github.event.inputs.experiment != 'exp1-provenance'") == 2
-    assert "(github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false'" in workflow
+    assert "RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}" in workflow
     assert 'expected_domains = {"amm"' in workflow
     assert "result_sha256" in workflow and "protocol_config_sha256" in workflow
     assert '"expected_nshards": 5' in workflow
