@@ -61,7 +61,7 @@ class FreshModeWorkflowContract(unittest.TestCase):
         )
 
     def test_seed_sharding_and_artifact_upload_are_preserved(self):
-        self.assertIn('exp1-provenance:    5', self.text)
+        self.assertIn('\"exp1-provenance\":    5', self.text)
         self.assertIn('name: results-${{ github.event.inputs.experiment }}-shard', self.text)
         self.assertIn('retention-days: ${{ github.event.inputs.experiment == \'exp1-provenance\' && 90 || 30 }}', self.text)
         self.assertIn("exp1-provenance-aggregate-run", self.text)
