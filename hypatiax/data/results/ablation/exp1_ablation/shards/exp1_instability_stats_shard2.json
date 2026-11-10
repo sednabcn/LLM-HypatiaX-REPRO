@@ -3,23 +3,23 @@
     {
       "equation": "Arrhenius",
       "domain": "Chemistry",
-      "extrap_r2_near": -42.89282313472968,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Henderson-Hasselbalch",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9989703498098388,
-      "extrap_r2_far": 0.9989703498098388,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Rate Law",
       "domain": "Chemistry",
-      "extrap_r2_near": 0.9994747827749156,
-      "extrap_r2_far": 0.9949958398346882,
-      "instability_index": 0.004478942940227437
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Allometric Scaling",
@@ -45,65 +45,65 @@
     {
       "equation": "Kinetic Energy",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Gravitational Force",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Ideal Gas Law",
       "domain": "Physics",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Impermanent Loss",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.7160050608369003,
+      "extrap_r2_near": null,
       "extrap_r2_far": null,
       "instability_index": null
     },
     {
       "equation": "Price Impact",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Constant Product",
       "domain": "DeFi AMM",
-      "extrap_r2_near": 0.9995667912134206,
-      "extrap_r2_far": 0.9995667912134206,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Value at Risk",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.9999409544066139,
-      "extrap_r2_far": 0.9999409544066139,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Liquidation Price",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 0.99997089603558,
-      "extrap_r2_far": 0.9999986404554436,
-      "instability_index": 2.774441986364007e-05
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     },
     {
       "equation": "Portfolio Std Dev",
       "domain": "DeFi Risk",
-      "extrap_r2_near": 1.0,
-      "extrap_r2_far": 1.0,
-      "instability_index": 0.0
+      "extrap_r2_near": null,
+      "extrap_r2_far": null,
+      "instability_index": null
     }
   ],
   "engine_version": "5.4",
