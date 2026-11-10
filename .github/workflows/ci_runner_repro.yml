@@ -1114,7 +1114,7 @@ jobs:
             if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation || "$d" == */exp1_ablation_seed* ]]; then
               echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
               # shard-scoped: never touch other shards' checkpoints or stale_* dirs
-              find "$d" -type f -name "*checkpoint*_shard${{ matrix.shard }}.json" \
+              find "$d" -type f -name "exp1_ablation_checkpoint*_shard${{ matrix.shard }}.json" \
                    -not -path '*/stale_*' \
                    -not -path '*/checkpoint_backups/*' -print -delete
             else
