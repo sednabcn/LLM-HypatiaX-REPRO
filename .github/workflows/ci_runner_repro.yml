@@ -140,6 +140,9 @@ env:
   HYPATIAX_STRICT: "1"
   # exp1_ablation: run the third (no-LLM) arm. Ignored by every other experiment.
   HYPATIAX_NOLLM_ARM: "1"
+  HYPATIAX_HOLDOUT: "1"   # L06: held-out llm/nn/blend R2 (extra NN fit per case)
+  LLM_MODEL:        "claude-sonnet-4-6"   # AUDIT C1: pinned; must equal config/repro.yaml llm_model
+  LLM_TEMPERATURE:  "0.25"                # AUDIT C1: must equal config/repro.yaml llm_temperature
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
   PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
@@ -157,6 +160,9 @@ env:
   LLM_METHOD_TIMEOUT:  "120"   # tight timeout for LLM/NN-only runs (methods 1-4, no PySR)
   PYSR_FIT_WALL_TIMEOUT: "1200" # repro.yaml timeouts.fit_wall_timeout → DiscoveryConfig
   PYSR_FIT_GRACE_SECS: "120"   # repro.yaml timeouts.fit_grace_secs → DiscoveryConfig
+  # exp1_ablation per-case wall clock = HYPATIA_MAX_RETRIES x PYSR_TIMEOUT(=FEYNMAN_TIMEOUT) + post-proc; recorded in provenance_generation_shard<N>.json
+  HYPATIA_MAX_RETRIES: "3"
+  PYSR_POST_PROC_BUDGET: "300"
   FEYNMAN_NOISELESS_THRESHOLD: "0.999999"  # matches run_noise_sweep_benchmark.py --threshold-noiseless default
   OUT_BASE:            ${{ github.event.inputs.fresh_mode == 'true' && format('{0}/../hypatiax-fresh-{1}-attempt-{2}', github.workspace, github.run_id, github.run_attempt) || 'hypatiax/data/results' }}
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
@@ -1105,7 +1111,18 @@ jobs:
           for d in "${DIRS[@]}"; do
             [[ -d "$d" ]] || continue
             echo "[clean_llm_rerun] stale checkpoints under $d:"
-            find "$d" -type f -name '*checkpoint*' -print -delete
+            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation || "$d" == */exp1_ablation_seed* ]]; then
+              echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
+              # shard-scoped: never touch other shards' checkpoints or stale_* dirs
+              find "$d" -type f -name "*checkpoint*_shard${{ matrix.shard }}.json" \
+                   -not -path '*/stale_*' \
+                   -not -path '*/checkpoint_backups/*' -print -delete
+            else
+              echo "[clean_llm_rerun] UNSCOPED delete"
+              find "$d" -type f -name '*checkpoint*' \
+                   -not -path '*/stale_*' \
+                   -not -path '*/checkpoint_backups/*' -print -delete
+            fi
           done
 
       - name: Clean live-LLM rerun - bypass audit gate
@@ -1321,6 +1338,11 @@ jobs:
             export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
             [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
             echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
+          fi
+
+          # resume=false must mean a clean run: run_all.sh resumes from any committed checkpoint unless CLEAR_CHECKPOINT is non-empty
+          if [[ "${RESUME}" == "false" ]]; then
+            export CLEAR_CHECKPOINT=1
           fi
 
           if [[ "${DRY_RUN}" == "true" ]]; then
@@ -3052,6 +3074,9 @@ jobs:
             # Shards may publish additions and modifications only. A file absent from
             # this runner is not an instruction to delete its committed counterpart.
             git add -f --ignore-removal "${TARGET}"
+            # CLEAR_CHECKPOINT moves old checkpoints into stale_*/ or checkpoint_backups/ inside TARGET;
+            # git add -f overrides .gitignore, so unstage them explicitly (never ship stale-run artifacts).
+            git reset -q -- "${TARGET%/}"/stale_* "${TARGET%/}"/checkpoint_backups 2>/dev/null || true
 
             echo "--- git status after add ---"
             git status --short || true
