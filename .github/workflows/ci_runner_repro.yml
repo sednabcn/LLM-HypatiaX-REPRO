@@ -894,6 +894,17 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Assert fresh output root is unused
+        if: ${{ github.event.inputs.fresh_mode == 'true' }}
+        run: |
+          set -euo pipefail
+          if [[ -e "${OUT_BASE}" ]]; then
+            echo "::error::Fresh output root already exists: ${OUT_BASE}"
+            exit 1
+          fi
+          mkdir -p "${OUT_BASE}"
+          echo "Created isolated fresh output root: ${OUT_BASE}"
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v5.3.0
         with:
