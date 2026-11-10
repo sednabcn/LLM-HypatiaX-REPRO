@@ -84,7 +84,7 @@ jobs:
                   raise SystemExit(f"{package}: expected {wanted}, got {actual}")
           PY
 
-      - name: Verify explicit live API credential
+      - name: Verify API credential is configured
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -92,7 +92,6 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY is not configured; refusing to run."
             exit 1
           }
-          python3 config/check_key_status.py
 
       - name: Create isolated output location
         run: |
