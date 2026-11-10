@@ -158,7 +158,7 @@ env:
   PYSR_FIT_WALL_TIMEOUT: "1200" # repro.yaml timeouts.fit_wall_timeout → DiscoveryConfig
   PYSR_FIT_GRACE_SECS: "120"   # repro.yaml timeouts.fit_grace_secs → DiscoveryConfig
   FEYNMAN_NOISELESS_THRESHOLD: "0.999999"  # matches run_noise_sweep_benchmark.py --threshold-noiseless default
-  OUT_BASE:            "hypatiax/data/results"
+  OUT_BASE:            ${{ github.event.inputs.fresh_mode == 'true' && format('{0}/../hypatiax-fresh-{1}-attempt-{2}', github.workspace, github.run_id, github.run_attempt) || 'hypatiax/data/results' }}
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
   # Clean live-LLM run: read by PureLLMBaseline. Local shell exports do NOT reach CI.
@@ -4577,6 +4577,7 @@ jobs:
       - name: Commit and push corrected baseline
         if: |
           success() &&
+          github.event.inputs.fresh_mode != 'true' &&
           github.event.inputs.dry_run != 'true'
         env:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}
