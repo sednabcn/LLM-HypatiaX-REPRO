@@ -32,15 +32,19 @@ class FreshModeWorkflowContract(unittest.TestCase):
         self.assertIn('if [[ -e "${OUT_BASE}" ]]; then', self.text)
 
     def test_all_checkpoint_cache_actions_are_disabled_in_fresh_mode(self):
-        for line in self.text.splitlines():
+        lines = self.text.splitlines()
+        cache_actions = 0
+        for index, line in enumerate(lines):
             if "uses: actions/cache/restore@" in line or "uses: actions/cache/save@" in line:
-                # The corresponding step-level if must be guarded. Check the
-                # nearest preceding if in the workflow text.
-                prefix = self.text[: self.text.index(line)]
-                preceding_if = re.findall(r"^\s+if: (.+)$", prefix, re.MULTILINE)
-                self.assertTrue(preceding_if, line)
-                self.assertIn("fresh_mode", preceding_if[-1], line)
-        self.assertIn("github.event.inputs.fresh_mode != 'true'", self.text)
+                cache_actions += 1
+                preceding = lines[max(0, index - 3):index]
+                step_if = next(
+                    (item.strip() for item in reversed(preceding) if item.strip().startswith("if:")),
+                    None,
+                )
+                self.assertIsNotNone(step_if, line)
+                self.assertIn("fresh_mode", step_if, line)
+        self.assertEqual(cache_actions, 4)
 
     def test_fresh_mode_never_seeds_or_resumes_checkpoints(self):
         self.assertIn("github.event.inputs.fresh_mode != 'true' }}", self.text)
@@ -49,16 +53,13 @@ class FreshModeWorkflowContract(unittest.TestCase):
 
     def test_result_commits_and_repo_verification_are_skipped(self):
         expected = [
-            "Commit and push shard results to repo",
-            "Verify results committed to repo",
-            "Commit and push corrected baseline",
+            "Commit and push shard results to repo\n        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}",
+            "Verify results committed to repo\n        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}",
         ]
         for step in expected:
             self.assertIn(step, self.text)
-        self.assertGreaterEqual(
-            self.text.count("github.event.inputs.fresh_mode != 'true'"),
-            5,
-        )
+        baseline = self.text.split("Commit and push corrected baseline", 1)[1]
+        self.assertIn("github.event.inputs.fresh_mode != 'true'", baseline)
 
     def test_seed_sharding_and_artifact_upload_are_preserved(self):
         self.assertIn('\"exp1-provenance\":    5', self.text)
