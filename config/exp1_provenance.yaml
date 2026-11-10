@@ -1,5 +1,7 @@
 # exp1-provenance: independent five-seed DeFi benchmark experiment.
-# This protocol is separate from the historical exp1 (seed 42) and exp1b stages.
+# This is an alternative consolidated route to exp1 + exp1b_seeds, not an additional stage.
+# Do not dispatch it alongside exp1 (seed 42) or exp1b_seeds (seeds 99,123,777,2024):
+# those split stages cover the same five benchmark seed runs without the consolidated manifests.
 experiment:
   id: exp1-provenance
   benchmark_script: hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py
