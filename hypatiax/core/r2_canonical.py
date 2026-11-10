@@ -116,3 +116,12 @@ def selection_score(r2_value: float) -> float:
     """Use when ranking candidates by R^2: undefined scores must lose, not win
     or be silently dropped by NaN comparisons."""
     return float("-inf") if not np.isfinite(r2_value) else float(r2_value)
+
+
+def r2_detail(y_true, y_pred, sign_flip: bool | None = None) -> tuple[float | None, str]:
+    """(raw_r2, status) for recording. Status is r2_scored's; raw_r2 is the R^2 WITHOUT the
+    catastrophic floor (None if non-finite), so a floored -inf keeps its magnitude.
+    Recording only: scoring still goes through r2_scored."""
+    _, status = r2_scored(y_true, y_pred, sign_flip=sign_flip)
+    raw, _ = r2_scored(y_true, y_pred, sign_flip=sign_flip, floor=None)
+    return (float(raw) if np.isfinite(raw) else None), status

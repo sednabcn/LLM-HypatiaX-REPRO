@@ -1000,7 +1000,16 @@ jobs:
           for d in "${DIRS[@]}"; do
             [[ -d "$d" ]] || continue
             echo "[clean_llm_rerun] stale checkpoints under $d:"
-            find "$d" -type f -name '*checkpoint*' -print -delete
+            echo "[clean_llm_rerun] EXP=${EXP} d=${d}"
+            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation || "$d" == */exp1_ablation_seed* ]]; then
+              echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
+              # shard-scoped: never touch other shards' checkpoints or stale_* dirs
+              find "$d" -type f -name "*checkpoint*_shard${{ matrix.shard }}.json" \
+                   -not -path '*/stale_*' -print -delete
+            else
+              echo "[clean_llm_rerun] UNSCOPED delete"
+              find "$d" -type f -name '*checkpoint*' -print -delete
+            fi
           done
 
       - name: Clean live-LLM rerun - bypass audit gate
@@ -1213,6 +1222,10 @@ jobs:
           [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
           echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
 
+          # resume=false must mean a clean run: run_all.sh resumes from any committed checkpoint unless CLEAR_CHECKPOINT is non-empty
+          if [[ "${RESUME}" == "false" ]]; then
+            export CLEAR_CHECKPOINT=1
+          fi
           if [[ "${DRY_RUN}" == "true" ]]; then
             echo "=== DRY RUN - shard ${SHARD} | experiment: ${EXP} ==="
             echo "${PENDING_IDS}" | python3 -c "import json,sys; [print(' ',t) for t in json.load(sys.stdin)]"
@@ -2892,6 +2905,7 @@ jobs:
             ADD_FLAGS=(-f)
             [[ "${EXP}" == "exp1_ablation" ]] && ADD_FLAGS+=(--ignore-removal)
             git add "${ADD_FLAGS[@]}" "${TARGET}"
+            git reset -q -- "${TARGET%/}"/stale_* 2>/dev/null || true
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2910,6 +2924,12 @@ jobs:
             fi
 
             if ! git diff --cached --quiet; then
+              DELREN=$(git diff --cached --name-status | grep -E '^[DR]' || true)
+              if [[ "${EXP}" == "exp1_ablation" && -n "${DELREN}" ]]; then
+                echo "::error::shard ${SHARD}: refusing to commit deletions/renames of committed files:"
+                echo "${DELREN}"
+                exit 1
+              fi
               # Only this shard's own output dir is subject to the guard (a stray staged
               # file elsewhere is not a shard-isolation problem), and per-shard run logs
               # are legitimately rewritten on every rerun.
@@ -2945,7 +2965,7 @@ jobs:
               fi
 
               STAGED=$(git diff --cached --name-only | wc -l)
-              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)" -- "${TARGET}"
+              git commit -m "ci: ${EXP} shard${SHARD} results (${STAGED} file(s)) — run ${{ github.run_id }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             else
               echo "Shard ${SHARD}: nothing newly staged, but HEAD is ${AHEAD} commit(s) ahead of upstream (a prior push in this job likely failed) — skipping commit, retrying push only."
               STAGED=0

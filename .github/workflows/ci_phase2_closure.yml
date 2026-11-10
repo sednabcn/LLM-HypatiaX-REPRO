@@ -59,6 +59,14 @@ jobs:
           mkdir -p "${RESULTS_DIR}"
           bash run_all.sh phase2_closure
 
+      - name: Provenance gate (ledger L03 / L52)
+        # Every LLM-involving row must record a live generation path (llm_source) and the
+        # run must not have sign-flip scoring active. Fails on local_fallback / hardcoded /
+        # frozen_cache_unknown_origin sources and on LLM rows with llm_source missing.
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_checks/01_provenance_gate.py "${P2_PURE_LLM_GLOB}" "${P2_HDS_GLOB}"
+
       - name: Summary
         if: always()
         run: |

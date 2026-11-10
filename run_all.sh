@@ -55,6 +55,7 @@ export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
 # AUDIT C1: one LLM sampling temperature for every experiment (config/repro.yaml llm_temperature).
 export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
 export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
+export HYPATIAX_HOLDOUT="${HYPATIAX_HOLDOUT:-1}"   # held-out R2 per case (adds one NN fit; budget runtime)
 [[ "${HYPATIAX_STRICT}" == "1" ]] || { echo "ERROR: HYPATIAX_STRICT must be 1" >&2; exit 1; }
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
@@ -131,9 +132,23 @@ mkdir -p "$(dirname "${HYPATIAX_FAILED_LOG}")"; : > "${HYPATIAX_FAILED_LOG}"
 record_failure() { echo "$*" >> "${HYPATIAX_FAILED_LOG}"; }
 export -f record_failure
 
+# L18 / L28 (owner decision 2026-11-03): the instability suite is NOT run in this study. It stays
+# a valid step name (so `--step instability` still works for an explicit, deliberate run) but is
+# skipped in full runs and --from runs unless RUN_DEFERRED=1. Paper claims that depend on it
+# (multi-run Instability Index, Regime A/B/C) must be dropped or qualified.
+_DEFERRED_STEPS="instability"
+
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
+  if [[ " ${_DEFERRED_STEPS} " == *" ${step} "* && "$ONLY_STEP" != "$step" && "${RUN_DEFERRED:-0}" != "1" ]]; then
+    # Still announce the step (banner marked DEFERRED) so the dry-run contract in
+    # ci_runner/run_smoke_all.sh ("every step in _STEP_ORDER is announced") stays strict.
+    echo ""
+    log "=== STEP: ${step} -- ${desc} [DEFERRED: not run] ==="
+    log "--- SKIP (deferred by owner decision, L18/L28): ${step}; run with --step ${step} or RUN_DEFERRED=1 ---"
+    return 0
+  fi
   if [[ -n "$FROM_STEP" ]]; then
     local skip=true
     for s in $_STEP_ORDER; do
@@ -509,8 +524,24 @@ _exp1_ablation_step() {
   fi
 
   log "exp1_ablation: NOLLM_ARM=${HYPATIAX_NOLLM_ARM} STRICT=${HYPATIAX_STRICT} shard=${SHARD_INDEX:-all} domain='${DOMAIN_FILTER:-<all>}'"
-  if [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
-    log "exp1_ablation: keeping existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json"
+  # CLEAR_CHECKPOINT now also applies here (it used to cover exp2_feynman only, so a "clean"
+  # rerun silently resumed stale exp1_ablation rows). Stale files are MOVED to a dated
+  # backup dir, not deleted, so nothing is lost and --resume cannot pick them up.
+  if [[ -n "${CLEAR_CHECKPOINT:-}" ]]; then
+    local _stale="${abl_dir}/stale_$(date +%Y%m%dT%H%M%S)" _moved=0 _f
+    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json "${abl_dir}"/_checkpoint_shard*.json \
+              "${abl_dir}"/exp1_ablation_results*.json; do
+      [[ -f "${_f}" ]] || continue
+      # a shard job must not move another shard's suffixed files
+      if [[ -n "${sfx:-}" ]]; then
+        _b="${_f##*/}"
+        if [[ "${_b}" =~ _shard[0-9]+ && "${_b}" != *"${sfx}"[._]* ]]; then continue; fi
+      fi
+      mkdir -p "${_stale}" && mv "${_f}" "${_stale}/" && _moved=$((_moved+1))
+    done
+    log "exp1_ablation: CLEAR_CHECKPOINT set -> moved ${_moved} stale checkpoint/result file(s) to ${_stale}"
+  elif [[ -f "${abl_dir}/exp1_ablation_checkpoint.json" ]]; then
+    log "exp1_ablation: RESUMING from existing checkpoint ${abl_dir}/exp1_ablation_checkpoint.json (set CLEAR_CHECKPOINT=1 for a clean run)"
   fi
 
   # Generation-time provenance (same fields as Phase 3 rows). Written BEFORE the run so the
@@ -2324,7 +2355,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       --results-dir "${_SEED_DIR}" \
       --output-dir  "${_SEED_DIR}" \
       2>&1 | tee "${_SEED_DIR}/symbolic_equivalence_run.log" \
-    || echo "WARNING: check_symbolic_equivalence.py exited non-zero — continuing (non-fatal reporting step)"
+    || { echo "WARNING: check_symbolic_equivalence.py exited non-zero — continuing"; record_failure exp3_symbolic_equivalence; }
     if [[ -f "${_REPORT}" ]]; then
       _NR=$(wc -l < "${_REPORT}" || echo "?")
       echo "[exp3_sym] symbolic_equivalence_report.csv: ${_NR} line(s) → ${_REPORT}"
@@ -2332,7 +2363,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
       echo "[WARN] symbolic_equivalence_report.csv was not produced — check script output above."
     fi
   fi
-) || echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing (non-fatal reporting step)"
+) || { echo "WARNING: exp3/exp3b symbolic equivalence check block failed — continuing"; record_failure exp3_symbolic_equivalence_block; }
 
 run suppA "DeFi routing improvement experiments (Supplement A - Tab 11-13 routing)" bash -c "
   cd '${REPO_ROOT}'
@@ -2539,8 +2570,12 @@ _tag = "OK" if ok else "FAIL"
 print(f"  [{_tag}] hybrid_llm_nn/all_domains/: {len(had)} JSON file(s)")
 
 inst_csv = os.path.isfile(f"{RESULTS}/figures/instability_analysis.csv")
-checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
-_tag = "OK" if inst_csv else "FAIL"
+if inst_csv or os.environ.get("RUN_DEFERRED") == "1":
+    checks.append(("instability_analysis.csv present", 1.0 if inst_csv else 0.0, 1.0, inst_csv))
+    _tag = "OK" if inst_csv else "FAIL"
+else:
+    # L18/L28: instability suite deferred by owner decision; absence is expected, not a failure.
+    _tag = "SKIP (deferred L18/L28)"
 print(f"  [{_tag}] instability_analysis.csv")
 
 sc = (glob.glob(f"{RESULTS}/comparison_results/feynman-tests/sample-complexity/*.json") +

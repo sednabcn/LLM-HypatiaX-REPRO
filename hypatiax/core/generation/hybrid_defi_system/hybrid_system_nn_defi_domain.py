@@ -193,7 +193,8 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 # ---------------------------------------------------------------------------
 # Formula evaluation helpers
-# -----------------------------def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
+# ---------------------------------------------------------------------------
+def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
     """Safely evaluate a restricted LLM formula against a feature matrix."""
     try:
         X = np.asarray(X, dtype=float)
@@ -377,23 +378,19 @@ def _create_message_deterministic(client, **kwargs):
     per-file copies rather than cross-module imports for this helper.
     Without this, EnhancedHybridSystemDeFi's local fallback (both the
     initial call and its max_tokens/malformed-response retry) called
-    client.messages.create(temperature=0.0, ...) directly -- which raises
+    client.messages.create with a hard-coded temperature directly -- which raises
     on any model that has deprecated the temperature/top_p/top_k sampling
     parameters (Claude Sonnet 4.6+, Opus 4.7+), and that exception was
     swallowed by generate_llm_formula's bare except into an N/A/error
     result rather than retried, unlike HSL's equivalent fallback. Tries
-    temperature=0.0 first and retries once without it only on that
+    a fixed temperature first and retries once without it only on that
     specific deprecation error, so determinism is preserved wherever the
     model still supports it, and the fallback degrades the same way HSL's
     does instead of going silently dark.
     """
-    try:
-        return client.messages.create(temperature=0.0, **kwargs)
-    except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
-        raise
+    # UNIFIED-TEMPERATURE: shared wrapper (LLM_TEMPERATURE, default 0.25, one fallback).
+    from hypatiax.core.llm_call import create_message
+    return create_message(client, **kwargs)
 
 
 class EnhancedHybridSystemDeFi:
@@ -892,14 +889,17 @@ EXPLANATION:
             residuals = y_train - best_preds
             with np.errstate(over="ignore", invalid="ignore"):
                 mse = float(np.mean(residuals ** 2))
-            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else 0.0
+            # L54: a non-finite MSE is a failure, never a perfect (0.0) RMSE
+            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else None
             mae  = float(np.mean(np.abs(residuals)))
         else:
-            final_r2 = 0.0
+            # L54: no predictions is a failure, not a score. None + status, never 0.0
+            # (0.0 R2 / 0.0 RMSE is indistinguishable from a genuine mean-predictor fit).
+            final_r2 = None
             final_r2_status = "no_predictions"
-            mse  = 0.0
-            rmse = 0.0
-            mae  = 0.0
+            mse  = None
+            rmse = None
+            mae  = None
 
 
         # =====================================================
@@ -925,7 +925,7 @@ EXPLANATION:
 
             "evaluation": {
                 "llm_source": llm_result.get("llm_source", "unknown"),
-                "r2":   float(final_r2),
+                "r2":   (float(final_r2) if final_r2 is not None else None),
                 "r2_status": final_r2_status,   # ok | degenerate_target | nonfinite_pred | ...
                 "rmse": rmse,
                 "mse":  mse,

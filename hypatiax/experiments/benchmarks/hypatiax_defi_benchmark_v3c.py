@@ -716,13 +716,11 @@ def formula({var_list}):
     return <expression>
 """
     try:
-        resp = client.messages.create(
+        from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
+        resp = create_message(
+        client,
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            # AUDIT-PATCH C2: direct messages.create(temperature=0.0). PureLLMBaseline and the shared
-            # wrapper do NOT send temperature on SDK>=1.0 (model default applies); the engine/CI
-            # env default is LLM_TEMPERATURE=0.25. These are different settings: report as such.
-            temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
         )
         code = resp.content[0].text.strip()

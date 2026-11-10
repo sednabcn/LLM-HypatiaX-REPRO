@@ -5,7 +5,7 @@ from hypatiax.core.generation.hybrid_all_domains_llm_nn.hybrid_system_llm_nn_all
 h = HybridSystemAllDomains.__new__(HybridSystemAllDomains)
 h.generate_llm_formula = lambda *a, **k: {
     "formula": "a**2*b",
-    "python_code": "def f(a, b):\n    return a**2 * b\n",
+    "python_code": "def formula(a, b):\n    return a**2 * b\n",
     "llm_source": "stub", "llm_called": False, "bypass_kind": "stub",
 }
 def _no_nn(*a, **k):

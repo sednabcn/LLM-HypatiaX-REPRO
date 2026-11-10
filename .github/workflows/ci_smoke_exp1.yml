@@ -1,0 +1,127 @@
+name: Smoke exp1_ablation (manual)
+
+# Runs run_all.sh --step exp1_ablation for N equations on a GitHub runner.
+# Separate from ci_tests.yml on purpose: that workflow must stay key-free.
+# Needs the ANTHROPIC_API_KEY repository secret. Costs API credit.
+# Output is a plumbing check, not evidence: do not cite smoke rows in the paper.
+
+on:
+  workflow_dispatch:
+    inputs:
+      n_tasks:
+        description: "Number of Core-15 equations (N_CORE15_TASKS)"
+        required: true
+        default: "1"
+      populations:
+        description: "Override PYSR_POPULATIONS (blank = script default, paper setting)"
+        required: false
+        default: ""
+      method_timeout:
+        description: "Override METHOD_TIMEOUT seconds (blank = script default)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-exp1
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PYTHONHASHSEED: "0"
+  CLEAR_CHECKPOINT: "1"
+  HYPATIAX_STRICT: "1"
+  HYPATIAX_HOLDOUT: "1"
+  HYPATIAX_DISABLE_HARDCODED: "1"
+  HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+  HYPATIAX_R2_SIGN_FLIP: "0"
+  N_CORE15_TASKS: ${{ inputs.n_tasks }}
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    # Hard cap: a fit that ignores its own wall-clock limit fails the job
+    # here instead of running for hours.
+    timeout-minutes: 240
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - name: Fail closed if the API key secret is missing
+        run: |
+          if [ -z "${ANTHROPIC_API_KEY}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set - the LLM arm would be skipped. Refusing."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          grep -viE '^torch' requirements.txt > /tmp/req.txt
+          python -m pip install -r /tmp/req.txt
+
+      - name: Apply optional overrides (only when non-empty)
+        run: |
+          if [ -n "${{ inputs.populations }}" ]; then echo "PYSR_POPULATIONS=${{ inputs.populations }}" >> "$GITHUB_ENV"; fi
+          if [ -n "${{ inputs.method_timeout }}" ]; then echo "METHOD_TIMEOUT=${{ inputs.method_timeout }}" >> "$GITHUB_ENV"; fi
+
+      - name: Run exp1_ablation
+        run: bash run_all.sh --step exp1_ablation < /dev/null 2>&1 | tee smoke.txt
+
+      - name: Reject runs that silently skipped the LLM or resumed old rows
+        if: always()
+        run: |
+          if grep -q "ANTHROPIC_API_KEY not set" smoke.txt; then
+            echo "::error::LLM arm was skipped (key not visible to the script)"; exit 1
+          fi
+          if grep -qi "keeping existing checkpoint\|RESUMING from existing checkpoint" smoke.txt; then
+            echo "::error::run resumed an existing checkpoint"; exit 1
+          fi
+          grep -m3 -iE "Resuming|moved .* stale|dirty=" smoke.txt || true
+
+      - name: Inspect result rows
+        if: always()
+        run: |
+          python - <<'EOF'
+          import json, os, sys
+          p = "hypatiax/data/results/ablation/exp1_ablation/exp1_ablation_results.json"
+          if not os.path.exists(p):
+              print("::error::exp1_ablation_results.json was not produced"); sys.exit(1)
+          d = json.load(open(p))
+          want = ["formula", "seed", "llm_called", "bypass_kind", "llm_model",
+                  "llm_temperature", "holdout", "r2"]
+          seen = {}
+          def walk(o, path=""):
+              if isinstance(o, dict):
+                  for k, v in o.items():
+                      if any(w in k.lower() for w in want) and not isinstance(v, (dict, list)):
+                          seen.setdefault(k, str(v)[:70])
+                      walk(v, f"{path}/{k}")
+              elif isinstance(o, list):
+                  for v in o[:30]:
+                      walk(v, path)
+          walk(d)
+          for k, v in sorted(seen.items()):
+              print(f"{k:32s} {v}")
+          for w in want:
+              if not any(w in k.lower() for k in seen):
+                  print(f"::warning::no field containing '{w}' found in results")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-exp1
+          path: |
+            smoke.txt
+            hypatiax/data/results/ablation/exp1_ablation/
+          if-no-files-found: ignore

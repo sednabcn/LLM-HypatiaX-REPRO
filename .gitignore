@@ -23,6 +23,7 @@ scan_report.html
 scan_after*.txt
 triage_out/
 _quarantine/
+hypatiax/data/results/ablation/exp1_ablation/stale_*/
 *~
 *.bak
 audit_out/*.json
@@ -59,3 +60,4 @@ phase3_closure_out/
 **/llm_replay/
 **/llm_cache/
 tree_cleanup.txt
+hypatiax/data/results/ablation/exp1_ablation/stale_*/
