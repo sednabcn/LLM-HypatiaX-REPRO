@@ -471,7 +471,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   cd '${REPO_ROOT}'
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
     _SHARD_SEEDS='42,99,123,777,2024'
@@ -643,7 +643,7 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
   # shard. Run Strategy A sweep-only for THAT seed and fail loudly if no file appears. Tables and
   # paper numbers need all seeds at once, so they are built afterwards by generate_tables.py.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -n \"\${_SHARD_SEEDS}\" ]]; then
     _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
     _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
@@ -1199,7 +1199,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   mkdir -p \"\${_PCA15_DIR}\"
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
     _SHARD_SEEDS='42,99,123,777,2024'
