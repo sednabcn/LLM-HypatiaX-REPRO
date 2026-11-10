@@ -1304,7 +1304,7 @@ jobs:
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
           PENDING_IDS:       ${{ steps.resolve_ids.outputs.pending_ids }}
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
-          RESULTS_DIR:       ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:       ${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
           RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
@@ -1551,11 +1551,11 @@ jobs:
           echo "=== OUT_BASE ===" && echo "${OUT_BASE}"
           echo "=== OUT_BASE resolved ===" && realpath "${OUT_BASE}" 2>/dev/null || true
           echo "=== RESULTS_DIR env (from Run experiment tasks step) ==="
-          echo "  RESULTS_DIR in env: ${{ github.workspace }}/${OUT_BASE}"
+          echo "  RESULTS_DIR in env: ${OUT_BASE}"
           echo "=== OUT_BASE vs RESULTS_DIR equivalence check ==="
-          WS_OUT="${GITHUB_WORKSPACE}/${OUT_BASE}"
+          WS_OUT="$(realpath -m "${OUT_BASE}")"
           echo "  Expected RESULTS_DIR: ${WS_OUT}"
-          echo "  Same? $([ "${WS_OUT}" = "${{ github.workspace }}/${{ env.OUT_BASE }}" ] && echo YES || echo NO)"
+          echo "  Same? $([ "${WS_OUT}" = "${{ env.OUT_BASE }}" ] && echo YES || echo NO)"
           echo "=== ALL *.json files anywhere under GITHUB_WORKSPACE (first 60) ==="
           find "${GITHUB_WORKSPACE}" -maxdepth 12 \
             -name "*.json" \
@@ -1745,7 +1745,7 @@ jobs:
       - name: Store results in canonical RESULT_SUBDIR
         if: always()
         env:
-          RESULTS_DIR:   ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:   ${{ env.OUT_BASE }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
         run: |
@@ -1885,7 +1885,7 @@ jobs:
         if: ${{ (needs.plan.outputs.exp_id == 'portfolio_feature_ranking' || needs.plan.outputs.exp_id == 'portfolio_pca_tail_error') && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           EXP: ${{ needs.plan.outputs.exp_id }}
-          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+          TARGET: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
@@ -2034,7 +2034,7 @@ jobs:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2177,7 +2177,7 @@ jobs:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2340,7 +2340,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "exp1_five_results*.json" 2>/dev/null | wc -l)
           echo "=== exp1_five output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2358,7 +2358,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_feynman output verification ==="
           echo "  Target dir       : ${TARGET}"
@@ -2376,7 +2376,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2 output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2393,7 +2393,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_five output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2410,7 +2410,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_PROTO=$(find "${TARGET}" -name "protocol_core_extrap_*.json" 2>/dev/null | wc -l)
           COUNT_BENCH=$(find "${TARGET}" \( -name "benchmark_results_extrap_shard*.json" -o -name "benchmark_results_extrap.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_feynman_extrap output verification ==="
@@ -2438,7 +2438,7 @@ jobs:
         if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
           EXP="${{ needs.plan.outputs.exp_id }}"
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
           echo "=== ${EXP} output verification ==="
           echo "  Target dir  : ${TARGET}"
@@ -2461,7 +2461,7 @@ jobs:
       - name: Verify exp3 trajectories are populated
         if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
-          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+          TARGET: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
@@ -2520,7 +2520,7 @@ jobs:
       - name: Verify suppA output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
           echo "=== suppA output verification ==="
           echo "  Target dir: ${TARGET}  JSON files: ${COUNT}"
@@ -2534,7 +2534,7 @@ jobs:
       - name: Verify suppA wiring regression test result
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          RESULT_JSON="${{ github.workspace }}/${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
+          RESULT_JSON="${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
           echo "=== suppA proc_box wiring regression test (item 10b) ==="
           if [[ ! -f "${RESULT_JSON}" ]]; then
             echo "::warning::${RESULT_JSON} not found — test_proc_box_wiring.py was likely absent from hypatiax/experiments/tests/, so run_all.sh skipped the wiring check (see suppA's 'Run experiment tasks' log for the skip warning). Not fatal, but the item 10b regression gate did not run."
@@ -2567,7 +2567,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "hybrid_llm_nn_all_domains_*.json" 2>/dev/null | wc -l)
           echo "=== hybrid_all_domains output verification ==="
           echo "  Target dir: ${TARGET}"
@@ -2585,7 +2585,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_CSV=$(find "${TARGET}" -name "instability_analysis.csv" 2>/dev/null | wc -l)
           echo "=== instability output verification ==="
           echo "  Target dir               : ${TARGET}"
@@ -2621,7 +2621,7 @@ jobs:
       - name: Verify extrap output files exist
         if: ${{ needs.plan.outputs.exp_id == 'extrap' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "all_domains_extrap_v4_*.json" -o -name "protocol_core_*.json" \) 2>/dev/null | wc -l)
           echo "=== extrap output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2664,7 +2664,7 @@ jobs:
       - name: Verify suppB output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppB' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
+          TARGET="${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
           COUNT=$(find "${TARGET}" \( -name "noise_sweep_*.json" -o -name "noise_sweep_*.csv" \) 2>/dev/null | wc -l)
           echo "=== suppB output verification ==="
           echo "  Target dir : ${TARGET}"
@@ -2680,7 +2680,7 @@ jobs:
       - name: Verify suppB_sc output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppB_sc' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
+          TARGET="${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
           COUNT=$(find "${TARGET}" \( -name "sample_complexity_*.json" -o -name "sample_complexity_*.csv" \) 2>/dev/null | wc -l)
           echo "=== suppB_sc output verification ==="
           echo "  Target dir : ${TARGET}"
@@ -2941,7 +2941,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           FILE_COUNT=$(find "${TARGET}" -type f 2>/dev/null | wc -l || echo 0)
           echo "Files in ${TARGET}: ${FILE_COUNT}"
           if [[ "${FILE_COUNT}" -eq 0 ]]; then
@@ -3139,7 +3139,7 @@ jobs:
           SHARD:         ${{ matrix.shard }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
 
           REL_TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           TRACKED=$(git ls-files --full-name "${REL_TARGET}" 2>/dev/null | wc -l || echo 0)
@@ -3230,7 +3230,7 @@ jobs:
         # replacement, never mixing arms from different runs) and fails with a clear list
         # if anything is still missing. A full run is left untouched.
         env:
-          RESULTS_DIR:            ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:            ${{ env.OUT_BASE }}
           ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
         run: |
           set -euo pipefail
@@ -3242,7 +3242,7 @@ jobs:
       - name: Merge shards and run analysis
         env:
           ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
-          RESULTS_DIR:           ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:           ${{ env.OUT_BASE }}
           ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
           # strict merge (this run's shards only) unless this is a deliberate partial re-run
           ABLATION_ALLOW_MASTER_FILL: ${{ github.event.inputs.task_ids_override != '' && '1' || '' }}
