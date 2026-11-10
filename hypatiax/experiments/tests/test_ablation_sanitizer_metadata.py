@@ -85,3 +85,26 @@ def test_no_silent_zero_r2_defaults():
         assert not re.search(r'get\("r2",\s*0\.0\)', t), name
         assert "AUDIT L36" in t or 'evaluation has no r2' in t
     assert 'res.get("rmse", float("inf"))' not in _text()
+
+
+
+def test_rows_record_raw_extrapolation_and_real_llm_metadata():
+    t = _text()
+    assert 'from hypatiax.core.r2_canonical import r2_detail as _r2_detail' in t
+    assert '"extrap_r2_raw":' in t and '"extrap_r2_status":' in t
+    assert 'from hypatiax.core.llm_meta import llm_meta' in t
+    assert '"llm_time_s":            _llm_m["llm_time_s"]' in t
+    assert '"llm_expression":        _llm_m["llm_expression"]' in t
+    assert '"llm_confidence":        _llm_m["llm_confidence"]' in t
+
+
+def test_total_time_is_wall_clock_and_llm_time_is_a_subset():
+    t = _text()
+    assert '"total_time_s":          sr_time,  # discover() wall time includes LLM; llm_time_s is a subset.' in t
+
+
+def test_provenance_detects_untracked_source_and_config_files():
+    t = _text()
+    assert '"--untracked-files=all"' in t
+    assert '":(exclude)hypatiax/data/results"' in t
+    assert '"tracked_and_untracked_worktree_excl_data_results"' in t
