@@ -5,7 +5,6 @@ fresh protocol stages are mapped to the original planner/PCA job architecture.
 These tests inspect workflow policy; they never dispatch jobs or call APIs.
 """
 from pathlib import Path
-import re
 import unittest
 
 
