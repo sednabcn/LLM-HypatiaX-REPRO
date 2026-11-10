@@ -40,6 +40,15 @@ import csv
 import importlib.util as _ilu
 import inspect
 import json
+try:
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
+except ImportError:  # run as a bare script, package not on sys.path
+    import pathlib as _pl, sys as _sys
+    for _up in _pl.Path(__file__).resolve().parents:
+        if (_up / "hypatiax" / "core" / "json_strict.py").is_file():
+            _sys.path.insert(0, str(_up))
+            break
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
 import os
 import hashlib
 import subprocess
@@ -785,6 +794,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # with discover()'s thresholds and never inverted a log-scaled y).
         # The formula is in *safe* variable names, so use res["formula"], not
         # the sanitizer-restored best_expr_raw.
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_r2, extrap_rmse = {}, {}
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
@@ -821,6 +832,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 y_pred = np.asarray(_predict(X_e), dtype=float)
                 extrap_r2[regime_name]   = _safe_r2(y_e, y_pred)
                 extrap_rmse[regime_name] = _safe_rmse(y_e, y_pred)
+                extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred)
             except Exception as ee:
                 dbg(f"extrap eval failed ({regime_name}): {ee}")
                 extrap_r2[regime_name]   = None
@@ -838,6 +850,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             f"far={_f(extrap_r2.get('far'))})  {sr_time:.1f}s"
             f"  scale_log={scale_log}  llm={res.get('llm_mode','none')}"
         )
+        from hypatiax.core.llm_meta import llm_meta
+        _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
         return {
             "condition":             condition,
             "success":               res.get("success", False),
@@ -848,16 +862,18 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_r2_near":        extrap_r2.get("near"),
             "extrap_r2_medium":      extrap_r2.get("medium"),
             "extrap_r2_far":         extrap_r2.get("far"),
+            "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+            "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
             "extrap_rmse_near":      extrap_rmse.get("near"),
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
             "sr_time_s":             sr_time,
-            "llm_time_s":            0.0,
-            "total_time_s":          sr_time,
+            "llm_time_s":            _llm_m["llm_time_s"],
+            "total_time_s":          sr_time,  # discover() wall time includes LLM; llm_time_s is a subset.
             "best_expression":       best_expr_raw,
             "complexity":            complexity,
-            "llm_expression":        None,
-            "llm_confidence":        None,
+            "llm_expression":        _llm_m["llm_expression"],
+            "llm_confidence":        _llm_m["llm_confidence"],
             # v5.4 provenance extras
             "engine_version":        HybridDiscoverySystem.VERSION,
             "scale_log":             scale_log,
@@ -909,11 +925,14 @@ def run_condition(eq, condition, seed=42, niterations=None,
         train_r2     = _safe_r2(y_train, y_pred_train)
         train_rmse   = _safe_rmse(y_train, y_pred_train)
 
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_r2, extrap_rmse = {}, {}
         for regime_name, (X_e, y_e) in extrap_sets.items():
             y_pred_e                  = model.predict(X_e)
             extrap_r2[regime_name]    = _safe_r2(y_e, y_pred_e)
             extrap_rmse[regime_name]  = _safe_rmse(y_e, y_pred_e)
+            extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred_e)
 
         best_expr_raw = str(model.sympy())
         best_expr     = sanitizer.restore(best_expr_raw)
@@ -926,6 +945,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         traceback.print_exc()
         train_r2 = train_rmse = None
         extrap_r2   = {r: None for r, _ in EXTRAP_REGIMES}
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_rmse = {r: None for r, _ in EXTRAP_REGIMES}
         best_expr   = "evaluation_error"
         complexity  = None
@@ -948,6 +968,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "extrap_r2_near":        extrap_r2.get("near"),
         "extrap_r2_medium":      extrap_r2.get("medium"),
         "extrap_r2_far":         extrap_r2.get("far"),
+        "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+        "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
         "extrap_rmse_near":      extrap_rmse.get("near"),
         "extrap_rmse_medium":    extrap_rmse.get("medium"),
         "extrap_rmse_far":       extrap_rmse.get("far"),
@@ -1824,6 +1846,7 @@ def write_provenance(all_results: dict) -> None:
     _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
     _source_revision = None
     _git_dirty = None
+    _git_dirty_files = None
     _script_tracked = False
     _git_dirty_scope = "unavailable"
     try:
@@ -1835,16 +1858,21 @@ def write_provenance(all_results: dict) -> None:
             ["git", "rev-parse", "HEAD"], cwd=_git_root,
             check=True, capture_output=True, text=True
         ).stdout.strip()
-        _git_dirty = bool(subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+        # Result files are outputs the run itself rewrites; only code/config
+        # changes make a run non-reproducible from source_revision.
+        _status_out = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all",
+             "--", ".", ":(exclude)hypatiax/data/results"],
             cwd=_git_root, check=True, capture_output=True, text=True
-        ).stdout.strip())
+        ).stdout.strip()
+        _git_dirty = bool(_status_out)
+        _git_dirty_files = _status_out.splitlines()[:20]
         _script_rel = _script_file.relative_to(_git_root).as_posix()
         _script_tracked = subprocess.run(
             ["git", "ls-files", "--error-unmatch", _script_rel],
             cwd=_git_root, capture_output=True, text=True
         ).returncode == 0
-        _git_dirty_scope = "tracked_worktree_only"
+        _git_dirty_scope = "tracked_and_untracked_worktree_excl_data_results"
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
     _source_meta = {
@@ -1854,6 +1882,7 @@ def write_provenance(all_results: dict) -> None:
         "benchmark_script_tracked": _script_tracked,
         "git_dirty": _git_dirty,
         "git_dirty_scope": _git_dirty_scope,
+        "git_dirty_files": _git_dirty_files,
     }
     provenance = {
         "family":                "ablation_exp1",
