@@ -272,6 +272,87 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
+    },
+    {
+      "equation_id": "BIO-HILL-MUSCLE-001",
+      "name": "Hill muscle force-velocity characteristic relation",
+      "domain": "Biology",
+      "subdomain": "muscle mechanics",
+      "formula": "(P + a)(V + b) = (P0 + a)b; equivalently V = b(P0 - P)/(P + a)",
+      "canonical_expression": "b*(P0-P)/(P+a)",
+      "formula_latex": "V=\\frac{b(P_0-P)}{P+a}",
+      "structural_fingerprint": "a7a5a3fe37b976c4146cdb2d4f6ceeee0df646b82650ee457ac09236cb4a882b",
+      "source_ids": [
+        "BIO-HILL-MUSCLE-1938"
+      ],
+      "source_family_id": "BIO-MUSCLE-FORCE-VELOCITY-HILL",
+      "status": "proposed",
+      "assumptions": [
+        "Steady isotonic concentric shortening",
+        "Tetanic activation and approximately constant load during the measured shortening interval",
+        "Force and velocity refer to the contractile element under the stated series-elastic assumptions",
+        "Parameters a and b are positive and specific to the muscle preparation/condition"
+      ],
+      "variables": {
+        "P": {
+          "meaning": "Applied load or shortening force",
+          "unit": "N or other force unit"
+        },
+        "P0": {
+          "meaning": "Isometric force at zero shortening velocity",
+          "unit": "Same force unit as P"
+        },
+        "a": {
+          "meaning": "Hill force constant controlling curvature",
+          "unit": "Same force unit as P"
+        },
+        "b": {
+          "meaning": "Hill velocity constant",
+          "unit": "m s^-1 or muscle lengths s^-1"
+        }
+      },
+      "validity": {
+        "source_location": "Hill (1938), Proc. R. Soc. B 126, 136-195; characteristic relation, cited source mapping pp. 174-177",
+        "regime": "Steady force-velocity relation during isotonic concentric shortening",
+        "limitations": [
+          "Do not treat the normalized Hill force-velocity relation as the Hill ligand-binding equation",
+          "The rectangular hyperbola is empirical and does not fit all force/velocity extremes or all muscle preparations",
+          "Freeze force/velocity sign convention, muscle type, temperature and activation protocol before benchmarking",
+          "No algebraic rearrangement or parameter rescaling is a separate equation"
+        ]
+      },
+      "input_ranges": {
+        "P": {
+          "train": null,
+          "extrapolation": null
+        },
+        "P0": {
+          "train": null,
+          "extrapolation": null
+        },
+        "a": {
+          "train": null,
+          "extrapolation": null
+        },
+        "b": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Primary source record and characteristic equation lineage identified",
+        "Modern sources reproduce the original equation and explain its isotonic shortening context",
+        "Exact page image transcription should be checked against the Royal Society original before source_verified status",
+        "Train/extrapolation ranges and deterministic generator remain pending",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Hill (1938), DOI 10.1098/rspb.1938.0050"
     }
   ],
   "source_register": [
@@ -1305,6 +1386,7 @@
     "Chemistry discovery batch 4 was deepened with primary/historical leads for Debye–Hückel electrolyte theory and van't Hoff temperature-dependent equilibrium, plus specific polyprotic-acid and conditional-solubility references; all are discovery-only candidate references.",
     "OpenStax Chemistry 2e §11.3 provides a specific Henry's-law equation lead C_g = k P_g. This is a candidate gas–liquid solubility relation, not the excluded ideal-gas law; it remains a candidate reference pending benchmark suitability and source-family review.",
     "Chemistry source mapping now includes surface adsorption (Langmuir 1918) and molecular diffusion (Fick 1855) as additional source-family leads; diffusion flux and diffusion PDE are related levels of one transport framework and must not be counted independently without an explicit sampling-unit rule.",
-    "First proposed-record pass: Henry gas solubility, Langmuir single-site adsorption, and Marcus outer-sphere electron transfer. All remain proposed with null input ranges and pending generators; none is accepted."
+    "First proposed-record pass: Henry gas solubility, Langmuir single-site adsorption, and Marcus outer-sphere electron transfer. All remain proposed with null input ranges and pending generators; none is accepted.",
+    "Second proposed-record pass adds the scalar Hill muscle force-velocity relation. It remains proposed pending primary-page transcription, muscle-context selection, ranges and generator. Michaelis-Menten remains excluded because it is a Core-15 exclusion."
   ]
 }
