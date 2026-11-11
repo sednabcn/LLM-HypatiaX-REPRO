@@ -124,3 +124,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 6 (2026-11-11)
 
 [Source Verification Audit 6](CORE295_SOURCE_VERIFICATION_AUDIT_6.md) verifies LFJ Liquidity Book's per-bin constant-sum relation, geometric bin-price grid and multi-bin swap traversal against the whitepaper and a pinned implementation snapshot. Treat the complete multi-bin state-transition model as one family, not a separate equation per bin, direction, fee or accumulator. It is structurally distinct from the Core-15 constant-product exclusion but remains held pending model-scope and implementation-contract decisions.
+
+
+## Source verification audit 7 (2026-11-11)
+
+[Source Verification Audit 7](CORE295_SOURCE_VERIFICATION_AUDIT_7.md) separates Chainlink's feed-specific heartbeat/deviation update triggers from consumer-defined updatedAt/maxAge freshness guards. Treat these as protocol operations and application safety predicates, not distinct universal equations. Keep the source as context; defer equation eligibility until the DeFi Risk domain contract explicitly includes version-pinned safety predicates.
