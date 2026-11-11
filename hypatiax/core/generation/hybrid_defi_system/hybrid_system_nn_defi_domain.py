@@ -37,7 +37,10 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from hypatiax.core.r2_canonical import r2_checked
-from hypatiax.core.routing import select_hypatiax_route, structural_risk_tokens
+from hypatiax.core.routing import (
+    kde_ood_probability, select_hypatiax_route, structural_risk_tokens,
+    training_edge_degradation_probe,
+)
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
 env_path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -753,6 +756,8 @@ EXPLANATION:
             variable_names: list[str],
             metadata: dict,
             verbose: bool = False,
+            X_query: np.ndarray | None = None,
+            degradation_tau: float | None = None,
     ) -> dict:
         """
         Hybrid symbolic + neural system.
@@ -849,6 +854,26 @@ EXPLANATION:
         _structural_tokens = structural_risk_tokens(
             llm_result.get("formula"), fitted_code
         )
+        _edge_probe = training_edge_degradation_probe(
+            X_train, y_train, fitted_preds_train
+        ) if fitted_preds_train is not None else {
+            "status": "no_fitted_training_predictions",
+            "r2_core": None, "r2_edge": None, "delta": None,
+        }
+        # tau is explicit: absent calibration must not silently create a
+        # pure-LLM route. Callers may pass it or set the documented env.
+        if degradation_tau is None:
+            _tau_env = os.getenv("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+            if _tau_env:
+                try:
+                    degradation_tau = float(_tau_env)
+                except ValueError as _tau_err:
+                    raise ValueError("HYPATIAX_ROUTING_DELTA_TAU must be numeric") from _tau_err
+        _ood = (
+            kde_ood_probability(X_train, X_query)
+            if X_query is not None else
+            {"status": "query_covariates_not_supplied", "p_ood": None}
+        )
         _route = select_hypatiax_route(
             fitted_train_r2=fitted_train_r2,
             nn_train_r2=nn_train_r2,
@@ -856,6 +881,10 @@ EXPLANATION:
             nn_preds_train=nn_preds_train,
             structural_tokens=_structural_tokens,
             trust_threshold=0.5,
+            degradation_delta=_edge_probe.get("delta"),
+            degradation_tau=degradation_tau,
+            p_ood=_ood.get("p_ood"),
+            alpha=0.3,
         )
         decision = _route["decision"]
         best_preds = _route["predictions"]
@@ -916,6 +945,9 @@ EXPLANATION:
             "structural_risk_flag": bool(_route["structural_risk_flag"]),
             "structural_risk_tokens": list(_route["structural_risk_tokens"]),
             "blend_weights":   _route["blend_weights"],
+            "degradation_probe": _edge_probe,
+            "ood_diagnostic": _ood,
+            "routing_alpha": 0.3,
 
             # Always keep NN artefacts regardless of decision.  The extrapolation
             # test (test_enhanced_defi_extrapolation.py) checks for a non-None
