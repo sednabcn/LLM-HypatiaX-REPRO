@@ -2991,7 +2991,7 @@
       "domain": "Biology",
       "title": "Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten",
       "url": "https://doi.org/10.1007/BF01755094",
-      "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340; foundational lineage for generalized two-power growth law dm/dt = p*m^a − q*m^b. Exact equation/page must be transcribed from original before candidate use. Cluster generalized Pütter law with the classical von Bertalanffy 2/3,1 specialization pending primary review.",
+      "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340; a 1960 Fisheries Research Board translation of the original paper is available. The original text defines a theoretical linear dimension λ=cube-root(weight), assumes anabolic construction ∝ λ² and catabolic breakdown ∝ λ³, derives the net increment and limiting size, and gives an integrated growth curve. Do not back-attribute the later arbitrary-exponent generalization dm/dt=p*m^a−q*m^b to this source without direct evidence.",
       "status": "candidate_reference"
     }
   ],
