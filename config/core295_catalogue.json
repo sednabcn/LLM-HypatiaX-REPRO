@@ -346,7 +346,7 @@
     },
     {
       "equation_id": "PHYS-POISEUILLE-001",
-      "name": "Poiseuille laminar tube-flow relation",
+      "name": "Hagen–Poiseuille laminar tube-flow relation",
       "domain": "Physics",
       "subdomain": "viscous fluid mechanics",
       "formula": "Q = (p2 - p1) pi r^4 / (8 eta l)",
@@ -430,7 +430,8 @@
         "The source explicitly identifies incompressible laminar flow through a tube; figure caption describes viscosity and cylindrical geometry",
         "Benchmark ranges must enforce p2>p1, positive r, eta and l, and a laminar Reynolds-number constraint",
         "Train/extrapolation ranges and deterministic generator remain pending",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Audit 4 (2026-11-11): distinguish the modern viscosity-explicit Hagen–Poiseuille expression in OpenStax §14.7 Eq. 14.19 from Poiseuille's original empirical K*DeltaP*D^4/L relation; viscosity-explicit derivation is later, commonly attributed to Hagenbach (1860). Preserve Navier–Stokes special-solution lineage and decide whether PDE special solutions count as distinct equations. See docs/CORE295_PROPOSED_RECORD_AUDIT_4.md."
       ],
       "source_location": "OpenStax University Physics Volume 1 §14.7, Eq. 14.19"
     },
