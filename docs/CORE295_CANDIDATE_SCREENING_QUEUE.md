@@ -168,3 +168,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 17 (2026-11-11)
 
 [Source Verification Audit 17](CORE295_SOURCE_VERIFICATION_AUDIT_17.md) verifies Compound III's post-absorption collateral storefront discount against official docs and the pinned Comet implementation: (d_{store}=StoreFrontPriceFactor(1-LiquidationFactor_a)), followed by discounted collateral price and a decimal-aware base-to-collateral quote. This is distinct in role from health-based liquidation eligibility, Morpho/Euler liquidation incentives and Sky time-decay auctions, but it is a configured proportional sale-price adjustment rather than a strong new structural equation. Retain as source-family context; do not add a proposed record or count the quote conversion as another equation.
+
+
+## Source verification audit 18 (2026-11-11)
+
+[Source Verification Audit 18](CORE295_SOURCE_VERIFICATION_AUDIT_18.md) verifies the classical outer-sphere Marcus barrier against IUPAC and distinguishes the 1956 paper's solution collision-number prefactor from IUPAC's encounter-complex Eyring prefactor. The proposed formula pairs the classical quadratic driving-force barrier with the collision-frequency prefactor; it remains held because the prefactor convention and overlap with Core-15 Arrhenius/generic Rate Law exclusions require an explicit ruling. Do not count barrier, rate, prefactor or reaction-region variants separately.
