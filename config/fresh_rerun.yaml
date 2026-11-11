@@ -273,9 +273,13 @@ deferred_experiments:
       - pysr_prior
     reason: "scripts/phase3_all.py now wires llm_acceptance, complexity_routing (structural-risk guard), and pysr_prior for Core-15 HDS v50_2. Neural degradation probe, NN augmentation and blend weight require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not claim six-gate coverage or compare omitted gates as no-effect."
   protocol30:
-    status: deferred
+    status: wired_not_executed
+    protocol_id: protocol30_custom_30_equations_11_domains
+    protocol_registry: hypatiax/protocols/experiment_protocol_benchmark_v2.py::Protocol30
+    source_equation_builder: hypatiax/protocols/experiment_protocol_benchmark_v2.py::_build_feynman_equations
     manuscript_equations: 30
-    manuscript_domains:
+    samples_per_equation: 200
+    domains:
       - biology
       - chemistry
       - electrochemistry
@@ -287,15 +291,39 @@ deferred_experiments:
       - probability
       - quantum
       - thermodynamics
-    missing_artifacts:
-      - manuscript-matching 30-equation registry and per-equation source formulas
-      - explicit random_80_20 and pca_40_60 split definitions for that registry
-      - clean method-arm and output-schema mapping
+    methods:
+      - PureLLMBaseline
+      - ImprovedNN
+      - EnhancedHybridDeFi
+      - HybridSystemLLMNN
+      - SymbolicEngineWithLLM
+      - HybridDiscoverySystem_v50_2
+    random_80_20:
+      runner_stage: exp2_protocol30_random_8020
+      script: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py
+      protocol_arg: protocol30
+      train_fraction: 0.80
+      test_fraction: 0.20
+      random_state: 42
+      output_dir: comparison_results/protocol30/random-80-20
+    pca_40_60:
+      runner_stage: exp2_protocol30_pca_4060
+      script: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py
+      protocol_arg: protocol30
+      train_fraction: 0.40
+      test_fraction: 0.60
+      random_state: 42
+      output_dir: comparison_results/protocol30/pca-40-60
+      interpretation: "PCA-held-out 60 percent is the extrapolation evaluation set"
+    noise_level: 0.0
+    recovery_threshold: 0.999999
+    verification_status: not_executed
+    provenance_note: "This is the manuscript custom 30-equation, 11-domain registry. The similarly named ExperimentProtocolAll 10-domain registry is a separate proxy and must not be mixed with Protocol-30."
     non_equivalent_proxy:
-      standard_runner_stages:
+      runner_stages:
         - exp2
-      deferred_optional_proxy_stage: exp2_all_domains_pca_4060
-      protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
+        - exp2_all_domains_pca_4060
+      protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py::ExperimentProtocolAll
       equations: 30
       registry_domains:
         - mechanics
@@ -309,8 +337,6 @@ deferred_experiments:
         - mathematics
         - economics
       verification_status: not_executed
-    reason: "The current 10-domain ExperimentProtocolAll registry is a different equation/domain suite from the manuscript's custom 30-equation, 11-domain Protocol-30. The exp2 random and new PCA 40/60 stages are retained as a clearly labelled proxy only. Do not report them as Protocol-30 or combine their outputs with historical Protocol-30 tables."
-
 # Manuscript §7.3 routing policy. The tau value is intentionally null until a
 # separate training-only calibration protocol is frozen; with no tau, routing
 # fails closed to ensemble and never silently admits the pure-LLM shortcut.
