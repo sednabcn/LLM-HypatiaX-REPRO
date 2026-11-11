@@ -1,7 +1,7 @@
 # Core-295 source verification audit 64: Acerbi–Tasche coherent expected shortfall and normal closed form
 
 **Date:** 2026-11-11  
-**Status:** verification of the author-pool normal expected-shortfall lead; new source registered as candidate_reference. No equation is added to the formal catalogue or counted toward 295.
+**Status:** verification of the author-pool normal expected-shortfall lead; source RISK-ACERBI-TASCHE-2002 is registered as candidate_reference. No equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary source
 
