@@ -24,7 +24,8 @@ def test_structural_risk_overrides_high_fit_pure_llm_route():
     assert route["decision"] == "ensemble"
     assert route["route_reason"] == "structural_risk_precedence"
     assert route["structural_risk_flag"] is True
-    assert route["blend_weights"] == {"llm": 0.65, "nn": 0.35}
+    assert np.isclose(route["blend_weights"]["llm"], 0.65)
+    assert np.isclose(route["blend_weights"]["nn"], 0.35)
 
 
 def test_high_fit_without_structural_risk_needs_low_degradation():
