@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 34 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 35 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -294,3 +294,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 29 (2026-11-11)
 
 [Source Verification Audit 29](CORE295_SOURCE_VERIFICATION_AUDIT_29.md) transcribes Fisher 1937's scalar reaction–diffusion equation and Gierer–Meinhardt 1972 Eq. (15a,b). Keep Fisher in the spatial logistic-reaction family; keep Gierer–Meinhardt as a coupled activator–inhibitor model within the broader Turing/morphogenesis PDE family. The source's explicit source-density fields and multiple mechanism variants must not be collapsed into one generic formula without a declared model choice.
+
+
+## Discovery batch 35 (2026-11-11)
+
+[Candidate Discovery Batch 35](CORE295_CANDIDATE_DISCOVERY_BATCH_35.md) adds Schrödinger wave mechanics, Compton photon–electron scattering and de Broglie matter waves. Keep stationary/time-dependent Schrödinger forms in one family; keep Compton wavelength shift distinct from Planck spectral distribution; keep de Broglie phase/group-wave representations in one matter-wave family.
