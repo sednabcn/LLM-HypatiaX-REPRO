@@ -488,3 +488,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 64 (2026-11-11)
 
 [Source Verification Audit 64](CORE295_SOURCE_VERIFICATION_AUDIT_64.md) verifies Acerbi–Tasche's coherent expected-shortfall definition and the normal-distribution closed form. Source RISK-ACERBI-TASCHE-2002 is candidate_reference. ES is distinct from VaR, but the Core-15 exclusion's scope must be decided; continuous-loss conditional expectation and quantile-integral definitions are one ES family.
+
+
+## Source verification audit 65 (2026-11-11)
+
+[Source Verification Audit 65](CORE295_SOURCE_VERIFICATION_AUDIT_65.md) verifies Basel CRE35's (EL=PD\times LGD\) and (EL_{amount}=EL\times EAD). Source RISK-BASEL-CRE35-EL is candidate_reference. This is a standard credit-risk accounting decomposition, not a distinct structural equation; PD, LGD and EAD need their own model/source contracts.
