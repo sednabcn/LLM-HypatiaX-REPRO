@@ -29,3 +29,7 @@ def test_failed_trust_gate_routes_to_nn():
     assert route["decision"] == "nn"
     assert route["route_reason"] == "trust_gate_failed"
     assert route["trust_gate_passed"] is False
+
+
+def test_formula_fragment_fallback_detects_function_calls():
+    assert structural_risk_tokens("exp(x") == ["exp"]
