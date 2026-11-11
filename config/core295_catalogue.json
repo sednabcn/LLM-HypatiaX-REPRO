@@ -790,6 +790,46 @@
       "url": "https://doi.org/10.1146/annurev.mi.03.100149.002103",
       "use": "Primary Monod 1949 bacterial growth source; substrate-dependent specific growth relation is hyperbolic and structurally analogous to Michaelis–Menten; exact original equation/page verification still required",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-BEER-1852",
+      "domain": "Chemistry",
+      "title": "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten",
+      "url": "https://doi.org/10.1002/andp.18521620505",
+      "use": "Primary Beer 1852 absorption paper, Annalen der Physik 162, 78–88; distinguish original exponential absorption relation from modern decadic absorbance/molar absorptivity notation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-ERDEY-GRUZ-VOLMER-1930",
+      "domain": "Chemistry",
+      "title": "Zur Theorie der Wasserstoff Überspannung",
+      "url": "https://doi.org/10.1515/zpch-1930-15020",
+      "use": "Primary 1930 reversible hydrogen electrode kinetics source for exponential anodic/cathodic current contributions; historical origin of the modern Butler–Volmer family",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-BUTLER-1924",
+      "domain": "Chemistry",
+      "title": "Studies in Heterogeneous Equilibria Parts II and III",
+      "url": "https://doi.org/10.1039/TF9241900729",
+      "use": "Primary Butler 1924 sources for kinetic interpretation of Nernst equilibrium and reversible oxidation potentials; do not attribute the complete modern Butler–Volmer law to these papers",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-HINSHELWOOD-PRICHARD-1925",
+      "domain": "Chemistry",
+      "title": "The relation of homogeneous to catalysed reactions: catalytic decomposition of hydrogen iodide on gold",
+      "url": "https://doi.org/10.1039/CT9252701552",
+      "use": "Primary 1925 surface-catalysis paper relevant to Langmuir–Hinshelwood mechanisms; trace exact elementary surface steps before assigning a global rate equation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-LH-WACHS-2024",
+      "domain": "Chemistry",
+      "title": "The Conundrum of Pair Sites in Langmuir-Hinshelwood Reaction Kinetics in Heterogeneous Catalysis",
+      "url": "https://doi.org/10.1021/acscatal.4c02813",
+      "use": "Explicit modern derivation of a competitive-adsorption bimolecular Langmuir–Hinshelwood rate equation (Eq. 5), with surface site balance and assumptions",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
