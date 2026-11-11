@@ -550,6 +550,22 @@
       "url": "https://openstax.org/books/chemistry-2e/pages/11-3-solubility",
       "use": "Exact Henry's-law relation between dissolved-gas concentration and gas partial pressure; state the convention for Henry constant and temperature/solution regime",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-LANGMUIR-1918",
+      "domain": "Chemistry",
+      "title": "The adsorption of gases on plane surfaces of glass, mica and platinum",
+      "url": "https://doi.org/10.1021/ja02242a004",
+      "use": "Primary source for gas-surface adsorption and Langmuir isotherm family; verify monolayer assumptions and exact equation location",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-FICK-1855",
+      "domain": "Chemistry",
+      "title": "Ueber Diffusion",
+      "url": "https://doi.org/10.1002/andp.18551700105",
+      "use": "Primary source for diffusion/transport relations; define flux, concentration, diffusivity, geometry and boundary conditions",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -563,6 +579,7 @@
     "Primary biology source leads for Lotka population dynamics, Kermack–McKendrick epidemic theory, Turing morphogenesis and Gyenge physiological transport are recorded as candidate references only; none establishes an accepted equation or independent calibration unit.",
     "Chemistry source-map expansion in discovery batch 4 adds mass-action historical provenance, IUPAC equilibrium/activity definitions, and OpenStax chapter coverage for equilibrium, acid-base, solubility, thermodynamics and electrochemistry; all remain candidate references.",
     "Chemistry discovery batch 4 was deepened with primary/historical leads for Debye–Hückel electrolyte theory and van't Hoff temperature-dependent equilibrium, plus specific polyprotic-acid and conditional-solubility references; all are discovery-only candidate references.",
-    "OpenStax Chemistry 2e §11.3 provides a specific Henry's-law equation lead C_g = k P_g. This is a candidate gas–liquid solubility relation, not the excluded ideal-gas law; it remains a candidate reference pending benchmark suitability and source-family review."
+    "OpenStax Chemistry 2e §11.3 provides a specific Henry's-law equation lead C_g = k P_g. This is a candidate gas–liquid solubility relation, not the excluded ideal-gas law; it remains a candidate reference pending benchmark suitability and source-family review.",
+    "Chemistry source mapping now includes surface adsorption (Langmuir 1918) and molecular diffusion (Fick 1855) as additional source-family leads; diffusion flux and diffusion PDE are related levels of one transport framework and must not be counted independently without an explicit sampling-unit rule."
   ]
 }
