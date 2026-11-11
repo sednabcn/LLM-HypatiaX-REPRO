@@ -2881,6 +2881,22 @@
       "url": "https://doi.org/10.1515/zpch-1930-15020",
       "use": "Primary Erdey-Grúz and Volmer (1930), Zeitschrift für Physikalische Chemie A 150, pp. 203–213; original scan available at https://knowledge.electrochem.org/estir/hist/hist-34-Volmer-1.pdf. Opposing electron-transfer rates and equilibrium/net current expressions are printed Eqs. (7)–(8), (13)–(15), pp. 209–212; Tafel limit Eq. (17), p. 212. The paper treats hydrogen overpotential via a stated slow electron-transfer step and estimates the transfer parameter near 0.5 for its conditions. Candidate reference only; formal symbol/sign and surface-concentration adapter still required.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-THIEME-2003-POPULATION-MATH",
+      "domain": "Biology",
+      "title": "Mathematics in Population Biology",
+      "url": "https://api.pageplace.de/preview/DT0400.9780691187655_A33705070/preview-9780691187655_A33705070.pdf",
+      "use": "Thieme (2003), Princeton University Press, textbook. Accessible contents and text distinguish continuous-time Beverton–Holt and Ricker growth equations (Ch. 5, §§5.2–5.3) from discrete-time Beverton–Holt and Ricker difference equations (Ch. 9, §§9.1–9.2). Useful secondary source for separating model type/time structure; not primary source for fisheries stock–recruitment equations.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-OVERVIEW-2026",
+      "domain": "DeFi AMM",
+      "title": "Curve AMM: StableSwap and CryptoSwap overview",
+      "url": "https://docs.curve.finance/developer/amm/curve-amm-overview/",
+      "use": "Official Curve developer documentation identifying StableSwap as the invariant for near-parity assets and CryptoSwap for volatile pairs, with current NG implementation families. Supports family discovery and version separation; detailed equations and code revision must be pinned per candidate.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
