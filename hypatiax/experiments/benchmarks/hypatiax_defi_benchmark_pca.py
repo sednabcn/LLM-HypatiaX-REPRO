@@ -1402,9 +1402,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
                     "decision":        hy_m["decision"],
+                    "route_reason":    hy_m.get("route_reason"),
+                    "route_execution_status": hy_m.get("route_execution_status"),
+                    "structural_risk_flag": hy_m.get("structural_risk_flag"),
+                    "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "degradation_probe": hy_m.get("degradation_probe"),
+                    "degradation_tau": hy_m.get("degradation_tau"),
+                    "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
-                    "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
+                    "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }
