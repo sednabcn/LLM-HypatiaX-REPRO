@@ -85,6 +85,8 @@
 
 68. Lotka, A. J. (1920). Analytical note on certain rhythmic relations in organic systems. *Proceedings of the National Academy of Sciences, 6*(7), 410–415. https://doi.org/10.1073/pnas.6.7.410. Primary source for a two-species plant–herbivore interaction model and undamped oscillations; the paper’s own equations (5)–(10) and transformed system (15) are more nuanced than the later constant-coefficient textbook Lotka–Volterra form. Cite the original model and its assumptions rather than retrofitting the modern form.
 
+69. Egorov, M. (2021). *Automatic market-making with dynamic peg*. Curve Finance, June 9, 2021. https://docs.curve.fi/assets/pdf/whitepaper_cryptoswap.pdf. Primary protocol whitepaper for the CryptoSwap dynamic-peg invariant, including the state-dependent coefficient \(K\), transformed balances and internal price-scale mechanism. Distinguish this from the 2019 StableSwap invariant and record the exact paper revision and implementation version.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
