@@ -37,7 +37,21 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 
 **Pool disposition:** Do not label either prefactor universally correct without fixing the model scope. The 1956 solution-reaction treatment is associated with a solution collision-number prefactor (Z), whereas the IUPAC encounter-complex/intramolecular form uses κ_ET k_BT/h. These are not interchangeable metadata choices: the equation must declare bimolecular solution encounter versus encounter-complex/intramolecular kinetics, and define the prefactor and units accordingly. The uploaded candidate's generic (Z) is therefore not automatically wrong, but it is underspecified as a general Marcus rate law. Do not silently identify the 1956 ΔF* with the later/generalized quadratic expression ΔG‡=(λ+ΔG°ET)²/(4λ): the 1956 abstract describes an electrostatic variational construction, and its exact equation/parameter mapping still needs line-by-line PDF verification. The collision-number statement is now source-confirmed at abstract level; the full equation transcription and model contract remain open.
 
-## 4. Candidate-family disposition
+## 4. Butler–Volmer lineage: correct primary attribution
+
+The full modern two-exponential current–overpotential relation should not be attributed to Butler's 1924 paper alone. Butler's 1924 Part II/III papers developed a kinetic/dynamic-equilibrium interpretation of the Nernst reversible potential. Erdey-Grúz and Volmer's 1930 *Zur Theorie der Wasserstoffüberspannung* is a key primary source for slow-discharge hydrogen overpotential kinetics and the transfer coefficient; the historical record also includes Erdey-Grúz and Volmer's 1931 treatment and Butler's 1932 paper on overvoltage. A recent detailed historical review explicitly cautions that Butler's 1924 works did not set out a complete theory of heterogeneous electron-transfer rates, while the 1930 Erdey-Grúz–Volmer contribution is often omitted from the familiar equation name.
+
+The commonly used charge-transfer-controlled form is
+
+[
+j=j_0\left[\exp\left(\frac{\alpha_a nF\eta}{RT}\right)-\exp\left(-\frac{\alpha_c nF\eta}{RT}\right)\right],
+]
+
+with sign convention, electron number, transfer coefficients and surface concentrations declared. Some simplified forms impose a relation between anodic and cathodic transfer coefficients; that relation is not a universal identity for every mechanism. If surface concentrations differ from bulk because of mass transport, concentration ratios must be retained and the scalar form above is not the complete mixed-control model.
+
+**Structural screen:** This is an electrochemical interfacial charge-transfer kinetic law with two directional exponential contributions. It is not the Frumkin adsorption isotherm and not the Marcus outer-sphere solution electron-transfer barrier model. The shared presence of exponentials is not enough to equate mechanisms. Keep the full current law as a family lead, but do not count its anodic and cathodic terms, Tafel limits, or linear small-overpotential approximation as separate equations. Exact primary equation/page transcription and scope conditions remain required before promotion.
+
+## 5. Candidate-family disposition
 
 | Family | Structural relationship | Current action |
 |---|---|---|
@@ -45,7 +59,7 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 | Frumkin interacting adsorption | Coverage-dependent exponential interaction term | High-priority distinct-family lead; exact primary transcription pending |
 | Potential-dependent electrosorption | Adds electrode potential, charge and electrochemical standard-state dependence | Research lead; requires a complete electrochemical model contract |
 | Marcus outer-sphere electron transfer | Quadratic reorganization-energy barrier; prefactor depends on solution-bimolecular versus encounter-complex/intramolecular scope | Specify source-matched (Z) or κ_ET(k_BT/h) convention and verify primary equation before promotion |
-| Butler–Volmer electrode kinetics | Exponential anodic/cathodic overpotential contributions | Keep separate from Marcus outer-sphere rate unless a derivation establishes equivalence; do not attribute the full modern equation to Butler 1924 alone |
+| Butler–Volmer / Erdey-Grúz–Volmer electrode kinetics | Two directional exponential charge-transfer contributions under declared surface-concentration and transfer-coefficient assumptions | Keep as a distinct electrochemical interfacial kinetic lead; do not attribute the complete modern law to Butler 1924 alone; verify 1930 primary equation |
 
 ## 5. Source evidence
 
@@ -57,6 +71,9 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 - Marcus (1956), primary electron-transfer theory; publisher abstract explicitly identifies solution collision number × exp(-ΔF*/kBT): https://doi.org/10.1063/1.1742723
 - Caltech repository record and attached original paper PDF: https://authors.library.caltech.edu/records/desqy-fmq55
 - IUPAC Marcus equation, prefactor and barrier definition: https://goldbook.iupac.org/terms/view/M03702
+- Butler (1924), *Studies in heterogeneous equilibria, Part III*: https://doi.org/10.1039/TF9241900734
+- Erdey-Grúz & Volmer (1930), *Zur Theorie der Wasserstoffüberspannung*: https://doi.org/10.1515/zpch-1930-15020
+- Dickinson & Wain, historical and equation-form review of Butler–Volmer: https://www.sciencedirect.com/science/article/pii/S1572665720303283
 - Equation-level Frumkin isotherm and surface equation of state: https://pmc.ncbi.nlm.nih.gov/articles/PMC5686271/
 - Interfacial adsorption isotherm comparison: https://pure.rug.nl/ws/portalfiles/portal/3086148/c3.pdf
 
