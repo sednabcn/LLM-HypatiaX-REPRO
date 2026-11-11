@@ -4,11 +4,9 @@
 
 **Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 12 proposed equation records; zero accepted equation entries.
 
-**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`; pass 7 adds `RISK-MORPHO-LIF-001`; pass 8 adds `RISK-EULER-AUCTION-001`; pass 9 adds `RISK-COMPOUND-BORROW-KINK-001`; pass 10 adds `AMM-DODO-PMM-BASE-SHORTAGE-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See proposed-record reviews [1](CORE295_PROPOSED_RECORD_REVIEW_1.md), [2](CORE295_PROPOSED_RECORD_REVIEW_2.md), [3](CORE295_PROPOSED_RECORD_REVIEW_3.md), [4](CORE295_PROPOSED_RECORD_REVIEW_4.md), [5](CORE295_PROPOSED_RECORD_REVIEW_5.md), [6](CORE295_PROPOSED_RECORD_REVIEW_6.md), [7](CORE295_PROPOSED_RECORD_REVIEW_7.md) and [8](CORE295_PROPOSED_RECORD_REVIEW_8.md). The source counts are not equation counts.
+**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`; pass 7 adds `RISK-MORPHO-LIF-001`; pass 8 adds `RISK-EULER-AUCTION-001`; pass 9 adds `RISK-COMPOUND-BORROW-KINK-001`; pass 10 adds `AMM-DODO-PMM-BASE-SHORTAGE-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See proposed-record reviews [1](CORE295_PROPOSED_RECORD_REVIEW_1.md), [2](CORE295_PROPOSED_RECORD_REVIEW_2.md), [3](CORE295_PROPOSED_RECORD_REVIEW_3.md), [4](CORE295_PROPOSED_RECORD_REVIEW_4.md), [5](CORE295_PROPOSED_RECORD_REVIEW_5.md), [6](CORE295_PROPOSED_RECORD_REVIEW_6.md), [7](CORE295_PROPOSED_RECORD_REVIEW_7.md) and [8](CORE295_PROPOSED_RECORD_REVIEW_8.md), [9](CORE295_PROPOSED_RECORD_REVIEW_9.md) and [10](CORE295_PROPOSED_RECORD_REVIEW_10.md). The source counts are not equation counts.
 
 ## Tier A — eligible for proposed-record drafting after technical review
-
-The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSCLE-001`; see proposed-record review pass 2. It remains proposed pending primary-page transcription, exact muscle context and benchmark contract.
 
 | Domain | Source IDs | Candidate structure | Remaining checks before proposed record |
 |---|---|---|---|
@@ -36,6 +34,8 @@ The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSC
 | DeFi Risk | RISK-COMPOUND-IR; RISK-COMPOUND-LIQUIDATION | Compound III utilization-kink rate and collateral discount | Pin Comet version, market parameters, utilization denominator, annualization, collateral factor and quote units. |
 
 ## Tier B — formula visible; source/assumption work still required
+
+The Hill muscle force–velocity relation is drafted as `BIO-HILL-MUSCLE-001` but remains in Tier B until the original 1938 equation page and notation are checked; its benchmark ranges and muscle context are also pending.
 
 | Domain | Source IDs | Candidate structure | Main blocker |
 |---|---|---|---|
