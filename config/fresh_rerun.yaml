@@ -273,19 +273,43 @@ deferred_experiments:
       - pysr_prior
     reason: "scripts/phase3_all.py now wires llm_acceptance, complexity_routing (structural-risk guard), and pysr_prior for Core-15 HDS v50_2. Neural degradation probe, NN augmentation and blend weight require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not claim six-gate coverage or compare omitted gates as no-effect."
   protocol30:
-    status: wired_with_registry_gap
-    runner_stages:
-      - exp2
-      - exp2_protocol30_pca_4060
-    random_runner: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py
-    pca_runner: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py
-    protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
-    equations: 30
-    registry_domains: 10
-    manuscript_domains: 11
-    implemented_protocols: [random_80_20, pca_40_60]
-    verification_status: not_executed
-    reason: "Both random and PCA 40/60 paths are now wired to the 30-equation, 10-domain registry. The manuscript specifies 11 domains; identify and reconcile the missing domain before claiming full manuscript coverage. Do not substitute the Feynman PCA stage."
+    status: deferred
+    manuscript_equations: 30
+    manuscript_domains:
+      - biology
+      - chemistry
+      - electrochemistry
+      - electromagnetism
+      - electrostatics
+      - magnetism
+      - mechanics
+      - optics
+      - probability
+      - quantum
+      - thermodynamics
+    missing_artifacts:
+      - manuscript-matching 30-equation registry and per-equation source formulas
+      - explicit random_80_20 and pca_40_60 split definitions for that registry
+      - clean method-arm and output-schema mapping
+    non_equivalent_proxy:
+      runner_stages:
+        - exp2
+        - exp2_all_domains_pca_4060
+      protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
+      equations: 30
+      registry_domains:
+        - mechanics
+        - thermodynamics
+        - electromagnetism
+        - fluid_dynamics
+        - optics
+        - quantum
+        - chemistry
+        - biology
+        - mathematics
+        - economics
+      verification_status: not_executed
+    reason: "The current 10-domain ExperimentProtocolAll registry is a different equation/domain suite from the manuscript's custom 30-equation, 11-domain Protocol-30. The exp2 random and new PCA 40/60 stages are retained as a clearly labelled proxy only. Do not report them as Protocol-30 or combine their outputs with historical Protocol-30 tables."
 
 # Manuscript §7.3 routing policy. The tau value is intentionally null until a
 # separate training-only calibration protocol is frozen; with no tau, routing
