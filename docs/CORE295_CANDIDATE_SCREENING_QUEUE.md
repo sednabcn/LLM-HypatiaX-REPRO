@@ -373,3 +373,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 42 (2026-11-11)
 
 [Source Verification Audit 42](CORE295_SOURCE_VERIFICATION_AUDIT_42.md) verifies Solidly's stable-pool quartic invariant (k=XY(X^2+Y^2)=X^3Y+XY^3) against its protocol specification and a pinned Velodrome/Solidly implementation. The implementation normalizes reserves by token decimals before applying the invariant. This is structurally distinct from CP, weighted geometric, StableSwap/CryptoSwap, PMM, E-CLP and linear-sum pools; all Solidly-derived forks remain one family.
+
+
+## Source verification audit 43 (2026-11-11)
+
+[Source Verification Audit 43](CORE295_SOURCE_VERIFICATION_AUDIT_43.md) classifies Swaap V2 as non-custodial RFQ market-making with off-chain quote optimization and on-chain settlement safeguards, not a new on-chain CFMM invariant. Its max-drawdown, last-look and max-imbalance rules are protocol-specific predicates; consider them only as one version-pinned settlement-policy system if DeFi Risk admits executable safeguards.
