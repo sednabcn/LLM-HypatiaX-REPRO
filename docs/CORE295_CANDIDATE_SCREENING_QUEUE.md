@@ -148,3 +148,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 13 (2026-11-11)
 
 [Source Verification Audit 13](CORE295_SOURCE_VERIFICATION_AUDIT_13.md) verifies Euler EVK's health-dependent capped liquidation discount against official documentation and the pinned `Liquidation.sol` commit. The implementation uses health (h=) risk-adjusted collateral/liability, retained discount factor (f=max(h,1-m)), equivalent discount (d=min(1-h,m)), and collateral yield value (R/f) before availability and conversion constraints. This is not a time-elapsed auction schedule. It is structurally distinct from Morpho's LLTV-dependent capped rational LIF, but both remain in the liquidation-incentive family and held pending complete valuation/unit/rounding contracts. No candidates were accepted.
+
+
+## Source verification audit 14 (2026-11-11)
+
+[Source Verification Audit 14](CORE295_SOURCE_VERIFICATION_AUDIT_14.md) checks the current Sky LIQ2.0 documentation and the registered Abacus implementation source. It transcribes the linear decrease (P_0(1-t/\tau)) until zero, the stairstep exponential (P_0c^{\lfloor t/s\rfloor}), and the continuous per-second exponential (P_0c^t). The implementation explicitly identifies the stairstep and continuous forms as equivalent when (s=1). These are configurable price calculators in one Dutch-auction architecture, not separate liquidation systems. Keep the linear and exponential structures distinct but cluster them; do not count parameter variants, (s=1), auction reset, initial-price buffer or partial-take logic as extra equations. Hold pending immutable source commit and fixed-point adapter. No candidates were accepted.
