@@ -230,7 +230,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_protocol30_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -375,7 +375,7 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
-  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,noise-sweep,sample-complexity},protocol30-random-80-20,protocol30-pca-4060,noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
+  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,noise-sweep,sample-complexity},all-domains-random-80-20,all-domains-pca-4060,noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
@@ -2223,9 +2223,9 @@ PYEOF
 )
 
 
-run exp2 "Protocol-30 custom 30-equation registry -- random 80/20, all six methods" bash -c "
+run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
   cd '${REPO_ROOT}'
-  mkdir -p '${RESULTS_DIR}/comparison_results/protocol30-random-80-20'
+  mkdir -p '${RESULTS_DIR}/comparison_results/all-domains-random-80-20'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
   [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
@@ -2247,17 +2247,17 @@ run exp2 "Protocol-30 custom 30-equation registry -- random 80/20, all six metho
         --noiseless \
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"exp2_checkpoint_\${DOMAIN_ID}\" \
-        --output-dir '${RESULTS_DIR}/comparison_results/protocol30-random-80-20' \
+        --output-dir '${RESULTS_DIR}/comparison_results/all-domains-random-80-20' \
         --resume \
-        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/protocol30-random-80-20/exp2_run.log' \
+        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/all-domains-random-80-20/exp2_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
 
-run exp2_protocol30_pca_4060 "Protocol-30 custom 30-equation registry -- PCA-directed 40/60 (separate from Feynman)" bash -c "
+run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-directed 40/60 (not manuscript Protocol-30)" bash -c "
   cd '${REPO_ROOT}'
-  _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30-pca-4060'
+  _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/all-domains-pca-4060'
   mkdir -p "\${_P30_PCA_DIR}"
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
   [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
@@ -2279,10 +2279,10 @@ run exp2_protocol30_pca_4060 "Protocol-30 custom 30-equation registry -- PCA-dir
         --use-transcendental-compositions \
         --noiseless \
         --threshold 0.999999 \
-        --checkpoint-name "protocol30_pca4060_checkpoint_\${DOMAIN_ID}" \
+        --checkpoint-name "all_domains_pca4060_checkpoint_\${DOMAIN_ID}" \
         --output-dir "\${_P30_PCA_DIR}" \
         --force-fresh \
-        2>&1 | tee -a "\${_P30_PCA_DIR}/protocol30_pca4060_run.log" \
+        2>&1 | tee -a "\${_P30_PCA_DIR}/all_domains_pca4060_run.log" \
       || { echo '::error::Protocol-30 PCA domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
   python3 - "\${_P30_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
@@ -2299,7 +2299,7 @@ for path in files:
     except Exception:
         pass
 summary = {
-    'campaign': 'Protocol-30',
+    'campaign': 'all_domains_registry_proxy',
     'protocol': 'pca_40_60',
     'registry': 'hypatiax.protocols.experiment_protocol_all_30.ExperimentProtocolAll',
     'registry_domains': registry_domains,
@@ -2307,10 +2307,10 @@ summary = {
     'result_files': [p.name for p in files],
     'record_count': rows,
     'status': ('incomplete' if not files else ('outputs_present_with_domain_mismatch' if registry_domains != 11 else 'outputs_present')),
-    'note': f'Manuscript specifies 11 domains; current registry contains {registry_domains}. Resolve any mismatch before claiming full manuscript coverage.'
+    'note': f'This 10-domain registry is not the manuscript's custom 11-domain Protocol-30 equation set; do not use these results as Protocol-30.'
 }
-(out / 'protocol30_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
-print(f"[Protocol-30 PCA] files={len(files)} records={rows} summary={out / 'protocol30_pca4060_summary.json'}")
+(out / 'all_domains_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
+print(f"[Protocol-30 PCA] files={len(files)} records={rows} summary={out / 'all_domains_pca4060_summary.json'}")
 if not files:
     raise SystemExit('Protocol-30 PCA produced no result files')
 PYEOF
@@ -2938,8 +2938,8 @@ EXPERIMENTS = {
     "instability":            RESULTS / "figures",
     "exp2_feynman":           RESULTS / "comparison_results/feynman-tests/exp2",
     "exp2_feynman_pca_4060":  RESULTS / "comparison_results/feynman-tests/exp2_pca_4060",
-    "exp2":                   RESULTS / "comparison_results/protocol30-random-80-20",
-    "exp2_protocol30_pca_4060": RESULTS / "comparison_results/protocol30-pca-4060",
+    "exp2":                   RESULTS / "comparison_results/all-domains-random-80-20",
+    "exp2_all_domains_pca_4060": RESULTS / "comparison_results/all-domains-pca-4060",
     "exp3":                   RESULTS / "extrapolation",
     "exp3b":                  RESULTS / "extrapolation/multi_seed",
     "suppA":                  RESULTS / "hybrid_pysr/defi",
