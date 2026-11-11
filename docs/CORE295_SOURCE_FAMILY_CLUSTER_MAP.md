@@ -199,3 +199,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 21 (2026-11-11)
 
 [Source Verification Audit 21](CORE295_SOURCE_VERIFICATION_AUDIT_21.md) verifies Hill's muscle force–velocity equation from the original 1938 paper and clarifies its first occurrence (printed p. 162) versus later mechanical verification (pp. 176–177). It is distinct from Hill ligand binding. Planck's 1901 equation (13) is spectral energy density per wavelength; the proposed exitance form follows from isotropic (c/4) conversion. Keep frequency/radiance forms and Wien/Stefan consequences in one Planck family; use an explicit spectral-exitance symbol.
+
+
+## Source verification audit 22 (2026-11-11)
+
+[Source Verification Audit 22](CORE295_SOURCE_VERIFICATION_AUDIT_22.md) confirms the thin-lens imaging relation (with signed real/virtual image conventions) and the viscosity-explicit Hagen–Poiseuille tube-flow relation. Keep thin-lens imaging with geometric-optics/lens-maker relations and Poiseuille flow with laminar viscous-fluid mechanics; do not count rearrangements, resistance identity or pressure-flow components as extra equations.
