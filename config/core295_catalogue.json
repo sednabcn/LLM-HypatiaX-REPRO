@@ -886,6 +886,38 @@
       "url": "https://doi.org/10.1098/rspb.1938.0050",
       "use": "Primary Hill 1938 muscle force–velocity characteristic equation, pp. 174–177; distinguish muscle-mechanics Hill equation from Hill ligand-binding equation",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-NAVIER-1822",
+      "domain": "Physics",
+      "title": "Mémoire sur les lois du mouvement des fluides",
+      "url": "https://ccfr.bnf.fr/portailccfr/ark:/16871/0018999898",
+      "use": "Primary Navier 1822 memoir (read 18 March 1822; published in 1823 Mémoires de l'Académie, vol. 6, pp. 389–416), early viscous-fluid momentum equation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-STOKES-1845",
+      "domain": "Physics",
+      "title": "On the Theories of the Internal Friction of Fluids in Motion",
+      "url": "https://www.cambridge.org/core/books/abs/mathematical-and-physical-papers/on-the-theories-of-the-internal-friction-of-fluids-in-motion-and-of-the-equilibrium-and-motion-of-elastic-solids/03959CB979233BCA95EB128CC5FF6D41",
+      "use": "Primary Stokes 1845 contribution to viscous stress and fluid momentum equations; Cambridge reprint pp. 75–129",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-PLANCK-1901",
+      "domain": "Physics",
+      "title": "Ueber das Gesetz der Energieverteilung im Normalspectrum",
+      "url": "https://doi.org/10.1002/andp.19013090310",
+      "use": "Primary Planck 1901 paper, Annalen der Physik 309, 553–563; equation (8) spectral energy distribution and blackbody law",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-PLANCK",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §6.1 Blackbody Radiation",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-1-blackbody-radiation",
+      "use": "Modern spectral intensity form of Planck's law (Eq. 6.11); identifies Stefan and Wien relations as integrals/extrema derived from Planck spectrum",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
