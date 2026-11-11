@@ -757,6 +757,82 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Morpho Blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d"
+    },
+    {
+      "equation_id": "RISK-EULER-AUCTION-001",
+      "name": "Euler EVK health-dependent capped liquidation discount factor",
+      "domain": "DeFi Risk",
+      "subdomain": "reverse Dutch auction liquidation",
+      "formula": "F_discount = max(C_adj / L, 1 - D_max); discount = 1 - F_discount",
+      "canonical_expression": "Max(Cadj/L,1-Dmax)",
+      "formula_latex": "F_{discount}=\\max\\left(\\frac{C_{adj}}{L},1-D_{max}\\right),\\quad D=1-F_{discount}",
+      "structural_fingerprint": "4857bfe0c16c11631575482b5427cf4db0375596d3804988e9116c97aee2bd8a",
+      "source_ids": [
+        "RISK-EULER-REVERSE-AUCTION"
+      ],
+      "source_family_id": "RISK-EULER-EVK-REVERSE-AUCTION-DISCOUNT",
+      "status": "proposed",
+      "assumptions": [
+        "EVK liquidation path at the pinned implementation revision",
+        "Account is unhealthy: risk-adjusted collateral value is less than or equal to liability value",
+        "Liability value is strictly positive",
+        "Collateral value is computed using the liquidation valuation mode and risk-adjusted by the configured liquidation LTV",
+        "Maximum liquidation discount is a configured fraction in [0,1)",
+        "Discount factor is the health score floored at 1-Dmax"
+      ],
+      "variables": {
+        "Cadj": {
+          "meaning": "Total liquidation-LTV-adjusted collateral value in the vault unit of account",
+          "unit": "unit of account"
+        },
+        "L": {
+          "meaning": "Liability value in the same unit of account",
+          "unit": "unit of account"
+        },
+        "Dmax": {
+          "meaning": "Vault-configured maximum liquidation discount",
+          "unit": "dimensionless fraction"
+        }
+      },
+      "validity": {
+        "source_location": "euler-xyz/euler-vault-kit commit 93a1de491531e54cbbcf0e5c8cacfe558f924867, src/EVault/modules/Liquidation.sol, calculateMaxLiquidation; official Euler Liquidations documentation",
+        "regime": "Reverse Dutch auction liquidation discount factor for an unhealthy EVK position",
+        "limitations": [
+          "The implementation defines discountFactor = health score = 1 - discount, then floors it at 1 - maxLiquidationDiscount",
+          "The expression is a scalar abstraction of the discount factor; collateral seizure and debt repayment are separate downstream calculations",
+          "Risk-adjusted collateral value depends on collateral-specific liquidation LTVs and mid-point oracle prices; the aggregation must be frozen",
+          "Fixed-point CONFIG_SCALE and rounding must be preserved in an implementation-faithful benchmark",
+          "Do not mix this EVK mechanism with Euler V1's distinct boosted discount formula"
+        ]
+      },
+      "input_ranges": {
+        "Cadj": {
+          "train": null,
+          "extrapolation": null
+        },
+        "L": {
+          "train": null,
+          "extrapolation": null
+        },
+        "Dmax": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Exact source implementation was fetched at the pinned EVK commit; discountFactor is calculated as collateralAdjustedValue/liabilityValue and floored at 1-maxDiscount",
+        "Official docs describe a reverse Dutch auction with zero discount at the threshold and increasing discount as health worsens",
+        "Generator must enforce L>0, 0<=Cadj/L<=1, and 0<=Dmax<1",
+        "Need freeze oracle mid-point pricing, LTV aggregation, collateral set, CONFIG_SCALE and integer rounding",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Euler EVK commit 93a1de491531e54cbbcf0e5c8cacfe558f924867, src/EVault/modules/Liquidation.sol"
     }
   ],
   "source_register": [
@@ -1796,6 +1872,7 @@
     "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family.",
     "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered.",
     "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded.",
-    "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator."
+    "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator.",
+    "Eighth proposed-record pass adds Euler EVK's health-dependent capped reverse-auction discount factor, pinned to commit 93a1de491531e54cbbcf0e5c8cacfe558f924867. It remains proposed pending risk-adjusted collateral aggregation, oracle convention, CONFIG_SCALE and deterministic generator."
   ]
 }
