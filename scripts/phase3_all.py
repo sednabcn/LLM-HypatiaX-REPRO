@@ -112,15 +112,15 @@ def apply_engine_patch(path):
             )
         s = s.replace(a_old, "if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:")
         s = s.replace(b_old, "if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:")
-        m = re.search(r"^class SymbolicEngineWithLLM\\b[^\\n]*:\\n", s, re.M)
+        m = re.search(r"^class SymbolicEngineWithLLM\b[^\n]*:\n", s, re.M)
         if not m:
             raise RuntimeError("class SymbolicEngineWithLLM not found")
-        s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\\n    _LLM_PRIOR_SEED = True\\n" + s[m.end():]
+        s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\n    _LLM_PRIOR_SEED = True\n" + s[m.end():]
     if "_COMPLEXITY_ROUTING" not in s:
-        prior = re.search(r"^    _LLM_PRIOR_SEED\\s*=.*$", s, re.M)
+        prior = re.search(r"^    _LLM_PRIOR_SEED\s*=.*$", s, re.M)
         if prior:
             pos = prior.end()
-            s = s[:pos] + "\\n    _COMPLEXITY_ROUTING = True" + s[pos:]
+            s = s[:pos] + "\n    _COMPLEXITY_ROUTING = True" + s[pos:]
         else:
             raise RuntimeError("cannot locate class-level _LLM_PRIOR_SEED for complexity gate")
     Path(path).write_text(s, encoding="utf-8")
