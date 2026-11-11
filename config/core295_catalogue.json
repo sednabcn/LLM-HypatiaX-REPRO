@@ -854,6 +854,38 @@
       "url": "https://medium.com/carbondefi/introducing-carbon-1f41aebf634b",
       "use": "Protocol source lead for one-sided adjustable buy/sell curves parameterized by start price, end price and capacity; exact on-chain curve function and state transition still to be traced",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-FICK-1870",
+      "domain": "Biology",
+      "title": "Ueber die Messung des Blutquantums in den Herzventrikeln",
+      "url": "https://historyofmedicine.com/id/251",
+      "use": "Primary Fick 1870 report, Würzburg proceedings, pp. XVI–XVII; cardiac output from oxygen uptake and arteriovenous oxygen-content difference",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-WINDKESSEL-FRANK-1899",
+      "domain": "Biology",
+      "title": "Die Grundform des arteriellen Pulses",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/2192068/",
+      "use": "Primary Otto Frank 1899 arterial Windkessel paper, with 1990 English translation; single compliant compartment and diastolic pressure decay",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-WINDKESSEL-WESTERHOF-2009",
+      "domain": "Biology",
+      "title": "The arterial Windkessel",
+      "url": "https://doi.org/10.1007/s11517-008-0359-2",
+      "use": "Modern review of 2-element and 3-element Windkessel models, characteristic impedance, compliance/resistance and limitations",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HILL-MUSCLE-1938",
+      "domain": "Biology",
+      "title": "The Heat of Shortening and the Dynamic Constants of Muscle",
+      "url": "https://doi.org/10.1098/rspb.1938.0050",
+      "use": "Primary Hill 1938 muscle force–velocity characteristic equation, pp. 174–177; distinguish muscle-mechanics Hill equation from Hill ligand-binding equation",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
