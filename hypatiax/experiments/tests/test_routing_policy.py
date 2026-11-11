@@ -169,3 +169,32 @@ def test_constant_training_covariates_cannot_define_edge_probe():
         assert "varying covariates" in str(exc)
     else:
         raise AssertionError("constant covariates must not define an arbitrary PCA edge")
+
+def test_missing_or_non_numeric_training_r2_fails_closed_without_type_error():
+    for value in (None, "not-a-number", float("nan"), True):
+        route = select_hypatiax_route(value, 0.8, np.ones(3), np.zeros(3), [])
+        assert route["decision"] == "nn"
+        assert route["route_reason"] == "trust_gate_failed"
+
+
+def test_invalid_query_ood_values_are_ignored_safely():
+    route = select_hypatiax_route(
+        0.8, 0.7, np.ones(3), np.zeros(3), ["exp"],
+        p_ood="invalid", p_ood_per_query=["invalid"],
+    )
+    assert route["decision"] == "ensemble"
+    assert route["p_ood"] is None
+    assert route["query_blend_weights"] is None
+
+
+def test_invalid_alpha_is_rejected_before_blending():
+    for alpha in (-0.1, 1.1, float("nan"), None):
+        try:
+            select_hypatiax_route(
+                0.8, 0.7, np.ones(3), np.zeros(3), ["exp"],
+                p_ood=0.5, alpha=alpha,
+            )
+        except ValueError as exc:
+            assert "alpha" in str(exc)
+        else:
+            raise AssertionError("invalid alpha must not silently produce weights")
