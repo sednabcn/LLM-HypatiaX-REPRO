@@ -918,6 +918,30 @@
       "url": "https://openstax.org/books/university-physics-volume-3/pages/6-1-blackbody-radiation",
       "use": "Modern spectral intensity form of Planck's law (Eq. 6.11); identifies Stefan and Wien relations as integrals/extrema derived from Planck spectrum",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-UNISWAP-V2-TWAP",
+      "domain": "DeFi Risk",
+      "title": "Uniswap v2 cumulative price oracle",
+      "url": "https://developers.uniswap.org/docs/protocols/v2/concepts/oracles",
+      "use": "Official v2 oracle documentation and core whitepaper for cumulative price integral and arithmetic TWAP; document manipulation window and UQ112x112/timestamp-wrap implementation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-UNISWAP-V3-TWAP",
+      "domain": "DeFi Risk",
+      "title": "Uniswap v3 tick and seconds-per-liquidity oracle",
+      "url": "https://developers.uniswap.org/docs/protocols/v3/concepts/price-oracles",
+      "use": "Official v3 oracle docs and OracleLibrary consult implementation; mean tick/geometric TWAP and harmonic mean liquidity; code blob SHA ddb82be610e5694581de1553fe86f4ca3da82e55",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-CHAINLINK-FEED-FRESHNESS",
+      "domain": "DeFi Risk",
+      "title": "Chainlink Data Feed freshness and update triggers",
+      "url": "https://docs.chain.link/data-feeds/overview",
+      "use": "Official data feed guidance for deviation-threshold and heartbeat update triggers, updatedAt freshness checks and consumer-side fail-safe; protocol parameters vary by feed/network",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
