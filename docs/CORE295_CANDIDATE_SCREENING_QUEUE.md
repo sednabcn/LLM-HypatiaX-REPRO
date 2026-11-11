@@ -458,3 +458,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 58 (2026-11-11)
 
 [Source Verification Audit 58](CORE295_SOURCE_VERIFICATION_AUDIT_58.md) verifies Euler's downward-only, time-ramped liquidation LTV against the pinned LTVConfig implementation. The ramp changes liquidation eligibility over time while borrow LTV remains separate; group it with Euler's health/discount/liquidation system, not as an independent equation sample.
+
+
+## Source verification audit 59 (2026-11-11)
+
+[Source Verification Audit 59](CORE295_SOURCE_VERIFICATION_AUDIT_59.md) verifies Aave V4's Babylon liquidation path: a caller-supplied maximum collateral amount caps removable shares, and repayment is inversely resized to match that cap. It shares standard V4's health-factor validation, dynamic bonus and debt/share accounting; treat it as a version-specific liquidation sizing variant, not a separate set of equations.
