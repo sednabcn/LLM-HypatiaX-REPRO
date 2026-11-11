@@ -315,6 +315,13 @@ def run_method_on_equation(eq: dict, method_name: str, method, seed: int = 42) -
         "best_expression":      result.formula,
         "complexity":           None,
         "design_focus":         _DESIGN_FOCUS.get(method_name, "---"),
+        # Preserve method-level diagnostics/provenance instead of dropping them
+        # at this adapter boundary (e.g. NN held-out selection metrics and LLM
+        # live-call/bypass fields). Missing provenance stays null/unknown.
+        "method_metadata":      dict(result.metadata or {}),
+        "llm_called":           (result.metadata or {}).get("llm_called"),
+        "bypass_kind":          (result.metadata or {}).get("bypass_kind"),
+        "llm_source":           (result.metadata or {}).get("llm_source"),
     }
 
 
