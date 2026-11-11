@@ -6,20 +6,17 @@
 
 ## 1. Butler–Volmer electrode current–overpotential relation
 
-**Historical source lineage:**
-- J. A. V. Butler (1924), *Studies in heterogeneous equilibria. Part II.—The kinetic interpretation of the Nernst theory of electromotive force*, Transactions of the Faraday Society 19, 729–733, DOI 10.1039/TF9241900729.
-- J. A. V. Butler (1924), *Studies in heterogeneous equilibria. Part III. A kinetic theory of reversible oxidation potentials at inert electrodes*, Transactions of the Faraday Society 19, 734–739, DOI 10.1039/TF9241900734.
-- M. Volmer and T. Erdey-Grúz (1930), foundational follow-up on electrode reaction kinetics. A 2020 review, *The Butler-Volmer equation in electrochemical theory: Origins, value, and practical application*, compares the common modern forms and explains the historical contributions.
+**Historical source lineage:** Butler's 1924 papers developed a kinetic interpretation of the Nernst equilibrium potential and transition-state ideas, but did not derive the general modern electrode-rate equation. Erdey–Grüz and Volmer (1930) treated reversible anodic and cathodic contributions for a hydrogen-electrode rate-determining step; later Butler work and engineering conventions contributed to the current forms. See Dickinson and Wain (2020), *The Butler–Volmer equation in electrochemical theory: Origins, value, and practical application*, for the historical and notational review.
 
-A common current-density form is:
-[
+Under the 2020 review's engineer's convention, a common current-density form is:
+\[
 i=i_0\left[
-\exp\left(\frac{\alpha_a nF\eta}{RT}\right)
+\exp\left(\frac{\alpha_a F\eta}{RT}\right)
 -
-\exp\left(-\frac{\alpha_c nF\eta}{RT}\right)
+\exp\left(-\frac{\alpha_c F\eta}{RT}\right)
 \right],
-]
-where (i_0) is exchange current density, (eta=E-E_{eq}) is overpotential, (alpha_a,alpha_c) are anodic/cathodic transfer coefficients, (n) is electron number, (F) Faraday's constant, (R) the gas constant and (T) absolute temperature. A common one-electron convention imposes (alpha_a+alpha_c=1), but the 2020 review documents that different disciplines use different coefficient and reference-condition conventions.
+\]
+where \(i_0\) is exchange current density, \(\eta=E-E_{eq}\) is overpotential, \(\alpha_a,\alpha_c\) are anodic/cathodic transfer coefficients, \(F\) is Faraday's constant, \(R\) the gas constant and \(T\) absolute temperature. In this convention the transfer coefficients are **not multiplied by the total electron number \(n\)**. Older textbook forms sometimes place \(nF\) in the exponent; those use a different coefficient convention and must not be mixed. For a simple one-electron step \(n=1\); \(\alpha_a+\alpha_c=1\) is a common special convention, not a universal constraint.
 
 **Boundary and risks:** the surface concentrations and reference condition must be defined; mass-transfer limitation can make bulk concentrations differ from surface concentrations. The zero-overpotential point has equal and opposite partial currents and zero net current. At large positive/negative overpotential, one exponential dominates and the equation reduces to a Tafel asymptote. Tafel law is a limiting approximation, not another independent candidate. The Nernst equation gives equilibrium potential; Butler–Volmer describes the non-equilibrium current response about that equilibrium.
 
