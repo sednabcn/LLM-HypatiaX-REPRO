@@ -1149,6 +1149,65 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Fick (1870), Neue Folge 2, XVI-XVII; Geerts et al. (2011), Fick section"
+    },
+    {
+      "equation_id": "RISK-UNISWAP-V3-GEOMETRIC-TWAP-001",
+      "name": "Uniswap v3 geometric price TWAP from mean tick",
+      "domain": "DeFi Risk",
+      "subdomain": "oracle manipulation resistance",
+      "formula": "P_TWAP = (1.0001)^meanTick",
+      "canonical_expression": "(10001/10000)**meanTick",
+      "formula_latex": "P_{TWAP}=1.0001^{\\overline{tick}}",
+      "structural_fingerprint": "7f403d85ad9bb854d1e4e6c5ae445e6f66f8b95e268d723a4a914d182524d709",
+      "source_ids": [
+        "RISK-UNISWAP-V3-TWAP"
+      ],
+      "source_family_id": "RISK-UNISWAP-ORACLE-GEOMETRIC-TWAP",
+      "status": "proposed",
+      "assumptions": [
+        "Uniswap v3 tick grid and pool price convention at the pinned periphery/core revision",
+        "Token0/token1 ordering is fixed; output is raw token1 per token0 ratio before decimal normalization",
+        "Mean tick is computed over a nonzero observation interval from cumulative tick differences",
+        "Integer division for negative cumulative tick deltas rounds toward negative infinity",
+        "The price is the geometric time average implied by the arithmetic mean of log-price ticks"
+      ],
+      "variables": {
+        "meanTick": {
+          "meaning": "Arithmetic mean tick over the selected observation window, rounded toward negative infinity as in OracleLibrary.consult",
+          "unit": "integer tick"
+        }
+      },
+      "validity": {
+        "source_location": "Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol, consult and getQuoteAtTick; official Uniswap v3 price-oracle documentation",
+        "regime": "Geometric mean price ratio over a specified observation interval, represented by the arithmetic mean tick",
+        "limitations": [
+          "This record covers the price ratio from mean tick; meanTick itself is computed from tickCumulativesDelta/secondsAgo with negative-infinity rounding",
+          "Token ordering and decimal scaling must be explicit; reciprocal price is a direction conversion, not a separate equation",
+          "The harmonic mean liquidity returned by consult is a related but distinct oracle output; do not merge it into the price equation",
+          "Preserve int56 cumulative tick subtraction, uint32 secondsAgo and int24 mean tick bounds",
+          "Uniswap v2 arithmetic cumulative-price TWAP is a distinct averaging construction but shares the oracle-manipulation source family"
+        ]
+      },
+      "input_ranges": {
+        "meanTick": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": "Generate valid mean ticks within the pinned TickMath min/max bounds; specify observation interval and token direction in the adapter"
+      },
+      "review_notes": [
+        "Pinned OracleLibrary source computes arithmeticMeanTick from cumulative tick delta divided by secondsAgo",
+        "For negative nonintegral quotients the implementation decrements the truncated quotient, implementing floor toward negative infinity",
+        "TickMath price ratio is 1.0001^tick; the time average in log-price space yields geometric mean price",
+        "Need pin core TickMath version, observation window, token order, decimal scaling and deterministic generator",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol"
     }
   ],
   "source_register": [
@@ -2037,7 +2096,7 @@
       "domain": "DeFi Risk",
       "title": "Uniswap v3 tick and seconds-per-liquidity oracle",
       "url": "https://developers.uniswap.org/docs/protocols/v3/concepts/price-oracles",
-      "use": "Official v3 oracle docs and OracleLibrary consult implementation; mean tick/geometric TWAP and harmonic mean liquidity; code blob SHA ddb82be610e5694581de1553fe86f4ca3da82e55",
+      "use": "Official Uniswap v3 price oracle docs plus pinned Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol; arithmetic mean tick with floor-toward-negative-infinity rounding, then geometric price ratio 1.0001^meanTick",
       "status": "candidate_reference"
     },
     {
@@ -2193,6 +2252,7 @@
     "Ninth proposed-record pass adds Compound III's borrow utilization-kink function, pinned to Comet commit f766f51583c23acc33b2a7824654ef2029a96804. It remains proposed pending market-specific parameter configuration, fixed-point rounding and deterministic generator.",
     "Tenth proposed-record pass adds the DODO PMM base-shortage marginal price curve, pinned to DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. It remains proposed pending pool-state, regression, oracle and fixed-point generator contract.",
     "Eleventh proposed-record pass adds the Raoult ideal-solution component vapor-pressure relation. It remains proposed pending original-paper equation-page transcription, a defensible ideal mixture/temperature context and deterministic generator.",
-    "Twelfth proposed-record pass adds Fick's oxygen mass-balance cardiac-output relation. It remains proposed pending original 1870 page transcription, steady-state physiology adapter and deterministic data generator."
+    "Twelfth proposed-record pass adds Fick's oxygen mass-balance cardiac-output relation. It remains proposed pending original 1870 page transcription, steady-state physiology adapter and deterministic data generator.",
+    "Thirteenth proposed-record pass adds the Uniswap v3 geometric price TWAP from mean tick, pinned to Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45. It remains proposed pending observation-window, token-order, decimal-scaling and deterministic generator decisions."
   ]
 }
