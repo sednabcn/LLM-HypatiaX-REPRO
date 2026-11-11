@@ -429,3 +429,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 50 (2026-11-11)
 
 [Source Verification Audit 50](CORE295_SOURCE_VERIFICATION_AUDIT_50.md) classifies the OECD liquidation-volatility study as empirical context. Realized volatility, OLS/2SLS specifications and alternative window lengths are not independent DeFi protocol equations; the reported relation is sample- and dataset-specific.
+
+
+## Source verification audit 51 (2026-11-11)
+
+[Source Verification Audit 51](CORE295_SOURCE_VERIFICATION_AUDIT_51.md) classifies the fixed-spread two-call optimizer as a single derived strategy family. Its health-factor constraint overlaps the collateral-weighted lending-risk ratio; its first/second repayments and profit expressions are linked outputs. Keep separate from auction liquidation and modern protocol-specific incentive curves, but hold pending the system-unit policy.
