@@ -64,7 +64,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 
 The current `ci_runner/run_fresh_experiments.sh` stage list is:
 
-`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_all_domains_pca_4060 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
+`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
 
 Interpretation and gaps:
 
@@ -74,7 +74,7 @@ Interpretation and gaps:
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- `exp2` runs the current 10-domain `ExperimentProtocolAll` registry with a random 80/20 split; `exp2_all_domains_pca_4060` runs that same proxy registry through the PCA 40/60 runner. Neither is the manuscript's custom Protocol-30: the equation and domain sets differ, not merely the count. Keep their outputs separate and do not merge them with historical Protocol-30 evidence.
+- `exp2` runs the current 10-domain `ExperimentProtocolAll` registry with a random 80/20 split. Neither this nor the five-system `exp2_five` stage is the manuscript's custom Protocol-30: the equation and domain sets differ, not merely the count. The optional `exp2_all_domains_pca_4060` proxy stage is deferred from the standard fresh campaign; it can be explicitly requested, but its outputs must not be merged with historical Protocol-30 evidence.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
 ## 5. Supplementary-protocol correction required
