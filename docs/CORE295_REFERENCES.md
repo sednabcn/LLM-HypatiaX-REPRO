@@ -288,3 +288,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 169. Marcus, R. A. (1956). “On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I.” *The Journal of Chemical Physics*, 24(5), 966–978. https://doi.org/10.1063/1.1742723. Primary solution-phase electron-transfer theory; Part I's conditional overall rate statement uses the solution collision number multiplied by exp(−ΔF*/kT) for the stated intermediate-state mechanism. Exact equation/page and collision-number convention still require PDF transcription.
+
+
+170. Pütter, A. (1920). “Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten.” *Pflügers Archiv für die gesamte Physiologie des Menschen und der Tiere*, 180, 298–340. https://doi.org/10.1007/BF01755094. Primary lineage for the generalized two-power mass-growth law; exact equation/page transcription remains to be checked against the original paper.
