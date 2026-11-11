@@ -293,3 +293,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Discovery batch 36 (2026-11-11)
 
 [Candidate Discovery Batch 36](CORE295_CANDIDATE_DISCOVERY_BATCH_36.md) adds Goldman–Hodgkin–Katz multi-ion membrane potential and revised Starling capillary filtration. GHK is a constant-field zero-current relation distinct from the single-ion Nernst equation; classical/revised Starling forms belong to one lineage, with the revised form using subglycocalyx oncotic pressure.
+
+
+## Source verification audit 30 (2026-11-11)
+
+[Source Verification Audit 30](CORE295_SOURCE_VERIFICATION_AUDIT_30.md) verifies Hawkes's original 1971 self-exciting intensity definition, exponential kernel and stationarity condition, and Merton's original 1976 jump-diffusion stock-return Eq. (2) and compound-Poisson distribution. OU and CIR are confirmed as primary model lineages, but their common modern SDE forms still need direct original equation-page transcription. All remain discovery-only; no catalogue entries were added.
