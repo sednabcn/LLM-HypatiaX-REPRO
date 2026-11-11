@@ -580,3 +580,12 @@ The Physics author-pool audit screens 75 rows and accepts none. See [CORE295_AUT
 
 See [CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md](CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md). This source expansion adds three references, not three equations; no entry is accepted.
 
+### Additional Biology stock–recruitment family from source audit 1
+
+| Provisional family ID | Related models | Initial structural screen |
+|---|---|---|
+| BIO-STOCK-RECRUITMENT-DERISO-SCHNUTE | Generalized Deriso–Schnute; Ricker; Beverton–Holt | Secondary literature reports Ricker as the generalized form's \(\gamma\to0\) limit and Beverton–Holt at \(\gamma=-1\). Treat the classical curves as one E2 family for counting under the draft policy. The exact generalized equation/page still requires direct transcription from Deriso (1980) and Schnute (1985); do not promote based only on the secondary cross-check. |
+| BIO-FISH-POPULATION-DELAY-DIFFERENCE | Deriso age-structured/delay-difference model; Schnute general catch-effort model | A complete age-structured state/observation system is not the same counting unit as a scalar stock–recruitment function. Preserve survival, growth, recruitment timing and observation structure; do not split components into nominally independent rows. |
+
+See [CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md](CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md). This adds four source records, not four equation entries.
+
