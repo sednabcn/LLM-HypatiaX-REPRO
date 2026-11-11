@@ -10,6 +10,9 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import sympy as sp
+
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_MANIFEST = ROOT / "config" / "core295_catalogue.json"
 DOMAINS = ("Chemistry", "Biology", "Physics", "DeFi AMM", "DeFi Risk")
@@ -85,6 +88,116 @@ def validate_shard_plan(
         (len(shard) for shard in shards), default=0
     ) > 1:
         raise ValueError("shard task counts are not balanced to within one task")
+
+
+
+def equations_from_manifest(
+    data: dict[str, Any], *, require_complete: bool = True
+) -> list[dict[str, Any]]:
+    """Convert reviewed symbolic records to the Core-15 equation dictionary API.
+
+    Expressions are parsed by SymPy (never Python eval) and lambdified against
+    NumPy. The manifest must contain reviewed, accepted records. This adapter
+    does not itself certify units, science, or independence.
+    """
+    if data.get("catalogue_id") != "core295-option2":
+        raise ValueError("not a Core-295 Option 2 catalogue")
+    entries = [item for item in data.get("entries", [])
+               if item.get("status") == "accepted"]
+    if require_complete:
+        if len(entries) != 295:
+            raise ValueError(f"expected 295 accepted equations, found {len(entries)}")
+        for domain in DOMAINS:
+            count = sum(item.get("domain") == domain for item in entries)
+            if count != 59:
+                raise ValueError(f"{domain}: expected 59 accepted equations, found {count}")
+
+    ids = [item.get("equation_id") for item in entries]
+    if any(not isinstance(value, str) or not value for value in ids):
+        raise ValueError("accepted entries require equation_id")
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate equation_id in accepted catalogue")
+
+    converted: list[dict[str, Any]] = []
+    for item in entries:
+        variables = item.get("variables")
+        if not isinstance(variables, dict) or not variables:
+            raise ValueError(f"{item['equation_id']}: variables must be a non-empty mapping")
+        names = list(variables)
+        if any(not isinstance(name, str) or not name.isidentifier() for name in names):
+            raise ValueError(f"{item['equation_id']}: variable names must be identifiers")
+        symbols = {name: sp.Symbol(name, real=True) for name in names}
+        try:
+            expression = sp.sympify(item["canonical_expression"], locals=symbols)
+        except (KeyError, TypeError, ValueError, sp.SympifyError) as exc:
+            raise ValueError(f"{item['equation_id']}: invalid canonical_expression: {exc}") from exc
+        unknown = expression.free_symbols - set(symbols.values())
+        if unknown:
+            raise ValueError(
+                f"{item['equation_id']}: expression contains undeclared symbols "
+                f"{sorted(str(symbol) for symbol in unknown)}"
+            )
+        ranges = item.get("input_ranges")
+        if not isinstance(ranges, dict) or set(ranges) != set(names):
+            raise ValueError(f"{item['equation_id']}: input_ranges must match declared variables")
+        train_range = []
+        extrap_range = []
+        for name in names:
+            pair = ranges[name].get("train") if isinstance(ranges[name], dict) else None
+            extra = ranges[name].get("extrapolation") if isinstance(ranges[name], dict) else None
+            if not (isinstance(pair, list) and len(pair) == 2 and pair[0] < pair[1]):
+                raise ValueError(f"{item['equation_id']}: invalid training range for {name}")
+            if not (isinstance(extra, list) and len(extra) == 2 and extra[0] < extra[1]):
+                raise ValueError(f"{item['equation_id']}: invalid extrapolation range for {name}")
+            train_range.append(tuple(float(v) for v in pair))
+            extrap_range.append(tuple(float(v) for v in extra))
+        numeric_fn = sp.lambdify([symbols[name] for name in names], expression, modules="numpy")
+
+        def fn(*args, _fn=numeric_fn):
+            return np.asarray(_fn(*args), dtype=float)
+
+        converted.append({
+            "id": item["equation_id"],
+            "name": item["name"],
+            "domain": item["domain"],
+            "subdomain": item["subdomain"],
+            "vars": names,
+            "train_range": train_range,
+            "extrap_range": extrap_range,
+            "fn": fn,
+            "formula_latex": item.get("formula_latex", sp.latex(expression)),
+            "formula_sympy": str(expression),
+            "source_family_id": item["source_family_id"],
+            "source_ids": list(item["source_ids"]),
+        })
+    return converted
+
+
+def load_core295_equations(
+    path: Path = DEFAULT_MANIFEST, *, require_complete: bool = True
+) -> list[dict[str, Any]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return equations_from_manifest(data, require_complete=require_complete)
+
+
+def smoke_check_equations(equations: list[dict[str, Any]]) -> None:
+    """Evaluate each formula at three deterministic interior training points."""
+    for equation in equations:
+        ranges = equation["train_range"]
+        sample_count = 3
+        columns = [
+            np.linspace(lo + (hi - lo) * 0.2, hi - (hi - lo) * 0.2, sample_count)
+            for lo, hi in ranges
+        ]
+        try:
+            output = np.asarray(equation["fn"](*columns), dtype=float)
+            if output.ndim == 0:
+                output = np.full(sample_count, float(output))
+            output = np.broadcast_to(output, (sample_count,))
+        except Exception as exc:
+            raise ValueError(f"{equation['id']}: numeric smoke check failed: {exc}") from exc
+        if not np.all(np.isfinite(output)):
+            raise ValueError(f"{equation['id']}: formula produced non-finite smoke-test output")
 
 
 def main() -> int:
