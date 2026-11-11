@@ -524,3 +524,6 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 67 (2026-11-11)
 
 [Source Verification Audit 67](CORE295_SOURCE_VERIFICATION_AUDIT_67.md) retains Maverick V2 in the virtual-reserve constant-product family. Its bin movement, TWAP and merging logic may form a complete protocol system, but the primary core source and implementation equations remain inaccessible/unverified; no separate invariant or accepted equation is justified.
+
+
+| RISK-RANGE-VOLATILITY | Parkinson (1980); Rogers–Satchell (1991); Garman–Klass; Yang–Zhang | Related but distinct OHLC volatility functionals. Parkinson uses high–low range under zero drift; Rogers–Satchell uses high, low and close relative to interval start and is drift-unbiased under its Brownian model. Keep shared data-path dependence explicit; do not assume separate estimators are independent samples. See [Audit 61](CORE295_SOURCE_VERIFICATION_AUDIT_61.md) and [Audit 68](CORE295_SOURCE_VERIFICATION_AUDIT_68.md). |
