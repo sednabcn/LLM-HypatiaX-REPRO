@@ -11,6 +11,7 @@ on:
       - "config/core295_catalogue.json"
       - "docs/CORE295_DESIGN_PROTOCOL.md"
       - "docs/CORE295_SOURCE_CATALOGUE_PLAN.md"
+      - "docs/CORE295_CANDIDATE_DISCOVERY_BATCH_1.md"
       - "scripts/validate_core295_catalogue.py"
       - "scripts/validate_tau_calibration_manifest.py"
       - ".github/scripts/result_subdir_map.py"
