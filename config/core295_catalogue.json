@@ -2905,6 +2905,14 @@
       "url": "https://docs.curve.finance/assets/files/whitepaper_stableswap-fc0bb370db9fe3a91afdde8662e78206.pdf",
       "use": "Primary Egorov (2019) StableSwap whitepaper. Derives the N-coin invariant AnnΣx_i + D = ADn^n + D^(n+1)/(n^n Πx_i), with A amplification and D solved from pool balances. Original PDF pages 3–4 (printed pagination around 3–4). States D and output coin balances are found iteratively. Formal candidate must pin implementation/version and integer scaling/rounding.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-CRYPTOSWAP-WP-2021",
+      "domain": "DeFi AMM",
+      "title": "Automatic market-making with dynamic peg",
+      "url": "https://docs.curve.finance/assets/files/whitepaper_cryptoswap-de196d8f95aae3164a1226234d6d96ca.pdf",
+      "use": "Primary Egorov (2021) Curve CryptoSwap whitepaper. Defines transformed balances by price_scale, dynamic K(D,x) based on amplification A, gamma and K0, CryptoSwap invariant, Newton solves for D/output balance, EMA internal price oracle and repegging rule. Exact equations on original PDF pp. 1–4; convergence ranges stated p. 3. Candidate is a complete dynamic invariant/oracle state system, not separate counts for solver steps, fee curve and EMA update.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
