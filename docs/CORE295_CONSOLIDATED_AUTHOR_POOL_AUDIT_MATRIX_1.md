@@ -19,7 +19,7 @@ No author-pool script was executed. No equations were generated, validated, fitt
 
 The arithmetic gap column is only (59-\text{raw rows}); it is not a feasibility estimate. Physics surplus cannot be transferred to another domain. A domain with fewer than 59 defensible models must expand its source universe rather than relax the structural rule or pad with variants.
 
-The 167 source-register records are references/leads, not equations. The formal manifest remains **draft**, with **19 proposed**, **0 accepted**, and sampling frame **not frozen**. These 19 formal proposals are separate from the 299-row discovery pool.
+The 169 source-register records are references/leads, not equations. The formal manifest remains **draft**, with **19 proposed**, **0 accepted**, and sampling frame **not frozen**. These 19 formal proposals are separate from the 299-row discovery pool.
 
 ## 2. Consolidated family and defect matrix
 
