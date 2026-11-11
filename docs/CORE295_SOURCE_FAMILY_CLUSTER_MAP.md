@@ -489,3 +489,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 62 (2026-11-11)
 
 [Source Verification Audit 62](CORE295_SOURCE_VERIFICATION_AUDIT_62.md) adds Merton structural credit risk as one model family. Equity option value, risky debt value, d1/d2, risk-neutral PD and physical distance-to-default are linked outputs, not separate equations. Distinguish risk-neutral (\Phi(-d_2)) from physical (\Phi(-DD)).
+
+
+## Source verification audit 63 (2026-11-11)
+
+[Source Verification Audit 63](CORE295_SOURCE_VERIFICATION_AUDIT_63.md) adds the Black–Cox first-passage model to the Merton structural-credit family. The first-passage probability includes paths that cross a covenant/liquidation barrier and later recover; Merton only tests the terminal asset value. Keep their related GBM/source assumptions linked, and do not count survival, default and valuation outputs separately.
