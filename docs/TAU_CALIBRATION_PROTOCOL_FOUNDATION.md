@@ -92,19 +92,17 @@ The minimum is **per category**, not a pooled total across categories. Do not po
 
 ## 6. Selecting among candidate thresholds
 
-The 59-equation calculation above is for one fixed candidate threshold. It does **not** establish the same guarantee after searching a grid of thresholds or making simultaneous claims across multiple categories. A selection-aware procedure must account for the full family of claims.
+The 59-equation calculation above applies to one fixed, pre-specified candidate threshold. It does **not** establish the same guarantee after searching a grid of thresholds or making simultaneous claims across multiple categories. A selection-aware procedure must account for the full family of claims.
 
-**Recommended conservative implementation for approval (not yet adopted):** predeclare a finite grid of (m) candidate thresholds; for each threshold, count bad routes and compute the exact one-sided binomial test of (H_0:p_{bad}(\tau)\geq0.05); then apply Bonferroni family-wise error control at total level 0.05. A threshold is certified only if its adjusted test rejects the unsafe-risk null. Selecting the largest certified threshold is then valid under the family-wise guarantee, even if risk is not monotone in tau, provided the candidate grid and all tests were predeclared and the independent-unit assumptions hold. This is a transparent, conservative Learn-then-Test-style multiple-testing design. It should not be called an implemented LTT method until its exact test and selection logic are coded and tested.
+**Recommended conservative implementation for approval (not yet adopted):** predeclare a finite grid of `m` candidate thresholds. For each candidate, count bad routes and perform an exact one-sided binomial test of the null hypothesis `H0: p_bad(tau) >= 0.05`. Apply Bonferroni family-wise error control at total level 0.05. A candidate is certified only if its adjusted test rejects the unsafe-risk null. Selecting the largest certified threshold is then valid under the family-wise guarantee, even if risk is not monotone in tau, provided the candidate grid and all tests were predeclared and the independent-unit assumptions hold. This is a transparent, conservative Learn-then-Test-style multiple-testing design. It should not be called an implemented LTT method until its exact test and selection logic are coded and tested.
 
-For zero observed bad routes, Bonferroni requires
+For zero observed bad routes, Bonferroni requires:
 
-[
-n\geq\left\lceil\frac{\log(0.05/m)}{\log(0.95)}\right\rceil
-]
+`n >= ceil(log(0.05 / m) / log(0.95))`
 
-independent units **per category and per risk family**, rather than a universal 59. Illustrative minimums:
+independent units per category for that threshold family, rather than a universal 59. Illustrative minimums:
 
-| Number of predeclared thresholds (m) | Minimum (n), zero bad routes |
+| Number of predeclared thresholds (m) | Minimum n, zero bad routes |
 |---:|---:|
 | 1 | 59 |
 | 2 | 72 |
@@ -114,21 +112,20 @@ independent units **per category and per risk family**, rather than a universal 
 | 50 | 135 |
 | 100 | 149 |
 
-These are zero-failure minima under the simple Bonferroni/exact-binomial construction. Any observed bad routes increase the required sample size; use the adjusted exact upper bound for the observed (k), not this table. If simultaneous claims are made across categories as well as thresholds, include all claims in the multiplicity family or use another valid simultaneous procedure. The selected procedure may be less conservative than Bonferroni, but its finite-sample validity and assumptions must be justified.
+These are zero-failure minima under the simple Bonferroni/exact-binomial construction. Any observed bad routes increase the required sample size; use the adjusted exact upper bound for the observed failure count, not this table. If simultaneous claims are made across categories as well as thresholds, include all claims in the multiplicity family or use another valid simultaneous procedure. The selected procedure may be less conservative than Bonferroni, but its finite-sample validity and assumptions must be justified.
 
+The fixed-threshold binomial calculation does not by itself justify searching many candidate tau values and reporting the most favorable one. Repeatedly testing candidates on the same calibration observations and then applying an ordinary 95% interval to the selected candidate can invalidate the nominal risk guarantee.
 
-The fixed-threshold binomial calculation above does not by itself justify searching many candidate (\tau) values and reporting the most favorable one. Repeatedly testing candidates on the same calibration observations and then applying an ordinary 95% interval to the selected candidate can invalidate the nominal risk guarantee.
+Before data are examined, specify and implement a valid selection-aware risk-control procedure that accounts for the candidate-threshold search and any category-wise claims. Freeze:
 
-Before data are examined, specify and implement a valid selection-aware risk-control procedure (for example, a correctly specified Learn-then-Test or conformal risk-control method) that accounts for the candidate-threshold search and any category-wise claims. Freeze:
-
-- The finite candidate-(\tau) set or the selection algorithm;
+- The finite candidate-tau set or the selection algorithm;
 - The calibration statistic and exact edge-row construction;
 - The bad-route event and score evaluator;
 - The risk-control method, confidence level, and multiplicity handling;
 - The category definitions and independent sampling unit;
 - The fallback behavior when no candidate is certified.
 
-Do not claim that a valid Learn-then-Test/conformal procedure is already implemented merely because it is named here. The exact method and its assumptions must be selected, implemented, and tested before calibration. If a valid selection-aware guarantee cannot be established, do not tune (\tau) on the same observations using unadjusted repeated confidence intervals. Use a separately justified calibration/validation design or retain the fail-closed default.
+Do not claim that a valid Learn-then-Test/conformal procedure is implemented merely because it is named here. The exact method and its assumptions must be selected, implemented, and tested before calibration. If a valid selection-aware guarantee cannot be established, do not tune tau on the same observations using unadjusted repeated confidence intervals. Use a separately justified calibration/validation design or retain the fail-closed default.
 
 ## 7. Data separation, freeze, and fail-closed policy
 
@@ -158,7 +155,7 @@ The protocol parameters are approved, but the calibration procedure is not yet r
 
 ## 9. Reviewer-facing concise justification
 
-> We predefine a conservative pure-LLM eligibility rule requiring both an absolute edge-recovery score of (R^2\geq0.99) and non-inferiority to the ensemble edge score (zero relative margin). The absolute floor follows the manuscript's primary recovery criterion; the zero margin avoids introducing an unsupported tolerance. We control the probability of permitting a bad pure-LLM route at 5% using a one-sided 95% risk bound. Under independent equation-level Bernoulli observations, 59 calibration equations with zero observed bad routes are the smallest sample supporting an exact one-sided binomial upper bound no greater than 5%. This minimum increases when failures occur. Because threshold selection over multiple candidates can invalidate a naïve interval, (\tau) is selected only through a predeclared selection-aware risk-control procedure. Calibration uses training data from a predeclared equation set disjoint from Core-15, and the resulting threshold is frozen before Core-15 evaluation. If the assumptions or risk bound are not satisfied, the system defaults to ensemble routing rather than claiming an unsupported pure-LLM guarantee.
+> We predefine a conservative pure-LLM eligibility rule requiring both an absolute edge-recovery score of (R^2\geq0.99) and non-inferiority to the ensemble edge score (zero relative margin). The absolute floor follows the manuscript's primary recovery criterion; the zero margin avoids introducing an unsupported tolerance. We control the probability of permitting a bad pure-LLM route at 5% using a one-sided 95% risk bound. Under independent equation-level Bernoulli observations, 59 calibration equations with zero observed bad routes are the smallest sample supporting an exact one-sided binomial upper bound no greater than 5% for one fixed, pre-specified threshold. Searching multiple thresholds or making simultaneous category claims requires multiplicity adjustment and generally a larger sample; this minimum also increases when failures occur. Because threshold selection over multiple candidates can invalidate a naïve interval, (\tau) is selected only through a predeclared selection-aware risk-control procedure. Calibration uses training data from a predeclared equation set disjoint from Core-15, and the resulting threshold is frozen before Core-15 evaluation. If the assumptions or risk bound are not satisfied, the system defaults to ensemble routing rather than claiming an unsupported pure-LLM guarantee.
 
 ## 10. Machine-checkable pre-run manifest
 
