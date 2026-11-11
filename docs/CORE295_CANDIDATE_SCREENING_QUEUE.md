@@ -213,3 +213,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 26 (2026-11-11)
 
 [Source Verification Audit 26](CORE295_SOURCE_VERIFICATION_AUDIT_26.md) verifies Fick's original 1855 p. 66 local transfer relation (dM=-Qk(dy/dx)dt) and its modern 1D flux form (J=-D,dC/dx). Fick explicitly analogizes the constitutive law to Fourier heat conduction and Ohm electrical conduction, so the same linear-gradient transport structure crosses domain boundaries. Hold pending the declared physical-mechanism versus strict structural-equivalence policy; do not count the derived diffusion PDE, geometry specializations or Fourier/Ohm analogues as separate equations under a strict form rule.
+
+
+## Proposed-record source verification matrix (2026-11-11)
+
+[Core-295 Proposed-Record Source Verification Matrix](CORE295_PROPOSED_RECORD_SOURCE_VERIFICATION_MATRIX.md) consolidates audit coverage for all 19 currently proposed records, their source evidence, hold reasons and cross-domain structural-equivalence blockers. It does not change any record status: 19 proposed, zero accepted, sampling frame unfrozen.
