@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot (2026-11-11):** 172 candidate source-register records (Chemistry 36, Biology 35, Physics 43, DeFi AMM 25, DeFi Risk 33); 19 proposed equation records; zero accepted equation entries. Bibliography-item and discovery-batch totals are not repeated here because their current totals have not been independently refreshed. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot (2026-11-11):** 173 candidate source-register records (Chemistry 36, Biology 35, Physics 43, DeFi AMM 26, DeFi Risk 33); 19 proposed equation records; zero accepted equation entries. Bibliography-item and discovery-batch totals are not repeated here because their current totals have not been independently refreshed. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -83,7 +83,7 @@
 |---|---|---|
 | AMM-CONSTANT-PRODUCT | Uniswap v2; Uniswap v3 virtual reserves; volatile Solidly pools | Core-15 constant-product exclusion applies. Uniswap v3 local virtual reserves and range restrictions do not create a new invariant. |
 | AMM-WEIGHTED-GEOMETRIC | Balancer weighted pools | Non-equal weights or multi-asset structure may be structurally distinct. Spot prices, swap formulas and equal-weight two-token special cases remain linked to the invariant. |
-| AMM-CURVE-STABLE | Curve StableSwap; Solidly stable polynomial | Distinct invariant structures: amplified sum/product blend versus polynomial stable curve. Related stable-asset AMM source cluster, but do not merge mathematically distinct invariants. |
+| AMM-CURVE-STABLE | Curve StableSwap and CryptoSwap; Solidly stable polynomial | Distinct invariant structures: amplified sum/product blend versus polynomial stable curve. Related stable-asset AMM source cluster, but do not merge mathematically distinct invariants. |
 | AMM-CURVE-CRYPTOSWAP | Curve CryptoSwap dynamic-peg invariant | Separate invariant from StableSwap; cluster protocol lineage and state-dependent coefficient/price-scale mechanism. |
 | AMM-DODO-PMM | DODO Proactive Market Maker | Inventory-deviation marginal price, integrated trade amount, average price and quadratic solve are one PMM curve family. |
 | AMM-DISCRETE-BINS | LFJ Liquidity Book; Maverick dynamic distribution; Carbon adjustable orders | Fixed-price bins, geometric bin progression and dynamic bin movement are related discrete-liquidity mechanisms. Carbon curve formula and Maverick state transitions still require code-level tracing. |
