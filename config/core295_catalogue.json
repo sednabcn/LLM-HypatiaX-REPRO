@@ -1342,6 +1342,90 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Fick (1855), Annalen der Physik 170(1), p. 66"
+    },
+    {
+      "equation_id": "CHEM-BEER-LAMBERT-001",
+      "name": "Beer–Lambert decadic spectral attenuation law",
+      "domain": "Chemistry",
+      "subdomain": "optical absorption spectroscopy",
+      "formula": "I = I0 * 10^(-epsilon * c * l)",
+      "canonical_expression": "I0*10**(-eps*c*l)",
+      "formula_latex": "I=I_0 10^{-\\varepsilon c l}",
+      "structural_fingerprint": "a6493c9f84de997280640d05fd3c0bc41e5457ebf21772c3a5cab2bc819b4f57",
+      "source_ids": [
+        "CHEM-BEER-1852",
+        "CHEM-IUPAC-BEER-LAMBERT"
+      ],
+      "source_family_id": "CHEM-OPTICAL-ABSORPTION-BEER-LAMBERT",
+      "status": "proposed",
+      "assumptions": [
+        "Collimated monochromatic radiation with spectral bandwidth narrow relative to absorption linewidths",
+        "Homogeneous isotropic absorbing medium",
+        "Absorption dominates; reflection and scattering are negligible in the chosen optical path",
+        "Decadic absorbance convention is used",
+        "Molar absorption coefficient is constant over the selected concentration and path-length regime"
+      ],
+      "variables": {
+        "I0": {
+          "meaning": "Incident spectral radiant power or intensity at the selected wavelength",
+          "unit": "same units as I"
+        },
+        "eps": {
+          "meaning": "Molar decadic absorption coefficient",
+          "unit": "m^2 mol^-1 when c is mol m^-3 and l is m"
+        },
+        "c": {
+          "meaning": "Concentration of the absorbing species",
+          "unit": "mol m^-3"
+        },
+        "l": {
+          "meaning": "Optical path length through the absorbing medium",
+          "unit": "m"
+        }
+      },
+      "validity": {
+        "source_location": "IUPAC Gold Book B00626 exact expression P_lambda=P_lambda^0 10^(-epsilon c l); Beer (1852), Annalen der Physik 162, 78-88, primary historical source",
+        "regime": "Decadic spectral-power attenuation through a homogeneous isotropic absorbing medium",
+        "limitations": [
+          "The primary Beer 1852 Wiley record confirms metadata, but full-text equation-page transcription remains unavailable; the exact modern expression is sourced from IUPAC",
+          "Lambert's natural-exponential path attenuation and the decadic absorbance form A=epsilon*c*l are linked representations of this same Beer-Lambert family, not separate candidates",
+          "At high concentrations, chemical association, refractive effects, scattering or spectral bandwidth can cause deviations",
+          "Do not mix decadic epsilon with a natural-log attenuation coefficient; conversion includes ln(10)",
+          "The exponential form is physically distinct from Arrhenius kinetics, but an explicit Core-15 exclusion overlap review remains required"
+        ]
+      },
+      "input_ranges": {
+        "I0": {
+          "train": null,
+          "extrapolation": null
+        },
+        "eps": {
+          "train": null,
+          "extrapolation": null
+        },
+        "c": {
+          "train": null,
+          "extrapolation": null
+        },
+        "l": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "IUPAC Gold Book gives the exact decadic spectral-power relation and the conditions on monochromatic radiation and homogeneous isotropic medium",
+        "Primary Beer (1852) article metadata is confirmed, but the Wiley full text is unavailable; do not claim direct transcription of its original formula",
+        "Keep Beer and Lambert contributions within one optical-absorption source family; absorbance and transmitted-intensity equations are linked",
+        "Need choose wavelength-specific material, coefficient, concentration and path-length domain; preserve decadic convention",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "IUPAC Gold Book B00626; Beer (1852), DOI 10.1002/andp.18521620505"
     }
   ],
   "source_register": [
@@ -2094,7 +2178,7 @@
       "domain": "Chemistry",
       "title": "Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten",
       "url": "https://doi.org/10.1002/andp.18521620505",
-      "use": "Primary Beer 1852 absorption paper, Annalen der Physik 162, 78–88; distinguish original exponential absorption relation from modern decadic absorbance/molar absorptivity notation",
+      "use": "Primary Beer (1852) paper metadata, Annalen der Physik 162, 78-88, DOI 10.1002/andp.18521620505; Wiley full text currently unavailable. Pair with IUPAC Gold Book B00626 for exact modern decadic Beer-Lambert expression; distinguish original Beer concentration extension from Lambert path attenuation and modern notation.",
       "status": "candidate_reference"
     },
     {
@@ -2360,6 +2444,14 @@
       "url": "https://public.websites.umich.edu/~elements/7e/04chap/summary-example1.html",
       "use": "Explicit engineering rate-law example -rA'=k PA PB/(1+KA PA+KC PC) with competitive adsorption; modern formula cross-check, not primary historical equation",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-IUPAC-BEER-LAMBERT",
+      "domain": "Chemistry",
+      "title": "IUPAC Gold Book: Beer–Lambert law",
+      "url": "https://goldbook.iupac.org/terms/view/B00626",
+      "use": "Authoritative modern definition and exact decadic spectral-power attenuation expression P_lambda=P_lambda^0*10^(-epsilon*c*l); records homogeneous/isotropic medium, monochromatic radiation, path length and coefficient units",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -2389,7 +2481,8 @@
     "Twelfth proposed-record pass adds Fick's oxygen mass-balance cardiac-output relation. It remains proposed pending original 1870 page transcription, steady-state physiology adapter and deterministic data generator.",
     "Thirteenth proposed-record pass adds the Uniswap v3 geometric price TWAP from mean tick, pinned to Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45. It remains proposed pending observation-window, token-order, decimal-scaling and deterministic generator decisions.",
     "Fourteenth proposed-record pass adds the Uniswap v2 arithmetic cumulative-price TWAP, pinned to Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2. It remains proposed pending fixed-point conversion, timestamp-wrap and observation-window adapter.",
-    "Fifteenth proposed-record pass adds Fick's one-dimensional diffusive flux law, with the original transfer equation confirmed on page 66 of the Wiley scan. It remains proposed because its linear-gradient structure may overlap Fourier/Ohm transport forms; the derived diffusion PDE is not counted separately."
+    "Fifteenth proposed-record pass adds Fick's one-dimensional diffusive flux law, with the original transfer equation confirmed on page 66 of the Wiley scan. It remains proposed because its linear-gradient structure may overlap Fourier/Ohm transport forms; the derived diffusion PDE is not counted separately.",
+    "Sixteenth proposed-record pass adds the Beer-Lambert decadic spectral attenuation law. The exact modern equation is sourced from IUPAC Gold Book B00626; the primary Beer 1852 paper is registered for historical lineage but its full-text equation page remains unavailable."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
