@@ -1,7 +1,7 @@
 # Core-295 source verification audit 63: Black–Cox first-passage structural default model
 
 **Date:** 2026-11-11  
-**Status:** new peer-reviewed primary research lead; no equation is added to the formal catalogue or counted toward 295.
+**Status:** new peer-reviewed primary research lead registered as RISK-BLACK-COX-1976 (candidate_reference); no equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary source
 
