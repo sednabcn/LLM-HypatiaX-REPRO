@@ -179,3 +179,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 17 (2026-11-11)
 
 [Source Verification Audit 17](CORE295_SOURCE_VERIFICATION_AUDIT_17.md) separates Compound III's post-absorption storefront price discount from liquidation eligibility and liquidator incentives. The discount is a configured product of StoreFrontPriceFactor and one minus the asset's LiquidationFactor; its quote conversion is not an independent equation. Keep as collateral-sale pricing context in the broader liquidation family, not a new structurally rich candidate.
+
+
+## Source verification audit 18 (2026-11-11)
+
+[Source Verification Audit 18](CORE295_SOURCE_VERIFICATION_AUDIT_18.md) places Marcus outer-sphere transfer in the activated-rate family but records its distinctive quadratic driving-force barrier. It distinguishes the original collision-frequency prefactor from the IUPAC encounter-complex Eyring prefactor. Keep one Marcus family and hold until the benchmark selects one prefactor and resolves Core-15 Arrhenius/generic rate-law overlap; no barrier/prefactor/regime variants are independent entries.
