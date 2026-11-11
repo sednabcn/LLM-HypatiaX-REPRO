@@ -13,7 +13,7 @@ IN MEMORY so rows carry the P-arm hash scheme, a real model_id and a real prompt
 
 PREFLIGHT (blocking unless marked warn) - everything that would otherwise invalidate hours of runs:
   P1  repo root, evaluator sha256 starts with 7d5395ed (the Phase 2 pin)
-  P2  engine gates exist (_LLM_ACCEPT_R2, _LLM_PRIOR_SEED); --apply-engine-patch adds them
+  P2  engine gates exist (_LLM_ACCEPT_R2, _LLM_PRIOR_SEED, _COMPLEXITY_ROUTING); --apply-engine-patch adds them
   P3  clean-run flags: HYPATIAX_DISABLE_PROMPT_HINTS=1, HYPATIAX_DISABLE_HARDCODED=1 are forced,
       HYPATIAX_LLM_MODEL is unset, an API key is present
   P4  git tree clean (or --allow-dirty, recorded as a caveat)
@@ -103,6 +103,8 @@ class Pre:
 
 def apply_engine_patch(path):
     s = Path(path).read_text(encoding="utf-8")
+    if all(name in s for name in ("_LLM_ACCEPT_R2", "_LLM_PRIOR_SEED", "_COMPLEXITY_ROUTING")):
+        return "already patched"
     if "_LLM_ACCEPT_R2" not in s or "_LLM_PRIOR_SEED" not in s:
         a_old = "if best_hyp.r2_score and best_hyp.r2_score > 0.95:"
         b_old = "if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:"
