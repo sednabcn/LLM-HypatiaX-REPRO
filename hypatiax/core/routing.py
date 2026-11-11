@@ -12,6 +12,8 @@ from typing import Any
 
 import numpy as np
 
+from hypatiax.core.r2_canonical import r2_checked
+
 STRUCTURAL_RISK_FUNCTIONS = frozenset({"exp", "log", "Phi", "sin", "cos", "erf"})
 
 
@@ -44,17 +46,9 @@ def structural_risk_tokens(*sources: str | None) -> list[str]:
 
 
 def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float | None:
-    y_true = np.asarray(y_true, dtype=float).reshape(-1)
-    y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
-    if y_true.shape != y_pred.shape or y_true.size < 2:
-        return None
-    if not np.isfinite(y_true).all() or not np.isfinite(y_pred).all():
-        return None
-    ss_tot = float(np.sum((y_true - np.mean(y_true)) ** 2))
-    if not np.isfinite(ss_tot) or ss_tot <= np.finfo(float).tiny:
-        return None
-    value = 1.0 - float(np.sum((y_true - y_pred) ** 2)) / ss_tot
-    return value if np.isfinite(value) else None
+    """Use the repository's canonical R² policy for routing diagnostics."""
+    value, status = r2_checked(y_true, y_pred)
+    return float(value) if status == "ok" and np.isfinite(value) else None
 
 
 def training_edge_split_indices(
