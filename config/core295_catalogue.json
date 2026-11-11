@@ -2977,6 +2977,14 @@
       "url": "https://www.jstor.org/stable/41447359",
       "use": "Primary von Bertalanffy (1938), Human Biology 10(2), pp. 181–213; derives organic growth laws from the counteraction of anabolic construction and catabolic destruction terms, with surface/volume scaling assumptions. Equation transcription and biological size/mass observable need direct PDF review before candidate drafting.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-MARCUS-1956-ET-PART-I",
+      "domain": "Chemistry",
+      "title": "On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I",
+      "url": "https://authors.library.caltech.edu/records/desqy-fmq55",
+      "use": "Primary Marcus (1956), J. Chem. Phys. 24(5), 966–978. Under its stated solution-phase intermediate-state mechanism, the overall rate is the solution collision number multiplied by exp(−ΔF*/kT). Do not substitute a universal Eyring prefactor; exact equation/page and collision-number definition remain to be transcribed.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
