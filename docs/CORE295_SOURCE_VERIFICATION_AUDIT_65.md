@@ -1,7 +1,7 @@
 # Core-295 source verification audit 65: Basel IRB expected-loss decomposition
 
 **Date:** 2026-11-11  
-**Status:** source verification of the author-pool expected-loss candidate; no equation is added to the formal catalogue or counted toward 295.
+**Status:** source verification of the author-pool expected-loss candidate; source RISK-BASEL-CRE35-EL is registered as candidate_reference. No equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary standard
 
