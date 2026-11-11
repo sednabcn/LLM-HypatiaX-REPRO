@@ -75,6 +75,10 @@
 
 63. Flowers, P., Theopold, K., Langley, R., & Robinson, W. R. (2019). *Chemistry 2e*, §11.3 “Solubility”. OpenStax. https://openstax.org/books/chemistry-2e/pages/11-3-solubility. Exact textbook statement of Henry’s law, (C_g=kP_g), for gas solubility in a liquid, with (k) dependent on gas, solvent and temperature. Treat as a candidate gas–liquid partition relation; verify the applicable dilute/ideal-solution regime and distinguish concentration-per-pressure convention from reciprocal Henry constants used elsewhere.
 
+
+64. Langmuir, I. (1918). The adsorption of gases on plane surfaces of glass, mica and platinum. *Journal of the American Chemical Society, 40*(9), 1361–1403. https://doi.org/10.1021/ja02242a004. Primary source for the surface-adsorption model now known as the Langmuir isotherm. Confirm the exact assumptions and equation location in the original article; distinguish ideal monolayer-site adsorption from heterogeneous/multilayer adsorption models.
+65. Fick, A. (1855). Ueber Diffusion. *Annalen der Physik, 170*(1), 59–86. https://doi.org/10.1002/andp.18551700105. Primary source for diffusion relations; a candidate transport family requiring explicit concentration, flux, spatial coordinate, diffusivity and boundary/initial-condition conventions. First-law flux and second-law diffusion PDE are related, not automatically independent.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
