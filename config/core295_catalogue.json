@@ -2832,6 +2832,30 @@
       "url": "https://doi.org/10.1139/f85-057",
       "use": "Primary Schnute (1985), Canadian Journal of Fisheries and Aquatic Sciences 42(3), pp. 414–429; generalized age-structured catch/effort model class and derivation lineage. Secondary literature reports the Deriso–Schnute recruitment form and its Beverton–Holt/Ricker cases; exact primary equation/page remains to be transcribed.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-FRUMKIN-1920-ELECTROCAPILLARY",
+      "domain": "Chemistry",
+      "title": "On the theory of electrocapillarity: II",
+      "url": "https://doi.org/10.1080/14786440908636137",
+      "use": "Primary Frumkin (1920), Philosophical Magazine, series 6, 40(237), pp. 375–385; historical source lead for potential-dependent interfacial adsorption/electrocapillarity. The commonly transcribed Frumkin coverage isotherm and exact original equation location still require direct primary-text verification.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-COMPOUND-COMET-SPEC",
+      "domain": "DeFi Risk",
+      "title": "Compound Comet Specification",
+      "url": "https://github.com/compound-finance/comet/blob/main/SPEC.md",
+      "use": "Official Compound Comet specification (repository SPEC.md, Comet v2.5 tagged in document metadata): piecewise borrow/supply rates around a utilization kink, principal/present-value index accrual, negative-liquidity liquidation predicate and internal absorption/collateral accounting. Pin exact spec and contract commit before equation transcription; this is protocol-model evidence, not an accepted candidate.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-V3-HEALTH-FACTOR-DOCS",
+      "domain": "DeFi Risk",
+      "title": "Aave V3 Health Factor Preview",
+      "url": "https://www.aave.com/docs/aave-v3/markets/health-factor",
+      "use": "Official Aave V3 documentation states HF = total collateral value × weighted average collateral factor / total borrow value; HF below 1 is liquidation-eligible. Complementary current developer documentation to Aave FAQ; same health-factor family, not an additional equation.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
