@@ -2897,6 +2897,14 @@
       "url": "https://docs.curve.finance/developer/amm/curve-amm-overview/",
       "use": "Official Curve developer documentation identifying StableSwap as the invariant for near-parity assets and CryptoSwap for volatile pairs, with current NG implementation families. Supports family discovery and version separation; detailed equations and code revision must be pinned per candidate.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-STABLESWAP-WP-2019",
+      "domain": "DeFi AMM",
+      "title": "StableSwap - efficient mechanism for Stablecoin liquidity",
+      "url": "https://docs.curve.finance/assets/files/whitepaper_stableswap-fc0bb370db9fe3a91afdde8662e78206.pdf",
+      "use": "Primary Egorov (2019) StableSwap whitepaper. Derives the N-coin invariant AnnΣx_i + D = ADn^n + D^(n+1)/(n^n Πx_i), with A amplification and D solved from pool balances. Original PDF pages 3–4 (printed pagination around 3–4). States D and output coin balances are found iteratively. Formal candidate must pin implementation/version and integer scaling/rounding.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
