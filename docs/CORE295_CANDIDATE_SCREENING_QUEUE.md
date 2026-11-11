@@ -158,3 +158,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 15 (2026-11-11)
 
 [Source Verification Audit 15](CORE295_SOURCE_VERIFICATION_AUDIT_15.md) checks Liquity V1's product-sum Stability Pool derivation against Pardoe's December 2020 paper, V1 documentation and a fetched Solidity source snapshot. The core coupled state is (P_n=\prod_i(1-Q_i/D_{i-1})), (S_n=\sum_k(E_k/D_{k-1})P_{k-1}), with depositor outputs (d_n=d_tP_n/P_t) and (e_n=d_t(S_n-S_t)/P_t). Treat it as one stateful accounting/system candidate, not separate formulas for P, S, deposit, gain, scale or LQTY rewards. Hold pending immutable code pin, Recovery Mode/domain boundary and deterministic stateful adapter. No candidates were accepted.
+
+
+## Source verification audit 16 (2026-11-11)
+
+[Source Verification Audit 16](CORE295_SOURCE_VERIFICATION_AUDIT_16.md) verifies Aave V3's multi-collateral health factor as Σ(collateral value × asset liquidation threshold) / total debt. This is the portfolio-weighted form of the same risk-adjusted collateral/debt health family already represented by Euler EVK; Morpho's single-collateral health ratio is the corresponding one-collateral case. Retain Aave as multi-collateral source/adapter context, not an additional independent equation. Keep health metrics distinct from liquidation incentive functions. No new proposed record or accepted equation was added.
