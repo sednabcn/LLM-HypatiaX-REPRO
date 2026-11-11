@@ -89,7 +89,7 @@ The fresh launcher requires a new empty RESULTS_DIR outside the repository, a cl
 
 Before any scientific run:
 - Calibrate and freeze the Stage 3 degradation threshold tau using a separate training-only calibration protocol; tau is currently intentionally unset by default.
-- Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The existing Phase 3 harness wires LLM acceptance and PySR prior; probe, NN augmentation, and blend weight are not HDS v50_2 switches, and complexity routing is disabled by construction. Do not call this a completed six-gate study.
+- Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The Phase 3 harness now wires LLM acceptance, structural-risk complexity routing, and PySR prior. Neural degradation probe, NN augmentation, and blend weight still require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not call this a completed six-gate study.
 - Resolve the Protocol-30 domain-count mismatch: source registry and both wired runners cover 30 equations across 10 domains; the manuscript claims 11. The PCA route is newly wired but unexecuted. Verify the registry and both fresh output schemas after the user runs the pipeline.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
 - Pin/report the actual runtime LLM model and temperature behavior for every call path (including whether the SDK sends a temperature parameter).
