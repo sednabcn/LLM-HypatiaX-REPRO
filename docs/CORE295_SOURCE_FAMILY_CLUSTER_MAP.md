@@ -304,3 +304,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 36 (2026-11-11)
 
 [Candidate Discovery Batch 36](CORE295_CANDIDATE_DISCOVERY_BATCH_36.md) adds GHK multi-ion membrane potential and revised Starling filtration. Keep GHK voltage/current and original Goldman/Hodgkin–Katz formulations in one constant-field family; keep classical/revised Starling in one capillary-filtration lineage, with the glycocalyx subcompartment defining the revised oncotic term.
+
+
+## Source verification audit 30 (2026-11-11)
+
+[Source Verification Audit 30](CORE295_SOURCE_VERIFICATION_AUDIT_30.md) confirms Hawkes self-exciting event intensity and Merton's Brownian-plus-Poisson jump process from the original papers. OU and CIR remain related mean-reverting diffusion families with incomplete original-page transcription; Hawkes and Merton are distinct process classes. No stochastic process has been added to the formal catalogue.
