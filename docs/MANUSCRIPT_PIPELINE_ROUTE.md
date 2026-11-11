@@ -20,13 +20,18 @@ All paths converge to one selected formula/prediction record. Store the proposed
 
 ### Manuscript consistency issue — agreed precedence and implementation status
 
-**Decision agreed:** the structural-risk flag has precedence over the high-fit pure-LLM shortcut. A trusted candidate using a flagged function is routed to an LLM+NN ensemble even when training R² >= 0.95. A failed trust gate routes to NN fallback. Pure LLM is eligible only when the trust gate passes, no structural-risk function is present, and training R² >= 0.95.
+**Decision agreed:** the structural-risk flag takes precedence over the high-fit pure-LLM shortcut. In the DeFi LLM+NN route, a trusted formula containing a flagged function is sent to the ensemble even when training R² >= 0.95. In Core-15 HDS v50_2, which has no NN component, the equivalent guard skips pure-LLM acceptance and forces PySR refinement; it must not be described as an LLM+NN ensemble.
 
-**Implemented on this branch (scoped):** `hypatiax/core/routing.py` provides exact function-call detection for exp/log/Phi/sin/cos/erf and a deterministic route selector. `hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py` now uses it in the EnhancedHybridSystem DeFi route, logs the route reason, and returns trust-gate status, structural-risk flag/tokens, and blend weights. Regression tests cover exact-call detection, formula-fragment fallback, high-fit structural-risk override, high-fit non-structural pure LLM, and trust-gate failure. This is **not yet wired into the separate Core-15 `exp1_ablation.py` / `HybridDiscoverySystem v50_2` route**; that path remains a separate integration task.
+**Implemented on this branch:**
+- `hypatiax/core/routing.py` detects exact calls to exp/log/Phi/sin/cos/erf; computes a PCA-edge training-only degradation probe; fits a 1-D KDE to training covariates and scores query covariates without labels; and implements the manuscript blend (w_{LLM}=0.3+0.7p_{OOD}).
+- `hybrid_system_nn_defi_domain.py` uses those diagnostics. `X_query` is optional and receives no target labels; `tau` must be passed explicitly or supplied through `HYPATIAX_ROUTING_DELTA_TAU`. If tau is absent, the route fails closed to ensemble rather than inventing a threshold.
+- `test_enhanced_defi_extrapolation.py` now passes held-out covariates only, removes the old post-hoc transcendental/probe overrides that could force pure LLM, and uses the recorded manuscript blend weights without looking at held-out labels.
+- `symbolic_engine.py` applies the structural-risk precedence to the Core-15 HDS v50_2 LLM-acceptance shortcut. Structural-risk candidates are refined by PySR even when the LLM candidate has higher training R². The flag/tokens/reason are propagated into `exp1_ablation.py` output rows.
+- Regression tests cover exact token detection, structural-risk precedence, the training-edge probe, KDE OOD ordering, blend weights, missing tau, and NN-unavailable fallback.
 
-**Still not implemented:** end-to-end application to the Core-15 v50_2 path; the manuscript's Stage 3 training-side edge degradation probe and calibrated tau; Stage 4 training-fitted KDE/OOD probability; and the manuscript's specified alpha=0.3 OOD-dependent blend formula. The current helper deliberately retains the existing R²-proportional blend for compatibility and does not claim those missing stages are complete. These remain pre-run blockers for claiming full five-stage algorithm conformance.
+**Still open:** `tau` has no manuscript-specified calibrated numeric value or frozen calibration dataset/procedure. Do not set it by looking at extrapolation/test scores. The Core-15 HDS v50_2 architecture is LLM+PySR, not the manuscript's LLM+NN five-stage router; its structural-risk guard is therefore a conservative PySR refinement, not the requested NN ensemble. The Stage 3/4 LLM+NN route is currently wired in the DeFi hybrid path and the extrapolation harness; callers that do not supply `X_query` record OOD as unavailable and use the in-distribution alpha floor.
 
-The Stage 3 edge probe must be drawn from training data. Stage 4 may use only unlabelled query covariates plus training-fitted density information. Never use held-out target labels/scores to select a route, tune tau, or choose blend weights.
+The Stage 3 edge probe uses only training rows and their formula predictions. Stage 4 fits standardisation, PCA, KDE bandwidth, and leave-one-out reference densities using only training covariates. Query covariates are scored without labels. Held-out target labels/scores must never select the route, tune tau, or choose blend weights.
 
 ## 3. Campaign-level experiment route
 
@@ -41,7 +46,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 | 4 | Feynman five-system exp1 | Core-15 comparison suite; report each method and extrapolation metric separately. Do not substitute the Core-15 PySR-only ablation for the six-gate controlled study. |
 | 5 | Feynman 10-domain exp2 | Separate 10-domain suite. Keep interpolation and extrapolation denominators distinct; where finite held-out extrapolation scores are absent, report no comparison. |
 | 6 | Nguyen-12 | 12 standard equations; per-equation axis-aligned train/extrapolation ranges; 40/60; five seeds (42, 99, 123, 777, 2024); HypatiaX vs PySR-only. Use the manuscript's R² >= 0.9999 convention, count aborts/missing/NaN as failures, and disclose that no NN baseline is specified. |
-| 7 | Protocol-30 | Dedicated custom 30-equation benchmark across 11 domains; not a Feynman subset. Preserve random 80/20 and PCA 40/60 as separate protocols. For PCA, only the held-out 60% score is the extrapolation measure. Use the paper's strict R² >= 0.999999 criterion and retain formula strings for audit. |
+| 7 | Protocol-30 | The `exp2` stage already invokes `run_comparative_suite_benchmark_v2.py --protocol all_domains`, backed by `experiment_protocol_all_30.py`: 30 registered equations across **10** domains. This is separate from the Feynman suite. The manuscript specifies 11 domains, so the registry/domain discrepancy remains to resolve. Keep random 80/20 and PCA 40/60 separate; for PCA, only held-out 60% is extrapolation. Use R² >= 0.999999 and retain formula strings. |
 | 8 | M3/M4 noise sweep | Same custom 30 equations, n=200, sigma in {0, 0.05, 0.1, 0.5, 1}%. Preserve the threshold used at each noise level in the raw data and caption; because thresholds vary, do not compare recovery percentages as if they shared one threshold. |
 | 9 | M3/M4 sample-complexity sweep | Same 30 equations, noiseless, n in {50, 100, 200, 500, 750, 1000}; preserve the sample-size-specific thresholds. |
 | 10 | Post-run audit | Verify formulas, LLM-call flags, hardcoded/hint bypass flags, seeds, split hashes, raw and scored R², finite/missing status, timeout status, runtime, resource use, and exact evaluator version. Generate manuscript tables/figures only from the audited fresh outputs. |
@@ -69,8 +74,7 @@ Interpretation and gaps:
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- There is no dedicated Protocol-30 stage in this launcher. Do not claim that Protocol-30 is freshly rerun by `exp2` or `exp2_five`. This remains a pre-run blocker; no stage is added until the custom 30-equation source, clean live method arms, random/PCA split definitions, output schema, and timeout policy are pinned.
-- The fresh protocol currently contains no explicit Protocol-30 campaign entry. Add one only after its inputs, clean-path method arms, output schema, and timeout policy are frozen.
+- `exp2` is the existing Protocol-30-capable stage: it runs `--protocol all_domains` over the ten-domain registry. It is not `exp2_five`, and it must not be described as an 11-domain rerun until the missing domain is identified and added consistently to the registry, domain loop, sharding, and manuscript. Confirm that the separate random 80/20 and PCA 40/60 protocols are both represented by the actual fresh launcher before claiming full Protocol-30 coverage.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
 ## 5. Supplementary-protocol correction required
@@ -84,11 +88,9 @@ The noise-sweep recovery thresholds vary by sigma (0.999999 at 0%; 0.995 at 0.05
 The fresh launcher requires a new empty RESULTS_DIR outside the repository, a clean Git checkout, no legacy mode, and records a run manifest. It forces hardcoded-formula and prompt-hint bypasses off and clears inherited LLM cache/replay settings. The real route includes a live API preflight and a PySR warm-up; do not execute it without explicit approval of compute/API spend.
 
 Before any scientific run:
-- Complete and test the Stage 3 training-side degradation probe and Stage 4 train-fitted KDE/OOD weighting; the current routing patch only resolves trust-gate and structural-risk precedence.
-- Add and validate the six Core-15 leave-one-gate-out arms; do not treat the current three-arm ablation as complete.
-- Freeze and implement the dedicated Protocol-30 campaign inputs, arms, split definitions, schema, and timeout policy.
-- Add a dedicated Protocol-30 stage with clean formula provenance.
-- Implement the six Core-15 leave-one-gate-out variants, on the same equations/splits/seeds/resources as Pure LLM and full HDS.
+- Calibrate and freeze the Stage 3 degradation threshold tau using a separate training-only calibration protocol; tau is currently intentionally unset by default.
+- Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The existing Phase 3 harness wires LLM acceptance and PySR prior; probe, NN augmentation, and blend weight are not HDS v50_2 switches, and complexity routing is disabled by construction. Do not call this a completed six-gate study.
+- Resolve the Protocol-30 domain-count mismatch: source registry and exp2 runner cover 30 equations across 10 domains; the manuscript claims 11. Verify the custom registry and random/PCA split outputs before calling the protocol complete.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
 - Pin/report the actual runtime LLM model and temperature behavior for every call path (including whether the SDK sends a temperature parameter).
 - Confirm each campaign's output schema records exact formula, route, LLM-call flag, seed, split, failure status, timing, raw/scored R², and evaluator output.
