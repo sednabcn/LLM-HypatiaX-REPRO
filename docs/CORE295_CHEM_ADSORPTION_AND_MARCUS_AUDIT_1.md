@@ -25,7 +25,7 @@ Frumkin's electrocapillarity work concerns the dependence of interfacial adsorpt
 
 ## 3. Marcus electron transfer: distinguish the rate prefactor by kinetic scope
 
-The primary Marcus 1956 paper describes a slight-orbital-overlap outer-sphere electron-transfer mechanism and a quantitative solution-rate theory. The rate prefactor must be tied to the kinetic scope. IUPAC's current Marcus equation entry gives the encounter-complex/intramolecular form with an Eyring prefactor and electronic transmission coefficient:
+The primary Marcus 1956 paper describes a slight-orbital-overlap outer-sphere electron-transfer mechanism and a quantitative solution-rate theory. Its publisher abstract explicitly states that, when conversion from the activated intermediate to products is more probable than return to reactants, the overall solution reaction rate is the intermediate-formation rate: the solution collision number multiplied by exp(-ΔF*/kBT). Thus the source-specific expression is k = Z exp(-ΔF*/kBT), with Z denoting the solution collision number and ΔF* the electrostatic free-energy contribution to forming the intermediate. This is direct primary-source abstract evidence, not yet a transcription of the complete numbered equation from the paper PDF. IUPAC's current Marcus equation entry gives an encounter-complex/intramolecular form with an Eyring prefactor and electronic transmission coefficient:
 
 [
 k_{ET}=\kappa_{ET}\frac{k_BT}{h}\exp\left(-\frac{\Delta G^{\ddagger}}{RT}\right),
@@ -35,7 +35,7 @@ k_{ET}=\kappa_{ET}\frac{k_BT}{h}\exp\left(-\frac{\Delta G^{\ddagger}}{RT}\right)
 
 The transmission factor distinguishes adiabatic and diabatic transfer; the inverted region requires additional Franck–Condon/vibrational treatment.
 
-**Pool disposition:** Do not label either prefactor universally correct without fixing the model scope. The 1956 solution-reaction treatment is associated with a solution collision-number prefactor (Z), whereas the IUPAC encounter-complex/intramolecular form uses κ_ET k_BT/h. These are not interchangeable metadata choices: the equation must declare bimolecular solution encounter versus encounter-complex/intramolecular kinetics, and define the prefactor and units accordingly. The uploaded candidate's generic (Z) is therefore not automatically wrong, but it is underspecified as a general Marcus rate law. The quadratic free-energy barrier is the defining structural feature; the exact 1956 primary equation and parameter convention still require line-by-line verification before promotion.
+**Pool disposition:** Do not label either prefactor universally correct without fixing the model scope. The 1956 solution-reaction treatment is associated with a solution collision-number prefactor (Z), whereas the IUPAC encounter-complex/intramolecular form uses κ_ET k_BT/h. These are not interchangeable metadata choices: the equation must declare bimolecular solution encounter versus encounter-complex/intramolecular kinetics, and define the prefactor and units accordingly. The uploaded candidate's generic (Z) is therefore not automatically wrong, but it is underspecified as a general Marcus rate law. Do not silently identify the 1956 ΔF* with the later/generalized quadratic expression ΔG‡=(λ+ΔG°ET)²/(4λ): the 1956 abstract describes an electrostatic variational construction, and its exact equation/parameter mapping still needs line-by-line PDF verification. The collision-number statement is now source-confirmed at abstract level; the full equation transcription and model contract remain open.
 
 ## 4. Candidate-family disposition
 
@@ -52,7 +52,8 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 - Frumkin (1920), primary historical source: https://doi.org/10.1080/14786440908636137
 - Frumkin & Obrutsheva (1926), electric-field dependence of adsorption: https://doi.org/10.1038/117790a0
 - Langmuir (1918), primary ideal adsorption source: https://doi.org/10.1021/ja02242a004
-- Marcus (1956), primary electron-transfer theory: https://doi.org/10.1063/1.1742723
+- Marcus (1956), primary electron-transfer theory; publisher abstract explicitly identifies solution collision number × exp(-ΔF*/kBT): https://doi.org/10.1063/1.1742723
+- Caltech repository record and attached original paper PDF: https://authors.library.caltech.edu/records/desqy-fmq55
 - IUPAC Marcus equation, prefactor and barrier definition: https://goldbook.iupac.org/terms/view/M03702
 - Equation-level Frumkin isotherm and surface equation of state: https://pmc.ncbi.nlm.nih.gov/articles/PMC5686271/
 - Interfacial adsorption isotherm comparison: https://pure.rug.nl/ws/portalfiles/portal/3086148/c3.pdf
