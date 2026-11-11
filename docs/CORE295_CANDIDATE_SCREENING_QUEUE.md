@@ -103,3 +103,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 4 (2026-11-11)
 
 [Source Verification Audit 4](CORE295_SOURCE_VERIFICATION_AUDIT_4.md) checks Frank's original Windkessel lineage and the canonical two-element RC equation, and transcribes FitzHugh's original 1961 two-state BVP system and parameter constraints. The diastolic exponential and impedance are derived forms of the Windkessel model; the BVP equations are a coupled system, not separate scalar entries. Both remain held pending exact model contracts, ranges and independence review. No candidates were accepted.
+
+
+## Source verification audit 5 (2026-11-11)
+
+[Source Verification Audit 5](CORE295_SOURCE_VERIFICATION_AUDIT_5.md) reviews Fick's 1870 cardiac-output mass-balance principle and Timoshenko's 1921 shear-correction source. Fick remains held pending original-page transcription and a decision on whether measurement equations are in scope; Timoshenko remains a source lead only because the primary equation text was not accessible and the Bresse–Timoshenko lineage needs precise mapping. No candidates were accepted.
