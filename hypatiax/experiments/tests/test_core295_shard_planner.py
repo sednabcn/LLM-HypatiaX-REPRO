@@ -96,6 +96,26 @@ class TestCore295ShardPlanner(unittest.TestCase):
                 require_complete=False,
             )
 
+    def test_arbitrary_python_calls_are_rejected(self):
+        record = {
+            "equation_id": "CORE295-CHEM-TEST-003",
+            "name": "Unsafe Candidate",
+            "domain": "Chemistry",
+            "subdomain": "kinetics",
+            "formula": "unsafe",
+            "canonical_expression": "__import__('os').system('echo unsafe')",
+            "variables": {"t": {"meaning": "time"}},
+            "input_ranges": {"t": {"train": [0.0, 1.0], "extrapolation": [1.0, 2.0]}},
+            "source_family_id": "chem-family",
+            "source_ids": ["CHEM-OPENSTAX-2E"],
+            "status": "accepted",
+        }
+        with self.assertRaisesRegex(ValueError, "invalid canonical_expression"):
+            equations_from_manifest(
+                {"catalogue_id": "core295-option2", "entries": [record]},
+                require_complete=False,
+            )
+
     def test_invalid_shard_count_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "n_shards"):
             plan_domain_balanced_shards([], 0)
