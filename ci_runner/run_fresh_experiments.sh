@@ -155,10 +155,11 @@ print(cfg.get("llm_temperature", 0.25))
 routing = cfg.get("routing_policy") or {}
 tau = routing.get("degradation_tau")
 print("" if tau is None else tau)
+print(routing.get("training_edge_fraction", 0.15))
 PY
 )
-if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 3 ]]; then
-  echo "ERROR: could not read model/temperature/routing tau from fresh protocol" >&2
+if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 4 ]]; then
+  echo "ERROR: could not read model/temperature/routing settings from fresh protocol" >&2
   exit 2
 fi
 export HYPATIAX_LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
@@ -169,6 +170,7 @@ if [[ -n "${_FRESH_LLM_SETTINGS[2]:-}" ]]; then
 else
   unset HYPATIAX_ROUTING_DELTA_TAU
 fi
+export HYPATIAX_ROUTING_EDGE_FRACTION="${_FRESH_LLM_SETTINGS[3]}"
 unset _FRESH_LLM_SETTINGS
 mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
