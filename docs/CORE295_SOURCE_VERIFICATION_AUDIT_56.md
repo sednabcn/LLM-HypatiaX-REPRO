@@ -84,11 +84,11 @@ The liquidation logic can size debt repayment to a target health factor \(H_T\).
 \]
 with the bonus converted to WAD and collateral factor applied. It then calculates the debt amount required to reach the target:
 \[
-D_{repay}=
-\frac{D_{total}(H_T-H)}
+D_{repay,ray}=
+\frac{D_{total,ray}\,U_D(H_T-H)}
 {(H_T-\Pi_L)\,P_D},
 \]
-where \(P_D\) is the debt-asset price/unit conversion factor under the contract's RAY/WAD conventions. The code implements this as a full-precision mulDiv with upward rounding and explicit unit scaling. It then converts the amount into premium debt and drawn shares, applies the caller's debtToCover cap, and handles dust exceptions.
+where \(U_D\) is the debt-asset unit scale and \(P_D\) is the debt-asset price converted to WAD under the contract's RAY/WAD conventions. The code implements this as a full-precision mulDiv with upward rounding and explicit unit scaling. It then converts the amount into premium debt and drawn shares, applies the caller's debtToCover cap, and handles dust exceptions.
 
 The target-health repayment formula, debt-share conversion, collateral seizure and dust handling are one liquidation sizing procedure. They are not separate candidate equations. The exact adapter must reproduce the code's scaling, share/index conversions and exceptional branches rather than use the simplified real-number expression alone.
 
