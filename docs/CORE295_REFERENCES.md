@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–12. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–13. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -110,6 +110,12 @@
 80. Hertzog, E., Benartzi, G., & Benartzi, G. (2017). *Bancor Protocol: Continuous Liquidity and Asynchronous Price Discovery for Tokens through their Smart Contracts*, draft v0.99, May 30, 2017. https://paperzz.com/doc/9208421/whitepaper---bancor-protocol. Primary historical bonding-curve design; p. 11 gives reserve-ratio purchase and sale returns. Verify against an archived official source before acceptance.
 
 81. Maverick Protocol. (2022). *Maverick AMM: The Revolutionary Dynamic Distribution AMM That Enables Directional LPing*. https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-greater-capital-34427f5ac22f. Protocol source for price-bin liquidity movement modes; pair with the Omniscia implementation audit, which validates selected whitepaper formula ranges but does not validate the entire swap/liquidity formula surface.
+
+82. Morpho. *Liquidation on Morpho Blue* and *Collateral, LTV & Health*. Official protocol documentation. https://docs.morpho.org/learn/concepts/liquidation/ and https://docs.morpho.org/developers/blue/concepts/ltv/. Defines LLTV-based liquidation eligibility and the liquidation incentive factor. The core Morpho.sol source implements \(LIF=\min(M,1/(1-c(1-LLTV)))\), with cursor \(c=0.3\) and cap \(M=1.15\); pin code and constants.
+
+83. Euler Labs. *Euler Vault Kit: Liquidations*. Official protocol documentation and whitepaper. https://docs.euler.finance/learn/liquidations/ and https://docs.euler.finance/euler-vault-kit-white-paper/. The pinned EVK Liquidation.sol implementation sets the discount factor to risk-adjusted collateral value divided by liability value, bounded below by one minus the configured maximum discount. Treat the health-dependent discount and maximum cap as one reverse-Dutch liquidation incentive family.
+
+84. Liquity. *Stability Pool and Liquidations* and *Recovery Mode*. Official Liquity V1 documentation. https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations and https://docs.liquity.org/liquity-v1/faq/recovery-mode. Describes debt offset against Stability Pool deposits, collateral transfer/pro-rata allocation and Recovery Mode liquidation branches. Use as a source lead for stateful loss-absorption accounting, not as a generic collateral-ratio formula.
 
 ## Bibliographic and provenance cautions
 
