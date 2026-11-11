@@ -23,15 +23,29 @@ A candidate is not accepted because its name is familiar. Reviewers must verify 
 | Physics | [OpenStax University Physics](https://openstax.org/details/books/university-physics-volume-1) | Mechanics, energy, momentum, oscillations, waves and thermodynamics | Use all relevant volumes and exact sections |
 | Physics | [NIST CODATA constants](https://physics.nist.gov/cuu/Constants/) | Fundamental constants used by formula implementations | Constants source only; not an equation catalogue |
 | Physics | [NIST Guide to the SI](https://www.nist.gov/pml/special-publication-811) | SI units and dimensional consistency | Units/standards source only |
+| Physics | [OpenStax University Physics Volume 2: circuits](https://openstax.org/books/university-physics-volume-2/pages/9-key-equations) | Current, resistance, Ohm's law and power | Exact chapter-level equation reference |
+| Physics | [OpenStax University Physics Volume 2: magnetic fields](https://openstax.org/books/university-physics-volume-2/pages/12-key-equations) | Biot–Savart, Ampère and magnetic-force relations | Exact chapter-level equation reference |
+| Physics | [OpenStax University Physics Volume 2: Maxwell's equations](https://openstax.org/books/university-physics-volume-2/pages/16-1-maxwells-equations-and-electromagnetic-waves) | Electromagnetic field laws and waves | Exact section-level equation reference |
+| Physics | [OpenStax University Physics Volume 3: optics](https://openstax.org/books/university-physics-volume-3/pages/1-key-equations) | Reflection, refraction, critical angle, polarization | Exact chapter-level equation reference |
+| Physics | [OpenStax University Physics Volume 3: modern physics](https://openstax.org/books/university-physics-volume-3/pages/6-key-equations) | Photon relations, Compton shift, de Broglie and uncertainty | Exact chapter-level equation reference |
 | DeFi AMM | [Uniswap developer concepts](https://developers.uniswap.org/docs/get-started/concepts/how-uniswap-works) | Constant-product invariant and concentrated liquidity | Primary protocol documentation; version-tag every formula |
 | DeFi AMM | [Uniswap v2 pricing](https://developers.uniswap.org/docs/protocols/v2/concepts/pricing) | Reserve pricing, exact-input/output mechanics | Version-specific |
 | DeFi AMM | [Uniswap fees](https://developers.uniswap.org/docs/get-started/concepts/fees) | Fee and protocol-fee mechanics | Version-specific |
 | DeFi AMM | [Uniswap v3 whitepaper](https://app.uniswap.org/whitepaper-v3.pdf) | Concentrated liquidity and tick/range mechanics | Primary technical source |
 | DeFi AMM | [AMM slippage survey](https://www.mdpi.com/2813-5288/4/3/8) | Constant product, weighted product, constant sum, Curve-style stable-swap families | Secondary discovery source; trace to protocol papers |
+| DeFi AMM | [Curve mathematical derivations](https://docs.curve.finance/developer/resources/derivations/) | StableSwap invariant and Newton iteration | Primary protocol math documentation |
+| DeFi AMM | [Curve StableSwap NG math contract](https://docs.curve.finance/developer/stableswap-exchange/stableswap-ng/utility_contracts/math) | Iterative invariant implementation | Version-specific contract math |
+| DeFi AMM | [Balancer whitepaper](https://docs.balancer.fi/whitepaper.pdf) | Weighted invariant and weighted spot-price equations | Primary protocol whitepaper |
 | DeFi Risk | [Aave V3 health factor](https://www.aave.com/docs/aave-v3/markets/health-factor) | Collateral-weighted health factor | Protocol/version-specific |
 | DeFi Risk | [Aave FAQ](https://www.aave.com/faq) | Liquidation eligibility, close factor, bonus, liquidation-price concepts | Protocol/version-specific; verify current governance parameters |
 | DeFi Risk | [Aave V3 overview](https://aave.dev/docs/aave-v3/overview) | Utilization-dependent interest rates and liquidation thresholds | Protocol/version-specific |
 | DeFi Risk | [Aave V4 overview](https://aave.com/docs/aave-v4) | Risk premium and revised liquidation mechanics | V4-only; do not blend with V3 |
+| DeFi Risk | [Compound III interest rates](https://docs.compound.finance/interest-rates/) | Utilization-kink supply and borrow rate functions | Primary protocol documentation |
+| DeFi Risk | [An Empirical Study of DeFi Liquidations](https://discovery.ucl.ac.uk/id/eprint/10150722/) | Borrowing capacity, liquidation mechanisms and protocol risk | Peer-reviewed research; cite exact equations |
+| DeFi Risk | [OECD DeFi Liquidations](https://www.oecd.org/content/dam/oecd/en/publications/reports/2023/07/defi-liquidations_89cba79d/0524faaf-en.pdf) | Collateral ratios and liquidation dynamics | Institutional research report |
+| DeFi Risk | [Mitigating Decentralized Finance Liquidations](https://eprint.iacr.org/2023/254.pdf) | Collateralization, close factor, spread and liquidator-profit equations | Research preprint; verify version and assumptions |
+| DeFi Risk | [BIS Working Paper 1171: DeFi leverage](https://www.bis.org/publications/working-paper-1171-defi-leverage) | Wallet leverage and proximity-to-liquidation risk | Central-bank research; cite exact model definitions |
+| DeFi Risk | [A Risk Classification Framework for DeFi Protocols](https://www.soa.org/globalassets/assets/files/resources/research-report/2022/decentralized-finance-protocols.pdf) | Collateralization, liquidity and systemic-risk measures | Industry research report; validate each metric |
 
 ## 3. Domain coverage plan
 
