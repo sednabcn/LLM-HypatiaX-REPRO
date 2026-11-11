@@ -93,3 +93,8 @@ Key blockers:
 ## Additional author-pool screen (2026-11-11)
 
 The second static screen covers all 54 Chemistry, 59 Biology and 75 Physics rows (188 candidates). See [Author Pool Screening Audit 2](CORE295_AUTHOR_POOL_SCREENING_AUDIT_2.md). The review identifies cross-family overlaps, formula/definition defects and missing source/range provenance. No candidates were accepted or imported; the formal catalogue count is unchanged.
+
+
+## Selected source-verification leads (2026-11-11)
+
+See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five existing source-register leads were checked at equation/model level: Langmuir–Hinshelwood and Eley–Rideal surface kinetics; Adair's four-step hemoglobin binding polynomial; the age-structured Kermack–McKendrick epidemic model; Turing's coupled reaction–diffusion system; and Euler column stability. These remain held, not accepted. The audit distinguishes different mechanisms/structures from shared source families and requires system-level adapters for coupled models.
