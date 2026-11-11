@@ -399,3 +399,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 45 (2026-11-11)
 
 [Source Verification Audit 45](CORE295_SOURCE_VERIFICATION_AUDIT_45.md) confirms Morpho LIF as a capped reciprocal affine function of LLTV and liquidation cursor. Keep the Morpho Blue/Midnight naming and version distinctions explicit; do not count parameter values or collateral-seizure operations separately.
+
+
+## Source verification audit 46 (2026-11-11)
+
+[Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) confirms Euler's capped linear health-shortfall discount and distinguishes it from Morpho's reciprocal liquidation incentive factor. Both belong to the broader liquidation-incentive family but have different scalar functional forms; protocol version, health calculation, discount cap and settlement semantics must be frozen.
