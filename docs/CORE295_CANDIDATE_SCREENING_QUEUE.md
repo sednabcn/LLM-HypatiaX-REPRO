@@ -453,3 +453,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 57 (2026-11-11)
 
 [Source Verification Audit 57](CORE295_SOURCE_VERIFICATION_AUDIT_57.md) confirms MIP45 is now marked obsolete following MIP102c2-SP1, while remaining the historical primary design spec for the Dog/Clipper/Abacus Dutch-auction architecture. Its intended Hole/Dirt/lot accounting invariants are not formally proven. Audit 48 is cross-linked and clarified: its pinned liq-2.0 source commit does not establish current deployment.
+
+
+## Source verification audit 58 (2026-11-11)
+
+[Source Verification Audit 58](CORE295_SOURCE_VERIFICATION_AUDIT_58.md) verifies Euler's downward-only, time-ramped liquidation LTV against the pinned LTVConfig implementation. The ramp changes liquidation eligibility over time while borrow LTV remains separate; group it with Euler's health/discount/liquidation system, not as an independent equation sample.
