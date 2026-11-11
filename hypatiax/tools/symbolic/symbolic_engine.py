@@ -84,6 +84,7 @@ from typing import ClassVar
 
 import numpy as np
 from hypatiax.safe_formula import evaluate_expression
+from hypatiax.core.routing import structural_risk_tokens
 import psutil
 import sympy as sp
 
@@ -2290,19 +2291,28 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         except Exception:
             pass
 
-        # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping)
+        # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping).
+        # Structural-risk detection is based on exact function calls, not substrings.
+        _structural_tokens = structural_risk_tokens(
+            best_hyp.equation, getattr(best_hyp, "raw_equation", None)
+        )
+        _structural_risk = bool(_structural_tokens)
         _llm_info = {
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
             "llm_best_r2": best_hyp.r2_score,
             "llm_confidence": getattr(best_hyp, "confidence", None),
             "llm_hypotheses_raw": [getattr(h, "raw_equation", h.equation) for h in hypotheses],
+            "structural_risk_flag": _structural_risk,
+            "structural_risk_tokens": _structural_tokens,
+            "routing_reason": "structural_risk_forces_pysr_refinement" if _structural_risk else "ordinary_llm_acceptance_policy",
         }
         print(f"   LLM best: {best_hyp.equation}")
         print(f"   LLM R²: {best_hyp.r2_score:.4f}")
         print(f"   LLM time: {llm_time:.2f}s")
 
         # Decision: Is LLM good enough?
-        if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:
+        if (best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2
+                and not _structural_risk):
             print("   ✅ LLM solution excellent, skipping PySR")
             return {
                 "expression": best_hyp.equation,
@@ -2320,6 +2330,13 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "validation": {"valid": True, "errors": [], "warnings": []},
                 "llm_hypotheses": [h.equation for h in hypotheses],
             }
+
+        if _structural_risk:
+            print(
+                f"   ⚠ Structural-risk functions {_structural_tokens}; "
+                "bypassing pure-LLM acceptance and forcing PySR refinement.",
+                flush=True,
+            )
 
         # Discard LLM prior if it is too weak to be a useful seed for PySR
         _use_llm_seed = True
@@ -2373,9 +2390,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         print(f"   PySR R²: {result['r2_score']:.4f}")
 
         # Compare and choose best
-        if result["r2_score"] > best_hyp.r2_score:
+        if result["r2_score"] > best_hyp.r2_score or _structural_risk:
             print("   ✅ PySR refinement improved result")
-            result["llm_mode"] = "hybrid_pysr_better"
+            result["llm_mode"] = (
+                "hybrid_structural_risk_pysr" if _structural_risk else "hybrid_pysr_better"
+            )
             result.update(_llm_info)
             result["llm_hypotheses"] = [h.equation for h in hypotheses]
             result["llm_time"] = llm_time
