@@ -200,6 +200,7 @@ def select_hypatiax_route(
     degradation_delta: float | None = None,
     degradation_tau: float | None = None,
     p_ood: float | None = None,
+    p_ood_per_query: Any = None,
     alpha: float = 0.3,
 ) -> dict[str, Any]:
     """Select NN fallback, pure LLM, or ensemble using training-only diagnostics.
@@ -224,6 +225,16 @@ def select_hypatiax_route(
         nn_ok = False
 
     tokens = sorted(set(structural_tokens))
+    query_weights = None
+    if p_ood_per_query is not None:
+        _p_query = np.asarray(p_ood_per_query, dtype=float).reshape(-1)
+        if _p_query.size and np.isfinite(_p_query).all() and np.all((_p_query >= 0.0) & (_p_query <= 1.0)):
+            query_weights = {
+                "llm": (alpha + (1.0 - alpha) * _p_query).astype(float).tolist(),
+                "nn": (1.0 - (alpha + (1.0 - alpha) * _p_query)).astype(float).tolist(),
+            }
+            if p_ood is None:
+                p_ood = float(np.mean(_p_query))
     base = {
         "trust_gate_passed": bool(llm_ok),
         "structural_risk_flag": bool(tokens),
@@ -232,6 +243,7 @@ def select_hypatiax_route(
         "degradation_tau": (float(degradation_tau) if degradation_tau is not None and np.isfinite(degradation_tau) else None),
         "p_ood": (float(p_ood) if p_ood is not None and np.isfinite(p_ood) else None),
         "blend_weights": None,
+        "query_blend_weights": query_weights,
     }
     if not llm_ok:
         return {**base, "decision": "nn", "predictions": nn_preds if nn_ok else None,
