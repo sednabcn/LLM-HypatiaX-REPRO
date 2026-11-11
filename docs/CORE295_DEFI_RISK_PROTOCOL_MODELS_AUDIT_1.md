@@ -37,7 +37,7 @@ under the specification's per-second rate and elapsed-time convention.
 
 **Disposition:** The kinked piecewise-linear form is a real protocol-specific model, but its normalized structure is shared with Compound V2 jump-rate models and Aave's two-slope utilization models. Under the current draft E3 rule, these are mechanism/protocol diversity leads, not separate structural equation counts solely because their parameters, clock units or naming differ. The prior generic quartic borrow-rate sketch remains unsupported and should not be treated as Compound III's rate law.
 
-**Version caveat:** The specification page currently identifies itself as Comet v2.5. Its GitHub URL points to the moving `main` branch. Before formal candidate use, pin the exact specification commit and the matching deployed contract revision; do not infer deployment-specific parameters from the generic specification.
+**Version caveat:** The specification page identifies itself as Comet v2.5. The source snapshot is now pinned below; it is not yet matched to a specific deployed market or proxy implementation.
 
 ## 3. Compound Comet liquidation is not Aave's liquidation mechanism
 
@@ -56,6 +56,39 @@ This is structurally more than a scalar health-factor display: it is a protocol 
 | Compound Comet index accrual | Discrete multiplicative state update tied to rate and elapsed time | Model with principal/index state; do not count each balance rearrangement separately |
 | Compound Comet liquidatability | Weighted collateral-debt threshold, related to Aave HF | Do not count scalar threshold separately |
 | Compound Comet absorption | Multi-state collateral seizure, penalty, debt absorption and reserve accounting | Potential protocol-level model; full state transition and version pin required |
+
+
+## 4. Version-pinned Comet absorption transition
+
+A reproducible repository snapshot is now pinned:
+
+- Repository: https://github.com/compound-finance/comet
+- Commit: `f766f51583c23acc33b2a7824654ef2029a96804` (2026-06-23)
+- Specification: https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/SPEC.md
+- Implementation: https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/contracts/CometWithExtendedAssetList.sol
+- Math helpers: https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/contracts/CometMath.sol
+
+The pinned `SPEC.md` metadata labels the specification `v2.5`. This pins a source snapshot, **not** a deployed market/proxy implementation. A market-specific record still needs the chain, market/proxy, implementation address and implementation bytecode/source match. No live RPC, explorer API or on-chain call was made.
+
+### Implementation-level transition in `absorbInternal`
+
+The implementation does the following:
+
+1. Requires `isLiquidatable(account)`; snapshots the borrower's signed principal and present-value base balance.
+2. Iterates the borrower's asset-membership bitmap. For each included collateral asset, reads the collateral balance, zeroes the borrower's balance, decrements `totalsCollateral[asset].totalSupplyAsset`, values the seized amount using asset price and scale, and adds `value × liquidationFactor` to `deltaValue`.
+3. Converts the collateral offset into base units using the base-token price and base scale: `deltaBalance = divPrice(deltaValue, basePrice, baseScale)`.
+4. Adds this offset to the old signed base balance. If the result is negative, clamps it to zero; the residual shortfall is borne through protocol reserves rather than leaving a negative borrower balance.
+5. Converts the nonnegative balance to new principal and calls `updateBasePrincipal`; clears the borrower's `assetsIn` and reserved bitmap.
+6. Computes `repayAmount` and `supplyAmount` from old and new principal; increases `totalSupplyBase` by the supply amount and decreases `totalBorrowBase` by the repay amount.
+7. Emits `AbsorbDebt` using `basePaidOut = newBalance - oldBalance`, alongside collateral/debt events.
+
+Important implementation distinctions:
+- This snapshot uses `liquidationFactor` in the collateral-offset calculation; do not substitute a generic `liquidationPenalty` parameter.
+- It updates borrower principal and aggregate principal accounting, not merely a market-value debt scalar.
+- The `absorb` wrapper accrues interest before processing accounts and records liquidator-point statistics. The pinned implementation does not establish a universal cash incentive transfer to the absorber; do not import older specification wording as if it were identical implementation behavior.
+- `buyCollateral` is a separate subsequent mechanism. It accepts base-token payment, prices collateral with a store-front discount derived from `storeFrontPriceFactor` and `liquidationFactor`, and transfers protocol-held collateral subject to minimum amount and available-reserve checks.
+
+This is a coupled protocol state transition involving multiple storage variables, price feeds, index/principal conversions and event outputs. It is a candidate system-level family only if the benchmark unit is explicitly the full absorption/accounting transition. Do not count intermediate scalar formulas as independent equation rows.
 
 ## 5. Sources
 
