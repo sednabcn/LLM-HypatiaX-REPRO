@@ -41,7 +41,7 @@ llm_k_runs:    30
 llm_provenance:
   disable_hardcoded:    1
   disable_prompt_hints: 1
-  no_llm_cache_steps:   [exp2_feynman, exp2_feynman_pca_4060, extrap]
+  no_llm_cache_steps:   [exp2_feynman, exp2_feynman_pca_4060, exp2_protocol30_random_8020, exp2_protocol30_pca_4060, extrap]
 
 n_tasks_defi:       74
 n_tasks_instability: 70
