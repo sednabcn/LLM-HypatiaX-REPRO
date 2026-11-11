@@ -104,66 +104,59 @@ class TestCreateAggressiveSplit:
 # ─────────────────────────────────────────────────────────────────────────
 
 class TestFormulaHasTranscendental:
-    @pytest.mark.parametrize("code", [
-        "def formula(x0): return np.exp(x0)",
-        "def formula(x0): return math.log(x0)",
-        "def formula(x0): return np.sqrt(x0)",
-        "def formula(x0): return norm.cdf(x0)",
-        "def formula(x0): return np.maximum(x0, 0)",
-        "def formula(x0): return x0**0.5",
-        "def formula(x0): return np.sin(x0) + np.cos(x0)",
-    ])
-    def test_detects_transcendental_tokens(self, code):
-        assert EnhancedExtrapolationTest._formula_has_transcendental(code) is True
+    from hypatiax.core.routing import structural_risk_tokens
 
-    @pytest.mark.parametrize("code", [
-        "def formula(x0): return 2 * x0",
-        "def formula(x0, x1): return x0 + x1 - 3",
-        "def formula(x0): return x0 * x0",
-    ])
-    def test_plain_polynomial_is_not_transcendental(self, code):
-        assert EnhancedExtrapolationTest._formula_has_transcendental(code) is False
+    @pytest.mark.parametrize(
+        "code, expected",
+        [
+            ("def formula(x0): return np.exp(x0)", ["exp"]),
+            ("def formula(x0): return math.log(x0)", ["log"]),
+            ("def formula(x0): return Phi(x0)", ["Phi"]),
+            ("def formula(x0): return erf(x0)", ["erf"]),
+            ("def formula(x0): return np.sin(x0) + np.cos(x0)", ["cos", "sin"]),
+            ("def formula(x0): return np.sqrt(x0)", []),
+            ("def formula(x0): return norm.cdf(x0)", []),
+            ("def formula(x0): return np.maximum(x0, 0)", []),
+            ("def formula(x0): return x0**0.5", []),
+            ("def formula(x0): return 2 * x0", []),
+        ],
+    )
+    def test_exact_structural_function_calls(self, code, expected):
+        from hypatiax.core.routing import structural_risk_tokens
+        assert structural_risk_tokens(code) == expected
 
-    def test_is_case_insensitive(self):
-        assert EnhancedExtrapolationTest._formula_has_transcendental(
-            "def formula(x0): return NP.EXP(x0)"
-        ) is True
+    def test_token_substrings_do_not_trigger(self):
+        from hypatiax.core.routing import structural_risk_tokens
+        assert structural_risk_tokens("def formula(exp_value): return exp_value + 1") == []
 
 
 # ─────────────────────────────────────────────────────────────────────────
 # _distance_llm_weight
 # ─────────────────────────────────────────────────────────────────────────
 
-class TestDistanceLlmWeight:
-    def test_in_distribution_gives_base_weight(self):
-        X_train = np.array([[0.0], [10.0]])
-        X_test = np.array([[5.0]])   # fully inside [0, 10]
-        w = EnhancedExtrapolationTest._distance_llm_weight(
-            X_test, X_train, base_weight=0.3
-        )
-        assert w == pytest.approx(0.3)
+class TestManuscriptBlendWeights:
+    def test_in_distribution_uses_alpha_floor(self):
+        from hypatiax.core.routing import manuscript_blend_weights
+        weights = manuscript_blend_weights(0.0, alpha=0.3)
+        assert weights["llm"] == pytest.approx(0.3)
+        assert weights["nn"] == pytest.approx(0.7)
 
-    def test_fully_out_of_distribution_gives_weight_one(self):
-        X_train = np.array([[0.0], [10.0]])
-        X_test = np.array([[100.0]])  # outside range
-        w = EnhancedExtrapolationTest._distance_llm_weight(
-            X_test, X_train, base_weight=0.3
-        )
-        assert w == pytest.approx(1.0)
+    def test_ood_increases_llm_weight_using_manuscript_formula(self):
+        from hypatiax.core.routing import manuscript_blend_weights
+        weights = manuscript_blend_weights(0.5, alpha=0.3)
+        assert weights["llm"] == pytest.approx(0.65)
+        assert weights["nn"] == pytest.approx(0.35)
 
-    def test_partial_out_of_distribution_is_between_bounds(self):
-        X_train = np.array([[0.0], [10.0]])
-        X_test = np.array([[5.0], [20.0]])  # 1 of 2 points out of range
-        w = EnhancedExtrapolationTest._distance_llm_weight(
-            X_test, X_train, base_weight=0.3
-        )
-        assert 0.3 < w < 1.0
+    def test_maximal_ood_gives_full_llm_weight(self):
+        from hypatiax.core.routing import manuscript_blend_weights
+        weights = manuscript_blend_weights(1.0, alpha=0.3)
+        assert weights["llm"] == pytest.approx(1.0)
+        assert weights["nn"] == pytest.approx(0.0)
 
-    def test_handles_1d_arrays(self):
-        X_train = np.array([0.0, 10.0])
-        X_test = np.array([50.0])
-        w = EnhancedExtrapolationTest._distance_llm_weight(X_test, X_train)
-        assert w == pytest.approx(1.0)
+    def test_invalid_ood_probability_is_rejected(self):
+        from hypatiax.core.routing import manuscript_blend_weights
+        with pytest.raises(ValueError):
+            manuscript_blend_weights(float("nan"), alpha=0.3)
 
 
 # ─────────────────────────────────────────────────────────────────────────
