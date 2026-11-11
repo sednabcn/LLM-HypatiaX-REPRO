@@ -7,16 +7,16 @@
 
 A provisional cross-domain clustering review is maintained in [CORE295_SOURCE_FAMILY_CLUSTER_MAP.md](CORE295_SOURCE_FAMILY_CLUSTER_MAP.md); its family labels are review aids, not accepted catalogue IDs. The prioritized evidence tiers for the next candidate-record drafting pass are in [CORE295_CANDIDATE_SCREENING_QUEUE.md](CORE295_CANDIDATE_SCREENING_QUEUE.md).
 
-The current manifest contains **123 candidate source records** across the five Option 2 domains, and the consolidated bibliography contains **118 numbered references**. Twenty-two discovery batches are linked below. These counts describe source/provenance leads only; they are **not equation counts** and do not satisfy the 59-equation target in any domain.
+The current manifest contains **127 candidate source records** across the five Option 2 domains, and the consolidated bibliography contains **121 numbered references**. Twenty-three discovery batches are linked below. These counts describe source/provenance leads only; they are **not equation counts** and do not satisfy the 59-equation target in any domain.
 
 | Domain | Candidate source records | Accepted equation entries |
 |---|---:|---:|
-| Chemistry | 27 | 0 |
+| Chemistry | 31 | 0 |
 | Biology | 30 | 0 |
 | Physics | 25 | 0 |
 | DeFi AMM | 20 | 0 |
 | DeFi Risk | 21 | 0 |
-| **Total** | **123** | **0** |
+| **Total** | **127** | **0** |
 
 The manifest remains `draft`, with target 295 and 59 per domain. All source-register records remain `candidate_reference`. Primary-source equation transcription, assumptions/units/ranges, source-family clustering, equivalence review, deterministic benchmark adapters and independence-unit decisions are still required before any entry can be accepted.
 
