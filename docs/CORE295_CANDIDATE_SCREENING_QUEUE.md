@@ -17,7 +17,6 @@
 | Biology | BIO-TUMOR-DBUCK-2014 | Concentration-modulated tumor turnover, primary Eq. 9 | Freeze tumor state as sum of longest diameters, concentration input, units and valid clinical range. |
 | Biology | BIO-HH-1952; BIO-HH-MODERN-2019 | Hodgkin–Huxley coupled membrane/gating ODE system | Freeze original/modern current sign convention, temperature scaling, gate-rate functions and full four-state system. |
 | Biology | BIO-MICHAELIS-MENTEN-1913 | **Excluded** | Michaelis–Menten is explicitly in the Core-15 exclusion list; retain the bibliography lead for provenance only, never draft it as a Core-295 candidate. |
-
 | Biology | BIO-MORRIS-LECAR-1981 | Two-variable conductance-based excitable-cell model | Confirm original equations 1–2, ionic-current conventions, quasi-steady activation and parameter units. |
 | Physics | PHYS-PLANCK-1901; PHYS-OPENSTAX-V3-PLANCK | Planck blackbody spectral distribution | Freeze spectral energy density versus exitance/radiance convention and SI conversion; cluster Stefan/Wien consequences. |
 | Physics | PHYS-OPENSTAX-V3-THIN-LENS | Thin-lens equation | Confirm sign convention, refractive index assumptions and thin-lens regime. |
