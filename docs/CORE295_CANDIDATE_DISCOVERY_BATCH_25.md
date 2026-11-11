@@ -22,11 +22,11 @@ E_{cell}=E_{cell}^{\circ}-\frac{RT}{nF}\ln Q.
 
 **Sources:** Debye and Hückel (1923), *Zur Theorie der Elektrolyte I*; IUPAC Gold Book, *Debye–Hückel equation* (D01534), with mean-activity/limiting-law convention clarified in Audit 27.
 
-The limiting form is:
-[
-\log_{10}\gamma_i=-A z_i^2\sqrt{I},
-]
-where (gamma_i) is the ionic activity coefficient, (z_i) the charge number, (I) ionic strength, and (A) a solvent- and temperature-dependent constant.
+The mean molal activity-coefficient limiting form is:
+\[
+\log_{10}\gamma_{\pm}=-A\,|z_+z_-|\sqrt{I},
+\]
+where \(\gamma_{\pm}\) is the mean ionic activity coefficient, \(z_+\) and \(z_-\) are cation and anion charge numbers, \(I=\tfrac12\sum_i m_i z_i^2\) is molal ionic strength, and \(A\) is solvent- and temperature-dependent. A single-ion coefficient form is convention-dependent and is not independently measurable thermodynamically.
 
 **Boundary and risks:** the limiting law applies only at sufficiently low ionic strength, where finite-ion-size corrections are negligible (a common aqueous rule of thumb is about 0.01 mol kg−1 for uni-univalent electrolytes). Do not conflate the mean activity coefficient with the osmotic coefficient or a single-ion convention, and do not conflate the limiting law with the extended Debye–Hückel equation, Davies equation or Bates–Guggenheim convention. Those are related corrections/approximations in one electrolyte-activity family, not automatically independent equations. Individual-ion activity coefficients are convention-dependent and cannot be independently measured thermodynamically.
 
