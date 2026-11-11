@@ -158,8 +158,8 @@ tau = routing.get("degradation_tau")
 print("" if tau is None else tau)
 PY
 )
-if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 2 ]]; then
-  echo "ERROR: could not read model/temperature from fresh protocol" >&2
+if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 3 ]]; then
+  echo "ERROR: could not read model/temperature/routing tau from fresh protocol" >&2
   exit 2
 fi
 export HYPATIAX_LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
