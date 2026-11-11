@@ -72,6 +72,7 @@ def validate_manifest(
         equations = []
     seen_ids: set[str] = set()
     units_by_category: dict[str, set[str]] = defaultdict(set)
+    seen_units_globally: set[str] = set()
     counts_by_category: dict[str, int] = defaultdict(int)
     for index, item in enumerate(equations):
         prefix = f"calibration_equations[{index}]"
@@ -95,10 +96,12 @@ def validate_manifest(
         if not isinstance(unit_id, str) or not unit_id.strip():
             errors.append(f"{prefix}.independent_unit_id must be a non-empty string")
         elif isinstance(category, str) and category.strip():
-            if unit_id in units_by_category[category]:
+            if unit_id in seen_units_globally:
                 errors.append(
-                    f"non-independent repeated unit {unit_id!r} in category {category!r}"
+                    f"independent_unit_id {unit_id!r} is reused; units must be "
+                    "unique across the entire calibration manifest"
                 )
+            seen_units_globally.add(unit_id)
             units_by_category[category].add(unit_id)
         if not isinstance(provenance, str) or not provenance.strip():
             errors.append(f"{prefix}.provenance must identify an auditable source")
