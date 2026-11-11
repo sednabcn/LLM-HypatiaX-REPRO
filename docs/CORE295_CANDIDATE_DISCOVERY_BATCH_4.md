@@ -74,6 +74,15 @@ where dissolved-gas concentration is proportional to the gas partial pressure ab
 
 These additions broaden Chemistry into interfacial phenomena and transport. They are not substitutes for exact formula transcription, dimensional checks, regime checks or source-family review.
 
+
+## Additional exact equation lead: ideal-solution vapor pressure
+
+**Raoult’s law (Raoult, 1887; OpenStax Chemistry 2e, §11.4):** for component \(A\) in an ideal liquid solution, the partial vapor pressure is \(P_A=X_A P_A^*\), where \(X_A\) is the liquid-phase mole fraction and \(P_A^*\) is the pure-component vapor pressure at the same temperature. For a multicomponent ideal solution, the total vapor pressure is the sum of component partial pressures.
+
+**Primary-source trail:** Raoult, F.-M. (1887), “Loi générale des tensions de vapeur des dissolvants,” *Comptes Rendus* 104, 1430–1433. A bibliographic record confirms the original journal and page range; the accessible OpenStax section gives the explicit equation and ideal-solution condition. The original paper’s precise equation wording and empirical scope still require page-level verification before formal acceptance.
+
+**Core-15 and family screen:** this is distinct from Henry’s law: Raoult relates a liquid component’s vapor pressure to its liquid mole fraction, whereas Henry relates dissolved-gas concentration to gas partial pressure in the applicable dilute regime. Keep Raoult’s law as one ideal-solution vapor-pressure family. Do not count each component, total-pressure summation, solvent-only special case, or algebraic rearrangement as a separate equation. Nonideal mixtures require activity/fugacity treatment; do not silently apply the ideal relation outside its validity regime.
+
 ## Acceptance boundary
 
 No equation is promoted to entries. The candidate source map does not establish 59 structurally distinct Chemistry equations, nor 59 independent statistical units. Each eventual entry still requires an exact source location, formula transcription, assumptions, units, validity ranges, source-family ID, equivalence review, and a defensible deterministic benchmark mapping. If the Chemistry stratum cannot supply the required independent units, report the shortfall rather than pad the catalogue.
