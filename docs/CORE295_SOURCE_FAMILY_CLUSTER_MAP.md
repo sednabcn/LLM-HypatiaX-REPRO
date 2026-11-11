@@ -99,3 +99,8 @@
 5. **Equivalence review:** normalize symbols/units, compare algebraic forms, identify special cases, and trace derivative/integral/solution relationships before assigning unique equation fingerprints.
 
 **No entries are accepted by this map.** It is a curation aid for the next candidate-screening stage; all final acceptance remains subject to the catalogue validator, exact source transcription, domain review, provenance and independence metadata.
+
+
+## Author-pool screening audit 2 (2026-11-11)
+
+The Chemistry, Biology and Physics portions of the assistant-authored 299-row discovery pool have been screened (188 rows). The detailed candidate disposition register and cross-domain family blockers are in [Author Pool Screening Audit 2](CORE295_AUTHOR_POOL_SCREENING_AUDIT_2.md). In particular, the review flags Michaelis–Menten/Hill saturation and population-growth families in Biology, kinematic/mechanical and circuit response families in Physics, and linear-gradient transport overlap across Chemistry/Physics/Biology. This map remains provisional; no candidate is accepted by the audit.
