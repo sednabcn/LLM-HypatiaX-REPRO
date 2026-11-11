@@ -36,7 +36,7 @@ def structural_risk_tokens(*sources: str | None) -> list[str]:
                 # Python: match a complete function token followed by '('.
                 found.update(
                     name for name in STRUCTURAL_RISK_FUNCTIONS
-                    if re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\\s*\\(", source)
+                    if re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*\(", source)
                 )
                 continue
         for node in ast.walk(tree):
