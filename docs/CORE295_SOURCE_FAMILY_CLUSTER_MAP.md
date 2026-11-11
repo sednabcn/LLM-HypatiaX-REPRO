@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 27 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 28 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -244,3 +244,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 27 (2026-11-11)
 
 [Candidate Discovery Batch 27](CORE295_CANDIDATE_DISCOVERY_BATCH_27.md) adds Physics leads for Kepler orbital period, Lorentz force and Bragg diffraction. Keep Kepler linked to Newtonian central-force dynamics, Lorentz as a vector matter–field coupling distinct from Maxwell's field equations, and Bragg in the same path-difference interference family as double-slit/grating relations.
+
+
+## Discovery batch 28 (2026-11-11)
+
+[Candidate Discovery Batch 28](CORE295_CANDIDATE_DISCOVERY_BATCH_28.md) adds financial-risk leads for Parkinson range variance, GARCH(1,1), normal expected shortfall and Merton structural credit risk. EWMA is grouped with GARCH as an IGARCH boundary case; Merton distance-to-default is a derived statistic of the structural credit model. Confirm that general market/credit risk fits the DeFi Risk domain before formal registration.
