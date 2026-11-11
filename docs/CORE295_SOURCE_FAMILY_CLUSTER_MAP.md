@@ -119,3 +119,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 5 (2026-11-11)
 
 [Source Verification Audit 5](CORE295_SOURCE_VERIFICATION_AUDIT_5.md) records Fick's oxygen mass-balance cardiac-output relation as a measurement equation, with primary-page transcription and domain-scope questions still open. It also records the Timoshenko 1921 shear-correction source as metadata-verified but not equation-transcribed; Bresse antecedents and later Timoshenko formulations must not be conflated. Neither lead is accepted.
+
+
+## Source verification audit 6 (2026-11-11)
+
+[Source Verification Audit 6](CORE295_SOURCE_VERIFICATION_AUDIT_6.md) verifies LFJ Liquidity Book's per-bin constant-sum relation, geometric bin-price grid and multi-bin swap traversal against the whitepaper and a pinned implementation snapshot. Treat the complete multi-bin state-transition model as one family, not a separate equation per bin, direction, fee or accumulator. It is structurally distinct from the Core-15 constant-product exclusion but remains held pending model-scope and implementation-contract decisions.
