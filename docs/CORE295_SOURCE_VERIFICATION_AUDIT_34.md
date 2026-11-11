@@ -1,7 +1,7 @@
 # Core-295 source verification audit 34: Parkinson range variance, GARCH(1,1) and normal expected shortfall
 
 **Date:** 2026-11-11  
-**Status:** verification of discovery-batch 28 leads only. No equation is added to the formal catalogue or counted toward 295.
+**Status:** verification of discovery-batch 28 leads. Parkinson, Bollerslev and RiskMetrics sources are now registered as candidate_reference; no equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Parkinson 1980 extreme-range variance estimator
 
@@ -96,6 +96,6 @@ For losses, the tail is \(L\\geq VaR_\\alpha\); for returns, the sign and tail d
 
 ## 5. Catalogue status and work not performed
 
-No source-register or equation-catalogue record was changed. The formal manifest remains 128 source records, 19 proposed equation records, zero accepted equations and an unfrozen sampling frame.
+The source register now contains 138 records, including RISK-PARKINSON-1980, RISK-BOLLERSLEV-1986 and RISK-RISKMETRICS-1996. No equation-catalogue record was changed: 19 proposed, zero accepted, sampling frame unfrozen.
 
 No experiments, solvers, validators, workflows, paid compute, API calls, market-data retrieval or volatility estimation were run. This is source and mathematical review only.
