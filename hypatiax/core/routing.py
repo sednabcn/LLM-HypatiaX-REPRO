@@ -67,7 +67,8 @@ def training_edge_degradation_probe(
 
     Rows are ordered along the first principal component fitted on X_train.
     The outer `edge_fraction` of rows (both tails) form the edge probe; the
-    central rows form the core.  No held-out/query targets are accepted.
+    central rows are also reported as a diagnostic.  Manuscript Delta is
+    full-training R² minus edge-subset R².  No held-out/query targets are used.
     """
     X = np.asarray(X_train, dtype=float)
     y = np.asarray(y_train, dtype=float).reshape(-1)
@@ -76,7 +77,7 @@ def training_edge_degradation_probe(
         raise ValueError("X_train, y_train, and train_predictions have incompatible shapes")
     if not 0.05 <= float(edge_fraction) <= 0.4:
         raise ValueError("edge_fraction must be between 0.05 and 0.4")
-    if X.shape[0] < 12 or not np.isfinite(X).all():
+    if X.shape[0] < 12 or X.shape[1] < 1 or not np.isfinite(X).all():
         return {"status": "insufficient_or_nonfinite_training_covariates",
                 "r2_core": None, "r2_edge": None, "delta": None}
     if not np.isfinite(y).all() or not np.isfinite(pred).all():
@@ -96,14 +97,18 @@ def training_edge_degradation_probe(
                 "r2_core": None, "r2_edge": None, "delta": None}
     edge_idx = np.concatenate((order[:n_edge], order[-n_edge:]))
     core_idx = order[n_edge:-n_edge]
+    r2_train = _r2(y, pred)
     r2_core = _r2(y[core_idx], pred[core_idx])
     r2_edge = _r2(y[edge_idx], pred[edge_idx])
-    if r2_core is None or r2_edge is None:
-        return {"status": "undefined_core_or_edge_r2",
-                "r2_core": r2_core, "r2_edge": r2_edge, "delta": None}
+    if r2_train is None or r2_edge is None:
+        return {"status": "undefined_train_or_edge_r2",
+                "r2_train": r2_train, "r2_core": r2_core,
+                "r2_edge": r2_edge, "delta": None}
     return {
-        "status": "ok", "r2_core": float(r2_core), "r2_edge": float(r2_edge),
-        "delta": float(r2_core - r2_edge), "edge_fraction": float(edge_fraction),
+        "status": "ok", "r2_train": float(r2_train),
+        "r2_core": (float(r2_core) if r2_core is not None else None),
+        "r2_edge": float(r2_edge),
+        "delta": float(r2_train - r2_edge), "edge_fraction": float(edge_fraction),
         "n_core": int(core_idx.size), "n_edge": int(edge_idx.size),
     }
 
@@ -122,7 +127,7 @@ def kde_ood_probability(
     """
     train = np.asarray(X_train, dtype=float)
     query = np.asarray(X_query, dtype=float)
-    if train.ndim != 2 or query.ndim != 2 or train.shape[1] != query.shape[1]:
+    if train.ndim != 2 or query.ndim != 2 or train.shape[1] < 1 or train.shape[1] != query.shape[1]:
         raise ValueError("X_train and X_query must be 2-D with matching feature counts")
     if train.shape[0] < 5 or query.shape[0] < 1:
         return {"status": "insufficient_rows", "p_ood": None}
