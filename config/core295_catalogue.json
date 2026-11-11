@@ -224,11 +224,7 @@
         ]
       },
       "input_ranges": {
-        "kappaET": {
-          "train": null,
-          "extrapolation": null
-        },
-        "kB": {
+        "Z": {
           "train": null,
           "extrapolation": null
         },
@@ -236,7 +232,7 @@
           "train": null,
           "extrapolation": null
         },
-        "h": {
+        "R": {
           "train": null,
           "extrapolation": null
         },
@@ -245,10 +241,6 @@
           "extrapolation": null
         },
         "deltaG": {
-          "train": null,
-          "extrapolation": null
-        },
-        "R": {
           "train": null,
           "extrapolation": null
         }
@@ -265,7 +257,8 @@
         "The lambda/DeltaG0 parabolic barrier expression is a modern classical Marcus parameterization; verify its exact source and assumptions separately rather than implying it is transcribed verbatim from the 1956 paper.",
         "The exponential activated-rate structure requires explicit overlap review against the Core-15 Arrhenius and generic Rate Law exclusions; a Marcus mechanism label alone does not establish structural distinctness.",
         "Input ranges, solvent/electronic coupling assumptions and deterministic generator remain unspecified",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Metadata audit 2026-11-11: input_ranges keys were stale from the superseded transition-state-prefactor draft; they now match the five variables in the corrected collision-frequency expression. Numerical train/extrapolation bounds remain unset."
       ],
       "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
     },
