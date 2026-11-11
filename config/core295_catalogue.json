@@ -397,6 +397,7 @@
     "A source can support a family of equations but each entry must cite the exact page, section, theorem, or protocol version.",
     "Do not treat algebraic rearrangements, unit conversions, parameter changes, or variable renamings as structurally distinct.",
     "Protocol formulas must be version-tagged; Aave V3/V4 and Uniswap V2/V3/V4 mechanics are not interchangeable.",
-    "No calibration-ready independence claim is made by this manifest."
+    "No calibration-ready independence claim is made by this manifest.",
+    "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version."
   ]
 }
