@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 32 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 33 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -279,3 +279,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 32 (2026-11-11)
 
 [Candidate Discovery Batch 32](CORE295_CANDIDATE_DISCOVERY_BATCH_32.md) identifies Maverick V2's tick invariant as constant product in virtual reserves, structurally related to Gyro 2-CLP. Bin movement, merging and the recursive tick-domain log-price TWAP are protocol-state features; they are not independent invariant equations.
+
+
+## Discovery batch 33 (2026-11-11)
+
+[Candidate Discovery Batch 33](CORE295_CANDIDATE_DISCOVERY_BATCH_33.md) adds four stochastic-risk families: OU (constant-volatility mean reversion), CIR (square-root mean reversion), Hawkes (self-exciting event clusters) and Merton jump diffusion. Keep OU/CIR in the broader mean-reverting diffusion family; keep Hawkes as point-process risk; keep Merton jump and its no-jump GBM limit in one jump-diffusion family. Applicability depends on the DeFi Risk domain boundary.
