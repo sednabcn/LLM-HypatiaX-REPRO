@@ -1208,6 +1208,73 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol"
+    },
+    {
+      "equation_id": "RISK-UNISWAP-V2-ARITHMETIC-TWAP-001",
+      "name": "Uniswap v2 arithmetic price TWAP from cumulative price",
+      "domain": "DeFi Risk",
+      "subdomain": "oracle manipulation resistance",
+      "formula": "P_TWAP = (C(t2) - C(t1)) / (t2 - t1)",
+      "canonical_expression": "deltaC/deltaT",
+      "formula_latex": "P_{TWAP}=\\frac{C(t_2)-C(t_1)}{t_2-t_1}",
+      "structural_fingerprint": "348d90772d174700a4a83313e66efd66c7b8b9025dc2ae0521f96c8ea927b62c",
+      "source_ids": [
+        "RISK-UNISWAP-V2-TWAP"
+      ],
+      "source_family_id": "RISK-UNISWAP-ORACLE-ARITHMETIC-TWAP",
+      "status": "proposed",
+      "assumptions": [
+        "Uniswap v2 cumulative-price oracle semantics at the pinned periphery/core revision",
+        "C(t) is the cumulative integral of the pair's instantaneous UQ112x112 price over time",
+        "Observation interval is strictly positive",
+        "The same token direction and pair ordering are used at both observations",
+        "Cumulative arithmetic uses modular uint256 subtraction and uint32 timestamp wrap semantics"
+      ],
+      "variables": {
+        "deltaC": {
+          "meaning": "Difference between cumulative UQ112x112 price values at the two observations",
+          "unit": "UQ112x112 price-seconds"
+        },
+        "deltaT": {
+          "meaning": "Elapsed seconds between observations",
+          "unit": "s"
+        }
+      },
+      "validity": {
+        "source_location": "Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2, contracts/examples/ExampleOracleSimple.sol, update; contracts/libraries/UniswapV2OracleLibrary.sol, currentCumulativePrices; official Uniswap v2 oracle docs",
+        "regime": "Arithmetic time-weighted mean of the pair price over a nonzero observation interval",
+        "limitations": [
+          "This is the arithmetic average of spot price over time, distinct from Uniswap v3's geometric mean tick construction",
+          "The cumulative price is fixed-point UQ112x112 and has price-seconds units; conversion back to human price requires the correct 2^112 scaling and token decimal orientation",
+          "The example oracle enforces a minimum PERIOD (24 hours in the example); production windows are an adapter choice",
+          "Preserve uint32 timestamp wrap and uint256 cumulative subtraction semantics",
+          "The formula is a manipulation-resistant oracle statistic only when observations are spaced and maintained according to the chosen security design"
+        ]
+      },
+      "input_ranges": {
+        "deltaC": {
+          "train": null,
+          "extrapolation": null
+        },
+        "deltaT": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": "Use positive observation intervals and paired cumulative-price observations from the same token ordering; preserve fixed-point wrap semantics"
+      },
+      "review_notes": [
+        "Pinned example implementation computes priceAverage=(priceCumulative-priceCumulativeLast)/timeElapsed",
+        "The cumulative price represents the integral of the UQ112x112 spot price over time",
+        "Uniswap v2 arithmetic TWAP and v3 geometric TWAP are distinct averaging constructions but belong to one oracle family cluster",
+        "Need freeze observation schedule, UQ112x112 conversion, token ordering, timestamp wrap and deterministic generator",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2, contracts/examples/ExampleOracleSimple.sol"
     }
   ],
   "source_register": [
@@ -2088,7 +2155,7 @@
       "domain": "DeFi Risk",
       "title": "Uniswap v2 cumulative price oracle",
       "url": "https://developers.uniswap.org/docs/protocols/v2/concepts/oracles",
-      "use": "Official v2 oracle documentation and core whitepaper for cumulative price integral and arithmetic TWAP; document manipulation window and UQ112x112/timestamp-wrap implementation",
+      "use": "Official Uniswap v2 oracle docs and pinned Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2, contracts/examples/ExampleOracleSimple.sol and contracts/libraries/UniswapV2OracleLibrary.sol; arithmetic average from cumulative UQ112x112 price integral",
       "status": "candidate_reference"
     },
     {
@@ -2253,6 +2320,7 @@
     "Tenth proposed-record pass adds the DODO PMM base-shortage marginal price curve, pinned to DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. It remains proposed pending pool-state, regression, oracle and fixed-point generator contract.",
     "Eleventh proposed-record pass adds the Raoult ideal-solution component vapor-pressure relation. It remains proposed pending original-paper equation-page transcription, a defensible ideal mixture/temperature context and deterministic generator.",
     "Twelfth proposed-record pass adds Fick's oxygen mass-balance cardiac-output relation. It remains proposed pending original 1870 page transcription, steady-state physiology adapter and deterministic data generator.",
-    "Thirteenth proposed-record pass adds the Uniswap v3 geometric price TWAP from mean tick, pinned to Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45. It remains proposed pending observation-window, token-order, decimal-scaling and deterministic generator decisions."
+    "Thirteenth proposed-record pass adds the Uniswap v3 geometric price TWAP from mean tick, pinned to Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45. It remains proposed pending observation-window, token-order, decimal-scaling and deterministic generator decisions.",
+    "Fourteenth proposed-record pass adds the Uniswap v2 arithmetic cumulative-price TWAP, pinned to Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2. It remains proposed pending fixed-point conversion, timestamp-wrap and observation-window adapter."
   ]
 }
