@@ -189,3 +189,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 19 (2026-11-11)
 
 [Source Verification Audit 19](CORE295_SOURCE_VERIFICATION_AUDIT_19.md) verifies the BYL719 tumour-turnover ODE against De Buck et al. (2014), equation 9. It is a drug-specific PK/PD model with zero-order growth modulated by saturable Emax inhibition and first-order loss; its state is the sum of longest tumour diameters, and drug concentration is an external PK input. Keep it as one complete turnover model, not component equations, and hold pending clinical input/range and family-dependence contracts.
+
+
+## Source verification audit 20 (2026-11-11)
+
+[Source Verification Audit 20](CORE295_SOURCE_VERIFICATION_AUDIT_20.md) groups Henry and Raoult as different physical equilibria but flags their identical bare proportionality structure for the strict structural-distinctness policy. Beer–Lambert is one decadic exponential attenuation family; Lambert/Beer contributions, absorbance and transmission forms are not extra entries. Henry's modern textbook equation and Beer–Lambert's IUPAC expression are verified; primary historical equation-page checks and benchmark ranges remain outstanding.
