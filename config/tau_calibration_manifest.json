@@ -1,0 +1,43 @@
+<escape>{
+  "schema_version": 1,
+  "status": "draft",
+  "approved_protocol": {
+    "edge_r2_floor": 0.99,
+    "relative_margin": 0.0,
+    "bad_routing_risk": 0.05,
+    "one_sided_confidence": 0.95,
+    "minimum_n_if_zero_failures": 59
+  },
+  "core15_exclusion_ids": [
+    "Arrhenius",
+    "Henderson-Hasselbalch",
+    "Rate Law",
+    "Allometric Scaling",
+    "Michaelis-Menten",
+    "Logistic Growth",
+    "Kinetic Energy",
+    "Gravitational Force",
+    "Ideal Gas Law",
+    "Impermanent Loss",
+    "Price Impact",
+    "Constant Product",
+    "Value at Risk",
+    "Liquidation Price",
+    "Portfolio Std Dev"
+  ],
+  "calibration_equations": [],
+  "candidate_tau_values": [],
+  "category_definition": null,
+  "independence_justification": null,
+  "frozen_edge_definition": null,
+  "selection_procedure": {
+    "name": "NOT_SELECTED",
+    "implementation_or_spec_ref": null
+  },
+  "notes": [
+    "Template only: no calibration equations or numeric tau are approved by this manifest.",
+    "Do not populate this file with Core-15 equations or any held-out/extrapolation outcomes.",
+    "The 59-per-category minimum is sufficient only for zero observed bad routes under the stated independent-binomial assumptions.",
+    "A valid selection-aware risk-control method must be selected and implemented before calibration."
+  ]
+}</escape>
