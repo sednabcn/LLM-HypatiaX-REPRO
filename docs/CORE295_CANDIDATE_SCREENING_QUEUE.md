@@ -113,3 +113,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 6 (2026-11-11)
 
 [Source Verification Audit 6](CORE295_SOURCE_VERIFICATION_AUDIT_6.md) checks the JOE v2.1 Liquidity Book whitepaper against a pinned joe-v2 implementation commit. The model's per-bin constant-sum accounting, geometric bin-price grid and traversal across nonempty bins form one discrete multi-bin AMM system; bin equations, swap directions and fee/volatility components are not separate independent candidates. The lead remains held pending a frozen model/implementation contract. No candidate was accepted.
+
+
+## Source verification audit 7 (2026-11-11)
+
+[Source Verification Audit 7](CORE295_SOURCE_VERIFICATION_AUDIT_7.md) classifies the Chainlink feed-freshness lead. Official documentation separates feed-specific heartbeat/deviation update triggers from consumer-defined updatedAt/maxAge checks. These are operational safety rules, not a universal portable equation; retain as risk/provenance context and do not count toward the equation target unless the domain contract explicitly includes version-pinned safety predicates.
