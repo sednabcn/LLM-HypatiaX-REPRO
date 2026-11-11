@@ -508,3 +508,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 34 source-register update (2026-11-11)
 
 [Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) now has source-register entries for Parkinson (RISK-PARKINSON-1980), Bollerslev GARCH (RISK-BOLLERSLEV-1986) and RiskMetrics EWMA (RISK-RISKMETRICS-1996). GARCH(1,1) and EWMA remain one conditional-variance family because EWMA is the IGARCH boundary case.
+
+
+## Source verification audit 67 (2026-11-11)
+
+[Source Verification Audit 67](CORE295_SOURCE_VERIFICATION_AUDIT_67.md) confirms Maverick V2's whitepaper tick invariant is virtual constant product, shared with Gyro 2-CLP. The security review identifies a pinned supplemental commit but excludes core pool swap/liquidity files; the repository is not retrievable through the current GitHub access path. Keep the dynamic-bin/TWAP system held pending core implementation verification.
