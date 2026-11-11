@@ -6,7 +6,7 @@
 
 ## 1. Butler–Volmer electrode current–overpotential relation
 
-**Primary historical sources:**
+**Historical source lineage:**
 - J. A. V. Butler (1924), *Studies in heterogeneous equilibria. Part II.—The kinetic interpretation of the Nernst theory of electromotive force*, Transactions of the Faraday Society 19, 729–733, DOI 10.1039/TF9241900729.
 - J. A. V. Butler (1924), *Studies in heterogeneous equilibria. Part III. A kinetic theory of reversible oxidation potentials at inert electrodes*, Transactions of the Faraday Society 19, 734–739, DOI 10.1039/TF9241900734.
 - M. Volmer and T. Erdey-Grúz (1930), foundational follow-up on electrode reaction kinetics. A 2020 review, *The Butler-Volmer equation in electrochemical theory: Origins, value, and practical application*, compares the common modern forms and explains the historical contributions.
