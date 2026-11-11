@@ -258,7 +258,8 @@
         "The exponential activated-rate structure requires explicit overlap review against the Core-15 Arrhenius and generic Rate Law exclusions; a Marcus mechanism label alone does not establish structural distinctness.",
         "Input ranges, solvent/electronic coupling assumptions and deterministic generator remain unspecified",
         "Proposed only; not scientifically accepted or eligible for shard planning",
-        "Metadata audit 2026-11-11: input_ranges keys were stale from the superseded transition-state-prefactor draft; they now match the five variables in the corrected collision-frequency expression. Numerical train/extrapolation bounds remain unset."
+        "Metadata audit 2026-11-11: input_ranges keys were stale from the superseded transition-state-prefactor draft; they now match the five variables in the corrected collision-frequency expression. Numerical train/extrapolation bounds remain unset.",
+        "Audit 2 (2026-11-11): distinguish Marcus (1956) solution collision-number prefactor from the current IUPAC encounter-complex/intramolecular Eyring-prefactor Marcus equation; current hybrid formulation remains source-scope unresolved. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md."
       ],
       "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
     },
@@ -1328,7 +1329,8 @@
         "Equation (1) and constant-cross-section equation (2) are derived from the same flux law; do not count them separately",
         "The same linear-gradient algebra occurs in Fourier and Ohm transport laws; source-family distinction does not prove structural uniqueness",
         "Need freeze medium/species, concentration units, diffusivity range and a deterministic spatial-gradient generator",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Audit 2 (2026-11-11): scalar Fick flux law shares normalized first-order linear-gradient constitutive structure with Fourier heat flux and Ohm current density; cross-domain equivalence policy decision required before counting. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md."
       ],
       "source_location": "Fick (1855), Annalen der Physik 170(1), p. 66"
     },
