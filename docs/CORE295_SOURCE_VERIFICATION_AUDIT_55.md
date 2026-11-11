@@ -1,7 +1,7 @@
 # Core-295 source verification audit 55: Under-collateralized DeFi leverage and liquidation-constrained maximum multiplier
 
 **Date:** 2026-11-11  
-**Status:** new primary research lead identified; source-register addition proposed below. No equation is added to the formal catalogue or counted toward 295.
+**Status:** new peer-reviewed primary research lead verified and added to the source register as candidate_reference. No equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary source
 
@@ -106,6 +106,6 @@ A deterministic adapter must freeze:
 
 ## 8. Decision
 
-**Disposition:** retain as a strong DeFi Risk analytical candidate lead, particularly the liquidation-constrained maximum leverage relation. Add the peer-reviewed source to the source register as candidate_reference only. Keep all equations held pending the structural-equivalence rule, a bounded price-horizon definition and a deterministic one-pair adapter. Do not add an accepted or proposed equation record.
+**Disposition:** retain as a strong DeFi Risk analytical candidate lead, particularly the liquidation-constrained maximum leverage relation. The peer-reviewed source is now registered as RISK-WANG-SPECULATIVE-MULTIPLIERS with status candidate_reference. Keep all equations held pending the structural-equivalence rule, a bounded price-horizon definition and a deterministic one-pair adapter. No accepted or proposed equation record was added.
 
 No experiments, on-chain data extraction, solver runs, validators, workflows, paid compute, API calls, or protocol transactions were run. This is mathematical source review only.
