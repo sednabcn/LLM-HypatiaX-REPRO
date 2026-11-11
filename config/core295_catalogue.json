@@ -2776,6 +2776,30 @@
       "url": "https://openstax.org/books/university-physics-volume-3/pages/3-1-youngs-double-slit-interference",
       "use": "Double-slit interference path-difference and fringe conditions; coherent illumination and far-field geometry.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-JOE-LB-WP-2022",
+      "domain": "DeFi AMM",
+      "title": "JOE v2: Liquidity Book",
+      "url": "https://resources.cryptocompare.com/asset-management/333/1669892646295.pdf",
+      "use": "Primary Trader Joe v2.1 design paper (November 2022), §§2.1–2.4 and 3.1–3.3: per-bin constant-sum reserve relation P_i*x+y=L, composition state, aggregate-bin market structure and geometric bin-price progression; exact protocol revision and fee/state-transition contract still required.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-YIELDSPACE-WP-2020",
+      "domain": "DeFi AMM",
+      "title": "YieldSpace: An Automated Liquidity Provider for Fixed Yield Tokens",
+      "url": "https://yieldprotocol.com/YieldSpace.pdf",
+      "use": "Primary working-draft paper by Allan Niemerg, Dan Robinson and Lev Livnev (August 2020), Eq. (1) and §§2–5: constant power-sum invariant x^(1-t)+y^(1-t)=k with normalized time-to-maturity; constant-sum and constant-product endpoint/limit relations must remain within this single invariant family.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-INVARIANT-WP-2021",
+      "domain": "DeFi AMM",
+      "title": "Invariant: First AMM DEX providing concentrated liquidity on Solana",
+      "url": "https://invariant.app/whitepaper.pdf",
+      "use": "Primary protocol whitepaper by Wojciech Cichocki (6 December 2021), §2: xy=L^2 reserve curve and translated virtual-reserve curve for bounded price ranges; source supports a Uniswap-v3-style concentrated-liquidity family, not a new invariant family or independent equation count.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
