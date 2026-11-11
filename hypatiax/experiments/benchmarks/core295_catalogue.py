@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import math
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -214,6 +215,8 @@ def equations_from_manifest(
 
     converted: list[dict[str, Any]] = []
     for item in entries:
+        if item.get("domain") not in DOMAINS:
+            raise ValueError(f"{item.get('equation_id')}: unknown Core-295 domain")
         variables = item.get("variables")
         if not isinstance(variables, dict) or not variables:
             raise ValueError(f"{item['equation_id']}: variables must be a non-empty mapping")
@@ -233,9 +236,18 @@ def equations_from_manifest(
         for name in names:
             pair = ranges[name].get("train") if isinstance(ranges[name], dict) else None
             extra = ranges[name].get("extrapolation") if isinstance(ranges[name], dict) else None
-            if not (isinstance(pair, list) and len(pair) == 2 and pair[0] < pair[1]):
+            def valid_interval(interval):
+                if not isinstance(interval, list) or len(interval) != 2:
+                    return False
+                if any(isinstance(value, bool) or not isinstance(value, (int, float))
+                       for value in interval):
+                    return False
+                lo, hi = map(float, interval)
+                return math.isfinite(lo) and math.isfinite(hi) and lo < hi
+
+            if not valid_interval(pair):
                 raise ValueError(f"{item['equation_id']}: invalid training range for {name}")
-            if not (isinstance(extra, list) and len(extra) == 2 and extra[0] < extra[1]):
+            if not valid_interval(extra):
                 raise ValueError(f"{item['equation_id']}: invalid extrapolation range for {name}")
             train_range.append(tuple(float(v) for v in pair))
             extrap_range.append(tuple(float(v) for v in extra))
