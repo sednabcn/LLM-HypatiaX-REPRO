@@ -93,3 +93,12 @@ def test_independence_unit_cannot_be_reused_across_categories():
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids)
     assert any("reused" in e and "entire calibration manifest" in e for e in errors)
+
+
+def test_readiness_requires_hash_pinned_data_code_and_evaluator():
+    manifest = _manifest()
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids, require_ready=True)
+    assert any("calibration_data_manifest_sha256" in e for e in errors)
+    assert any("calibration_code_commit" in e for e in errors)
+    assert any("evaluator_version" in e for e in errors)
