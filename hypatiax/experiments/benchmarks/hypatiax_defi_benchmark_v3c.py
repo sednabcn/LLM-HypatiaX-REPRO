@@ -578,7 +578,7 @@ def _eval_formula_r2(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _extrapolation_probe(
-    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float = 0.15
+    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float | None = None
 ) -> dict:
     """Train on the central training region and probe both training-set tails.
 
@@ -591,6 +591,15 @@ def _extrapolation_probe(
     n = len(X_train)
     if X_train.ndim != 2 or X_train.shape[0] != y_train.size:
         raise ValueError("X_train and y_train have incompatible shapes")
+    if probe_frac is None:
+        _raw_fraction = os.environ.get("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15").strip()
+        try:
+            probe_frac = float(_raw_fraction)
+        except ValueError:
+            probe_frac = None
+    if probe_frac is None or not np.isfinite(float(probe_frac)):
+        return {"status": "invalid_probe_fraction", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
     if not 0.05 <= float(probe_frac) <= 0.4:
         raise ValueError("probe_frac must be between 0.05 and 0.4")
     if n < 20 or not np.isfinite(X_train).all() or not np.isfinite(y_train).all():
