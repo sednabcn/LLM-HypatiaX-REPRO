@@ -2865,6 +2865,22 @@
       "url": "https://www.elch.chem.msu.ru/article/index.htm",
       "use": "Primary Frumkin (1926), Zeitschrift für Physik 35, pp. 792–802; identified in the Moscow State University electrochemistry department's Frumkin bibliography as the field-dependent neutral-molecule adsorption paper. A later technical treatment attributes the Frumkin adsorption isotherm derivation to 1926 and gives the equation of state γ = −RTΓ∞ ln(1−θ) + aθ², combined with Gibbs adsorption to obtain Bc = [θ/(1−θ)]exp(−2aθ). Exact equation/page transcription from the 1926 original remains pending; candidate reference only.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-BUTLER-1924-REVERSIBLE-POTENTIALS",
+      "domain": "Chemistry",
+      "title": "Studies in heterogeneous equilibria. Part III. A kinetic theory of reversible oxidation potentials at inert electrodes",
+      "url": "https://doi.org/10.1039/TF9241900734",
+      "use": "Primary Butler (1924), Transactions of the Faraday Society 19, pp. 734–739; dynamic-equilibrium/kinetic interpretation of reversible oxidation potentials. Historical antecedent, not by itself the complete modern two-exponential Butler–Volmer current-overpotential relation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-ERDEYGRUZ-VOLMER-1930",
+      "domain": "Chemistry",
+      "title": "Zur Theorie der Wasserstoffüberspannung",
+      "url": "https://doi.org/10.1515/zpch-1930-15020",
+      "use": "Primary Erdey-Grúz and Volmer (1930), Zeitschrift für Physikalische Chemie A 150, pp. 203–213; source for slow-discharge hydrogen overpotential kinetics and transfer coefficient. Important primary lineage for the two-direction exponential current-overpotential relation later commonly called Butler–Volmer. Exact equation/page and assumptions still require direct primary-text transcription.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
