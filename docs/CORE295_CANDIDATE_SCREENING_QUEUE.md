@@ -88,3 +88,8 @@ Key blockers:
 - DeFi AMM: constant-product swap/price/LP/impermanent-loss/depth rows collapse into shared families and collide with Core-15 exclusions; Balancer trade directions and spot price derive from one weighted invariant; Uniswap V3 amount/liquidity/position/tick metrics share a concentrated-liquidity family; the two supplied Curve shortcuts are not the documented StableSwap invariant; Bancor buy/sell/spot are one connector-weight family; TWAP, LVR, MEV, bonding-curve and reward sketches need exact source/model contracts.
 - DeFi Risk: all VaR variants collide with the Core-15 Value at Risk exclusion; liquidation-price rows collide with the Liquidation Price exclusion; correlation extrapolation to 4 is invalid; portfolio weights/covariances lack joint constraints; the quartic borrow-rate expression is not Compound III's documented piecewise-linear kink model; generic APR/APY, volatility, funding, credit and liquidation sketches need source-specific definitions.
 - Raw counts are 54 AMM and 57 Risk, but accepted counts remain zero. Do not fill the 59/domain target by counting algebraic rearrangements, derived observables or unsupported generic formulas.
+
+
+## Additional author-pool screen (2026-11-11)
+
+The second static screen covers all 54 Chemistry, 59 Biology and 75 Physics rows (188 candidates). See [Author Pool Screening Audit 2](CORE295_AUTHOR_POOL_SCREENING_AUDIT_2.md). The review identifies cross-family overlaps, formula/definition defects and missing source/range provenance. No candidates were accepted or imported; the formal catalogue count is unchanged.
