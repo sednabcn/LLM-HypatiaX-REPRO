@@ -651,9 +651,17 @@ def _ensemble_llm_nn(
     apply them per query; otherwise retain the legacy training-residual blend.
     """
     if blend_weights is not None:
+        llm_pred_test = np.asarray(llm_pred_test, dtype=float).reshape(-1)
+        nn_pred_test = np.asarray(nn_pred_test, dtype=float).reshape(-1)
         llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
         nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
         n_query = len(llm_pred_test)
+        if (
+            len(nn_pred_test) != n_query
+            or not np.isfinite(llm_pred_test).all()
+            or not np.isfinite(nn_pred_test).all()
+        ):
+            raise ValueError("LLM/NN query predictions must be shape-aligned and finite")
         if llm_w.size == 1:
             llm_w = np.full(n_query, llm_w.item())
         if nn_w.size == 1:
