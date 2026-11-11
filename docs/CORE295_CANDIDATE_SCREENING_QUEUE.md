@@ -533,3 +533,8 @@ The complete 75-row Physics block from the uploaded `author_pool.py` has now bee
 ## Physics source expansion 1 (2026-11-11)
 
 The Physics source register has been expanded from 25 to 43 candidate-reference records (+18), with matching bibliography entries 123–140. The new OpenStax section-level leads cover collisions, rocket propulsion, Kepler orbits, pendulums, forced oscillations, standing waves, Doppler shift, sound intensity, capacitance, RC circuits, Faraday induction, AC resonance, photoelectric effect, Compton scattering, Bohr hydrogen, de Broglie waves, the infinite well and Young double-slit interference. These are traceable discovery references, not 18 new equations and not accepted entries. Exact equation/page review and family screening remain required. Several section URLs were corrected after checking the official OpenStax pages.
+
+
+## Cross-domain equivalence policy draft (2026-11-11)
+
+[Structural Equivalence Policy Draft 1](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md) proposes a strict E0–E5 review scale. Exact duplicates, algebraic rearrangements, derived/limiting forms and identical normalized structures across different domains do not count as distinct structural equations. Different irreducible governing structures may qualify while retaining shared source-family/dependence labels. The policy is a draft only; no formal catalogue policy has been frozen and no entry has been accepted under it.
