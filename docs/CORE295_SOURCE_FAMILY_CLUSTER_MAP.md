@@ -424,3 +424,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 49 (2026-11-11)
 
 [Source Verification Audit 49](CORE295_SOURCE_VERIFICATION_AUDIT_49.md) classifies Compound III's liquidation path as a weighted collateral eligibility check plus reserve absorption and storefront sale. The eligibility form is related to Aave/Euler health metrics; the reserve-funded absorption and storefront mechanism are protocol-specific. Treat all stages as one system unit if system-level candidates are allowed.
+
+
+## Source verification audit 50 (2026-11-11)
+
+[Source Verification Audit 50](CORE295_SOURCE_VERIFICATION_AUDIT_50.md) classifies the OECD liquidation-volatility study as empirical context. Realized volatility, OLS/2SLS specifications and alternative window lengths are not independent DeFi protocol equations; the reported relation is sample- and dataset-specific.
