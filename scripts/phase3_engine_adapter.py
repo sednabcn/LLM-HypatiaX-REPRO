@@ -5,14 +5,13 @@ Strategy: call exp1_ablation.run_condition(eq, "hypatia", seed) UNCHANGED, so th
 is the same code path as the Phase 2 HDS rows.  Gates are switched by setting class attributes
 on SymbolicEngineWithLLM (see ENGINE_PATCH below) for the duration of one call, then restoring.
 
-Wired gates (HDS v50_2 has no others):
-    llm_acceptance : the "LLM R2 > 0.95 -> skip PySR" shortcut in _discover_hybrid
-                     ablated = threshold inf, PySR always runs
-    pysr_prior     : seeding PySR's operators/seed_expressions from the LLM candidate
-                     ablated = never seed (cold PySR refinement)
-Not wired (declare with --omit in phase3_close.py, runner: --components llm_acceptance,pysr_prior):
-    probe, nn_augmentation, blend_weight : exist only in hypatiax_defi_benchmark_v3c.py
-    complexity_routing : the only complexity gate is `if False and ...` (already off in full)
+Wired gates (Core-15 HDS v50_2):
+    llm_acceptance    : the "LLM R2 > 0.95 -> skip PySR" shortcut
+    complexity_routing: structural-risk function-call guard that forces PySR refinement
+    pysr_prior        : seeding PySR operators/seed_expressions from the LLM candidate
+Not wired (declare with --omit in phase3_close.py):
+    probe, nn_augmentation, blend_weight : these require the separate DeFi LLM+NN architecture
+
 
 Three TODOs remain, each marked TODO(...) below.
 """
@@ -33,7 +32,7 @@ ENGINE_MODULE = "hypatiax.tools.symbolic.symbolic_engine"
 GATE_SWITCHES = {
     "llm_acceptance": ("_LLM_ACCEPT_R2", float("inf")),
     "probe": None,
-    "complexity_routing": None,
+    "complexity_routing": ("_COMPLEXITY_ROUTING", False),
     "nn_augmentation": None,
     "blend_weight": None,
     "pysr_prior": ("_LLM_PRIOR_SEED", False),
@@ -54,6 +53,7 @@ ENGINE_PATCH = """
 In hypatiax/tools/symbolic/symbolic_engine.py, class SymbolicEngineWithLLM, add (un-annotated):
     _LLM_ACCEPT_R2 = 0.95
     _LLM_PRIOR_SEED = True
+    _COMPLEXITY_ROUTING = True
 and in _discover_hybrid change
     if best_hyp.r2_score and best_hyp.r2_score > 0.95:
 to  if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:
@@ -196,6 +196,12 @@ def run_case(equation, seed, disabled, timeout_s):
     # Control check: the gate must have changed behaviour, else the row is not an ablation.
     if "llm_acceptance" in disabled and res.get("llm_mode_used") == "hybrid_llm_only":
         raise RuntimeError("llm_acceptance ablated but the LLM-only shortcut still fired")
+    if (
+        "complexity_routing" in disabled
+        and res.get("structural_risk_flag")
+        and res.get("llm_mode_used") == "hybrid_structural_risk_pysr"
+    ):
+        raise RuntimeError("complexity_routing ablated but structural-risk PySR forcing still fired")
 
     kind = res["bypass_kind"]            # required: KeyError if the engine stops returning it
     llm_r2 = _f(res.get("llm_best_r2"))
@@ -205,6 +211,7 @@ def run_case(equation, seed, disabled, timeout_s):
     # >0.95 -> accepted outright (llm_acceptance); [0.5, 0.95) -> seeded refinement (pysr_prior).
     reach = {
         "llm_acceptance": llm_r2 is not None and llm_r2 > 0.95,
+        "complexity_routing": bool(res.get("structural_risk_flag")),
         "pysr_prior": llm_r2 is not None and 0.5 <= llm_r2 < 0.95,
     }
     gate_reachable = all(reach[c] for c in disabled) if disabled else None
