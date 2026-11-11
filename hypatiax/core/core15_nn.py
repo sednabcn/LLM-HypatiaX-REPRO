@@ -1,8 +1,16 @@
-"""Deterministic neural components for the Core-15 HDS ablation path.
+"""Experimental NN primitives; NOT integrated into the Core-15 HDS benchmark.
 
-These primitives deliberately do not alter HDS routing by themselves. They are
-called by the benchmark adapter only when the corresponding ablation switch is
-enabled, keeping the historical symbolic route unchanged.
+The current Core-15 HybridDiscoverySystem v50_2 path returns a symbolic
+formula and does not expose the independent LLM prediction stream required by
+the manuscript's LLM/NN blend. Its Phase-3 adapter therefore rejects the
+NN-dependent gates rather than silently substituting PySR predictions or
+running a no-op ablation.
+
+These helpers are isolated building blocks only. They are not called by
+HybridDiscoverySystem.discover(), exp1_ablation.run_condition(), or the Phase-3
+adapter. Integration requires a specified Core-15 NN architecture, an
+auditable LLM prediction stream, and a frozen training-only degradation
+threshold before any NN-dependent gate can be counted as wired.
 """
 from __future__ import annotations
 
