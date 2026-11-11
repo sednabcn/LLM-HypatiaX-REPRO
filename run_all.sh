@@ -2258,7 +2258,8 @@ run exp2_protocol30_pca_4060 "Protocol-30 custom 30-equation registry -- PCA-dir
   cd '${REPO_ROOT}'
   _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30-pca-4060'
   mkdir -p "\${_P30_PCA_DIR}"
-  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== Protocol-30 PCA 40/60: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
