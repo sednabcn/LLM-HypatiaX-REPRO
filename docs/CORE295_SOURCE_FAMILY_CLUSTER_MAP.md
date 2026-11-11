@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 38 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot (2026-11-11):** 138 candidate source-register records; 19 proposed equation records; zero accepted equation entries. Bibliography-item and discovery-batch totals are not repeated here because their current totals have not been independently refreshed. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -546,3 +546,26 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 
 
 | RISK-RANGE-VOLATILITY | Parkinson (1980); Rogers–Satchell (1991); Garman–Klass; Yang–Zhang | Related but distinct OHLC volatility functionals. Parkinson uses high–low range under zero drift; Rogers–Satchell uses high, low and close relative to interval start and is drift-unbiased under its Brownian model. Keep shared data-path dependence explicit; do not assume separate estimators are independent samples. See [Audit 61](CORE295_SOURCE_VERIFICATION_AUDIT_61.md) and [Audit 68](CORE295_SOURCE_VERIFICATION_AUDIT_68.md). |
+
+
+
+### Additional families surfaced by Physics author-pool audit 1
+
+| Provisional family ID | Related pool rows | Initial screen |
+|---|---|---|
+| PHYS-NEWTONIAN-GRAVITY-ORBIT | kepler_period; gravity_field; grav_potential_energy; orbital_angular_momentum; tidal_acceleration | One Newtonian inverse-square gravity/orbit family. Kepler and circular-orbit angular momentum are derived under specified orbit assumptions; check all against Core-15 gravity exclusions. |
+| PHYS-KINEMATICS-PROJECTILE | displacement; final_speed; projectile_range; projectile_height | Constant-acceleration kinematics and ideal projectile outputs are linked; projectile range/height share one trajectory, launch state and no-drag assumptions. |
+| PHYS-CIRCULAR-MOTION | centripetal_accel; centripetal_force; pendulum_period; physical_pendulum; gyro_precession | Centripetal force is m times centripetal acceleration; pendulum models are small-angle oscillation specializations; gyro precession is a distinct rigid-body torque balance. |
+| PHYS-LINEAR-OSCILLATOR-CIRCUIT | damped_oscillation; driven_resonance_amp; rc_charge; rc_discharge; lc_frequency; rlc_impedance; ac_power | Oscillator and circuit responses share linear dynamical-system structures. RC charge/discharge are one first-order circuit model; do not count transient, impedance and power observables as independent without a predeclared model-level rule. |
+| PHYS-BLACKBODY-RADIATION | Planck spectrum; Wien displacement; Stefan–Boltzmann; Rayleigh–Jeans | One Planck-spectrum family; Wien and Stefan are derived consequences, Rayleigh–Jeans is a limiting approximation. |
+| PHYS-QUANTUM-ATOMIC | Bohr levels; Bohr radius; particle in box; matter-wave kinetic energy; photoelectric KE; relativistic KE; mass-energy | Several are related through photon/de Broglie/quantum or relativistic energy frameworks. Preserve distinct governing models only after exact source and unit reconstruction; Bohr energy/radius are linked outputs. |
+| PHYS-RADIOACTIVE-DECAY | radioactive_decay; decay_activity | Activity is the rate/derivative observable of the exponential-decay state; half-life and decay-constant forms are parameterizations of one law. |
+| PHYS-FLUID-MECHANICS-DRAG | drag_force; terminal_velocity; stokes_drag; hydrostatic_pressure; torricelli | Terminal speed is a force-balance consequence of drag; Stokes is a distinct low-Re spherical regime; hydrostatics is Bernoulli's static limit; Torricelli is an ideal Bernoulli outflow result. |
+| PHYS-WAVE-OPTICS-ACOUSTICS | double_slit_intensity; single_slit_intensity; malus_law; traveling_wave; beats; standing_wave; string_wave_energy; sound_intensity; doppler | Keep distinct interference/diffraction/polarization mechanisms but cluster common wave assumptions, derived superposition identities and output observables. |
+| PHYS-ELECTROMAGNETIC-FIELD-DEVICES | faraday_emf; wire_force; magnetic_moment_energy; hall_voltage; skin_depth; coax_capacitance; solenoid_energy; poynting_flux | Distinct device/field relations under Maxwell and material constitutive laws; exact geometry, peak/RMS, permeability/permittivity and sign conventions required. |
+| PHYS-THERMODYNAMIC-PROCESS | heat_conduction; newton_cooling; adiabatic_pressure; isothermal_work; entropy_expansion; boltzmann_factor; thermal_expansion | Different physical processes, but some are reduced solutions/state changes of broader thermodynamic laws. State the process constraints and avoid counting derived process observables separately. |
+| PHYS-COLLISION-CONSERVATION | elastic_collision_v1; inelastic_final_v; friction_work; incline_accel; rocket_equation | Distinct mechanics problems but largely special solutions of momentum/energy/Newton-law balances; source and boundary-condition specificity needed. |
+| PHYS-ELASTIC-STRUCTURE | beam_deflection | Euler–Bernoulli cantilever solution with a specific load and boundary condition; do not treat it as a general beam equation. |
+| PHYS-THERMAL-TRANSPORT | heat_conduction; Planck/Stefan radiation | Keep conductive and radiative transfer physically distinct; cross-domain transport-operator equivalence still requires the global policy. |
+
+The Physics author-pool audit screens 75 rows and accepts none. See [CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md](CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md). This map is provisional and does not imply that any family contributes an accepted entry.
