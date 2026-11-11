@@ -64,7 +64,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 
 The current `ci_runner/run_fresh_experiments.sh` stage list is:
 
-`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
+`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_protocol30_pca_4060 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
 
 Interpretation and gaps:
 
@@ -74,7 +74,7 @@ Interpretation and gaps:
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- `exp2` is the existing Protocol-30-capable stage: it runs `--protocol all_domains` over the ten-domain registry. It is not `exp2_five`, and it must not be described as an 11-domain rerun until the missing domain is identified and added consistently to the registry, domain loop, sharding, and manuscript. Confirm that the separate random 80/20 and PCA 40/60 protocols are both represented by the actual fresh launcher before claiming full Protocol-30 coverage.
+- `exp2` runs Protocol-30's random 80/20 route via `--protocol all_domains`; `exp2_protocol30_pca_4060` now runs the same 30-equation registry through `run_comparative_suite_benchmark_pca.py` with the outer PCA 40/60 split. These are separate output namespaces and split protocols. The registry currently covers 10 domains while the manuscript specifies 11; do not claim full 11-domain coverage until the missing domain is identified and added consistently to the registry, domain loop, sharding, and manuscript.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
 ## 5. Supplementary-protocol correction required
@@ -90,7 +90,7 @@ The fresh launcher requires a new empty RESULTS_DIR outside the repository, a cl
 Before any scientific run:
 - Calibrate and freeze the Stage 3 degradation threshold tau using a separate training-only calibration protocol; tau is currently intentionally unset by default.
 - Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The existing Phase 3 harness wires LLM acceptance and PySR prior; probe, NN augmentation, and blend weight are not HDS v50_2 switches, and complexity routing is disabled by construction. Do not call this a completed six-gate study.
-- Resolve the Protocol-30 domain-count mismatch: source registry and exp2 runner cover 30 equations across 10 domains; the manuscript claims 11. Verify the custom registry and random/PCA split outputs before calling the protocol complete.
+- Resolve the Protocol-30 domain-count mismatch: source registry and both wired runners cover 30 equations across 10 domains; the manuscript claims 11. The PCA route is newly wired but unexecuted. Verify the registry and both fresh output schemas after the user runs the pipeline.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
 - Pin/report the actual runtime LLM model and temperature behavior for every call path (including whether the SDK sends a temperature parameter).
 - Confirm each campaign's output schema records exact formula, route, LLM-call flag, seed, split, failure status, timing, raw/scored R², and evaluator output.
