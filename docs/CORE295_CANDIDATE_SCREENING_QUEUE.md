@@ -163,3 +163,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 16 (2026-11-11)
 
 [Source Verification Audit 16](CORE295_SOURCE_VERIFICATION_AUDIT_16.md) verifies Aave V3's multi-collateral health factor as Σ(collateral value × asset liquidation threshold) / total debt. This is the portfolio-weighted form of the same risk-adjusted collateral/debt health family already represented by Euler EVK; Morpho's single-collateral health ratio is the corresponding one-collateral case. Retain Aave as multi-collateral source/adapter context, not an additional independent equation. Keep health metrics distinct from liquidation incentive functions. No new proposed record or accepted equation was added.
+
+
+## Source verification audit 17 (2026-11-11)
+
+[Source Verification Audit 17](CORE295_SOURCE_VERIFICATION_AUDIT_17.md) verifies Compound III's post-absorption collateral storefront discount against official docs and the pinned Comet implementation: (d_{store}=StoreFrontPriceFactor(1-LiquidationFactor_a)), followed by discounted collateral price and a decimal-aware base-to-collateral quote. This is distinct in role from health-based liquidation eligibility, Morpho/Euler liquidation incentives and Sky time-decay auctions, but it is a configured proportional sale-price adjustment rather than a strong new structural equation. Retain as source-family context; do not add a proposed record or count the quote conversion as another equation.
