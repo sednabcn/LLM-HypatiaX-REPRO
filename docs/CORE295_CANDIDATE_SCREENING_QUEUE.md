@@ -343,3 +343,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Discovery batch 38 (2026-11-11)
 
 [Candidate Discovery Batch 38](CORE295_CANDIDATE_DISCOVERY_BATCH_38.md) adds Curve LLAMMA's multi-band soft-liquidation/de-liquidation mechanism as a protocol-risk lead. Its per-band invariant is virtual constant product and therefore related to Gyro/Maverick/Uniswap v3; the potentially distinct unit is the complete oracle-driven lending/liquidation state machine, only if DeFi Risk admits system-level models.
+
+
+## Source verification audit 38 (2026-11-11)
+
+[Source Verification Audit 38](CORE295_SOURCE_VERIFICATION_AUDIT_38.md) verifies the E-CLP ellipse invariant from the November 2022 mathematical specification and a pinned Gyro implementation commit. The invariant is an affine-shifted, stretched and rotated ellipse, structurally distinct from Gyro 2-CLP virtual constant product, weighted geometric, StableSwap/CryptoSwap, PMM and linear/bin pools. Hold pending a two-token parameter/range generator and static-invariant vs full-pool adapter choice.
