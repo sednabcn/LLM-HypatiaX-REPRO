@@ -47,14 +47,14 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 | 4 | Feynman five-system exp1 | Core-15 comparison suite; report each method and extrapolation metric separately. Do not substitute the Core-15 PySR-only ablation for the six-gate controlled study. |
 | 5 | Feynman 10-domain exp2 | Separate 10-domain suite. Keep interpolation and extrapolation denominators distinct; where finite held-out extrapolation scores are absent, report no comparison. |
 | 6 | Nguyen-12 | 12 standard equations; per-equation axis-aligned train/extrapolation ranges; 40/60; five seeds (42, 99, 123, 777, 2024); HypatiaX vs PySR-only. Use the manuscript's R² >= 0.9999 convention, count aborts/missing/NaN as failures, and disclose that no NN baseline is specified. |
-| 7 | Protocol-30 | **Not yet implemented from the manuscript source.** The manuscript's custom registry spans biology, chemistry, electrochemistry, electromagnetism, electrostatics, magnetism, mechanics, optics, probability, quantum, and thermodynamics. The current `ExperimentProtocolAll` registry has a different 30-equation set across mechanics, thermodynamics, electromagnetism, fluid dynamics, optics, quantum, chemistry, biology, mathematics, and economics. Existing `exp2` and the optional deferred `exp2_all_domains_pca_4060` stage are retained as a non-equivalent proxy only; do not report them as Protocol-30. Recover the paper-matching equation registry and its split definitions before wiring a true campaign. |
+| 7 | Protocol-30 | **Wired; not yet executed.** `Protocol30` adapts the manuscript-linked `_build_feynman_equations()` source registry into an explicit custom-protocol identity: 30 analytic equations across biology, chemistry, electrochemistry, electromagnetism, electrostatics, magnetism, mechanics, optics, probability, quantum, and thermodynamics. The fresh launcher now has separate six-method random 80/20 and PCA 40/60 stages, both noiseless with threshold R² >= 0.999999. The PCA-held-out 60% is the extrapolation evaluation set. The 10-domain `ExperimentProtocolAll` registry remains a separate proxy. |
 | 8 | M3/M4 noise sweep | Same custom 30 equations, n=200, sigma in {0, 0.05, 0.1, 0.5, 1}%. Preserve the threshold used at each noise level in the raw data and caption; because thresholds vary, do not compare recovery percentages as if they shared one threshold. |
 | 9 | M3/M4 sample-complexity sweep | Same 30 equations, noiseless, n in {50, 100, 200, 500, 750, 1000}; preserve the sample-size-specific thresholds. |
 | 10 | Post-run audit | Verify formulas, LLM-call flags, hardcoded/hint bypass flags, seeds, split hashes, raw and scored R², finite/missing status, timeout status, runtime, resource use, and exact evaluator version. Generate manuscript tables/figures only from the audited fresh outputs. |
 
 ### Important benchmark distinctions
 
-- DeFi's 74-task PCA 40/60 campaign, Core-15, Feynman 10-domain, Nguyen-12, and custom Protocol-30 are different suites.
+- DeFi's 74-task PCA 40/60 campaign, Core-15, 10-domain all-domains proxy, Nguyen-12, and custom Protocol-30 are different suites.
 - Nguyen-12 is axis-aligned, not PCA-directed.
 - Protocol-30 is a custom 30-equation suite, not a subset of AI Feynman.
 - PureLLM historical Protocol-30 results include 11 hardcoded/fitted bypass rows. The fresh launcher disables hardcoded formulas and prompt hints; new results must be labelled as the clean live path, not spliced into historical tables without a full rerun of all comparison arms.
@@ -65,7 +65,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 
 The current `ci_runner/run_fresh_experiments.sh` stage list is:
 
-`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
+`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2_protocol30_random_8020 → exp2_protocol30_pca_4060 → exp2 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
 
 Interpretation and gaps:
 
@@ -75,7 +75,8 @@ Interpretation and gaps:
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- `exp2` runs the current 10-domain `ExperimentProtocolAll` registry with a random 80/20 split. Neither this nor the five-system `exp2_five` stage is the manuscript's custom Protocol-30: the equation and domain sets differ, not merely the count. The optional `exp2_all_domains_pca_4060` proxy stage is deferred from the standard fresh campaign; it can be explicitly requested, but its outputs must not be merged with historical Protocol-30 evidence.
+- `exp2_protocol30_random_8020` and `exp2_protocol30_pca_4060` use the manuscript-linked custom 30-equation registry through the new `Protocol30` adapter. They are separate output namespaces and use all six methods, noiseless data, and the paper's strict 0.999999 threshold. The PCA route uses 40% training / 60% held-out.
+- `exp2` and `exp2_five` continue to run the distinct 10-domain `ExperimentProtocolAll` proxy. The optional `exp2_all_domains_pca_4060` proxy stage remains deferred. Never combine proxy outputs with Protocol-30 results.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
 ## 5. Supplementary-protocol correction required
@@ -91,7 +92,7 @@ The fresh launcher requires a new empty RESULTS_DIR outside the repository, a cl
 Before any scientific run:
 - Calibrate and freeze the Stage 3 degradation threshold tau using a separate training-only calibration protocol; tau is currently intentionally unset by default.
 - Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The Phase 3 harness now wires LLM acceptance, structural-risk complexity routing, and PySR prior. Neural degradation probe, NN augmentation, and blend weight still require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not call this a completed six-gate study.
-- Recover or reconstruct the manuscript's actual custom Protocol-30 equation registry (30 equations in the 11 named domains), then implement its own random 80/20 and PCA 40/60 split paths, provenance, clean method arms, and output schemas. The existing 10-domain all-domains runners are only a proxy and must not be presented as paper replication.
+- Verify the two new Protocol-30 routes and output schemas after the user runs the fresh campaign. Historical 2026-08-12 Protocol-30 outputs are marked contaminated (11 bypass rows) and must not be mixed with the new clean runs.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
 - Pin/report the actual runtime LLM model and temperature behavior for every call path (including whether the SDK sends a temperature parameter).
 - Confirm each campaign's output schema records exact formula, route, LLM-call flag, seed, split, failure status, timing, raw/scored R², and evaluator output.
