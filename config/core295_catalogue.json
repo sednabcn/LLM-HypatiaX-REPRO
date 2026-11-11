@@ -2991,7 +2991,7 @@
       "domain": "Biology",
       "title": "Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten",
       "url": "https://doi.org/10.1007/BF01755094",
-      "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340; a 1960 Fisheries Research Board translation of the original paper is available. The original text defines a theoretical linear dimension λ=cube-root(weight), assumes anabolic construction ∝ λ² and catabolic breakdown ∝ λ³, derives the net increment and limiting size, and gives an integrated growth curve. Do not back-attribute the later arbitrary-exponent generalization dm/dt=p*m^a−q*m^b to this source without direct evidence.",
+      "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340. Fisheries Research Board of Canada Translation Series No. 325 (1960), https://waves-vagues.dfo-mpo.gc.ca/Library/147555.pdf, directly states on translated printed pp. 299–300 (PDF pp. 2–3) that theoretical linear dimension is cube-root weight, anabolism scales as dimension squared and catabolism as dimension cubed, yielding net length-dimension increment k1*lambda^2-k2*lambda^3 and limiting dimension L=k1/k2. Do not attribute the later arbitrary-exponent mass law verbatim to this paper; mass transform and integrated curve are derived forms in the same family.",
       "status": "candidate_reference"
     },
     {
