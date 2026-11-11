@@ -37,6 +37,20 @@ A delay-difference or age-structured model must be treated as a complete state/o
 
 **Disposition:** retain the generalized stock–recruitment family as a provisional cluster; keep continuous and discrete population-growth forms in separate clusters pending derivation review; no Biology candidate accepted.
 
+
+### 1.4 Additional primary Biology source families
+
+The source register now includes five additional primary/foundational lineages and one review:
+
+- **Kermack–McKendrick epidemic model (1927):** the epidemic flow is a coupled compartment system. Infection incidence, removal and susceptible depletion are linked state transitions; do not split them into three independent equation counts. Primary scan: https://pdodds.w3.uvm.edu/files/papers/others/1927/kermack1927a.pdf
+- **Leslie age-structured matrix (1945):** the age-class population vector advances through a fertility/survival matrix. Stable age distribution, growth eigenvalue and reproductive-value outputs are derived from the matrix model, not independent candidates. DOI: https://doi.org/10.1093/biomet/33.3.183
+- **Michaelis–Menten invertase kinetics (1913):** the original article studies reaction progress for invertase. Do not silently replace the original mechanistic/reaction-progress treatment with a later steady-state hyperbolic rate-law transcription. Accessible English translation: https://www.chem.uwec.edu/Chem352_F18/pages/readings/media/Michaelis_%26_Menton_1913.pdf
+- **Holling functional responses (1959):** Type II is a saturating handling-time response; Type III has a different low-prey-density shape. Type I/II/III labels are not three independent model counts unless their complete response mechanisms and state contracts differ. DOI: https://doi.org/10.4039/Ent91385-7
+- **Volterra predator–prey dynamics (1926):** keep predator and prey equations as one coupled system. The 1927 correspondence explicitly acknowledges Lotka's prior publication of the two-species differential equations; the surname "Lotka–Volterra" should not obscure the shared model family. DOI: https://doi.org/10.1038/118558a0
+- **Monod bacterial culture growth (1949):** a foundational review/synthesis of quantitative bacterial growth, not the original primary discovery paper. Use it for model lineage and assumptions, not as an unqualified primary-source attribution. DOI: https://doi.org/10.1146/annurev.mi.03.100149.002103
+
+**Cross-family screen:** Monod substrate-limited growth, Holling Type II consumption and Michaelis–Menten enzyme rates share a hyperbolic saturation structure after normalization, but represent different biological mechanisms. Under the current draft E3 rule, do not count them as three structurally distinct scalar formulas solely because their variables and interpretations differ. A full enzyme mechanism, consumer-handling model or microbial growth/state system may be a different model unit only when its complete state equations are supplied and the benchmark unit is declared accordingly. Holling Type III is a stronger structural-distinctness lead because of its sigmoidal low-density response, but exact original functional form and mechanism must be transcribed before promotion.
+
 ## 2. DeFi AMM: primary invariant reconstruction
 
 ### 2.1 Uniswap constant-product and concentrated liquidity
