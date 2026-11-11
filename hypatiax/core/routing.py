@@ -60,10 +60,10 @@ def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float | None:
 def training_edge_degradation_probe(
     X_train: Any,
     y_train: Any,
-    train_predictions: Any,
+    nn_train_predictions: Any,
     edge_fraction: float = 0.2,
 ) -> dict[str, Any]:
-    """Measure core-to-boundary R² degradation using training rows only.
+    """Measure neural-network core-to-boundary R² degradation using training rows only.
 
     Rows are ordered along the first principal component fitted on X_train.
     The outer `edge_fraction` of rows (both tails) form the edge probe; the
@@ -74,7 +74,7 @@ def training_edge_degradation_probe(
     y = np.asarray(y_train, dtype=float).reshape(-1)
     pred = np.asarray(nn_train_predictions, dtype=float).reshape(-1)
     if X.ndim != 2 or X.shape[0] != y.size or y.shape != pred.shape:
-        raise ValueError("X_train, y_train, and train_predictions have incompatible shapes")
+        raise ValueError("X_train, y_train, and nn_train_predictions have incompatible shapes")
     if not 0.05 <= float(edge_fraction) <= 0.4:
         raise ValueError("edge_fraction must be between 0.05 and 0.4")
     if X.shape[0] < 12 or X.shape[1] < 1 or not np.isfinite(X).all():
