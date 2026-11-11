@@ -348,3 +348,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 38 (2026-11-11)
 
 [Source Verification Audit 38](CORE295_SOURCE_VERIFICATION_AUDIT_38.md) verifies the E-CLP ellipse invariant from the November 2022 mathematical specification and a pinned Gyro implementation commit. The invariant is an affine-shifted, stretched and rotated ellipse, structurally distinct from Gyro 2-CLP virtual constant product, weighted geometric, StableSwap/CryptoSwap, PMM and linear/bin pools. Hold pending a two-token parameter/range generator and static-invariant vs full-pool adapter choice.
+
+
+## Source verification audit 39 (2026-11-11)
+
+[Source Verification Audit 39](CORE295_SOURCE_VERIFICATION_AUDIT_39.md) verifies Gyro 2-CLP's quadratic invariant against a pinned balancer-maths commit and shows it is constant product in virtual reserves. Group it with Uniswap v3, Maverick tick and LLAMMA per-band virtual-CP structures, not as a new equation; retain Gyro E-CLP as the distinct ellipse invariant.
