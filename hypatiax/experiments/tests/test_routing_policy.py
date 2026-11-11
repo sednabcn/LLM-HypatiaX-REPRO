@@ -87,7 +87,8 @@ def test_training_edge_probe_uses_outer_training_rows():
     pred[edge] += 10.0
     result = training_edge_degradation_probe(x, y, pred, edge_fraction=0.2)
     assert result["status"] == "ok"
-    assert result["r2_core"] > result["r2_edge"]
+    assert result["r2_train"] > result["r2_edge"]
+    assert result["delta"] == result["r2_train"] - result["r2_edge"]
     assert result["delta"] > 0.0
     assert result["n_edge"] == 20
 
