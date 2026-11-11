@@ -364,3 +364,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 39 (2026-11-11)
 
 [Source Verification Audit 39](CORE295_SOURCE_VERIFICATION_AUDIT_39.md) confirms Gyro 2-CLP belongs to the virtual-reserve constant-product family. Its bounded price range and protocol architecture differ, but the invariant form is shared with Uniswap v3, Maverick and LLAMMA. Gyro E-CLP remains distinct as an affine-transformed ellipse.
+
+
+## Structural-equivalence policy decision pending (2026-11-11)
+
+[Structural Equivalence Policy Options](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_OPTIONS.md) consolidates the cross-domain collisions and system-level distinctions. The recommended hybrid rule (strict scalar-form comparison plus complete coupled-system units) is a proposal only; no rule has been adopted and unresolved families remain held.
