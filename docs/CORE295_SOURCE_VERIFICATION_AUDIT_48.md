@@ -92,3 +92,8 @@ Freeze:
 No formal source-register or equation-catalogue record was changed. The manifest remains 128 source records, 19 proposed records, zero accepted equations and an unfrozen sampling frame.
 
 No experiments, solvers, validators, workflows, paid compute, API calls, on-chain reads or transactions were run. This is official-documentation and static-source review only.
+
+
+## Governance-status clarification (Audit 57)
+
+The primary MIP45 proposal is now marked obsolete by the Maker MIPs portal following MIP102c2-SP1. Audit 48's pinned `liq-2.0` code snapshot is a reproducible source revision, not proof of the currently deployed version. Use MIP45 as historical design provenance and require an exact deployment/code-version mapping before authoring a production-faithful adapter. See [Source Verification Audit 57](CORE295_SOURCE_VERIFICATION_AUDIT_57.md).
