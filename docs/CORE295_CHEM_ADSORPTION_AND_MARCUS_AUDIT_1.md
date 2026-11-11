@@ -44,7 +44,7 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 | Langmuir ideal monolayer | Frumkin (a=0) limit | Group under Frumkin parent if the generalized model is selected; do not count both |
 | Frumkin interacting adsorption | Coverage-dependent exponential interaction term | High-priority distinct-family lead; exact primary transcription pending |
 | Potential-dependent electrosorption | Adds electrode potential, charge and electrochemical standard-state dependence | Research lead; requires a complete electrochemical model contract |
-| Marcus outer-sphere electron transfer | Quadratic reorganization-energy barrier with Eyring/transmission prefactor | Repair candidate's (Z) prefactor and define mechanism; primary transcription pending |
+| Marcus outer-sphere electron transfer | Quadratic reorganization-energy barrier; prefactor depends on solution-bimolecular versus encounter-complex/intramolecular scope | Specify source-matched (Z) or κ_ET(k_BT/h) convention and verify primary equation before promotion |
 | Butler–Volmer electrode kinetics | Exponential anodic/cathodic overpotential contributions | Keep separate from Marcus outer-sphere rate unless a derivation establishes equivalence; do not attribute the full modern equation to Butler 1924 alone |
 
 ## 5. Source evidence
