@@ -104,3 +104,8 @@
 ## Author-pool screening audit 2 (2026-11-11)
 
 The Chemistry, Biology and Physics portions of the assistant-authored 299-row discovery pool have been screened (188 rows). The detailed candidate disposition register and cross-domain family blockers are in [Author Pool Screening Audit 2](CORE295_AUTHOR_POOL_SCREENING_AUDIT_2.md). In particular, the review flags Michaelis–Menten/Hill saturation and population-growth families in Biology, kinematic/mechanical and circuit response families in Physics, and linear-gradient transport overlap across Chemistry/Physics/Biology. This map remains provisional; no candidate is accepted by the audit.
+
+
+## Source verification audit 3 (2026-11-11)
+
+[Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md) records equation-level source checks for L–H versus E–R surface kinetics, Adair versus Hill hemoglobin binding, Kermack–McKendrick age-structured epidemic dynamics versus its SIR reduction, Turing reaction–diffusion systems, and Euler column stability. These findings reinforce that source-family membership and structural equivalence are separate decisions. Coupled ODE/PDE/integral models must be treated as whole systems; alternate representations, components and special-case reductions are not extra entries. No candidates were accepted.
