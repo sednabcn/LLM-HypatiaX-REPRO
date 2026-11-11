@@ -285,3 +285,6 @@ These are additional official documentation pointers, not independent primary re
 
 167. Verhulst, P.-F. (1838). “Notice sur la loi que la population suit dans son accroissement.” *Correspondance Mathématique et Physique*, 10, 113–121. Translated scan: https://www.neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf.
 168. von Bertalanffy, L. (1938). “A Quantitative Theory of Organic Growth (Inquiries on Growth Laws II).” *Human Biology*, 10(2), 181–213. Bibliographic record: https://www.jstor.org/stable/41447359.
+
+
+169. Marcus, R. A. (1956). “On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I.” *The Journal of Chemical Physics*, 24(5), 966–978. https://doi.org/10.1063/1.1742723. Primary solution-phase electron-transfer theory; Part I's conditional overall rate statement uses the solution collision number multiplied by exp(−ΔF*/kT) for the stated intermediate-state mechanism. Exact equation/page and collision-number convention still require PDF transcription.
