@@ -34,7 +34,7 @@ def extract_core15_ids(source_text: str) -> list[str]:
     if end < 0:
         raise ValueError("CORE_15 catalogue terminator not found")
     block = source_text[start:end]
-    names = re.findall(r'"name"\\s*:\\s*"([^"]+)"', block)
+    names = re.findall(r'"name"\s*:\s*"([^"]+)"', block)
     if len(names) != 15 or len(set(names)) != 15:
         raise ValueError(
             f"Expected 15 unique Core-15 equation names; found {len(names)}"
