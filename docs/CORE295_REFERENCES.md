@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–21. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–22. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -178,6 +178,12 @@
 114. Timoshenko, S. P. (1921). LXVI. On the correction for shear of the differential equation for transverse vibrations of prismatic bars. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science, 41*(245), 744–746. https://doi.org/10.1080/14786442108636264. Primary source for shear correction in transverse beam vibration.
 
 115. TU Delft. *Timoshenko beam theory: governing equations*. https://teachbooks.tudelft.nl/computational-modelling/structural_linear/timoshenko.html. Modern derivation of coupled transverse-displacement and cross-section-rotation equations, shear force, bending moment and boundary conditions; use alongside the 1921 primary paper.
+
+116. Marcus, R. A. (1956). On the theory of oxidation-reduction reactions involving electron transfer. I. *The Journal of Chemical Physics, 24*(5), 966–978. https://doi.org/10.1063/1.1742723. Primary source for the outer-sphere electron-transfer theory and solvent reorganization-energy dependence.
+
+117. Marcus, R. A. (1965). On the theory of electron-transfer reactions. VI. Unified treatment for homogeneous and electrode reactions. *The Journal of Chemical Physics, 43*(2), 679–701. https://doi.org/10.1063/1.1696792. Primary extension unifying homogeneous and electrochemical electron-transfer rates.
+
+118. IUPAC. *Marcus equation for electron transfer*. Compendium of Chemical Terminology, Gold Book, term M03702. https://goldbook.iupac.org/terms/view/M03702. Authoritative modern expression for the electron-transfer rate and quadratic activation free-energy barrier, including reorganization energy and standard reaction Gibbs energy.
 
 ## Bibliographic and provenance cautions
 
