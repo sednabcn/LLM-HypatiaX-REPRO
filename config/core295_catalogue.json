@@ -1475,7 +1475,10 @@
           "C is an externally supplied concentration-time input; the PK model and its transit-compartment ODEs are separate linked model components",
           "The Emax*C/(C+IC50) term has a hyperbolic saturation structure related to Michaelis-Menten; explicit Core-15 exclusion/equivalence review is required before acceptance",
           "Do not count the zero-order/first-order no-drug turnover special case or algebraic rearrangements as separate candidates",
-          "Parameter estimates are clinical population-model estimates; use clinically defensible ranges and preserve the sum-of-longest-diameters state definition"
+          "Parameter estimates are clinical population-model estimates; use clinically defensible ranges and preserve the sum-of-longest-diameters state definition",
+          "The primary study reports Emax fixed at 1 and Kgrowth fixed at 0.581 cm/week in the final model; a benchmark that samples these freely is a modified model and must be labelled as such.",
+          "The primary study cautions that the model cannot be generalized beyond the baseline tumor-size range represented in its population (2–20 cm); this is a study-specific evidence boundary, not a universal safe extrapolation interval.",
+          "Concentration is an individual PK-derived time-varying input; independently sampling C at each equation row would break the dosing/PK dependence structure."
         ]
       },
       "input_ranges": {
@@ -1516,7 +1519,11 @@
         "The primary paper defines tumor as the one-dimensional sum of longest lesion diameters and uses individual predicted drug concentration as input",
         "Must resolve hyperbolic Emax term against Core-15 Michaelis-Menten exclusion; do not accept on name/domain distinction alone",
         "Ranges, BYL719 concentration-time input adapter and deterministic generator remain pending",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Audit 6: De Buck et al. describe this as an empirical BYL719 clinical PK/PD implementation, not a universal tumor-growth law; the state is the one-dimensional sum of longest lesion diameters, and the authors caution against generalization beyond baseline sizes represented in the study (2–20 cm).",
+        "Audit 6: Emax was fixed at 1 in the reported final model, while Kgrowth was fixed at 0.581 cm/week; do not treat these as freely sampled parameters in a source-faithful reproduction. Kdeg and IC50 were estimated.",
+        "Audit 6: C(t) is an individual PK-model-predicted concentration-time input; it must be generated as a coherent time series from a declared dosing/PK contract, not sampled as independent static values.",
+        "Audit 6: the Emax*C/(C+IC50) inhibition fraction has a Michaelis-Menten-like hyperbolic saturation motif, but that motif alone does not prove the complete tumor-turnover ODE is algebraically equivalent to the excluded Michaelis-Menten equation. The structural policy must state whether embedded subexpressions trigger exclusion or whether full-model equivalence is required."
       ],
       "source_location": "De Buck et al. (2014), Eq. 9, printed p. 547"
     }
