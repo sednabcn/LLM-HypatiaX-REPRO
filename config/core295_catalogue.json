@@ -534,6 +534,71 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11"
+    },
+    {
+      "equation_id": "PHYS-THIN-LENS-001",
+      "name": "Thin-lens imaging relation",
+      "domain": "Physics",
+      "subdomain": "geometric optics",
+      "formula": "1/do + 1/di = 1/f; di = f*do/(do-f)",
+      "canonical_expression": "do*f/(do-f)",
+      "formula_latex": "\\frac{1}{d_o}+\\frac{1}{d_i}=\\frac{1}{f};\\quad d_i=\\frac{fd_o}{d_o-f}",
+      "structural_fingerprint": "96e2bbd713e0290ca6d03ffccc53679b0e79aebf9fe5da39b8dfb2de90ca8b16",
+      "source_ids": [
+        "PHYS-OPENSTAX-V3-THIN-LENS"
+      ],
+      "source_family_id": "PHYS-GEOMETRIC-OPTICS-THIN-LENS",
+      "status": "proposed",
+      "assumptions": [
+        "Paraxial ray approximation and thin-lens limit",
+        "Object and image distances are measured from the lens plane using the source sign convention",
+        "Lens is in a uniform surrounding medium and focal length is defined for that medium",
+        "Negligible lens thickness relative to the relevant image distances and radii of curvature"
+      ],
+      "variables": {
+        "do": {
+          "meaning": "Signed object distance; positive for a real object in the source convention",
+          "unit": "m"
+        },
+        "f": {
+          "meaning": "Signed focal length; positive for converging lens and negative for diverging lens",
+          "unit": "m"
+        }
+      },
+      "validity": {
+        "source_location": "OpenStax University Physics Volume 3 §2.4, Eq. 2.19; sign conventions immediately following Eqs. 2.18-2.21",
+        "regime": "Thin lens under paraxial geometric optics",
+        "limitations": [
+          "Image distance is signed; di>0 denotes a real image on the opposite side and di<0 a virtual image on the object side",
+          "Singularity at do=f must be excluded from finite-output samples",
+          "Do not count lens-maker equation, sign variants or algebraic rearrangements as independent units without separate derivation review",
+          "Thick lenses, aberrations and non-paraxial rays require richer models"
+        ]
+      },
+      "input_ranges": {
+        "do": {
+          "train": null,
+          "extrapolation": null
+        },
+        "f": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Exact thin-lens equation is printed as OpenStax Eq. 2.19",
+        "Source provides explicit sign conventions for image distance, focal length and curvature",
+        "The lens-maker relation is a linked but distinct derivation object; keep both within the geometric-optics family",
+        "Benchmark ranges must exclude do=f and retain signed real/virtual image cases consistently",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "OpenStax University Physics Volume 3 §2.4, Eq. 2.19"
     }
   ],
   "source_register": [
@@ -1570,6 +1635,7 @@
     "First proposed-record pass: Henry gas solubility, Langmuir single-site adsorption, and Marcus outer-sphere electron transfer. All remain proposed with null input ranges and pending generators; none is accepted.",
     "Second proposed-record pass adds the scalar Hill muscle force-velocity relation. It remains proposed pending primary-page transcription, muscle-context selection, ranges and generator. Michaelis-Menten remains excluded because it is a Core-15 exclusion.",
     "Third proposed-record pass adds the scalar Poiseuille laminar tube-flow relation from OpenStax University Physics Volume 1 §14.7, Eq. 14.19. It remains proposed pending constrained ranges, deterministic generator and numerical review.",
-    "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family."
+    "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family.",
+    "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered."
   ]
 }
