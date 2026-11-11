@@ -143,3 +143,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 12 (2026-11-11)
 
 [Source Verification Audit 12](CORE295_SOURCE_VERIFICATION_AUDIT_12.md) verifies the Gyroscope E-CLP's shifted/stretched/rotated ellipse invariant against its November 2022 technical specification; screens the registered Gyro 2-CLP math snapshot and identifies its virtual-reserve invariant as constant product after translation; and verifies Solidly V2's stable quartic invariant (x^3y+xy^3) against official documentation. E-CLP and Solidly stable remain held pending pinned deployed implementations and numerical contracts. Gyro 2-CLP is not a new structurally distinct equation under the current Core-15 Constant Product exclusion. No candidates were accepted.
+
+
+## Source verification audit 13 (2026-11-11)
+
+[Source Verification Audit 13](CORE295_SOURCE_VERIFICATION_AUDIT_13.md) verifies Euler EVK's health-dependent capped liquidation discount against official documentation and the pinned `Liquidation.sol` commit. The implementation uses health (h=) risk-adjusted collateral/liability, retained discount factor (f=max(h,1-m)), equivalent discount (d=min(1-h,m)), and collateral yield value (R/f) before availability and conversion constraints. This is not a time-elapsed auction schedule. It is structurally distinct from Morpho's LLTV-dependent capped rational LIF, but both remain in the liquidation-incentive family and held pending complete valuation/unit/rounding contracts. No candidates were accepted.
