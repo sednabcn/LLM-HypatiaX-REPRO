@@ -228,11 +228,28 @@ def select_hypatiax_route(
     """
     llm_preds = np.asarray(fitted_preds_train, dtype=float) if fitted_preds_train is not None else None
     nn_preds = np.asarray(nn_preds_train, dtype=float) if nn_preds_train is not None else None
+    try:
+        train_r2 = float(fitted_train_r2)
+        trust_cutoff = float(trust_threshold)
+        trust_values_valid = (
+            not isinstance(fitted_train_r2, (bool, np.bool_))
+            and not isinstance(trust_threshold, (bool, np.bool_))
+            and np.isfinite(train_r2) and np.isfinite(trust_cutoff)
+        )
+    except (TypeError, ValueError, OverflowError):
+        train_r2, trust_cutoff, trust_values_valid = float("nan"), float("nan"), False
     llm_ok = (
         llm_preds is not None and llm_preds.ndim == 1 and llm_preds.size > 0
-        and bool(np.isfinite(llm_preds).all()) and np.isfinite(fitted_train_r2)
-        and float(fitted_train_r2) >= float(trust_threshold)
+        and bool(np.isfinite(llm_preds).all()) and trust_values_valid
+        and train_r2 >= trust_cutoff
     )
+    try:
+        # Validate alpha before constructing either scalar or per-query weights.
+        alpha = float(alpha)
+        if not np.isfinite(alpha) or not 0.0 <= alpha <= 1.0:
+            raise ValueError("alpha must be finite and in [0, 1]")
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("alpha must be finite and in [0, 1]") from exc
     nn_ok = (
         nn_preds is not None and nn_preds.ndim == 1 and nn_preds.size > 0
         and bool(np.isfinite(nn_preds).all())
@@ -255,21 +272,33 @@ def select_hypatiax_route(
         _tau = None
     query_weights = None
     if p_ood_per_query is not None:
-        _p_query = np.asarray(p_ood_per_query, dtype=float).reshape(-1)
+        try:
+            _p_query = np.asarray(p_ood_per_query, dtype=float).reshape(-1)
+        except (TypeError, ValueError, OverflowError):
+            _p_query = np.asarray([], dtype=float)
         if _p_query.size and np.isfinite(_p_query).all() and np.all((_p_query >= 0.0) & (_p_query <= 1.0)):
+            _query_llm = alpha + (1.0 - alpha) * _p_query
             query_weights = {
-                "llm": (alpha + (1.0 - alpha) * _p_query).astype(float).tolist(),
-                "nn": (1.0 - (alpha + (1.0 - alpha) * _p_query)).astype(float).tolist(),
+                "llm": _query_llm.astype(float).tolist(),
+                "nn": (1.0 - _query_llm).astype(float).tolist(),
             }
             if p_ood is None:
                 p_ood = float(np.mean(_p_query))
+    try:
+        _p_ood = float(p_ood) if p_ood is not None else None
+    except (TypeError, ValueError, OverflowError):
+        _p_ood = None
+    if _p_ood is not None and (
+        not np.isfinite(_p_ood) or not 0.0 <= _p_ood <= 1.0
+    ):
+        _p_ood = None
     base = {
         "trust_gate_passed": bool(llm_ok),
         "structural_risk_flag": bool(tokens),
         "structural_risk_tokens": tokens,
         "degradation_delta": _delta,
         "degradation_tau": _tau,
-        "p_ood": (float(p_ood) if p_ood is not None and np.isfinite(p_ood) else None),
+        "p_ood": _p_ood,
         "blend_weights": None,
         "query_blend_weights": query_weights,
     }
