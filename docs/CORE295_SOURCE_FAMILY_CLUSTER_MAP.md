@@ -499,3 +499,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 64 (2026-11-11)
 
 [Source Verification Audit 64](CORE295_SOURCE_VERIFICATION_AUDIT_64.md) adds coherent expected shortfall as a distinct tail functional from VaR. For continuous distributions it equals the conditional tail mean; for distributions with atoms, the general quantile-integral definition and quantile-mass correction matter. Normal ES is a specialization, not a separate family.
+
+
+## Source verification audit 65 (2026-11-11)
+
+[Source Verification Audit 65](CORE295_SOURCE_VERIFICATION_AUDIT_65.md) classifies PD×LGD×EAD as one expected-loss accounting family. EL rate, EL amount and algebraic rearrangements are not separate equations; do not count the decomposition as a novel DeFi-specific structure.
