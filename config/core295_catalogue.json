@@ -437,7 +437,7 @@
     },
     {
       "equation_id": "PHYS-PLANCK-SPECTRUM-001",
-      "name": "Planck blackbody spectral intensity law",
+      "name": "Planck spectral exitance per unit wavelength",
       "domain": "Physics",
       "subdomain": "thermal radiation",
       "formula": "I(lambda,T) = 2 pi h c^2 / [lambda^5 (exp(h c/(lambda kB T)) - 1)]",
@@ -479,7 +479,7 @@
         }
       },
       "validity": {
-        "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11; Planck (1901), Annalen der Physik 309, 553-563, Eq. (8) is the primary historical source in the original spectral-distribution convention",
+        "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11 (spectral exitance per wavelength); Planck (1901), Eq. (13) is the original spectral energy density and requires the isotropic c/4 conversion",
         "regime": "Blackbody spectral power intensity per unit wavelength at thermal equilibrium",
         "limitations": [
           "Do not confuse spectral intensity per wavelength with spectral energy density or frequency-domain forms; conversions require the correct Jacobian",
@@ -522,7 +522,8 @@
         "Primary Planck 1901 source is registered but uses a different original spectral-distribution convention; verify original Eq. (8) before source_verified status",
         "Use physical constants with fixed SI values; sample only lambda and T in the benchmark adapter, not constants as independent random variables",
         "Planck spectrum is the parent family for Wien maximum and Stefan integral; do not count those derived laws independently without a separate sampling design",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Audit 5 (2026-11-11): OpenStax defines I(lambda,T) as power per unit area per unit wavelength (spectral exitance, W m^-3), not radiance per solid angle. Planck 1901 Eq. (13) is spectral energy density per wavelength; multiplying by c/4 for isotropic equilibrium radiation gives the OpenStax exitance formula. Keep Wien/Stefan consequences in the same family. See docs/CORE295_PROPOSED_RECORD_AUDIT_5.md."
       ],
       "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11"
     },
