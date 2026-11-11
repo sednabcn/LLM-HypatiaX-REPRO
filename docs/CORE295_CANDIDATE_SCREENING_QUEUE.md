@@ -363,3 +363,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 40 (2026-11-11)
 
 [Source Verification Audit 40](CORE295_SOURCE_VERIFICATION_AUDIT_40.md) closes Balancer Linear Pool's implementation-version gap by pinning balancer-v2-monorepo commit e91a2b643a49856f51a648d175667c1b48cf3377. It verifies the invariant (I=N_m+B_w^{(m)}), piecewise nominal main-balance fee transform and wrapped-token upscaling in LinearPool.getRate. Remaining blockers are the constant-sum/StableSwap family ruling and frozen target/rate/fee adapter.
+
+
+## Source verification audit 41 (2026-11-11)
+
+[Source Verification Audit 41](CORE295_SOURCE_VERIFICATION_AUDIT_41.md) verifies LLAMMA whitepaper Eq. (6) and its correspondence to a pinned LlamaLend V2 AMM.vy implementation. The per-band invariant is virtual constant product and stays grouped with Gyro 2-CLP/Uniswap v3/Maverick. The potentially distinct candidate is the full multi-band oracle-driven soft-liquidation/de-liquidation state machine, pending a system-level DeFi Risk policy and adapter.
