@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–17. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–18. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -148,6 +148,14 @@
 99. Westerhof, N., Lankhaar, J.-W., & Westerhof, B. E. (2009). The arterial Windkessel. *Medical & Biological Engineering & Computing, 47*(2), 131–141. https://doi.org/10.1007/s11517-008-0359-2. Modern source for two- and three-element Windkessel equations and their physiological interpretation.
 
 100. Hill, A. V. (1938). The heat of shortening and the dynamic constants of muscle. *Proceedings of the Royal Society of London. Series B, 126*(843), 136–195. https://doi.org/10.1098/rspb.1938.0050. Primary source for the hyperbolic force–velocity relation \((P+a)(v+b)=(P_0+a)b\), developed from muscle shortening heat and mechanical work.
+
+101. Navier, C.-L.-M.-H. (1822/1823). Mémoire sur les lois du mouvement des fluides. Read before the Académie royale des sciences, 18 March 1822; published in *Mémoires de l’Académie royale des sciences*, 6 (1823), 389–416. Bibliographic catalogue record: https://ccfr.bnf.fr/portailccfr/ark:/16871/0018999898. Primary early viscous-fluid momentum formulation; Navier's molecular-force derivation differs from the modern compact Newtonian-fluid equation.
+
+102. Stokes, G. G. (1845; published 1849). On the theories of the internal friction of fluids in motion, and of the equilibrium and motion of elastic solids. *Transactions of the Cambridge Philosophical Society, 8*, 287–319 (read 14 April 1845). Cambridge reprint in *Mathematical and Physical Papers*, pp. 75–129: https://doi.org/10.1017/CBO9780511702242.005. Primary development of viscous stress terms and equations of motion; combine with Navier's contribution for the modern Navier–Stokes lineage.
+
+103. Planck, M. (1901). Ueber das Gesetz der Energieverteilung im Normalspectrum. *Annalen der Physik, 309*(3), 553–563. https://doi.org/10.1002/andp.19013090310. Primary blackbody spectral distribution paper; equation (8), p. 554, gives the energy distribution that underlies the modern Planck radiation law.
+
+104. OpenStax. *University Physics Volume 3*, §6.1 “Blackbody Radiation,” Eq. 6.11. https://openstax.org/books/university-physics-volume-3/pages/6-1-blackbody-radiation. Gives the modern wavelength spectral-intensity form of Planck's law and explains that Wien's displacement law and Stefan's law follow from its maximum and wavelength integration.
 
 ## Bibliographic and provenance cautions
 
