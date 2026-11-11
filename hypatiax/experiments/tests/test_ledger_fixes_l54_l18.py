@@ -24,7 +24,8 @@ def test_l54_evaluation_dict_is_none_safe():
 
 def test_l18_instability_deferred_in_full_runs():
     s = RUN_ALL.read_text(encoding="utf-8")
-    assert '_DEFERRED_STEPS="instability"' in s
+    deferred = re.search(r'_DEFERRED_STEPS="([^"]*)"', s)
+    assert deferred and {"instability", "exp2_all_domains_pca_4060"}.issubset(set(deferred.group(1).split()))
     assert 'RUN_DEFERRED' in s
     # still a valid step name so an explicit --step instability keeps working
     assert re.search(r'_STEP_ORDER="[^"]*\binstability\b', s)
