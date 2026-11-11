@@ -71,7 +71,6 @@ def validate_manifest(
         errors.append("calibration_equations must be a list")
         equations = []
     seen_ids: set[str] = set()
-    units_by_category: dict[str, set[str]] = defaultdict(set)
     seen_units_globally: set[str] = set()
     counts_by_category: dict[str, int] = defaultdict(int)
     for index, item in enumerate(equations):
@@ -102,7 +101,6 @@ def validate_manifest(
                     "unique across the entire calibration manifest"
                 )
             seen_units_globally.add(unit_id)
-            units_by_category[category].add(unit_id)
         if not isinstance(provenance, str) or not provenance.strip():
             errors.append(f"{prefix}.provenance must identify an auditable source")
         if item.get("uses_training_data_only") is not True:
