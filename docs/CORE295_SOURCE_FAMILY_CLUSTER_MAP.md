@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 37 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 38 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -349,3 +349,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 37 (2026-11-11)
 
 [Source Verification Audit 37](CORE295_SOURCE_VERIFICATION_AUDIT_37.md) verifies Curve CryptoSwap's A–gamma dynamic invariant and pinned Tricrypto implementation. It is distinct from fixed StableSwap but related within the amplified-invariant family; the dynamic price_scale/repeg state is part of the complete pool model. Keep the invariant, K0/K definitions, Newton D/y solvers, swap formulas and repegging machinery together as one family.
+
+
+## Discovery batch 38 (2026-11-11)
+
+[Candidate Discovery Batch 38](CORE295_CANDIDATE_DISCOVERY_BATCH_38.md) identifies Curve LLAMMA's per-band invariant as virtual constant product, structurally related to Gyro/Maverick/Uniswap v3. Its complete soft-liquidation/de-liquidation mechanism is a potentially distinct protocol-risk system, not a new per-band invariant; it requires oracle, band, fee, interest and hard-liquidation state in one adapter.
