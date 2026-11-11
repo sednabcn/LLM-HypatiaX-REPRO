@@ -1607,6 +1607,7 @@ class Protocol30(BenchmarkProtocol):
 
     def get_all_domains(self) -> list[str]:
         """Return the 11 manuscript domain names without legacy Feynman prefixes."""
+        import os
         domains = sorted({eq.domain for eq in self._feynman_eqs})
         raw = os.environ.get("SHARD_IDS", "").replace(",", " ").split()
         if not raw:
