@@ -95,7 +95,11 @@ https://docs.curve.finance/developer/amm/curve-amm-overview/
 
 ### 2.4 Curve CryptoSwap and other AMMs
 
-Curve's official overview identifies CryptoSwap as a separate invariant family for volatile pairs, but this audit has not yet transcribed the CryptoSwap whitepaper equations or pinned a specific NG implementation. It remains a source lead, not an accepted candidate.
+Egorov's 2021 CryptoSwap whitepaper directly gives a dynamic invariant system. It transforms balances by an internal price-scale vector, defines a dynamic coefficient from amplification A, gamma and a normalized product term K0, then uses that coefficient in a StableSwap-like sum/product invariant. It defines an internal N-dimensional exponential-moving-average price oracle and a repegging rule constrained by a tracked profit/loss condition. The paper states Newton iteration is used to solve for D and the output balance and explicitly warns that the solve function is not monotonic, making initial values and applicability ranges important (original PDF pp. 1–4). This is substantially more than a fee or parameter variant of StableSwap: the complete system includes dynamic price-scale/oracle state and repegging. Under draft E4 it is a plausible separate full-system family, but must be reviewed against the exact benchmark unit and version-pinned NG implementation before acceptance.
+
+Primary source: Egorov (2021), *Automatic market-making with dynamic peg*: https://docs.curve.finance/assets/files/whitepaper_cryptoswap-de196d8f95aae3164a1226234d6d96ca.pdf
+
+The official Curve overview also identifies CryptoSwap for volatile pairs and current Twocrypto-NG/Tricrypto-NG implementations. The whitepaper is not a substitute for matching one current contract revision and its integer implementation.
 
 Balancer weighted pools, Curve StableSwap, Curve CryptoSwap, DODO PMM, Solidly stable/volatile pools, Gyro E-CLP, YieldSpace and liquidity-book designs should each be reconstructed from their own primary whitepapers or pinned code. Similar use of reserves, weights, amplification, exponentials or derivatives does not by itself establish equivalence or distinctness.
 
@@ -117,6 +121,6 @@ Balancer weighted pools, Curve StableSwap, Curve CryptoSwap, DODO PMM, Solidly s
 | DeFi AMM: Uniswap v2/v3 | Official concepts + academic equation transcription | Constant-product exclusion / full concentrated-liquidity system lead |
 | DeFi AMM: Balancer weighted | Official invariant and derived formulas | One weighted-invariant family; E3/E4 review |
 | DeFi AMM: Curve StableSwap | Primary whitepaper equation verified | Strong distinct invariant lead; not accepted |
-| DeFi AMM: Curve CryptoSwap | Official taxonomy only in this pass | Source lead; equation reconstruction pending |
+| DeFi AMM: Curve CryptoSwap | Primary 2021 whitepaper equations and dynamic oracle/repeg system verified | Plausible E4 full-system family; pin NG implementation and audit parameter/state contract |
 
 No formal catalogue entry was added or accepted. Source records are not equation counts. No experiments, validators, solvers, workflows, paid compute or live protocol/API calls were run.
