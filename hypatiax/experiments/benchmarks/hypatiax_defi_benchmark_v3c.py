@@ -149,6 +149,7 @@ sys.path.insert(0, str(_ROOT))
 
 from hypatiax.core.routing import (
     kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
+    training_edge_split_indices,
 )
 
 # ── env / API key ─────────────────────────────────────────────────────────────
@@ -576,17 +577,6 @@ def _eval_formula_r2(
 # SECTION 3 — Routing helpers (Fixes 1, 2, 4)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
-    """Order rows on a PCA axis after training-only feature standardisation."""
-    X = np.asarray(X, dtype=float)
-    scale = np.std(X, axis=0)
-    scale[scale <= np.finfo(float).eps] = 1.0
-    Z = (X - np.mean(X, axis=0)) / scale
-    _, _, vh = np.linalg.svd(Z, full_matrices=False)
-    scores = Z @ vh[0]
-    return np.argsort(scores, kind="mergesort")
-
-
 def _extrapolation_probe(
     X_train: np.ndarray, y_train: np.ndarray, probe_frac: float = 0.15
 ) -> dict:
@@ -606,14 +596,15 @@ def _extrapolation_probe(
     if n < 20 or not np.isfinite(X_train).all() or not np.isfinite(y_train).all():
         return {"status": "insufficient_or_nonfinite_training_data", "delta": None,
                 "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
-    order = _sort_by_principal_direction(X_train)
-    n_edge_side = max(2, int(np.ceil(n * float(probe_frac) / 2.0)))
-    if n - 2 * n_edge_side < 10:
+    try:
+        core_idx, edge_idx = training_edge_split_indices(X_train, probe_frac)
+    except ValueError:
+        return {"status": "insufficient_core_rows", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    if len(core_idx) < 10 or len(edge_idx) < 5:
         return {"status": "insufficient_core_rows", "delta": None,
                 "r2_train": None, "r2_edge": None,
-                "n_fit": int(n - 2 * n_edge_side), "n_edge": int(2 * n_edge_side)}
-    edge_idx = np.concatenate((order[:n_edge_side], order[-n_edge_side:]))
-    core_idx = order[n_edge_side:-n_edge_side]
+                "n_fit": int(len(core_idx)), "n_edge": int(len(edge_idx))}
     Xf, yf = X_train[core_idx], y_train[core_idx]
     Xp, yp = X_train[edge_idx], y_train[edge_idx]
     try:
