@@ -292,9 +292,9 @@ deferred_experiments:
       - explicit random_80_20 and pca_40_60 split definitions for that registry
       - clean method-arm and output-schema mapping
     non_equivalent_proxy:
-      runner_stages:
+      standard_runner_stages:
         - exp2
-        - exp2_all_domains_pca_4060
+      deferred_optional_proxy_stage: exp2_all_domains_pca_4060
       protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
       equations: 30
       registry_domains:
