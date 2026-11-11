@@ -209,3 +209,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 23 (2026-11-11)
 
 [Source Verification Audit 23](CORE295_SOURCE_VERIFICATION_AUDIT_23.md) verifies the Fick cardiac-output mass balance directly against the original 1870 report. The source states the principle in prose rather than printing the modern equation; the transcription is oxygen uptake rate divided by the arterial–mixed-venous oxygen-content difference. It is a physiological conservation relation, not Fick diffusion flux. Keep CO2 cross-check and stroke-volume conversion as derived/validation steps, not separate equations.
+
+
+## Source verification audit 24 (2026-11-11)
+
+[Source Verification Audit 24](CORE295_SOURCE_VERIFICATION_AUDIT_24.md) verifies Balancer's weighted geometric invariant and its correspondence to the V2 WeightedMath implementation. Three-token form is one fixed-arity adapter to the general n-token weighted family; the equal two-token special case is constant product. Do not count spot prices, swap formulas or weight/token-count variants separately. Hold pending immutable implementation pin and numerical contract.
