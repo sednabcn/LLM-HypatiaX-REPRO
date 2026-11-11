@@ -174,3 +174,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 16 (2026-11-11)
 
 [Source Verification Audit 16](CORE295_SOURCE_VERIFICATION_AUDIT_16.md) confirms Aave V3's health factor expands to the collateral-value-weighted liquidation-threshold sum divided by total debt. This is the multi-collateral form of the same risk-adjusted collateral/debt health family as Euler EVK, while Morpho's market formula is its single-collateral case. Do not count protocol labels or the weighted-average-threshold identity as new equations; keep health-state measures separate from liquidation incentive functions.
+
+
+## Source verification audit 17 (2026-11-11)
+
+[Source Verification Audit 17](CORE295_SOURCE_VERIFICATION_AUDIT_17.md) separates Compound III's post-absorption storefront price discount from liquidation eligibility and liquidator incentives. The discount is a configured product of StoreFrontPriceFactor and one minus the asset's LiquidationFactor; its quote conversion is not an independent equation. Keep as collateral-sale pricing context in the broader liquidation family, not a new structurally rich candidate.
