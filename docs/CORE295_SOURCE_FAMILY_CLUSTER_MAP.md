@@ -504,3 +504,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 65 (2026-11-11)
 
 [Source Verification Audit 65](CORE295_SOURCE_VERIFICATION_AUDIT_65.md) classifies PD×LGD×EAD as one expected-loss accounting family. EL rate, EL amount and algebraic rearrangements are not separate equations; do not count the decomposition as a novel DeFi-specific structure.
+
+
+## Source verification audit 66 (2026-11-11)
+
+[Source Verification Audit 66](CORE295_SOURCE_VERIFICATION_AUDIT_66.md) groups perpetual funding as a protocol-specific premium/interest/cap/time-aggregation family. Deribit and Binance implementations differ; do not count their parameters or alternative normalizations as independent equations. The candidate-pool basis expression is not a valid universal substitute.
