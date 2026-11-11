@@ -2353,13 +2353,14 @@ class HybridAllDomainsMethod(BaseMethod):
             # path for all Feynman physics domains so the physics prior is used
             # instead of a linear-space MLP that cannot capture power-law structure.
             _domain = metadata.get("domain", "")
-            if _domain in (
+            _force_llm_domain_override = _domain in (
                 "feynman_mechanics",
                 "feynman_electromagnetism",
                 "feynman_quantum",
                 "feynman_thermodynamics",
                 "feynman_optics",
-            ):
+            )
+            if _force_llm_domain_override:
                 # AUDIT-PATCH L39: Feynman-domain guard forces the LLM path. Disclose in the paper, or rerun
                 # the comparison with this guard disabled and report both.
                 metadata = {**metadata, "force_llm": True}
@@ -2590,6 +2591,8 @@ class HybridAllDomainsMethod(BaseMethod):
                     **_provenance(result),
                     "decision":   result.get("decision", "unknown"),
                     "nn_applied": nn_applied,
+                    "force_llm_domain_override": _force_llm_domain_override,
+                    "forced_domain": _domain if _force_llm_domain_override else None,
                 },
             )
 
