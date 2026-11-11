@@ -205,17 +205,13 @@ No new equation was accepted. These checks refine provenance and prevent later t
 
 ### 5.4 Pütter–von Bertalanffy growth lineage: attribution and model unit
 
-A primary-source lead for the generalized growth law predates von Bertalanffy's 1938 paper: Pütter (1920), *Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten*, Pflügers Archiv 180, 298–340, DOI https://doi.org/10.1007/BF01755094. Later reviews transcribe the generalized mass-growth equation as
+A Fisheries Research Board of Canada translation of Pütter's original 1920 article is available and has now been inspected. The paper defines a theoretical linear dimension \(\lambda\) as the cube root of weight. It assumes catabolic breakdown proportional to \(\lambda^3\) and anabolic construction proportional to \(\lambda^2\), so the net increment is proportional to \(k_1\lambda^2-k_2\lambda^3\). At the limiting size \(L\), the two terms balance, giving \(k_1L^2=k_2L^3\), hence \(L=k_1/k_2\). The paper then gives an integrated growth curve for the theoretical linear dimension (its equation (3)); the OCR available here does not make every symbol in that expression reliable enough for a verbatim transcription.
 
-\[
-\frac{dm}{dt}=p m^a-q m^b,
-\]
+Primary source: Pütter (1920), *Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten*, Pflügers Archiv 180, 298–340, DOI https://doi.org/10.1007/BF01755094; Fisheries Research Board of Canada Translation Series No. 325 (1960), especially the discussion on original pp. 299–301: https://waves-vagues.dfo-mpo.gc.ca/Library/147555.pdf. The translation explicitly identifies the original title, journal, volume, pages and 1920 date.
 
-and attribute this general two-power form to Pütter. Von Bertalanffy's contribution is more specifically associated with a mechanistic anabolism/catabolism interpretation and the choice of surface-like and mass-like scaling exponents (classically \(2/3\) and 1), yielding a special case of the generalized Pütter form. The integrated length-at-age curve is a derived solution/observable under additional geometric and length–mass assumptions, not an independent governing equation.
+This verifies Pütter's particular surface-versus-volume mass-balance model. It does **not** establish that the arbitrary-exponent generalization \(dm/dt=p m^a-q m^b\) appears in the 1920 paper; that broader form is a later generalized family and must not be back-attributed without direct source evidence. The classical von Bertalanffy mass-growth form with exponents \(2/3\) and 1 is closely related to the surface/volume mechanism, but the 1938 article's exact equation number/page and notation still require direct inspection. The integrated length-at-age curve is a derived solution/observable under geometric and length–mass assumptions, not an independent governing equation.
 
-The available evidence here is still secondary for the exact Pütter 1920 equation transcription and page. It is sufficient to correct the source lineage and prevent treating the generalized Pütter law and the classical von Bertalanffy special case as unrelated equation families. The 1938 primary article's own equation number/page and definitions remain to be checked directly.
-
-**Disposition:** group the generalized Pütter growth law and the classical \(a=2/3,b=1\) von Bertalanffy mass-growth specialization as one provisional lineage (E2/specialization pending primary transcription); keep other exponent pairs as parameterized members of that general family unless the complete mechanism/state contract establishes a different model unit. Do not count the integrated length-at-age curve separately.
+**Disposition:** register Pütter 1920 as a primary source for the specific surface/volume balance and associated growth curve. Keep later arbitrary-exponent Pütter/Bertalanffy generalizations in a related lineage, but do not claim they are verbatim 1920 equations. Do not count the integrated curve separately from its governing model.
 
 ### 5.5 Holling 1959 evidence boundary
 
