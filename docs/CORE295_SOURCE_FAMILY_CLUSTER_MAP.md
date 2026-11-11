@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 36 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 37 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -314,3 +314,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 31 (2026-11-11)
 
 [Source Verification Audit 31](CORE295_SOURCE_VERIFICATION_AUDIT_31.md) confirms the GHK constant-field diffusion-potential lineage and the revised Starling glycocalyx model. GHK is a multi-ion zero-current steady state, not a Nernst thermodynamic equilibrium. The revised Starling Πg force balance is not a closed steady-state law; the full Levick–Michel Eq. (3) is implicit through its Péclet number. Keep all expressions in one model lineage.
+
+
+## Discovery batch 37 (2026-11-11)
+
+[Candidate Discovery Batch 37](CORE295_CANDIDATE_DISCOVERY_BATCH_37.md) adds Heston stochastic volatility and Cramér–Lundberg reserve ruin. Heston is a coupled price/variance SDE with CIR-like variance and correlated Brownian shocks; Cramér–Lundberg is a compound-Poisson reserve process with a first-passage ruin functional. Keep components and derived pricing/ruin outputs in one complete-system family.
