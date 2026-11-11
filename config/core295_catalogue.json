@@ -45,7 +45,235 @@
     "source_family_definition": null,
     "status": "not_frozen"
   },
-  "entries": [],
+  "entries": [
+    {
+      "equation_id": "CHEM-HENRY-001",
+      "name": "Henry gas-solubility relation",
+      "domain": "Chemistry",
+      "subdomain": "gas-liquid equilibrium",
+      "formula": "C_g = k_H P_g",
+      "canonical_expression": "kH*Pg",
+      "formula_latex": "C_g = k_H P_g",
+      "structural_fingerprint": "5cf92e20a0b7dca1d9ed88e6ceef0bdd92110395ecd528b4a779908956c74e03",
+      "source_ids": [
+        "CHEM-OPENSTAX-HENRY-11-3"
+      ],
+      "source_family_id": "CHEM-GAS-LIQUID-SOLUBILITY-HENRY",
+      "status": "proposed",
+      "assumptions": [
+        "Gas-liquid equilibrium at fixed temperature",
+        "Dilute/ideal-solution regime where dissolved concentration is proportional to gas partial pressure",
+        "Gas and solvent identities fixed for the Henry coefficient",
+        "No significant chemical reaction of dissolved gas"
+      ],
+      "variables": {
+        "Pg": {
+          "meaning": "Gas partial pressure; kPa or other pressure unit matched by kH",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "kH": {
+          "meaning": "Concentration/pressure Henry coefficient; mol L^-1 kPa^-1",
+          "unit": "To be frozen in benchmark contract"
+        }
+      },
+      "validity": {
+        "source_location": "OpenStax Chemistry 2e §11.3",
+        "regime": "Dilute/ideal gas-solubility proportionality at fixed temperature and fixed gas-solvent pair",
+        "limitations": [
+          "No significant reactive dissolution",
+          "gas and solvent identities fixed",
+          "do not confuse with Ideal Gas Law"
+        ]
+      },
+      "input_ranges": {
+        "Pg": {
+          "train": null,
+          "extrapolation": null
+        },
+        "kH": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Input ranges and deterministic generator remain unspecified",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "OpenStax Chemistry 2e §11.3"
+    },
+    {
+      "equation_id": "CHEM-LANGMUIR-001",
+      "name": "Langmuir single-site monolayer adsorption isotherm",
+      "domain": "Chemistry",
+      "subdomain": "surface adsorption",
+      "formula": "theta = u1 p / (1 + u1 p)",
+      "canonical_expression": "u1*p/(1+u1*p)",
+      "formula_latex": "\\\\theta = \\\\frac{u_1 p}{1+u_1 p}",
+      "structural_fingerprint": "483703addf661dae59ffe9d3d9a3438587dc482fa0087358e017337c7b0482f4",
+      "source_ids": [
+        "CHEM-LANGMUIR-1918"
+      ],
+      "source_family_id": "CHEM-SURFACE-ADSORPTION-LANGMUIR",
+      "status": "proposed",
+      "assumptions": [
+        "Equivalent elementary adsorption sites",
+        "One molecule per site",
+        "Monolayer coverage",
+        "Adsorption/desorption equilibrium",
+        "Negligible lateral interactions in the simple model"
+      ],
+      "variables": {
+        "p": {
+          "meaning": "Equilibrium gas pressure",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "u1": {
+          "meaning": "Ratio of adsorption to evaporation parameters; inverse pressure",
+          "unit": "To be frozen in benchmark contract"
+        }
+      },
+      "validity": {
+        "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)",
+        "regime": "Simple single-site monolayer adsorption equilibrium",
+        "limitations": [
+          "Equivalent sites",
+          "one molecule per site",
+          "monolayer",
+          "adsorption/desorption equilibrium"
+        ]
+      },
+      "input_ranges": {
+        "p": {
+          "train": null,
+          "extrapolation": null
+        },
+        "u1": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Input ranges and deterministic generator remain unspecified",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)"
+    },
+    {
+      "equation_id": "CHEM-MARCUS-001",
+      "name": "Marcus outer-sphere electron-transfer rate",
+      "domain": "Chemistry",
+      "subdomain": "electron-transfer kinetics",
+      "formula": "DeltaG_dagger=(lambda+DeltaG0)^2/(4lambda); kET=kappaET*kB*T/h*exp(-DeltaG_dagger/(R*T))",
+      "canonical_expression": "kappaET*kB*T/h*exp(-((lam+deltaG)**2)/(4*lam*R*T))",
+      "formula_latex": "k_{ET}=\\\\kappa_{ET}\\\\frac{k_B T}{h}\\\\exp\\\\left[-\\\\frac{(\\\\lambda+\\\\Delta G^0)^2}{4\\\\lambda R T}\\\\right]",
+      "structural_fingerprint": "de157472fea9be7692c819092ea44ad8ef554fea83d441d96befca364dbcb9c4",
+      "source_ids": [
+        "CHEM-MARCUS-1956",
+        "CHEM-IUPAC-MARCUS"
+      ],
+      "source_family_id": "CHEM-ELECTRON-TRANSFER-MARCUS",
+      "status": "proposed",
+      "assumptions": [
+        "Outer-sphere electron transfer",
+        "Classical parabolic free-energy surfaces",
+        "Temperature and solvent regime where classical Marcus barrier is appropriate",
+        "Transmission factor captures adiabatic/diabatic effects",
+        "Consistent molar energy convention for lambda, deltaG and R"
+      ],
+      "variables": {
+        "kappaET": {
+          "meaning": "Electronic transmission factor, dimensionless",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "kB": {
+          "meaning": "Boltzmann constant, J K^-1",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "T": {
+          "meaning": "Absolute temperature, K",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "h": {
+          "meaning": "Planck constant, J s",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "lam": {
+          "meaning": "Total reorganization energy, J mol^-1 with molar R",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "deltaG": {
+          "meaning": "Standard electron-transfer Gibbs energy, J mol^-1",
+          "unit": "To be frozen in benchmark contract"
+        },
+        "R": {
+          "meaning": "Molar gas constant, J mol^-1 K^-1",
+          "unit": "To be frozen in benchmark contract"
+        }
+      },
+      "validity": {
+        "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723",
+        "regime": "Classical outer-sphere Marcus relation, especially normal region",
+        "limitations": [
+          "Inverted region generally needs Franck-Condon correction",
+          "energy units must be consistent",
+          "explicit Core-15 Arrhenius/Rate Law overlap review required"
+        ]
+      },
+      "input_ranges": {
+        "kappaET": {
+          "train": null,
+          "extrapolation": null
+        },
+        "kB": {
+          "train": null,
+          "extrapolation": null
+        },
+        "T": {
+          "train": null,
+          "extrapolation": null
+        },
+        "h": {
+          "train": null,
+          "extrapolation": null
+        },
+        "lam": {
+          "train": null,
+          "extrapolation": null
+        },
+        "deltaG": {
+          "train": null,
+          "extrapolation": null
+        },
+        "R": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Input ranges and deterministic generator remain unspecified",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
+    }
+  ],
   "source_register": [
     {
       "source_id": "CHEM-SQA-DATABOOK",
@@ -1076,6 +1304,7 @@
     "Chemistry source-map expansion in discovery batch 4 adds mass-action historical provenance, IUPAC equilibrium/activity definitions, and OpenStax chapter coverage for equilibrium, acid-base, solubility, thermodynamics and electrochemistry; all remain candidate references.",
     "Chemistry discovery batch 4 was deepened with primary/historical leads for Debye–Hückel electrolyte theory and van't Hoff temperature-dependent equilibrium, plus specific polyprotic-acid and conditional-solubility references; all are discovery-only candidate references.",
     "OpenStax Chemistry 2e §11.3 provides a specific Henry's-law equation lead C_g = k P_g. This is a candidate gas–liquid solubility relation, not the excluded ideal-gas law; it remains a candidate reference pending benchmark suitability and source-family review.",
-    "Chemistry source mapping now includes surface adsorption (Langmuir 1918) and molecular diffusion (Fick 1855) as additional source-family leads; diffusion flux and diffusion PDE are related levels of one transport framework and must not be counted independently without an explicit sampling-unit rule."
+    "Chemistry source mapping now includes surface adsorption (Langmuir 1918) and molecular diffusion (Fick 1855) as additional source-family leads; diffusion flux and diffusion PDE are related levels of one transport framework and must not be counted independently without an explicit sampling-unit rule.",
+    "First proposed-record pass: Henry gas solubility, Langmuir single-site adsorption, and Marcus outer-sphere electron transfer. All remain proposed with null input ranges and pending generators; none is accepted."
   ]
 }
