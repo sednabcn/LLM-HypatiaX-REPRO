@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 31 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 32 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -274,3 +274,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 31 (2026-11-11)
 
 [Candidate Discovery Batch 31](CORE295_CANDIDATE_DISCOVERY_BATCH_31.md) adds Bernoulli, Stokes drag and Young–Laplace pressure. Keep Bernoulli with inviscid Euler-flow energy integrals; Stokes drag with creeping-flow/Poiseuille/Navier–Stokes special solutions; Young–Laplace as a distinct curvature-dependent interfacial pressure family.
+
+
+## Discovery batch 32 (2026-11-11)
+
+[Candidate Discovery Batch 32](CORE295_CANDIDATE_DISCOVERY_BATCH_32.md) identifies Maverick V2's tick invariant as constant product in virtual reserves, structurally related to Gyro 2-CLP. Bin movement, merging and the recursive tick-domain log-price TWAP are protocol-state features; they are not independent invariant equations.
