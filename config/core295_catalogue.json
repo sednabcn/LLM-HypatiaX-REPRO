@@ -830,6 +830,30 @@
       "url": "https://doi.org/10.1021/acscatal.4c02813",
       "use": "Explicit modern derivation of a competitive-adsorption bimolecular Langmuir–Hinshelwood rate equation (Eq. 5), with surface site balance and assumptions",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-SOLIDLY-STABLE-V2",
+      "domain": "DeFi AMM",
+      "title": "Solidly V2 stable and volatile pool invariant documentation",
+      "url": "https://docs.solidly.com/dex-basics/swaps.html",
+      "use": "Official Solidly documentation for volatile xy=k and stable x^3 y + xy^3 = k invariants; pin fork/version and stable-pair assumptions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-SWAAP-V2-WP",
+      "domain": "DeFi AMM",
+      "title": "Swaap v2: Optimal liquidity infrastructure",
+      "url": "https://swaap.xyz/v2-whitepaper.pdf",
+      "use": "Primary 2023 RfQ market-making whitepaper; stochastic markup optimization objective and on-chain max drawdown, last-look and max-imbalance settlement safeguards",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CARBON-ADJUSTABLE-CURVES",
+      "domain": "DeFi AMM",
+      "title": "Carbon adjustable bonding curves and asymmetric orders",
+      "url": "https://medium.com/carbondefi/introducing-carbon-1f41aebf634b",
+      "use": "Protocol source lead for one-sided adjustable buy/sell curves parameterized by start price, end price and capacity; exact on-chain curve function and state transition still to be traced",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
