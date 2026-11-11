@@ -5,6 +5,7 @@ No model, API, Julia, PySR, or experiment code is imported or executed here.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 from collections import Counter
 from pathlib import Path
@@ -91,13 +92,104 @@ def validate_shard_plan(
 
 
 
+
+_ALLOWED_FUNCTIONS = {
+    "exp": sp.exp, "log": sp.log, "sqrt": sp.sqrt,
+    "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
+    "asin": sp.asin, "acos": sp.acos, "atan": sp.atan,
+    "sinh": sp.sinh, "cosh": sp.cosh, "tanh": sp.tanh,
+    "Abs": sp.Abs, "Min": sp.Min, "Max": sp.Max,
+    "erf": sp.erf, "erfc": sp.erfc, "Piecewise": sp.Piecewise,
+}
+
+
+def _safe_symbolic_expression(source: str, symbols: dict[str, sp.Symbol]) -> sp.Expr:
+    """Parse a deliberately small arithmetic grammar; never evaluate source code."""
+    if not isinstance(source, str) or not source.strip():
+        raise ValueError("canonical_expression must be a non-empty string")
+    tree = ast.parse(source, mode="eval")
+
+    def visit(node):
+        if isinstance(node, ast.Expression):
+            return visit(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return sp.sympify(node.value)
+        if isinstance(node, ast.Name):
+            if node.id in symbols:
+                return symbols[node.id]
+            if node.id == "pi":
+                return sp.pi
+            if node.id == "E":
+                return sp.E
+            if node.id in {"True", "False"}:
+                return node.id == "True"
+            raise ValueError(f"undeclared name {node.id!r}")
+        if isinstance(node, ast.BinOp):
+            left, right = visit(node.left), visit(node.right)
+            operations = {
+                ast.Add: lambda: left + right,
+                ast.Sub: lambda: left - right,
+                ast.Mult: lambda: left * right,
+                ast.Div: lambda: left / right,
+                ast.Pow: lambda: left ** right,
+            }
+            operation = operations.get(type(node.op))
+            if operation is None:
+                raise ValueError(f"unsupported arithmetic operator {type(node.op).__name__}")
+            return operation()
+        if isinstance(node, ast.UnaryOp):
+            value = visit(node.operand)
+            if isinstance(node.op, ast.UAdd):
+                return value
+            if isinstance(node.op, ast.USub):
+                return -value
+            if isinstance(node.op, ast.Not):
+                return sp.Not(value)
+            raise ValueError(f"unsupported unary operator {type(node.op).__name__}")
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name) or node.func.id not in _ALLOWED_FUNCTIONS:
+                raise ValueError("only explicitly allow-listed mathematical functions may be called")
+            if node.keywords:
+                raise ValueError("keyword arguments are not supported in formula expressions")
+            return _ALLOWED_FUNCTIONS[node.func.id](*(visit(arg) for arg in node.args))
+        if isinstance(node, ast.Tuple):
+            return tuple(visit(element) for element in node.elts)
+        if isinstance(node, ast.Compare) and len(node.ops) == 1:
+            left, right = visit(node.left), visit(node.comparators[0])
+            op = node.ops[0]
+            comparisons = {
+                ast.Lt: sp.Lt, ast.LtE: sp.Le, ast.Gt: sp.Gt,
+                ast.GtE: sp.Ge, ast.Eq: sp.Eq, ast.NotEq: sp.Ne,
+            }
+            constructor = comparisons.get(type(op))
+            if constructor is None:
+                raise ValueError(f"unsupported comparison {type(op).__name__}")
+            return constructor(left, right)
+        if isinstance(node, ast.BoolOp):
+            values = [visit(value) for value in node.values]
+            if isinstance(node.op, ast.And):
+                return sp.And(*values)
+            if isinstance(node.op, ast.Or):
+                return sp.Or(*values)
+        raise ValueError(f"unsupported expression syntax: {type(node).__name__}")
+
+    expression = visit(tree)
+    if not isinstance(expression, sp.Expr):
+        raise ValueError("canonical_expression must evaluate to a scalar symbolic expression")
+    unknown = expression.free_symbols - set(symbols.values())
+    if unknown:
+        raise ValueError(f"expression contains undeclared symbols: {sorted(map(str, unknown))}")
+    return expression
+
+
 def equations_from_manifest(
     data: dict[str, Any], *, require_complete: bool = True
 ) -> list[dict[str, Any]]:
     """Convert reviewed symbolic records to the Core-15 equation dictionary API.
 
-    Expressions are parsed by SymPy (never Python eval) and lambdified against
-    NumPy. The manifest must contain reviewed, accepted records. This adapter
+    Expressions are parsed by a restricted AST arithmetic grammar into SymPy
+    (no source-code evaluation) and lambdified against NumPy. The manifest must
+    contain reviewed, accepted records. This adapter
     does not itself certify units, science, or independence.
     """
     if data.get("catalogue_id") != "core295-option2":
@@ -128,15 +220,9 @@ def equations_from_manifest(
             raise ValueError(f"{item['equation_id']}: variable names must be identifiers")
         symbols = {name: sp.Symbol(name, real=True) for name in names}
         try:
-            expression = sp.sympify(item["canonical_expression"], locals=symbols)
-        except (KeyError, TypeError, ValueError, sp.SympifyError) as exc:
+            expression = _safe_symbolic_expression(item["canonical_expression"], symbols)
+        except (KeyError, TypeError, ValueError, SyntaxError) as exc:
             raise ValueError(f"{item['equation_id']}: invalid canonical_expression: {exc}") from exc
-        unknown = expression.free_symbols - set(symbols.values())
-        if unknown:
-            raise ValueError(
-                f"{item['equation_id']}: expression contains undeclared symbols "
-                f"{sorted(str(symbol) for symbol in unknown)}"
-            )
         ranges = item.get("input_ranges")
         if not isinstance(ranges, dict) or set(ranges) != set(names):
             raise ValueError(f"{item['equation_id']}: input_ranges must match declared variables")
