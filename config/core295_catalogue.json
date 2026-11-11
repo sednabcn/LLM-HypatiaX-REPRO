@@ -654,6 +654,14 @@
       "url": "https://openstax.org/books/university-physics-volume-3/pages/7-5-the-quantum-harmonic-oscillator",
       "use": "Quantum harmonic oscillator eigenvalue equation, energy spectrum and Hermite-function solutions; linked to Schrödinger eigenproblem",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-ODE-COMPARISON-2020",
+      "domain": "Biology",
+      "title": "Different ODE models of tumor growth can deliver similar results",
+      "url": "https://doi.org/10.1186/s12885-020-6703-0",
+      "use": "Secondary equation comparison with explicit Simeoni transit-compartment system and alternative tumor-growth ODEs; trace selected equations to original primary papers",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
