@@ -61,7 +61,7 @@ def test_duplicate_independence_unit_is_rejected_within_category():
     ]
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids)
-    assert any("non-independent repeated unit" in e for e in errors)
+    assert any("independent_unit_id" in e and "reused" in e for e in errors)
 
 
 def test_heldout_fields_are_rejected():
