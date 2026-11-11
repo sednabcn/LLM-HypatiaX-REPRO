@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–8. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–9. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -94,6 +94,8 @@
 72. MakerDAO. (2020). *MIP45: Liquidations 2.0 — Liquidation System Redesign*. Historical primary design specification. https://mips.makerdao.com/mips/details/MIP45. Specifies Dutch collateral auctions and configurable linear, stair-step exponential and continuous exponential price-decrease calculators. The MIP is marked obsolete by a later governance decision; retain only as historical design provenance and pair with current Sky documentation and versioned contract code.
 
 73. OpenStax. *University Physics Volume 3*. Sections 2.4 “Thin Lenses” (Eqs. 2.19–2.21); 4.3–4.4 “Double-Slit Diffraction” and “Diffraction Gratings”; 6.3 “The Compton Effect” (Eqs. 6.28–6.30); 7.3 “The Schrödinger Equation” (Eq. 7.23); and 7.5 “The Quantum Harmonic Oscillator” (Eqs. 7.55–7.58). https://openstax.org/details/books/university-physics-volume-3. Exact section-level equation locations for geometric optics, diffraction, photon scattering and quantum eigenvalue problems; related equations within each derivation system must be clustered rather than counted as independent units.
+
+74. *Different ODE models of tumor growth can deliver similar results*. (2020). *BMC Cancer*. https://doi.org/10.1186/s12885-020-6703-0. Secondary comparison that prints the Simeoni tumor-growth function and the associated transit-compartment ODE system, and contrasts alternative growth laws. Use it to locate and compare equations; the Simeoni primary paper remains the source for its model lineage and assumptions.
 
 ## Bibliographic and provenance cautions
 
