@@ -2632,6 +2632,150 @@
       "url": "https://goldbook.iupac.org/terms/view/B00626",
       "use": "Authoritative modern definition and exact decadic spectral-power attenuation expression P_lambda=P_lambda^0*10^(-epsilon*c*l); records homogeneous/isotropic medium, monochromatic radiation, path length and coefficient units",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-COLLISIONS",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §9.4 Types of Collisions",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/9-4-types-of-collisions",
+      "use": "Elastic and inelastic collision relations; define isolated-system assumptions, dimensionality and whether the collision is perfectly inelastic.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-ROCKET",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §9.7 Rocket Propulsion",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/9-7-rocket-propulsion",
+      "use": "Tsiolkovsky rocket equation and momentum-balance derivation; distinguish ideal rocket equation from gravity/drag trajectory.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-KEPLER",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §13.5 Kepler's Laws of Planetary Motion",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/13-5-keplers-laws-of-planetary-motion",
+      "use": "Kepler orbital laws and Newtonian derivation; link orbital period/angular momentum to inverse-square gravitation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-PENDULUM",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §15.4 Pendulums",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/15-4-pendulums",
+      "use": "Simple and physical pendulum periods; small-angle approximation and moment-of-inertia conventions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-FORCED-OSC",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §15.6 Forced Oscillations",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/15-6-forced-oscillations",
+      "use": "Driven damped oscillator governing equation and steady-state amplitude; distinguish transient and steady-state solutions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-STANDING-WAVES",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §16.6 Standing Waves and Resonance",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/16-6-standing-waves-and-resonance",
+      "use": "Standing-wave modes and resonance frequencies; boundary conditions determine allowed harmonics.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-DOPPLER",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §17.7 The Doppler Effect",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/17-7-the-doppler-effect",
+      "use": "Classical Doppler frequency shift; distinguish moving source, moving observer and relativistic light cases.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-SOUND",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §17.3 Sound Intensity",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/17-3-sound-intensity",
+      "use": "Sound intensity, sound-level decibels and pressure amplitude; RMS/peak and reference-intensity conventions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-CAPACITANCE",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2 §8.3 Capacitors and Capacitance",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/8-3-capacitors-and-capacitance",
+      "use": "Capacitance of ideal geometries and stored electric energy; dielectric and fringing assumptions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-RC",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2 §10.4 RC Circuits",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/10-4-rc-circuits",
+      "use": "Charging/discharging transient solutions of a first-order RC circuit; one governing model with different initial conditions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-FARADAY",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2 §13.2 Faraday's Law",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/13-2-faradays-law",
+      "use": "Induced EMF from changing magnetic flux; sign, orientation and coil-turn convention.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-AC",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2 §15.5 Resonance in AC Circuits",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/15-5-resonance-in-ac-circuits",
+      "use": "Series RLC impedance, resonance, phase and average power; RMS/peak and circuit topology.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-PHOTOELECTRIC",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §6.2 Photoelectric Effect",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-2-photoelectric-effect",
+      "use": "Einstein photoelectric equation and threshold frequency; metal work-function and photon-energy units.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-COMPTON",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §6.3 The Compton Effect",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-3-the-compton-effect",
+      "use": "Compton wavelength shift from relativistic energy-momentum conservation; scattering-angle convention.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-BOHR",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §6.4 Bohr's Model of the Hydrogen Atom",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-4-bohrs-model-of-the-hydrogen-atom",
+      "use": "Hydrogenic energy levels and orbital radii; keep linked outputs within the Bohr-model family.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-DEBROGLIE",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §6.5 De Broglie's Matter Waves",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-5-de-broglies-matter-waves",
+      "use": "Matter-wave wavelength relation; nonrelativistic and relativistic momentum conventions.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-BOX",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §7.4 The Quantum Particle in a Box",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/7-4-the-quantum-particle-in-a-box",
+      "use": "One-dimensional infinite-well eigenvalues and boundary conditions; link to Schrödinger eigenproblem.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-INTERFERENCE",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §3.1 Young's Double-Slit Experiment",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/3-1-youngs-double-slit-experiment",
+      "use": "Double-slit interference path-difference and fringe conditions; coherent illumination and far-field geometry.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
