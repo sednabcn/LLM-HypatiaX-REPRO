@@ -231,7 +231,7 @@ FROM_STEP=""
 DRY_RUN=false
 
 _STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
-_DEFERRED_STEPS="instability"
+_DEFERRED_STEPS="instability exp2_all_domains_pca_4060"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
 while [[ $# -gt 0 ]]; do
