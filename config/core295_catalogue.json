@@ -1779,6 +1779,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-WANG-SPECULATIVE-MULTIPLIERS",
+      "domain": "DeFi Risk",
+      "title": "Speculative Multipliers on DeFi: Quantifying On-Chain Leverage Risks (FC 2022)",
+      "url": "https://doi.org/10.1007/978-3-031-18283-9_3",
+      "use": "Under-collateralized leverage model; liquidation-constrained maximum leverage; borrower IL, arbitrage and liquidation risk",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
