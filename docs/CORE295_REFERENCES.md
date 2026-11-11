@@ -81,6 +81,8 @@
 
 66. Raoult, F.-M. (1887). Loi générale des tensions de vapeur des dissolvants. *Comptes Rendus Hebdomadaires des Séances de l’Académie des Sciences, 104*, 1430–1433. Primary historical source for the vapor-pressure relation now known as Raoult’s law. A modern bibliographic record confirms the original journal, volume and pages; OpenStax Chemistry 2e §11.4 provides an accessible ideal-solution statement, \(P_A=X_A P_A^*\). Confirm the original paper’s exact equation and empirical scope before formal acceptance. https://openstax.org/books/chemistry-2e/pages/11-4-colligative-properties.
 
+67. Raoult, F.-M. (1882). Loi générale de congélation des dissolvants. *Comptes Rendus Hebdomadaires des Séances de l’Académie des Sciences, 95*, 1030–1033. Original source for the empirical freezing-point depression relation; an English historical transcription is available in *A Source Book in Chemistry, 1400–1900*. Confirm the original notation, concentration basis and scope before treating a modern \(\Delta T_f=K_f m\) form as an exact transcription. http://www.originalsources.com/Document.aspx?DocID=FF4QNC1T8Z463L8.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
