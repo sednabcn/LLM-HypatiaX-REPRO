@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 33 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 34 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -284,3 +284,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 33 (2026-11-11)
 
 [Candidate Discovery Batch 33](CORE295_CANDIDATE_DISCOVERY_BATCH_33.md) adds four stochastic-risk families: OU (constant-volatility mean reversion), CIR (square-root mean reversion), Hawkes (self-exciting event clusters) and Merton jump diffusion. Keep OU/CIR in the broader mean-reverting diffusion family; keep Hawkes as point-process risk; keep Merton jump and its no-jump GBM limit in one jump-diffusion family. Applicability depends on the DeFi Risk domain boundary.
+
+
+## Discovery batch 34 (2026-11-11)
+
+[Candidate Discovery Batch 34](CORE295_CANDIDATE_DISCOVERY_BATCH_34.md) adds Fisher–KPP, Gierer–Meinhardt and chemostat–Monod. Fisher–KPP extends logistic growth spatially; Gierer–Meinhardt is a nonlinear activator–inhibitor member of the broader Turing/morphogenesis PDE family; chemostat–Monod couples biomass and substrate states but contains the MM/Monod saturation structure.
