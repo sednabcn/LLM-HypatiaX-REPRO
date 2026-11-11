@@ -169,3 +169,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 15 (2026-11-11)
 
 [Source Verification Audit 15](CORE295_SOURCE_VERIFICATION_AUDIT_15.md) records Liquity V1's coupled product-sum Stability Pool accounting: the cumulative depletion product P and collateral-gain sum S jointly determine compounded deposits and collateral gains from depositor snapshots. It is a possible system-level risk-sharing candidate only if the domain admits stateful protocol accounting and a deterministic system adapter. Do not split P, S, deposit/gain queries, scale handling or LQTY reward sum G into separate equations. Hold pending immutable implementation pin and domain/Recovery Mode contract.
+
+
+## Source verification audit 16 (2026-11-11)
+
+[Source Verification Audit 16](CORE295_SOURCE_VERIFICATION_AUDIT_16.md) confirms Aave V3's health factor expands to the collateral-value-weighted liquidation-threshold sum divided by total debt. This is the multi-collateral form of the same risk-adjusted collateral/debt health family as Euler EVK, while Morpho's market formula is its single-collateral case. Do not count protocol labels or the weighted-average-threshold identity as new equations; keep health-state measures separate from liquidation incentive functions.
