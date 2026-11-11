@@ -117,13 +117,47 @@ The official Curve overview also identifies CryptoSwap for volatile pairs and cu
 
 Balancer weighted pools, Curve StableSwap, Curve CryptoSwap, DODO PMM, Solidly stable/volatile pools, Gyro E-CLP, YieldSpace and liquidity-book designs should each be reconstructed from their own primary whitepapers or pinned code. Similar use of reserves, weights, amplification, exponentials or derivatives does not by itself establish equivalence or distinctness.
 
+
+### 2.5 DODO Proactive Market Maker
+
+Official DODO documentation defines a guide-price-centered, inventory-dependent marginal price. For base inventory \(B\) below its equilibrium \(B_0\), the relative price factor is \(R=1-k+k(B_0/B)^2\), so \(P=iR\). The documentation integrates this marginal price to obtain a finite-trade quote and then derives a quadratic inversion for the post-trade inventory. It also defines a long-regression rule that resets the equilibrium inventory using the guide price. These are not four independent equations: they are one PMM pricing/inventory-regression mechanism. Its use of an external guide price and inventory re-centering is structurally different from a static reserve-only constant-product invariant; the full guide-price and regression state contract must be part of any candidate.
+
+Source: https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm
+
+### 2.6 YieldSpace constant-power-sum invariant
+
+The 2020 YieldSpace working paper gives
+
+\[
+x^{1-t}+y^{1-t}=k,
+\]
+
+where \(t\) is normalized time to maturity with \(0\leq t<1\). At \(t=0\) it becomes constant sum; as \(t\to1\) it approaches constant product. The paper's intended observable is fixed-yield-token interest rate rather than a conventional spot price, and it derives the reserve-ratio rate relation \(r=y/x-1\). Time-to-maturity is an explicit state/parameter in the invariant, not merely a different numerical fee.
+
+**Structural screen:** this is a strong distinct AMM invariant lead because the exponent depends on time to maturity and the target property is a constant interest rate for a fixed reserve ratio. The t=0 and t→1 limits are not separate equations. The invariant, rate observable, time convention, fee function and maturity behavior should be one coherent model contract.
+
+Primary source: Niemerg, Robinson & Livnev (2020), *YieldSpace*, working draft: https://yieldprotocol.com/YieldSpace.pdf
+
+### 2.7 Solidly V2 stable and volatile pools
+
+Solidly's official V2 documentation specifies:
+- volatile pool: \(xy\geq k\), which remains in the constant-product family;
+- stable pool: \(x^3y+y^3x\geq k\), a polynomial invariant intended for correlated assets.
+
+The stable polynomial is not the Curve StableSwap invariant and should not be represented by the unsupported Curve shortcut \((A+1)\sqrt{xy}\). However, reserve units, decimal normalization, fee treatment, invariant inequality and exact deployed implementation revision need verification. Do not infer the full contract math from the short documentation page alone.
+
+Source: https://docs.solidly.com/dex-basics/swaps.html
+
 ## 3. Cross-family and Core-15 exclusion gates
 
 1. Uniswap V2 swap output, reserve ratio, spot price, execution price, price impact and LP share formulas remain tied to the constant-product family and must not evade Core-15 exclusions by changing observable or fee convention.
 2. Uniswap V3's per-range virtual-reserve curve is a coordinate transform of constant-product trading in an active range; count a full tick/position state system only if its complete state transition is the benchmark unit.
 3. Balancer's weighted invariant is a generalized product-power family. Its relationship to constant product requires explicit E3/E4 adjudication.
 4. Curve StableSwap is a separate nonlinear sum/product invariant candidate; its scalar solver and derived swap/price outputs are not independent equations.
-5. Curve CryptoSwap is provisionally separate from StableSwap according to Curve's own model taxonomy, but exact equation/code evidence is still required.
+5. Curve CryptoSwap is provisionally separate from StableSwap according to its primary dynamic-invariant/oracle formulation.
+6. YieldSpace's time-dependent constant-power-sum invariant is a distinct yield-space candidate; its constant-sum and constant-product limits are not additional equations.
+7. DODO PMM is a guide-price/inventory-regression system; do not count its marginal price, integrated quote and quadratic inverse separately.
+8. Solidly stable polynomial invariant is distinct from Curve StableSwap in form, but its implementation-level scaling/normalization remains unverified; Solidly volatile remains constant-product.
 6. Structural distinctness does not imply statistical independence. Pool versions, forks, and parameterized deployments from one invariant family should be clustered for sampling.
 
 ## 4. Current disposition
