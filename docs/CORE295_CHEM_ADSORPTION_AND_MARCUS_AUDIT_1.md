@@ -5,7 +5,7 @@
 
 ## 1. Frumkin adsorption versus Langmuir
 
-The source register already includes Langmuir's 1918 primary paper. This pass adds Frumkin's 1920 *On the theory of electrocapillarity: II* as a primary historical source lead (Philosophical Magazine, Series 6, 40(237), 375–385). The source record is not yet a verified equation/page transcription.
+The source register includes Langmuir's 1918 primary paper and Frumkin's 1920 *On the theory of electrocapillarity: II* (Philosophical Magazine, Series 6, 40(237), 375–385). **Attribution correction:** the 1920 paper is a relevant electrocapillarity source, but it should not be cited as the established original derivation of the modern Frumkin coverage isotherm. The Moscow State University Department of Electrochemistry bibliography separately lists Frumkin's 1926 *The Influence of the Electric Field on the Adsorption of Neutral Molecules* (Zeitschrift für Physik 35, 792–802); a later technical account attributes the isotherm derivation to 1926. That 1926 paper is now registered as the higher-priority primary equation source, but its exact equation/page is not yet transcribed.
 
 The equation-level form commonly given in modern literature is
 
@@ -13,7 +13,7 @@ The equation-level form commonly given in modern literature is
 bc=\frac{\theta}{1-\theta}\exp(-2a\theta),
 ]
 
-where θ is surface coverage, (b) an adsorption coefficient/activity convention, and (a) an adsorbate-interaction parameter. A recent accessible primary-research treatment gives this form and the corresponding surface equation of state; a review table lists Langmuir, Volmer, Frumkin, Temkin and other isotherms as distinct coverage relations derived from different assumptions.
+where θ is surface coverage, (b) an adsorption coefficient/activity convention, and (a) an adsorbate-interaction parameter. A later technical treatment gives the corresponding surface equation of state, γ = −RTΓ∞ ln(1−θ) + aθ², and reports that combining it with Gibbs adsorption yields this coverage isotherm. This is secondary equation-level evidence, not yet direct transcription from the 1926 primary paper.
 
 **Structural screen:** At (a=0), the Frumkin equation reduces to the Langmuir isotherm. Thus Langmuir is a parameter-limit/special case of this Frumkin expression, not an independent count if the generalized Frumkin family is the model unit (E2 under the draft policy). For nonzero (a), the exponential coverage-interaction factor changes the constitutive relation and represents nonideal lateral adsorbate interactions. This is a potentially distinct model family from ideal Langmuir adsorption, but it must be reconstructed with a source-verified parameter/sign convention and a physical coverage domain (0\leq\theta<1).
 
@@ -49,7 +49,9 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 
 ## 5. Source evidence
 
-- Frumkin (1920), primary historical source: https://doi.org/10.1080/14786440908636137
+- Frumkin (1920), primary electrocapillarity source: https://doi.org/10.1080/14786440908636137
+- Frumkin (1926), *The Influence of the Electric Field on the Adsorption of Neutral Molecules*, Z. Phys. 35, 792–802; bibliographic listing: https://www.elch.chem.msu.ru/article/index.htm
+- Later technical treatment of Frumkin equation of state and isotherm derivation: https://studylib.net/doc/26249563/yuliy-d.-gamburg--giovanni-zangari--auth.----theory-and-p...
 - Frumkin & Obrutsheva (1926), electric-field dependence of adsorption: https://doi.org/10.1038/117790a0
 - Langmuir (1918), primary ideal adsorption source: https://doi.org/10.1021/ja02242a004
 - Marcus (1956), primary electron-transfer theory; publisher abstract explicitly identifies solution collision number × exp(-ΔF*/kBT): https://doi.org/10.1063/1.1742723
