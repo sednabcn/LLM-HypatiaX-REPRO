@@ -18,11 +18,15 @@ For each equation/task, the intended sequence in the main manuscript, Section 7.
 
 All paths converge to one selected formula/prediction record. Store the proposed formula, parsed formula, selected route, every diagnostic value, thresholds, blend weights, and failure status.
 
-### Manuscript consistency issue — resolve before changing routing code
+### Manuscript consistency issue — agreed precedence and implementation status
 
-The Stage 2 prose says a transcendental-token flag triggers ensemble mode, but the Stage 5 decision equation does not include that flag: it permits pure LLM whenever training R² >= 0.95 and Delta < tau. These rules can disagree. The implementation must not silently choose one interpretation. Before claiming exact manuscript conformance, revise the paper's decision equation/prose or explicitly specify that the Stage 2 flag has precedence (e.g. pure LLM additionally requires no structural-risk flag). Record the agreed rule in tests.
+**Decision agreed:** the structural-risk flag has precedence over the high-fit pure-LLM shortcut. A trusted candidate using a flagged function is routed to an LLM+NN ensemble even when training R² >= 0.95. A failed trust gate routes to NN fallback. Pure LLM is eligible only when the trust gate passes, no structural-risk function is present, and training R² >= 0.95.
 
-Also state explicitly that the Stage 3 edge probe is drawn from training data and that Stage 4 uses only unlabelled query covariates plus training-fitted density information. Never use test labels to select the route, tune tau, or choose blend weights.
+**Implemented on this branch:** `hypatiax/core/routing.py` provides exact function-call detection for exp/log/Phi/sin/cos/erf and a deterministic route selector. `hybrid_system_nn_defi_domain.py` now uses it, logs the route reason, and returns trust-gate status, structural-risk flag/tokens, and blend weights. Regression tests cover exact-call detection, high-fit structural-risk override, high-fit non-structural pure LLM, and trust-gate failure.
+
+**Still not implemented:** the manuscript's Stage 3 training-side edge degradation probe and calibrated tau; Stage 4 training-fitted KDE/OOD probability; and the manuscript's specified alpha=0.3 OOD-dependent blend formula. The current helper deliberately retains the existing R²-proportional blend for compatibility and does not claim those missing stages are complete. These remain pre-run blockers for claiming full five-stage algorithm conformance.
+
+The Stage 3 edge probe must be drawn from training data. Stage 4 may use only unlabelled query covariates plus training-fitted density information. Never use held-out target labels/scores to select a route, tune tau, or choose blend weights.
 
 ## 3. Campaign-level experiment route
 
@@ -60,12 +64,12 @@ The current `ci_runner/run_fresh_experiments.sh` stage list is:
 Interpretation and gaps:
 
 - `exp1` / `exp1_pca`: DeFi benchmark paths; `exp1b` / `exp1b_pca` are DeFi seed/portfolio paths.
-- `exp1_ablation` currently advertises only PySR-only, HypatiaX, and HypatiaX-noLLM. It does **not** implement the six leave-one-gate-out arms in the main paper's decision-aligned plan.
+- `exp1_ablation` currently advertises only PySR-only, HypatiaX, and HypatiaX-noLLM. It does **not** implement the six leave-one-gate-out arms in the main paper's decision-aligned plan. Do not label the existing three-way comparison as a six-gate ablation.
 - `exp1_five` is the Core-15 five-system comparison; it is not the full six-gate ablation.
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- There is no dedicated Protocol-30 stage in this launcher. Do not claim that Protocol-30 is freshly rerun by `exp2` or `exp2_five`.
+- There is no dedicated Protocol-30 stage in this launcher. Do not claim that Protocol-30 is freshly rerun by `exp2` or `exp2_five`. This remains a pre-run blocker; no stage is added until the custom 30-equation source, clean live method arms, random/PCA split definitions, output schema, and timeout policy are pinned.
 - The fresh protocol currently contains no explicit Protocol-30 campaign entry. Add one only after its inputs, clean-path method arms, output schema, and timeout policy are frozen.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
@@ -80,7 +84,9 @@ The noise-sweep recovery thresholds vary by sigma (0.999999 at 0%; 0.995 at 0.05
 The fresh launcher requires a new empty RESULTS_DIR outside the repository, a clean Git checkout, no legacy mode, and records a run manifest. It forces hardcoded-formula and prompt-hint bypasses off and clears inherited LLM cache/replay settings. The real route includes a live API preflight and a PySR warm-up; do not execute it without explicit approval of compute/API spend.
 
 Before any scientific run:
-- Resolve the Stage 2 / Stage 5 routing precedence conflict.
+- Complete and test the Stage 3 training-side degradation probe and Stage 4 train-fitted KDE/OOD weighting; the current routing patch only resolves trust-gate and structural-risk precedence.
+- Add and validate the six Core-15 leave-one-gate-out arms; do not treat the current three-arm ablation as complete.
+- Freeze and implement the dedicated Protocol-30 campaign inputs, arms, split definitions, schema, and timeout policy.
 - Add a dedicated Protocol-30 stage with clean formula provenance.
 - Implement the six Core-15 leave-one-gate-out variants, on the same equations/splits/seeds/resources as Pure LLM and full HDS.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
