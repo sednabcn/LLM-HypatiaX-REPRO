@@ -230,7 +230,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_protocol30_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -375,7 +375,7 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
-  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
+  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},protocol30-pca-4060,noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
@@ -2254,6 +2254,65 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
 "
 
 
+run exp2_protocol30_pca_4060 "Protocol-30 custom 30-equation registry -- PCA-directed 40/60 (separate from Feynman)" bash -c "
+  cd '${REPO_ROOT}'
+  _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30-pca-4060'
+  mkdir -p "\${_P30_PCA_DIR}"
+  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  for DOMAIN_ID in \${EXP2_DOMAINS}; do
+    echo '=== Protocol-30 PCA 40/60: domain='\${DOMAIN_ID}' ==='
+    FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+    METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+    PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+    PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+    JOB_DEADLINE=${JOB_DEADLINE} \
+      python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
+        --protocol all_domains \
+        --domain "\${DOMAIN_ID}" \
+        --samples ${FEYNMAN_SAMPLES} \
+        --pysr-timeout ${FEYNMAN_TIMEOUT} \
+        --method-timeout ${METHOD_TIMEOUT} \
+        --populations ${PYSR_POPULATIONS} \
+        --parsimony 0.01 \
+        --use-transcendental-compositions \
+        --noiseless \
+        --threshold 0.999999 \
+        --checkpoint-name "protocol30_pca4060_checkpoint_\${DOMAIN_ID}" \
+        --output-dir "\${_P30_PCA_DIR}" \
+        --force-fresh \
+        2>&1 | tee -a "\${_P30_PCA_DIR}/protocol30_pca4060_run.log" \
+      || { echo '::error::Protocol-30 PCA domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
+  done
+  python3 - "\${_P30_PCA_DIR}" <<'PYEOF'
+import json, sys
+from pathlib import Path
+out = Path(sys.argv[1])
+files = sorted(out.glob('protocol_core_noiseless_pca_*.json'))
+rows = 0
+for path in files:
+    try:
+        data = json.loads(path.read_text())
+        rows += len(data) if isinstance(data, list) else len(data.get('results', [])) if isinstance(data, dict) else 0
+    except Exception:
+        pass
+summary = {
+    'campaign': 'Protocol-30',
+    'protocol': 'pca_40_60',
+    'registry': 'hypatiax.protocols.experiment_protocol_all_30.ExperimentProtocolAll',
+    'registry_domains': 10,
+    'expected_equations': 30,
+    'result_files': [p.name for p in files],
+    'record_count': rows,
+    'status': 'outputs_present' if files else 'incomplete',
+    'note': 'Manuscript specifies 11 domains; current registry contains 10. Resolve before claiming full manuscript coverage.'
+}
+(out / 'protocol30_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
+print(f"[Protocol-30 PCA] files={len(files)} records={rows} summary={out / 'protocol30_pca4060_summary.json'}")
+if not files:
+    raise SystemExit('Protocol-30 PCA produced no result files')
+PYEOF
+"
+ 
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
@@ -2876,6 +2935,7 @@ EXPERIMENTS = {
     "exp2_feynman":           RESULTS / "comparison_results/feynman-tests/exp2",
     "exp2_feynman_pca_4060":  RESULTS / "comparison_results/feynman-tests/exp2_pca_4060",
     "exp2":                   RESULTS / "comparison_results/feynman-tests/exp2_multi",
+    "exp2_protocol30_pca_4060": RESULTS / "comparison_results/protocol30-pca-4060",
     "exp3":                   RESULTS / "extrapolation",
     "exp3b":                  RESULTS / "extrapolation/multi_seed",
     "suppA":                  RESULTS / "hybrid_pysr/defi",
