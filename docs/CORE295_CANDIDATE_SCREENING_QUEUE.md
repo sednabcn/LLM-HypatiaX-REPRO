@@ -513,3 +513,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 67 (2026-11-11)
 
 [Source Verification Audit 67](CORE295_SOURCE_VERIFICATION_AUDIT_67.md) confirms Maverick V2's whitepaper tick invariant is virtual constant product, shared with Gyro 2-CLP. The security review identifies a pinned supplemental commit but excludes core pool swap/liquidity files; the repository is not retrievable through the current GitHub access path. Keep the dynamic-bin/TWAP system held pending core implementation verification.
+
+
+## Source verification audit 68 (2026-11-11)
+
+[Source Verification Audit 68](CORE295_SOURCE_VERIFICATION_AUDIT_68.md) verifies Rogers–Satchell's drift-independent OHLC variance estimator against the 1991 primary paper. It is structurally distinct from Parkinson's zero-drift high–low estimator, but both belong to one range-volatility source family and share price-path/data dependencies. Retain as candidate_reference only; hold pending the discrete-extrema correction, DeFi OHLC sampling contract and statistical-unit policy. No proposed or accepted equation is added.
