@@ -388,3 +388,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 45 (2026-11-11)
 
 [Source Verification Audit 45](CORE295_SOURCE_VERIFICATION_AUDIT_45.md) verifies Morpho Blue's capped liquidation incentive factor (LIF=\min(M,1/[1-\gamma(1-LLTV)])) against official docs and a pinned Morpho Blue implementation commit. The factor is one protocol-specific liquidation-incentive function; collateral seizure, debt-share conversion, health factor and bad-debt handling belong to the same liquidation system, not separate equation units.
+
+
+## Source verification audit 46 (2026-11-11)
+
+[Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) verifies Euler EVK's capped linear liquidation discount (d(h)=\min(1-h,d_{max})) from the account health ratio and a pinned Liquidation.sol commit. It is a health-shortfall function, not a time-based Dutch auction; it differs structurally from Morpho's reciprocal LLTV/cursor LIF. Keep health, discount, collateral-yield conversion and max-repay logic in one liquidation transition.
