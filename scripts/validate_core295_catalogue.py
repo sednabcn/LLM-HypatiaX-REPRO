@@ -45,6 +45,9 @@ def validate(data: dict, require_ready: bool = False) -> list[str]:
     if tuple(data.get("domains", ())) != DOMAINS:
         _fail(errors, f"domains must be exactly {list(DOMAINS)} in canonical order")
 
+    excluded = data.get("core15_exclusion_ids")
+    if not isinstance(excluded, list) or len(excluded) != 15 or len(set(excluded)) != 15:
+        _fail(errors, "core15_exclusion_ids must contain the 15 unique Core-15 names")
     entries = data.get("entries")
     if not isinstance(entries, list):
         _fail(errors, "entries must be a list")
@@ -71,6 +74,8 @@ def validate(data: dict, require_ready: bool = False) -> list[str]:
                 _fail(errors, f"{where}.{field} is required")
         equation_id = entry.get("equation_id")
         if isinstance(equation_id, str):
+            if equation_id in set(excluded or []):
+                _fail(errors, f"Core-15 exclusion violation: {equation_id}")
             if equation_id in ids:
                 _fail(errors, f"duplicate equation_id: {equation_id}")
             ids.add(equation_id)
