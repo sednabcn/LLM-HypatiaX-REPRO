@@ -569,3 +569,14 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 | PHYS-THERMAL-TRANSPORT | heat_conduction; Planck/Stefan radiation | Keep conductive and radiative transfer physically distinct; cross-domain transport-operator equivalence still requires the global policy. |
 
 The Physics author-pool audit screens 75 rows and accepts none. See [CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md](CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md). This map is provisional and does not imply that any family contributes an accepted entry.
+
+### Additional families and source leads from DeFi AMM source expansion 1
+
+| Provisional family ID | Source lead | Initial structural screen |
+|---|---|---|
+| DEFI-AMM-LIQUIDITY-BOOK-DISCRETE-BINS | Trader Joe JOE v2.1, §§2–3 | The per-bin relation (P_i x+y=L) is a fixed-price constant-sum relation and is not a distinct invariant by itself. The aggregate discrete-bin state-transition mechanism may be a protocol-level candidate only after full state/transition and pinned implementation reconstruction. |
+| DEFI-AMM-YIELDSPACE-POWER-SUM | YieldSpace (2020), Eq. 1 | Time-to-maturity-dependent constant power-sum invariant (x^{1-t}+y^{1-t}=k); constant-sum and constant-product endpoint/limit cases belong to this same family. High-priority candidate lead; not yet a proposed or accepted catalogue entry. |
+| DEFI-AMM-CONCENTRATED-CPMM | Invariant (2021), §2 | Bounded-range reserve formulas derive from a translated (xy=L^2) curve. Group with Uniswap v3 concentrated liquidity; a new chain/deployment does not establish a new invariant family. |
+
+See [CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md](CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md). This source expansion adds three references, not three equations; no entry is accepted.
+
