@@ -577,3 +577,5 @@ Primary/official equation evidence has been added for Curve StableSwap (Egorov 2
 - Balancer weighted: invariant, spot price and inverse trade directions are one weighted-invariant family; apply E3/E4 policy explicitly.
 
 See [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md). No AMM candidate was accepted.
+
+Biology queue also includes Verhulst (1838) logistic population growth and von Bertalanffy (1938) organic growth. Keep the Verhulst differential equation and integrated solution in one derivation family; preserve continuous/discrete time distinctions. von Bertalanffy remains a primary-source equation/page transcription task, not a proposed candidate yet.
