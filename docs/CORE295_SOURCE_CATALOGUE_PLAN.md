@@ -3,6 +3,8 @@
 **Status:** source register drafted; no equation entries approved yet.  
 **Design:** Option 2 — 295 structurally distinct equations, 59 per domain.
 
+The first candidate discovery pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_1.md](CORE295_CANDIDATE_DISCOVERY_BATCH_1.md). It is a review backlog only; none of its candidates count toward the 295 accepted records.
+
 ## 1. Source policy
 
 Use textbooks, peer-reviewed mathematical-biology literature, standards bodies, and primary protocol documentation. Secondary formula sheets may help discover candidate equations but cannot be the sole acceptance source. For each equation, cite an exact chapter/section/page or protocol version, not merely a general home page.
