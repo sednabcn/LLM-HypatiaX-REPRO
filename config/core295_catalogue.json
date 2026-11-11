@@ -2961,6 +2961,22 @@
       "url": "https://docs.solidly.com/dex-basics/swaps.html",
       "use": "Official Solidly V2 documentation specifies volatile x*y≥k and stable x^3*y + y^3*x≥k for correlated assets. Stable invariant is polynomial and differs from Curve StableSwap; exact reserve scaling, token decimal normalization and implementation revision must be checked before formal candidate transcription. Volatile pool remains constant-product family.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-VERHULST-1838-LOGISTIC",
+      "domain": "Biology",
+      "title": "Notice sur la loi que la population suit dans son accroissement",
+      "url": "https://www.neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf",
+      "use": "Primary Verhulst (1838), Correspondance Mathématique et Physique 10, pp. 113–121; translated scan of the original logistic population-growth note. The later 1845 memoir provides further development. Preserve original population-growth assumptions and distinguish continuous logistic ODE, its integrated logistic curve, and discrete logistic maps as related but not automatically independent equations.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BERTALANFFY-1938-ORGANIC-GROWTH",
+      "domain": "Biology",
+      "title": "A Quantitative Theory of Organic Growth (Inquiries on Growth Laws II)",
+      "url": "https://www.jstor.org/stable/41447359",
+      "use": "Primary von Bertalanffy (1938), Human Biology 10(2), pp. 181–213; derives organic growth laws from the counteraction of anabolic construction and catabolic destruction terms, with surface/volume scaling assumptions. Equation transcription and biological size/mass observable need direct PDF review before candidate drafting.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
