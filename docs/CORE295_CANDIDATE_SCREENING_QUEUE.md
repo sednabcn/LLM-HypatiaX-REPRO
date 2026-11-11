@@ -393,3 +393,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 46 (2026-11-11)
 
 [Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) verifies Euler EVK's capped linear liquidation discount (d(h)=\min(1-h,d_{max})) from the account health ratio and a pinned Liquidation.sol commit. It is a health-shortfall function, not a time-based Dutch auction; it differs structurally from Morpho's reciprocal LLTV/cursor LIF. Keep health, discount, collateral-yield conversion and max-repay logic in one liquidation transition.
+
+
+## Source verification audit 46 (2026-11-11)
+
+[Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) verifies Euler EVK's capped linear health-shortfall liquidation discount against official documentation and a pinned implementation commit. The discount is (d(h)=\min(1-h,d_{max})) for (0\le h<1), unlike Morpho Blue's capped reciprocal LIF. Treat health, discount, collateral-yield conversion and repay limits as one liquidation transition.
