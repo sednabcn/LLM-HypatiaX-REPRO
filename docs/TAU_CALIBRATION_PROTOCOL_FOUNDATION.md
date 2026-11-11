@@ -92,33 +92,33 @@ The guarantee is **per category**, not a pooled total across categories. Do not 
 
 ## 6. Selecting among candidate thresholds: fixed-sequence testing
 
-The approved selection procedure is **fixed-sequence testing**, not Bonferroni over the threshold grid. Before calibration outcomes are examined, declare a finite grid in order from the strictest threshold (smallest \\(\\tau\\), permitting the fewest pure-LLM routes) to the laxest (largest \\(\\tau\\)). The order must be frozen in the manifest. With the routing convention \\(\\Delta\\leq\\tau\\), this means candidate values are strictly increasing.
+The approved selection procedure is **fixed-sequence testing**, not Bonferroni over the threshold grid. Before calibration outcomes are examined, declare a finite grid in order from the strictest threshold (smallest \(\tau\), permitting the fewest pure-LLM routes) to the laxest (largest \(\tau\)). The order must be frozen in the manifest. With the routing convention \(\Delta\leq\tau\), this means candidate values are strictly increasing.
 
 For each candidate in that order, test the unsafe-risk null hypothesis
 
 \[
-H_{0,j}: p_{\\mathrm{bad}}(\\tau_j)\\geq\\varepsilon
+H_{0,j}: p_{\mathrm{bad}}(\tau_j)\geq\varepsilon
 \]
 
-against the alternative that the bad-route probability is below \\(\\varepsilon\\), using an exact one-sided binomial test at level \\(\\delta=0.05\\). Proceed to the next, more permissive candidate only if the current null is rejected. Stop at the first candidate that is not certified. The selected threshold is the last candidate that passed. If the strictest candidate does not pass, no threshold is certified and that category remains on ensemble routing. If every candidate passes, the laxest candidate is selected.
+against the alternative that the bad-route probability is below \(\varepsilon\), using an exact one-sided binomial test at level \(\delta=0.05\). Proceed to the next, more permissive candidate only if the current null is rejected. Stop at the first candidate that is not certified. The selected threshold is the last candidate that passed. If the strictest candidate does not pass, no threshold is certified and that category remains on ensemble routing. If every candidate passes, the laxest candidate is selected.
 
-This fixed-sequence gatekeeping procedure controls the family-wise probability of falsely certifying one or more unsafe thresholds at \\(\\delta\\), for any finite grid size, provided the tests are valid and the sequence was fixed in advance. To see why, consider the first unsafe candidate in the ordered sequence. Certifying any unsafe candidate requires that this first unsafe candidate pass its level-`δ` test; under its null, that false-pass probability is at most \\(\\delta\\). No Bonferroni division by the number of thresholds is required. The procedure is conservative in search efficiency: a poorly placed early candidate that cannot be certified stops the search, even if later candidates might otherwise have passed. The grid and order are therefore substantive pre-calibration design choices.
+This fixed-sequence gatekeeping procedure controls the family-wise probability of falsely certifying one or more unsafe thresholds at \(\delta\), for any finite grid size, provided the tests are valid and the sequence was fixed in advance. To see why, consider the first unsafe candidate in the ordered sequence. Certifying any unsafe candidate requires that this first unsafe candidate pass its level-`δ` test; under its null, that false-pass probability is at most \(\delta\). No Bonferroni division by the number of thresholds is required. The procedure is conservative in search efficiency: a poorly placed early candidate that cannot be certified stops the search, even if later candidates might otherwise have passed. The grid and order are therefore substantive pre-calibration design choices.
 
-For zero observed bad routes, each fixed-sequence test at level \\(\\delta\\) has the minimum sample size
+For zero observed bad routes, each fixed-sequence test at level \(\delta\) has the minimum sample size
 
 \[
-n\\geq\\left\\lceil\\frac{\\log(\\delta)}{\\log(1-\\varepsilon)}\\right\\rceil.
+n\geq\left\lceil\frac{\log(\delta)}{\log(1-\varepsilon)}\right\rceil.
 \]
 
-At \\(\\varepsilon=\\delta=0.05\\), this is 59 independent equations per category, whether the predeclared grid contains 1, 5, or 50 candidates. With observed bad routes, use the exact one-sided binomial test (or equivalent exact Clopper–Pearson upper bound) for the actual \\(n,k\\); do not rely on the zero-failure minimum. Certification requires the exact upper bound to be no greater than \\(\\varepsilon\\).
+At \(\varepsilon=\delta=0.05\), this is 59 independent equations per category, whether the predeclared grid contains 1, 5, or 50 candidates. With observed bad routes, use the exact one-sided binomial test (or equivalent exact Clopper–Pearson upper bound) for the actual \(n,k\); do not rely on the zero-failure minimum. Certification requires the exact upper bound to be no greater than \(\varepsilon\).
 
-For planning with \\(\\delta=0.05\\), the zero-failure minimum varies with the predeclared tolerated bad-route rate:
+For planning with \(\delta=0.05\), the zero-failure minimum varies with the predeclared tolerated bad-route rate:
 
-| Tolerated bad-route rate \\(\\varepsilon\\) | 0.05 | 0.10 | 0.15 | 0.20 | 0.25 |
+| Tolerated bad-route rate \(\varepsilon\) | 0.05 | 0.10 | 0.15 | 0.20 | 0.25 |
 |---:|---:|---:|---:|---:|---:|
 | Minimum independent equations | 59 | 29 | 19 | 14 | 11 |
 
-These are feasibility calculations, not a recommendation to loosen \\(\\varepsilon\\). Count eligible, disjoint, training-only independent calibration equations by category **before** choosing a risk-control procedure or changing \\(\\varepsilon\\). If a category has too few independent equations, options are: (a) leave it on ensemble routing; (b) predeclare a pooled threshold only if a common-risk population assumption is scientifically defensible; or (c) choose a looser \\(\\varepsilon\\) in advance with an explicit scientific justification and disclose it. Do not change \\(\\varepsilon\\) after seeing the counts or outcomes without documenting the protocol deviation. If simultaneous guarantees across categories are required, the category family needs its own error allocation or valid simultaneous procedure; the per-category fixed-sequence guarantee alone does not supply it.
+These are feasibility calculations, not a recommendation to loosen \(\varepsilon\). Count eligible, disjoint, training-only independent calibration equations by category **before** choosing a risk-control procedure or changing \(\varepsilon\). If a category has too few independent equations, options are: (a) leave it on ensemble routing; (b) predeclare a pooled threshold only if a common-risk population assumption is scientifically defensible; or (c) choose a looser \(\varepsilon\) in advance with an explicit scientific justification and disclose it. Do not change \(\varepsilon\) after seeing the counts or outcomes without documenting the protocol deviation. If simultaneous guarantees across categories are required, the category family needs its own error allocation or valid simultaneous procedure; the per-category fixed-sequence guarantee alone does not supply it.
 
 The bad-route event in Section 3—including the absolute edge-`R²` floor, relative margin against the ensemble, edge-row construction, evaluator, and invalid-score handling—must be frozen before calibration. These choices define the Bernoulli outcome and cannot be tuned after seeing calibration results.
 
@@ -129,7 +129,7 @@ The approved sequence is:
 1. Predeclare the calibration population, category membership, independent unit, and equation identities.
 2. Confirm that no calibration equation is one of the 15 Core-15 benchmark equations and record a machine-checkable disjointness assertion.
 3. Compute the Stage 3 statistic and the predeclared edge-recovery outcomes using training data only.
-4. Apply the frozen fixed-sequence exact binomial tests at level \\(\\delta\\), stopping at the first candidate not certified; certify only candidates with bad-route risk below \\(\\varepsilon\\).
+4. Apply the frozen fixed-sequence exact binomial tests at level \(\delta\), stopping at the first candidate not certified; certify only candidates with bad-route risk below \(\varepsilon\).
 5. Record the selected (\tau), calibration data manifest/hash, code and evaluator versions, category, sample count, bad-route count, confidence bound, and selection-procedure details.
 6. Freeze the threshold and its provenance before any Core-15 benchmark evaluation.
 7. At Core-15 evaluation, apply the frozen threshold without revision. Do not feed Core-15 outcomes, held-out target labels/scores, or extrapolation results back into calibration.
@@ -150,7 +150,7 @@ The risk parameters and fixed-sequence method are approved, but calibration is n
 
 ## 9. Reviewer-facing concise justification
 
-> We predefine a conservative pure-LLM eligibility rule requiring both an absolute edge-recovery score of (R^2\geq0.99) and non-inferiority to the ensemble edge score (zero relative margin). The absolute floor follows the manuscript's primary recovery criterion; the zero margin avoids introducing an unsupported tolerance. We set the tolerated bad-route probability to \\(\\varepsilon=0.05\\) and the family-wise error rate to \\(\\delta=0.05\\), using fixed-sequence exact binomial testing at level \\(\\delta\\). Under independent equation-level Bernoulli observations, 59 calibration equations with zero observed bad routes are the smallest sample supporting an exact one-sided binomial upper bound no greater than 5% for one fixed, pre-specified threshold. A predeclared strictest-to-laxest fixed sequence controls threshold-grid family-wise error at \\(\\delta\\) without a grid-size penalty; simultaneous claims across categories still require category-level multiplicity control. The minimum also increases when failures occur. Because threshold selection over multiple candidates can invalidate a naïve interval, (\tau) is selected only through the predeclared fixed-sequence exact-binomial procedure. Calibration uses training data from a predeclared equation set disjoint from Core-15, and the resulting threshold is frozen before Core-15 evaluation. If the assumptions or risk bound are not satisfied, the system defaults to ensemble routing rather than claiming an unsupported pure-LLM guarantee.
+> We predefine a conservative pure-LLM eligibility rule requiring both an absolute edge-recovery score of (R^2\geq0.99) and non-inferiority to the ensemble edge score (zero relative margin). The absolute floor follows the manuscript's primary recovery criterion; the zero margin avoids introducing an unsupported tolerance. We set the tolerated bad-route probability to \(\varepsilon=0.05\) and the family-wise error rate to \(\delta=0.05\), using fixed-sequence exact binomial testing at level \(\delta\). Under independent equation-level Bernoulli observations, 59 calibration equations with zero observed bad routes are the smallest sample supporting an exact one-sided binomial upper bound no greater than 5% for one fixed, pre-specified threshold. A predeclared strictest-to-laxest fixed sequence controls threshold-grid family-wise error at \(\delta\) without a grid-size penalty; simultaneous claims across categories still require category-level multiplicity control. The minimum also increases when failures occur. Because threshold selection over multiple candidates can invalidate a naïve interval, (\tau) is selected only through the predeclared fixed-sequence exact-binomial procedure. Calibration uses training data from a predeclared equation set disjoint from Core-15, and the resulting threshold is frozen before Core-15 evaluation. If the assumptions or risk bound are not satisfied, the system defaults to ensemble routing rather than claiming an unsupported pure-LLM guarantee.
 
 ## 10. Machine-checkable pre-run manifest
 
