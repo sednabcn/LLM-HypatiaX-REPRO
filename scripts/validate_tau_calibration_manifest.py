@@ -156,8 +156,8 @@ def validate_manifest(
         category_list = manifest.get("category_list")
         if not isinstance(category_list, list) or not category_list:
             errors.append("category_list must be a non-empty predeclared list")
-        if not isinstance(selection_name, str) or not selection_name.strip() or selection_name == "NOT_SELECTED":
-            errors.append("a concrete selection-aware risk-control procedure must be selected")
+        if selection_name != "fixed_sequence_exact_binomial":
+            errors.append("selection_procedure.name must be fixed_sequence_exact_binomial")
         if isinstance(selection, dict) and not selection.get("implementation_or_spec_ref"):
             errors.append("selection procedure must include implementation_or_spec_ref")
         if not manifest.get("independence_justification"):
@@ -186,9 +186,25 @@ def validate_manifest(
             source_ref = item.get("source_ref")
             if not isinstance(source_ref, str) or not source_ref.strip():
                 errors.append(f"calibration_equations[{index}].source_ref is required")
+        declared_categories = manifest.get("category_list", [])
+        if isinstance(declared_categories, list):
+            if len(set(declared_categories)) != len(declared_categories):
+                errors.append("category_list must not contain duplicates")
+            undeclared = sorted(set(counts_by_category) - set(declared_categories))
+            if undeclared:
+                errors.append(f"calibration equations use undeclared categories: {undeclared}")
+            category_counts = {category: counts_by_category.get(category, 0) for category in declared_categories}
+        else:
+            category_counts = dict(counts_by_category)
+        epsilon = protocol.get("tolerated_bad_route_rate_epsilon")
+        delta = protocol.get("family_wise_error_delta")
+        try:
+            minimum_n = minimum_n_zero_failures(float(epsilon), float(delta))
+        except (TypeError, ValueError):
+            minimum_n = APPROVED["minimum_n_if_zero_failures"]
         underpowered = {
-            category: count for category, count in counts_by_category.items()
-            if count < APPROVED["minimum_n_if_zero_failures"]
+            category: count for category, count in category_counts.items()
+            if count < minimum_n
         }
         if underpowered:
             errors.append(
