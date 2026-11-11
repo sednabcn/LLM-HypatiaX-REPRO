@@ -313,3 +313,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 32 (2026-11-11)
 
 [Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) verifies Heston's original price and square-root variance equations (1993 Eqs. 1 and 4) and distinguishes physical-measure drift from the risk-neutralized variance process (Eq. 27). It also checks the Cramér–Lundberg reserve process and the exact infinite-horizon ruin formula for exponential claim sizes. Heston's CIR variance component and pricing PDE are not separate candidates; Cramér–Lundberg's ruin time and distribution-specific ruin probability are outputs of one reserve system. Both remain discovery-only pending DeFi domain and adapter decisions.
+
+
+## Source verification audit 33 (2026-11-11)
+
+[Source Verification Audit 33](CORE295_SOURCE_VERIFICATION_AUDIT_33.md) verifies Kepler's third-law orbital period equation, the vector Lorentz force law, and Bragg's crystal-plane diffraction condition against OpenStax. Kepler is a derived consequence of Newtonian inverse-square dynamics; Lorentz is a distinct vector matter–field force law; Bragg shares the normalized path-difference interference structure with slit/grating maxima. Only Lorentz currently clears the immediate structural-form concern, and it remains discovery-only pending a vector adapter.
