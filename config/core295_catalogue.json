@@ -2846,8 +2846,8 @@
       "source_id": "RISK-COMPOUND-COMET-SPEC",
       "domain": "DeFi Risk",
       "title": "Compound Comet Specification",
-      "url": "https://github.com/compound-finance/comet/blob/main/SPEC.md",
-      "use": "Official Compound Comet specification (repository SPEC.md, Comet v2.5 tagged in document metadata): piecewise borrow/supply rates around a utilization kink, principal/present-value index accrual, negative-liquidity liquidation predicate and internal absorption/collateral accounting. Pin exact spec and contract commit before equation transcription; this is protocol-model evidence, not an accepted candidate.",
+      "url": "https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/SPEC.md",
+      "use": "Pinned development snapshot at commit f766f51583c23acc33b2a7824654ef2029a96804 (2026-06-23), SPEC.md blob 0a9fb98d505b57494ce2d6ec437c21ae90360091; paired CometWithExtendedAssetList.sol blob 3490e984d133789aa1afe2e8f7e37a11d2512396. SPEC describes signed-principal absorption, collateral credit to protocol, liquidation-penalty valuation, debt clamp and aggregate base supply/borrow updates. Paired Solidity uses liquidationFactor and different collateral/total-supply accounting; reconcile exact deployment/config before candidate use. Development snapshot only, not a deployed market pin.",
       "status": "candidate_reference"
     },
     {
@@ -2992,6 +2992,14 @@
       "title": "Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten",
       "url": "https://doi.org/10.1007/BF01755094",
       "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340; a 1960 Fisheries Research Board translation of the original paper is available. The original text defines a theoretical linear dimension λ=cube-root(weight), assumes anabolic construction ∝ λ² and catabolic breakdown ∝ λ³, derives the net increment and limiting size, and gives an integrated growth curve. Do not back-attribute the later arbitrary-exponent generalization dm/dt=p*m^a−q*m^b to this source without direct evidence.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-REAL-1977-FUNCTIONAL-RESPONSE",
+      "domain": "Biology",
+      "title": "The Kinetics of Functional Response",
+      "url": "https://doi.org/10.1086/283161",
+      "use": "Primary Real (1977), The American Naturalist 111(978), pp. 289–300; explicitly generalizes Type II and Type III functional responses using encounter/learning effects. Full equation and mechanism require transcription before candidate acceptance.",
       "status": "candidate_reference"
     }
   ],
