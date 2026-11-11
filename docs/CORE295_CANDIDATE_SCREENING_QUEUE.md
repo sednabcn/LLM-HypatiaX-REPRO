@@ -463,3 +463,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 59 (2026-11-11)
 
 [Source Verification Audit 59](CORE295_SOURCE_VERIFICATION_AUDIT_59.md) verifies Aave V4's Babylon liquidation path: a caller-supplied maximum collateral amount caps removable shares, and repayment is inversely resized to match that cap. It shares standard V4's health-factor validation, dynamic bonus and debt/share accounting; treat it as a version-specific liquidation sizing variant, not a separate set of equations.
+
+
+## Source verification audit 60 (2026-11-11)
+
+[Source Verification Audit 60](CORE295_SOURCE_VERIFICATION_AUDIT_60.md) verifies Maker/Sky Jug's per-second stability-fee accumulation from a pinned source commit. The global base plus collateral-specific duty is exponentiated over elapsed seconds with RAY fixed-point rounding. It is a versioned instance of generic exponential compounding, not a distinct equation beside APY conversion or lending-index accrual.
