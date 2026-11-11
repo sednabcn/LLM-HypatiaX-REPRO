@@ -1795,6 +1795,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-MERTON-1974",
+      "domain": "DeFi Risk",
+      "title": "On the Pricing of Corporate Debt: The Risk Structure of Interest Rates (Merton, 1974)",
+      "url": "https://doi.org/10.1111/j.1540-6261.1974.tb03058.x",
+      "use": "Structural credit risk; equity-as-call-option, risky debt valuation and default probability",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
