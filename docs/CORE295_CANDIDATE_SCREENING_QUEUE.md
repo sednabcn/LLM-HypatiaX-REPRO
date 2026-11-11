@@ -153,3 +153,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 14 (2026-11-11)
 
 [Source Verification Audit 14](CORE295_SOURCE_VERIFICATION_AUDIT_14.md) checks the current Sky LIQ2.0 documentation and the registered Abacus implementation source. It transcribes the linear decrease (P_0(1-t/\tau)) until zero, the stairstep exponential (P_0c^{\lfloor t/s\rfloor}), and the continuous per-second exponential (P_0c^t). The implementation explicitly identifies the stairstep and continuous forms as equivalent when (s=1). These are configurable price calculators in one Dutch-auction architecture, not separate liquidation systems. Keep the linear and exponential structures distinct but cluster them; do not count parameter variants, (s=1), auction reset, initial-price buffer or partial-take logic as extra equations. Hold pending immutable source commit and fixed-point adapter. No candidates were accepted.
+
+
+## Source verification audit 15 (2026-11-11)
+
+[Source Verification Audit 15](CORE295_SOURCE_VERIFICATION_AUDIT_15.md) checks Liquity V1's product-sum Stability Pool derivation against Pardoe's December 2020 paper, V1 documentation and a fetched Solidity source snapshot. The core coupled state is (P_n=\prod_i(1-Q_i/D_{i-1})), (S_n=\sum_k(E_k/D_{k-1})P_{k-1}), with depositor outputs (d_n=d_tP_n/P_t) and (e_n=d_t(S_n-S_t)/P_t). Treat it as one stateful accounting/system candidate, not separate formulas for P, S, deposit, gain, scale or LQTY rewards. Hold pending immutable code pin, Recovery Mode/domain boundary and deterministic stateful adapter. No candidates were accepted.
