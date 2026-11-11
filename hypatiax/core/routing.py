@@ -51,9 +51,7 @@ def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float | None:
     if not np.isfinite(y_true).all() or not np.isfinite(y_pred).all():
         return None
     ss_tot = float(np.sum((y_true - np.mean(y_true)) ** 2))
-    if not np.isfinite(ss_tot) or ss_tot <= np.finfo(float).eps * max(
-        1.0, float(np.sum(y_true ** 2))
-    ):
+    if not np.isfinite(ss_tot) or ss_tot <= np.finfo(float).tiny:
         return None
     value = 1.0 - float(np.sum((y_true - y_pred) ** 2)) / ss_tot
     return value if np.isfinite(value) else None
@@ -155,13 +153,17 @@ def kde_ood_probability(
     # its own density.  Work in log space for numerical stability.
     d_train = (t_train[:, None] - t_train[None, :]) / bandwidth
     np.fill_diagonal(d_train, np.inf)
+    train_log_kernel = -0.5 * np.square(np.clip(d_train, -1e150, 1e150))
+    train_max = np.max(train_log_kernel, axis=1)
     train_log_density = (
-        np.log(np.exp(-0.5 * d_train ** 2).sum(axis=1))
+        train_max + np.log(np.exp(train_log_kernel - train_max[:, None]).sum(axis=1))
         - np.log(n - 1) - np.log(bandwidth) - 0.5 * np.log(2.0 * np.pi)
     )
     d_query = (t_query[:, None] - t_train[None, :]) / bandwidth
+    query_log_kernel = -0.5 * np.square(np.clip(d_query, -1e150, 1e150))
+    query_max = np.max(query_log_kernel, axis=1)
     query_log_density = (
-        np.log(np.exp(-0.5 * d_query ** 2).sum(axis=1))
+        query_max + np.log(np.exp(query_log_kernel - query_max[:, None]).sum(axis=1))
         - np.log(n) - np.log(bandwidth) - 0.5 * np.log(2.0 * np.pi)
     )
     # Fraction of training reference densities at least as high as query
