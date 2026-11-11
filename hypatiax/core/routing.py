@@ -77,54 +77,6 @@ def training_edge_split_indices(
     return core.astype(int), edge.astype(int)
 
 
-def training_edge_degradation_probe(
-    X_train: Any,
-    y_train: Any,
-    nn_train_predictions: Any,
-    edge_fraction: float = 0.15,
-) -> dict[str, Any]:
-    """Measure neural-network core-to-boundary R² degradation using training rows only.
-
-    Rows are ordered along the first principal component fitted on X_train.
-    The outer `edge_fraction` of rows (both tails) form the edge probe; the
-    central rows are also reported as a diagnostic.  Manuscript Delta is
-    full-training R² minus edge-subset R².  No held-out/query targets are used.
-    """
-    X = np.asarray(X_train, dtype=float)
-    y = np.asarray(y_train, dtype=float).reshape(-1)
-    pred = np.asarray(nn_train_predictions, dtype=float).reshape(-1)
-    if X.ndim != 2 or X.shape[0] != y.size or y.shape != pred.shape:
-        raise ValueError("X_train, y_train, and nn_train_predictions have incompatible shapes")
-    if not 0.05 <= float(edge_fraction) <= 0.4:
-        raise ValueError("edge_fraction must be between 0.05 and 0.4")
-    if X.shape[0] < 12 or X.shape[1] < 1 or not np.isfinite(X).all():
-        return {"status": "insufficient_or_nonfinite_training_covariates",
-                "r2_core": None, "r2_edge": None, "delta": None}
-    if not np.isfinite(y).all() or not np.isfinite(pred).all():
-        return {"status": "nonfinite_training_targets_or_predictions",
-                "r2_core": None, "r2_edge": None, "delta": None}
-
-    try:
-        core_idx, edge_idx = training_edge_split_indices(X, edge_fraction)
-    except ValueError:
-        return {"status": "insufficient_core_rows",
-                "r2_core": None, "r2_edge": None, "delta": None}
-    r2_train = _r2(y, pred)
-    r2_core = _r2(y[core_idx], pred[core_idx])
-    r2_edge = _r2(y[edge_idx], pred[edge_idx])
-    if r2_train is None or r2_edge is None:
-        return {"status": "undefined_train_or_edge_r2",
-                "r2_train": r2_train, "r2_core": r2_core,
-                "r2_edge": r2_edge, "delta": None}
-    return {
-        "status": "ok", "r2_train": float(r2_train),
-        "r2_core": (float(r2_core) if r2_core is not None else None),
-        "r2_edge": float(r2_edge),
-        "delta": float(r2_train - r2_edge), "edge_fraction": float(edge_fraction),
-        "n_core": int(core_idx.size), "n_edge": int(edge_idx.size),
-    }
-
-
 def kde_ood_probability(
     X_train: Any,
     X_query: Any,
