@@ -144,3 +144,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 10 (2026-11-11)
 
 [Source Verification Audit 10](CORE295_SOURCE_VERIFICATION_AUDIT_10.md) distinguishes Uniswap v2's arithmetic mean of price from Uniswap v3's geometric mean price obtained through an arithmetic mean tick. The estimands are mathematically different, although they remain in one broad on-chain oracle family with shared market dependence. Preserve this distinction and avoid counting accumulators, inverse orientation, window lengths or harmonic-mean liquidity as separate price equations.
+
+
+## Source verification audit 11 (2026-11-11)
+
+[Source Verification Audit 11](CORE295_SOURCE_VERIFICATION_AUDIT_11.md) sharpens three DeFi family boundaries. Curve CryptoSwap is a distinct dynamic-peg invariant within the Curve invariant-AMM lineage; Morpho's LLTV-dependent capped rational LIF is a liquidation-incentive model, not another health-factor equation; and Compound III's per-second borrow rate is a piecewise-affine utilization-kink function, structurally related to Aave-style kink curves. Keep each complete mechanism in one family and do not count helper identities, supply-rate conversions, annualization, price-scale/repegging updates or liquidation bookkeeping as extra equations. All three remain held, not accepted.
