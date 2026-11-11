@@ -45,7 +45,7 @@ The source register now includes five additional primary/foundational lineages a
 - **Kermack–McKendrick epidemic model (1927):** the epidemic flow is a coupled compartment system. Infection incidence, removal and susceptible depletion are linked state transitions; do not split them into three independent equation counts. Primary scan: https://pdodds.w3.uvm.edu/files/papers/others/1927/kermack1927a.pdf
 - **Leslie age-structured matrix (1945):** the age-class population vector advances through a fertility/survival matrix. Stable age distribution, growth eigenvalue and reproductive-value outputs are derived from the matrix model, not independent candidates. DOI: https://doi.org/10.1093/biomet/33.3.183
 - **Michaelis–Menten invertase kinetics (1913):** the original article studies reaction progress for invertase. Do not silently replace the original mechanistic/reaction-progress treatment with a later steady-state hyperbolic rate-law transcription. Accessible English translation: https://www.chem.uwec.edu/Chem352_F18/pages/readings/media/Michaelis_%26_Menton_1913.pdf
-- **Holling functional responses (1959):** Type II is a saturating handling-time response; Type III has a different low-prey-density shape. Type I/II/III labels are not three independent model counts unless their complete response mechanisms and state contracts differ. DOI: https://doi.org/10.4039/Ent91385-7
+- **Holling functional response (1959):** the accessible abstract for *Some Characteristics of Simple Types of Predation and Parasitism* gives a saturating search/handling response and reports an S-shaped small-mammal response, but explicitly says an additional search-stimulation component was still under investigation. This article alone does not provide a complete, separately specified Type III model. DOI: https://doi.org/10.4039/Ent91385-7
 - **Volterra predator–prey dynamics (1926):** keep predator and prey equations as one coupled system. The 1927 correspondence explicitly acknowledges Lotka's prior publication of the two-species differential equations; the surname "Lotka–Volterra" should not obscure the shared model family. DOI: https://doi.org/10.1038/118558a0
 - **Monod bacterial culture growth (1949):** a foundational review/synthesis of quantitative bacterial growth, not the original primary discovery paper. Use it for model lineage and assumptions, not as an unqualified primary-source attribution. DOI: https://doi.org/10.1146/annurev.mi.03.100149.002103
 
@@ -53,7 +53,7 @@ The source register now includes five additional primary/foundational lineages a
 - **Verhulst logistic population growth (1838):** an original translated scan is registered. Keep the differential equation, integrated logistic solution, and discrete logistic map as related forms; the integrated solution is not a second governing equation. Original note: https://www.neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf
 - **von Bertalanffy organic growth (1938):** the primary article derives growth from opposing construction/anabolism and destruction/catabolism terms with surface/volume scaling. Exact equation/page and observable transcription remain open. Bibliographic record: https://www.jstor.org/stable/41447359
 
-**Cross-family screen:** Monod substrate-limited growth, Holling Type II consumption and Michaelis–Menten enzyme rates share a hyperbolic saturation structure after normalization, but represent different biological mechanisms. Under the current draft E3 rule, do not count them as three structurally distinct scalar formulas solely because their variables and interpretations differ. A full enzyme mechanism, consumer-handling model or microbial growth/state system may be a different model unit only when its complete state equations are supplied and the benchmark unit is declared accordingly. Holling Type III is a stronger structural-distinctness lead because of its sigmoidal low-density response, but exact original functional form and mechanism must be transcribed before promotion.
+**Cross-family screen:** Monod substrate-limited growth, Holling Type II consumption and Michaelis–Menten enzyme rates share a hyperbolic saturation structure after normalization, but represent different biological mechanisms. Under the current draft E3 rule, do not count them as three structurally distinct scalar formulas solely because their variables and interpretations differ. A full enzyme mechanism, consumer-handling model or microbial growth/state system may be a different model unit only when its complete state equations are supplied and the benchmark unit is declared accordingly. The S-shaped small-mammal response reported by Holling (1959) is not yet a complete Type III equation candidate: the paper describes an additional search-stimulation component as unresolved. Any later Type III formulation needs its own primary-source equation and mechanism audit.
 
 ## 2. DeFi AMM: primary invariant reconstruction
 
@@ -201,3 +201,22 @@ The accessible bibliographic record for *A Quantitative Theory of Organic Growth
 **Disposition:** source lead only. Directly inspect the primary article to identify the original size/mass variable, geometric assumptions, coefficients and equation/page before considering a candidate.
 
 No new equation was accepted. These checks refine provenance and prevent later textbook conventions from being back-attributed to the original papers.
+
+
+### 5.4 Pütter–von Bertalanffy growth lineage: attribution and model unit
+
+A primary-source lead for the generalized growth law predates von Bertalanffy's 1938 paper: Pütter (1920), *Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten*, Pflügers Archiv 180, 298–340, DOI https://doi.org/10.1007/BF01755094. Later reviews transcribe the generalized mass-growth equation as
+
+\[
+\frac{dm}{dt}=p m^a-q m^b,
+\]
+
+and attribute this general two-power form to Pütter. Von Bertalanffy's contribution is more specifically associated with a mechanistic anabolism/catabolism interpretation and the choice of surface-like and mass-like scaling exponents (classically \(2/3\) and 1), yielding a special case of the generalized Pütter form. The integrated length-at-age curve is a derived solution/observable under additional geometric and length–mass assumptions, not an independent governing equation.
+
+The available evidence here is still secondary for the exact Pütter 1920 equation transcription and page. It is sufficient to correct the source lineage and prevent treating the generalized Pütter law and the classical von Bertalanffy special case as unrelated equation families. The 1938 primary article's own equation number/page and definitions remain to be checked directly.
+
+**Disposition:** group the generalized Pütter growth law and the classical \(a=2/3,b=1\) von Bertalanffy mass-growth specialization as one provisional lineage (E2/specialization pending primary transcription); keep other exponent pairs as parameterized members of that general family unless the complete mechanism/state contract establishes a different model unit. Do not count the integrated length-at-age curve separately.
+
+### 5.5 Holling 1959 evidence boundary
+
+The original 1959 article's accessible abstract transcribes the saturating count relation as \(y=Ttax/(1+abx)\), with the paper's own notation and definitions for search period, disk density, discovery rate and handling time. It then reports an S-shaped rise in the small-mammal experiment and states that an additional component, apparently stimulation of searching by each prey found, was still being investigated. Thus the article supports the saturating functional-response mechanism but does not establish a fully specified Type III equation from this abstract. Keep the Holling S-curve observation as an unresolved mechanistic lead, not a candidate equation or distinct family.
