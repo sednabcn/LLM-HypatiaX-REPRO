@@ -152,6 +152,26 @@ def validate_manifest(
             errors.append("category_definition is required")
         if not manifest.get("frozen_edge_definition"):
             errors.append("frozen_edge_definition is required")
+        for key in ("calibration_data_manifest_sha256",):
+            value = manifest.get(key)
+            if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+                errors.append(f"{key} must be a 64-character lowercase SHA-256")
+        for key in ("calibration_code_commit", "evaluator_version"):
+            value = manifest.get(key)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(f"{key} must be recorded before calibration")
+        for index, item in enumerate(equations):
+            if not isinstance(item, dict):
+                continue
+            for key in ("source_sha256", "formula_sha256", "training_rows_sha256"):
+                value = item.get(key)
+                if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+                    errors.append(
+                        f"calibration_equations[{index}].{key} must be a 64-character lowercase SHA-256"
+                    )
+            source_ref = item.get("source_ref")
+            if not isinstance(source_ref, str) or not source_ref.strip():
+                errors.append(f"calibration_equations[{index}].source_ref is required")
         underpowered = {
             category: count for category, count in counts_by_category.items()
             if count < APPROVED["minimum_n_if_zero_failures"]
