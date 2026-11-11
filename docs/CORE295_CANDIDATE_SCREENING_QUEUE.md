@@ -318,3 +318,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 33 (2026-11-11)
 
 [Source Verification Audit 33](CORE295_SOURCE_VERIFICATION_AUDIT_33.md) verifies Kepler's third-law orbital period equation, the vector Lorentz force law, and Bragg's crystal-plane diffraction condition against OpenStax. Kepler is a derived consequence of Newtonian inverse-square dynamics; Lorentz is a distinct vector matter–field force law; Bragg shares the normalized path-difference interference structure with slit/grating maxima. Only Lorentz currently clears the immediate structural-form concern, and it remains discovery-only pending a vector adapter.
+
+
+## Source verification audit 34 (2026-11-11)
+
+[Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) verifies Parkinson's 1980 original range-variance estimator (0.361/n\sum_i\ln(H_i/L_i)^2), Bollerslev's GARCH(p,q) conditional-variance family and its GARCH(1,1) specialization, and the normal-loss expected-shortfall formula by truncated-normal integration. EWMA is exactly an IGARCH boundary case (ω=0, α=1-λ, β=λ), not a separate structure. ES remains held pending the VaR-family exclusion ruling.
