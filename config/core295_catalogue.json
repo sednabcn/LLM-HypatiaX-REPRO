@@ -2913,6 +2913,38 @@
       "url": "https://docs.curve.finance/assets/files/whitepaper_cryptoswap-de196d8f95aae3164a1226234d6d96ca.pdf",
       "use": "Primary Egorov (2021) Curve CryptoSwap whitepaper. Defines transformed balances by price_scale, dynamic K(D,x) based on amplification A, gamma and K0, CryptoSwap invariant, Newton solves for D/output balance, EMA internal price oracle and repegging rule. Exact equations on original PDF pp. 1–4; convergence ranges stated p. 3. Candidate is a complete dynamic invariant/oracle state system, not separate counts for solver steps, fee curve and EMA update.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LESLIE-1945-MATRIX",
+      "domain": "Biology",
+      "title": "On the Use of Matrices in Certain Population Mathematics",
+      "url": "https://doi.org/10.1093/biomet/33.3.183",
+      "use": "Primary Leslie (1945), Biometrika 33(3), pp. 183–212; age-structured population projection using a fertility/survival matrix. The full matrix state transition and its age-class conventions form the model unit; eigenvalue, stable age distribution and reproductive-value outputs are derived, not independent equations.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HOLLING-1959-FUNCTIONAL-RESPONSE",
+      "domain": "Biology",
+      "title": "Some Characteristics of Simple Types of Predation and Parasitism",
+      "url": "https://doi.org/10.4039/Ent91385-7",
+      "use": "Primary Holling (1959), The Canadian Entomologist 91(7), pp. 385–398; empirical/theoretical classification of predator functional responses. The original Type II handling-time response is a saturating consumption function; Type III has a different low-density response. Cluster derived limits and units carefully; hyperbolic similarity to Michaelis–Menten/Monod is not by itself mechanistic identity.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-VOLTERRA-1926-PREDATOR-PREY",
+      "domain": "Biology",
+      "title": "Fluctuations in the Abundance of a Species considered Mathematically",
+      "url": "https://doi.org/10.1038/118558a0",
+      "use": "Primary Volterra (1926), Nature 118, pp. 558–560; mathematical treatment of interspecific abundance fluctuations. A 1927 follow-up correspondence acknowledges Lotka's earlier priority for the two-species differential equations. Treat predator and prey equations as one coupled system.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MONOD-1949-BACTERIAL-GROWTH",
+      "domain": "Biology",
+      "title": "The Growth of Bacterial Cultures",
+      "url": "https://doi.org/10.1146/annurev.mi.03.100149.002103",
+      "use": "Monod (1949), Annual Review of Microbiology 3, pp. 371–394; foundational review and synthesis of quantitative bacterial culture growth and substrate-dependent growth. Secondary review, not original primary discovery source; use for source lineage and model assumptions, not unqualified primary attribution.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
