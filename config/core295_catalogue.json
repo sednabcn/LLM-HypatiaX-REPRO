@@ -2800,6 +2800,38 @@
       "url": "https://invariant.app/whitepaper.pdf",
       "use": "Primary protocol whitepaper by Wojciech Cichocki (6 December 2021), §2: xy=L^2 reserve curve and translated virtual-reserve curve for bounded price ranges; source supports a Uniswap-v3-style concentrated-liquidity family, not a new invariant family or independent equation count.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BEVERTO-HOLT-1957",
+      "domain": "Biology",
+      "title": "On the Dynamics of Exploited Fish Populations",
+      "url": "https://books.google.com/books/about/On_the_Dynamics_of_Exploited_Fish_Popula.html?id=1JntoCImKC8C",
+      "use": "Primary Beverton & Holt monograph (1957), 533 pp., HMSO, Fishery Investigations Series II, vol. 19; source lineage for stock–recruitment and exploited-population dynamics. Exact page/equation transcription for any candidate must be checked in the scanned monograph.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-RICKER-1954",
+      "domain": "Biology",
+      "title": "Stock and Recruitment",
+      "url": "https://doi.org/10.1139/f54-039",
+      "use": "Primary Ricker (1954), Canadian Journal of Fisheries Research Board 11, pp. 559–623; dome-shaped stock–recruitment model and density-dependent recruitment mechanism. Treat as a special case/limit within the generalized Deriso–Schnute family pending source-level derivation review.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-DERISO-1980",
+      "domain": "Biology",
+      "title": "Harvesting Strategies and Parameter Estimation for an Age-Structured Model",
+      "url": "https://doi.org/10.1139/F80-034",
+      "use": "Primary Deriso (1980), Canadian Journal of Fisheries and Aquatic Sciences 37(2), pp. 268–282; age-structured/delay-difference population model and generalized recruitment lineage. Exact stock–recruitment equation transcription and model scope require direct primary-text review.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-SCHNUTE-1985",
+      "domain": "Biology",
+      "title": "A General Theory for Analysis of Catch and Effort Data",
+      "url": "https://doi.org/10.1139/f85-057",
+      "use": "Primary Schnute (1985), Canadian Journal of Fisheries and Aquatic Sciences 42(3), pp. 414–429; generalized age-structured catch/effort model class and derivation lineage. Secondary literature reports the Deriso–Schnute recruitment form and its Beverton–Holt/Ricker cases; exact primary equation/page remains to be transcribed.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
