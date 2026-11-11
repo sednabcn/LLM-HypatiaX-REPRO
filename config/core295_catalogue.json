@@ -758,6 +758,38 @@
       "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations",
       "use": "Official protocol documentation for debt offset by Stability Pool deposits, pro-rata collateral gain/loss and Recovery Mode liquidation branches; source-family candidate for risk-sharing accounting",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MICHAELIS-MENTEN-1913",
+      "domain": "Biology",
+      "title": "Die Kinetik der Invertinwirkung",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3381512/",
+      "use": "Original 1913 paper in complete modern translation; initial-rate relation and product-inhibition progress-curve equations; preserve rapid-equilibrium assumptions and original Ks versus later Km distinction",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HILL-1910",
+      "domain": "Biology",
+      "title": "The Possible Effects of the Aggregation of the Molecules of Haemoglobin on its Dissociation Curves",
+      "url": "https://doi.org/10.1113/jphysiol.1910.sp001386",
+      "use": "Primary Hill 1910 oxygen-saturation equation and empirical cooperativity exponent; original short communication J Physiol 40, iv–vii",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-ADAIR-1925",
+      "domain": "Biology",
+      "title": "The Hemoglobin System VI: The Oxygen Dissociation Curve of Hemoglobin",
+      "url": "https://doi.org/10.1016/S0021-9258(18)85018-9",
+      "use": "Primary four-step oxygen-binding polynomial (JBC 63, 529–545); distinguish from Hill's empirical two-parameter curve and later Adair-Klotz microscopic constants",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MONOD-1949",
+      "domain": "Biology",
+      "title": "The Growth of Bacterial Cultures",
+      "url": "https://doi.org/10.1146/annurev.mi.03.100149.002103",
+      "use": "Primary Monod 1949 bacterial growth source; substrate-dependent specific growth relation is hyperbolic and structurally analogous to Michaelis–Menten; exact original equation/page verification still required",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
