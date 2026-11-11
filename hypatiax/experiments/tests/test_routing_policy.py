@@ -33,3 +33,16 @@ def test_failed_trust_gate_routes_to_nn():
 
 def test_formula_fragment_fallback_detects_function_calls():
     assert structural_risk_tokens("exp(x") == ["exp"]
+
+
+def test_detects_all_manuscript_function_names():
+    assert structural_risk_tokens("Phi(x) + log(x) + sin(x) + cos(x)") == [
+        "Phi", "cos", "log", "sin"
+    ]
+
+
+def test_structural_risk_fails_closed_when_nn_prediction_is_unavailable():
+    route = select_hypatiax_route(0.99, 0.0, np.ones(3), None, ["erf"])
+    assert route["decision"] == "nn"
+    assert route["predictions"] is None
+    assert route["route_reason"] == "structural_risk_nn_unavailable"
