@@ -1,7 +1,7 @@
 # Core-295 source verification audit 32: Heston stochastic-volatility process and Cramér–Lundberg reserve ruin
 
 **Date:** 2026-11-11  
-**Status:** verification of discovery-batch 37 leads only. No equation is added to the formal catalogue or counted toward 295.
+**Status:** verification of discovery-batch 37 leads. Heston (1993) and Asmussen–Albrecher (2010) are now registered as candidate_reference sources; no equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Heston 1993 stochastic-volatility model
 
@@ -78,6 +78,6 @@ Liquidation payouts are often correlated with token prices, market stress and ev
 
 ## 3. Catalogue status and work not performed
 
-No source-register or equation-catalogue record was changed. The formal manifest remains 128 source records, 19 proposed equation records, zero accepted equations and an unfrozen sampling frame.
+The source register now contains 136 records after separate source registrations, including RISK-HESTON-1993 and RISK-ASMUSSEN-ALBRECHER-2010. No equation-catalogue record was changed: 19 proposed, zero accepted, sampling frame unfrozen.
 
 No experiments, solvers, validators, workflows, paid compute, API calls, market-data retrieval or stochastic simulations were run. This is original-source and mathematical-source review only.
