@@ -825,19 +825,28 @@ class EnhancedExtrapolationTest:
                         train_result["nn_model"], train_result["scaler_X"],
                         train_result["scaler_y"], X_test,
                     )
-                    weights = train_result.get("blend_weights") or {}
-                    llm_w = float(weights.get("llm", 0.3))
-                    nn_w = float(weights.get("nn", 1.0 - llm_w))
+                    query_weights = train_result.get("query_blend_weights") or {}
+                    llm_w = np.asarray(query_weights.get("llm", []), dtype=float)
+                    nn_w = np.asarray(query_weights.get("nn", []), dtype=float)
+                    if llm_w.size == 0 or nn_w.size == 0:
+                        weights = train_result.get("blend_weights") or {}
+                        llm_w = np.asarray([float(weights.get("llm", 0.3))])
+                        nn_w = np.asarray([float(weights.get("nn", 1.0 - llm_w[0]))])
+                    if llm_w.size == 1:
+                        llm_w = np.full(X_test.shape[0], llm_w.item())
+                        nn_w = np.full(X_test.shape[0], nn_w.item())
                     if (
-                        np.isfinite(llm_w) and np.isfinite(nn_w)
-                        and 0.0 <= llm_w <= 1.0 and 0.0 <= nn_w <= 1.0
-                        and np.isclose(llm_w + nn_w, 1.0)
+                        llm_w.size == nn_w.size == X_test.shape[0]
+                        and np.isfinite(llm_w).all() and np.isfinite(nn_w).all()
+                        and np.all((llm_w >= 0.0) & (llm_w <= 1.0))
+                        and np.all((nn_w >= 0.0) & (nn_w <= 1.0))
+                        and np.allclose(llm_w + nn_w, 1.0)
                         and np.isfinite(llm_pred).all() and np.isfinite(nn_pred).all()
                     ):
                         ensemble_pred = llm_w * llm_pred + nn_w * nn_pred
                         test_r2, _ = _r2_reported(y_test, ensemble_pred)
                     else:
-                        raise RuntimeError("Invalid manuscript blend weights or non-finite predictions")
+                        raise RuntimeError("Invalid per-query manuscript blend weights or non-finite predictions")
                 else:
                     # Formula invalid on query covariates: use NN, never choose
                     # between candidates by inspecting held-out target scores.
@@ -889,6 +898,7 @@ class EnhancedExtrapolationTest:
                 "degradation_probe": train_result.get("degradation_probe"),
                 "ood_diagnostic": train_result.get("ood_diagnostic"),
                 "blend_weights": train_result.get("blend_weights"),
+                "query_blend_weights": train_result.get("query_blend_weights"),
                 "success":  True,
             }
 
