@@ -557,3 +557,8 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 - [DeFi Risk Protocol Models Audit 1](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md): Aave V3 health factor and Compound Comet negative-liquidity threshold are related weighted-collateral/debt eligibility tests, not separate scalar families. Comet borrow/supply rates are kinked piecewise-linear/utilization-derived; same normalized structure as other lending kink-rate models. The absorb state machine may be a protocol-level model only after exact version pin and full state-transition reconstruction.
 - Source register adds three references (Frumkin 1920, Compound Comet specification, Aave V3 health-factor developer documentation); total 166. No formal equation entry was added or accepted.
 
+
+
+## Biology source-family additions (2026-11-11)
+
+The source register now includes Kermack–McKendrick (1927) epidemic flow, Leslie (1945) age-structured matrix, Michaelis–Menten (1913) invertase kinetics, Holling (1959) functional response, Volterra (1926) predator–prey and Monod (1949) bacterial culture growth review. These are source leads, not accepted equations. Preserve complete coupled-system units for epidemic, predator–prey and Leslie matrix models. Do not count Monod, Holling Type II and Michaelis–Menten scalar saturation laws separately solely by naming/mechanism; the draft E3 rule blocks normalized-structure variants. Holling Type III remains a distinctness lead pending exact primary transcription. See [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md).
