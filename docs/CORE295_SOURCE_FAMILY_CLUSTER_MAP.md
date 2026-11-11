@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 17 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 24 discovery batches; 18 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
