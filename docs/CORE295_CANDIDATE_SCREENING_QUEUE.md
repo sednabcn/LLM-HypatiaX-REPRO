@@ -423,3 +423,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 51 (2026-11-11)
 
 [Source Verification Audit 51](CORE295_SOURCE_VERIFICATION_AUDIT_51.md) verifies Qin et al.'s two-successive fixed-spread liquidation optimizer. The closed-form first repayment (r_1=(D-LT\,C)/[1-LT(1+LS)]), second repayment (r_2=CF(D-r_1)), and profit equations form one constrained strategy under fixed-price/fixed-spread assumptions. Retain as an analytical system lead, not as several independent equation entries.
+
+
+## Source verification audit 52 (2026-11-11)
+
+[Source Verification Audit 52](CORE295_SOURCE_VERIFICATION_AUDIT_52.md) verifies Miqado's reversible-call-option liquidation-mitigation system from IACR ePrint 2023/254 / arXiv:2303.15162v2. The supporter collateral top-up, seller's early termination/reimbursement right, borrower rescue payment and maturity takeover/default form one distinct system lead. The paper's Black–Scholes premium is explicitly an approximation that omits early-termination value.
