@@ -498,3 +498,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 66 (2026-11-11)
 
 [Source Verification Audit 66](CORE295_SOURCE_VERIFICATION_AUDIT_66.md) rejects the author-pool ((F-S)/(8S)) expression as a universal funding-rate law. Deribit and Binance use different premium/index definitions, averaging, dampers, caps and interval/payment rules. Retain only as an underspecified basis proxy pending a named protocol and exact version.
+
+
+## Source verification audit 32 source-register update (2026-11-11)
+
+[Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) contains Heston's coupled stochastic price/variance process and the Cramér–Lundberg reserve process with exponential-claim ruin probability. Sources RISK-HESTON-1993 and RISK-ASMUSSEN-ALBRECHER-2010 are now registered as candidate_reference; the complete Heston system and the reserve/ruin process each remain one family.
