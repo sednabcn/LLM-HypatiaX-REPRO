@@ -39,7 +39,7 @@ from dotenv import load_dotenv
 from hypatiax.core.r2_canonical import r2_checked
 from hypatiax.core.routing import (
     kde_ood_probability, select_hypatiax_route, structural_risk_tokens,
-    training_edge_degradation_probe,
+    training_edge_split_indices,
 )
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
@@ -168,6 +168,47 @@ def nn_predict(model, scaler_X, scaler_y, X: np.ndarray) -> np.ndarray:
         Xs = scaler_X.transform(X)
         ys = model(torch.FloatTensor(Xs)).numpy().flatten()
         return scaler_y.inverse_transform(ys.reshape(-1, 1)).flatten()
+
+
+def _training_only_nn_edge_probe(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    seed: int | None,
+    edge_fraction: float | None = None,
+) -> dict:
+    """Fit a fresh NN on the central training region and score both training tails."""
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float).reshape(-1)
+    if edge_fraction is None:
+        try:
+            edge_fraction = float(os.getenv("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15"))
+        except ValueError:
+            return {"status": "invalid_probe_fraction", "delta": None}
+    try:
+        core_idx, edge_idx = training_edge_split_indices(X, edge_fraction)
+        probe_model, probe_sx, probe_sy = train_nn_model(X[core_idx], y[core_idx], seed=seed)
+        pred_core = nn_predict(probe_model, probe_sx, probe_sy, X[core_idx])
+        pred_edge = nn_predict(probe_model, probe_sx, probe_sy, X[edge_idx])
+        r2_core, core_status = r2_score_checked(y[core_idx], pred_core)
+        r2_edge, edge_status = r2_score_checked(y[edge_idx], pred_edge)
+        if core_status != "ok" or edge_status != "ok":
+            return {
+                "status": "undefined_probe_r2", "delta": None,
+                "r2_core": float(r2_core) if np.isfinite(r2_core) else None,
+                "r2_edge": float(r2_edge) if np.isfinite(r2_edge) else None,
+                "core_status": core_status, "edge_status": edge_status,
+            }
+        return {
+            "status": "ok", "r2_train": float(r2_core),
+            "r2_core": float(r2_core), "r2_edge": float(r2_edge),
+            "delta": float(r2_core - r2_edge),
+            "edge_fraction": float(edge_fraction),
+            "n_core": int(len(core_idx)), "n_edge": int(len(edge_idx)),
+            "edge_sides": 2,
+        }
+    except Exception as exc:
+        return {"status": "error", "delta": None,
+                "error": f"{type(exc).__name__}: {exc}"}
 
 
 def r2_score_checked(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, str]:
@@ -854,8 +895,8 @@ EXPLANATION:
         _structural_tokens = structural_risk_tokens(
             llm_result.get("formula"), fitted_code
         )
-        _edge_probe = training_edge_degradation_probe(
-            X_train, y_train, nn_preds_train
+        _edge_probe = _training_only_nn_edge_probe(
+            X_train, y_train, seed=_nn_seed
         ) if nn_preds_train is not None else {
             "status": "no_nn_training_predictions",
             "r2_core": None, "r2_edge": None, "delta": None,
