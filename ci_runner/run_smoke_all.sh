@@ -45,7 +45,8 @@ unset HYPATIAX_ALLOW_LEGACY HYPATIAX_R2_SIGN_FLIP LEGACY_RESULTS_DIR
 export MPLBACKEND=Agg
 
 STEP_ORDER="$(grep -m1 '^_STEP_ORDER=' "$RUN_ALL" | sed -E 's/^_STEP_ORDER="(.*)"[[:space:]]*$/\1/')"
-DEFERRED_ORDER="$(awk -F'"' '/^_DEFERRED_STEPS=/{print $2; exit}' "$RUN_ALL")"
+DEFERRED_ORDER="$(grep -m1 '^_DEFERRED_STEPS=' "$RUN_ALL" | cut -d '"' -f 2)"
+[[ -n "$DEFERRED_ORDER" ]] || { echo "could not parse deferred step registry from $RUN_ALL" >&2; exit 2; }
 
 # Benchmark entry points (same list the real workflow runs); missing files are reported, not fatal.
 SCRIPTS=(
