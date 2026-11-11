@@ -254,3 +254,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 27 (2026-11-11)
 
 [Source Verification Audit 27](CORE295_SOURCE_VERIFICATION_AUDIT_27.md) confirms the modern Nernst reaction-quotient equation and the original 1889 historical context, and clarifies Debye–Hückel's limiting law for mean ionic activity coefficients. Keep original Nernst electrode notation distinct from modern whole-cell form; distinguish mean, single-ion and osmotic coefficients. No formal catalogue record is added.
+
+
+## Source verification audit 28 (2026-11-11)
+
+[Source Verification Audit 28](CORE295_SOURCE_VERIFICATION_AUDIT_28.md) confirms Leslie's age-structured linear projection matrix and Taylor–Jonker's nonlinear simplex-constrained replicator dynamics from their original papers. Treat each as one complete vector system; no age/strategy component, eigenvalue or equilibrium condition is a separate equation. Nicholson–Bailey remains a source lead only until its original equation page is verified.
