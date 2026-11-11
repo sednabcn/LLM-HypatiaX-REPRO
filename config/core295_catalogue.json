@@ -1827,6 +1827,22 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-ASMUSSEN-ALBRECHER-2010",
+      "domain": "DeFi Risk",
+      "title": "Ruin Probabilities, 2nd Edition (Asmussen & Albrecher, 2010)",
+      "url": "https://doi.org/10.1142/7431",
+      "use": "Classical Cramér–Lundberg reserve process and exact exponential-claim ruin probability",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-HESTON-1993",
+      "domain": "DeFi Risk",
+      "title": "A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options (Heston, 1993)",
+      "url": "https://doi.org/10.1093/rfs/6.2.327",
+      "use": "Coupled stochastic price/variance process and risk-neutral variance dynamics",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
