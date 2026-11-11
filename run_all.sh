@@ -375,7 +375,7 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
-  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},protocol30-pca-4060,noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
+  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,noise-sweep,sample-complexity},protocol30-random-80-20,protocol30-pca-4060,noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
