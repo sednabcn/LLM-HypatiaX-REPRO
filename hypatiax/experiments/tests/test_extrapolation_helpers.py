@@ -104,8 +104,6 @@ class TestCreateAggressiveSplit:
 # ─────────────────────────────────────────────────────────────────────────
 
 class TestFormulaHasTranscendental:
-    from hypatiax.core.routing import structural_risk_tokens
-
     @pytest.mark.parametrize(
         "code, expected",
         [
@@ -113,11 +111,11 @@ class TestFormulaHasTranscendental:
             ("def formula(x0): return math.log(x0)", ["log"]),
             ("def formula(x0): return Phi(x0)", ["Phi"]),
             ("def formula(x0): return erf(x0)", ["erf"]),
-            ("def formula(x0): return np.sin(x0) + np.cos(x0)", ["cos", "sin"]),
             ("def formula(x0): return np.sqrt(x0)", []),
             ("def formula(x0): return norm.cdf(x0)", []),
             ("def formula(x0): return np.maximum(x0, 0)", []),
             ("def formula(x0): return x0**0.5", []),
+            ("def formula(x0): return np.sin(x0) + np.cos(x0)", ["cos", "sin"]),
             ("def formula(x0): return 2 * x0", []),
         ],
     )
@@ -128,7 +126,6 @@ class TestFormulaHasTranscendental:
     def test_token_substrings_do_not_trigger(self):
         from hypatiax.core.routing import structural_risk_tokens
         assert structural_risk_tokens("def formula(exp_value): return exp_value + 1") == []
-
 
 # ─────────────────────────────────────────────────────────────────────────
 # _distance_llm_weight
