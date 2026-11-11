@@ -879,6 +879,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "scale_log":             scale_log,
             "rmse_original_units":   train_rmse,
             "llm_mode_used":         res.get("llm_mode", "none"),
+            "structural_risk_flag":  bool(res.get("structural_risk_flag", False)),
+            "structural_risk_tokens": list(res.get("structural_risk_tokens", [])),
+            "routing_reason":        res.get("routing_reason"),
             "llm_called":            bool(res.get("llm_called", False)),   # B2
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
             # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
