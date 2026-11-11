@@ -622,6 +622,38 @@
       "url": "https://mips.makerdao.com/mips/details/MIP45",
       "use": "Historical primary design specification for Dutch liquidation auctions and linear/stepwise/continuous exponential Abacus price curves; explicitly superseded, not current normative behavior",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-THIN-LENS",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §2.4 Thin Lenses",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/2-4-thin-lenses",
+      "use": "Exact thin-lens and lens-maker equations (Eqs. 2.19–2.21); linked geometric-optics derivation family",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-DIFFRACTION",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §§4.3–4.4 Diffraction",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/4-4-diffraction-gratings",
+      "use": "Diffraction-grating and double-slit interference relations; record slit geometry and order conventions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-SCHRODINGER",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §7.3 The Schrödinger Equation",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/7-3-the-schrodinger-equation",
+      "use": "Time-dependent Schrödinger equation, free-particle reduction and separation-of-variables relation; vector/PDE scope must be specified",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-QHO",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3 §7.5 The Quantum Harmonic Oscillator",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/7-5-the-quantum-harmonic-oscillator",
+      "use": "Quantum harmonic oscillator eigenvalue equation, energy spectrum and Hermite-function solutions; linked to Schrödinger eigenproblem",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
