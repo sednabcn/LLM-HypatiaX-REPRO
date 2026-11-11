@@ -195,6 +195,46 @@ def manuscript_blend_weights(p_ood: float, alpha: float = 0.3) -> dict[str, floa
     return {"llm": float(w_llm), "nn": float(1.0 - w_llm)}
 
 
+def route_decision_from_diagnostics(
+    trust_gate_passed: bool,
+    fitted_train_r2: float,
+    structural_tokens: list[str] | tuple[str, ...] = (),
+    degradation_delta: float | None = None,
+    degradation_tau: float | None = None,
+) -> dict[str, Any]:
+    """Central five-stage route decision from training-only diagnostics."""
+    tokens = sorted(set(structural_tokens))
+    if not trust_gate_passed:
+        return {"decision": "nn", "route_reason": "trust_gate_failed",
+                "structural_risk_flag": bool(tokens), "structural_risk_tokens": tokens}
+    if tokens:
+        return {"decision": "ensemble", "route_reason": "structural_risk_precedence",
+                "structural_risk_flag": True, "structural_risk_tokens": tokens}
+    try:
+        delta = float(degradation_delta) if degradation_delta is not None else None
+    except (TypeError, ValueError):
+        delta = None
+    if delta is not None and not np.isfinite(delta):
+        delta = None
+    try:
+        tau = float(degradation_tau) if degradation_tau is not None else None
+    except (TypeError, ValueError):
+        tau = None
+    if tau is not None and (not np.isfinite(tau) or tau < 0.0):
+        tau = None
+    if delta is None or tau is None:
+        return {"decision": "ensemble",
+                "route_reason": "degradation_probe_or_tau_unavailable",
+                "structural_risk_flag": False, "structural_risk_tokens": []}
+    if np.isfinite(fitted_train_r2) and float(fitted_train_r2) >= 0.95 and delta <= tau:
+        return {"decision": "fitted_llm",
+                "route_reason": "trusted_high_fit_low_degradation",
+                "structural_risk_flag": False, "structural_risk_tokens": []}
+    return {"decision": "ensemble",
+            "route_reason": "degradation_exceeds_tau_or_fit_below_0.95",
+            "structural_risk_flag": False, "structural_risk_tokens": []}
+
+
 def select_hypatiax_route(
     fitted_train_r2: float,
     nn_train_r2: float,
@@ -266,25 +306,17 @@ def select_hypatiax_route(
         return {**base, "decision": "nn", "predictions": nn_preds if nn_ok else None,
                 "route_reason": "trust_gate_failed"}
 
-    if tokens or _delta is None or _tau is None:
-        reason = "structural_risk_precedence" if tokens else "degradation_probe_or_tau_unavailable"
-        if not nn_ok:
-            return {**base, "decision": "nn", "predictions": None,
-                    "route_reason": reason + "_nn_unavailable"}
-        weights = manuscript_blend_weights(0.0, alpha)
-        predictions = weights["llm"] * llm_preds + weights["nn"] * nn_preds
-        return {**base, "decision": "ensemble", "predictions": predictions,
-                "route_reason": reason, "blend_weights": weights}
-
-    if float(fitted_train_r2) >= 0.95 and _delta <= _tau:
+    policy = route_decision_from_diagnostics(
+        True, fitted_train_r2, tokens, _delta, _tau
+    )
+    if policy["decision"] == "fitted_llm":
         return {**base, "decision": "fitted_llm", "predictions": llm_preds,
-                "route_reason": "trusted_high_fit_low_degradation"}
+                "route_reason": policy["route_reason"]}
 
     if not nn_ok:
         return {**base, "decision": "nn", "predictions": None,
-                "route_reason": "ensemble_required_nn_unavailable"}
+                "route_reason": policy["route_reason"] + "_nn_unavailable"}
     weights = manuscript_blend_weights(0.0, alpha)
     predictions = weights["llm"] * llm_preds + weights["nn"] * nn_preds
     return {**base, "decision": "ensemble", "predictions": predictions,
-            "route_reason": "degradation_exceeds_tau_or_fit_below_0.95",
-            "blend_weights": weights}
+            "route_reason": policy["route_reason"], "blend_weights": weights}
