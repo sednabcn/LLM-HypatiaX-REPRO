@@ -369,3 +369,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Structural-equivalence policy decision pending (2026-11-11)
 
 [Structural Equivalence Policy Options](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_OPTIONS.md) consolidates the cross-domain collisions and system-level distinctions. The recommended hybrid rule (strict scalar-form comparison plus complete coupled-system units) is a proposal only; no rule has been adopted and unresolved families remain held.
+
+
+## Source verification audit 40 (2026-11-11)
+
+[Source Verification Audit 40](CORE295_SOURCE_VERIFICATION_AUDIT_40.md) verifies Balancer Linear Pool's rate-normalized constant-sum invariant and piecewise nominal-balance fee transform at a pinned V2 commit. The moving-branch source concern is closed; keep invariant, nominal transform, inverse, BPT conversion and swap directions in one family. Resolve whether the constant-sum mechanism is structurally separate from StableSwap's high-amplification limit.
