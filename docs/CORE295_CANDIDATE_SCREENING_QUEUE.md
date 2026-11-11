@@ -278,3 +278,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Discovery batch 34 (2026-11-11)
 
 [Candidate Discovery Batch 34](CORE295_CANDIDATE_DISCOVERY_BATCH_34.md) adds Fisher's spatial reaction–diffusion wave, Gierer–Meinhardt activator–inhibitor morphogenesis and a chemostat–Monod system. Fisher's logistic reaction is linked to the Core-15 logistic exclusion; Gierer–Meinhardt is a nonlinear kinetics member of the Turing/morphogenesis family and needs primary equation transcription; chemostat–Monod must be treated as a coupled system, not a separate MM saturation formula.
+
+
+## Source verification audit 29 (2026-11-11)
+
+[Source Verification Audit 29](CORE295_SOURCE_VERIFICATION_AUDIT_29.md) verifies Fisher's original 1937 reaction–diffusion Eq. (1) and Gierer–Meinhardt's original 1972 different-source activator–inhibitor system Eq. (15a,b). Fisher's local reaction is the Core-15-excluded logistic term; Gierer–Meinhardt's original model has explicit source-density fields (Q(x),Q'(x)) and is not identical to the commonly quoted simplified form. Both are complete PDE systems and remain discovery-only pending family policy and PDE adapters.
