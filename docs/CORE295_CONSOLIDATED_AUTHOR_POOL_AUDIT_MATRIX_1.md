@@ -11,15 +11,18 @@ No author-pool script was executed. No equations were generated, validated, fitt
 | Domain | Raw author-pool rows | Target accepted models | Raw arithmetic gap | Accepted from author-pool audit | Current source-register records | Main disposition |
 |---|---:|---:|---:|---:|---:|---|
 | Chemistry | 54 | 59 | 5 | 0 | 36 | Do not import wholesale; source reconstruction, model-family clustering, units and regime constraints required |
-| Biology | 59 | 59 | 0 | 0 | 34 | Raw count exactly matches target but is not an acceptance count; coupled systems and derived outputs materially reduce the apparent pool |
+| Biology | 59 | 59 | 0 | 0 | 35 | Raw count exactly matches target but is not an acceptance count; coupled systems and derived outputs materially reduce the apparent pool |
 | Physics | 75 | 59 | 16 surplus | 0 | 43 | Broad textbook formula collection; many outputs, special cases, limits and linked models |
-| DeFi AMM | 54 | 59 | 5 | 0 | 23 | Several rows are views of a few invariant families; protocol/version and state-transition contracts are missing |
+| DeFi AMM | 54 | 59 | 5 | 0 | 25 | Several rows are views of a few invariant families; protocol/version and state-transition contracts are missing |
 | DeFi Risk | 57 | 59 | 2 | 0 | 33 | Generic finance identities, excluded Core-15 structures and protocol-unspecified heuristics dominate |
-| **Total** | **299** | **295** | **0 net raw gap** | **0** | **169** | Raw row total is not evidence that 295 structurally distinct equations exist |
+| **Total** | **299** | **295** | **0 net raw gap** | **0** | **172** | Raw row total is not evidence that 295 structurally distinct equations exist |
 
 The arithmetic gap column is only (59-\text{raw rows}); it is not a feasibility estimate. Physics surplus cannot be transferred to another domain. A domain with fewer than 59 defensible models must expand its source universe rather than relax the structural rule or pad with variants.
 
 The 169 source-register records are references/leads, not equations. The formal manifest remains **draft**, with **19 proposed**, **0 accepted**, and sampling frame **not frozen**. These 19 formal proposals are separate from the 299-row discovery pool.
+
+
+- [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md) reconstructs the Deriso–Schnute family, separates continuous/discrete population models, verifies the Curve StableSwap whitepaper invariant, and clusters Uniswap/Balancer derived equations.
 
 ## 2. Consolidated family and defect matrix
 
