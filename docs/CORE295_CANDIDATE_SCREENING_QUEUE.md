@@ -18,7 +18,7 @@ The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSC
 | Biology | BIO-TUMOR-DBUCK-2014 | Concentration-modulated tumor turnover, primary Eq. 9 | Freeze tumor state as sum of longest diameters, concentration input, units and valid clinical range. |
 | Biology | BIO-HH-1952; BIO-HH-MODERN-2019 | Hodgkin–Huxley coupled membrane/gating ODE system | Freeze original/modern current sign convention, temperature scaling, gate-rate functions and full four-state system. |
 | Biology | BIO-MICHAELIS-MENTEN-1913 | **Excluded** | Michaelis–Menten is explicitly in the Core-15 exclusion list; retain the bibliography lead for provenance only, never draft it as a Core-295 candidate. |
-| Biology | BIO-HILL-MUSCLE-1938 | Hill muscle force–velocity relation | Confirm exact original equation page, muscle preparation, tetanic state and units of a,b. |
+
 | Biology | BIO-MORRIS-LECAR-1981 | Two-variable conductance-based excitable-cell model | Confirm original equations 1–2, ionic-current conventions, quasi-steady activation and parameter units. |
 | Physics | PHYS-PLANCK-1901; PHYS-OPENSTAX-V3-PLANCK | Planck blackbody spectral distribution | Freeze spectral energy density versus exitance/radiance convention and SI conversion; cluster Stefan/Wien consequences. |
 | Physics | PHYS-OPENSTAX-V3-THIN-LENS | Thin-lens equation | Confirm sign convention, refractive index assumptions and thin-lens regime. |
@@ -46,6 +46,7 @@ The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSC
 | Chemistry | CHEM-RIDEAL-1939; CHEM-ELEY-RIDEAL-1940; CHEM-ER-ENG-REACTION; CHEM-IUPAC-LANGMUIR-RIDEAL | Rideal–Eley gas/adsorbed surface-reaction rate | Mechanism is primary-sourced; explicit engineering rate form is secondary. Verify the rate-law assumptions and catalyst-specific pathway before proposed-record drafting. |
 | Biology | BIO-SIMEONI-2004; BIO-TUMOR-ODE-COMPARISON-2020 | Exponential-to-linear tumor growth and transit-compartment TGI | Exact growth formula currently transcribed from secondary comparison; original primary equation/page remains outstanding. |
 | Biology | BIO-HILL-1910; BIO-ADAIR-1925 | Hemoglobin oxygen-binding models | Hill/Adair formula transcription needs original-paper page verification; keep common hemoglobin source cluster. |
+| Biology | BIO-HILL-MUSCLE-1938 | Hill muscle force–velocity relation | Confirm exact equation page and original notation; specify muscle preparation, steady isotonic/tetanic conditions, sign convention, and valid force–velocity range. The record is drafted but remains proposed pending primary-page verification. |
 | Biology | BIO-FICK-1870; BIO-WINDKESSEL-FRANK-1899; BIO-WINDKESSEL-WESTERHOF-2009 | Fick cardiac output and Windkessel hemodynamics | Original notation, assumptions and modern model translation require exact page-level review. |
 | Biology | BIO-FITZHUGH-1961 | FitzHugh/BVP reduction | Canonical dimensionless FHN form is a later parameterization; exact 1961 original equations need transcription. |
 | Physics | PHYS-NAVIER-1822; PHYS-STOKES-1845 | Modern Navier–Stokes system | Modern compact form is a synthesis; exact historical equations and Newtonian constitutive assumptions need lineage mapping. |
