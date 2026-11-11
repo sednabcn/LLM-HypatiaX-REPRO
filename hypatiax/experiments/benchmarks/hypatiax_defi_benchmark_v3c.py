@@ -16,10 +16,10 @@ What changed in v2.0
 ─────────────────────
 Fix 0   Reserve Ratio / Spot Price: independent log-uniform sampling
 Fix 0b  IL Breakeven flagged extrapolation_intractable
-Fix 1   Extrapolation-probe routing (NN edge-degradation → LLM)
-Fix 2   Formula-complexity routing (transcendental tokens → LLM)
+Fix 1   Training-only NN edge-degradation probe (Delta = R2_train - R2_edge)
+Fix 2   Exact structural-risk detection; flagged functions force ensemble
 Fix 3   LLM predictions as NN input feature (residual learning)
-Fix 4   Distance-gated blend weights (shift toward LLM out-of-range)
+Fix 4   Training-fitted KDE OOD scores and per-query manuscript blend weights
 Fix 5   UNIFIED formula evaluator — single code path for ALL LLM evaluation
 Fix 5b  Routing-override guard — only trust LLM override when
         LLM formula actually fitted training data (R² > 0)
@@ -36,12 +36,12 @@ Issue 3 fix  Hybrid timing now includes full NN re-run cost on fallback
              NN result.  nn_rerun_time_s is tracked separately and added
              to the wall-clock time recorded for the hybrid method.
 
-Issue 4 fix  Hybrid selector bug fixed.  When LLM achieves train_r2 ≥ 0.95
-             the decision is locked to "llm" before the routing-override
-             block runs, so overrides cannot silently flip it to NN.
-             Additionally, the LLM→NN fallback path only activates on a
-             genuine evaluation failure (NaN/exception), not on a valid
-             but negative test_r2.
+Routing policy update  The old high-fit lock and post-hoc overrides are removed.
+             Pure LLM now requires trust-gate pass, no structural-risk flag,
+             train R2 >= 0.95, and a valid training-only degradation probe
+             with Delta <= the pre-calibrated tau. Structural risk takes
+             precedence and forces ensemble. Missing tau fails closed to
+             ensemble; held-out labels never select routes or weights.
 
 Issue 5 fix  NaN-safe wrappers for log, sqrt, norm.cdf, norm.pdf, and
              norm_pdf/norm_cdf name aliases added to _EXEC_GLOBALS.
@@ -783,13 +783,13 @@ def _hybrid_predict_and_eval(
     Full hybrid pipeline for one test case.
     Returns dict: train_r2, test_r2, decision, success.
 
-    Routing priority (in order):
-      Fix 2  → transcendental token detection → LLM  (if formula trustworthy)
-      Fix 1  → extrapolation probe degradation → LLM  (if formula trustworthy)
-      Fix 3  → LLM-feature augmentation for NN path   (if formula trustworthy)
-      Fix 4  → distance-gated blend for ensemble path
-      Fix 5  → unified evaluator for ALL LLM formula calls
-      Fix 5b → routing guard: only override if LLM train R² > 0
+    Routing priority:
+      1. Trust gate failure -> NN fallback.
+      2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
+      3. Training-only NN edge degradation; pure LLM only if train R² >= 0.95
+         and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
+      4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
+      5. Held-out labels are used only for final metrics, never routing/blending.
     """
 
     # Step 1: Generate LLM formula
