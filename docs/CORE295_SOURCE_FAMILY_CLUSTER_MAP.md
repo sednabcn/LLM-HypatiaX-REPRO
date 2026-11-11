@@ -58,6 +58,25 @@
 | PHYS-OSCILLATORY-DYNAMICS | Damped harmonic oscillator ODE and solutions | ODE, under/critical/overdamped solutions and frequencies are one source family. |
 | PHYS-STRUCTURAL-ELASTICITY | Euler elastica; Euler column buckling; Timoshenko beam dynamics | Buckling is a stability/eigenvalue result from elastic-column mechanics; Timoshenko adds shear deformation and rotary inertia to slender-beam theory. Cluster the models but preserve their different kinematics and validity regimes. |
 
+
+### Additional families surfaced by author-pool audit 7
+
+| Provisional family ID | Related pool rows | Initial screen |
+|---|---|---|
+| CHEM-KINETIC-INTEGRATED | first/second/zero-order concentration laws; their half-life summaries; consecutive reaction intermediate | Integrated trajectories and derived half-life identities are linked. Do not count rate law, integrated solution and half-life as independent without a predeclared level-of-model distinction. |
+| CHEM-ACTIVATED-RATE | Eyring rate; collision-theory rate; Arrhenius two-point; catalytic rate ratio | Rate expressions and algebraic comparisons share activated-rate structure; exact prefactor, activation quantity and assumptions must be source-specific. |
+| CHEM-RECIPROCAL-TEMPERATURE-EQUILIBRIUM | van't Hoff K; Clausius–Clapeyron vapour pressure | Both have reciprocal-temperature exponential form; decide whether distinct observables justify separate source families under the canonical structure policy. |
+| CHEM-ACID-BASE-EQUILIBRIUM | weak-acid exact/approximate; pH; buffer capacity; ionic strength; Debye–Hückel/Davies | Separate equilibrium/speciation, derived approximation and activity-coefficient correction levels; enforce electroneutrality and activity conventions. |
+| CHEM-ADSORPTION-ISOTHERMS | Langmuir one-site/two-site; Freundlich | Langmuir variants are linked site-balance forms; Freundlich is a distinct empirical power law but needs material-specific source and fit range. |
+| CHEM-TRANSPORT-CONSTITUTIVE | Fick bulk flux; diffusion time; Stokes–Einstein; membrane permeability | Bulk gradient law, characteristic time and membrane reduction are related levels; Fick shares the Fourier/Ohm normalized operator overlap already flagged. |
+| BIO-SATURATION-HYPERBOLIC | Hill coefficient 2; Monod; Holling II; receptor occupancy; Emax; Scatchard specific-binding term | Same or embedded hyperbolic saturation structure after relabeling; count at most according to a declared complete-equation equivalence rule, not by domain label. |
+| BIO-POPULATION-GROWTH-SOLUTIONS | exponential; Gompertz; logistic solution; tumour Gompertz; cell-cycle doubling | Growth trajectories, special cases and derived time scales are related; preserve governing ODE and state definition. |
+| BIO-POPULATION-DYNAMICAL-SYSTEMS | Lotka–Volterra prey/predator; SIR incidence/epidemic growth; gene-regulatory steady states | Coupled system components must be one declared statistical unit and generated jointly. |
+| BIO-PHARMACOKINETICS | one-compartment bolus; oral absorption; IV infusion; clearance-AUC; bacterial kill; tumour PK/PD | Distinguish dosing input and dynamic model; AUC is a derived mass-balance identity; preserve concentration-time dependence. |
+| BIO-HEMODYNAMICS-POISEUILLE | blood-flow resistance; wall shear stress | Same laminar tube-flow family as Physics Hagen–Poiseuille; wall shear is derived from the same velocity profile. |
+| BIO-OPTICAL-ATTENUATION | light attenuation; Chemistry Beer–Lambert transmittance | Same exponential attenuation form; wavelength, geometry and observable differ but structural overlap requires explicit treatment. |
+
+
 ## DeFi AMM
 
 | Provisional family ID | Source leads / related structures | Initial screen |
