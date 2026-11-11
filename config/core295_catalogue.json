@@ -662,6 +662,30 @@
       "url": "https://doi.org/10.1186/s12885-020-6703-0",
       "use": "Secondary equation comparison with explicit Simeoni transit-compartment system and alternative tumor-growth ODEs; trace selected equations to original primary papers",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-FLUID",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 Chapter 14 Fluid Mechanics",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/14-key-equations",
+      "use": "Continuity, Bernoulli and Poiseuille relations; separate conservation-law derivations from laminar tube-flow constitutive law",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-HEAT-TRANSFER",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2 §1.6 Mechanisms of Heat Transfer",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/1-6-mechanisms-of-heat-transfer",
+      "use": "Stefan–Boltzmann radiation law and conductive heat-transfer relation; document emissivity, geometry and steady-state assumptions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V1-DAMPED-OSCILLATOR",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 1 §15.5 Damped Oscillations",
+      "url": "https://openstax.org/books/university-physics-volume-1/pages/15-5-damped-oscillations",
+      "use": "Damped harmonic oscillator ODE and underdamped solution/frequency; ODE and solution are one family",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
