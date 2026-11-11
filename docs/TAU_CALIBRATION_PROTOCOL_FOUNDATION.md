@@ -47,7 +47,7 @@ The manuscript does not supply a numeric (\tau), a calibration dataset, a reprod
 For each eligible calibration unit and each candidate threshold (\tau), define the pure-LLM decision using the same gates and the same Stage 3 statistic intended for evaluation. A **bad route** is a calibration unit for which the candidate rule would permit pure-LLM routing but either approved edge-recovery condition fails:
 
 1. Absolute recovery fails: (R^2_{LLM,edge}<0.99); or
-2. Relative recovery fails: (R^2_{LLM,edge}<R^2_{ensemble,edge}), corresponding to the approved zero margin (\delta=0.00).
+2. Relative recovery fails: (R^2_{LLM,edge}<R^2_{ensemble,edge}), corresponding to the approved zero margin (\gamma=0.00).
 
 Equivalently, a permitted pure-LLM route is acceptable only when both
 
