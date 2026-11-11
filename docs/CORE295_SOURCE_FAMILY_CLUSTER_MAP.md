@@ -484,3 +484,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 61 (2026-11-11)
 
 [Source Verification Audit 61](CORE295_SOURCE_VERIFICATION_AUDIT_61.md) adds Parkinson's high–low range estimator as one statistical volatility family, distinct from close-to-close realized variance and EWMA/GARCH conditional variance. Related range estimators (Garman–Klass, Rogers–Satchell) must be clustered; do not count sample averaging, annualization or coefficient forms separately.
+
+
+## Source verification audit 62 (2026-11-11)
+
+[Source Verification Audit 62](CORE295_SOURCE_VERIFICATION_AUDIT_62.md) adds Merton structural credit risk as one model family. Equity option value, risky debt value, d1/d2, risk-neutral PD and physical distance-to-default are linked outputs, not separate equations. Distinguish risk-neutral (\Phi(-d_2)) from physical (\Phi(-DD)).
