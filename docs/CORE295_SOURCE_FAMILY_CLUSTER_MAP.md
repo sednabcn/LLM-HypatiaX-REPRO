@@ -434,3 +434,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 51 (2026-11-11)
 
 [Source Verification Audit 51](CORE295_SOURCE_VERIFICATION_AUDIT_51.md) classifies the fixed-spread two-call optimizer as a single derived strategy family. Its health-factor constraint overlaps the collateral-weighted lending-risk ratio; its first/second repayments and profit expressions are linked outputs. Keep separate from auction liquidation and modern protocol-specific incentive curves, but hold pending the system-unit policy.
+
+
+## Source verification audit 52 (2026-11-11)
+
+[Source Verification Audit 52](CORE295_SOURCE_VERIFICATION_AUDIT_52.md) adds Miqado as a potentially distinct reversible-option support system. Its baseline health factor/FSL equations overlap existing lending-risk families; the distinctive structure is the reversible option with early seller termination, borrower rescue and supporter maturity takeover/default. Keep all components in one system unit.
