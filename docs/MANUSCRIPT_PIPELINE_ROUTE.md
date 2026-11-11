@@ -14,7 +14,7 @@ For each equation/task, the intended sequence in the main manuscript, Section 7.
 2. **Transcendental-token diagnostic.** Flag expressions containing exp, log, Phi, sin, cos, or erf. The manuscript says this flag indicates elevated structural complexity and activates ensemble mode.
 3. **Neural degradation probe.** Compute Delta = R²_train - R²_edge, where edge performance is measured on a training-side boundary/probe subset. Compare with a domain-calibrated threshold tau. Delta > tau activates ensemble mode.
 4. **OOD diagnostic.** Fit the KDE on training projections and estimate OOD likelihood for the query/input locations. This must not use held-out target labels or held-out scores. High p_OOD increases the LLM weight.
-5. **Final route and blend.** The manuscript specifies neural fallback for a failed trust gate; pure LLM for training R² >= 0.95 and Delta < tau; otherwise ensemble for a trusted candidate. For ensemble mode, w_LLM = alpha + (1-alpha)*p_OOD, w_NN = 1-w_LLM, alpha=0.3; blend the LLM and neural predictions.
+5. **Final route and blend.** The manuscript specifies neural fallback for a failed trust gate; pure LLM for training R² >= 0.95 and Delta <= tau; otherwise ensemble for a trusted candidate. For ensemble mode, w_LLM = alpha + (1-alpha)*p_OOD, w_NN = 1-w_LLM, alpha=0.3; blend the LLM and neural predictions.
 
 All paths converge to one selected formula/prediction record. Store the proposed formula, parsed formula, selected route, every diagnostic value, thresholds, blend weights, and failure status.
 
