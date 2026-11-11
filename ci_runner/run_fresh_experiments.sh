@@ -202,6 +202,7 @@ manifest = {
         "seeds": cfg.get("seeds"),
         "llm_model": cfg.get("llm_model"),
         "llm_temperature": cfg.get("llm_temperature"),
+        "routing_policy": cfg.get("routing_policy"),
         "llm_retries": cfg.get("llm_retries"),
         "llm_k_runs": cfg.get("llm_k_runs"),
         "timeouts": cfg.get("timeouts"),
