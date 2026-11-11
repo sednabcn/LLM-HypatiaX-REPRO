@@ -905,8 +905,9 @@ def _hybrid_predict_and_eval(
                     llm_pred_train=llm_train_preds,
                     nn_pred_train=nn_m["y_pred_train"],
                     y_train=y_train,
-                    llm_r2=llm_train_r2 * llm_w,
-                    nn_r2=nn_m["train_r2"] * nn_w,
+                    llm_r2=llm_train_r2,
+                    nn_r2=nn_m["train_r2"],
+                    blend_weights=query_blend_weights,
                 )
                 m = _compute_metrics(y_test, ensemble_pred)
                 test_r2 = m["r2"]
@@ -947,6 +948,13 @@ def _hybrid_predict_and_eval(
         "decision":       decision,
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
+        "route_reason":   route_reason,
+        "structural_risk_flag": structural_risk_flag,
+        "structural_risk_tokens": structural_tokens,
+        "degradation_probe": degradation_probe,
+        "degradation_tau": degradation_tau,
+        "ood_diagnostic": ood_diagnostic,
+        "blend_weights": query_blend_weights,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
         "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
@@ -1488,6 +1496,13 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
                     "decision":        hy_m["decision"],
+                    "route_reason":    hy_m.get("route_reason"),
+                    "structural_risk_flag": hy_m.get("structural_risk_flag"),
+                    "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "degradation_probe": hy_m.get("degradation_probe"),
+                    "degradation_tau": hy_m.get("degradation_tau"),
+                    "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
