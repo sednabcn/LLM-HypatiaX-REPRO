@@ -598,6 +598,30 @@
       "url": "https://docs.curve.fi/assets/pdf/whitepaper_cryptoswap.pdf",
       "use": "Primary Curve CryptoSwap source, June 9 2021; dynamic-peg invariant and state-dependent K; distinguish from StableSwap and pin model/implementation version",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-COMPOUND-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Compound III liquidation documentation",
+      "url": "https://docs.compound.finance/liquidation/",
+      "use": "Official Comet documentation for liquidation eligibility, absorb mechanics and collateral quote discount; pin Comet implementation/version and governance parameters",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-SKY-COLLATERAL-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Sky Protocol collateral liquidation documentation",
+      "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
+      "use": "Official current documentation for Clipper/Abacus liquidation auction price functions and governance parameters; version contract code and price calculator",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-MAKER-MIP45-LIQ2",
+      "domain": "DeFi Risk",
+      "title": "MIP45: Liquidations 2.0 — Liquidation System Redesign",
+      "url": "https://mips.makerdao.com/mips/details/MIP45",
+      "use": "Historical primary design specification for Dutch liquidation auctions and linear/stepwise/continuous exponential Abacus price curves; explicitly superseded, not current normative behavior",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
