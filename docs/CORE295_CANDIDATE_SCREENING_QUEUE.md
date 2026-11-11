@@ -203,3 +203,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 24 (2026-11-11)
 
 [Source Verification Audit 24](CORE295_SOURCE_VERIFICATION_AUDIT_24.md) verifies Balancer's weighted geometric invariant (V=\prod_i B_i^{w_i}), Σw_i=1, against official documentation and the fetched V2 WeightedMath implementation. The proposed three-token expression is a fixed-arity adapter to the general n-token invariant; equal two-token weights reduce to excluded constant product. Keep spot-price and swap-output equations in the same family. Hold pending immutable implementation commit, token scaling, weight-sampling and fixed-point rounding contracts.
+
+
+## Source verification audit 25 (2026-11-11)
+
+[Source Verification Audit 25](CORE295_SOURCE_VERIFICATION_AUDIT_25.md) verifies Langmuir's 1918 primary single-site coverage equation, Eq. (8), and its amount-adsorbed Eq. (9). The source's one-site, one-molecule, monolayer and adsorption/desorption equilibrium assumptions are explicit. The formula is the same rational saturation form as Michaelis–Menten/Hill-one occupancy, so the Core-15 cross-domain exclusion and structural-unit policy must be resolved before acceptance. Keep Eq. (8), Eq. (9), LH adsorption substeps and linearized forms in one family.
