@@ -10,16 +10,16 @@ No author-pool script was executed. No equations were generated, validated, fitt
 
 | Domain | Raw author-pool rows | Target accepted models | Raw arithmetic gap | Accepted from author-pool audit | Current source-register records | Main disposition |
 |---|---:|---:|---:|---:|---:|---|
-| Chemistry | 54 | 59 | 5 | 0 | 32 | Do not import wholesale; source reconstruction, model-family clustering, units and regime constraints required |
-| Biology | 59 | 59 | 0 | 0 | 30 | Raw count exactly matches target but is not an acceptance count; coupled systems and derived outputs materially reduce the apparent pool |
+| Chemistry | 54 | 59 | 5 | 0 | 33 | Do not import wholesale; source reconstruction, model-family clustering, units and regime constraints required |
+| Biology | 59 | 59 | 0 | 0 | 34 | Raw count exactly matches target but is not an acceptance count; coupled systems and derived outputs materially reduce the apparent pool |
 | Physics | 75 | 59 | 16 surplus | 0 | 43 | Broad textbook formula collection; many outputs, special cases, limits and linked models |
 | DeFi AMM | 54 | 59 | 5 | 0 | 23 | Several rows are views of a few invariant families; protocol/version and state-transition contracts are missing |
-| DeFi Risk | 57 | 59 | 2 | 0 | 31 | Generic finance identities, excluded Core-15 structures and protocol-unspecified heuristics dominate |
-| **Total** | **299** | **295** | **0 net raw gap** | **0** | **159** | Raw row total is not evidence that 295 structurally distinct equations exist |
+| DeFi Risk | 57 | 59 | 2 | 0 | 33 | Generic finance identities, excluded Core-15 structures and protocol-unspecified heuristics dominate |
+| **Total** | **299** | **295** | **0 net raw gap** | **0** | **166** | Raw row total is not evidence that 295 structurally distinct equations exist |
 
 The arithmetic gap column is only (59-\text{raw rows}); it is not a feasibility estimate. Physics surplus cannot be transferred to another domain. A domain with fewer than 59 defensible models must expand its source universe rather than relax the structural rule or pad with variants.
 
-The 159 source-register records are references/leads, not equations. The formal manifest remains **draft**, with **19 proposed**, **0 accepted**, and sampling frame **not frozen**. These 19 formal proposals are separate from the 299-row discovery pool.
+The 166 source-register records are references/leads, not equations. The formal manifest remains **draft**, with **19 proposed**, **0 accepted**, and sampling frame **not frozen**. These 19 formal proposals are separate from the 299-row discovery pool.
 
 ## 2. Consolidated family and defect matrix
 
@@ -44,8 +44,10 @@ The 159 source-register records are references/leads, not equations. The formal 
 ## 4. Audit source documents
 
 - Chemistry and Biology: [CORE295_AUTHOR_POOL_CHEM_BIO_AUDIT_1.md](CORE295_AUTHOR_POOL_CHEM_BIO_AUDIT_1.md) — 54 Chemistry + 59 Biology rows.
+- Chemistry source refinements: [CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md](CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md) — Frumkin/Langmuir family and Marcus prefactor scope.
 - Physics: [CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md](CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md) — 75 Physics rows.
 - DeFi AMM and DeFi Risk: [CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md](CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md) — 54 AMM + 57 Risk rows.
+- DeFi Risk protocol refinements: [CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md) — Aave V3 and Compound Comet models.
 - Structural rules: [CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md) — provisional E0–E5 policy, not frozen.
 - AMM source expansion: [CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md](CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md).
 
