@@ -147,7 +147,9 @@ from sklearn.preprocessing import StandardScaler
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT))
 
-from hypatiax.core.routing import kde_ood_probability, structural_risk_tokens
+from hypatiax.core.routing import (
+    kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
+)
 
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
@@ -848,24 +850,12 @@ def _hybrid_predict_and_eval(
         "nn": _nn_w.astype(float).tolist(),
     }
 
-    _delta = degradation_probe.get("delta")
-    if not llm_trustworthy:
-        decision = "nn"
-        route_reason = "trust_gate_failed"
-    elif structural_risk_flag:
-        # Structural risk has precedence over the high-fit shortcut.
-        decision = "ensemble"
-        route_reason = "structural_risk_precedence"
-    elif _delta is None or degradation_tau is None:
-        # Never invent tau or silently permit pure LLM when the probe is absent.
-        decision = "ensemble"
-        route_reason = "degradation_probe_or_tau_unavailable"
-    elif llm_train_r2 >= 0.95 and float(_delta) <= degradation_tau:
-        decision = "llm"
-        route_reason = "trusted_high_fit_low_degradation"
-    else:
-        decision = "ensemble"
-        route_reason = "degradation_exceeds_tau_or_fit_below_0.95"
+    _policy = route_decision_from_diagnostics(
+        bool(llm_trustworthy), llm_train_r2, structural_tokens,
+        degradation_probe.get("delta"), degradation_tau,
+    )
+    decision = "llm" if _policy["decision"] == "fitted_llm" else _policy["decision"]
+    route_reason = _policy["route_reason"]
 
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
