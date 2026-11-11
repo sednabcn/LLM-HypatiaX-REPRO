@@ -378,3 +378,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 43 (2026-11-11)
 
 [Source Verification Audit 43](CORE295_SOURCE_VERIFICATION_AUDIT_43.md) classifies Swaap V2 as non-custodial RFQ market-making with off-chain quote optimization and on-chain settlement safeguards, not a new on-chain CFMM invariant. Its max-drawdown, last-look and max-imbalance rules are protocol-specific predicates; consider them only as one version-pinned settlement-policy system if DeFi Risk admits executable safeguards.
+
+
+## Source verification audit 44 (2026-11-11)
+
+[Source Verification Audit 44](CORE295_SOURCE_VERIFICATION_AUDIT_44.md) verifies Aave V3's weighted collateral/debt health factor against official docs and pinned GenericLogic.sol, including eMode, eligible collateral and debt accrual. It also verifies Compound III's utilization-based piecewise-linear borrow-rate function. Aave/Compound two-slope rate curves are one family; health factor is a distinct collateralization-risk metric, not a liquidation-price equation.
