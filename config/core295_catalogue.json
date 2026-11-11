@@ -731,7 +731,7 @@
       "source_id": "AMM-MAVERICK-DYNAMIC",
       "domain": "DeFi AMM",
       "title": "Maverick AMM dynamic distribution and directional LPing",
-      "url": "https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-capital-efficiency",
+      "url": "https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-greater-capital-34427f5ac22f",
       "use": "Protocol source lead for TWAP-triggered movement of discrete liquidity bins; audit report validates selected whitepaper formula numbers but swap/liquidity formula scope is incomplete; algorithmic state-transition lead only",
       "status": "candidate_reference"
     }
