@@ -289,3 +289,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 34 (2026-11-11)
 
 [Candidate Discovery Batch 34](CORE295_CANDIDATE_DISCOVERY_BATCH_34.md) adds Fisher–KPP, Gierer–Meinhardt and chemostat–Monod. Fisher–KPP extends logistic growth spatially; Gierer–Meinhardt is a nonlinear activator–inhibitor member of the broader Turing/morphogenesis PDE family; chemostat–Monod couples biomass and substrate states but contains the MM/Monod saturation structure.
+
+
+## Source verification audit 29 (2026-11-11)
+
+[Source Verification Audit 29](CORE295_SOURCE_VERIFICATION_AUDIT_29.md) transcribes Fisher 1937's scalar reaction–diffusion equation and Gierer–Meinhardt 1972 Eq. (15a,b). Keep Fisher in the spatial logistic-reaction family; keep Gierer–Meinhardt as a coupled activator–inhibitor model within the broader Turing/morphogenesis PDE family. The source's explicit source-density fields and multiple mechanism variants must not be collapsed into one generic formula without a declared model choice.
