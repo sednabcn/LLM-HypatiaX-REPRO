@@ -1803,6 +1803,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-BLACK-COX-1976",
+      "domain": "DeFi Risk",
+      "title": "Valuing Corporate Securities: Some Effects of Bond Indenture Provisions (Black & Cox, 1976)",
+      "url": "https://doi.org/10.1111/j.1540-6261.1976.tb01891.x",
+      "use": "First-passage structural credit/default model with time-dependent covenant barrier",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
