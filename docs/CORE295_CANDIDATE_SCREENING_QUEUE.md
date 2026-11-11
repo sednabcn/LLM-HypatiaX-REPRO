@@ -208,3 +208,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 25 (2026-11-11)
 
 [Source Verification Audit 25](CORE295_SOURCE_VERIFICATION_AUDIT_25.md) verifies Langmuir's 1918 primary single-site coverage equation, Eq. (8), and its amount-adsorbed Eq. (9). The source's one-site, one-molecule, monolayer and adsorption/desorption equilibrium assumptions are explicit. The formula is the same rational saturation form as Michaelis–Menten/Hill-one occupancy, so the Core-15 cross-domain exclusion and structural-unit policy must be resolved before acceptance. Keep Eq. (8), Eq. (9), LH adsorption substeps and linearized forms in one family.
+
+
+## Source verification audit 26 (2026-11-11)
+
+[Source Verification Audit 26](CORE295_SOURCE_VERIFICATION_AUDIT_26.md) verifies Fick's original 1855 p. 66 local transfer relation (dM=-Qk(dy/dx)dt) and its modern 1D flux form (J=-D,dC/dx). Fick explicitly analogizes the constitutive law to Fourier heat conduction and Ohm electrical conduction, so the same linear-gradient transport structure crosses domain boundaries. Hold pending the declared physical-mechanism versus strict structural-equivalence policy; do not count the derived diffusion PDE, geometry specializations or Fourier/Ohm analogues as separate equations under a strict form rule.
