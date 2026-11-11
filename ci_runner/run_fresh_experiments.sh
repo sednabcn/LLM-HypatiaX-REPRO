@@ -153,6 +153,9 @@ import sys, yaml
 cfg = yaml.safe_load(open(sys.argv[1], encoding="utf-8")) or {}
 print(cfg.get("llm_model", "claude-sonnet-4-6"))
 print(cfg.get("llm_temperature", 0.25))
+routing = cfg.get("routing_policy") or {}
+tau = routing.get("degradation_tau")
+print("" if tau is None else tau)
 PY
 )
 if [[ "${#_FRESH_LLM_SETTINGS[@]}" -lt 2 ]]; then
@@ -162,6 +165,11 @@ fi
 export HYPATIAX_LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
 export LLM_MODEL="${_FRESH_LLM_SETTINGS[0]}"
 export LLM_TEMPERATURE="${_FRESH_LLM_SETTINGS[1]}"
+if [[ -n "${_FRESH_LLM_SETTINGS[2]:-}" ]]; then
+  export HYPATIAX_ROUTING_DELTA_TAU="${_FRESH_LLM_SETTINGS[2]}"
+else
+  unset HYPATIAX_ROUTING_DELTA_TAU
+fi
 unset _FRESH_LLM_SETTINGS
 mkdir -p "$RESULTS_DIR/logs"
 cp "$PROTOCOL" "$RESULTS_DIR/protocol.yaml"
