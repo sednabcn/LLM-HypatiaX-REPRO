@@ -2945,6 +2945,22 @@
       "url": "https://doi.org/10.1146/annurev.mi.03.100149.002103",
       "use": "Monod (1949), Annual Review of Microbiology 3, pp. 371–394; foundational review and synthesis of quantitative bacterial culture growth and substrate-dependent growth. Secondary review, not original primary discovery source; use for source lineage and model assumptions, not unqualified primary attribution.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-DODO-PMM-MATH-DOCS",
+      "domain": "DeFi AMM",
+      "title": "DODO PMM mathematical principle: price curve and inventory regression",
+      "url": "https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm",
+      "use": "Official DODO documentation defines guide price, slippage factor, base/quote inventory and equilibrium inventories; gives piecewise marginal price, integrated trade amount and quadratic inversion, plus long-regression target updates. Candidate model unit should include oracle/guide-price and inventory-regression state, not separately count integral, average price, quadratic root and target equation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-SOLIDLY-STABLE-V2-DOCS",
+      "domain": "DeFi AMM",
+      "title": "Solidly V2 swaps: volatile and stable pool invariants",
+      "url": "https://docs.solidly.com/dex-basics/swaps.html",
+      "use": "Official Solidly V2 documentation specifies volatile x*y≥k and stable x^3*y + y^3*x≥k for correlated assets. Stable invariant is polynomial and differs from Curve StableSwap; exact reserve scaling, token decimal normalization and implementation revision must be checked before formal candidate transcription. Volatile pool remains constant-product family.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
