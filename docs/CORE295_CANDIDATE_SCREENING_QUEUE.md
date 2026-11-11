@@ -178,3 +178,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 19 (2026-11-11)
 
 [Source Verification Audit 19](CORE295_SOURCE_VERIFICATION_AUDIT_19.md) verifies De Buck et al. (2014) equation 9 (printed p. 547) for the BYL719 tumour-growth turnover model: zero-order growth inhibited by a saturable Emax concentration response, minus first-order tumour loss. The state is the one-dimensional sum of longest lesion diameters; concentration is an external PK input from the study's t_lag model. Treat the complete ODE as one drug-specific PK/PD turnover system, not separate Emax/growth/degradation/PK equations. Hold pending input trajectory, units/ranges, clinical scope and turnover-family dependence policy. No candidates were accepted.
+
+
+## Source verification audit 20 (2026-11-11)
+
+[Source Verification Audit 20](CORE295_SOURCE_VERIFICATION_AUDIT_20.md) verifies Henry's gas-solubility proportionality and Raoult's ideal-solution component vapor-pressure equation from OpenStax, and the decadic Beer–Lambert attenuation expression from IUPAC. Henry and Raoult describe different physical regimes but share the same bare linear-proportionality structure; do not automatically count both as structurally distinct. Raoult's original 1887 page-level transcription and Beer (1852) original equation-page transcription remain outstanding. Beer/Lambert/absorbance/transmission forms are one family. All remain held.
