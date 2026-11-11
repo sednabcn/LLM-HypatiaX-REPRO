@@ -21,8 +21,8 @@ PREFLIGHT (blocking unless marked warn) - everything that would otherwise invali
   P6  G1 dry check: regenerate train/far data for every (equation, seed) in the P rows with
       the P-arm hash scheme and require equality with the P rows' hashes. This is what
       decides whether G1 can pass; it costs seconds, not hours.
-RUN    leave-one-out for llm_acceptance and pysr_prior (the only gates wired in v50_2),
-       full config first per (seed, equation); outputs are per-run only, with no cross-run cache.
+RUN    leave-one-out for llm_acceptance, complexity_routing and pysr_prior (the three
+       gates wired in Core-15 HDS v50_2), full config first per (seed, equation).
 CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned evaluator,
        and --omit reasons for the four gates that have no switch in the v50_2 path.
 
@@ -60,10 +60,9 @@ sys.path.insert(0, os.getcwd())
 EVAL_PREFIX = "7d5395ed"
 EVAL_PATH = "hypatiax/core/r2_canonical.py"
 ENGINE_PATH = "hypatiax/tools/symbolic/symbolic_engine.py"
-WIRED = ["llm_acceptance", "pysr_prior"]
+WIRED = ["llm_acceptance", "complexity_routing", "pysr_prior"]
 OMIT = {
     'probe': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
-    'complexity_routing': 'only complexity gate is `if False and ...` in symbolic_engine.py, off in the full config, so ablating it is identical by construction',
     'nn_augmentation': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
     'blend_weight': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
 }
@@ -104,21 +103,28 @@ class Pre:
 
 def apply_engine_patch(path):
     s = Path(path).read_text(encoding="utf-8")
-    if "_LLM_ACCEPT_R2" in s and "_LLM_PRIOR_SEED" in s:
-        return "already patched"
-    a_old = "if best_hyp.r2_score and best_hyp.r2_score > 0.95:"
-    b_old = "if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:"
-    if s.count(a_old) != 1 or s.count(b_old) != 1:
-        raise RuntimeError(f"anchors not unique (accept x{s.count(a_old)}, prior x{s.count(b_old)}); patch by hand")
-    s = s.replace(a_old, "if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:")
-    s = s.replace(b_old, "if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:")
-    m = re.search(r"^class SymbolicEngineWithLLM\b[^\n]*:\n", s, re.M)
-    if not m:
-        raise RuntimeError("class SymbolicEngineWithLLM not found")
-    s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\n    _LLM_PRIOR_SEED = True\n" + s[m.end():]
+    if "_LLM_ACCEPT_R2" not in s or "_LLM_PRIOR_SEED" not in s:
+        a_old = "if best_hyp.r2_score and best_hyp.r2_score > 0.95:"
+        b_old = "if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:"
+        if s.count(a_old) != 1 or s.count(b_old) != 1:
+            raise RuntimeError(
+                f"anchors not unique (accept x{s.count(a_old)}, prior x{s.count(b_old)}); patch by hand"
+            )
+        s = s.replace(a_old, "if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:")
+        s = s.replace(b_old, "if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:")
+        m = re.search(r"^class SymbolicEngineWithLLM\\b[^\\n]*:\\n", s, re.M)
+        if not m:
+            raise RuntimeError("class SymbolicEngineWithLLM not found")
+        s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\\n    _LLM_PRIOR_SEED = True\\n" + s[m.end():]
+    if "_COMPLEXITY_ROUTING" not in s:
+        prior = re.search(r"^    _LLM_PRIOR_SEED\\s*=.*$", s, re.M)
+        if prior:
+            pos = prior.end()
+            s = s[:pos] + "\\n    _COMPLEXITY_ROUTING = True" + s[pos:]
+        else:
+            raise RuntimeError("cannot locate class-level _LLM_PRIOR_SEED for complexity gate")
     Path(path).write_text(s, encoding="utf-8")
     return "patched (commit it before the run, or the tree is dirty)"
-
 
 def force_clean_env():
     os.environ["HYPATIAX_DISABLE_PROMPT_HINTS"] = "1"
@@ -164,7 +170,7 @@ def preflight(a):
         except RuntimeError as e:
             p.add("P2 engine patch applied", False, str(e))
     txt = Path(ENGINE_PATH).read_text(encoding="utf-8")
-    p.add("P2 engine gates exist", "_LLM_ACCEPT_R2" in txt and "_LLM_PRIOR_SEED" in txt,
+    p.add("P2 engine gates exist", "_LLM_ACCEPT_R2" in txt and "_LLM_PRIOR_SEED" in txt and "_COMPLEXITY_ROUTING" in txt,
           "run with --apply-engine-patch if missing")
     force_clean_env()
     p.add("P3 clean-run flags forced", True, "PROMPT_HINTS=1, HARDCODED=1, LLM_MODEL unset (in this process)")
@@ -293,7 +299,7 @@ def selftest():
                  "        if best_hyp.r2_score and best_hyp.r2_score > 0.95:\n            pass\n"
                  "        if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:\n            pass\n")
     print(apply_engine_patch(d)); assert apply_engine_patch(d) == "already patched"
-    s = d.read_text(); assert "self._LLM_ACCEPT_R2" in s and "not self._LLM_PRIOR_SEED" in s
+    s = d.read_text(); assert "self._LLM_ACCEPT_R2" in s and "not self._LLM_PRIOR_SEED" in s and "_COMPLEXITY_ROUTING" in s
     compile(s, "e", "exec")
     print("selftest OK")
 
