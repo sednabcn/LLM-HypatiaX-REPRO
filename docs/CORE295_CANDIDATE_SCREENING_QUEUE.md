@@ -198,3 +198,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 23 (2026-11-11)
 
 [Source Verification Audit 23](CORE295_SOURCE_VERIFICATION_AUDIT_23.md) closes the original-source gap for the Fick cardiac-output relation: the 1870 scanned report gives the measurement principle in prose, not a displayed algebraic equation. The modern faithful mass-balance transcription is ẏVO2 = Q(CaO2−CvO2), hence Q = ẏVO2/(CaO2−CvO2), with oxygen content units and steady-state/system-boundary assumptions explicit. The CO2 cross-check and stroke-volume conversion are not separate equations. This is distinct from Fick's diffusion law despite the shared surname. Candidate remains held pending physiological ranges.
+
+
+## Source verification audit 24 (2026-11-11)
+
+[Source Verification Audit 24](CORE295_SOURCE_VERIFICATION_AUDIT_24.md) verifies Balancer's weighted geometric invariant (V=\prod_i B_i^{w_i}), Σw_i=1, against official documentation and the fetched V2 WeightedMath implementation. The proposed three-token expression is a fixed-arity adapter to the general n-token invariant; equal two-token weights reduce to excluded constant product. Keep spot-price and swap-output equations in the same family. Hold pending immutable implementation commit, token scaling, weight-sampling and fixed-point rounding contracts.
