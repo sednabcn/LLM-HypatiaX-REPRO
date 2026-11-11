@@ -4488,7 +4488,7 @@ Examples
     )
     parser.add_argument(
         "--domain", type=str, default="all_domains",
-        help="Domain filter — short name ('mechanics') or full key ('feynman_mechanics')",
+        help="Domain filter — bare Protocol-30 name, short proxy name, or full Feynman key",
     )
     parser.add_argument(
         "--test", type=str, default=None,
