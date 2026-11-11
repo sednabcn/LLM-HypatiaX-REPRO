@@ -54,7 +54,7 @@
       "formula": "C_g = k_H P_g",
       "canonical_expression": "kH*Pg",
       "formula_latex": "C_g = k_H P_g",
-      "structural_fingerprint": "5cf92e20a0b7dca1d9ed88e6ceef0bdd92110395ecd528b4a779908956c74e03",
+      "structural_fingerprint": "163b90247c0d1d4388c04e78fe4550d3844a9ec3fbce45caf25c5ebd18b02fe3",
       "source_ids": [
         "CHEM-OPENSTAX-HENRY-11-3"
       ],
@@ -69,11 +69,11 @@
       "variables": {
         "Pg": {
           "meaning": "Gas partial pressure; kPa or other pressure unit matched by kH",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "kPa (or another pressure unit with matching kH)"
         },
         "kH": {
           "meaning": "Concentration/pressure Henry coefficient; mol L^-1 kPa^-1",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "mol L^-1 kPa^-1 for the selected convention"
         }
       },
       "validity": {
@@ -115,7 +115,7 @@
       "formula": "theta = u1 p / (1 + u1 p)",
       "canonical_expression": "u1*p/(1+u1*p)",
       "formula_latex": "\\\\theta = \\\\frac{u_1 p}{1+u_1 p}",
-      "structural_fingerprint": "483703addf661dae59ffe9d3d9a3438587dc482fa0087358e017337c7b0482f4",
+      "structural_fingerprint": "5b2c9485e4c10d8e803cc5770a59cdf4696fe14466e8dd85b21e9cc98268ab68",
       "source_ids": [
         "CHEM-LANGMUIR-1918"
       ],
@@ -131,11 +131,11 @@
       "variables": {
         "p": {
           "meaning": "Equilibrium gas pressure",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "pressure unit selected for the gas phase"
         },
         "u1": {
           "meaning": "Ratio of adsorption to evaporation parameters; inverse pressure",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "inverse of the selected pressure unit"
         }
       },
       "validity": {
@@ -178,7 +178,7 @@
       "formula": "DeltaG_dagger=(lambda+DeltaG0)^2/(4lambda); kET=kappaET*kB*T/h*exp(-DeltaG_dagger/(R*T))",
       "canonical_expression": "kappaET*kB*T/h*exp(-((lam+deltaG)**2)/(4*lam*R*T))",
       "formula_latex": "k_{ET}=\\\\kappa_{ET}\\\\frac{k_B T}{h}\\\\exp\\\\left[-\\\\frac{(\\\\lambda+\\\\Delta G^0)^2}{4\\\\lambda R T}\\\\right]",
-      "structural_fingerprint": "de157472fea9be7692c819092ea44ad8ef554fea83d441d96befca364dbcb9c4",
+      "structural_fingerprint": "d78210ce17c9ebc4fcb5a2ef95ebe9f3ae2a4a4c6034a22e69e12638e72f4f58",
       "source_ids": [
         "CHEM-MARCUS-1956",
         "CHEM-IUPAC-MARCUS"
@@ -195,31 +195,31 @@
       "variables": {
         "kappaET": {
           "meaning": "Electronic transmission factor, dimensionless",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "dimensionless"
         },
         "kB": {
           "meaning": "Boltzmann constant, J K^-1",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "J K^-1"
         },
         "T": {
           "meaning": "Absolute temperature, K",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "K"
         },
         "h": {
           "meaning": "Planck constant, J s",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "J s"
         },
         "lam": {
           "meaning": "Total reorganization energy, J mol^-1 with molar R",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "J mol^-1"
         },
         "deltaG": {
           "meaning": "Standard electron-transfer Gibbs energy, J mol^-1",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "J mol^-1"
         },
         "R": {
           "meaning": "Molar gas constant, J mol^-1 K^-1",
-          "unit": "To be frozen in benchmark contract"
+          "unit": "J mol^-1 K^-1"
         }
       },
       "validity": {
