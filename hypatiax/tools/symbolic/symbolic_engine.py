@@ -2390,7 +2390,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         print(f"   PySR R²: {result['r2_score']:.4f}")
 
         # Compare and choose best
-        if result["r2_score"] > best_hyp.r2_score or _structural_risk:
+        if _structural_risk or (
+            result.get("r2_score") is not None
+            and best_hyp.r2_score is not None
+            and result["r2_score"] > best_hyp.r2_score
+        ):
             print("   ✅ PySR refinement improved result")
             result["llm_mode"] = (
                 "hybrid_structural_risk_pysr" if _structural_risk else "hybrid_pysr_better"
