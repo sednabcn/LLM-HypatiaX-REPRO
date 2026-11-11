@@ -2390,5 +2390,15 @@
     "Thirteenth proposed-record pass adds the Uniswap v3 geometric price TWAP from mean tick, pinned to Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45. It remains proposed pending observation-window, token-order, decimal-scaling and deterministic generator decisions.",
     "Fourteenth proposed-record pass adds the Uniswap v2 arithmetic cumulative-price TWAP, pinned to Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2. It remains proposed pending fixed-point conversion, timestamp-wrap and observation-window adapter.",
     "Fifteenth proposed-record pass adds Fick's one-dimensional diffusive flux law, with the original transfer equation confirmed on page 66 of the Wiley scan. It remains proposed because its linear-gradient structure may overlap Fourier/Ohm transport forms; the derived diffusion PDE is not counted separately."
-  ]
+  ],
+  "fingerprint_scheme": {
+    "version": "sympy-srepr-simplify-real-symbols-v1",
+    "procedure": "Parse canonical_expression with the allow-listed AST grammar; declare each variable as a real SymPy Symbol; evaluate the expression; apply sympy.simplify; serialize with sympy.srepr; SHA-256 hash the UTF-8 serialization.",
+    "limitations": [
+      "Variable names are retained, so this hash is not invariant under symbol renaming.",
+      "Units and dimensional equivalence are not normalized by this hash.",
+      "The hash is a deterministic syntax/normal-form fingerprint, not a proof of mathematical inequivalence or structural distinctness.",
+      "Cross-domain analogues, special cases, rearrangements, limits, derivatives, integrals and source-family relationships still require explicit scientific equivalence review."
+    ]
+  }
 }
