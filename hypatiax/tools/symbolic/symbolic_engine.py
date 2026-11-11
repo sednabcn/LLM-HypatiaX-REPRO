@@ -2402,9 +2402,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             and best_hyp.r2_score is not None
             and result["r2_score"] > best_hyp.r2_score
         ):
-            print("   ✅ PySR refinement improved result")
+            print(
+                "   ✅ Structural-risk policy selected PySR refinement"
+                if _structural_guard else "   ✅ PySR refinement improved result"
+            )
             result["llm_mode"] = (
-                "hybrid_structural_risk_pysr" if _structural_risk else "hybrid_pysr_better"
+                "hybrid_structural_risk_pysr" if _structural_guard else "hybrid_pysr_better"
             )
             result.update(_llm_info)
             result["llm_hypotheses"] = [h.equation for h in hypotheses]
