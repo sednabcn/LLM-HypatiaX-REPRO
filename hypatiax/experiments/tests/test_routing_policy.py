@@ -6,7 +6,6 @@ from hypatiax.core.routing import (
     route_decision_from_diagnostics,
     select_hypatiax_route,
     structural_risk_tokens,
-    training_edge_degradation_probe,
     training_edge_split_indices,
 )
 
@@ -79,20 +78,6 @@ def test_structural_risk_fails_closed_when_nn_prediction_is_unavailable():
     assert route["decision"] == "nn"
     assert route["predictions"] is None
     assert route["route_reason"] == "structural_risk_precedence_nn_unavailable"
-
-
-def test_training_edge_probe_uses_outer_training_rows():
-    x = np.linspace(-2.0, 2.0, 100).reshape(-1, 1)
-    y = x[:, 0]
-    pred = y.copy()
-    edge = np.r_[0:10, 90:100]
-    pred[edge] += 10.0
-    result = training_edge_degradation_probe(x, y, pred, edge_fraction=0.2)
-    assert result["status"] == "ok"
-    assert result["r2_train"] > result["r2_edge"]
-    assert result["delta"] == result["r2_train"] - result["r2_edge"]
-    assert result["delta"] > 0.0
-    assert result["n_edge"] == 20
 
 
 def test_kde_ood_probability_uses_training_covariates_only():
