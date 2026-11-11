@@ -509,3 +509,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 66 (2026-11-11)
 
 [Source Verification Audit 66](CORE295_SOURCE_VERIFICATION_AUDIT_66.md) groups perpetual funding as a protocol-specific premium/interest/cap/time-aggregation family. Deribit and Binance implementations differ; do not count their parameters or alternative normalizations as independent equations. The candidate-pool basis expression is not a valid universal substitute.
+
+
+## Source verification audit 32 source-register update (2026-11-11)
+
+[Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) groups Heston price and CIR variance as one coupled stochastic-volatility system, and the compound-Poisson reserve process with exponential-claim ruin probability as one classical ruin family. The two source references are registered, but no equations are accepted.
