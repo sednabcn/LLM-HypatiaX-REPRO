@@ -62,4 +62,4 @@
     "edge_rows": "Upper 20% of training rows ordered by projection onto first PCA direction; freeze exact construction/evaluator before calibration.",
     "invalid_or_missing_scores": "Fail closed; never drop silently or count as a successful route."
   }
-}\n
+}
