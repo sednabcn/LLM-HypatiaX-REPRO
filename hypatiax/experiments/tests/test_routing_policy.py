@@ -167,3 +167,20 @@ def test_missing_training_r2_cannot_enter_pure_llm_route():
     )
     assert route["decision"] == "ensemble"
     assert route["route_reason"] == "degradation_exceeds_tau_or_fit_below_0.95"
+
+
+def test_degenerate_training_projection_fails_closed_for_kde():
+    x_train = np.ones((30, 2))
+    result = kde_ood_probability(x_train, np.array([[1.0, 1.0], [2.0, 2.0]]))
+    assert result["status"] == "degenerate_training_projection"
+    assert result["p_ood"] is None
+    assert result["p_ood_per_query"] == []
+
+
+def test_constant_training_covariates_cannot_define_edge_probe():
+    try:
+        training_edge_split_indices(np.ones((30, 2)), edge_fraction=0.15)
+    except ValueError as exc:
+        assert "varying covariates" in str(exc)
+    else:
+        raise AssertionError("constant covariates must not define an arbitrary PCA edge")
