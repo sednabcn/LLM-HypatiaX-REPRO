@@ -2700,32 +2700,32 @@
     {
       "source_id": "PHYS-OPENSTAX-V2-CAPACITANCE",
       "domain": "Physics",
-      "title": "OpenStax University Physics Volume 2 §8.3 Capacitors and Capacitance",
-      "url": "https://openstax.org/books/university-physics-volume-2/pages/8-3-capacitors-and-capacitance",
+      "title": "OpenStax University Physics Volume 2 §8.1 Capacitors and Capacitance",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/8-1-capacitors-and-capacitance",
       "use": "Capacitance of ideal geometries and stored electric energy; dielectric and fringing assumptions.",
       "status": "candidate_reference"
     },
     {
       "source_id": "PHYS-OPENSTAX-V2-RC",
       "domain": "Physics",
-      "title": "OpenStax University Physics Volume 2 §10.4 RC Circuits",
-      "url": "https://openstax.org/books/university-physics-volume-2/pages/10-4-rc-circuits",
+      "title": "OpenStax University Physics Volume 2 §10.5 RC Circuits",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/10-5-rc-circuits",
       "use": "Charging/discharging transient solutions of a first-order RC circuit; one governing model with different initial conditions.",
       "status": "candidate_reference"
     },
     {
       "source_id": "PHYS-OPENSTAX-V2-FARADAY",
       "domain": "Physics",
-      "title": "OpenStax University Physics Volume 2 §13.2 Faraday's Law",
-      "url": "https://openstax.org/books/university-physics-volume-2/pages/13-2-faradays-law",
+      "title": "OpenStax University Physics Volume 2 Chapter 13 key equations (Faraday induction)",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/13-key-equations",
       "use": "Induced EMF from changing magnetic flux; sign, orientation and coil-turn convention.",
       "status": "candidate_reference"
     },
     {
       "source_id": "PHYS-OPENSTAX-V2-AC",
       "domain": "Physics",
-      "title": "OpenStax University Physics Volume 2 §15.5 Resonance in AC Circuits",
-      "url": "https://openstax.org/books/university-physics-volume-2/pages/15-5-resonance-in-ac-circuits",
+      "title": "OpenStax University Physics Volume 2 §15.5 Resonance in an AC Circuit",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/15-5-resonance-in-an-ac-circuit",
       "use": "Series RLC impedance, resonance, phase and average power; RMS/peak and circuit topology.",
       "status": "candidate_reference"
     },
@@ -2772,8 +2772,8 @@
     {
       "source_id": "PHYS-OPENSTAX-V3-INTERFERENCE",
       "domain": "Physics",
-      "title": "OpenStax University Physics Volume 3 §3.1 Young's Double-Slit Experiment",
-      "url": "https://openstax.org/books/university-physics-volume-3/pages/3-1-youngs-double-slit-experiment",
+      "title": "OpenStax University Physics Volume 3 §3.1 Young's Double-Slit Interference",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/3-1-youngs-double-slit-interference",
       "use": "Double-slit interference path-difference and fringe conditions; coherent illumination and far-field geometry.",
       "status": "candidate_reference"
     }
