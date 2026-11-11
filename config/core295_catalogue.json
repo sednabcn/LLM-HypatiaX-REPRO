@@ -326,6 +326,38 @@
       "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6813171/",
       "use": "Equation-level discovery leads for linear-shrinkage, Gompertz and combined exponential-linear tumor growth; primary-source tracing required",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-UMN-GEN-CHEM",
+      "domain": "Chemistry",
+      "title": "University of Minnesota General Chemistry: Principles, Patterns, and Applications",
+      "url": "https://open.umn.edu/opentextbooks/textbooks/69",
+      "use": "Open textbook discovery source for kinetics, equilibrium, acid-base, solubility, thermodynamics and electrochemistry; exact edition/equation location required",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-CALGARY-CHEM",
+      "domain": "Chemistry",
+      "title": "University of Calgary Chemistry Open Textbook, 2nd edition",
+      "url": "https://chem-textbook.ucalgary.ca/",
+      "use": "Open textbook discovery source for gases, kinetics, equilibrium, acid-base, solubility, thermodynamics and electrochemistry; exact chapter/equation location required",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2",
+      "url": "https://openstax.org/details/books/university-physics-volume-2",
+      "use": "Electricity and magnetism, circuits, induction, inductance, AC circuits, transformers and electromagnetic waves",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3",
+      "url": "https://openstax.org/details/books/university-physics-volume-3",
+      "use": "Optics and modern physics; exact chapter/key-equation location required",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
