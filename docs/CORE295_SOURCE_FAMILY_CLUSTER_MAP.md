@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 28 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 29 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -259,3 +259,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 28 (2026-11-11)
 
 [Source Verification Audit 28](CORE295_SOURCE_VERIFICATION_AUDIT_28.md) confirms Leslie's age-structured linear projection matrix and Taylor–Jonker's nonlinear simplex-constrained replicator dynamics from their original papers. Treat each as one complete vector system; no age/strategy component, eigenvalue or equilibrium condition is a separate equation. Nicholson–Bailey remains a source lead only until its original equation page is verified.
+
+
+## Discovery batch 29 (2026-11-11)
+
+[Candidate Discovery Batch 29](CORE295_CANDIDATE_DISCOVERY_BATCH_29.md) adds Balancer Linear Pool's rate-normalized constant-sum invariant with piecewise nominal main-balance fees. It is distinct from CP, weighted geometric, finite-amplification StableSwap, PMM and E-CLP structures, but should be grouped with constant-sum/linear-pool families and reviewed against the StableSwap high-amplification limit.
