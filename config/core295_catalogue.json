@@ -590,6 +590,14 @@
       "url": "https://doi.org/10.1073/pnas.6.7.410",
       "use": "Primary source for Lotka's two-species plant–herbivore interaction model; exact original equations (5)–(10), transformed system (15), assumptions and variable coefficient functions mapped in discovery batch 5",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-CRYPTOSWAP-WP",
+      "domain": "DeFi AMM",
+      "title": "Automatic market-making with dynamic peg (Curve CryptoSwap whitepaper)",
+      "url": "https://docs.curve.fi/assets/pdf/whitepaper_cryptoswap.pdf",
+      "use": "Primary Curve CryptoSwap source, June 9 2021; dynamic-peg invariant and state-dependent K; distinguish from StableSwap and pin model/implementation version",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
