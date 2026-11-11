@@ -468,3 +468,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 60 (2026-11-11)
 
 [Source Verification Audit 60](CORE295_SOURCE_VERIFICATION_AUDIT_60.md) verifies Maker/Sky Jug's per-second stability-fee accumulation from a pinned source commit. The global base plus collateral-specific duty is exponentiated over elapsed seconds with RAY fixed-point rounding. It is a versioned instance of generic exponential compounding, not a distinct equation beside APY conversion or lending-index accrual.
+
+
+## Source verification audit 61 (2026-11-11)
+
+[Source Verification Audit 61](CORE295_SOURCE_VERIFICATION_AUDIT_61.md) verifies Parkinson's 1980 high–low range variance estimator from the original paper. It is a distinct range-based volatility estimator under driftless continuous Brownian assumptions. Source RISK-PARKINSON-1980 is registered as candidate_reference; the equation remains held pending the DeFi OHLC sampling contract and structural-equivalence policy.
