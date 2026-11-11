@@ -599,6 +599,105 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "OpenStax University Physics Volume 3 §2.4, Eq. 2.19"
+    },
+    {
+      "equation_id": "AMM-BALANCER-WEIGHTED-001",
+      "name": "Three-token Balancer weighted geometric invariant",
+      "domain": "DeFi AMM",
+      "subdomain": "weighted constant-function market maker",
+      "formula": "V = B1^w1 * B2^w2 * B3^w3, with w1+w2+w3=1",
+      "canonical_expression": "B1**w1*B2**w2*B3**w3",
+      "formula_latex": "V=B_1^{w_1}B_2^{w_2}B_3^{w_3},\\quad w_1+w_2+w_3=1",
+      "structural_fingerprint": "dc98a945786ba10e01e897d8577f50b959a9c999e782e694476ed027afcefce1",
+      "source_ids": [
+        "AMM-BALANCER-WEIGHTED-MATH"
+      ],
+      "source_family_id": "AMM-WEIGHTED-GEOMETRIC-INVARIANT",
+      "status": "proposed",
+      "assumptions": [
+        "Three-token weighted pool with strictly positive normalized weights",
+        "Weights sum to one",
+        "All balances are expressed in consistent normalized/upscaled units",
+        "Pool invariant is held constant across a swap before fees and implementation rounding are applied",
+        "Pool uses the Balancer weighted math model and a pinned protocol implementation"
+      ],
+      "variables": {
+        "B1": {
+          "meaning": "Normalized balance of pool token 1",
+          "unit": "common normalized token-balance unit"
+        },
+        "B2": {
+          "meaning": "Normalized balance of pool token 2",
+          "unit": "common normalized token-balance unit"
+        },
+        "B3": {
+          "meaning": "Normalized balance of pool token 3",
+          "unit": "common normalized token-balance unit"
+        },
+        "w1": {
+          "meaning": "Normalized weight of token 1",
+          "unit": "dimensionless fraction"
+        },
+        "w2": {
+          "meaning": "Normalized weight of token 2",
+          "unit": "dimensionless fraction"
+        },
+        "w3": {
+          "meaning": "Normalized weight of token 3",
+          "unit": "dimensionless fraction"
+        }
+      },
+      "validity": {
+        "source_location": "Balancer official Weighted Math documentation, Invariant section; corresponding WeightedMath._calculateInvariant implementation in Balancer V2",
+        "regime": "Three-asset weighted geometric pool invariant",
+        "limitations": [
+          "The two-token equal-weight special case reduces to the excluded constant-product family; this candidate is explicitly three-token",
+          "Weights must be positive and sum to one; the benchmark generator must enforce this constraint rather than sampling weights independently",
+          "Balances must be scaled consistently for token decimals and protocol fixed-point implementation",
+          "Do not treat weighted spot-price or swap-output rearrangements as separate independent candidates without a family-level design",
+          "Pin the exact Balancer V2 code commit and pool version before source_verified or acceptance"
+        ]
+      },
+      "input_ranges": {
+        "B1": {
+          "train": null,
+          "extrapolation": null
+        },
+        "B2": {
+          "train": null,
+          "extrapolation": null
+        },
+        "B3": {
+          "train": null,
+          "extrapolation": null
+        },
+        "w1": {
+          "train": null,
+          "extrapolation": null
+        },
+        "w2": {
+          "train": null,
+          "extrapolation": null
+        },
+        "w3": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Official documentation gives the invariant V=product(B_t^W_t) and states normalized weights sum to one",
+        "Official V2 implementation computes the invariant by multiplying balance_i^weight_i terms",
+        "This record is a fixed three-token scalar adapter to the general n-token invariant, not a claim that every token count is a separate equation",
+        "Require a pinned implementation commit, explicit weight constraints, token scaling and fixed-point rounding before source_verified",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Balancer Weighted Math documentation; Balancer V2 WeightedMath.sol _calculateInvariant"
     }
   ],
   "source_register": [
@@ -1636,6 +1735,7 @@
     "Second proposed-record pass adds the scalar Hill muscle force-velocity relation. It remains proposed pending primary-page transcription, muscle-context selection, ranges and generator. Michaelis-Menten remains excluded because it is a Core-15 exclusion.",
     "Third proposed-record pass adds the scalar Poiseuille laminar tube-flow relation from OpenStax University Physics Volume 1 §14.7, Eq. 14.19. It remains proposed pending constrained ranges, deterministic generator and numerical review.",
     "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family.",
-    "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered."
+    "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered.",
+    "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded."
   ]
 }
