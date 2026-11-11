@@ -483,3 +483,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 63 (2026-11-11)
 
 [Source Verification Audit 63](CORE295_SOURCE_VERIFICATION_AUDIT_63.md) verifies Black–Cox's first-passage structural default model with a time-dependent covenant barrier. Source RISK-BLACK-COX-1976 is registered as candidate_reference. Group it with Merton for source-family independence, but preserve the structural distinction between terminal-only default and barrier crossing at any time.
+
+
+## Source verification audit 64 (2026-11-11)
+
+[Source Verification Audit 64](CORE295_SOURCE_VERIFICATION_AUDIT_64.md) verifies Acerbi–Tasche's coherent expected-shortfall definition and the normal-distribution closed form. Source RISK-ACERBI-TASCHE-2002 is candidate_reference. ES is distinct from VaR, but the Core-15 exclusion's scope must be decided; continuous-loss conditional expectation and quantile-integral definitions are one ES family.
