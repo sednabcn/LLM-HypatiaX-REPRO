@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "catalogue_id": "core295-option2",
+  "status": "draft",
+  "target_equation_count": 295,
+  "per_domain_target": 59,
+  "domains": [
+    "Chemistry",
+    "Biology",
+    "Physics",
+    "DeFi AMM",
+    "DeFi Risk"
+  ],
+  "design_decision": "option_2_structurally_distinct_equations",
+  "core15_exclusion_ids": [],
+  "structural_distinctness_policy": {
+    "canonicalization": "sympy_expression_normalization_v1",
+    "reject_cosmetic_variants": true,
+    "algebraic_equivalence_check": "required_where_feasible",
+    "human_review_required": true,
+    "source_family_tracking_required": true,
+    "independence_claim_requires_sampling_design": true
+  },
+  "sampling_frame": {
+    "source_universe": null,
+    "inclusion_exclusion_rules": null,
+    "selection_method": null,
+    "independent_statistical_unit": null,
+    "source_family_definition": null,
+    "status": "not_frozen"
+  },
+  "entries": [],
+  "source_register": [
+    {
+      "source_id": "CHEM-SQA-DATABOOK",
+      "domain": "Chemistry",
+      "title": "SQA Databook for Higher National Chemistry",
+      "url": "https://www.sqa.org.uk/sqa/files_ccc/SQA%20Databook%20for%20HN%20Chemistry.pdf",
+      "use": "Electrochemistry, kinetics, thermodynamics and equilibrium relations",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-OPENSTAX-2E",
+      "domain": "Chemistry",
+      "title": "OpenStax Chemistry 2e",
+      "url": "https://openstax.org/details/books/chemistry-2e",
+      "use": "General chemistry, kinetics, equilibrium, acid-base, thermodynamics, electrochemistry",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-LIBRETEXTS-REACTION",
+      "domain": "Chemistry",
+      "title": "Reaction Chemistry Chapter Review",
+      "url": "https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Foundations_of_Chemical_and_Biological_Engineering_I_%28Verret_Qiao_Barghout%29/02%3A_Reaction_Chemistry/2.10%3A_Reaction_Chemistry_Chapter_Review",
+      "use": "Reaction rates, integrated rate laws, equilibrium, Arrhenius",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-OXFORD-MMSC",
+      "domain": "Biology",
+      "title": "Oxford Mathematical Modelling and Scientific Computing handbook",
+      "url": "https://www.cs.ox.ac.uk/files/1099/MMSC_Handbook_2008.pdf",
+      "use": "Population, predator-prey, competition, epidemic, enzyme kinetics, pattern formation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MICHIGAN-ODE",
+      "domain": "Biology",
+      "title": "University of Michigan SOCR: ODEs in Biological Systems",
+      "url": "https://socr.umich.edu/BPAD1/BPAD1_notes/BPAD1_Chap01_MathFoundations.html",
+      "use": "Exponential kinetics, pharmacokinetics, tumour growth, epidemiology, enzyme kinetics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-DAUN-2008",
+      "domain": "Biology",
+      "title": "Equation-based models of dynamic biological systems",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6698907/",
+      "use": "Differential-equation models in physiology and clinical biology",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MULTISCALE-REVIEW",
+      "domain": "Biology",
+      "title": "Mathematical and computational modeling in biology at multiple scales",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC4396153/",
+      "use": "Epidemiology, cell physiology, cancer, genetics, cellular biology, biochemistry",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-UNIVERSITY",
+      "domain": "Physics",
+      "title": "OpenStax University Physics",
+      "url": "https://openstax.org/details/books/university-physics-volume-1",
+      "use": "Mechanics, energy, momentum, oscillations, waves, thermodynamics; companion volumes for E&M and optics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-NIST-CODATA",
+      "domain": "Physics",
+      "title": "NIST CODATA fundamental physical constants",
+      "url": "https://physics.nist.gov/cuu/Constants/",
+      "use": "Authoritative constants and units for dimensional/formula implementation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-NIST-SI",
+      "domain": "Physics",
+      "title": "NIST Guide to the SI",
+      "url": "https://www.nist.gov/pml/special-publication-811",
+      "use": "SI units and dimensional consistency",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "DEFI-UNISWAP-CONCEPTS",
+      "domain": "DeFi AMM",
+      "title": "Uniswap developer concepts: How Uniswap Works",
+      "url": "https://developers.uniswap.org/docs/get-started/concepts/how-uniswap-works",
+      "use": "Constant-product invariant, price impact, concentrated-liquidity context",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "DEFI-UNISWAP-V2-PRICING",
+      "domain": "DeFi AMM",
+      "title": "Uniswap v2 pricing",
+      "url": "https://developers.uniswap.org/docs/protocols/v2/concepts/pricing",
+      "use": "Pool reserve pricing and exact-input/output swap mechanics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "DEFI-UNISWAP-FEES",
+      "domain": "DeFi AMM",
+      "title": "Uniswap fees",
+      "url": "https://developers.uniswap.org/docs/get-started/concepts/fees",
+      "use": "Fee tiers and protocol fee mechanics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "DEFI-UNISWAP-V3-WP",
+      "domain": "DeFi AMM",
+      "title": "Uniswap v3 Core whitepaper",
+      "url": "https://app.uniswap.org/whitepaper-v3.pdf",
+      "use": "Concentrated liquidity and tick/range-based liquidity mechanics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "DEFI-AMM-SURVEY",
+      "domain": "DeFi AMM",
+      "title": "Understanding Slippage in Automated Market Makers: A Unified Deviation Framework and Survey",
+      "url": "https://www.mdpi.com/2813-5288/4/3/8",
+      "use": "Comparative invariant families: constant product, weighted product, constant sum, Curve-style stable swap",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-HEALTH",
+      "domain": "DeFi Risk",
+      "title": "Aave V3 Health Factor",
+      "url": "https://www.aave.com/docs/aave-v3/markets/health-factor",
+      "use": "Health factor and liquidation-weighted collateral",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-FAQ",
+      "domain": "DeFi Risk",
+      "title": "Aave FAQ: liquidations",
+      "url": "https://www.aave.com/faq",
+      "use": "Liquidation eligibility, close factors, bonuses and liquidation-price concept",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-V3",
+      "domain": "DeFi Risk",
+      "title": "Aave V3 overview",
+      "url": "https://aave.dev/docs/aave-v3/overview",
+      "use": "Utilization-dependent interest rate model and reserve liquidation thresholds",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-V4",
+      "domain": "DeFi Risk",
+      "title": "Aave V4 overview",
+      "url": "https://aave.com/docs/aave-v4",
+      "use": "Risk premium and position/liquidation mechanics; version-specific",
+      "status": "candidate_reference"
+    }
+  ],
+  "notes": [
+    "This is a draft source register, not the completed 295-equation catalogue.",
+    "A source can support a family of equations but each entry must cite the exact page, section, theorem, or protocol version.",
+    "Do not treat algebraic rearrangements, unit conversions, parameter changes, or variable renamings as structurally distinct.",
+    "Protocol formulas must be version-tagged; Aave V3/V4 and Uniswap V2/V3/V4 mechanics are not interchangeable.",
+    "No calibration-ready independence claim is made by this manifest."
+  ]
+}
