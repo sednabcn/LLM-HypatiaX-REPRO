@@ -5,7 +5,7 @@ from pathlib import Path
 
 from scripts.validate_core295_catalogue import DOMAINS, validate
 
-MANIFEST = Path(__file__).resolve().parents[2] / "config" / "core295_catalogue.json"
+MANIFEST = Path(__file__).resolve().parents[3] / "config" / "core295_catalogue.json"
 
 
 class TestCore295Catalogue(unittest.TestCase):
