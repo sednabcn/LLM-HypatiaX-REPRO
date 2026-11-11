@@ -116,3 +116,6 @@ def test_query_blend_weights_vary_with_query_ood_probability():
     assert route["decision"] == "ensemble"
     assert np.allclose(route["query_blend_weights"]["llm"], [0.3, 1.0])
     assert np.allclose(route["query_blend_weights"]["nn"], [0.7, 0.0])
+    # Training predictions use the in-distribution alpha floor, not query OOD.
+    assert np.isclose(route["blend_weights"]["llm"], 0.3)
+    assert np.isclose(route["blend_weights"]["nn"], 0.7)
