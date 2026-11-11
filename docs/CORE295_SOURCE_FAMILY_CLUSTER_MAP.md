@@ -459,3 +459,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 56 (2026-11-11)
 
 [Source Verification Audit 56](CORE295_SOURCE_VERIFICATION_AUDIT_56.md) adds Aave V4's debt-coverage-weighted collateral-risk premium: collateral is sorted by risk score and only the collateral value needed to cover debt contributes to the average. The health-dependent bonus interpolates between a minimum and maximum, and liquidation sizing targets a configurable health factor. Keep all in one Aave V4 position-risk/liquidation system; do not count components separately.
+
+
+## Source verification audit 57 (2026-11-11)
+
+[Source Verification Audit 57](CORE295_SOURCE_VERIFICATION_AUDIT_57.md) records MIP45's obsolete governance status and historical-design role. Keep MIP45, the Dog/Clipper/Abacus implementation, three price calculators, Hole/Dirt invariants, reset logic and circuit breaker in one historical liquidation-auction family; pin current deployed version before adapter work.
