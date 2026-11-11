@@ -45,6 +45,7 @@ unset HYPATIAX_ALLOW_LEGACY HYPATIAX_R2_SIGN_FLIP LEGACY_RESULTS_DIR
 export MPLBACKEND=Agg
 
 STEP_ORDER="$(grep -m1 '^_STEP_ORDER=' "$RUN_ALL" | sed -E 's/^_STEP_ORDER="(.*)"[[:space:]]*$/\1/')"
+DEFERRED_ORDER="$(grep -m1 '^_DEFERRED_STEPS=' "$RUN_ALL" | sed -E 's/^_DEFERRED_STEPS="(.*)"[[:space:]]*$/\1/')"
 
 # Benchmark entry points (same list the real workflow runs); missing files are reported, not fatal.
 SCRIPTS=(
@@ -160,9 +161,15 @@ s_dry_run_all() {
   local out="$SCRATCH/dry.log" s rc=0
   ra --dry-run >"$out" 2>&1 || { tail -40 "$out"; echo "dry-run exited non-zero"; return 1; }
   for s in $STEP_ORDER; do
-    grep -q "=== STEP: ${s} " "$out" || { echo "step not reached in dry-run: $s"; rc=1; }
+    if [[ " $DEFERRED_ORDER " == *" $s "* ]]; then
+      grep -Fq "Skipping deferred step '$s' in full runs" "$out" || {
+        echo "deferred step not explicitly skipped in dry-run: $s"; rc=1;
+      }
+    else
+      grep -q "=== STEP: ${s} " "$out" || { echo "step not reached in dry-run: $s"; rc=1; }
+    fi
   done
-  echo "dry-run reached $(grep -c '=== STEP:' "$out")/$(wc -w <<<"$STEP_ORDER") steps"
+  echo "dry-run reached $(grep -c '=== STEP:' "$out") active steps; deferred: $DEFERRED_ORDER"
   return $rc
 }
 
