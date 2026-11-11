@@ -66,3 +66,13 @@
 - The tumor-dynamics review's Eq. 5 logistic model is therefore excluded. Its other tumor model equations are only discovery leads until original references, assumptions and valid ranges are checked.
 - Equations from one textbook, review, protocol invariant or derivation family must not be assumed to be independent statistical units. Maintain distinct `source_family_id` and `independence_unit_id`.
 - Verify exact edition/revision and page-level metadata for book and protocol references before converting this discovery bibliography into a formal manuscript reference list.
+
+## Additional versioned protocol documentation cited in discovery batch 2
+
+41. Uniswap Labs. *Concentrated Liquidity* (developer documentation). https://developers.uniswap.org/docs/get-started/concepts/liquidity-providers/concentrated-liquidity. Explanatory documentation for position-specific price ranges and active liquidity; pair with the Uniswap v3 whitepaper and versioned core contracts for exact formulas.
+42. Balancer. *Weighted Math* (developer math reference). https://docs.balancer.fi/reference/math/weighted-math.html. Official implementation/reference documentation for weighted-pool swap and price calculations; record the exact pool version and fixed-point implementation.
+43. Aave. *Aave V3 Risk Parameters* (risk-v3 repository). https://github.com/aave/risk-v3/blob/main/asset-risk/risk-parameters.md. Protocol risk-parameter documentation; pin the exact repository commit because the default branch is mutable.
+44. Aave. *Aave V4 Positions*. https://aave.dev/docs/aave-v4/positions. Version-specific position and health-factor documentation; compare with the V4 overview and do not treat parameter changes alone as structural novelty.
+
+These are additional official documentation pointers, not independent primary research papers. Their formulas must be pinned to an exact protocol release/commit before use.
+
