@@ -253,3 +253,20 @@ deferred_experiments:
   instability_diagnostic:
     status: deferred
     reason: "The instability diagnostic is a valid explicit run_all step but is deferred from the standard full-run sequence by the L18 control. Run it separately with --step instability when it is specifically needed."
+
+  core15_leave_one_gate_out:
+    status: deferred
+    required_arms:
+      - llm_acceptance
+      - neural_degradation_probe
+      - complexity_routing
+      - nn_augmentation
+      - blend_weight
+      - pysr_prior
+    reason: "The current exp1_ablation runner implements pysr_only, hypatia, and hypatia_nollm only. Do not relabel those three arms as the six-gate study; implement each switch and matched Core-15 split/seed/resource controls before adding it to the fresh launcher."
+  protocol30:
+    status: deferred
+    equations: 30
+    domains: 11
+    protocols: [random_80_20, pca_40_60]
+    reason: "No dedicated clean Protocol-30 runner is wired. Freeze the custom equation registry, formula provenance, method arms, split semantics, output schema, and timeout policy before adding a launcher stage. It is not exp2 or exp2_five."
