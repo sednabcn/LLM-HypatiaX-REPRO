@@ -1,7 +1,7 @@
 # Core-295 source verification audit 61: Parkinson high–low range volatility estimator
 
 **Date:** 2026-11-11  
-**Status:** new peer-reviewed statistical source lead; no equation is added to the formal catalogue or counted toward 295.
+**Status:** new peer-reviewed statistical source lead registered as RISK-PARKINSON-1980 (candidate_reference); no equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary source
 
