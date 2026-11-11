@@ -1,5 +1,7 @@
 # Core-295 candidate discovery — batch 3: verified physics locations and biology source leads
 
+**Consolidated bibliography:** [CORE295_REFERENCES.md](CORE295_REFERENCES.md). This reference list collects the literature and source links used across all Core-295 discovery batches and the catalogue plan.
+
 **Status:** discovery and source verification only. No equation in this document is accepted, counted toward 295, or certified as an independent statistical unit.
 
 This batch records exact OpenStax equation locations for additional physics mechanisms and a more specific biology source map. It deliberately distinguishes a verified chapter-level source from verification of a candidate's full scientific assumptions and benchmark suitability.
