@@ -419,3 +419,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 48 (2026-11-11)
 
 [Source Verification Audit 48](CORE295_SOURCE_VERIFICATION_AUDIT_48.md) classifies Sky/Maker Liquidations 2.0 as a configurable Dutch-auction system. Linear and exponential time-price laws differ as scalar functions; stair-step exponential with one-second steps is equivalent to continuous exponential. Do not count calculator choices, reset logic, auction caps and incentives as separate system samples.
+
+
+## Source verification audit 49 (2026-11-11)
+
+[Source Verification Audit 49](CORE295_SOURCE_VERIFICATION_AUDIT_49.md) classifies Compound III's liquidation path as a weighted collateral eligibility check plus reserve absorption and storefront sale. The eligibility form is related to Aave/Euler health metrics; the reserve-funded absorption and storefront mechanism are protocol-specific. Treat all stages as one system unit if system-level candidates are allowed.
