@@ -54,7 +54,7 @@
       "formula": "C_g = k_H P_g",
       "canonical_expression": "kH*Pg",
       "formula_latex": "C_g = k_H P_g",
-      "structural_fingerprint": "163b90247c0d1d4388c04e78fe4550d3844a9ec3fbce45caf25c5ebd18b02fe3",
+      "structural_fingerprint": "75060ec1b48014701529030f0bd7eb564970fa65d4013093d53555ab922a5625",
       "source_ids": [
         "CHEM-OPENSTAX-HENRY-11-3"
       ],
@@ -115,7 +115,7 @@
       "formula": "theta = u1 p / (1 + u1 p)",
       "canonical_expression": "u1*p/(1+u1*p)",
       "formula_latex": "\\\\theta = \\\\frac{u_1 p}{1+u_1 p}",
-      "structural_fingerprint": "5b2c9485e4c10d8e803cc5770a59cdf4696fe14466e8dd85b21e9cc98268ab68",
+      "structural_fingerprint": "a6c2f0dcd44fd70c46f3f905067597d482711a860d266c5909de2b8c2675a6be",
       "source_ids": [
         "CHEM-LANGMUIR-1918"
       ],
@@ -178,7 +178,7 @@
       "formula": "DeltaG_dagger=(lambda+DeltaG0)^2/(4lambda); kET=kappaET*kB*T/h*exp(-DeltaG_dagger/(R*T))",
       "canonical_expression": "kappaET*kB*T/h*exp(-((lam+deltaG)**2)/(4*lam*R*T))",
       "formula_latex": "k_{ET}=\\\\kappa_{ET}\\\\frac{k_B T}{h}\\\\exp\\\\left[-\\\\frac{(\\\\lambda+\\\\Delta G^0)^2}{4\\\\lambda R T}\\\\right]",
-      "structural_fingerprint": "d78210ce17c9ebc4fcb5a2ef95ebe9f3ae2a4a4c6034a22e69e12638e72f4f58",
+      "structural_fingerprint": "64621216d3861f4afe63474a1b05541967f22cef51ce8e5df371bea7aebee5ac",
       "source_ids": [
         "CHEM-MARCUS-1956",
         "CHEM-IUPAC-MARCUS"
