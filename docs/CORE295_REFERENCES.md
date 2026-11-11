@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–22. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–23. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -184,6 +184,12 @@
 117. Marcus, R. A. (1965). On the theory of electron-transfer reactions. VI. Unified treatment for homogeneous and electrode reactions. *The Journal of Chemical Physics, 43*(2), 679–701. https://doi.org/10.1063/1.1696792. Primary extension unifying homogeneous and electrochemical electron-transfer rates.
 
 118. IUPAC. *Marcus equation for electron transfer*. Compendium of Chemical Terminology, Gold Book, term M03702. https://goldbook.iupac.org/terms/view/M03702. Authoritative modern expression for the electron-transfer rate and quadratic activation free-energy barrier, including reorganization energy and standard reaction Gibbs energy.
+
+119. Rideal, E. K. (1939). A note on a simple molecular mechanism for heterogeneous catalytic reactions. *Mathematical Proceedings of the Cambridge Philosophical Society, 35*(1), 130–132. https://doi.org/10.1017/S030500410002082X. Primary proposal for a gas-phase molecule reacting directly with an adsorbed surface species.
+
+120. Eley, D. D., & Rideal, E. K. (1940). Parahydrogen conversion on tungsten. *Nature, 146*, 401–402. https://doi.org/10.1038/146401d0. Primary experimental investigation of the surface-interchange mechanism involving gas-phase and adsorbed hydrogen.
+
+121. IUPAC. *Langmuir–Rideal mechanism*. Compendium of Chemical Terminology, Gold Book, term L03453. https://goldbook.iupac.org/terms/view/L03453. Defines the mechanism as reaction between a gas-phase molecule and a surface-adsorbed species; distinguishes it from the two-adsorbed-species Langmuir–Hinshelwood mechanism.
 
 ## Bibliographic and provenance cautions
 
