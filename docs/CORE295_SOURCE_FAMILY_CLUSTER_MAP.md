@@ -449,3 +449,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 54 (2026-11-11)
 
 [Source Verification Audit 54](CORE295_SOURCE_VERIFICATION_AUDIT_54.md) records the SOA report as taxonomy context only. It contributes no governing equation, quantitative risk function or independent equation family; use its categories for domain boundaries, not for padding the 295 count.
+
+
+## Source verification audit 55 (2026-11-11)
+
+[Source Verification Audit 55](CORE295_SOURCE_VERIFICATION_AUDIT_55.md) adds a peer-reviewed under-collateralized leverage model. Group its debt ratio, leverage, liquidation threshold, liquidation loss and maximum-leverage bound as one DeFi Risk analytical family; CP IL/arbitrage components remain attached to existing AMM families. Source RISK-WANG-SPECULATIVE-MULTIPLIERS is candidate_reference only.
