@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–15. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–16. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -134,6 +134,12 @@
 92. Hinshelwood, C. N., & Prichard, C. R. (1925). The relation of homogeneous to catalysed reactions. The catalytic decomposition of hydrogen iodide on the surface of gold. *Journal of the Chemical Society, Transactions*, 127, 1552–1559. https://doi.org/10.1039/CT9252701552. Primary heterogeneous surface-catalysis study relevant to Langmuir–Hinshelwood kinetics.
 
 93. Wachs, I. E. (2024). The Conundrum of “Pair Sites” in Langmuir-Hinshelwood Reaction Kinetics in Heterogeneous Catalysis. *ACS Catalysis, 14*(13), 10260–10270. https://doi.org/10.1021/acscatal.4c02813. Provides explicit elementary adsorption/site-balance steps and a competitive-adsorption bimolecular rate expression (Eq. 5); use as a modern derivation cross-check, not as the original historical source.
+
+94. Solidly. *Swaps: V2 Stable and Volatile Pools*. Official protocol documentation. https://docs.solidly.com/dex-basics/swaps.html. Defines volatile-pair invariant \(xy=k\) and stable-pair invariant \(x^3y+xy^3=k\). The stable invariant is a distinct polynomial curve; Solidly V3 concentrated liquidity is a Uniswap-v3-derived range mechanism and should not be counted as a new invariant.
+
+95. Swaap Labs. (2023). *Swaap v2: Optimal liquidity infrastructure*. June 1, 2023. https://swaap.xyz/v2-whitepaper.pdf. Primary RfQ market-making whitepaper. Section 2.2 gives a stochastic markup optimization objective; §§2.3.1–2.3.3 specify max-drawdown, last-look and max-imbalance on-chain safeguards. This is a quotation/settlement architecture, not a conventional invariant AMM.
+
+96. Carbon DeFi. *Introducing Carbon: Concentrated Liquidity*. Official protocol overview. https://medium.com/carbondefi/introducing-carbon-1f41aebf634b. Describes asymmetric one-sided adjustable bonding curves, each parameterized by starting price, ending price and capacity, with linked buy/sell orders. Exact curve function and state transition require code-level verification.
 
 ## Bibliographic and provenance cautions
 
