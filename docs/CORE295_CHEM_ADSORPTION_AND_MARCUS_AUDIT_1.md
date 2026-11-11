@@ -23,9 +23,9 @@ where θ is surface coverage, (b) an adsorption coefficient/activity convention,
 
 Frumkin's electrocapillarity work concerns the dependence of interfacial adsorption on electrode potential/electric field. A 1926 Nature note by Frumkin and Obrutsheva explicitly reports that adsorption of ions and neutral molecules depends on the direction and strength of the interfacial electric field. This is a mechanistic clue, not itself a complete equation record. If an electrosorption candidate is pursued, its model contract must specify electrode potential/reference, electrolyte composition, surface charge, adsorbate valence, competitive site balance and standard states.
 
-## 3. Marcus electron transfer: correct the rate prefactor and scope
+## 3. Marcus electron transfer: distinguish the rate prefactor by kinetic scope
 
-The primary Marcus 1956 paper describes a slight-orbital-overlap outer-sphere electron-transfer mechanism and a quantitative rate theory. IUPAC's current Marcus equation entry states the encounter-complex/intramolecular rate form as an Eyring prefactor with an electronic transmission coefficient:
+The primary Marcus 1956 paper describes a slight-orbital-overlap outer-sphere electron-transfer mechanism and a quantitative solution-rate theory. The rate prefactor must be tied to the kinetic scope. IUPAC's current Marcus equation entry gives the encounter-complex/intramolecular form with an Eyring prefactor and electronic transmission coefficient:
 
 [
 k_{ET}=\kappa_{ET}\frac{k_BT}{h}\exp\left(-\frac{\Delta G^{\ddagger}}{RT}\right),
@@ -35,7 +35,7 @@ k_{ET}=\kappa_{ET}\frac{k_BT}{h}\exp\left(-\frac{\Delta G^{\ddagger}}{RT}\right)
 
 The transmission factor distinguishes adiabatic and diabatic transfer; the inverted region requires additional Franck–Condon/vibrational treatment.
 
-**Pool disposition:** A Marcus candidate written with a generic collision-frequency (Z) prefactor is not a faithful generic outer-sphere Marcus rate law. Repair it to the source-defined Eyring/transmission-factor convention and specify the encounter-complex versus intramolecular context. The quadratic free-energy barrier is the defining structural feature; do not reduce the candidate to a generic Arrhenius exponential. The exact 1956 primary equation and parameter convention still require line-by-line source verification before promotion.
+**Pool disposition:** Do not label either prefactor universally correct without fixing the model scope. The 1956 solution-reaction treatment is associated with a solution collision-number prefactor (Z), whereas the IUPAC encounter-complex/intramolecular form uses κ_ET k_BT/h. These are not interchangeable metadata choices: the equation must declare bimolecular solution encounter versus encounter-complex/intramolecular kinetics, and define the prefactor and units accordingly. The uploaded candidate's generic (Z) is therefore not automatically wrong, but it is underspecified as a general Marcus rate law. The quadratic free-energy barrier is the defining structural feature; the exact 1956 primary equation and parameter convention still require line-by-line verification before promotion.
 
 ## 4. Candidate-family disposition
 
