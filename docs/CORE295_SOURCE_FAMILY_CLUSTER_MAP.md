@@ -324,3 +324,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 32 (2026-11-11)
 
 [Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) verifies Heston's coupled stochastic-volatility system from the original 1993 paper and records the physical vs risk-neutral process distinction. It also records the Cramér–Lundberg reserve/compound-Poisson process and its exponential-claim ruin functional. Keep Heston price and variance equations together; keep reserve process and ruin probability together. Applicability to DeFi depends on token-market/insurance-fund assumptions.
+
+
+## Source verification audit 33 (2026-11-11)
+
+[Source Verification Audit 33](CORE295_SOURCE_VERIFICATION_AUDIT_33.md) confirms Kepler, Lorentz and Bragg equations and their family boundaries. Keep Kepler linked to Newtonian orbital dynamics; Lorentz as a vector force law coupled to but distinct from Maxwell's field equations; Bragg in the constructive-interference path-difference family.
