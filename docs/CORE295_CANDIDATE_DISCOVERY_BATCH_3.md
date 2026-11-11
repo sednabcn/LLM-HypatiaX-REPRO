@@ -52,3 +52,18 @@ Do not create candidate records from chapter titles or from the generic ODE temp
 5. Populate the catalogue only after exact formula, units, assumptions, valid ranges, deterministic mapping, reviewer and provenance are complete.
 
 **No equations in this document count toward the 295 target. No scientific experiments, paid compute, live API calls, or workflow dispatches were performed.**
+
+## Biology: equation-level leads from a peer-reviewed tumor-dynamics review
+
+A further accessible review provides an equation table with explicit model equations and cross-references to primary studies: [A Review of Mathematical Models for Tumor Dynamics and Treatment Resistance Evolution of Solid Tumors](https://pmc.ncbi.nlm.nih.gov/articles/PMC6813171/), Table 1, equations 1–8.
+
+| Discovery lead | Equation reported in review | Review location | Curation status |
+|---|---|---|---|
+| Linear growth with first-order shrinkage | `dT/dt = k_g - d*T` | Table 1, Eq. 2 | Exact review-level equation found; trace cited primary study [21], verify biological interpretation, units and admissible T range. |
+| Gompertz tumor growth | `dT/dt = k_g*T*ln(T_max/T)` | Table 1, Eq. 6 | Exact review-level equation found; trace primary studies [27, 29], verify parameterization and positive T regime. Do not count the alternate log-derivative Eq. 7 as a second unit without equivalence review. |
+| Combined exponential-to-linear growth | `dT/dt = lambda_0*T / (1 + (lambda_0/lambda_1*T)^20)^(1/20)` | Table 1, Eq. 8 | Exact review-level equation found; trace primary study [31], verify the transition exponent and parameter units. Potentially distinct saturating growth mechanism, subject to symbolic comparison and source-family review. |
+
+**Explicit exclusion:** Logistic tumor growth in Table 1, Eq. 5 is not a new Core-295 candidate because Core-15 already includes Logistic Growth. Generic exponential growth and the net-growth restatement in Eq. 4 also require careful comparison with other exponential-growth and first-order kinetic families; do not count them by default.
+
+These three are still discovery leads, not accepted entries: the review's table gives equations and cites primary studies, but the primary references, assumptions, source-family IDs, and scalar benchmark mappings must be checked before catalogue entry. The tumor models are likely correlated by shared application/data-generating context; structural distinctness and independence must be reviewed separately.
+
