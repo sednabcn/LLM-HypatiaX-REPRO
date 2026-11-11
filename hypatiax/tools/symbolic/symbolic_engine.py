@@ -2039,6 +2039,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
     # Phase 3 ablation switches; defaults preserve existing behaviour.
     _LLM_ACCEPT_R2 = 0.95
     _LLM_PRIOR_SEED = True
+    _COMPLEXITY_ROUTING = True
 
     def __init__(
         self,
@@ -2297,6 +2298,8 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             best_hyp.equation, getattr(best_hyp, "raw_equation", None)
         )
         _structural_risk = bool(_structural_tokens)
+        _complexity_routing = bool(getattr(self, "_COMPLEXITY_ROUTING", True))
+        _structural_guard = _structural_risk and _complexity_routing
         _llm_info = {
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
             "llm_best_r2": best_hyp.r2_score,
@@ -2304,7 +2307,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             "llm_hypotheses_raw": [getattr(h, "raw_equation", h.equation) for h in hypotheses],
             "structural_risk_flag": _structural_risk,
             "structural_risk_tokens": _structural_tokens,
-            "routing_reason": "structural_risk_forces_pysr_refinement" if _structural_risk else "ordinary_llm_acceptance_policy",
+            "complexity_routing_enabled": _complexity_routing,
+            "routing_reason": (
+                "structural_risk_forces_pysr_refinement" if _structural_guard
+                else ("structural_risk_gate_ablated" if _structural_risk else "ordinary_llm_acceptance_policy")
+            ),
         }
         print(f"   LLM best: {best_hyp.equation}")
         print(f"   LLM R²: {best_hyp.r2_score:.4f}")
@@ -2312,7 +2319,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
         # Decision: Is LLM good enough?
         if (best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2
-                and not _structural_risk):
+                and not _structural_guard):
             print("   ✅ LLM solution excellent, skipping PySR")
             return {
                 "expression": best_hyp.equation,
@@ -2331,7 +2338,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "llm_hypotheses": [h.equation for h in hypotheses],
             }
 
-        if _structural_risk:
+        if _structural_guard:
             print(
                 f"   ⚠ Structural-risk functions {_structural_tokens}; "
                 "bypassing pure-LLM acceptance and forcing PySR refinement.",
@@ -2390,7 +2397,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         print(f"   PySR R²: {result['r2_score']:.4f}")
 
         # Compare and choose best
-        if _structural_risk or (
+        if _structural_guard or (
             result.get("r2_score") is not None
             and best_hyp.r2_score is not None
             and result["r2_score"] > best_hyp.r2_score
