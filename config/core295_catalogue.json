@@ -1787,6 +1787,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-PARKINSON-1980",
+      "domain": "DeFi Risk",
+      "title": "The Extreme Value Method for Estimating the Variance of the Rate of Return (Parkinson, 1980)",
+      "url": "https://doi.org/10.1086/296071",
+      "use": "High-low range estimator for log-return variance under driftless continuous Brownian motion",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
