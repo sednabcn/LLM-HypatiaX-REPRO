@@ -123,3 +123,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 8 (2026-11-11)
 
 [Source Verification Audit 8](CORE295_SOURCE_VERIFICATION_AUDIT_8.md) verifies the DODO PMM's piecewise inventory-dependent marginal price, integrated finite-trade equation and quadratic inversion against official mathematical documentation and the pinned contractV2 implementation commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. The branches, trade directions, integral, inversion and R-state changes are components of one PMM state-transition family, not separate independent entries. Strong lead; held pending exact pool/version, unit/range and statistical-unit contracts. No candidate accepted.
+
+
+## Source verification audit 9 (2026-11-11)
+
+[Source Verification Audit 9](CORE295_SOURCE_VERIFICATION_AUDIT_9.md) transcribes Carbon whitepaper v1.2's adjustable hyperbolic invariant, swap equation and marginal-price equation. The paper explicitly identifies the intermediate curves as translated/scaled constant-product hyperbolas, financially equivalent to virtual-token models, with constant-price as the endpoint. The one-direction orders and linked strategy are protocol-state innovations, not additional independent equations under the current equation-only policy. Do not count this lead as a structurally distinct equation; retain as architecture context.
