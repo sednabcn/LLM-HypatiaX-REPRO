@@ -176,3 +176,28 @@ Source: https://docs.solidly.com/dex-basics/swaps.html
 | DeFi AMM: Curve CryptoSwap | Primary 2021 whitepaper equations and dynamic oracle/repeg system verified | Plausible E4 full-system family; pin NG implementation and audit parameter/state contract |
 
 No formal catalogue entry was added or accepted. Source records are not equation counts. No experiments, validators, solvers, workflows, paid compute or live protocol/API calls were run.
+
+
+## 5. Chemistry: primary-source transcription checks
+
+### 5.1 Marcus solution electron-transfer rate (1956)
+
+The original Marcus Part I paper describes an intermediate state \(X^*\) with nonequilibrium solvent polarization. Under the paper's stated mechanism, when electronic transfer from \(X^*\) to product is more probable than return to reactants, the overall rate is the rate of formation of \(X^*\): the solution collision number multiplied by \(\exp(-\Delta F^*/kT)\). This is a conditional result tied to the paper's encounter/intermediate-state mechanism and its solution-phase collision-number convention. It must not be silently rewritten with a universal Eyring \(k_BT/h\) prefactor. Nor should the Part I electrostatic free-energy expression be conflated with later inner-sphere, nonadiabatic, electrochemical or intramolecular Marcus formulations.
+
+Primary source: Marcus, R. A. (1956), *On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I*, Journal of Chemical Physics 24(5), 966–978, DOI: https://doi.org/10.1063/1.1742723. Publisher abstract and Caltech-hosted original PDF record: https://authors.library.caltech.edu/records/desqy-fmq55.
+
+**Disposition:** source-level rate statement verified; exact equation number/page, collision-number definition and all model-specific prefactors still require direct PDF transcription before candidate acceptance. Keep distinct from Eyring/transition-state theory unless a full mechanism and benchmark contract establish the relationship.
+
+### 5.2 Frumkin electrocapillarity and adsorption attribution
+
+The registered Frumkin (1920) paper is *On the Theory of Electrocapillarity: II*, Philosophical Magazine 40(237), 375–385, DOI: https://doi.org/10.1080/14786440908636137. The search evidence available for this audit did not expose its original equation text or establish that the modern adsorption isotherm \(bc=\u005cfrac{\theta}{1-\theta}\u005cmathrm{exp}(-2a\theta)\) is a verbatim equation from that 1920 article. A later historical source attributes a Frumkin modification to 1925, while Frumkin and Obrutsheva's 1926 Nature letter specifically discusses field dependence of neutral-molecule adsorption. These are related historical sources, not interchangeable proof of one exact equation's date or convention.
+
+**Disposition:** retain the Frumkin 1920, 1925 and 1926 references as a provenance cluster; do not claim exact 1920 equation transcription or promote the modern isotherm until the original pages and sign/parameter definitions are checked. In particular, do not infer the sign meaning of the interaction parameter from modern conventions alone.
+
+### 5.3 Von Bertalanffy organic growth (1938): evidence boundary
+
+The accessible bibliographic record for *A Quantitative Theory of Organic Growth* supports the premise that construction/anabolism is treated as a surface function and destruction/catabolism as a volume function, with growth equations derived from those assumptions. The record does not expose the equation text, equation numbering or page-level definitions. The common later shorthand \(dW/dt=aW^{2/3}-bW\) must therefore not be represented as a verified transcription of the 1938 paper on this evidence alone.
+
+**Disposition:** source lead only. Directly inspect the primary article to identify the original size/mass variable, geometric assumptions, coefficients and equation/page before considering a candidate.
+
+No new equation was accepted. These checks refine provenance and prevent later textbook conventions from being back-attributed to the original papers.
