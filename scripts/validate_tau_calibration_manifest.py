@@ -19,13 +19,21 @@ from typing import Any
 APPROVED = {
     "edge_r2_floor": 0.99,
     "relative_margin": 0.0,
-    "tolerated_bad_route_rate_epsilon": 0.05,\n    "family_wise_error_delta": 0.05,
+    "tolerated_bad_route_rate_epsilon": 0.05,
+    "family_wise_error_delta": 0.05,
     "one_sided_confidence": 0.95,
     "minimum_n_if_zero_failures": 59,
 }
 
 
-def minimum_n_zero_failures(epsilon: float, delta: float) -> int:\n    """Exact zero-failure sample minimum for a one-sided binomial test."""\n    if not (0 < epsilon < 1 and 0 < delta < 1):\n        raise ValueError("epsilon and delta must be strictly between 0 and 1")\n    return math.ceil(math.log(delta) / math.log1p(-epsilon))\n\n\ndef extract_core15_ids(source_text: str) -> list[str]:
+def minimum_n_zero_failures(epsilon: float, delta: float) -> int:
+    """Exact zero-failure sample minimum for a one-sided binomial test."""
+    if not (0 < epsilon < 1 and 0 < delta < 1):
+        raise ValueError("epsilon and delta must be strictly between 0 and 1")
+    return math.ceil(math.log(delta) / math.log1p(-epsilon))
+
+
+def extract_core15_ids(source_text: str) -> list[str]:
     """Extract equation names from the literal CORE_15 catalogue block."""
     start = source_text.find("CORE_15 = [")
     if start < 0:
@@ -131,7 +139,10 @@ def validate_manifest(
         else:
             normalized.append(number)
 
-    if normalized and normalized != sorted(normalized):\n        errors.append("candidate_tau_values must be ordered strictlyest-to-laxest (ascending tau)")\n\n    selection = manifest.get("selection_procedure", {})
+    if normalized and normalized != sorted(normalized):
+        errors.append("candidate_tau_values must be ordered strictest-to-laxest (ascending tau)")
+
+    selection = manifest.get("selection_procedure", {})
     selection_name = selection.get("name") if isinstance(selection, dict) else None
     if require_ready:
         if manifest.get("status") != "ready_for_calibration":
@@ -140,6 +151,11 @@ def validate_manifest(
             errors.append("at least one predeclared calibration equation is required")
         if not candidates:
             errors.append("at least one predeclared candidate tau is required")
+        if manifest.get("candidate_tau_order") != "strictest_to_laxest":
+            errors.append("candidate_tau_order must be strictest_to_laxest")
+        category_list = manifest.get("category_list")
+        if not isinstance(category_list, list) or not category_list:
+            errors.append("category_list must be a non-empty predeclared list")
         if not isinstance(selection_name, str) or not selection_name.strip() or selection_name == "NOT_SELECTED":
             errors.append("a concrete selection-aware risk-control procedure must be selected")
         if isinstance(selection, dict) and not selection.get("implementation_or_spec_ref"):
@@ -176,7 +192,7 @@ def validate_manifest(
         }
         if underpowered:
             errors.append(
-                "each category needs at least 59 independent units even in the "
+                f"each category needs at least {minimum_n} independent units even in the "
                 f"zero-failure case; found {underpowered}"
             )
     elif manifest.get("status") not in {"draft", "ready_for_calibration"}:
