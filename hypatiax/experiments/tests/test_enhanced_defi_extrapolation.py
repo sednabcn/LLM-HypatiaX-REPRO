@@ -124,22 +124,6 @@ class EnhancedExtrapolationTest:
 
     # Fix 2: symbols that signal the LLM formula is structurally superior for
     # extrapolation — any of these in the extracted code → force LLM routing.
-    _TRANSCENDENTAL_TOKENS = [
-        "math.exp", "np.exp", "exp(",
-        "math.log", "np.log", "log(",
-        "math.sqrt", "np.sqrt", "sqrt(",
-        "norm.cdf", "norm.pdf", "scipy.stats",
-        "np.maximum", "np.minimum", "max(", "min(",
-        "math.sin", "np.sin", "math.cos", "np.cos",
-        "**0.",  # fractional power e.g. x**0.5
-    ]
-
-    @classmethod
-    def _formula_has_transcendental(cls, code: str) -> bool:
-        """Return True if the LLM formula contains transcendental / piecewise ops."""
-        low = code.lower()
-        return any(t.lower() in low for t in cls._TRANSCENDENTAL_TOKENS)
-
     @staticmethod
     def _eval_formula_r2(llm_code, X, y_true, var_names):
         """
