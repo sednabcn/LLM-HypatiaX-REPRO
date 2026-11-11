@@ -139,3 +139,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 9 (2026-11-11)
 
 [Source Verification Audit 9](CORE295_SOURCE_VERIFICATION_AUDIT_9.md) clarifies Carbon's structural relationship: its invariant is a translated/scaled constant-product hyperbola (including a constant-price limiting case), and the whitepaper says it is financially equivalent to a virtual-token model. Carbon's genuinely distinctive element is its asymmetric one-direction order and linked-strategy state architecture. Keep as protocol architecture context, not a new structural equation family under the current equation-only catalogue policy.
+
+
+## Source verification audit 10 (2026-11-11)
+
+[Source Verification Audit 10](CORE295_SOURCE_VERIFICATION_AUDIT_10.md) distinguishes Uniswap v2's arithmetic mean of price from Uniswap v3's geometric mean price obtained through an arithmetic mean tick. The estimands are mathematically different, although they remain in one broad on-chain oracle family with shared market dependence. Preserve this distinction and avoid counting accumulators, inverse orientation, window lengths or harmonic-mean liquidity as separate price equations.
