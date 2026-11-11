@@ -942,6 +942,38 @@
       "url": "https://docs.chain.link/data-feeds/overview",
       "use": "Official data feed guidance for deviation-threshold and heartbeat update triggers, updatedAt freshness checks and consumer-side fail-safe; protocol parameters vary by feed/network",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HH-1952",
+      "domain": "Biology",
+      "title": "A quantitative description of membrane current and its application to conduction and excitation in nerve",
+      "url": "https://doi.org/10.1113/jphysiol.1952.sp004764",
+      "use": "Primary Hodgkin–Huxley paper, J Physiol 117, 500–544; coupled membrane-current and gating-variable equations",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HH-MODERN-2019",
+      "domain": "Biology",
+      "title": "Updated Hodgkin–Huxley original article using the modern convention",
+      "url": "https://physoc.onlinelibrary.wiley.com/doi/10.1113/jphysiol.1952.sp004764",
+      "use": "Publisher-supplied 2019 supplementary modern-convention transcription of original HH equations; cross-check units/sign conventions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-FITZHUGH-1961",
+      "domain": "Biology",
+      "title": "Impulses and Physiological States in Theoretical Models of Nerve Membrane",
+      "url": "https://doi.org/10.1016/S0006-3495(61)86902-6",
+      "use": "Primary FitzHugh 1961 two-variable BVP reduction of excitable membrane dynamics; compare with HH phase-space projection",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MORRIS-LECAR-1981",
+      "domain": "Biology",
+      "title": "Voltage oscillations in the barnacle giant muscle fiber",
+      "url": "https://doi.org/10.1016/S0006-3495(81)84782-0",
+      "use": "Primary Morris–Lecar 1981 two-variable conductance model, equations 1–2; CellML source provides machine-readable units and parameter mapping",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
