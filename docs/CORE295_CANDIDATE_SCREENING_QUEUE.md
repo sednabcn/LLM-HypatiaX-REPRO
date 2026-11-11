@@ -443,3 +443,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 55 (2026-11-11)
 
 [Source Verification Audit 55](CORE295_SOURCE_VERIFICATION_AUDIT_55.md) verifies the peer-reviewed FC 2022 paper *Speculative Multipliers on DeFi*. Its most distinctive result is the liquidation-constrained maximum leverage bound (m_{max}=1+1/[\max(LS,Credit(B,C))q_{max}]). The source is registered as RISK-WANG-SPECULATIVE-MULTIPLIERS (candidate_reference); equations remain held, with no proposed/accepted record added.
+
+
+## Source verification audit 56 (2026-11-11)
+
+[Source Verification Audit 56](CORE295_SOURCE_VERIFICATION_AUDIT_56.md) verifies Aave V4's collateral-risk-sorted debt coverage premium, health-dependent liquidation bonus and target-health repayment sizing against a pinned upstream commit. Keep V3/V4 health factors in one weighted-collateral family; the V4 risk-premium aggregation and dynamic liquidation policy are potentially distinct leads, but all linked calculations remain held as one system pending deployment-specific adapter.
