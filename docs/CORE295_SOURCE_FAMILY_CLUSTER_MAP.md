@@ -164,3 +164,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 14 (2026-11-11)
 
 [Source Verification Audit 14](CORE295_SOURCE_VERIFICATION_AUDIT_14.md) distinguishes Sky LIQ2.0's linear auction-price decay from its exponential decay calculators. Stairstep exponential uses a floor-quantized elapsed-time exponent and becomes identical to continuous per-second exponential at step=1. Treat them as alternative price functions within one Clipper/Abacus liquidation-auction family; the auction architecture, resets, buffers and price-calculator helpers are not extra equation candidates. Hold pending immutable implementation pinning and exact RAY arithmetic/rounding contract.
+
+
+## Source verification audit 15 (2026-11-11)
+
+[Source Verification Audit 15](CORE295_SOURCE_VERIFICATION_AUDIT_15.md) records Liquity V1's coupled product-sum Stability Pool accounting: the cumulative depletion product P and collateral-gain sum S jointly determine compounded deposits and collateral gains from depositor snapshots. It is a possible system-level risk-sharing candidate only if the domain admits stateful protocol accounting and a deterministic system adapter. Do not split P, S, deposit/gain queries, scale handling or LQTY reward sum G into separate equations. Hold pending immutable implementation pin and domain/Recovery Mode contract.
