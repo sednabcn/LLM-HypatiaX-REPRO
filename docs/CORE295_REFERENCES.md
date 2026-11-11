@@ -282,3 +282,6 @@ These are additional official documentation pointers, not independent primary re
 164. DODO. “The Math Behind: Proactive Market Maker.” Official DODO documentation. https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm. Defines the PMM price curve, its integrated trade amount, quadratic trade inversion and inventory regression target.
 165. Niemerg, A., Robinson, D., & Livnev, L. (2020). *YieldSpace: An Automated Liquidity Provider for Fixed Yield Tokens*. Working draft, August 2020. https://yieldprotocol.com/YieldSpace.pdf. Primary source for the constant-power-sum invariant and time-to-maturity dependence.
 166. Solidly. “Swaps: V2 Volatile and Stable Pools.” Official documentation. https://docs.solidly.com/dex-basics/swaps.html. Gives volatile x·y≥k and stable x³y+y³x≥k pool invariants.
+
+167. Verhulst, P.-F. (1838). “Notice sur la loi que la population suit dans son accroissement.” *Correspondance Mathématique et Physique*, 10, 113–121. Translated scan: https://www.neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf.
+168. von Bertalanffy, L. (1938). “A Quantitative Theory of Organic Growth (Inquiries on Growth Laws II).” *Human Biology*, 10(2), 181–213. Bibliographic record: https://www.jstor.org/stable/41447359.
