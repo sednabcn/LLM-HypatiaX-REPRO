@@ -4280,7 +4280,7 @@ Examples
     )
     parser.add_argument(
         "--protocol",
-        choices=["benchmark", "all_domains"],
+        choices=["benchmark", "all_domains", "protocol30"],
         default="benchmark",
         help="Protocol registry: benchmark=Feynman/SRBench; all_domains=custom 30-equation, 10-domain registry.",
     )
@@ -4557,7 +4557,19 @@ Examples
     if _threshold is None:
         _threshold = 0.999999 if _noiseless else 0.99
 
-    if args.protocol == "all_domains":
+    if args.protocol == "protocol30":
+        if not _noiseless or float(_threshold) != 0.999999:
+            raise SystemExit("Protocol-30 requires --noiseless and --threshold 0.999999")
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+            protocol = Protocol30(num_samples=args.samples, seed=42, noiseless=True)
+        except (ImportError, ValueError) as exc:
+            raise SystemExit(f"Could not load manuscript Protocol-30 registry: {exc}") from exc
+        print(
+            f"✅ Manuscript Protocol-30 loaded "
+            f"({len(protocol._feynman_eqs)} equations, {len(protocol.get_all_domains())} domains)"
+        )
+    elif args.protocol == "all_domains":
         try:
             from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll
             protocol = ExperimentProtocolAll()
