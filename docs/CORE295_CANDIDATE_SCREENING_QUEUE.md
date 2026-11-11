@@ -328,3 +328,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 35 (2026-11-11)
 
 [Source Verification Audit 35](CORE295_SOURCE_VERIFICATION_AUDIT_35.md) verifies Bancor CRR purchase/sale returns against Inverter's implementation documentation and identifies a version conflict: an accessible 2017 v0.77 whitepaper draft prints a sale expression inconsistent with the CRR reserve-outflow invariant, while the implementation docs give the invariant-consistent formula. The registered v0.99 paper page remains to be checked. Keep the bonding curve as one power-law reserve-backed issuance family; hold pending source-version reconciliation and whether bonding curves belong in DeFi AMM.
+
+
+## Source verification audit 36 (2026-11-11)
+
+[Source Verification Audit 36](CORE295_SOURCE_VERIFICATION_AUDIT_36.md) corrects the Butler–Volmer historical attribution and coefficient convention: Butler's 1924 work is conceptual lineage, while Erdey–Grúz/Volmer and later work developed the rate relation; under the modern engineer's form, transfer coefficients are not multiplied by total electron number n. It also distinguishes Nernst–Planck mobility form from the diffusivity form, which assumes the Nernst–Einstein relation. Discovery batch 30 was corrected; both remain discovery-only.
