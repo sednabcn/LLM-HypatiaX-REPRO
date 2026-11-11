@@ -17,7 +17,7 @@ The approved operating criteria are:
 | Relative edge-recovery margin | (\delta=0.00) | LLM edge (R^2) must be no worse than ensemble edge (R^2); no unsupported tolerance is introduced |
 | Maximum bad-routing risk | (\alpha=0.05) | Explicit, predeclared 5% risk budget; a protocol choice, not a manuscript result |
 | Confidence bound | One-sided 95% | Matches the 5% risk budget |
-| Minimum calibration size per category | 59 independent equations if zero bad routes are observed | Exact one-sided binomial bound; not a universal sample-size guarantee |
+| Minimum calibration size per category | 59 independent equations if zero bad routes are observed for one fixed, pre-specified threshold | Exact one-sided binomial bound for a single test; threshold/category multiplicity can require more |
 
 The implementation convention at the routing boundary is inclusive: (\Delta \leq \tau) is eligible for pure-LLM routing, provided all other gates pass. This equality convention is a project decision, not a boundary rule specified by the manuscript.
 
@@ -76,7 +76,7 @@ where (\alpha_c=0.05) is the one-sided tail probability (not to be confused with
 n\geq\frac{\log(0.05)}{\log(0.95)}.
 ]
 
-The smallest integer satisfying this is (n=59). At (n=59), the one-sided upper bound is approximately 0.0495; at (n=58), it is above 0.05. Thus, 59 independent units with zero observed bad routes support the stated 95%-confidence upper risk bound of 5% under the binomial assumptions.
+The smallest integer satisfying this is (n=59). At (n=59), the one-sided upper bound is approximately 0.0495; at (n=58), it is above 0.05. Thus, 59 independent units with zero observed bad routes support the stated 95%-confidence upper risk bound of 5% for **one fixed, pre-specified candidate threshold and one risk claim** under the binomial assumptions.
 
 **The number 59 is conditional, not universal.** If one or more bad routes are observed, the required sample size is larger and must be recalculated using the exact one-sided binomial bound for the observed failure count. Do not retain the 59 minimum as sufficient when (k>0). The operational rule is to require the exact upper bound (U(n,k)\leq0.05); otherwise the category is not certified and pure-LLM routing remains disabled for it.
 
@@ -91,6 +91,31 @@ Before calibration, document the sampling frame and define the independent unit.
 The minimum is **per category**, not a pooled total across categories. Do not pool categories merely to reach 59. Pooling is permissible only if it is justified in advance by a defensible common-risk assumption and is reported as such. If the scientific claim requires simultaneous 95% guarantees across multiple categories, adjust the error budget or use a valid simultaneous procedure; separate unadjusted 95% bounds do not automatically provide a joint 95% guarantee.
 
 ## 6. Selecting among candidate thresholds
+
+The 59-equation calculation above is for one fixed candidate threshold. It does **not** establish the same guarantee after searching a grid of thresholds or making simultaneous claims across multiple categories. A selection-aware procedure must account for the full family of claims.
+
+**Recommended conservative implementation for approval (not yet adopted):** predeclare a finite grid of (m) candidate thresholds; for each threshold, count bad routes and compute the exact one-sided binomial test of (H_0:p_{bad}(\tau)\geq0.05); then apply Bonferroni family-wise error control at total level 0.05. A threshold is certified only if its adjusted test rejects the unsafe-risk null. Selecting the largest certified threshold is then valid under the family-wise guarantee, even if risk is not monotone in tau, provided the candidate grid and all tests were predeclared and the independent-unit assumptions hold. This is a transparent, conservative Learn-then-Test-style multiple-testing design. It should not be called an implemented LTT method until its exact test and selection logic are coded and tested.
+
+For zero observed bad routes, Bonferroni requires
+
+[
+n\geq\left\lceil\frac{\log(0.05/m)}{\log(0.95)}\right\rceil
+]
+
+independent units **per category and per risk family**, rather than a universal 59. Illustrative minimums:
+
+| Number of predeclared thresholds (m) | Minimum (n), zero bad routes |
+|---:|---:|
+| 1 | 59 |
+| 2 | 72 |
+| 5 | 90 |
+| 10 | 104 |
+| 20 | 117 |
+| 50 | 135 |
+| 100 | 149 |
+
+These are zero-failure minima under the simple Bonferroni/exact-binomial construction. Any observed bad routes increase the required sample size; use the adjusted exact upper bound for the observed (k), not this table. If simultaneous claims are made across categories as well as thresholds, include all claims in the multiplicity family or use another valid simultaneous procedure. The selected procedure may be less conservative than Bonferroni, but its finite-sample validity and assumptions must be justified.
+
 
 The fixed-threshold binomial calculation above does not by itself justify searching many candidate (\tau) values and reporting the most favorable one. Repeatedly testing candidates on the same calibration observations and then applying an ordinary 95% interval to the selected candidate can invalidate the nominal risk guarantee.
 
