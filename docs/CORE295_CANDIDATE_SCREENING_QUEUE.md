@@ -503,3 +503,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 32 source-register update (2026-11-11)
 
 [Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) contains Heston's coupled stochastic price/variance process and the Cramér–Lundberg reserve process with exponential-claim ruin probability. Sources RISK-HESTON-1993 and RISK-ASMUSSEN-ALBRECHER-2010 are now registered as candidate_reference; the complete Heston system and the reserve/ruin process each remain one family.
+
+
+## Source verification audit 34 source-register update (2026-11-11)
+
+[Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) now has source-register entries for Parkinson (RISK-PARKINSON-1980), Bollerslev GARCH (RISK-BOLLERSLEV-1986) and RiskMetrics EWMA (RISK-RISKMETRICS-1996). GARCH(1,1) and EWMA remain one conditional-variance family because EWMA is the IGARCH boundary case.
