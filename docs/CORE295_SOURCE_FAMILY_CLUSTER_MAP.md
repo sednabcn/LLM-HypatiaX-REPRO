@@ -474,3 +474,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 59 (2026-11-11)
 
 [Source Verification Audit 59](CORE295_SOURCE_VERIFICATION_AUDIT_59.md) distinguishes Aave V4 Babylon cap-bounded sizing from standard V4 target-health sizing. Both share the same health factor, dynamic liquidation bonus and debt/collateral conversion family; Babylon adds maxCollateralToRemove and inverse repayment resizing, with no separate liquidation fee or dust validation.
+
+
+## Source verification audit 60 (2026-11-11)
+
+[Source Verification Audit 60](CORE295_SOURCE_VERIFICATION_AUDIT_60.md) groups Maker/Sky Jug's per-second stability fee with the generic exponential-compounding family. Global base, collateral duty, rpow/rmul, rate delta and Vat.fold are one accounting transition; do not count these components separately.
