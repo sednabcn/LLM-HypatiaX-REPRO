@@ -519,3 +519,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 34 source-register update (2026-11-11)
 
 [Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) records Parkinson range volatility as a separate range-estimator family, while Bollerslev GARCH(1,1) and RiskMetrics EWMA are grouped as one conditional-variance family (EWMA: \(\omega=0,\alpha=1-\lambda,\beta=\lambda\)). The sources are now registered, with no equation acceptance.
+
+
+## Source verification audit 67 (2026-11-11)
+
+[Source Verification Audit 67](CORE295_SOURCE_VERIFICATION_AUDIT_67.md) retains Maverick V2 in the virtual-reserve constant-product family. Its bin movement, TWAP and merging logic may form a complete protocol system, but the primary core source and implementation equations remain inaccessible/unverified; no separate invariant or accepted equation is justified.
