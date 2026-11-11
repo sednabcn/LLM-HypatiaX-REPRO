@@ -310,6 +310,22 @@
       "url": "https://www.soa.org/globalassets/assets/files/resources/research-report/2022/decentralized-finance-protocols.pdf",
       "use": "Collateralization, liquidity and systemic-risk framework",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-MAZUMDAR-MATHBIO",
+      "domain": "Biology",
+      "title": "An Introduction to Mathematical Physiology and Biology",
+      "url": "https://www.cambridge.org/core/books/an-introduction-to-mathematical-physiology-and-biology/08FE1C4CE05359988B68BCE69C8E2F04",
+      "use": "Diffusion, population biology, pharmacokinetics, epidemiology, biofluid and cardiac mechanics; chapter-level source leads pending exact equation verification",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-DYNAMICS-REVIEW",
+      "domain": "Biology",
+      "title": "A Review of Mathematical Models for Tumor Dynamics and Treatment Resistance Evolution of Solid Tumors",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6813171/",
+      "use": "Equation-level discovery leads for linear-shrinkage, Gompertz and combined exponential-linear tumor growth; primary-source tracing required",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
