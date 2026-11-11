@@ -249,3 +249,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 28 (2026-11-11)
 
 [Candidate Discovery Batch 28](CORE295_CANDIDATE_DISCOVERY_BATCH_28.md) adds financial-risk leads for Parkinson range variance, GARCH(1,1), normal expected shortfall and Merton structural credit risk. EWMA is grouped with GARCH as an IGARCH boundary case; Merton distance-to-default is a derived statistic of the structural credit model. Confirm that general market/credit risk fits the DeFi Risk domain before formal registration.
+
+
+## Source verification audit 27 (2026-11-11)
+
+[Source Verification Audit 27](CORE295_SOURCE_VERIFICATION_AUDIT_27.md) confirms the modern Nernst reaction-quotient equation and the original 1889 historical context, and clarifies Debye–Hückel's limiting law for mean ionic activity coefficients. Keep original Nernst electrode notation distinct from modern whole-cell form; distinguish mean, single-ion and osmotic coefficients. No formal catalogue record is added.
