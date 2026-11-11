@@ -44,6 +44,16 @@ def test_missing_tau_fails_closed_to_ensemble():
     assert route["route_reason"] == "degradation_probe_or_tau_unavailable"
 
 
+
+def test_degradation_equal_to_tau_uses_approved_inclusive_boundary():
+    route = select_hypatiax_route(
+        0.99, 0.80, np.ones(3), np.zeros(3), [],
+        degradation_delta=0.1, degradation_tau=0.1,
+    )
+    assert route["decision"] == "fitted_llm"
+    assert route["route_reason"] == "trusted_high_fit_low_degradation"
+
+
 def test_degradation_above_tau_requires_ensemble():
     route = select_hypatiax_route(
         0.99, 0.80, np.ones(3), np.zeros(3), [],
