@@ -13,9 +13,9 @@ No author-pool script was executed. No equations were generated, validated, fitt
 | Chemistry | 54 | 59 | 5 | 0 | 36 | Do not import wholesale; source reconstruction, model-family clustering, units and regime constraints required |
 | Biology | 59 | 59 | 0 | 0 | 35 | Raw count exactly matches target but is not an acceptance count; coupled systems and derived outputs materially reduce the apparent pool |
 | Physics | 75 | 59 | 16 surplus | 0 | 43 | Broad textbook formula collection; many outputs, special cases, limits and linked models |
-| DeFi AMM | 54 | 59 | 5 | 0 | 25 | Several rows are views of a few invariant families; protocol/version and state-transition contracts are missing |
+| DeFi AMM | 54 | 59 | 5 | 0 | 26 | Several rows are views of a few invariant families; protocol/version and state-transition contracts are missing |
 | DeFi Risk | 57 | 59 | 2 | 0 | 33 | Generic finance identities, excluded Core-15 structures and protocol-unspecified heuristics dominate |
-| **Total** | **299** | **295** | **0 net raw gap** | **0** | **172** | Raw row total is not evidence that 295 structurally distinct equations exist |
+| **Total** | **299** | **295** | **0 net raw gap** | **0** | **173** | Raw row total is not evidence that 295 structurally distinct equations exist |
 
 The arithmetic gap column is only (59-\text{raw rows}); it is not a feasibility estimate. Physics surplus cannot be transferred to another domain. A domain with fewer than 59 defensible models must expand its source universe rather than relax the structural rule or pad with variants.
 
@@ -50,7 +50,7 @@ The 169 source-register records are references/leads, not equations. The formal 
 - Chemistry source refinements: [CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md](CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md) — Frumkin/Langmuir family and Marcus prefactor scope.
 - Physics: [CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md](CORE295_AUTHOR_POOL_PHYSICS_AUDIT_1.md) — 75 Physics rows.
 - DeFi AMM and DeFi Risk: [CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md](CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md) — 54 AMM + 57 Risk rows.
-- DeFi Risk protocol refinements: [CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md) — Aave V3 and Compound Comet models.
+- DeFi Risk protocol refinements: [CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md) — Aave V3 and Compound Comet models. The [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md) verifies Curve StableSwap and CryptoSwap whitepapers and clusters derived Uniswap/Balancer formulas.
 - Structural rules: [CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md) — provisional E0–E5 policy, not frozen.
 - AMM source expansion: [CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md](CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md).
 
