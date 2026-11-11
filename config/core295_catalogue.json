@@ -698,6 +698,65 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Balancer Weighted Math documentation; Balancer V2 WeightedMath.sol _calculateInvariant"
+    },
+    {
+      "equation_id": "RISK-MORPHO-LIF-001",
+      "name": "Morpho Blue LLTV-dependent liquidation incentive factor",
+      "domain": "DeFi Risk",
+      "subdomain": "collateral liquidation incentives",
+      "formula": "LIF = min(1.15, 1 / (1 - 0.3 * (1 - LLTV)))",
+      "canonical_expression": "Min(23/20,1/(1-(3/10)*(1-LLTV)))",
+      "formula_latex": "LIF=\\min\\left(1.15,\\frac{1}{1-0.3(1-LLTV)}\\right)",
+      "structural_fingerprint": "17d33019f41949dbbc535e23ed44db1602b109147b127bea0847bd6be445ed6f",
+      "source_ids": [
+        "RISK-MORPHO-LIF"
+      ],
+      "source_family_id": "RISK-MORPHO-BLUE-LIQUIDATION-INCENTIVE",
+      "status": "proposed",
+      "assumptions": [
+        "Morpho Blue core liquidation path at the pinned implementation revision",
+        "LLTV is a dimensionless fraction in [0,1] represented in WAD fixed-point arithmetic on chain",
+        "Liquidation cursor is fixed at 0.3e18 and maximum incentive factor at 1.15e18 for this implementation",
+        "Formula is applied to an unhealthy position after the oracle-based health check",
+        "Fixed-point division and multiplication use the implementation's rounding direction"
+      ],
+      "variables": {
+        "LLTV": {
+          "meaning": "Market liquidation loan-to-value threshold as a dimensionless fraction",
+          "unit": "dimensionless fraction; on-chain WAD scale 1e18"
+        }
+      },
+      "validity": {
+        "source_location": "morpho-org/morpho-blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d, src/Morpho.sol liquidation branch and src/libraries/ConstantsLib.sol; official Morpho Liquidation docs, LIF section",
+        "regime": "Morpho Blue core liquidation incentive calculation for a market's LLTV",
+        "limitations": [
+          "This is the incentive factor, not the health-factor or liquidation-eligibility equation",
+          "Cursor 0.3 and cap 1.15 are version-pinned implementation constants, not universal Morpho parameters",
+          "The contract uses WAD fixed-point arithmetic with downward rounding in the reciprocal; exact integer rounding must be preserved for implementation replication",
+          "Do not substitute newer Morpho Midnight per-collateral cursor or post-maturity ramp mechanics",
+          "Pin this exact commit; later contract versions may change constants or calculation"
+        ]
+      },
+      "input_ranges": {
+        "LLTV": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": "Use only governance-approved LLTV values from the pinned Morpho Blue market parameter set; do not sample arbitrary continuous LLTVs"
+      },
+      "review_notes": [
+        "The pinned Morpho Blue source confirms LIF=min(maxFactor,1/(1-cursor*(1-LLTV)))",
+        "Pinned constants are cursor=0.3e18 and maxFactor=1.15e18",
+        "Canonical expression uses exact rational constants 3/10 and 23/20",
+        "The benchmark should preserve the discrete governance-approved LLTV domain and WAD rounding",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Morpho Blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d"
     }
   ],
   "source_register": [
@@ -1394,7 +1453,7 @@
       "domain": "DeFi Risk",
       "title": "Morpho Blue liquidation incentive factor",
       "url": "https://docs.morpho.org/learn/concepts/liquidation/",
-      "use": "Official liquidation mechanism docs and Morpho.sol implementation; LIF=min(maxLIF,1/(1-cursor*(1-LLTV))); source code snapshot SHA ab064b646bf161b1510e2575a99412cdc2a43ebb",
+      "use": "Official Morpho Blue liquidation documentation plus pinned implementation at morpho-org/morpho-blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d (src/Morpho.sol and src/libraries/ConstantsLib.sol); LIF=min(1.15,1/(1-0.3*(1-LLTV))) using WAD fixed-point rounding",
       "status": "candidate_reference"
     },
     {
@@ -1736,6 +1795,7 @@
     "Third proposed-record pass adds the scalar Poiseuille laminar tube-flow relation from OpenStax University Physics Volume 1 §14.7, Eq. 14.19. It remains proposed pending constrained ranges, deterministic generator and numerical review.",
     "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family.",
     "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered.",
-    "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded."
+    "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded.",
+    "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator."
   ]
 }
