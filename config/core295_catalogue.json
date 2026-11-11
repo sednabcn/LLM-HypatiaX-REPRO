@@ -390,6 +390,46 @@
       "url": "https://aave.dev/docs/aave-v4/positions",
       "use": "Version-specific position and health-factor documentation",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-DBUCK-2014",
+      "domain": "Biology",
+      "title": "Population pharmacokinetics and pharmacodynamics of BYL719 in advanced solid malignancies",
+      "url": "https://doi.org/10.1111/bcp.12378",
+      "use": "Primary clinical PK/PD model cited for linear tumor growth with first-order shrinkage; Eq. 9 gives the tumor-turnover model",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-BELFATTO-2016",
+      "domain": "Biology",
+      "title": "Adaptive mathematical model of tumor response to radiotherapy based on CBCT data",
+      "url": "https://doi.org/10.1109/JBHI.2015.2453437",
+      "use": "Primary clinical application cited for Gompertz tumor growth; verify exact equation and radiotherapy assumptions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-BETHGE-2015",
+      "domain": "Biology",
+      "title": "Simulation of metastatic progression using a computer model including chemotherapy and radiation therapy",
+      "url": "https://doi.org/10.1016/j.jbi.2015.07.011",
+      "use": "Primary simulation application cited for Gompertz tumor growth; verify exact equation and model assumptions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-OUERDANI-2016",
+      "domain": "Biology",
+      "title": "Mechanism-based modeling of the clinical effects of bevacizumab and everolimus on vestibular schwannomas",
+      "url": "https://doi.org/10.1007/s00280-016-3046-2",
+      "use": "Primary clinical model cited for combined exponential-to-linear tumor growth and biomarker-linked angiogenesis dynamics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TUMOR-SIMEONI-2004",
+      "domain": "Biology",
+      "title": "Predictive pharmacokinetic-pharmacodynamic modeling of tumor growth kinetics in xenograft models",
+      "url": "https://doi.org/10.1158/0008-5472.CAN-03-2524",
+      "use": "Primary preclinical source for exponential-to-linear untreated tumor growth and treatment-linked tumor-growth inhibition dynamics",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -398,6 +438,7 @@
     "Do not treat algebraic rearrangements, unit conversions, parameter changes, or variable renamings as structurally distinct.",
     "Protocol formulas must be version-tagged; Aave V3/V4 and Uniswap V2/V3/V4 mechanics are not interchangeable.",
     "No calibration-ready independence claim is made by this manifest.",
-    "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version."
+    "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version.",
+    "Tumor-dynamics primary-source leads traced in discovery batch 3 are listed separately in the source register; they remain candidate references and do not approve or count any equation."
   ]
 }
