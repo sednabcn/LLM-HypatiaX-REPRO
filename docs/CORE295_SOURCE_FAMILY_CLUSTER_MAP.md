@@ -464,3 +464,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 57 (2026-11-11)
 
 [Source Verification Audit 57](CORE295_SOURCE_VERIFICATION_AUDIT_57.md) records MIP45's obsolete governance status and historical-design role. Keep MIP45, the Dog/Clipper/Abacus implementation, three price calculators, Hole/Dirt invariants, reset logic and circuit breaker in one historical liquidation-auction family; pin current deployed version before adapter work.
+
+
+## Source verification audit 58 (2026-11-11)
+
+[Source Verification Audit 58](CORE295_SOURCE_VERIFICATION_AUDIT_58.md) adds Euler's linear liquidation-LTV ramp to the same liquidation-risk family as its collateral-adjusted health ratio and capped discount. Only LTV decreases ramp; increases apply immediately. The current liquidation LTV, not borrow LTV, is used for liquidation valuation.
