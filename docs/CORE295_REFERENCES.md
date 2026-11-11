@@ -271,3 +271,10 @@ These are additional official documentation pointers, not independent primary re
 156. Egorov, M. (2019). “StableSwap — efficient mechanism for Stablecoin liquidity.” Curve Finance whitepaper, 10 November 2019. https://docs.curve.finance/assets/files/whitepaper_stableswap-fc0bb370db9fe3a91afdde8662e78206.pdf. Primary derivation of the N-coin StableSwap invariant and iterative solution approach.
 
 157. Egorov, M. (2021). “Automatic market-making with dynamic peg.” Curve Finance whitepaper, 9 June 2021. https://docs.curve.finance/assets/files/whitepaper_cryptoswap-de196d8f95aae3164a1226234d6d96ca.pdf. Primary source for transformed balances, CryptoSwap dynamic invariant, amplification/gamma parameters, iterative solver, internal EMA price oracle and repegging algorithm.
+
+158. Kermack, W. O., & McKendrick, A. G. (1927). “A Contribution to the Mathematical Theory of Epidemics.” *Proceedings of the Royal Society A*, 115(772), 700–721. https://doi.org/10.1098/rspa.1927.0118. Accessible scan: https://pdodds.w3.uvm.edu/files/papers/others/1927/kermack1927a.pdf.
+159. Leslie, P. H. (1945). “On the Use of Matrices in Certain Population Mathematics.” *Biometrika*, 33(3), 183–212. https://doi.org/10.1093/biomet/33.3.183.
+160. Michaelis, L., & Menten, M. L. (1913). “Die Kinetik der Invertinwirkung.” *Biochemische Zeitschrift*, 49, 333–369. https://doi.org/10.1007/BF02459570. English translation: https://www.chem.uwec.edu/Chem352_F18/pages/readings/media/Michaelis_%26_Menton_1913.pdf.
+161. Holling, C. S. (1959). “Some Characteristics of Simple Types of Predation and Parasitism.” *The Canadian Entomologist*, 91(7), 385–398. https://doi.org/10.4039/Ent91385-7.
+162. Volterra, V. (1926). “Fluctuations in the Abundance of a Species considered Mathematically.” *Nature*, 118, 558–560. https://doi.org/10.1038/118558a0.
+163. Monod, J. (1949). “The Growth of Bacterial Cultures.” *Annual Review of Microbiology*, 3, 371–394. https://doi.org/10.1146/annurev.mi.03.100149.002103. Review/synthesis.
