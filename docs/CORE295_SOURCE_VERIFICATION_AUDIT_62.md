@@ -1,7 +1,7 @@
 # Core-295 source verification audit 62: Merton structural corporate-credit model
 
 **Date:** 2026-11-11  
-**Status:** new peer-reviewed primary research lead; no equation is added to the formal catalogue or counted toward 295.
+**Status:** new peer-reviewed primary research lead registered as RISK-MERTON-1974 (candidate_reference); no equation is added to the formal catalogue or counted toward 295.
 
 ## 1. Primary source
 
