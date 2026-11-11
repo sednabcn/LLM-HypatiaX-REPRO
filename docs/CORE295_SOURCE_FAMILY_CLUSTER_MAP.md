@@ -194,3 +194,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 20 (2026-11-11)
 
 [Source Verification Audit 20](CORE295_SOURCE_VERIFICATION_AUDIT_20.md) groups Henry and Raoult as different physical equilibria but flags their identical bare proportionality structure for the strict structural-distinctness policy. Beer–Lambert is one decadic exponential attenuation family; Lambert/Beer contributions, absorbance and transmission forms are not extra entries. Henry's modern textbook equation and Beer–Lambert's IUPAC expression are verified; primary historical equation-page checks and benchmark ranges remain outstanding.
+
+
+## Source verification audit 21 (2026-11-11)
+
+[Source Verification Audit 21](CORE295_SOURCE_VERIFICATION_AUDIT_21.md) verifies Hill's muscle force–velocity equation from the original 1938 paper and clarifies its first occurrence (printed p. 162) versus later mechanical verification (pp. 176–177). It is distinct from Hill ligand binding. Planck's 1901 equation (13) is spectral energy density per wavelength; the proposed exitance form follows from isotropic (c/4) conversion. Keep frequency/radiance forms and Wien/Stefan consequences in one Planck family; use an explicit spectral-exitance symbol.
