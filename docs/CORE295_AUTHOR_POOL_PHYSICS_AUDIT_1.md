@@ -125,3 +125,9 @@ The existing source register has 25 Physics source records. That is a source-dis
 6. Resolve all Core-15 exclusions and cross-domain normalized-operator overlaps before counting.
 
 **Outcome:** all 75 Physics author-pool rows are screened as discovery leads. No row is accepted. Several may later seed proposed records after exact-source reconstruction; the generic pool expressions/ranges must not be copied into the formal catalogue.
+
+
+
+## Source-register expansion addendum (2026-11-11)
+
+After this row-level audit, the Physics source register was expanded from 25 to 43 candidate-reference records (+18), and the consolidated bibliography received corresponding entries 123–140. These section-level OpenStax leads cover collision mechanics, variable-mass rocket propulsion, Kepler orbits, pendulums, forced oscillations, standing waves, Doppler shift, sound intensity, capacitance, RC circuits, Faraday induction, AC resonance, photoelectric effect, Compton scattering, Bohr hydrogen, de Broglie matter waves, the infinite square well and Young double-slit interference. The new references improve traceability and source coverage; they do not validate or accept any author-pool row and do not add 18 equation entries. Section URLs were checked and corrected against official OpenStax pages where needed.
