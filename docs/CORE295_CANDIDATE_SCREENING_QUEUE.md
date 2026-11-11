@@ -298,3 +298,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 30 (2026-11-11)
 
 [Source Verification Audit 30](CORE295_SOURCE_VERIFICATION_AUDIT_30.md) verifies Hawkes's original 1971 self-exciting intensity definition, exponential kernel and stationarity condition, and Merton's original 1976 jump-diffusion stock-return Eq. (2) and compound-Poisson distribution. OU and CIR are confirmed as primary model lineages, but their common modern SDE forms still need direct original equation-page transcription. All remain discovery-only; no catalogue entries were added.
+
+
+## Source verification audit 31 (2026-11-11)
+
+[Source Verification Audit 31](CORE295_SOURCE_VERIFICATION_AUDIT_31.md) clarifies that GHK is a steady-state zero-current diffusion potential under a constant-field assumption, not a thermodynamic Nernst equilibrium potential; the three-ion expression is the Hodgkin–Katz extension of Goldman's original constant-field treatment. It also distinguishes the revised Starling Πg force-balance component from the full implicit steady-state Eq. (3), where Jv appears inside the Péclet number. Discovery batch 36 was corrected accordingly; both leads remain discovery-only.
