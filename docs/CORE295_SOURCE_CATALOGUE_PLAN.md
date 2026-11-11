@@ -79,7 +79,7 @@ Each entry must carry:
 
 Candidate states: `proposed`, `source_verified`, `scientifically_reviewed`, `structurally_reviewed`, `accepted`, `rejected`. Only `accepted` entries count toward 59/domain.
 
-The offline adapter in `hypatiax/experiments/benchmarks/core295_catalogue.py` parses `canonical_expression` with SymPy (never Python `eval`), compiles it to NumPy, and maps the record to the Core-15 equation dictionary contract (`name`, `domain`, `vars`, `train_range`, `extrap_range`, `fn`, formula metadata). It requires each variable's train and extrapolation intervals. Its deterministic smoke check is a preflight only; it does not replace scientific validation, dimensional analysis, or range review.
+The offline adapter in `hypatiax/experiments/benchmarks/core295_catalogue.py` parses `canonical_expression` through a restricted Python-AST grammar and an explicit mathematical-function allow-list (no source-code evaluation), converts it to SymPy, and compiles it to NumPy, and maps the record to the Core-15 equation dictionary contract (`name`, `domain`, `vars`, `train_range`, `extrap_range`, `fn`, formula metadata). It requires each variable's train and extrapolation intervals. Its deterministic smoke check is a preflight only; it does not replace scientific validation, dimensional analysis, or range review.
 
 ## 5. Independence is a separate decision
 
