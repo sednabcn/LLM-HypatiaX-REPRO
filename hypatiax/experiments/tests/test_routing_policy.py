@@ -120,3 +120,12 @@ def test_query_blend_weights_vary_with_query_ood_probability():
     # Training predictions use the in-distribution alpha floor, not query OOD.
     assert np.isclose(route["blend_weights"]["llm"], 0.3)
     assert np.isclose(route["blend_weights"]["nn"], 0.7)
+
+
+def test_invalid_negative_tau_fails_closed_to_ensemble():
+    route = select_hypatiax_route(
+        0.99, 0.8, np.ones(3), np.zeros(3), [],
+        degradation_delta=0.01, degradation_tau=-0.1,
+    )
+    assert route["decision"] == "ensemble"
+    assert route["route_reason"] == "degradation_probe_or_tau_unavailable"
