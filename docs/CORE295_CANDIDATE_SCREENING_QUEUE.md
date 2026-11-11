@@ -562,3 +562,18 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 ## Biology source-family additions (2026-11-11)
 
 The source register now includes Kermack–McKendrick (1927) epidemic flow, Leslie (1945) age-structured matrix, Michaelis–Menten (1913) invertase kinetics, Holling (1959) functional response, Volterra (1926) predator–prey and Monod (1949) bacterial culture growth review. These are source leads, not accepted equations. Preserve complete coupled-system units for epidemic, predator–prey and Leslie matrix models. Do not count Monod, Holling Type II and Michaelis–Menten scalar saturation laws separately solely by naming/mechanism; the draft E3 rule blocks normalized-structure variants. Holling Type III remains a distinctness lead pending exact primary transcription. See [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md).
+
+
+## DeFi AMM source-family additions (2026-11-11)
+
+Primary/official equation evidence has been added for Curve StableSwap (Egorov 2019), Curve CryptoSwap (Egorov 2021), YieldSpace (Niemerg, Robinson & Livnev 2020 working draft), DODO PMM and Solidly V2. Structural dispositions remain provisional:
+
+- Curve StableSwap: N-coin sum/product invariant with amplification; strong distinct invariant lead versus constant product. Iterative root solving and derived price/output formulas are not separate rows.
+- Curve CryptoSwap: dynamic invariant plus internal price-scale/EMA oracle and repegging state; plausible distinct complete-system family; pin a specific NG implementation before formal candidate drafting.
+- YieldSpace: constant-power-sum invariant with time-to-maturity exponent; strong distinct yield-space lead. Constant-sum/constant-product limits are not extra equations.
+- DODO PMM: guide-price/inventory-dependent marginal price and long-regression rule; count the full price/inventory state mechanism, not its integral, average price and quadratic inversion separately.
+- Solidly stable: polynomial invariant x^3*y + y^3*x; scaling/normalization and exact implementation revision still need verification. Solidly volatile is constant-product family.
+- Uniswap v3: virtual-reserve relation is a coordinate transform of constant-product trading within a selected active range; tick-crossing/position state may be a complete system unit but not a free pass around Core-15 exclusions.
+- Balancer weighted: invariant, spot price and inverse trade directions are one weighted-invariant family; apply E3/E4 policy explicitly.
+
+See [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md). No AMM candidate was accepted.
