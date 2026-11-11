@@ -817,37 +817,55 @@ def _hybrid_predict_and_eval(
         and not _formula_has_pathological_behavior(llm_code)
     )
 
-    # Step 3: Initial routing decision based on training LLM R²
-    # Issue 4 fix: if LLM achieved near-perfect training fit, prefer it
-    # immediately — do NOT allow the cascade below to accidentally flip to NN.
-    # Previous code only checked train_r2 > 0.95 which was correct in principle,
-    # but the routing-override block (Step 4) could later change "llm" back to
-    # "ensemble" or "nn" even when train_r2 == 1.0.  We lock the decision here
-    # so the Step 4 overrides only apply when the initial decision is NOT "llm".
-    if llm_train_ok and llm_train_r2 >= 0.95:
-        decision = "llm"          # locked — Step 4 overrides will be skipped
-    elif llm_train_ok and llm_train_r2 > 0.50:
-        decision = "ensemble"
-    else:
+    # Stages 2–4: structural risk, training-only NN edge probe, query-only KDE.
+    structural_tokens = structural_risk_tokens(llm_code)
+    structural_risk_flag = bool(structural_tokens)
+    degradation_probe = (
+        _extrapolation_probe(X_train, y_train)
+        if llm_trustworthy else
+        {"status": "trust_gate_failed", "delta": None,
+         "r2_train": None, "r2_edge": None}
+    )
+    degradation_tau = _routing_delta_tau()
+    try:
+        ood_diagnostic = kde_ood_probability(X_train, X_test)
+    except Exception as _ood_exc:
+        _m5_record_failure("kde_ood_probability", _ood_exc)
+        ood_diagnostic = {"status": "error", "p_ood": None, "p_ood_per_query": []}
+
+    # Per-query manuscript weights: w_LLM = 0.3 + 0.7*p_OOD.
+    _p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
+    if (
+        _p_query.size != len(X_test)
+        or not np.isfinite(_p_query).all()
+        or np.any((_p_query < 0.0) | (_p_query > 1.0))
+    ):
+        _p_query = np.zeros(len(X_test), dtype=float)  # fail to in-distribution alpha floor
+    _llm_w = 0.3 + 0.7 * _p_query
+    _nn_w = 1.0 - _llm_w
+    query_blend_weights = {
+        "llm": _llm_w.astype(float).tolist(),
+        "nn": _nn_w.astype(float).tolist(),
+    }
+
+    _delta = degradation_probe.get("delta")
+    if not llm_trustworthy:
         decision = "nn"
-
-    # Step 4: Routing overrides (only when formula is trustworthy — Fix 5b)
-    # IMPORTANT: do NOT override a locked "llm" decision (Issue 4 fix).
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 2: transcendental tokens → LLM wins
-        if _formula_has_transcendental(llm_code):
-            decision = "llm"
-
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 1: NN edge-degradation probe → LLM wins
-        try:
-            degradation = _extrapolation_probe(X_train, y_train)
-            if degradation >= 0.15:
-                decision = "llm"
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+        route_reason = "trust_gate_failed"
+    elif structural_risk_flag:
+        # Structural risk has precedence over the high-fit shortcut.
+        decision = "ensemble"
+        route_reason = "structural_risk_precedence"
+    elif _delta is None or degradation_tau is None:
+        # Never invent tau or silently permit pure LLM when the probe is absent.
+        decision = "ensemble"
+        route_reason = "degradation_probe_or_tau_unavailable"
+    elif llm_train_r2 >= 0.95 and float(_delta) <= degradation_tau:
+        decision = "llm"
+        route_reason = "trusted_high_fit_low_degradation"
+    else:
+        decision = "ensemble"
+        route_reason = "degradation_exceeds_tau_or_fit_below_0.95"
 
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
