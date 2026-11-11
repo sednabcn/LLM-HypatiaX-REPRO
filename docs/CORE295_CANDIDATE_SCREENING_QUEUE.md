@@ -545,7 +545,7 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 
 ## Consolidated author-pool audit matrix 1 (2026-11-11)
 
-[CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md](CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md) consolidates the five static domain screens: 299 raw rows (54 Chemistry, 59 Biology, 75 Physics, 54 DeFi AMM, 57 DeFi Risk), zero accepted from the discovery pool, and 159 source-register records. It distinguishes source coverage, proposed formal catalogue entries and accepted equations; records cross-domain overlaps, coupled-system/derived-output blockers, Core-15 exclusions and required acceptance gates. The matrix is an index and synthesis, not a new validation pass; no code or experiments were run.
+[CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md](CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md) consolidates the five static domain screens: 299 raw rows (54 Chemistry, 59 Biology, 75 Physics, 54 DeFi AMM, 57 DeFi Risk), zero accepted from the discovery pool, and 166 source-register records at the latest branch refresh (Chemistry 33, Biology 34, Physics 43, DeFi AMM 23, DeFi Risk 33). It distinguishes source coverage, proposed formal catalogue entries and accepted equations; records cross-domain overlaps, coupled-system/derived-output blockers, Core-15 exclusions and required acceptance gates. The matrix is an index and synthesis, not a new validation pass; no code or experiments were run.
 
 ## Biology stock–recruitment family source audit 1 (2026-11-11)
 
