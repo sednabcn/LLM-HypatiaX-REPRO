@@ -734,6 +734,30 @@
       "url": "https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-greater-capital-34427f5ac22f",
       "use": "Protocol source lead for TWAP-triggered movement of discrete liquidity bins; audit report validates selected whitepaper formula numbers but swap/liquidity formula scope is incomplete; algorithmic state-transition lead only",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-MORPHO-LIF",
+      "domain": "DeFi Risk",
+      "title": "Morpho Blue liquidation incentive factor",
+      "url": "https://docs.morpho.org/learn/concepts/liquidation/",
+      "use": "Official liquidation mechanism docs and Morpho.sol implementation; LIF=min(maxLIF,1/(1-cursor*(1-LLTV))); source code snapshot SHA ab064b646bf161b1510e2575a99412cdc2a43ebb",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-EULER-REVERSE-AUCTION",
+      "domain": "DeFi Risk",
+      "title": "Euler EVK reverse Dutch auction liquidation discount",
+      "url": "https://docs.euler.finance/learn/liquidations/",
+      "use": "Official docs and pinned Liquidation.sol implementation at commit 93a1de491531e54cbbcf0e5c8cacfe558f924867; discountFactor equals risk-adjusted collateral/liability capped by max discount; code blob SHA 8ce05719f1200e543b1b81ad5c749780e4cf7df4",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-LIQUITY-STABILITY-POOL",
+      "domain": "DeFi Risk",
+      "title": "Liquity V1 Stability Pool and Recovery Mode liquidation rules",
+      "url": "https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations",
+      "use": "Official protocol documentation for debt offset by Stability Pool deposits, pro-rata collateral gain/loss and Recovery Mode liquidation branches; source-family candidate for risk-sharing accounting",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
