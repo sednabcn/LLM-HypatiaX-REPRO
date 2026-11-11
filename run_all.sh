@@ -2285,7 +2285,7 @@ run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six method
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/all-domains-random-80-20'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
-  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2318,7 +2318,7 @@ run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-dir
   _ALLDOM_PCA_DIR='${RESULTS_DIR}/comparison_results/all-domains-pca-4060'
   mkdir -p "\${_ALLDOM_PCA_DIR}"
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
-  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== Protocol-30 PCA 40/60: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2378,7 +2378,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
-  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2_five: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
