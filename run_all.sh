@@ -2311,7 +2311,7 @@ summary = {
     'result_files': [p.name for p in files],
     'record_count': rows,
     'status': ('incomplete' if not files else ('outputs_present_with_domain_mismatch' if registry_domains != 11 else 'outputs_present')),
-    'note': f'This 10-domain registry is not the manuscript's custom 11-domain Protocol-30 equation set; do not use these results as Protocol-30.'
+    'note': 'This 10-domain registry differs from the manuscript-defined custom 11-domain Protocol-30 equation set; do not use these results as Protocol-30.'
 }
 (out / 'all_domains_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
 print('[All-domains PCA proxy] files=' + str(len(files)) + ' records=' + str(rows) + ' summary=' + str(out / 'all_domains_pca4060_summary.json'))
