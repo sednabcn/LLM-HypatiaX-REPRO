@@ -267,3 +267,5 @@ These are additional official documentation pointers, not independent primary re
 
 154. Thieme, H. R. (2003). *Mathematics in Population Biology*. Princeton University Press. Accessible preview: https://api.pageplace.de/preview/DT0400.9780691187655_A33705070/preview-9780691187655_A33705070.pdf. Chapters 5 and 9 separately treat continuous-time Beverton–Holt/Ricker growth equations and discrete-time Beverton–Holt/Ricker difference equations.
 155. Curve Finance. “Curve AMM: StableSwap and CryptoSwap overview.” Official developer documentation: https://docs.curve.finance/developer/amm/curve-amm-overview/. Identifies StableSwap (near-parity assets) and CryptoSwap (volatile pairs) as distinct core invariants and distinguishes current NG implementations from legacy contracts.
+
+156. Egorov, M. (2019). “StableSwap — efficient mechanism for Stablecoin liquidity.” Curve Finance whitepaper, 10 November 2019. https://docs.curve.finance/assets/files/whitepaper_stableswap-fc0bb370db9fe3a91afdde8662e78206.pdf. Primary derivation of the N-coin StableSwap invariant and iterative solution approach.
