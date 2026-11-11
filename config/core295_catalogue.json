@@ -2879,7 +2879,7 @@
       "domain": "Chemistry",
       "title": "Zur Theorie der Wasserstoffüberspannung",
       "url": "https://doi.org/10.1515/zpch-1930-15020",
-      "use": "Primary Erdey-Grúz and Volmer (1930), Zeitschrift für Physikalische Chemie A 150, pp. 203–213; source for slow-discharge hydrogen overpotential kinetics and transfer coefficient. Important primary lineage for the two-direction exponential current-overpotential relation later commonly called Butler–Volmer. Exact equation/page and assumptions still require direct primary-text transcription.",
+      "use": "Primary Erdey-Grúz and Volmer (1930), Zeitschrift für Physikalische Chemie A 150, pp. 203–213; original scan available at https://knowledge.electrochem.org/estir/hist/hist-34-Volmer-1.pdf. Opposing electron-transfer rates and equilibrium/net current expressions are printed Eqs. (7)–(8), (13)–(15), pp. 209–212; Tafel limit Eq. (17), p. 212. The paper treats hydrogen overpotential via a stated slow electron-transfer step and estimates the transfer parameter near 0.5 for its conditions. Candidate reference only; formal symbol/sign and surface-concentration adapter still required.",
       "status": "candidate_reference"
     }
   ],
