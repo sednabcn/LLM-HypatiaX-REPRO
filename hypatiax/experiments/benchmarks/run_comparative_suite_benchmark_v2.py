@@ -4475,18 +4475,15 @@ Examples
     )
     parser.add_argument(
         "--protocol",
-        choices=["benchmark", "all_domains"],
+        choices=["benchmark", "all_domains", "protocol30"],
         default="benchmark",
         help=(
             "Which protocol class to load. 'benchmark' (default) loads "
             "BenchmarkProtocol (Feynman/SRBench, controlled by --benchmark). "
-            "'all_domains' loads ExperimentProtocolAll from "
-            "hypatiax.core.generation.hybrid_all_domains_llm_nn."
-            "hybrid_system_llm_nn_all_domains — the 30-equation, "
-            "multi-domain protocol exp2 actually needs. There is no "
-            "'all30' choice; the run_all.sh comment referencing "
-            "'--protocol all30' referred to a flag/value that was never "
-            "implemented. Use --protocol all_domains instead."
+            "'all_domains' loads the distinct 10-domain ExperimentProtocolAll proxy. "
+            "'protocol30' loads the manuscript's custom 30-equation, 11-domain "
+            "analytic registry from experiment_protocol_benchmark_v2.py. "
+            "Protocol-30 requires --noiseless and R² threshold 0.999999."
         ),
     )
     parser.add_argument(
@@ -4829,7 +4826,21 @@ Examples
     if _threshold is None:
         _threshold = 0.999999 if _noiseless else 0.99
 
-    if args.protocol == "all_domains":
+    if args.protocol == "protocol30":
+        if not _noiseless or float(_threshold) != 0.999999:
+            raise SystemExit("Protocol-30 requires --noiseless and --threshold 0.999999")
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+            protocol = Protocol30(num_samples=args.samples, seed=42, noiseless=True)
+        except (ImportError, ValueError) as exc:
+            raise SystemExit(f"Could not load manuscript Protocol-30 registry: {exc}") from exc
+        print(
+            f"✅ Manuscript Protocol-30 loaded "
+            f"({sum(len(protocol.load_test_data(d, num_samples=1)) for d in protocol.get_all_domains())} equations, "
+            f"{len(protocol.get_all_domains())} domains)"
+        )
+        print()
+    elif args.protocol == "all_domains":
         try:
             from hypatiax.core.generation.hybrid_all_domains_llm_nn.hybrid_system_llm_nn_all_domains import (
                 ExperimentProtocolAll,
