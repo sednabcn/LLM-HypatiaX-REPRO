@@ -1,5 +1,7 @@
 # Core-295 source-universe expansion — discovery batch 2
 
+**Consolidated bibliography:** [CORE295_REFERENCES.md](CORE295_REFERENCES.md). This reference list collects the literature and source links used across all Core-295 discovery batches and the catalogue plan.
+
 **Status:** source-universe discovery only. This is not an equation catalogue, does not approve any candidate, and does not establish 59 independent units in any domain.
 
 This batch expands the source universe using chapter-level open textbooks, publisher-level mathematical biology references, and protocol-owned technical documentation. Each future equation still requires exact section/page/equation provenance, domain review, dimensional analysis, structural comparison, source-family clustering, and a defensible scalar benchmark mapping.
