@@ -102,3 +102,4 @@ def test_readiness_requires_hash_pinned_data_code_and_evaluator():
     assert any("calibration_data_manifest_sha256" in e for e in errors)
     assert any("calibration_code_commit" in e for e in errors)
     assert any("evaluator_version" in e for e in errors)
+\n\ndef test_fixed_sequence_zero_failure_sample_sizes_follow_epsilon_delta():\n    assert minimum_n_zero_failures(0.05, 0.05) == 59\n    assert [minimum_n_zero_failures(e, 0.05) for e in (0.05, 0.10, 0.15, 0.20, 0.25)] == [59, 29, 19, 14, 11]\n\n\ndef test_candidate_grid_must_be_strictest_to_laxest():\n    manifest = _manifest()\n    manifest["candidate_tau_values"] = [0.3, 0.1, 0.2]\n    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))\n    errors = validate_manifest(manifest, ids)\n    assert any("strictest-to-laxest" in e for e in errors)\n
