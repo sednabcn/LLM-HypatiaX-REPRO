@@ -214,3 +214,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 24 (2026-11-11)
 
 [Source Verification Audit 24](CORE295_SOURCE_VERIFICATION_AUDIT_24.md) verifies Balancer's weighted geometric invariant and its correspondence to the V2 WeightedMath implementation. Three-token form is one fixed-arity adapter to the general n-token weighted family; the equal two-token special case is constant product. Do not count spot prices, swap formulas or weight/token-count variants separately. Hold pending immutable implementation pin and numerical contract.
+
+
+## Source verification audit 25 (2026-11-11)
+
+[Source Verification Audit 25](CORE295_SOURCE_VERIFICATION_AUDIT_25.md) verifies Langmuir's 1918 single-site monolayer coverage equation. Its rational saturation form is mathematically shared with Michaelis–Menten/Hill-one occupancy despite the different surface-adsorption mechanism. This is a cross-domain structural-equivalence gate against Core-15's MM exclusion; source/domain labels alone do not make it a distinct equation. Keep coverage, adsorbed amount and LH adsorption substeps together.
