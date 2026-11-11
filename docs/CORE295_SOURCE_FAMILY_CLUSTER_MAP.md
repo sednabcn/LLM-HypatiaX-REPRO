@@ -114,3 +114,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 4 (2026-11-11)
 
 [Source Verification Audit 4](CORE295_SOURCE_VERIFICATION_AUDIT_4.md) adds equation-level checks for Frank's Windkessel model and FitzHugh's 1961 BVP system. Keep the Windkessel two-element RC equation, its zero-inflow decay and frequency-domain impedance in one derivation family; keep FitzHugh's two coupled ODEs as one system-level unit and distinguish the original BVP form from later FHN parameterizations. Both are held, not accepted; source-family membership does not establish independent statistical units.
+
+
+## Source verification audit 5 (2026-11-11)
+
+[Source Verification Audit 5](CORE295_SOURCE_VERIFICATION_AUDIT_5.md) records Fick's oxygen mass-balance cardiac-output relation as a measurement equation, with primary-page transcription and domain-scope questions still open. It also records the Timoshenko 1921 shear-correction source as metadata-verified but not equation-transcribed; Bresse antecedents and later Timoshenko formulations must not be conflated. Neither lead is accepted.
