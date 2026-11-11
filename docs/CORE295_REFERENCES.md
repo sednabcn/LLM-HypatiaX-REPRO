@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–11. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–12. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -102,6 +102,14 @@
 76. DODO. *The Math Behind: PMM Price Curve Definition*. Official DODO PMM documentation. https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm. Gives the piecewise inventory-dependent marginal price, integrated trade amount and quadratic inventory solve. Pin PMM version and regression semantics before use.
 
 77. LFJ. *Concentrated Liquidity / Liquidity Book*. Official developer documentation. https://developers.lfj.gg/concepts/concentrated-liquidity. Describes discrete price bins, fixed price within a bin, geometric price progression by bin step and the distinction from continuous constant-product concentrated liquidity. Verify exact per-bin state/invariant against the deployed Joe V2/V2.1 contracts.
+
+78. Klages-Mundt, A., & Schuldenzucker, S. (2022). *Elliptic Concentrated Liquidity Pool (E-CLP): Technical Overview*. Gyroscope, November 2022. https://3407769812-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MU527HCtxlYaQoNazhF%2Fuploads%2F2HscaHAluwXqLel1O4LI%2FE-CLP%20Technical%20Specification.pdf?alt=media&token=e67627c3-61ee-4786-9bca-9f0f5ab6d4d5. Primary mathematical specification, pp. 3–4: shifted/rotated/stretched ellipse invariant, invariant-radius formula and swap reserve solve.
+
+79. Balancer. *balancer-maths: Gyro2CLP math implementation*, typescript/src/gyro/gyro2CLPMath.ts. https://github.com/balancer/balancer-maths/blob/main/typescript/src/gyro/gyro2CLPMath.ts. Code-level quadratic invariant implementation; captured file blob SHA 635046fb5a6a498321bba8c1e7233ad0dd1cffd0. Re-fetch and pin repository commit before formal acceptance.
+
+80. Hertzog, E., Benartzi, G., & Benartzi, G. (2017). *Bancor Protocol: Continuous Liquidity and Asynchronous Price Discovery for Tokens through their Smart Contracts*, draft v0.99, May 30, 2017. https://paperzz.com/doc/9208421/whitepaper---bancor-protocol. Primary historical bonding-curve design; p. 11 gives reserve-ratio purchase and sale returns. Verify against an archived official source before acceptance.
+
+81. Maverick Protocol. (2022). *Maverick AMM: The Revolutionary Dynamic Distribution AMM That Enables Directional LPing*. https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-greater-capital-34427f5ac22f. Protocol source for price-bin liquidity movement modes; pair with the Omniscia implementation audit, which validates selected whitepaper formula ranges but does not validate the entire swap/liquidity formula surface.
 
 ## Bibliographic and provenance cautions
 
