@@ -439,3 +439,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 52 (2026-11-11)
 
 [Source Verification Audit 52](CORE295_SOURCE_VERIFICATION_AUDIT_52.md) adds Miqado as a potentially distinct reversible-option support system. Its baseline health factor/FSL equations overlap existing lending-risk families; the distinctive structure is the reversible option with early seller termination, borrower rescue and supporter maturity takeover/default. Keep all components in one system unit.
+
+
+## Source verification audit 53 (2026-11-11)
+
+[Source Verification Audit 53](CORE295_SOURCE_VERIFICATION_AUDIT_53.md) groups BIS actual wallet leverage and LTV-implied leverage as standard balance-sheet metrics. The study's “VaR” label means share of loans near liquidation, not conventional quantile VaR. Wallet addresses are not proven independent economic participants; preserve the reported sample-count discrepancy.
