@@ -414,3 +414,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 47 (2026-11-11)
 
 [Source Verification Audit 47](CORE295_SOURCE_VERIFICATION_AUDIT_47.md) classifies Liquity Stability Pool as a coupled path-dependent product-sum accounting system. Per-unit loss/gain, P/S accumulators, snapshot claims, error correction and scale transitions are one family, not separate equation candidates. Do not conflate the reviewed source snapshot with Liquity V2/BOLD.
+
+
+## Source verification audit 48 (2026-11-11)
+
+[Source Verification Audit 48](CORE295_SOURCE_VERIFICATION_AUDIT_48.md) classifies Sky/Maker Liquidations 2.0 as a configurable Dutch-auction system. Linear and exponential time-price laws differ as scalar functions; stair-step exponential with one-second steps is equivalent to continuous exponential. Do not count calculator choices, reset logic, auction caps and incentives as separate system samples.
