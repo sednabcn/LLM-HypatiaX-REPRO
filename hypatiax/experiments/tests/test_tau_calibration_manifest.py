@@ -77,3 +77,19 @@ def test_heldout_fields_are_rejected():
     ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
     errors = validate_manifest(manifest, ids)
     assert any("forbidden fields" in e for e in errors)
+
+
+def test_independence_unit_cannot_be_reused_across_categories():
+    manifest = _manifest()
+    base = {
+        "independent_unit_id": "shared-family",
+        "provenance": "predeclared source registry",
+        "uses_training_data_only": True,
+    }
+    manifest["calibration_equations"] = [
+        dict(base, equation_id="cal-chem-001", category="chemistry"),
+        dict(base, equation_id="cal-bio-001", category="biology"),
+    ]
+    ids = extract_core15_ids(SOURCE.read_text(encoding="utf-8"))
+    errors = validate_manifest(manifest, ids)
+    assert any("reused" in e and "entire calibration manifest" in e for e in errors)
