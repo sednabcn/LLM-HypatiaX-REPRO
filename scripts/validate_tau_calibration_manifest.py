@@ -19,13 +19,13 @@ from typing import Any
 APPROVED = {
     "edge_r2_floor": 0.99,
     "relative_margin": 0.0,
-    "bad_routing_risk": 0.05,
+    "tolerated_bad_route_rate_epsilon": 0.05,\n    "family_wise_error_delta": 0.05,
     "one_sided_confidence": 0.95,
     "minimum_n_if_zero_failures": 59,
 }
 
 
-def extract_core15_ids(source_text: str) -> list[str]:
+def minimum_n_zero_failures(epsilon: float, delta: float) -> int:\n    """Exact zero-failure sample minimum for a one-sided binomial test."""\n    if not (0 < epsilon < 1 and 0 < delta < 1):\n        raise ValueError("epsilon and delta must be strictly between 0 and 1")\n    return math.ceil(math.log(delta) / math.log1p(-epsilon))\n\n\ndef extract_core15_ids(source_text: str) -> list[str]:
     """Extract equation names from the literal CORE_15 catalogue block."""
     start = source_text.find("CORE_15 = [")
     if start < 0:
@@ -131,7 +131,7 @@ def validate_manifest(
         else:
             normalized.append(number)
 
-    selection = manifest.get("selection_procedure", {})
+    if normalized and normalized != sorted(normalized):\n        errors.append("candidate_tau_values must be ordered strictlyest-to-laxest (ascending tau)")\n\n    selection = manifest.get("selection_procedure", {})
     selection_name = selection.get("name") if isinstance(selection, dict) else None
     if require_ready:
         if manifest.get("status") != "ready_for_calibration":
