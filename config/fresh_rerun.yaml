@@ -255,7 +255,16 @@ deferred_experiments:
     reason: "The instability diagnostic is a valid explicit run_all step but is deferred from the standard full-run sequence by the L18 control. Run it separately with --step instability when it is specifically needed."
 
   core15_leave_one_gate_out:
-    status: deferred
+    status: partial_deferred
+    wired_arms:
+      - llm_acceptance
+      - pysr_prior
+    unavailable_in_hds_v50_2:
+      - neural_degradation_probe
+      - nn_augmentation
+      - blend_weight
+    disabled_by_construction:
+      - complexity_routing
     required_arms:
       - llm_acceptance
       - neural_degradation_probe
@@ -263,10 +272,15 @@ deferred_experiments:
       - nn_augmentation
       - blend_weight
       - pysr_prior
-    reason: "The current exp1_ablation runner implements pysr_only, hypatia, and hypatia_nollm only. Do not relabel those three arms as the six-gate study; implement each switch and matched Core-15 split/seed/resource controls before adding it to the fresh launcher."
+    reason: "scripts/phase3_all.py runs only llm_acceptance and pysr_prior for the Core-15 HDS v50_2 architecture. Probe, NN augmentation and blend weight belong to a different DeFi NN path; complexity routing is disabled in symbolic_engine.py. Do not claim six-gate coverage or compare omitted gates as no-effect."
   protocol30:
-    status: deferred
+    status: partial_deferred
+    runner_stage: exp2
+    runner_script: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py
+    protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
     equations: 30
-    domains: 11
-    protocols: [random_80_20, pca_40_60]
-    reason: "No dedicated clean Protocol-30 runner is wired. Freeze the custom equation registry, formula provenance, method arms, split semantics, output schema, and timeout policy before adding a launcher stage. It is not exp2 or exp2_five."
+    registry_domains: 10
+    manuscript_domains: 11
+    implemented_protocols: [random_80_20]
+    missing_protocols: [pca_40_60]
+    reason: "The exp2 stage already runs --protocol all_domains over the 30-equation, 10-domain registry. The manuscript specifies 11 domains and both random 80/20 and PCA 40/60. Identify the missing domain and implement/verify the separate PCA 40/60 route before claiming full Protocol-30 coverage. Do not substitute the Feynman PCA stage."
