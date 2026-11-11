@@ -32,19 +32,29 @@ The chloride concentrations are reversed relative to the cation terms because ch
 **Historical source:** E. H. Starling (1896), *On the absorption of fluids from the connective tissue spaces*, Journal of Physiology 19, 312–326.  
 **Modern sources:** Levick and Michel (2010), *Microvascular fluid exchange and the revised Starling principle*, Cardiovascular Research 87, 198–210; authoritative NCBI Bookshelf treatment of the revised Starling principle and glycocalyx.
 
-The revised filtration expression is:
-[
-J_v=K_f\left[(P_c-P_i)-\sigma(\pi_c-\pi_g)\right],
-]
-where (J_v) is transvascular fluid filtration rate, (K_f) the filtration coefficient (surface area × hydraulic conductivity), (P_c,P_i) capillary and interstitial hydrostatic pressures, (pi_c) plasma oncotic pressure, (pi_g) subglycocalyx oncotic pressure, and (sigma) the protein reflection coefficient.
+The revised glycocalyx force-balance component is:
+\[
+\frac{J_v}{A}=L_p\left[(P_c-P_i)-\sigma(\Pi_p-\Pi_g)\right],
+\]
+where \(\Pi_g\) is the subglycocalyx oncotic pressure rather than bulk interstitial oncotic pressure \(\Pi_i\). This substitution alone is not a closed steady-state prediction when \(\Pi_g\) is unknown.
 
-The classical Starling expression used interstitial oncotic pressure (pi_i) in place of the subglycocalyx value (pi_g). The revised principle emphasizes the endothelial glycocalyx as the effective semipermeable layer and does not predict sustained venous-end reabsorption under normal steady-state conditions; lymphatics return filtered fluid.
+Levick and Michel (2010) derive an implicit steady-state filtration relation (their Eq. 3):
+\[
+\frac{J_v}{A}
+=L_p\left[
+\Delta P-\sigma^2\Pi_p
+\left(\frac{1-e^{-Pe}}{1-\sigma e^{-Pe}}\right)
+\right],
+\qquad
+Pe=\frac{J_v(1-\sigma)}{p_dA},
+\]
+where \(p_d\) is the diffusional permeability of the capillary barrier to the macromolecule. Since \(J_v\) appears on both sides through \(Pe\), this full steady-state model requires an implicit solve. The classical equation with \(\Pi_i\), the \(\Pi_g\) force-balance substitution, and the full Eq. 3 are linked parts of one revised Starling model lineage.
 
 **Boundary and risks:** the revised model requires an intact glycocalyx and a defined subglycocalyx compartment; it is not a universal one-compartment pressure balance. (K_f), (sigma), and the oncotic-pressure terms vary by vascular bed and physiological state. The benchmark must not mix classical (pi_i) and revised (pi_g) conventions in one equation record.
 
 **Structural value:** a pressure-driven transvascular filtration relation with a reflection coefficient and an effective oncotic gradient. It is distinct from Poiseuille tube flow and Fick cardiac-output measurement, though it is related to capillary transport and endothelial permeability.
 
-**Initial disposition:** high-value physiology lead; hold pending a precise vascular-bed/steady-state contract, source-page verification and parameter ranges. The classical and revised Starling equations are one model lineage with different barrier assumptions, not independent candidate equations.
+**Initial disposition:** high-value physiology lead; hold pending a precise vascular-bed/steady-state contract, source-page verification and parameter ranges. The classical and revised Starling expressions are one model lineage with different barrier assumptions; the Πg force balance is not the full implicit steady-state model.
 
 ## 3. Batch-level structural decisions
 
