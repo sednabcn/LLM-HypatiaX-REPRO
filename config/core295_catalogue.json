@@ -582,6 +582,14 @@
       "url": "http://www.originalsources.com/Document.aspx?DocID=FF4QNC1T8Z463L8",
       "use": "Primary historical source transcription for freezing-point depression; original Comptes Rendus 95 (1882), 1030–1033. Verify translation/transcription, assumptions and dilute-solution scope.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LOTKA-1920",
+      "domain": "Biology",
+      "title": "Analytical Note on Certain Rhythmic Relations in Organic Systems",
+      "url": "https://doi.org/10.1073/pnas.6.7.410",
+      "use": "Primary source for Lotka's two-species plant–herbivore interaction model; exact original equations (5)–(10), transformed system (15), assumptions and variable coefficient functions mapped in discovery batch 5",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
