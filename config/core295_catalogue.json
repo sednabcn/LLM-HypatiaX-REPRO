@@ -430,6 +430,46 @@
       "url": "https://doi.org/10.1158/0008-5472.CAN-03-2524",
       "use": "Primary preclinical source for exponential-to-linear untreated tumor growth and treatment-linked tumor-growth inhibition dynamics",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LOTKA-1910",
+      "domain": "Biology",
+      "title": "Contribution to the theory of periodic reactions",
+      "url": "https://doi.org/10.1021/j150111a003",
+      "use": "Primary dynamical-systems precursor; distinguish chemical reaction context from later biological predator-prey application",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LOTKA-1925",
+      "domain": "Biology",
+      "title": "Elements of Physical Biology",
+      "url": "https://www.nature.com/articles/116461b0",
+      "use": "Primary book-length treatment of population interactions and predator-prey/host-parasite dynamics; one shared Lotka-Volterra model family",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-KERMACK-MCKENDRICK-1927",
+      "domain": "Biology",
+      "title": "A contribution to the mathematical theory of epidemics",
+      "url": "https://doi.org/10.1098/rspa.1927.0118",
+      "use": "Primary epidemic model source; original assumptions and formulation must be verified before scalar SIR mapping",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-TURING-1952",
+      "domain": "Biology",
+      "title": "The chemical basis of morphogenesis",
+      "url": "https://doi.org/10.1098/rstb.1952.0012",
+      "use": "Primary reaction-diffusion morphogenesis source; coupled spatial PDE family requires explicit output mapping",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-GYENGE-1999",
+      "domain": "Biology",
+      "title": "Transport of fluid and solutes in the body I. Formulation of a mathematical model",
+      "url": "https://doi.org/10.1152/ajpheart.1999.277.3.H1215",
+      "use": "Primary four-compartment physiological transport model; state variables, fluxes, units and output contract require review",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -439,6 +479,7 @@
     "Protocol formulas must be version-tagged; Aave V3/V4 and Uniswap V2/V3/V4 mechanics are not interchangeable.",
     "No calibration-ready independence claim is made by this manifest.",
     "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version.",
-    "Tumor-dynamics primary-source leads traced in discovery batch 3 are listed separately in the source register; they remain candidate references and do not approve or count any equation."
+    "Tumor-dynamics primary-source leads traced in discovery batch 3 are listed separately in the source register; they remain candidate references and do not approve or count any equation.",
+    "Primary biology source leads for Lotka population dynamics, Kermack–McKendrick epidemic theory, Turing morphogenesis and Gyenge physiological transport are recorded as candidate references only; none establishes an accepted equation or independent calibration unit."
   ]
 }
