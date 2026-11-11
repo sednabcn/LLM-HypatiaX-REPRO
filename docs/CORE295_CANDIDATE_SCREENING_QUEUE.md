@@ -333,3 +333,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 36 (2026-11-11)
 
 [Source Verification Audit 36](CORE295_SOURCE_VERIFICATION_AUDIT_36.md) corrects the Butler–Volmer historical attribution and coefficient convention: Butler's 1924 work is conceptual lineage, while Erdey–Grúz/Volmer and later work developed the rate relation; under the modern engineer's form, transfer coefficients are not multiplied by total electron number n. It also distinguishes Nernst–Planck mobility form from the diffusivity form, which assumes the Nernst–Einstein relation. Discovery batch 30 was corrected; both remain discovery-only.
+
+
+## Source verification audit 37 (2026-11-11)
+
+[Source Verification Audit 37](CORE295_SOURCE_VERIFICATION_AUDIT_37.md) verifies Curve CryptoSwap's dynamic-peg invariant against the 2021 whitepaper and a pinned Tricrypto implementation commit. Its state-dependent (K(K_0,A,\gamma)) modifies StableSwap's implicit invariant and concentrates liquidity around an adaptive price scale. Treat it as a distinct invariant within the broader amplified/stable-swap family; do not count K0, K, D, Newton solvers, spot prices, swap functions, price_scale EMA or repegging as separate equations. Hold pending static-vs-dynamic adapter scope.
