@@ -209,10 +209,22 @@ def run_case(equation, seed, disabled, timeout_s):
         llm_r2 = _f(seed_audit.get("llm_best_r2"))
     # A gate is reachable only if the LLM score sends the engine down the branch the gate controls:
     # >0.95 -> accepted outright (llm_acceptance); [0.5, 0.95) -> seeded refinement (pysr_prior).
+    _risk = bool(res.get("structural_risk_flag"))
+    _complexity_enabled = bool(res.get("complexity_routing_enabled", True))
     reach = {
-        "llm_acceptance": llm_r2 is not None and llm_r2 > 0.95,
-        "complexity_routing": bool(res.get("structural_risk_flag")),
-        "pysr_prior": llm_r2 is not None and 0.5 <= llm_r2 < 0.95,
+        # A flagged high-fit candidate cannot reach the pure-LLM shortcut while
+        # complexity routing is active; that gate takes precedence.
+        "llm_acceptance": (
+            llm_r2 is not None and llm_r2 > 0.95
+            and not (_risk and _complexity_enabled)
+        ),
+        "complexity_routing": _risk,
+        # The prior is reached for ordinary mid-fit candidates and for flagged
+        # high-fit candidates that complexity routing deliberately sends to PySR.
+        "pysr_prior": (
+            llm_r2 is not None and llm_r2 >= 0.5
+            and (llm_r2 < 0.95 or (_risk and _complexity_enabled))
+        ),
     }
     gate_reachable = all(reach[c] for c in disabled) if disabled else None
 
