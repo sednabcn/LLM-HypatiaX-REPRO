@@ -254,7 +254,7 @@ def select_hypatiax_route(
         if not nn_ok:
             return {**base, "decision": "nn", "predictions": None,
                     "route_reason": reason + "_nn_unavailable"}
-        weights = manuscript_blend_weights(0.0 if p_ood is None else p_ood, alpha)
+        weights = manuscript_blend_weights(0.0, alpha)
         predictions = weights["llm"] * llm_preds + weights["nn"] * nn_preds
         return {**base, "decision": "ensemble", "predictions": predictions,
                 "route_reason": reason, "blend_weights": weights}
@@ -266,7 +266,7 @@ def select_hypatiax_route(
     if not nn_ok:
         return {**base, "decision": "nn", "predictions": None,
                 "route_reason": "ensemble_required_nn_unavailable"}
-    weights = manuscript_blend_weights(0.0 if p_ood is None else p_ood, alpha)
+    weights = manuscript_blend_weights(0.0, alpha)
     predictions = weights["llm"] * llm_preds + weights["nn"] * nn_preds
     return {**base, "decision": "ensemble", "predictions": predictions,
             "route_reason": "degradation_exceeds_tau_or_fit_below_0.95",
