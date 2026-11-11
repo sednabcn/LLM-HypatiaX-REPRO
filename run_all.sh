@@ -2223,7 +2223,7 @@ PYEOF
 )
 
 
-run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c "
+run exp2 "Protocol-30 custom 30-equation registry -- random 80/20, all six methods" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/protocol30-random-80-20'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
