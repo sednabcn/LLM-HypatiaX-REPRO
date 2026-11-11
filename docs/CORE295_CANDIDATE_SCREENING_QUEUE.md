@@ -448,3 +448,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 56 (2026-11-11)
 
 [Source Verification Audit 56](CORE295_SOURCE_VERIFICATION_AUDIT_56.md) verifies Aave V4's collateral-risk-sorted debt coverage premium, health-dependent liquidation bonus and target-health repayment sizing against a pinned upstream commit. Keep V3/V4 health factors in one weighted-collateral family; the V4 risk-premium aggregation and dynamic liquidation policy are potentially distinct leads, but all linked calculations remain held as one system pending deployment-specific adapter.
+
+
+## Source verification audit 57 (2026-11-11)
+
+[Source Verification Audit 57](CORE295_SOURCE_VERIFICATION_AUDIT_57.md) confirms MIP45 is now marked obsolete following MIP102c2-SP1, while remaining the historical primary design spec for the Dog/Clipper/Abacus Dutch-auction architecture. Its intended Hole/Dirt/lot accounting invariants are not formally proven. Audit 48 is cross-linked and clarified: its pinned liq-2.0 source commit does not establish current deployment.
