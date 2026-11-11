@@ -358,3 +358,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Structural-equivalence policy decision pending (2026-11-11)
 
 [Structural Equivalence Policy Options](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_OPTIONS.md) compares strict normalized-form, mechanism-aware and hybrid form-and-system rules, with a collision/distinction evidence map across all reviewed candidates. Option C is recommended for consideration but not adopted. No formal catalogue status changes until the rule is selected.
+
+
+## Source verification audit 40 (2026-11-11)
+
+[Source Verification Audit 40](CORE295_SOURCE_VERIFICATION_AUDIT_40.md) closes Balancer Linear Pool's implementation-version gap by pinning balancer-v2-monorepo commit e91a2b643a49856f51a648d175667c1b48cf3377. It verifies the invariant (I=N_m+B_w^{(m)}), piecewise nominal main-balance fee transform and wrapped-token upscaling in LinearPool.getRate. Remaining blockers are the constant-sum/StableSwap family ruling and frozen target/rate/fee adapter.
