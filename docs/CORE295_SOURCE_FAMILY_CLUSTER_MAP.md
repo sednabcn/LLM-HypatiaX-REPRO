@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 29 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 30 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -264,3 +264,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 29 (2026-11-11)
 
 [Candidate Discovery Batch 29](CORE295_CANDIDATE_DISCOVERY_BATCH_29.md) adds Balancer Linear Pool's rate-normalized constant-sum invariant with piecewise nominal main-balance fees. It is distinct from CP, weighted geometric, finite-amplification StableSwap, PMM and E-CLP structures, but should be grouped with constant-sum/linear-pool families and reviewed against the StableSwap high-amplification limit.
+
+
+## Discovery batch 30 (2026-11-11)
+
+[Candidate Discovery Batch 30](CORE295_CANDIDATE_DISCOVERY_BATCH_30.md) adds two distinct electrochemical mechanisms: Butler–Volmer charge-transfer kinetics at the electrode interface and Nernst–Planck ionic bulk transport. Keep Nernst equilibrium, Butler–Volmer current response and Tafel asymptotes in one related electrode-kinetics family; keep Nernst–Planck's diffusion/migration/convection terms and Poisson/electroneutrality closures in one electrodiffusion system.
