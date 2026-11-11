@@ -128,3 +128,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 9 (2026-11-11)
 
 [Source Verification Audit 9](CORE295_SOURCE_VERIFICATION_AUDIT_9.md) transcribes Carbon whitepaper v1.2's adjustable hyperbolic invariant, swap equation and marginal-price equation. The paper explicitly identifies the intermediate curves as translated/scaled constant-product hyperbolas, financially equivalent to virtual-token models, with constant-price as the endpoint. The one-direction orders and linked strategy are protocol-state innovations, not additional independent equations under the current equation-only policy. Do not count this lead as a structurally distinct equation; retain as architecture context.
+
+
+## Source verification audit 10 (2026-11-11)
+
+[Source Verification Audit 10](CORE295_SOURCE_VERIFICATION_AUDIT_10.md) compares the registered Uniswap v2 and v3 oracle implementations. V2 computes an arithmetic time-weighted mean of reserve-ratio spot prices from cumulative-price deltas; v3 averages ticks and converts the arithmetic mean tick to a geometric mean price, with negative-floor rounding. These are distinct estimands, but they share a broad oracle family and market dependencies. Hold both pending the catalogue's family/independence policy; do not count helper accumulators, token inverses, time windows or v3 harmonic-mean liquidity as extra price equations.
