@@ -4,7 +4,7 @@
 
 **Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 10 proposed equation records; zero accepted equation entries.
 
-**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`; pass 7 adds `RISK-MORPHO-LIF-001`; pass 8 adds `RISK-EULER-AUCTION-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See [CORE295_PROPOSED_RECORD_REVIEW_1.md](CORE295_PROPOSED_RECORD_REVIEW_1.md). The source counts are not equation counts.
+**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`; pass 7 adds `RISK-MORPHO-LIF-001`; pass 8 adds `RISK-EULER-AUCTION-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See proposed-record reviews [1](CORE295_PROPOSED_RECORD_REVIEW_1.md), [2](CORE295_PROPOSED_RECORD_REVIEW_2.md), [3](CORE295_PROPOSED_RECORD_REVIEW_3.md), [4](CORE295_PROPOSED_RECORD_REVIEW_4.md), [5](CORE295_PROPOSED_RECORD_REVIEW_5.md), [6](CORE295_PROPOSED_RECORD_REVIEW_6.md), [7](CORE295_PROPOSED_RECORD_REVIEW_7.md) and [8](CORE295_PROPOSED_RECORD_REVIEW_8.md). The source counts are not equation counts.
 
 ## Tier A — eligible for proposed-record drafting after technical review
 
@@ -60,7 +60,7 @@ The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSC
 | Domain | Source IDs | Why held |
 |---|---|---|
 | Chemistry | CHEM-HINSHELWOOD-PRICHARD-1925 | Historical surface-catalysis paper located; exact mechanism-specific rate equation still needs primary transcription. |
-| Biology | BIO-MONOD-1949 | Primary paper located; exact original equation/page mapping outstanding; hyperbolic form overlaps Michaelis–Menten structurally. |
+| Biology | BIO-MONOD-1949 | **Not eligible as a distinct candidate**: the Monod hyperbolic saturation form is structurally equivalent to the explicitly excluded Core-15 Michaelis–Menten family; retain as a source lead only. |
 | Biology | BIO-LOTKA-1920; BIO-KERMACK-MCKENDRICK-1927; BIO-TURING-1952 | Strong primary source families, but vector/integral/spatial model adapters and independence units need full review. |
 | Physics | PHYS-OPENSTAX-V3-DIFFRACTION; PHYS-OPENSTAX-V3-QHO; PHYS-OPENSTAX-V1-DAMPED-OSCILLATOR | Equations are visible, but wave-optics and quantum-eigenproblem family overlaps plus model-specific ranges/benchmark adapters remain to be frozen. |
 | DeFi AMM | AMM-BANCOR-2017-WP | Archived third-party whitepaper copy; official archive/contract release and domain inclusion for reserve-backed issuance need confirmation. |
