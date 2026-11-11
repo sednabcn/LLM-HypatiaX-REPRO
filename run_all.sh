@@ -55,7 +55,11 @@ else
   export HYPATIAX_DISABLE_PROMPT_HINTS=1
 fi
 # Swallowed exceptions raise instead of logging (see fix_swallow.py).
-export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
+if [[ "${HYPATIAX_STRICT:-1}" != "1" ]]; then
+  echo "::error::HYPATIAX_STRICT must be 1; refusing a non-strict benchmark run." >&2
+  exit 2
+fi
+export HYPATIAX_STRICT=1
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
 # (HYPATIAX_ALLOW_LEGACY=1); otherwise any truthy value aborts and the flag is forced to 0.
