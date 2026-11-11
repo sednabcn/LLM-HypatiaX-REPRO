@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 116 candidate source records; 111 bibliography items; 20 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 120 candidate source records; 115 bibliography items; 21 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -55,6 +55,7 @@
 | PHYS-FLUID-MECHANICS | Continuity; Bernoulli; Poiseuille; Navier–Stokes | Poiseuille is a special Navier–Stokes solution; Bernoulli is an inviscid energy integral. Keep assumptions and parent derivations explicit. |
 | PHYS-THERMAL-TRANSPORT | Fourier conduction; Stefan–Boltzmann law; Planck spectrum; Wien displacement | Planck spectrum yields Wien and Stefan relations; slab conduction is a geometry reduction of Fourier flux law. |
 | PHYS-OSCILLATORY-DYNAMICS | Damped harmonic oscillator ODE and solutions | ODE, under/critical/overdamped solutions and frequencies are one source family. |
+| PHYS-STRUCTURAL-ELASTICITY | Euler elastica; Euler column buckling; Timoshenko beam dynamics | Buckling is a stability/eigenvalue result from elastic-column mechanics; Timoshenko adds shear deformation and rotary inertia to slender-beam theory. Cluster the models but preserve their different kinematics and validity regimes. |
 
 ## DeFi AMM
 
