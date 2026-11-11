@@ -3,7 +3,7 @@
   "status": "draft",
   "approved_protocol": {
     "edge_r2_floor": 0.99,
-    "relative_margin": 0.0,
+    "relative_margin": 0,
     "bad_routing_risk": 0.05,
     "one_sided_confidence": 0.95,
     "minimum_n_if_zero_failures": 59
@@ -38,6 +38,10 @@
     "Template only: no calibration equations or numeric tau are approved by this manifest.",
     "Do not populate this file with Core-15 equations or any held-out/extrapolation outcomes.",
     "The 59-per-category minimum is sufficient only for zero observed bad routes under the stated independent-binomial assumptions.",
-    "A valid selection-aware risk-control method must be selected and implemented before calibration."
-  ]
+    "A valid selection-aware risk-control method must be selected and implemented before calibration.",
+    "Ready manifests must record SHA-256 hashes for each equation source, canonical formula, and training-row dataset, plus the calibration data-manifest hash, code commit, and evaluator version."
+  ],
+  "calibration_data_manifest_sha256": null,
+  "calibration_code_commit": null,
+  "evaluator_version": null
 }
