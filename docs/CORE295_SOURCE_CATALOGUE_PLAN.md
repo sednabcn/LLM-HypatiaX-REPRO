@@ -100,3 +100,36 @@ The 59-per-domain zero-failure calibration sample-size calculation applies only 
 - [ ] Separate independence assessment approved before calibration use.
 
 Until these gates pass, the catalogue remains draft and the calibration manifest must remain not-ready.
+
+
+## 7. Rejection and replacement procedure (required)
+
+The 59-per-domain targets are targets for **accepted** equations, not quotas that justify retaining weak candidates. A proposed record is removed from the accepted count if any review gate fails.
+
+Reject a candidate from the current catalogue when any of the following applies:
+
+- its equation cannot be verified in an authoritative, versioned source at an exact location;
+- its assumptions, variable definitions, units, valid regime, or deterministic input/output mapping cannot be stated;
+- it duplicates a Core-15 equation or is only a variable rename, coefficient change, algebraic rearrangement, or cosmetic parameterization;
+- it is a solver iteration or numerical implementation step for a mechanism already represented, rather than a distinct scientific relation;
+- it is outside the supported scalar deterministic regression contract and no defensible mapping has been approved;
+- its structural or derivation-family relationship makes it unsuitable as a distinct candidate under the frozen sampling design;
+- the source provenance is inadequate or contradictory.
+
+For each rejection, retain an audit record with the candidate ID, rejection reason, evidence, reviewer, and date. Rejected entries never count toward 59. Do not erase the audit trail or recycle a rejected ID for a different equation.
+
+Replacement must follow this order:
+
+1. Search the same predeclared domain/subdomain stratum for another candidate from the approved source universe.
+2. Verify it against a primary or otherwise authoritative source and record exact location/version.
+3. Complete scientific, dimensional, validity-range, structural-equivalence, source-family, and benchmark-interface review.
+4. Assign a new stable ID and record the rejected candidate it replaces.
+5. Re-run catalogue and structural checks; a replacement is accepted only after all gates pass.
+
+A replacement is not automatically an independent statistical unit. Record its source-family/derivation cluster and independence eligibility separately. Multiple valid equations from one family may remain in the scientific catalogue if the sampling design permits clustered observations, but they must not be counted as independent Bernoulli units merely to reach 59. If the calibration design requires 59 independent units and a domain cannot provide them, report the shortfall and keep the calibration guarantee uncertified; do not substitute pseudo-replication.
+
+If a stratum is exhausted, expand the source universe only through a documented, reviewed amendment made before selecting additional candidates. Preserve the original source frame and amendment history. Do not quietly broaden the domain definition, alter the 295 target, or fill the gap with synthetic variants.
+
+## 8. Stage correspondence gate
+
+The current `run_all.sh` sequence confirms `exp1_ablation`, its aggregate step, and `exp1_five` as the identifiable Core-15 stages. The separate `exp1b` stage is part of the DeFi route and is not a Core-15 equation-suite counterpart. No third Core-15 stage corresponding to the requested `exp295b` has yet been established from the current launcher. Therefore, do not map `exp295b` to `exp1b` by naming similarity. Before implementing the three Core-295 stage wrappers, define the intended scientific purpose and output contract for the third stage, or document that it is a new Core-295-specific stage rather than a counterpart.
