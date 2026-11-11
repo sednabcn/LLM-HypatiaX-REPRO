@@ -413,3 +413,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 49 (2026-11-11)
 
 [Source Verification Audit 49](CORE295_SOURCE_VERIFICATION_AUDIT_49.md) verifies Compound III's liquidation eligibility inequality, distinct collateral valuation factor used in reserve absorption, and storefront discount/quote function against a pinned Comet implementation. Keep the complete absorb-and-buy lifecycle as one possible protocol system; do not count its eligibility, discount, quote and reserve-update components separately.
+
+
+## Source verification audit 50 (2026-11-11)
+
+[Source Verification Audit 50](CORE295_SOURCE_VERIFICATION_AUDIT_50.md) screens the OECD 2023 DeFi liquidation/DEX volatility study. It verifies a two-hour realized-volatility measure and log-linear OLS/2SLS specifications, but classifies them as conventional empirical estimators tied to a particular 2020–2022 sample and token pair, not universal protocol equations. Retain as systemic-risk context, not a new equation count.
