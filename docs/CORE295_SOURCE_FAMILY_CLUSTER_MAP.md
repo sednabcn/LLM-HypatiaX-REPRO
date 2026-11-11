@@ -339,3 +339,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 35 (2026-11-11)
 
 [Source Verification Audit 35](CORE295_SOURCE_VERIFICATION_AUDIT_35.md) records Bancor CRR's purchase/sale return functions and a versioned source discrepancy in an earlier whitepaper draft. The invariant is a reserve-backed power-law bonding curve, distinct from two-sided CP and weighted pools but potentially a separate token-issuance domain. Keep purchase, sale, spot-price and cross-connector calculations in one CRR family.
+
+
+## Source verification audit 36 (2026-11-11)
+
+[Source Verification Audit 36](CORE295_SOURCE_VERIFICATION_AUDIT_36.md) records the Butler–Volmer history and transfer-coefficient convention and the Nernst–Planck mobility/diffusivity distinction. Keep Butler–Volmer as one empirical two-way electrode-kinetics family, with Tafel and linear-response limits derived; keep Nernst–Planck's diffusion/migration/convection and balance/field closure as one coupled electrodiffusion system.
