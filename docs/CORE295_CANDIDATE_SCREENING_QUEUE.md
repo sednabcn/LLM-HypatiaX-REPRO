@@ -408,3 +408,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 48 (2026-11-11)
 
 [Source Verification Audit 48](CORE295_SOURCE_VERIFICATION_AUDIT_48.md) verifies Sky/Maker Liquidations 2.0 against official docs and pinned Dog/Clipper/Abacus sources. The auction supports linear, stair-step exponential and continuous exponential price decay; the stair-step case with step=1 is equivalent to continuous exponential. Treat the price calculator, resets, partial takes, Hole/Dirt capacity and keeper incentives as one versioned Dutch-auction liquidation system.
+
+
+## Source verification audit 49 (2026-11-11)
+
+[Source Verification Audit 49](CORE295_SOURCE_VERIFICATION_AUDIT_49.md) verifies Compound III's liquidation eligibility inequality, distinct collateral valuation factor used in reserve absorption, and storefront discount/quote function against a pinned Comet implementation. Keep the complete absorb-and-buy lifecycle as one possible protocol system; do not count its eligibility, discount, quote and reserve-update components separately.
