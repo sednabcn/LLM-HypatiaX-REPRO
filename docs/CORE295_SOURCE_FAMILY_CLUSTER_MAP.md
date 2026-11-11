@@ -409,3 +409,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 46 (2026-11-11)
 
 [Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) distinguishes Euler's capped linear health-shortfall discount from Morpho Blue's reciprocal LIF. Both are liquidation-incentive rules within a broader risk family; neither health, discount, yield conversion nor repay calculations should be split into separate samples.
+
+
+## Source verification audit 47 (2026-11-11)
+
+[Source Verification Audit 47](CORE295_SOURCE_VERIFICATION_AUDIT_47.md) classifies Liquity Stability Pool as a coupled path-dependent product-sum accounting system. Per-unit loss/gain, P/S accumulators, snapshot claims, error correction and scale transitions are one family, not separate equation candidates. Do not conflate the reviewed source snapshot with Liquity V2/BOLD.
