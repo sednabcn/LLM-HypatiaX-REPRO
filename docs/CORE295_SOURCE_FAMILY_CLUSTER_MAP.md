@@ -589,3 +589,24 @@ See [CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md](CORE295_AMM_SOURCE_EXPANSION_AUDIT
 
 See [CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md](CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md). This adds four source records, not four equation entries.
 
+### Chemistry: Frumkin adsorption and Marcus electron-transfer refinements
+
+| Provisional family ID | Related models | Initial structural screen |
+|---|---|---|
+| CHEM-ADSORPTION-FRUMKIN | Frumkin interacting adsorption; Langmuir ideal monolayer | The Frumkin relation (bc=\theta/(1-\theta)\exp(-2a\theta)) reduces to Langmuir at (a=0). Under the draft E2 policy, do not count the Langmuir limit separately if Frumkin is the selected parent model. Nonzero interaction parameter is a distinct constitutive lead; primary equation transcription remains pending. |
+| CHEM-ELECTROSORPTION-POTENTIAL-DEPENDENT | Frumkin electrocapillarity/electrosorption | Potential, charge, valence, electrolyte composition and standard-state contract are required. Frumkin 1920 is a historical primary lead; no candidate accepted. |
+| CHEM-MARCUS-OUTER-SPHERE-ET | Marcus outer-sphere electron transfer | Correct rate prefactor is Eyring ((k_BT/h)\kappa_{ET}), not a generic collision-frequency (Z); barrier is quadratic in (lambda+\Delta G^0). Repair and source-verify before promotion. |
+
+See [CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md](CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md).
+
+
+### DeFi Risk: Aave V3 and Compound Comet protocol model refinements
+
+| Provisional family ID | Related models | Initial structural screen |
+|---|---|---|
+| RISK-LENDING-HEALTH-FACTOR | Aave V3 health factor; Compound Comet liquidation-liquidity threshold | Both are weighted-collateral-versus-debt eligibility tests. Do not count the threshold inequality twice. Aave's scalar HF is a ratio; Comet's signed liquidity is used in a broader absorb transition. |
+| RISK-UTILIZATION-KINK-RATE | Compound Comet, Compound V2 jump rate, Aave two-slope utilization rates | Same normalized piecewise-linear kink structure; E3 mechanism/protocol variants under the draft policy, not separate structural counts. |
+| RISK-COMET-ABSORB-STATE-MACHINE | Compound Comet absorb/liquidation/accounting | Potential protocol-level state-transition model; requires exact commit, state variables, collateral seizure, penalty, index/principal accounting and reserve-sale transition. Not accepted. |
+
+See [CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md).
+
