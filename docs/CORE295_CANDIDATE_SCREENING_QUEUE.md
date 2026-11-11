@@ -433,3 +433,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 53 (2026-11-11)
 
 [Source Verification Audit 53](CORE295_SOURCE_VERIFICATION_AUDIT_53.md) screens BIS Working Paper 1171. Actual wallet asset-to-equity leverage and LTV-implied maximum leverage are standard balance-sheet identities, not new DeFi equations. The study is empirical context only; it also contains a sample-count inconsistency between the prose and Table 3 and an address-level independence limitation.
+
+
+## Source verification audit 54 (2026-11-11)
+
+[Source Verification Audit 54](CORE295_SOURCE_VERIFICATION_AUDIT_54.md) classifies the SOA 2022 report as an insurer-oriented DeFi risk taxonomy and incident review, not a mathematical model. Its four principal risk categories and additional social/financial/societal categories inform scope and labels only; incident counts are not equation counts or independent statistical units.
