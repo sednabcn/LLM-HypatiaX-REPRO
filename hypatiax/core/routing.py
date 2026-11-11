@@ -69,6 +69,8 @@ def training_edge_split_indices(
     if not 0.05 <= float(edge_fraction) <= 0.4:
         raise ValueError("edge_fraction must be between 0.05 and 0.4")
     scale = np.std(X, axis=0)
+    if not np.any(scale > np.finfo(float).eps):
+        raise ValueError("X_train has no varying covariates for a PCA edge split")
     scale[scale <= np.finfo(float).eps] = 1.0
     Z = (X - np.mean(X, axis=0)) / scale
     _, _, vt = np.linalg.svd(Z, full_matrices=False)
@@ -159,6 +161,9 @@ def kde_ood_probability(
     direction = vt[0]
     t_train = z_train @ direction
     t_query = z_query @ direction
+    if float(np.std(t_train)) <= np.finfo(float).eps:
+        return {"status": "degenerate_training_projection", "p_ood": None,
+                "p_ood_per_query": []}
 
     n = t_train.size
     if bandwidth is None:
