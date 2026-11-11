@@ -2,7 +2,7 @@
 
 **Status:** prioritized source-evidence queue, not an equation catalogue. Tier A means the equation or implementation formula is directly visible in an accessible primary/official source and can move to proposed-record drafting after a technical review. It does **not** mean scientifically accepted. Tier B means the formula is visible but exact primary-source mapping, assumptions, units or implementation details remain incomplete. Tier C means a source lead or domain-boundary issue remains.
 
-**Current manifest:** 123 candidate source records; 118 bibliography items; 22 discovery batches; zero accepted equation entries. The source counts are not equation counts.
+**Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; zero accepted equation entries. The source counts are not equation counts.
 
 ## Tier A — eligible for proposed-record drafting after technical review
 
@@ -38,7 +38,8 @@
 | Chemistry | CHEM-BEER-1852 | Beer absorption / modern Beer–Lambert relation | Original Beer notation and modern decadic molar-absorptivity convention need exact mapping. |
 | Chemistry | CHEM-ERDEY-GRUZ-VOLMER-1930; CHEM-BUTLER-1924 | Butler–Volmer electrode kinetics | Historical attribution and generalized modern form need primary-source synthesis; Tafel is an asymptote, Nernst is equilibrium. |
 | Chemistry | CHEM-RAOULT-1887; CHEM-RAOULT-FREEZING-1882 | Ideal-solution vapor pressure and freezing-point depression | Modern formula forms are accessible, but exact original equation notation/concentration basis remains to verify. |
-| Chemistry | CHEM-FICK-1855; CHEM-LANGMUIR-1918 | Diffusion and adsorption | Need exact original equation locations and assumptions; do not split flux/PDE or Langmuir rearrangements. |
+| Chemistry | CHEM-FICK-1855; CHEM-LANGMUIR-1918 | Diffusion and adsorption | Fick original equation and diffusion-PDE assumptions still need page-level transcription; Langmuir Eq. 8/9 is now located in the 1918 primary paper. |
+| Chemistry | CHEM-RIDEAL-1939; CHEM-ELEY-RIDEAL-1940; CHEM-ER-ENG-REACTION; CHEM-IUPAC-LANGMUIR-RIDEAL | Rideal–Eley gas/adsorbed surface-reaction rate | Mechanism is primary-sourced; explicit engineering rate form is secondary. Verify the rate-law assumptions and catalyst-specific pathway before proposed-record drafting. |
 | Biology | BIO-SIMEONI-2004; BIO-TUMOR-ODE-COMPARISON-2020 | Exponential-to-linear tumor growth and transit-compartment TGI | Exact growth formula currently transcribed from secondary comparison; original primary equation/page remains outstanding. |
 | Biology | BIO-HILL-1910; BIO-ADAIR-1925 | Hemoglobin oxygen-binding models | Hill/Adair formula transcription needs original-paper page verification; keep common hemoglobin source cluster. |
 | Biology | BIO-FICK-1870; BIO-WINDKESSEL-FRANK-1899; BIO-WINDKESSEL-WESTERHOF-2009 | Fick cardiac output and Windkessel hemodynamics | Original notation, assumptions and modern model translation require exact page-level review. |
