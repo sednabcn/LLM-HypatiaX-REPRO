@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–16. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–17. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -140,6 +140,14 @@
 95. Swaap Labs. (2023). *Swaap v2: Optimal liquidity infrastructure*. June 1, 2023. https://swaap.xyz/v2-whitepaper.pdf. Primary RfQ market-making whitepaper. Section 2.2 gives a stochastic markup optimization objective; §§2.3.1–2.3.3 specify max-drawdown, last-look and max-imbalance on-chain safeguards. This is a quotation/settlement architecture, not a conventional invariant AMM.
 
 96. Carbon DeFi. *Introducing Carbon: Concentrated Liquidity*. Official protocol overview. https://medium.com/carbondefi/introducing-carbon-1f41aebf634b. Describes asymmetric one-sided adjustable bonding curves, each parameterized by starting price, ending price and capacity, with linked buy/sell orders. Exact curve function and state transition require code-level verification.
+
+97. Fick, A. (1870). Ueber die Messung des Blutquantums in den Herzventrikeln. *Sitzungsberichte der Physikalisch-Medizinischen Gesellschaft zu Würzburg*, Neue Folge 2, XVI–XVII (also cited as pp. 16–17). Primary source for cardiac output from oxygen uptake and the arteriovenous oxygen-content difference; a historical facsimile pointer is available at https://historyofmedicine.com/id/251.
+
+98. Frank, O. (1899). Die Grundform des arteriellen Pulses. *Zeitschrift für Biologie, 37*, 483–526. Primary source for the two-element arterial Windkessel. An English translation was published by Sagawa, Lie & Schaefer (1990), DOI https://doi.org/10.1016/0022-2828(90)91459-k.
+
+99. Westerhof, N., Lankhaar, J.-W., & Westerhof, B. E. (2009). The arterial Windkessel. *Medical & Biological Engineering & Computing, 47*(2), 131–141. https://doi.org/10.1007/s11517-008-0359-2. Modern source for two- and three-element Windkessel equations and their physiological interpretation.
+
+100. Hill, A. V. (1938). The heat of shortening and the dynamic constants of muscle. *Proceedings of the Royal Society of London. Series B, 126*(843), 136–195. https://doi.org/10.1098/rspb.1938.0050. Primary source for the hyperbolic force–velocity relation \((P+a)(v+b)=(P_0+a)b\), developed from muscle shortening heat and mechanical work.
 
 ## Bibliographic and provenance cautions
 
