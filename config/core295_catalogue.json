@@ -1008,6 +1008,72 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol"
+    },
+    {
+      "equation_id": "CHEM-RAOULT-VAPOR-001",
+      "name": "Raoult ideal-solution component vapor-pressure relation",
+      "domain": "Chemistry",
+      "subdomain": "liquid-vapor equilibrium",
+      "formula": "P_A = X_A * P_A_star",
+      "canonical_expression": "XA*PAstar",
+      "formula_latex": "P_A=X_A P_A^*",
+      "structural_fingerprint": "22caa0aa609c68a6dd84006499829b05d3c7648280fecb6bfa597b9fd1d64923",
+      "source_ids": [
+        "CHEM-RAOULT-1887"
+      ],
+      "source_family_id": "CHEM-IDEAL-SOLUTION-RAOULT-VAPOR-PRESSURE",
+      "status": "proposed",
+      "assumptions": [
+        "Ideal liquid solution with component activities approximated by mole fractions",
+        "Liquid-vapor equilibrium at fixed temperature",
+        "P_A_star is the saturation vapor pressure of pure component A at the same temperature",
+        "Component A is volatile; vapor-phase partial pressure is measured at equilibrium",
+        "No chemical reaction or association/dissociation that invalidates the ideal-solution activity model"
+      ],
+      "variables": {
+        "XA": {
+          "meaning": "Liquid-phase mole fraction of component A",
+          "unit": "dimensionless, 0 to 1"
+        },
+        "PAstar": {
+          "meaning": "Saturation vapor pressure of pure component A at the same temperature",
+          "unit": "Pa, kPa or atm, consistently"
+        }
+      },
+      "validity": {
+        "source_location": "OpenStax Chemistry 2e §11.4, Raoult law equation P_A=X_A P_A*; historical primary source Raoult (1887), Comptes Rendus 104, 1430-1433",
+        "regime": "Ideal-solution liquid-vapor equilibrium at fixed temperature",
+        "limitations": [
+          "Original 1887 empirical paper page-level equation transcription remains to be checked; OpenStax is the explicit modern equation source",
+          "Nonideal solutions require activity coefficients; do not apply this ideal relation without checking mixture behavior",
+          "Henry's law describes a different limiting regime for dilute solutes; do not merge or count algebraic limiting cases separately",
+          "Total vapor pressure obtained by summing component partial pressures is linked through Dalton's law, not an independent candidate here",
+          "Do not confuse this vapor-liquid equilibrium relation with the excluded Ideal Gas Law"
+        ]
+      },
+      "input_ranges": {
+        "XA": {
+          "train": null,
+          "extrapolation": null
+        },
+        "PAstar": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Exact modern component equation is printed in OpenStax Chemistry 2e §11.4",
+        "Historical primary source is Raoult's 1887 Comptes Rendus paper, pp. 1430-1433; original page equation transcription remains outstanding",
+        "Freeze a named binary/ternary ideal-solution system and temperature-dependent pure-component vapor pressure before sampling",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "OpenStax Chemistry 2e §11.4; Raoult (1887), Comptes Rendus 104, 1430-1433"
     }
   ],
   "source_register": [
@@ -2050,6 +2116,7 @@
     "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator.",
     "Eighth proposed-record pass adds Euler EVK's health-dependent capped reverse-auction discount factor, pinned to commit 93a1de491531e54cbbcf0e5c8cacfe558f924867. It remains proposed pending risk-adjusted collateral aggregation, oracle convention, CONFIG_SCALE and deterministic generator.",
     "Ninth proposed-record pass adds Compound III's borrow utilization-kink function, pinned to Comet commit f766f51583c23acc33b2a7824654ef2029a96804. It remains proposed pending market-specific parameter configuration, fixed-point rounding and deterministic generator.",
-    "Tenth proposed-record pass adds the DODO PMM base-shortage marginal price curve, pinned to DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. It remains proposed pending pool-state, regression, oracle and fixed-point generator contract."
+    "Tenth proposed-record pass adds the DODO PMM base-shortage marginal price curve, pinned to DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. It remains proposed pending pool-state, regression, oracle and fixed-point generator contract.",
+    "Eleventh proposed-record pass adds the Raoult ideal-solution component vapor-pressure relation. It remains proposed pending original-paper equation-page transcription, a defensible ideal mixture/temperature context and deterministic generator."
   ]
 }
