@@ -323,3 +323,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 34 (2026-11-11)
 
 [Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) verifies Parkinson's 1980 original range-variance estimator (0.361/n\sum_i\ln(H_i/L_i)^2), Bollerslev's GARCH(p,q) conditional-variance family and its GARCH(1,1) specialization, and the normal-loss expected-shortfall formula by truncated-normal integration. EWMA is exactly an IGARCH boundary case (ω=0, α=1-λ, β=λ), not a separate structure. ES remains held pending the VaR-family exclusion ruling.
+
+
+## Source verification audit 35 (2026-11-11)
+
+[Source Verification Audit 35](CORE295_SOURCE_VERIFICATION_AUDIT_35.md) verifies Bancor CRR purchase/sale returns against Inverter's implementation documentation and identifies a version conflict: an accessible 2017 v0.77 whitepaper draft prints a sale expression inconsistent with the CRR reserve-outflow invariant, while the implementation docs give the invariant-consistent formula. The registered v0.99 paper page remains to be checked. Keep the bonding curve as one power-law reserve-backed issuance family; hold pending source-version reconciliation and whether bonding curves belong in DeFi AMM.
