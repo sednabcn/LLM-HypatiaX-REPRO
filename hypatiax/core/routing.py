@@ -57,6 +57,30 @@ def _r2(y_true: np.ndarray, y_pred: np.ndarray) -> float | None:
     return value if np.isfinite(value) else None
 
 
+def training_edge_split_indices(
+    X_train: Any, edge_fraction: float = 0.15
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return (core_indices, edge_indices) from both tails of a training-only PCA axis."""
+    X = np.asarray(X_train, dtype=float)
+    if X.ndim != 2 or X.shape[0] < 12 or X.shape[1] < 1:
+        raise ValueError("X_train must be a 2-D array with at least 12 rows and one feature")
+    if not np.isfinite(X).all():
+        raise ValueError("X_train must contain only finite covariates")
+    if not 0.05 <= float(edge_fraction) <= 0.4:
+        raise ValueError("edge_fraction must be between 0.05 and 0.4")
+    scale = np.std(X, axis=0)
+    scale[scale <= np.finfo(float).eps] = 1.0
+    Z = (X - np.mean(X, axis=0)) / scale
+    _, _, vt = np.linalg.svd(Z, full_matrices=False)
+    order = np.argsort(Z @ vt[0], kind="mergesort")
+    n_edge_side = max(2, int(np.ceil(X.shape[0] * float(edge_fraction) / 2.0)))
+    if X.shape[0] - 2 * n_edge_side < 2:
+        raise ValueError("edge_fraction leaves too few core rows")
+    edge = np.concatenate((order[:n_edge_side], order[-n_edge_side:]))
+    core = order[n_edge_side:-n_edge_side]
+    return core.astype(int), edge.astype(int)
+
+
 def training_edge_degradation_probe(
     X_train: Any,
     y_train: Any,
@@ -84,19 +108,11 @@ def training_edge_degradation_probe(
         return {"status": "nonfinite_training_targets_or_predictions",
                 "r2_core": None, "r2_edge": None, "delta": None}
 
-    # Standardise and project using training statistics only.
-    scale = np.std(X, axis=0)
-    scale[scale <= np.finfo(float).eps] = 1.0
-    Z = (X - np.mean(X, axis=0)) / scale
-    _, _, vt = np.linalg.svd(Z, full_matrices=False)
-    projection = Z @ vt[0]
-    order = np.argsort(projection, kind="mergesort")
-    n_edge = max(2, int(np.ceil(X.shape[0] * float(edge_fraction) / 2.0)))
-    if X.shape[0] - 2 * n_edge < 2:
+    try:
+        core_idx, edge_idx = training_edge_split_indices(X, edge_fraction)
+    except ValueError:
         return {"status": "insufficient_core_rows",
                 "r2_core": None, "r2_edge": None, "delta": None}
-    edge_idx = np.concatenate((order[:n_edge], order[-n_edge:]))
-    core_idx = order[n_edge:-n_edge]
     r2_train = _r2(y, pred)
     r2_core = _r2(y[core_idx], pred[core_idx])
     r2_edge = _r2(y[edge_idx], pred[edge_idx])
