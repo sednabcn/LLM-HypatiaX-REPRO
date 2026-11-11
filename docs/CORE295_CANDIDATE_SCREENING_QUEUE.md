@@ -478,3 +478,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 62 (2026-11-11)
 
 [Source Verification Audit 62](CORE295_SOURCE_VERIFICATION_AUDIT_62.md) verifies Merton's 1974 structural credit model: levered equity as a call on firm assets, risky debt as the residual claim, and a measure-specific default probability. Source RISK-MERTON-1974 is registered as candidate_reference; the DeFi balance-sheet mapping and physical-vs-risk-neutral probability convention remain unresolved.
+
+
+## Source verification audit 63 (2026-11-11)
+
+[Source Verification Audit 63](CORE295_SOURCE_VERIFICATION_AUDIT_63.md) verifies Black–Cox's first-passage structural default model with a time-dependent covenant barrier. Source RISK-BLACK-COX-1976 is registered as candidate_reference. Group it with Merton for source-family independence, but preserve the structural distinction between terminal-only default and barrier crossing at any time.
