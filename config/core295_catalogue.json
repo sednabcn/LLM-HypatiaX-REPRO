@@ -1030,6 +1030,38 @@
       "url": "https://goldbook.iupac.org/terms/view/M03702",
       "use": "Authoritative modern definition of Marcus electron-transfer rate and quadratic reorganization-energy barrier; modern equation transcription cross-check",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-RIDEAL-1939",
+      "domain": "Chemistry",
+      "title": "A note on a simple molecular mechanism for heterogeneous catalytic reactions",
+      "url": "https://doi.org/10.1017/S030500410002082X",
+      "use": "Primary Rideal 1939 note proposing gas-phase reactant reacting with adsorbed species; source lineage for Rideal–Eley mechanism",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-ELEY-RIDEAL-1940",
+      "domain": "Chemistry",
+      "title": "Parahydrogen Conversion on Tungsten",
+      "url": "https://www.nature.com/articles/146401d0",
+      "use": "Primary Eley & Rideal 1940 experimental paper supporting surface interchange between gas-phase and adsorbed hydrogen",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-IUPAC-LANGMUIR-RIDEAL",
+      "domain": "Chemistry",
+      "title": "IUPAC Gold Book: Langmuir–Rideal mechanism",
+      "url": "https://goldbook.iupac.org/terms/view/L03453",
+      "use": "Authoritative definition of gas-phase reactant reacting with an adsorbed surface species; mechanism distinction from Langmuir–Hinshelwood",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-ER-ENG-REACTION",
+      "domain": "Chemistry",
+      "title": "Elements of Chemical Reaction Engineering: Eley–Rideal rate-law example",
+      "url": "https://public.websites.umich.edu/~elements/7e/04chap/summary-example1.html",
+      "use": "Explicit engineering rate-law example -rA'=k PA PB/(1+KA PA+KC PC) with competitive adsorption; modern formula cross-check, not primary historical equation",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
