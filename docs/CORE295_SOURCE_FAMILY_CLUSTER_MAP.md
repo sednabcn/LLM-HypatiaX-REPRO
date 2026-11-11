@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 26 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 27 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -239,3 +239,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 26 (2026-11-11)
 
 [Candidate Discovery Batch 26](CORE295_CANDIDATE_DISCOVERY_BATCH_26.md) adds Biology leads for Nicholson–Bailey host–parasitoid dynamics, Leslie age-structured matrix projection and Taylor–Jonker replicator dynamics. These are complete discrete/vector systems and require a full-system adapter. Beverton–Holt stock–recruitment is flagged as a rational saturation structure related to Langmuir/MM, not an automatic new equation.
+
+
+## Discovery batch 27 (2026-11-11)
+
+[Candidate Discovery Batch 27](CORE295_CANDIDATE_DISCOVERY_BATCH_27.md) adds Physics leads for Kepler orbital period, Lorentz force and Bragg diffraction. Keep Kepler linked to Newtonian central-force dynamics, Lorentz as a vector matter–field coupling distinct from Maxwell's field equations, and Bragg in the same path-difference interference family as double-slit/grating relations.
