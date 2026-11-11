@@ -317,7 +317,7 @@ deferred_experiments:
 routing_policy:
   trust_gate_r2_min: 0.5
   pure_llm_train_r2_min: 0.95
-  training_edge_fraction: 0.2
+  training_edge_fraction: 0.15
   degradation_tau: null
   degradation_tau_status: requires_separate_training_only_calibration
   ood_projection: training_fitted_pca_1d
