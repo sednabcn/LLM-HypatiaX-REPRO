@@ -183,3 +183,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 20 (2026-11-11)
 
 [Source Verification Audit 20](CORE295_SOURCE_VERIFICATION_AUDIT_20.md) verifies Henry's gas-solubility proportionality and Raoult's ideal-solution component vapor-pressure equation from OpenStax, and the decadic Beer–Lambert attenuation expression from IUPAC. Henry and Raoult describe different physical regimes but share the same bare linear-proportionality structure; do not automatically count both as structurally distinct. Raoult's original 1887 page-level transcription and Beer (1852) original equation-page transcription remain outstanding. Beer/Lambert/absorbance/transmission forms are one family. All remain held.
+
+
+## Source verification audit 21 (2026-11-11)
+
+[Source Verification Audit 21](CORE295_SOURCE_VERIFICATION_AUDIT_21.md) verifies Hill's muscle force–velocity characteristic equation against the 1938 original PDF: equation (2) first appears on printed p. 162; pp. 176–177 contain later mechanical verification. It is not Hill ligand-binding. It also verifies Planck's original 1901 equation (13) as spectral energy density per wavelength and derives the proposed modern spectral exitance by the isotropic (c/4) conversion. Rename the candidate output symbol from ambiguous (I_\lambda) to (M_\lambda); keep frequency/radiance forms and Wien/Stefan consequences in the same Planck family. Both candidates remain held for ranges/output conventions.
