@@ -106,3 +106,13 @@ def test_manuscript_blend_weights():
     assert np.isclose(weights["llm"], 0.86)
     assert np.isclose(weights["nn"], 0.14)
     assert np.isclose(weights["llm"] + weights["nn"], 1.0)
+
+
+def test_query_blend_weights_vary_with_query_ood_probability():
+    route = select_hypatiax_route(
+        0.8, 0.7, np.ones(3), np.zeros(3), ["exp"],
+        p_ood=0.5, p_ood_per_query=[0.0, 1.0],
+    )
+    assert route["decision"] == "ensemble"
+    assert np.allclose(route["query_blend_weights"]["llm"], [0.3, 1.0])
+    assert np.allclose(route["query_blend_weights"]["nn"], [0.7, 0.0])
