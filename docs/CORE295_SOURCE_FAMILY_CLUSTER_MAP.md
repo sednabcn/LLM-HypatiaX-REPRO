@@ -454,3 +454,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 55 (2026-11-11)
 
 [Source Verification Audit 55](CORE295_SOURCE_VERIFICATION_AUDIT_55.md) adds a peer-reviewed under-collateralized leverage model. Group its debt ratio, leverage, liquidation threshold, liquidation loss and maximum-leverage bound as one DeFi Risk analytical family; CP IL/arbitrage components remain attached to existing AMM families. Source RISK-WANG-SPECULATIVE-MULTIPLIERS is candidate_reference only.
+
+
+## Source verification audit 56 (2026-11-11)
+
+[Source Verification Audit 56](CORE295_SOURCE_VERIFICATION_AUDIT_56.md) adds Aave V4's debt-coverage-weighted collateral-risk premium: collateral is sorted by risk score and only the collateral value needed to cover debt contributes to the average. The health-dependent bonus interpolates between a minimum and maximum, and liquidation sizing targets a configurable health factor. Keep all in one Aave V4 position-risk/liquidation system; do not count components separately.
