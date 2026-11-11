@@ -2225,7 +2225,7 @@ PYEOF
 
 run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c "
   cd '${REPO_ROOT}'
-  mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi'
+  mkdir -p '${RESULTS_DIR}/comparison_results/protocol30-random-80-20'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
   [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
@@ -2247,9 +2247,9 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --noiseless \
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"exp2_checkpoint_\${DOMAIN_ID}\" \
-        --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
+        --output-dir '${RESULTS_DIR}/comparison_results/protocol30-random-80-20' \
         --resume \
-        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
+        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/protocol30-random-80-20/exp2_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
@@ -2938,7 +2938,7 @@ EXPERIMENTS = {
     "instability":            RESULTS / "figures",
     "exp2_feynman":           RESULTS / "comparison_results/feynman-tests/exp2",
     "exp2_feynman_pca_4060":  RESULTS / "comparison_results/feynman-tests/exp2_pca_4060",
-    "exp2":                   RESULTS / "comparison_results/feynman-tests/exp2_multi",
+    "exp2":                   RESULTS / "comparison_results/protocol30-random-80-20",
     "exp2_protocol30_pca_4060": RESULTS / "comparison_results/protocol30-pca-4060",
     "exp3":                   RESULTS / "extrapolation",
     "exp3b":                  RESULTS / "extrapolation/multi_seed",
