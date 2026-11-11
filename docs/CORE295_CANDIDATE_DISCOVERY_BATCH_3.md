@@ -67,3 +67,20 @@ A further accessible review provides an equation table with explicit model equat
 
 These three are still discovery leads, not accepted entries: the review's table gives equations and cites primary studies, but the primary references, assumptions, source-family IDs, and scalar benchmark mappings must be checked before catalogue entry. The tumor models are likely correlated by shared application/data-generating context; structural distinctness and independence must be reviewed separately.
 
+### Additional scalar tumor-burden response leads from the same review
+
+The same review's Table 1 also reports algebraic time-course models that are naturally scalar in their stated output (tumor burden (T(t))). These are promising for a deterministic benchmark interface, subject to primary-source tracing and a decision about whether time-course models are admissible in the frozen Core-295 domain strata.
+
+| Discovery lead | Equation reported in review | Exact review location | Review status |
+|---|---|---|---|
+| Two-phase growth/regression | `T(t) = BASE*(exp(-k_d*t) + exp(k_g*t) - 1)` | Table 1, Eq. 26; cited studies 50, 51, 55 | Exact equation found; source family is the two-phase tumor growth/regression model. |
+| Delayed regrowth | `T(t) = BASE*(exp(-k_d*t) + exp(k_g*(t-tau)) - 1)` | Table 1, Eq. 27; cited study 50 | Modification of Eq. 26; do not count as an independent unit without a substantive structural review. |
+| Sensitive-fraction two-phase model | `T(t) = BASE*(phi*exp(-k_d*t) + (exp(k_g*t)-phi))` | Table 1, Eq. 28; cited study 55 | Modification of Eq. 26; same family pending source-level and structural review. |
+| Exponential shrinkage plus linear growth | `T(t) = BASE*exp(-A*t) + B*t` | Table 1, Eq. 29; cited studies 52, 56 | Exact scalar algebraic form; trace Wang et al. and check validity/time range. |
+| Quadratic extension | `T(t) = BASE*exp(-A*t) + B*t + C*t^2` | Table 1, Eq. 30; cited study 53 | Extension of Eq. 29; same source/derivation family, not a separate independent unit by default. |
+| Simplified treatment-growth-inhibition model | `T(t) = BASE*exp(k_g*t - (k_d/lambda)*(1-exp(-lambda*t)))` | Table 1, Eq. 32; cited studies 54, 57–60 | Exact scalar algebraic form; trace original model paper(s), confirm exposure assumptions and parameter units. |
+
+These candidates share a clinical tumor-growth/treatment-response application and some are explicitly extensions of one another. They may be retained as structurally different scientific models if the review approves them, but the family must be clustered for sampling and must not be treated as six independent calibration units. The review notes that model selection depends on cancer type, treatment and available longitudinal measurements; those conditions must be reflected in any validity regime and deterministic generator.
+
+**Not promoted:** Table 1 Eq. 25 is a saturating exposure-effect relation and may overlap Michaelis–Menten-type saturation; Table 1 Eq. 33 is a reaction-diffusion PDE and requires a non-arbitrary spatial/scalar output contract. Neither is counted here as a candidate accepted into the catalogue.
+
