@@ -33,6 +33,8 @@ The existing five-system NN method is the current `ImprovedNNMethod` wrapper. Do
 
 ## 3. Catalogue specification
 
+The source-discovery policy and initial reference register are maintained in [CORE295_SOURCE_CATALOGUE_PLAN.md](CORE295_SOURCE_CATALOGUE_PLAN.md), and the machine-readable draft is `config/core295_catalogue.json`. The draft pins the 15 Core-15 names as exclusions; it deliberately contains no accepted Core-295 entries yet.
+
 Every equation record must carry:
 
 - Stable unique equation ID, domain, and scientific subdomain.
@@ -65,6 +67,8 @@ If a domain cannot supply 59 defensibly distinct equations, do not pad it with c
 Preserve Core-15 data-generation/evaluation conventions unless a deviation is versioned and justified. For each equation, record generator version, seed, parameter values, input ranges, formula hash, and data hashes. Keep training, ordinary test, and extrapolation data separate. Do not use held-out or extrapolation outcomes to select equations, tune routing thresholds, revise the generator, or replace failed equations. Record failures and retries explicitly. Freeze and hash the catalogue/data manifest before evaluation.
 
 Core-295 IDs must not collide with Core-15 IDs. Record scientifically related source families rather than hiding dependencies.
+
+An offline manifest validator (`scripts/validate_core295_catalogue.py`) checks entry fields, source references, duplicate IDs/fingerprints, Core-15 exclusions, and readiness quotas. The offline shard planner (`hypatiax/experiments/benchmarks/core295_catalogue.py`) assigns accepted equations deterministically and verifies exact-once coverage; its default 100-shard plan is a dry-run only. Tests are wired into the read-only R2 policy CI workflow. These checks do not establish scientific validity or independence.
 
 ## 5. CI shards and per-run workers
 
