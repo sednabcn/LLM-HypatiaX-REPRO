@@ -112,6 +112,8 @@ def _safe_symbolic_expression(source: str, symbols: dict[str, sp.Symbol]) -> sp.
     def visit(node):
         if isinstance(node, ast.Expression):
             return visit(node.body)
+        if isinstance(node, ast.Constant) and isinstance(node.value, bool):
+            return node.value
         if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
             return sp.sympify(node.value)
         if isinstance(node, ast.Name):
