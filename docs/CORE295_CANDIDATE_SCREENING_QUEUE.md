@@ -138,3 +138,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 11 (2026-11-11)
 
 [Source Verification Audit 11](CORE295_SOURCE_VERIFICATION_AUDIT_11.md) verifies the Curve CryptoSwap dynamic-peg invariant against Egorov's 2021 primary whitepaper; Morpho Blue's capped LLTV-dependent liquidation incentive factor against official documentation and the pinned Morpho implementation; and Compound III's piecewise-affine utilization-kink borrow rate against official documentation and the pinned Comet implementation. CryptoSwap remains held pending a pinned deployed implementation and numerical contract; Morpho LIF and Compound borrow kink remain held pending family-level comparisons and frozen unit/parameter/rounding contracts. The audit rejects counting helper definitions, supply-rate conversions, annualization, oracle/price-scale updates or liquidation bookkeeping as additional independent equations. No candidates were accepted and the formal catalogue is unchanged.
+
+
+## Source verification audit 12 (2026-11-11)
+
+[Source Verification Audit 12](CORE295_SOURCE_VERIFICATION_AUDIT_12.md) verifies the Gyroscope E-CLP's shifted/stretched/rotated ellipse invariant against its November 2022 technical specification; screens the registered Gyro 2-CLP math snapshot and identifies its virtual-reserve invariant as constant product after translation; and verifies Solidly V2's stable quartic invariant (x^3y+xy^3) against official documentation. E-CLP and Solidly stable remain held pending pinned deployed implementations and numerical contracts. Gyro 2-CLP is not a new structurally distinct equation under the current Core-15 Constant Product exclusion. No candidates were accepted.
