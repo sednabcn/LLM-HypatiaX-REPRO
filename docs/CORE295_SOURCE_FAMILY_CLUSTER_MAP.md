@@ -404,3 +404,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 46 (2026-11-11)
 
 [Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) confirms Euler's capped linear health-shortfall discount and distinguishes it from Morpho's reciprocal liquidation incentive factor. Both belong to the broader liquidation-incentive family but have different scalar functional forms; protocol version, health calculation, discount cap and settlement semantics must be frozen.
+
+
+## Source verification audit 46 (2026-11-11)
+
+[Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) distinguishes Euler's capped linear health-shortfall discount from Morpho Blue's reciprocal LIF. Both are liquidation-incentive rules within a broader risk family; neither health, discount, yield conversion nor repay calculations should be split into separate samples.
