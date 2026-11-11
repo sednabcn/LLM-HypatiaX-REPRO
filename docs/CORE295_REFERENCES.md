@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–10. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–11. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -98,6 +98,10 @@
 74. *Different ODE models of tumor growth can deliver similar results*. (2020). *BMC Cancer*. https://doi.org/10.1186/s12885-020-6703-0. Secondary comparison that prints the Simeoni tumor-growth function and the associated transit-compartment ODE system, and contrasts alternative growth laws. Use it to locate and compare equations; the Simeoni primary paper remains the source for its model lineage and assumptions.
 
 75. OpenStax. *University Physics Volumes 1 and 2*. Volume 1 §§14.5–14.7 “Fluid Dynamics,” “Bernoulli’s Equation,” and “Viscosity and Turbulence” (including Poiseuille flow and Reynolds number), and §15.5 “Damped Oscillations”; Volume 2 §1.6 “Mechanisms of Heat Transfer” (Fourier conduction and Stefan–Boltzmann radiation). https://openstax.org/details/books/university-physics-volume-1 and https://openstax.org/details/books/university-physics-volume-2. Section-level equation locations for laminar transport, radiation/conduction and damped oscillatory systems. Cluster conservation-law special cases and ODE solutions with their parent derivations.
+
+76. DODO. *The Math Behind: PMM Price Curve Definition*. Official DODO PMM documentation. https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm. Gives the piecewise inventory-dependent marginal price, integrated trade amount and quadratic inventory solve. Pin PMM version and regression semantics before use.
+
+77. LFJ. *Concentrated Liquidity / Liquidity Book*. Official developer documentation. https://developers.lfj.gg/concepts/concentrated-liquidity. Describes discrete price bins, fixed price within a bin, geometric price progression by bin step and the distinction from continuous constant-product concentrated liquidity. Verify exact per-bin state/invariant against the deployed Joe V2/V2.1 contracts.
 
 ## Bibliographic and provenance cautions
 
