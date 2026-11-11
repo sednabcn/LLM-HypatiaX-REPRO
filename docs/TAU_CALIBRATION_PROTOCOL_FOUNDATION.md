@@ -137,7 +137,7 @@ The protocol parameters are approved, but the calibration procedure is not yet r
 
 ## 10. Machine-checkable pre-run manifest
 
-The repository now includes `config/tau_calibration_manifest.json` as an intentionally incomplete draft and `scripts/validate_tau_calibration_manifest.py` as a pre-run validator. The validator extracts the current 15 equation names from the Core-15 catalogue in `exp1_ablation.py`, requires the manifest's exclusion list to match that catalogue exactly, rejects any calibration entry whose ID overlaps Core-15, requires a distinct independent-unit identifier within each category, and rejects fields that would import held-out/extrapolation outcomes. It also checks that the approved numerical protocol constants have not drifted.
+The repository now includes `config/tau_calibration_manifest.json` as an intentionally incomplete draft and `scripts/validate_tau_calibration_manifest.py` as a pre-run validator. The validator extracts the current 15 equation names from the Core-15 catalogue in `exp1_ablation.py`, requires the manifest's exclusion list to match that catalogue exactly, rejects any calibration entry whose ID overlaps Core-15, requires a distinct independent-unit identifier within each category, and rejects fields that would import held-out/extrapolation outcomes. It also checks that the approved numerical protocol constants have not drifted. A ready manifest must additionally pin the calibration data-manifest hash, code commit, evaluator version, and per-equation source, canonical-formula, and training-row hashes.
 
 Run the structural check with:
 
