@@ -64,6 +64,16 @@ where dissolved-gas concentration is proportional to the gas partial pressure ab
 
 **Thermodynamic/electrochemical linkage:** OpenStax §16.4 states (G=H-TS), ΔG=ΔH-TΔS and ΔG°=−RT ln K; §17.4 links ΔG°=−nFE°cell. These identities are linked state-function/electrochemical relations, and the last is connected to the Nernst/electrochemical family already listed in batch 1. Do not count these as independent equations by rearrangement. Exact source sections: [§16.4](https://openstax.org/books/chemistry-2e/pages/16-4-free-energy) and [§17.4](https://openstax.org/books/chemistry-2e/pages/17-4-potential-free-energy-and-equilibrium).
 
+
+## Additional Chemistry strata: adsorption and molecular transport
+
+| Family | Primary source | Candidate relation and scope | Review boundary |
+|---|---|---|---|
+| Gas adsorption at a surface | Langmuir (1918), [JACS DOI](https://doi.org/10.1021/ja02242a004), *The adsorption of gases on plane surfaces of glass, mica and platinum* | Surface coverage as a saturating function of gas pressure; the paper is the primary source lineage for the Langmuir isotherm | Verify the original equation and page. State assumptions about equivalent independent sites, monolayer coverage and adsorption/desorption equilibrium. Do not treat linearized/rearranged Langmuir forms as separate candidates; distinguish later heterogeneous/multilayer isotherms by mechanism and source. |
+| Molecular diffusion | Fick (1855), [Annalen der Physik DOI](https://doi.org/10.1002/andp.18551700105), *Ueber Diffusion* | Concentration-gradient-driven diffusive transport; the original work is the primary source lineage for Fickian diffusion | The constitutive flux law and its conservation-derived diffusion PDE are linked levels of one model family. Specify coordinate, geometry, diffusivity, concentration units, and boundary/initial conditions. Avoid treating 1-D/2-D/3-D or constant/variable diffusivity variants as automatically independent. |
+
+These additions broaden Chemistry into interfacial phenomena and transport. They are not substitutes for exact formula transcription, dimensional checks, regime checks or source-family review.
+
 ## Acceptance boundary
 
 No equation is promoted to entries. The candidate source map does not establish 59 structurally distinct Chemistry equations, nor 59 independent statistical units. Each eventual entry still requires an exact source location, formula transcription, assumptions, units, validity ranges, source-family ID, equivalence review, and a defensible deterministic benchmark mapping. If the Chemistry stratum cannot supply the required independent units, report the shortfall rather than pad the catalogue.
