@@ -334,3 +334,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 34 (2026-11-11)
 
 [Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) verifies Parkinson range variance, GARCH conditional variance and normal expected shortfall. Group EWMA with GARCH as its IGARCH boundary case; keep Parkinson as a range estimator, GARCH as a conditional-variance recursion, and ES as a tail-mean functional distinct from the VaR quantile but subject to the Core-15 VaR-family exclusion policy.
+
+
+## Source verification audit 35 (2026-11-11)
+
+[Source Verification Audit 35](CORE295_SOURCE_VERIFICATION_AUDIT_35.md) records Bancor CRR's purchase/sale return functions and a versioned source discrepancy in an earlier whitepaper draft. The invariant is a reserve-backed power-law bonding curve, distinct from two-sided CP and weighted pools but potentially a separate token-issuance domain. Keep purchase, sale, spot-price and cross-connector calculations in one CRR family.
