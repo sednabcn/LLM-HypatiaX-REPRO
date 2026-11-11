@@ -469,3 +469,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 58 (2026-11-11)
 
 [Source Verification Audit 58](CORE295_SOURCE_VERIFICATION_AUDIT_58.md) adds Euler's linear liquidation-LTV ramp to the same liquidation-risk family as its collateral-adjusted health ratio and capped discount. Only LTV decreases ramp; increases apply immediately. The current liquidation LTV, not borrow LTV, is used for liquidation valuation.
+
+
+## Source verification audit 59 (2026-11-11)
+
+[Source Verification Audit 59](CORE295_SOURCE_VERIFICATION_AUDIT_59.md) distinguishes Aave V4 Babylon cap-bounded sizing from standard V4 target-health sizing. Both share the same health factor, dynamic liquidation bonus and debt/collateral conversion family; Babylon adds maxCollateralToRemove and inverse repayment resizing, with no separate liquidation fee or dust validation.
