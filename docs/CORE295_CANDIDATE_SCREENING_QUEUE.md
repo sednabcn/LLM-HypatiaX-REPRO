@@ -188,3 +188,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 21 (2026-11-11)
 
 [Source Verification Audit 21](CORE295_SOURCE_VERIFICATION_AUDIT_21.md) verifies Hill's muscle force–velocity characteristic equation against the 1938 original PDF: equation (2) first appears on printed p. 162; pp. 176–177 contain later mechanical verification. It is not Hill ligand-binding. It also verifies Planck's original 1901 equation (13) as spectral energy density per wavelength and derives the proposed modern spectral exitance by the isotropic (c/4) conversion. Rename the candidate output symbol from ambiguous (I_\lambda) to (M_\lambda); keep frequency/radiance forms and Wien/Stefan consequences in the same Planck family. Both candidates remain held for ranges/output conventions.
+
+
+## Source verification audit 22 (2026-11-11)
+
+[Source Verification Audit 22](CORE295_SOURCE_VERIFICATION_AUDIT_22.md) verifies the thin-lens equation and signed image/focal-length conventions against OpenStax Eq. 2.19, and Hagen–Poiseuille flow against OpenStax Eq. 14.19 with its Eq. 14.18 resistance derivation. The thin-lens rearrangement and Poiseuille resistance/pressure-flow components are not separate entries. Both candidates remain held pending signed optical ranges and a physically constrained laminar Reynolds-number/geometry generator.
