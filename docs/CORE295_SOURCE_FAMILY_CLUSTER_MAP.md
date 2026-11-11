@@ -134,3 +134,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 8 (2026-11-11)
 
 [Source Verification Audit 8](CORE295_SOURCE_VERIFICATION_AUDIT_8.md) adds DODO PMM as a strong, structurally distinct inventory-dependent AMM family: a piecewise guide-price-centered marginal curve, its integrated finite-trade amount and the R-state transition. Keep the whole piecewise state-transition model as one candidate family. It is distinct from constant-product, weighted-product, discrete-bin constant-sum and Uniswap v3 position models, but statistical independence is not established. Lead remains held.
+
+
+## Source verification audit 9 (2026-11-11)
+
+[Source Verification Audit 9](CORE295_SOURCE_VERIFICATION_AUDIT_9.md) clarifies Carbon's structural relationship: its invariant is a translated/scaled constant-product hyperbola (including a constant-price limiting case), and the whitepaper says it is financially equivalent to a virtual-token model. Carbon's genuinely distinctive element is its asymmetric one-direction order and linked-strategy state architecture. Keep as protocol architecture context, not a new structural equation family under the current equation-only catalogue policy.
