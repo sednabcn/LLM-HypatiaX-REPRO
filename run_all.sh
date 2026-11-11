@@ -2257,8 +2257,8 @@ run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six method
 
 run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-directed 40/60 (not manuscript Protocol-30)" bash -c "
   cd '${REPO_ROOT}'
-  _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/all-domains-pca-4060'
-  mkdir -p "\${_P30_PCA_DIR}"
+  _ALLDOM_PCA_DIR='${RESULTS_DIR}/comparison_results/all-domains-pca-4060'
+  mkdir -p "\${_ALLDOM_PCA_DIR}"
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
   [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
@@ -2280,12 +2280,12 @@ run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-dir
         --noiseless \
         --threshold 0.999999 \
         --checkpoint-name "all_domains_pca4060_checkpoint_\${DOMAIN_ID}" \
-        --output-dir "\${_P30_PCA_DIR}" \
+        --output-dir "\${_ALLDOM_PCA_DIR}" \
         --force-fresh \
-        2>&1 | tee -a "\${_P30_PCA_DIR}/all_domains_pca4060_run.log" \
+        2>&1 | tee -a "\${_ALLDOM_PCA_DIR}/all_domains_pca4060_run.log" \
       || { echo '::error::Protocol-30 PCA domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
-  python3 - "\${_P30_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
+  python3 - "\${_ALLDOM_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
 import json, sys
 from pathlib import Path
 out = Path(sys.argv[1])
