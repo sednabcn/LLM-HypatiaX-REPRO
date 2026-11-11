@@ -924,6 +924,90 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Compound Comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol"
+    },
+    {
+      "equation_id": "AMM-DODO-PMM-BASE-SHORTAGE-001",
+      "name": "DODO PMM base-shortage marginal price curve",
+      "domain": "DeFi AMM",
+      "subdomain": "inventory-sensitive proactive market making",
+      "formula": "P = i * (1 - k + k * (B0/B)^2), for 0 < B < B0",
+      "canonical_expression": "i*(1-k+k*(B0/B)**2)",
+      "formula_latex": "P=i\\left(1-k+k\\left(\\frac{B_0}{B}\\right)^2\\right),\\quad 0<B<B_0",
+      "structural_fingerprint": "2db08f3412d43557e08273a8425a79bb7b22f800a80826ace49dc134bbd98d29",
+      "source_ids": [
+        "AMM-DODO-PMM-MATH"
+      ],
+      "source_family_id": "AMM-DODO-PMM-INVENTORY-PRICE-CURVE",
+      "status": "proposed",
+      "assumptions": [
+        "DODO PMM V2 pricing model at the pinned contract revision",
+        "Base-token inventory is below its equilibrium/regression target: 0 < B < B0",
+        "Guide price i is positive and fixed during the quote",
+        "Slippage factor k is in [0,1]",
+        "P is the marginal quote price for one unit of base token, before transaction fee treatment",
+        "Pool state is already classified as the base-shortage/ABOVE_ONE branch"
+      ],
+      "variables": {
+        "i": {
+          "meaning": "Initial guide price for base token in quote-token units",
+          "unit": "quote token per base token"
+        },
+        "k": {
+          "meaning": "PMM slippage factor",
+          "unit": "dimensionless, [0,1]"
+        },
+        "B0": {
+          "meaning": "Equilibrium/regression target base-token inventory",
+          "unit": "base-token units"
+        },
+        "B": {
+          "meaning": "Current base-token inventory",
+          "unit": "base-token units"
+        }
+      },
+      "validity": {
+        "source_location": "DODO official PMM mathematical principle, base-shortage branch; DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol, getMidPrice ABOVE_ONE branch",
+        "regime": "Marginal price in DODO PMM V2 when base-token inventory is below its equilibrium target",
+        "limitations": [
+          "The quote-shortage branch is the reciprocal counterpart and belongs to the same PMM price-curve family; do not count it independently",
+          "The equilibrium R=1 branch gives P=i and is a state boundary, not a separate candidate",
+          "Integrated trade amount is the integral of the marginal curve and is linked, not a separate independent equation in this record",
+          "Regression target updates and pool-specific DVM/DSP/DPP state transitions are not captured by this scalar branch",
+          "Preserve DecimalMath fixed-point rounding and the pinned contract revision before implementation-level acceptance"
+        ]
+      },
+      "input_ranges": {
+        "i": {
+          "train": null,
+          "extrapolation": null
+        },
+        "k": {
+          "train": null,
+          "extrapolation": null
+        },
+        "B0": {
+          "train": null,
+          "extrapolation": null
+        },
+        "B": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": "Enforce i>0, B0>0, 0<B<B0 and 0<=k<=1"
+      },
+      "review_notes": [
+        "Official DODO docs state the base-shortage marginal price P=i(1-k+(B0/B)^2 k)",
+        "Pinned V2 contract code uses B0^2/B^2 in the ABOVE_ONE getMidPrice branch",
+        "This is one state branch of a piecewise mechanism; reciprocal quote-shortage and equilibrium branches are linked, not additional units",
+        "Need freeze pool type, guide-price oracle context, regression state and DecimalMath precision",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol"
     }
   ],
   "source_register": [
@@ -1572,7 +1656,7 @@
       "domain": "DeFi AMM",
       "title": "DODO Proactive Market Maker mathematical principle",
       "url": "https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm",
-      "use": "Official DODO source for piecewise inventory-dependent marginal price, integral trade amount and quadratic inventory solve; pin PMM version and regression rule",
+      "use": "Official DODO PMM mathematical principle plus pinned DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol; marginal price and integrated trade formulas, state/regression rules",
       "status": "candidate_reference"
     },
     {
@@ -1965,6 +2049,7 @@
     "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded.",
     "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator.",
     "Eighth proposed-record pass adds Euler EVK's health-dependent capped reverse-auction discount factor, pinned to commit 93a1de491531e54cbbcf0e5c8cacfe558f924867. It remains proposed pending risk-adjusted collateral aggregation, oracle convention, CONFIG_SCALE and deterministic generator.",
-    "Ninth proposed-record pass adds Compound III's borrow utilization-kink function, pinned to Comet commit f766f51583c23acc33b2a7824654ef2029a96804. It remains proposed pending market-specific parameter configuration, fixed-point rounding and deterministic generator."
+    "Ninth proposed-record pass adds Compound III's borrow utilization-kink function, pinned to Comet commit f766f51583c23acc33b2a7824654ef2029a96804. It remains proposed pending market-specific parameter configuration, fixed-point rounding and deterministic generator.",
+    "Tenth proposed-record pass adds the DODO PMM base-shortage marginal price curve, pinned to DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. It remains proposed pending pool-state, regression, oracle and fixed-point generator contract."
   ]
 }
