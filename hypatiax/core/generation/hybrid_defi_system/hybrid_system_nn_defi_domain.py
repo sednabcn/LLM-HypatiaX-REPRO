@@ -884,6 +884,7 @@ EXPLANATION:
             degradation_delta=_edge_probe.get("delta"),
             degradation_tau=degradation_tau,
             p_ood=_ood.get("p_ood"),
+            p_ood_per_query=_ood.get("p_ood_per_query"),
             alpha=0.3,
         )
         decision = _route["decision"]
@@ -945,6 +946,7 @@ EXPLANATION:
             "structural_risk_flag": bool(_route["structural_risk_flag"]),
             "structural_risk_tokens": list(_route["structural_risk_tokens"]),
             "blend_weights":   _route["blend_weights"],
+            "query_blend_weights": _route["query_blend_weights"],
             "degradation_probe": _edge_probe,
             "ood_diagnostic": _ood,
             "routing_alpha": 0.3,
