@@ -269,3 +269,5 @@ These are additional official documentation pointers, not independent primary re
 155. Curve Finance. “Curve AMM: StableSwap and CryptoSwap overview.” Official developer documentation: https://docs.curve.finance/developer/amm/curve-amm-overview/. Identifies StableSwap (near-parity assets) and CryptoSwap (volatile pairs) as distinct core invariants and distinguishes current NG implementations from legacy contracts.
 
 156. Egorov, M. (2019). “StableSwap — efficient mechanism for Stablecoin liquidity.” Curve Finance whitepaper, 10 November 2019. https://docs.curve.finance/assets/files/whitepaper_stableswap-fc0bb370db9fe3a91afdde8662e78206.pdf. Primary derivation of the N-coin StableSwap invariant and iterative solution approach.
+
+157. Egorov, M. (2021). “Automatic market-making with dynamic peg.” Curve Finance whitepaper, 9 June 2021. https://docs.curve.finance/assets/files/whitepaper_cryptoswap-de196d8f95aae3164a1226234d6d96ca.pdf. Primary source for transformed balances, CryptoSwap dynamic invariant, amplification/gamma parameters, iterative solver, internal EMA price oracle and repegging algorithm.
