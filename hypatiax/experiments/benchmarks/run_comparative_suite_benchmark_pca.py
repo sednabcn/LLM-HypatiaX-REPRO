@@ -4279,6 +4279,12 @@ Examples
         help="Which published SR benchmark to use (default: feynman)",
     )
     parser.add_argument(
+        "--protocol",
+        choices=["benchmark", "all_domains"],
+        default="benchmark",
+        help="Protocol registry: benchmark=Feynman/SRBench; all_domains=custom 30-equation, 10-domain registry.",
+    )
+    parser.add_argument(
         "--domain", type=str, default="all_domains",
         help="Domain filter — short name ('mechanics') or full key ('feynman_mechanics')",
     )
@@ -4545,48 +4551,52 @@ Examples
     global _METHOD_TIMEOUT_SECS
     _METHOD_TIMEOUT_SECS = args.method_timeout
 
-    # ── Load BenchmarkProtocol ──────────────────────────────────────────────
-    try:
-        from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
-        _noiseless = getattr(args, "noiseless", False)
-        _threshold = getattr(args, "threshold", None)
-        if _threshold is None:
-            _threshold = 0.999999 if _noiseless else 0.99
+    # ── Load the requested protocol registry ─────────────────────────────────
+    _noiseless = getattr(args, "noiseless", False)
+    _threshold = getattr(args, "threshold", None)
+    if _threshold is None:
+        _threshold = 0.999999 if _noiseless else 0.99
 
-        protocol = BenchmarkProtocol(
-            benchmark=args.benchmark,
-            num_samples=args.samples,
-            seed=42,
-            feynman_series=args.series,
-            noiseless=_noiseless,
+    if args.protocol == "all_domains":
+        try:
+            from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll
+            protocol = ExperimentProtocolAll()
+        except ImportError as exc:
+            print(f"❌  experiment_protocol_all_30.py not found: {exc}")
+            sys.exit(1)
+        _registry_domains = protocol.get_all_domains()
+        print(
+            f"✅ ExperimentProtocolAll loaded (30-equation registry; "
+            f"{len(_registry_domains)} domains: {', '.join(_registry_domains)})"
         )
-        print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
-        print()
-        if getattr(args, "extrap", False):
-            print("=" * 70)
-            print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
-            print("=" * 70)
-        elif _noiseless:
-            print("=" * 70)
-            print("  NOISELESS MODE  —  noise_level = 0.0")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
-            print("                     TPSR (56.0%)       DSR (32.0%)")
-            print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
-            print("=" * 70)
-        else:
-            print("=" * 70)
-            print("  NON-NOISELESS MODE  —  NOTE: this PCA runner injects NO noise (clean targets)")
-            print(f"  R² threshold    :  {_threshold}  (practical)")
-            print("  Use --noiseless --threshold 0.999999 for literature comparison.")
-            print("=" * 70)
-        print()
-    except ImportError:
-        print("❌  experiment_protocol_benchmark_v2.py not found.")
-        print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
-        sys.exit(1)
+    else:
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
+            protocol = BenchmarkProtocol(
+                benchmark=args.benchmark,
+                num_samples=args.samples,
+                seed=42,
+                feynman_series=args.series,
+                noiseless=_noiseless,
+            )
+        except ImportError:
+            print("❌  experiment_protocol_benchmark_v2.py not found.")
+            sys.exit(1)
+        print(f"✅ BenchmarkProtocol loaded (benchmark={args.benchmark})")
+
+    if getattr(args, "extrap", False):
+        print("=" * 70)
+        print("  EXTRAP MODE  — train on first 80% of range, test beyond it")
+        print(f"  R² threshold    :  {_threshold}")
+        print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
+        print("=" * 70)
+    elif _noiseless:
+        print("=" * 70)
+        print("  NOISELESS MODE  — noise_level = 0.0")
+        print(f"  R² threshold    :  {_threshold}")
+        print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
+        print("=" * 70)
+    print()
 
     # ── Build suite ─────────────────────────────────────────────────────────
     # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).
