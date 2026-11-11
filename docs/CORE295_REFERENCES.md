@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–14. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–15. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -124,6 +124,16 @@
 87. Adair, G. S. (1925). The hemoglobin system: VI. The oxygen dissociation curve of hemoglobin. *Journal of Biological Chemistry, 63*(2), 529–545. https://doi.org/10.1016/S0021-9258(18)85018-9. Primary four-step binding-polynomial source; the modern equation transcription is cross-checked against the 2025 centenary review and should be checked against the original paper before acceptance.
 
 88. Monod, J. (1949). The growth of bacterial cultures. *Annual Review of Microbiology, 3*, 371–394. https://doi.org/10.1146/annurev.mi.03.100149.002103. Primary source for bacterial growth under limiting substrate; the familiar hyperbolic specific-growth relation is printed in later reviews. Exact original equation/page mapping remains outstanding.
+
+89. Beer, A. (1852). Bestimmung der Absorption des rothen Lichts in farbigen Flüssigkeiten. *Annalen der Physik, 162*(5), 78–88. https://doi.org/10.1002/andp.18521620505. Primary source extending the exponential absorption law for colored liquids; the modern decadic absorbance and molar absorptivity convention must be distinguished from the original notation.
+
+90. Erdey-Grúz, T., & Volmer, M. (1930). Zur Theorie der Wasserstoff Überspannung. *Zeitschrift für Physikalische Chemie, 150A*(1), 203–213. https://doi.org/10.1515/zpch-1930-15020. Primary source for the reversible kinetic treatment of hydrogen overpotential; historical origin of the two-direction exponential current relation.
+
+91. Butler, J. A. V. (1924). Studies in heterogeneous equilibria. Part II: The kinetic interpretation of the Nernst theory of electromotive force. *Transactions of the Faraday Society, 19*, 729–733. https://doi.org/10.1039/TF9241900729. See also Part III, pp. 734–739, DOI https://doi.org/10.1039/TF9241900734. Historical precursor papers; they do not by themselves contain the fully generalized modern Butler–Volmer current law.
+
+92. Hinshelwood, C. N., & Prichard, C. R. (1925). The relation of homogeneous to catalysed reactions. The catalytic decomposition of hydrogen iodide on the surface of gold. *Journal of the Chemical Society, Transactions*, 127, 1552–1559. https://doi.org/10.1039/CT9252701552. Primary heterogeneous surface-catalysis study relevant to Langmuir–Hinshelwood kinetics.
+
+93. Wachs, I. E. (2024). The Conundrum of “Pair Sites” in Langmuir-Hinshelwood Reaction Kinetics in Heterogeneous Catalysis. *ACS Catalysis, 14*(13), 10260–10270. https://doi.org/10.1021/acscatal.4c02813. Provides explicit elementary adsorption/site-balance steps and a competitive-adsorption bimolecular rate expression (Eq. 5); use as a modern derivation cross-check, not as the original historical source.
 
 ## Bibliographic and provenance cautions
 
