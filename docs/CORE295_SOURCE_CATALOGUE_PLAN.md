@@ -3,11 +3,11 @@
 **Status:** source register drafted; no equation entries approved yet.  
 **Design:** Option 2 — 295 structurally distinct equations, 59 per domain.
 
-The first candidate discovery pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_1.md](CORE295_CANDIDATE_DISCOVERY_BATCH_1.md). It is a review backlog only; none of its candidates count toward the 295 accepted records. The expanded source-universe pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_2.md](CORE295_CANDIDATE_DISCOVERY_BATCH_2.md); it also contains discovery leads only, not accepted equations. A third verification pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_3.md](CORE295_CANDIDATE_DISCOVERY_BATCH_3.md), with exact OpenStax physics equation locations and biology source leads; it likewise does not approve or count candidates.
+The first candidate discovery pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_1.md](CORE295_CANDIDATE_DISCOVERY_BATCH_1.md). It is a review backlog only; none of its candidates count toward the 295 accepted records. The expanded source-universe pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_2.md](CORE295_CANDIDATE_DISCOVERY_BATCH_2.md); it also contains discovery leads only, not accepted equations. A third verification pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_3.md](CORE295_CANDIDATE_DISCOVERY_BATCH_3.md), with exact OpenStax physics equation locations and biology source leads; it likewise does not approve or count candidates. A fourth pass, [CORE295_CANDIDATE_DISCOVERY_BATCH_4.md](CORE295_CANDIDATE_DISCOVERY_BATCH_4.md), expands Chemistry coverage into equilibrium, acid–base, solubility/complexation, thermodynamics and ionic activity; it remains a discovery-only source map.
 
 ## Consolidated bibliography
 
-The consolidated literature, textbook, standards and protocol reference list is maintained in [CORE295_REFERENCES.md](CORE295_REFERENCES.md). It covers all sources cited or proposed across discovery batches 1–3 and the catalogue source register. Use it as the bibliography index; each accepted equation must still carry its own exact source location and version in the catalogue record.
+The consolidated literature, textbook, standards and protocol reference list is maintained in [CORE295_REFERENCES.md](CORE295_REFERENCES.md). It covers all sources cited or proposed across discovery batches 1–4 and the catalogue source register. Use it as the bibliography index; each accepted equation must still carry its own exact source location and version in the catalogue record.
 
 ## 1. Source policy
 
