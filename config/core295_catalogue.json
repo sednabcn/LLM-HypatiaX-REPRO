@@ -2839,7 +2839,7 @@
       "domain": "Chemistry",
       "title": "On the theory of electrocapillarity: II",
       "url": "https://doi.org/10.1080/14786440908636137",
-      "use": "Primary Frumkin (1920), Philosophical Magazine, series 6, 40(237), pp. 375–385; historical source lead for potential-dependent interfacial adsorption/electrocapillarity. The commonly transcribed Frumkin coverage isotherm and exact original equation location still require direct primary-text verification.",
+      "use": "Primary Frumkin (1920), Philosophical Magazine, series 6, 40(237), pp. 375–385; source for electrocapillarity theory and potential-dependent interfacial adsorption. Do not treat this citation alone as the original derivation of the modern Frumkin coverage isotherm: a university source bibliography identifies Frumkin's 1926 paper on electric-field effects on adsorption of neutral molecules (Z. Phys. 35, 792–802) as the relevant later source; exact equation/page transcription remains pending.",
       "status": "candidate_reference"
     },
     {
@@ -2856,6 +2856,14 @@
       "title": "Aave V3 Health Factor Preview",
       "url": "https://www.aave.com/docs/aave-v3/markets/health-factor",
       "use": "Official Aave V3 documentation states HF = total collateral value × weighted average collateral factor / total borrow value; HF below 1 is liquidation-eligible. Complementary current developer documentation to Aave FAQ; same health-factor family, not an additional equation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-FRUMKIN-1926-FIELD-ADSORPTION",
+      "domain": "Chemistry",
+      "title": "The Influence of the Electric Field on the Adsorption of Neutral Molecules",
+      "url": "https://www.elch.chem.msu.ru/article/index.htm",
+      "use": "Primary Frumkin (1926), Zeitschrift für Physik 35, pp. 792–802; identified in the Moscow State University electrochemistry department's Frumkin bibliography as the field-dependent neutral-molecule adsorption paper. A later technical treatment attributes the Frumkin adsorption isotherm derivation to 1926 and gives the equation of state γ = −RTΓ∞ ln(1−θ) + aθ², combined with Gibbs adsorption to obtain Bc = [θ/(1−θ)]exp(−2aθ). Exact equation/page transcription from the 1926 original remains pending; candidate reference only.",
       "status": "candidate_reference"
     }
   ],
