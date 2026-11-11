@@ -83,6 +83,13 @@ These additions broaden Chemistry into interfacial phenomena and transport. They
 
 **Core-15 and family screen:** this is distinct from Henry’s law: Raoult relates a liquid component’s vapor pressure to its liquid mole fraction, whereas Henry relates dissolved-gas concentration to gas partial pressure in the applicable dilute regime. Keep Raoult’s law as one ideal-solution vapor-pressure family. Do not count each component, total-pressure summation, solvent-only special case, or algebraic rearrangement as a separate equation. Nonideal mixtures require activity/fugacity treatment; do not silently apply the ideal relation outside its validity regime.
 
+
+## Additional primary lead: freezing-point depression
+
+**Raoult’s freezing-point work (1882):** Raoult’s “Loi générale de congélation des dissolvants” appeared in *Comptes Rendus* 95 (1882), 1030–1033. A historical English transcription states the empirical result in terms of the lowering of a liquid’s freezing point as solute molecules are added; OpenStax Chemistry 2e §11.4 gives the modern dilute-solution relation \(\Delta T_f=K_f m\).
+
+**Review boundary:** the modern molality form is not to be presented as a verbatim equation from the 1882 paper without checking the original text. Record the original concentration basis and assumptions, then derive/justify any modern form. Freezing-point depression and boiling-point elevation are related colligative-property consequences and should be clustered within a solution-thermodynamics family; do not count their rearrangements or solvent-specific constants as independent units. Their common historical source lineage also means they are not automatically independent statistical samples.
+
 ## Acceptance boundary
 
 No equation is promoted to entries. The candidate source map does not establish 59 structurally distinct Chemistry equations, nor 59 independent statistical units. Each eventual entry still requires an exact source location, formula transcription, assumptions, units, validity ranges, source-family ID, equivalence review, and a defensible deterministic benchmark mapping. If the Chemistry stratum cannot supply the required independent units, report the shortfall rather than pad the catalogue.
