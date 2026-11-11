@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–18. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–19. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -156,6 +156,12 @@
 103. Planck, M. (1901). Ueber das Gesetz der Energieverteilung im Normalspectrum. *Annalen der Physik, 309*(3), 553–563. https://doi.org/10.1002/andp.19013090310. Primary blackbody spectral distribution paper; equation (8), p. 554, gives the energy distribution that underlies the modern Planck radiation law.
 
 104. OpenStax. *University Physics Volume 3*, §6.1 “Blackbody Radiation,” Eq. 6.11. https://openstax.org/books/university-physics-volume-3/pages/6-1-blackbody-radiation. Gives the modern wavelength spectral-intensity form of Planck's law and explains that Wien's displacement law and Stefan's law follow from its maximum and wavelength integration.
+
+105. Uniswap Labs. *Uniswap v2 Oracles*. Official developer documentation; see also Adams, H., Zinsmeister, N., Robinson, D. (2020), *Uniswap v2 Core*, oracle section. https://developers.uniswap.org/docs/protocols/v2/concepts/oracles and https://uniswap.org/whitepaper.pdf. Defines cumulative-price accumulation and arithmetic time-weighted average price from cumulative differences over elapsed time.
+
+106. Uniswap Labs. *Uniswap v3 Price Oracles*. Official developer documentation. https://developers.uniswap.org/docs/protocols/v3/concepts/price-oracles. The tick accumulator gives an arithmetic mean tick and hence a geometric mean price; the seconds-per-liquidity accumulator gives harmonic mean in-range liquidity. Implementation cross-check: v3-periphery contracts/libraries/OracleLibrary.sol, captured blob SHA ddb82be610e5694581de1553fe86f4ca3da82e55.
+
+107. Chainlink. *What are Chainlink Data Feeds?* Official documentation. https://docs.chain.link/data-feeds/overview. Describes off-chain deviation-threshold and heartbeat triggers and recommends consumer-side updatedAt/latestTimestamp freshness checks, volatility bounds and fallback behavior. Trigger parameters are feed- and network-specific.
 
 ## Bibliographic and provenance cautions
 
