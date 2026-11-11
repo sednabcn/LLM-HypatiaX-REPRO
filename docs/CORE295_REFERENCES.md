@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–6. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–7. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -88,6 +88,10 @@
 69. Egorov, M. (2021). *Automatic market-making with dynamic peg*. Curve Finance, June 9, 2021. https://docs.curve.fi/assets/pdf/whitepaper_cryptoswap.pdf. Primary protocol whitepaper for the CryptoSwap dynamic-peg invariant, including the state-dependent coefficient \(K\), transformed balances and internal price-scale mechanism. Distinguish this from the 2019 StableSwap invariant and record the exact paper revision and implementation version.
 
 70. Compound Labs. *Compound III (Comet) Liquidation*. Official protocol documentation. https://docs.compound.finance/liquidation/. Describes liquidation eligibility under liquidation collateral factors, protocol absorption, collateral purchase quotes and the discount relation \(DiscountFactor=StoreFrontPriceFactor\times(1-LiquidationFactor)\) in fixed-point units. Pin the Comet release and distinguish the liquidation factor from collateral borrow/liquidation thresholds.
+
+71. Sky Ecosystem. *Collateral Liquidation*. Official Sky Protocol developer documentation. https://developers.skyeco.com/protocol/vaults/collateral-liquidation/. Current documentation for Clipper/Abacus collateral auctions and configurable price-decrease calculators. Record exact deployed calculator implementation and governance parameters; do not treat protocol parameter values as independent equations.
+
+72. MakerDAO. (2020). *MIP45: Liquidations 2.0 — Liquidation System Redesign*. Historical primary design specification. https://mips.makerdao.com/mips/details/MIP45. Specifies Dutch collateral auctions and configurable linear, stair-step exponential and continuous exponential price-decrease calculators. The MIP is marked obsolete by a later governance decision; retain only as historical design provenance and pair with current Sky documentation and versioned contract code.
 
 ## Bibliographic and provenance cautions
 
