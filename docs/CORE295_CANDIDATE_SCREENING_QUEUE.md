@@ -173,3 +173,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 18 (2026-11-11)
 
 [Source Verification Audit 18](CORE295_SOURCE_VERIFICATION_AUDIT_18.md) verifies the classical outer-sphere Marcus barrier against IUPAC and distinguishes the 1956 paper's solution collision-number prefactor from IUPAC's encounter-complex Eyring prefactor. The proposed formula pairs the classical quadratic driving-force barrier with the collision-frequency prefactor; it remains held because the prefactor convention and overlap with Core-15 Arrhenius/generic Rate Law exclusions require an explicit ruling. Do not count barrier, rate, prefactor or reaction-region variants separately.
+
+
+## Source verification audit 19 (2026-11-11)
+
+[Source Verification Audit 19](CORE295_SOURCE_VERIFICATION_AUDIT_19.md) verifies De Buck et al. (2014) equation 9 (printed p. 547) for the BYL719 tumour-growth turnover model: zero-order growth inhibited by a saturable Emax concentration response, minus first-order tumour loss. The state is the one-dimensional sum of longest lesion diameters; concentration is an external PK input from the study's t_lag model. Treat the complete ODE as one drug-specific PK/PD turnover system, not separate Emax/growth/degradation/PK equations. Hold pending input trajectory, units/ranges, clinical scope and turnover-family dependence policy. No candidates were accepted.
