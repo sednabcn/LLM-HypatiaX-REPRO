@@ -384,3 +384,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 42 (2026-11-11)
 
 [Source Verification Audit 42](CORE295_SOURCE_VERIFICATION_AUDIT_42.md) confirms the normalized Solidly stable invariant (XY(X^2+Y^2)=k), a symmetric quartic curve with no StableSwap amplification parameter. Keep Solidly-derived stable forks in one family; the volatile (xy=k) branch, decimal-normalization transforms, solver and swap directions are not additional equation candidates.
+
+
+## Source verification audit 43 (2026-11-11)
+
+[Source Verification Audit 43](CORE295_SOURCE_VERIFICATION_AUDIT_43.md) records Swaap V2 as RFQ market-making infrastructure. The Balancer-derived vault does not make its off-chain quote-generation mechanism a new AMM invariant; the drawdown/last-look/imbalance checks are protocol-specific safeguards, not independent equation candidates.
