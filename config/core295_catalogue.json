@@ -358,6 +358,38 @@
       "url": "https://openstax.org/details/books/university-physics-volume-3",
       "use": "Optics and modern physics; exact chapter/key-equation location required",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-UNISWAP-CONCENTRATED-DOCS",
+      "domain": "DeFi AMM",
+      "title": "Uniswap concentrated liquidity developer documentation",
+      "url": "https://developers.uniswap.org/docs/get-started/concepts/liquidity-providers/concentrated-liquidity",
+      "use": "Official explanatory source; verify equations against Uniswap v3 whitepaper and versioned core contracts",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-BALANCER-WEIGHTED-MATH",
+      "domain": "DeFi AMM",
+      "title": "Balancer weighted math developer reference",
+      "url": "https://docs.balancer.fi/reference/math/weighted-math.html",
+      "use": "Official implementation/reference for weighted-pool swap and price calculations; pin pool version",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-RISK-V3-PARAMS",
+      "domain": "DeFi Risk",
+      "title": "Aave V3 risk parameters",
+      "url": "https://github.com/aave/risk-v3/blob/main/asset-risk/risk-parameters.md",
+      "use": "Protocol risk parameters; pin exact Git commit",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-V4-POSITIONS",
+      "domain": "DeFi Risk",
+      "title": "Aave V4 positions documentation",
+      "url": "https://aave.dev/docs/aave-v4/positions",
+      "use": "Version-specific position and health-factor documentation",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
