@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot (2026-11-11):** 169 candidate source-register records (Chemistry 36, Biology 34, Physics 43, DeFi AMM 23, DeFi Risk 33); 19 proposed equation records; zero accepted equation entries. Bibliography-item and discovery-batch totals are not repeated here because their current totals have not been independently refreshed. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot (2026-11-11):** 172 candidate source-register records (Chemistry 36, Biology 35, Physics 43, DeFi AMM 25, DeFi Risk 33); 19 proposed equation records; zero accepted equation entries. Bibliography-item and discovery-batch totals are not repeated here because their current totals have not been independently refreshed. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -124,6 +124,9 @@
 
 The Chemistry, Biology and Physics portions of the assistant-authored 299-row discovery pool have been screened (188 rows). The detailed candidate disposition register and cross-domain family blockers are in [Author Pool Screening Audit 2](CORE295_AUTHOR_POOL_SCREENING_AUDIT_2.md). In particular, the review flags Michaelis–Menten/Hill saturation and population-growth families in Biology, kinematic/mechanical and circuit response families in Physics, and linear-gradient transport overlap across Chemistry/Physics/Biology. This map remains provisional; no candidate is accepted by the audit.
 
+
+
+- [Biology and DeFi AMM primary-source audit 1](CORE295_BIO_AMM_PRIMARY_SOURCE_AUDIT_1.md) reconstructs the Deriso–Schnute family, separates continuous/discrete population models, verifies the Curve StableSwap whitepaper invariant, and clusters Uniswap/Balancer derived equations.
 
 ## Source verification audit 3 (2026-11-11)
 
