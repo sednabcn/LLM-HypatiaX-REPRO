@@ -5,7 +5,7 @@
 
 ## Discovery progress snapshot (2026-11-11)
 
-A provisional cross-domain clustering review is maintained in [CORE295_SOURCE_FAMILY_CLUSTER_MAP.md](CORE295_SOURCE_FAMILY_CLUSTER_MAP.md); its family labels are review aids, not accepted catalogue IDs.
+A provisional cross-domain clustering review is maintained in [CORE295_SOURCE_FAMILY_CLUSTER_MAP.md](CORE295_SOURCE_FAMILY_CLUSTER_MAP.md); its family labels are review aids, not accepted catalogue IDs. The prioritized evidence tiers for the next candidate-record drafting pass are in [CORE295_CANDIDATE_SCREENING_QUEUE.md](CORE295_CANDIDATE_SCREENING_QUEUE.md).
 
 The current manifest contains **123 candidate source records** across the five Option 2 domains, and the consolidated bibliography contains **118 numbered references**. Twenty-two discovery batches are linked below. These counts describe source/provenance leads only; they are **not equation counts** and do not satisfy the 59-equation target in any domain.
 
