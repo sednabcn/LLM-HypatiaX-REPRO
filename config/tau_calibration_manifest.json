@@ -1,4 +1,4 @@
-<escape>{
+{
   "schema_version": 1,
   "status": "draft",
   "approved_protocol": {
@@ -40,4 +40,4 @@
     "The 59-per-category minimum is sufficient only for zero observed bad routes under the stated independent-binomial assumptions.",
     "A valid selection-aware risk-control method must be selected and implemented before calibration."
   ]
-}</escape>
+}
