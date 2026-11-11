@@ -2226,7 +2226,8 @@ PYEOF
 run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi'
-  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2318,7 +2319,8 @@ PYEOF
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
-  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::Protocol-30 registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2_five: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
