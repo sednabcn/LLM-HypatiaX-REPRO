@@ -12,7 +12,8 @@
 |---|---|---|---|
 | Chemistry | CHEM-OPENSTAX-HENRY-11-3 | Henry gas-solubility relation | Fix Henry constant convention/units, dilute regime, temperature and gas/solvent assumptions. |
 | Chemistry | CHEM-IUPAC-MARCUS; CHEM-MARCUS-1956 | Marcus outer-sphere electron-transfer barrier/rate | Confirm primary-paper equation and classical high-temperature/nonadiabatic regime; explicitly separate from Arrhenius exclusion. |
-| Chemistry | CHEM-LH-WACHS-2024; CHEM-LANGMUIR-1918 | Competitive-adsorption Langmuir–Hinshelwood rate | Confirm surface-site balance, rate-determining step, adsorption equilibria and primary historical lineage. |
+| Chemistry | CHEM-FICK-1855 | Fick one-dimensional diffusive flux law | Primary scan p. 66 gives the transfer law; the modern flux adapter is drafted. Structural overlap with Fourier heat-flux and Ohm current-density laws must be resolved before acceptance. |
+| Chemistry | CHEM-LANGMUIR-1918 | Langmuir single-site adsorption isotherm | Eq. 8/9 is located in the 1918 primary paper; exact adsorbate/surface context, site balance and benchmark ranges remain pending. |
 | Biology | BIO-TUMOR-DBUCK-2014 | Concentration-modulated tumor turnover, primary Eq. 9 | Freeze tumor state as sum of longest diameters, concentration input, units and valid clinical range. |
 | Biology | BIO-HH-1952; BIO-HH-MODERN-2019 | Hodgkin–Huxley coupled membrane/gating ODE system | Freeze original/modern current sign convention, temperature scaling, gate-rate functions and full four-state system. |
 | Biology | BIO-MICHAELIS-MENTEN-1913 | **Excluded** | Michaelis–Menten is explicitly in the Core-15 exclusion list; retain the bibliography lead for provenance only, never draft it as a Core-295 candidate. |
@@ -33,10 +34,6 @@
 | DeFi Risk | RISK-UNISWAP-V2-TWAP; RISK-UNISWAP-V3-TWAP | Arithmetic v2 TWAP and geometric v3 tick TWAP | Fix observation interval, token direction, timestamp wrap, tick rounding, fixed-point scales and liquidity semantics. |
 | DeFi Risk | RISK-COMPOUND-IR; RISK-COMPOUND-LIQUIDATION | Compound III utilization-kink rate and collateral discount | Pin Comet version, market parameters, utilization denominator, annualization, collateral factor and quote units. |
 
-## Tier A — eligible for proposed-record drafting after technical review
-
-| Chemistry | CHEM-FICK-1855 | Fick one-dimensional diffusive flux law | Primary scan p. 66 gives the transfer law; the modern flux adapter is drafted. Structural overlap with Fourier heat-flux and Ohm current-density laws must be resolved before acceptance. |
-
 ## Tier B — formula visible; source/assumption work still required
 
 The Hill muscle force–velocity relation is drafted as `BIO-HILL-MUSCLE-001` but remains in Tier B until the original 1938 equation page and notation are checked; its benchmark ranges and muscle context are also pending.
@@ -45,8 +42,9 @@ The Hill muscle force–velocity relation is drafted as `BIO-HILL-MUSCLE-001` bu
 |---|---|---|---|
 | Chemistry | CHEM-BEER-1852 | Beer absorption / modern Beer–Lambert relation | Original Beer notation and modern decadic molar-absorptivity convention need exact mapping. |
 | Chemistry | CHEM-ERDEY-GRUZ-VOLMER-1930; CHEM-BUTLER-1924 | Butler–Volmer electrode kinetics | Historical attribution and generalized modern form need primary-source synthesis; Tafel is an asymptote, Nernst is equilibrium. |
+| Chemistry | CHEM-LH-WACHS-2024 | Langmuir–Hinshelwood surface-reaction kinetics | Formula visible in modern review; primary mechanistic equation/page and catalyst-specific rate-determining-step assumptions still require tracing. |
 | Chemistry | CHEM-RAOULT-1887; CHEM-RAOULT-FREEZING-1882 | Ideal-solution vapor pressure and freezing-point depression | Modern formula forms are accessible, but exact original equation notation/concentration basis remains to verify. |
-| Chemistry | CHEM-LANGMUIR-1918 | Langmuir adsorption | Eq. 8/9 is located in the 1918 primary paper; exact adsorbate/surface context, site balance and benchmark ranges remain pending. |
+
 | Chemistry | CHEM-RIDEAL-1939; CHEM-ELEY-RIDEAL-1940; CHEM-ER-ENG-REACTION; CHEM-IUPAC-LANGMUIR-RIDEAL | Rideal–Eley gas/adsorbed surface-reaction rate | Mechanism is primary-sourced; explicit engineering rate form is secondary. Verify the rate-law assumptions and catalyst-specific pathway before proposed-record drafting. |
 | Biology | BIO-SIMEONI-2004; BIO-TUMOR-ODE-COMPARISON-2020 | Exponential-to-linear tumor growth and transit-compartment TGI | Exact growth formula currently transcribed from secondary comparison; original primary equation/page remains outstanding. |
 | Biology | BIO-HILL-1910; BIO-ADAIR-1925 | Hemoglobin oxygen-binding models | Hill/Adair formula transcription needs original-paper page verification; keep common hemoglobin source cluster. |
