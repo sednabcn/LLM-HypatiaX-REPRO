@@ -79,3 +79,12 @@ The Hill muscle force–velocity relation is drafted as `BIO-HILL-MUSCLE-001`; t
 5. Promote to accepted only after exact-source, scientific, equivalence, provenance and independence review.
 
 **No equation is accepted by this queue.** Tier A is an order of work, not a quality guarantee.
+
+## User-supplied author_pool.py DeFi screening audit
+
+Static review of all 54 DeFi AMM and 57 DeFi Risk rows in the user-supplied `author_pool.py` is recorded in [author-pool DeFi audit 1](CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md). The script was not executed and no benchmark/experiment was run. **No rows were promoted or accepted.**
+
+Key blockers:
+- DeFi AMM: constant-product swap/price/LP/impermanent-loss/depth rows collapse into shared families and collide with Core-15 exclusions; Balancer trade directions and spot price derive from one weighted invariant; Uniswap V3 amount/liquidity/position/tick metrics share a concentrated-liquidity family; the two supplied Curve shortcuts are not the documented StableSwap invariant; Bancor buy/sell/spot are one connector-weight family; TWAP, LVR, MEV, bonding-curve and reward sketches need exact source/model contracts.
+- DeFi Risk: all VaR variants collide with the Core-15 Value at Risk exclusion; liquidation-price rows collide with the Liquidation Price exclusion; correlation extrapolation to 4 is invalid; portfolio weights/covariances lack joint constraints; the quartic borrow-rate expression is not Compound III's documented piecewise-linear kink model; generic APR/APY, volatility, funding, credit and liquidation sketches need source-specific definitions.
+- Raw counts are 54 AMM and 57 Risk, but accepted counts remain zero. Do not fill the 59/domain target by counting algebraic rearrangements, derived observables or unsupported generic formulas.
