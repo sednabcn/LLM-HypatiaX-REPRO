@@ -595,7 +595,7 @@ See [CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md](CORE295_BIO_STOCK_RECRUITM
 |---|---|---|
 | CHEM-ADSORPTION-FRUMKIN | Frumkin interacting adsorption; Langmuir ideal monolayer | The Frumkin relation (bc=\theta/(1-\theta)\exp(-2a\theta)) reduces to Langmuir at (a=0). Under the draft E2 policy, do not count the Langmuir limit separately if Frumkin is the selected parent model. Nonzero interaction parameter is a distinct constitutive lead; primary equation transcription remains pending. |
 | CHEM-ELECTROSORPTION-POTENTIAL-DEPENDENT | Frumkin electrocapillarity/electrosorption | Potential, charge, valence, electrolyte composition and standard-state contract are required. Frumkin 1920 is a historical primary lead; no candidate accepted. |
-| CHEM-MARCUS-OUTER-SPHERE-ET | Marcus outer-sphere electron transfer | Correct rate prefactor is Eyring ((k_BT/h)\kappa_{ET}), not a generic collision-frequency (Z); barrier is quadratic in (lambda+\Delta G^0). Repair and source-verify before promotion. |
+| CHEM-MARCUS-OUTER-SPHERE-ET | Marcus outer-sphere electron transfer | Prefactor is kinetic-scope dependent: solution-reaction collision-number convention versus IUPAC encounter-complex/intramolecular Eyring form κ_ET(k_BT/h); these are not interchangeable. Barrier is quadratic in (lambda+\Delta G^0). Specify mechanism and verify the primary equation before promotion. |
 
 See [CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md](CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md).
 
