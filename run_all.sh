@@ -2283,7 +2283,7 @@ run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-dir
         --output-dir "\${_ALLDOM_PCA_DIR}" \
         --force-fresh \
         2>&1 | tee -a "\${_ALLDOM_PCA_DIR}/all_domains_pca4060_run.log" \
-      || { echo '::error::Protocol-30 PCA domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
+      || { echo '::error::all-domains PCA proxy domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
   python3 - "\${_ALLDOM_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
 import json, sys
@@ -2310,9 +2310,9 @@ summary = {
     'note': f'This 10-domain registry is not the manuscript's custom 11-domain Protocol-30 equation set; do not use these results as Protocol-30.'
 }
 (out / 'all_domains_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
-print(f"[Protocol-30 PCA] files={len(files)} records={rows} summary={out / 'all_domains_pca4060_summary.json'}")
+print('[All-domains PCA proxy] files=' + str(len(files)) + ' records=' + str(rows) + ' summary=' + str(out / 'all_domains_pca4060_summary.json'))
 if not files:
-    raise SystemExit('Protocol-30 PCA produced no result files')
+    raise SystemExit('all-domains PCA proxy produced no result files')
 PYEOF
 "
  
