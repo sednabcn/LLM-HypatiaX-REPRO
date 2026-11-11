@@ -2985,6 +2985,14 @@
       "url": "https://authors.library.caltech.edu/records/desqy-fmq55",
       "use": "Primary Marcus (1956), J. Chem. Phys. 24(5), 966–978. Under its stated solution-phase intermediate-state mechanism, the overall rate is the solution collision number multiplied by exp(−ΔF*/kT). Do not substitute a universal Eyring prefactor; exact equation/page and collision-number definition remain to be transcribed.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-PUTTER-1920-GROWTH-LAW",
+      "domain": "Biology",
+      "title": "Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten",
+      "url": "https://doi.org/10.1007/BF01755094",
+      "use": "Primary Pütter (1920), Pflügers Archiv 180, pp. 298–340; foundational lineage for generalized two-power growth law dm/dt = p*m^a − q*m^b. Exact equation/page must be transcribed from original before candidate use. Cluster generalized Pütter law with the classical von Bertalanffy 2/3,1 specialization pending primary review.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
