@@ -389,3 +389,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 43 (2026-11-11)
 
 [Source Verification Audit 43](CORE295_SOURCE_VERIFICATION_AUDIT_43.md) records Swaap V2 as RFQ market-making infrastructure. The Balancer-derived vault does not make its off-chain quote-generation mechanism a new AMM invariant; the drawdown/last-look/imbalance checks are protocol-specific safeguards, not independent equation candidates.
+
+
+## Source verification audit 44 (2026-11-11)
+
+[Source Verification Audit 44](CORE295_SOURCE_VERIFICATION_AUDIT_44.md) adds Aave health factor as a multi-asset weighted collateral/debt ratio and Compound/Aave kinked borrowing rates as one piecewise-linear utilization-rate family. Keep the health-factor aggregate and liquidation predicate together; do not split reserve contributions or weighted-threshold components. Group Aave and Compound rate curves despite protocol-specific parameters.
