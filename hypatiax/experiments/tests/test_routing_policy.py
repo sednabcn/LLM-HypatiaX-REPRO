@@ -6,6 +6,7 @@ from hypatiax.core.routing import (
     select_hypatiax_route,
     structural_risk_tokens,
     training_edge_degradation_probe,
+    training_edge_split_indices,
 )
 
 
@@ -129,3 +130,31 @@ def test_invalid_negative_tau_fails_closed_to_ensemble():
     )
     assert route["decision"] == "ensemble"
     assert route["route_reason"] == "degradation_probe_or_tau_unavailable"
+
+
+def test_training_edge_split_uses_both_tails_and_training_only_standardisation():
+    x = np.column_stack([
+        np.linspace(-5.0, 5.0, 100),
+        np.linspace(-50000.0, 50000.0, 100),
+    ])
+    core, edge = training_edge_split_indices(x, edge_fraction=0.15)
+    assert len(edge) == 16  # ceil(100 * .15 / 2) from each tail
+    assert len(core) == 84
+    assert len(set(core).intersection(set(edge))) == 0
+    assert sorted(np.concatenate([core, edge]).tolist()) == list(range(100))
+    # Feature rescaling must not change the standardized PCA ordering.
+    scaled = x * np.array([1000.0, 0.001])
+    core_scaled, edge_scaled = training_edge_split_indices(scaled, edge_fraction=0.15)
+    assert np.array_equal(core, core_scaled)
+    assert np.array_equal(edge, edge_scaled)
+
+
+def test_training_edge_split_rejects_nonfinite_covariates():
+    x = np.ones((20, 2))
+    x[0, 0] = np.nan
+    try:
+        training_edge_split_indices(x, edge_fraction=0.15)
+    except ValueError as exc:
+        assert "finite" in str(exc)
+    else:
+        raise AssertionError("non-finite training covariates must be rejected")
