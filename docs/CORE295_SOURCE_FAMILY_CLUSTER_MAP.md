@@ -309,3 +309,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 30 (2026-11-11)
 
 [Source Verification Audit 30](CORE295_SOURCE_VERIFICATION_AUDIT_30.md) confirms Hawkes self-exciting event intensity and Merton's Brownian-plus-Poisson jump process from the original papers. OU and CIR remain related mean-reverting diffusion families with incomplete original-page transcription; Hawkes and Merton are distinct process classes. No stochastic process has been added to the formal catalogue.
+
+
+## Source verification audit 31 (2026-11-11)
+
+[Source Verification Audit 31](CORE295_SOURCE_VERIFICATION_AUDIT_31.md) confirms the GHK constant-field diffusion-potential lineage and the revised Starling glycocalyx model. GHK is a multi-ion zero-current steady state, not a Nernst thermodynamic equilibrium. The revised Starling Πg force balance is not a closed steady-state law; the full Levick–Michel Eq. (3) is implicit through its Péclet number. Keep all expressions in one model lineage.
