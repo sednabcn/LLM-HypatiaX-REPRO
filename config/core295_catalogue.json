@@ -574,6 +574,14 @@
       "url": "https://openstax.org/books/chemistry-2e/pages/11-4-colligative-properties",
       "use": "Primary historical source metadata: Raoult, Comptes Rendus 104 (1887), 1430–1433; accessible explicit ideal-solution equation and regime reference in OpenStax §11.4. Original paper page-level verification remains required.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-RAOULT-FREEZING-1882",
+      "domain": "Chemistry",
+      "title": "Raoult, General Law of the Freezing of Solutions (1882), original Comptes Rendus paper",
+      "url": "http://www.originalsources.com/Document.aspx?DocID=FF4QNC1T8Z463L8",
+      "use": "Primary historical source transcription for freezing-point depression; original Comptes Rendus 95 (1882), 1030–1033. Verify translation/transcription, assumptions and dilute-solution scope.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
