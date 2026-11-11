@@ -33,7 +33,6 @@ STAGES=(
   exp2_feynman_pca_4060
   exp2_feynman_extrap
   exp2
-  exp2_all_domains_pca_4060
   exp2_five
   exp3
   exp3b
