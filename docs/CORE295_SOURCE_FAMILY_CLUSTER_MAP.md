@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 120 candidate source records; 115 bibliography items; 21 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 123 candidate source records; 118 bibliography items; 22 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -27,6 +27,7 @@
 | CHEM-DIFFUSION | Fick flux law and diffusion equation | Flux law and PDE are linked levels of one transport family unless a predeclared model split justifies otherwise. |
 | CHEM-OPTICAL-ABSORPTION | Beer absorption / Beer–Lambert notation | Decadic absorbance, natural-log attenuation and transmittance forms are equivalent representations. |
 | CHEM-ELECTRODE-KINETICS | Butler/Erdey-Grúz–Volmer; Butler–Volmer; Tafel asymptotes | Kinetic current–overpotential law is distinct from Nernst equilibrium. Tafel forms are asymptotic regimes, not independent families. |
+| CHEM-ELECTRON-TRANSFER | Marcus outer-sphere electron-transfer rate and electrochemical extension | Quadratic reorganization-energy barrier is distinct from Butler–Volmer's transfer-coefficient current law and Nernst equilibrium, but Marcus rate forms and activation-barrier forms are linked. Explicitly screen against the Arrhenius exclusion. |
 
 ## Biology
 
