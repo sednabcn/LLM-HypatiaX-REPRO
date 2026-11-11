@@ -883,6 +883,7 @@ def _hybrid_predict_and_eval(
 
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
+    route_execution_status = "selected_route_executed"
 
     if decision == "llm":
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
@@ -890,8 +891,10 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
-            test_r2 = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+            route_reason = "pure_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "pure_llm_evaluation_and_nn_fallback_failed"
+            route_execution_status = decision
 
     elif decision == "ensemble" and has_formula:
         # Fix 5: LLM test predictions via unified evaluator
@@ -903,9 +906,16 @@ def _hybrid_predict_and_eval(
         if llm_test_preds is not None:
             # FIX 7: also get LLM train predictions for uncertainty estimation
             llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-            if llm_train_preds is None:
-                test_r2  = nn_m["test_r2"]
-                decision = "nn_fallback"
+            if (
+                llm_train_preds is None
+                or nn_m.get("y_pred_test") is None
+                or nn_m.get("y_pred_train") is None
+                or not nn_m.get("success", False)
+            ):
+                test_r2 = float(nn_m.get("test_r2", float("nan")))
+                decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+                route_reason = "ensemble_inputs_unavailable_nn_fallback" if decision == "nn_fallback" else "ensemble_and_nn_fallback_failed"
+                route_execution_status = decision
             else:
                 # Per-query KDE weights use X_test covariates only; y_test is not consulted.
                 ensemble_pred = _ensemble_llm_nn(
@@ -919,10 +929,16 @@ def _hybrid_predict_and_eval(
                     blend_weights=query_blend_weights,
                 )
                 m = _compute_metrics(y_test, ensemble_pred)
-                test_r2 = m["r2"]
+                test_r2 = float(m.get("r2", float("nan")))
+                if not np.isfinite(test_r2):
+                    route_execution_status = "ensemble_metrics_undefined"
+                else:
+                    route_execution_status = "ensemble_executed"
         else:
-            test_r2  = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+            route_reason = "llm_test_prediction_unavailable_nn_fallback" if decision == "nn_fallback" else "llm_and_nn_predictions_unavailable"
+            route_execution_status = decision
 
     else:
         # decision == "nn"
@@ -949,7 +965,8 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
-        test_r2 = nn_m["test_r2"]
+        test_r2 = float(nn_m.get("test_r2", float("nan")))
+        route_execution_status = "nn_fallback_executed" if np.isfinite(test_r2) else "nn_fallback_failed"
 
     return {
         "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
@@ -958,6 +975,7 @@ def _hybrid_predict_and_eval(
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
         "route_reason":   route_reason,
+        "route_execution_status": route_execution_status,
         "structural_risk_flag": structural_risk_flag,
         "structural_risk_tokens": structural_tokens,
         "degradation_probe": degradation_probe,
