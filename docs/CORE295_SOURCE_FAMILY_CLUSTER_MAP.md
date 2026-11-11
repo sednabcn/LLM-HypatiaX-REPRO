@@ -514,3 +514,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 32 source-register update (2026-11-11)
 
 [Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) groups Heston price and CIR variance as one coupled stochastic-volatility system, and the compound-Poisson reserve process with exponential-claim ruin probability as one classical ruin family. The two source references are registered, but no equations are accepted.
+
+
+## Source verification audit 34 source-register update (2026-11-11)
+
+[Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) records Parkinson range volatility as a separate range-estimator family, while Bollerslev GARCH(1,1) and RiskMetrics EWMA are grouped as one conditional-variance family (EWMA: \(\omega=0,\alpha=1-\lambda,\beta=\lambda\)). The sources are now registered, with no equation acceptance.
