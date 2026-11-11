@@ -86,3 +86,15 @@ These candidates share a clinical tumor-growth/treatment-response application an
 
 **Not promoted:** Table 1 Eq. 25 is a saturating exposure-effect relation and may overlap Michaelis–Menten-type saturation; Table 1 Eq. 33 is a reaction-diffusion PDE and requires a non-arbitrary spatial/scalar output contract. Neither is counted here as a candidate accepted into the catalogue.
 
+## Biology: primary-source tracing for selected tumor-growth leads
+
+The tumor-dynamics review's Table 1 maps selected equation structures to original clinical or preclinical studies. The following source links have now been added to the consolidated bibliography and catalogue source register. These are **primary-source leads**, not accepted catalogue records.
+
+| Review equation | Candidate structure | Primary-source lead | Curation interpretation |
+|---|---|---|---|
+| Table 1, Eq. 2 | Linear tumor growth with first-order shrinkage, `dT/dt = k_g - d*T` | De Buck et al. (2014), *British Journal of Clinical Pharmacology*, 78(3), 543–555, DOI [10.1111/bcp.12378](https://doi.org/10.1111/bcp.12378); primary model Eq. 9 | The source is a clinical PK/PD turnover model. Verify the exact exposure-linked term and whether the simplified review form is an appropriate deterministic benchmark equation before acceptance. |
+| Table 1, Eq. 6 | Gompertz tumor growth, `dT/dt = k_g*T*ln(T_max/T)` | Belfatto et al. (2016), DOI [10.1109/JBHI.2015.2453437](https://doi.org/10.1109/JBHI.2015.2453437); Bethge et al. (2015), DOI [10.1016/j.jbi.2015.07.011](https://doi.org/10.1016/j.jbi.2015.07.011) | These are application/simulation sources cited by the review, not necessarily the origin of the Gompertz law. Treat the two papers as a shared Gompertz derivation family unless the sampling design supports a different unit. |
+| Table 1, Eq. 8 | Combined exponential-to-linear tumor growth | Simeoni et al. (2004), DOI [10.1158/0008-5472.CAN-03-2524]; Ouerdani et al. (2016), DOI [10.1007/s00280-016-3046-2] | Simeoni et al. describe the preclinical model in which untreated growth transitions from exponential to linear; Ouerdani et al. provide a clinical application. These are related source-family evidence, not two independent equations. |
+
+The review explicitly distinguishes natural-growth equations, treatment-effect terms, heterogeneous-cell ODE systems, and algebraic tumor-time-course models. Do not flatten these into one undifferentiated candidate pool. In particular, a simplified equation transcribed from a review must be checked against the primary model's full terms, state definitions, units and assumptions. The new references are recorded as `candidate_reference`; no equation has been promoted to `source_verified` or `accepted`.
+
