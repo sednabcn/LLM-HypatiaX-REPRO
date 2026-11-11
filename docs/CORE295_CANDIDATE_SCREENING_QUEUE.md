@@ -2,11 +2,13 @@
 
 **Status:** prioritized source-evidence queue, not an equation catalogue. Tier A means the equation or implementation formula is directly visible in an accessible primary/official source and can move to proposed-record drafting after a technical review. It does **not** mean scientifically accepted. Tier B means the formula is visible but exact primary-source mapping, assumptions, units or implementation details remain incomplete. Tier C means a source lead or domain-boundary issue remains.
 
-**Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 3 proposed equation records; zero accepted equation entries.
+**Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 4 proposed equation records; zero accepted equation entries.
 
-**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See [CORE295_PROPOSED_RECORD_REVIEW_1.md](CORE295_PROPOSED_RECORD_REVIEW_1.md). The source counts are not equation counts.
+**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See [CORE295_PROPOSED_RECORD_REVIEW_1.md](CORE295_PROPOSED_RECORD_REVIEW_1.md). The source counts are not equation counts.
 
 ## Tier A — eligible for proposed-record drafting after technical review
+
+The Hill muscle force–velocity relation has now been drafted as `BIO-HILL-MUSCLE-001`; see proposed-record review pass 2. It remains proposed pending primary-page transcription, exact muscle context and benchmark contract.
 
 | Domain | Source IDs | Candidate structure | Remaining checks before proposed record |
 |---|---|---|---|
@@ -15,7 +17,7 @@
 | Chemistry | CHEM-LH-WACHS-2024; CHEM-LANGMUIR-1918 | Competitive-adsorption Langmuir–Hinshelwood rate | Confirm surface-site balance, rate-determining step, adsorption equilibria and primary historical lineage. |
 | Biology | BIO-TUMOR-DBUCK-2014 | Concentration-modulated tumor turnover, primary Eq. 9 | Freeze tumor state as sum of longest diameters, concentration input, units and valid clinical range. |
 | Biology | BIO-HH-1952; BIO-HH-MODERN-2019 | Hodgkin–Huxley coupled membrane/gating ODE system | Freeze original/modern current sign convention, temperature scaling, gate-rate functions and full four-state system. |
-| Biology | BIO-MICHAELIS-MENTEN-1913 | Original rapid-equilibrium enzyme initial-rate relation | Preserve original K_S assumption; do not silently substitute later Briggs–Haldane K_m. |
+| Biology | BIO-MICHAELIS-MENTEN-1913 | **Excluded** | Michaelis–Menten is explicitly in the Core-15 exclusion list; retain the bibliography lead for provenance only, never draft it as a Core-295 candidate. |
 | Biology | BIO-HILL-MUSCLE-1938 | Hill muscle force–velocity relation | Confirm exact original equation page, muscle preparation, tetanic state and units of a,b. |
 | Biology | BIO-MORRIS-LECAR-1981 | Two-variable conductance-based excitable-cell model | Confirm original equations 1–2, ionic-current conventions, quasi-steady activation and parameter units. |
 | Physics | PHYS-PLANCK-1901; PHYS-OPENSTAX-V3-PLANCK | Planck blackbody spectral distribution | Freeze spectral energy density versus exitance/radiance convention and SI conversion; cluster Stefan/Wien consequences. |
