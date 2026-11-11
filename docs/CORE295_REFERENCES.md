@@ -87,6 +87,8 @@
 
 69. Egorov, M. (2021). *Automatic market-making with dynamic peg*. Curve Finance, June 9, 2021. https://docs.curve.fi/assets/pdf/whitepaper_cryptoswap.pdf. Primary protocol whitepaper for the CryptoSwap dynamic-peg invariant, including the state-dependent coefficient \(K\), transformed balances and internal price-scale mechanism. Distinguish this from the 2019 StableSwap invariant and record the exact paper revision and implementation version.
 
+70. Compound Labs. *Compound III (Comet) Liquidation*. Official protocol documentation. https://docs.compound.finance/liquidation/. Describes liquidation eligibility under liquidation collateral factors, protocol absorption, collateral purchase quotes and the discount relation \(DiscountFactor=StoreFrontPriceFactor\times(1-LiquidationFactor)\) in fixed-point units. Pin the Comet release and distinguish the liquidation factor from collateral borrow/liquidation thresholds.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
