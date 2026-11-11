@@ -278,3 +278,7 @@ These are additional official documentation pointers, not independent primary re
 161. Holling, C. S. (1959). “Some Characteristics of Simple Types of Predation and Parasitism.” *The Canadian Entomologist*, 91(7), 385–398. https://doi.org/10.4039/Ent91385-7.
 162. Volterra, V. (1926). “Fluctuations in the Abundance of a Species considered Mathematically.” *Nature*, 118, 558–560. https://doi.org/10.1038/118558a0.
 163. Monod, J. (1949). “The Growth of Bacterial Cultures.” *Annual Review of Microbiology*, 3, 371–394. https://doi.org/10.1146/annurev.mi.03.100149.002103. Review/synthesis.
+
+164. DODO. “The Math Behind: Proactive Market Maker.” Official DODO documentation. https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm. Defines the PMM price curve, its integrated trade amount, quadratic trade inversion and inventory regression target.
+165. Niemerg, A., Robinson, D., & Livnev, L. (2020). *YieldSpace: An Automated Liquidity Provider for Fixed Yield Tokens*. Working draft, August 2020. https://yieldprotocol.com/YieldSpace.pdf. Primary source for the constant-power-sum invariant and time-to-maturity dependence.
+166. Solidly. “Swaps: V2 Volatile and Stable Pools.” Official documentation. https://docs.solidly.com/dex-basics/swaps.html. Gives volatile x·y≥k and stable x³y+y³x≥k pool invariants.
