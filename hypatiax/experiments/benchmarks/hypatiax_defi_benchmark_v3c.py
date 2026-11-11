@@ -1508,12 +1508,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
-                # Issue 3 fix: when hybrid fell back to NN, the time already
-                # recorded for the standalone NN run CANNOT be reused — the
-                # hybrid must pay the full NN training cost itself.
-                # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
-                # fallback cases so the reported hybrid time is self-contained.
-                hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
+                # _hyb_wall already includes any NN rerun performed inside
+                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
+                # diagnostic; adding it again would double-count wall time.
+                hyb_time = _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
