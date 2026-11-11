@@ -31,7 +31,7 @@ All paths converge to one selected formula/prediction record. Store the proposed
 
 **Still open:** `tau` has no manuscript-specified calibrated numeric value or frozen calibration dataset/procedure. Do not set it by looking at extrapolation/test scores. The Core-15 HDS v50_2 architecture is LLM+PySR, not the manuscript's LLM+NN five-stage router; its structural-risk guard is therefore a conservative PySR refinement, not the requested NN ensemble. The Stage 3/4 LLM+NN route is currently wired in the DeFi hybrid path and the extrapolation harness; callers that do not supply `X_query` record OOD as unavailable and use the in-distribution alpha floor.
 
-The Stage 3 edge probe uses only training rows and their formula predictions. Stage 4 fits standardisation, PCA, KDE bandwidth, and leave-one-out reference densities using only training covariates. Query covariates are scored without labels. Held-out target labels/scores must never select the route, tune tau, or choose blend weights.
+The Stage 3 edge probe uses only training rows and the NN's predictions on those same training rows. Stage 4 fits standardisation, PCA, KDE bandwidth, and leave-one-out reference densities using only training covariates. Query covariates are scored without labels. Held-out target labels/scores must never select the route, tune tau, or choose blend weights.
 
 ## 3. Campaign-level experiment route
 
