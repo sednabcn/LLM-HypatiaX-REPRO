@@ -1556,6 +1556,9 @@ class HybridDiscoverySystem:
                          or bool(getattr(self, "_llm_attempt_modes", None)))
                 )) else "symbolic",
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
+                "structural_risk_flag": bool(discovery.get("structural_risk_flag", False)),
+                "structural_risk_tokens": list(discovery.get("structural_risk_tokens", [])),
+                "routing_reason": discovery.get("routing_reason"),
                 "validations": 1 if validation else 0,
                 "validation_score": validation.get("total_score", 0.0),
                 # FIX-D: flag log-space transform
@@ -1587,6 +1590,9 @@ class HybridDiscoverySystem:
                 "llm_mode": "none",
                 "llm_called": bool(getattr(self, "_llm_attempt_modes", None)),
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
+                "structural_risk_flag": False,
+                "structural_risk_tokens": [],
+                "routing_reason": "discovery_failed",
                 "bypass_kind": "live" if (bool(getattr(self, "_llm_attempt_modes", None))) else "none",
                 "generation_path": "symbolic+llm" if (bool(getattr(self, "_llm_attempt_modes", None))) else "symbolic",
                 "validations": 0,
