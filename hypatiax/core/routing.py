@@ -242,7 +242,11 @@ def route_decision_from_diagnostics(
         return {"decision": "ensemble",
                 "route_reason": "degradation_probe_or_tau_unavailable",
                 "structural_risk_flag": False, "structural_risk_tokens": []}
-    if np.isfinite(fitted_train_r2) and float(fitted_train_r2) >= 0.95 and delta <= tau:
+    try:
+        train_r2 = float(fitted_train_r2)
+    except (TypeError, ValueError):
+        train_r2 = float("nan")
+    if np.isfinite(train_r2) and train_r2 >= 0.95 and delta <= tau:
         return {"decision": "fitted_llm",
                 "route_reason": "trusted_high_fit_low_degradation",
                 "structural_risk_flag": False, "structural_risk_tokens": []}
