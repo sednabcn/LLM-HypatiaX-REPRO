@@ -154,3 +154,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 12 (2026-11-11)
 
 [Source Verification Audit 12](CORE295_SOURCE_VERIFICATION_AUDIT_12.md) distinguishes Gyro E-CLP's elliptic invariant from Gyro 2-CLP's translated constant-product invariant, and distinguishes Solidly V2's quartic stable-pool invariant (x^3y+xy^3) from both constant product and Curve StableSwap. E-CLP and Solidly stable remain held for implementation/version, units, decimals, fixed-point and rounding contracts. Gyro 2-CLP remains blocked by the Core-15 Constant Product exclusion; virtual offsets and quadratic solution are not independent equations.
+
+
+## Source verification audit 13 (2026-11-11)
+
+[Source Verification Audit 13](CORE295_SOURCE_VERIFICATION_AUDIT_13.md) confirms Euler EVK's capped health-dependent discount (d=min(1-h,m)), equivalently retained factor (f=max(h,1-m)), against a pinned implementation. Unlike Morpho's market-LLTV rational LIF, Euler's discount depends on individual position health. Keep both as distinct mechanisms in one liquidation-incentive source family; neither health ratio, discount complement nor collateral conversion is an extra equation. Euler remains held pending its full valuation and rounding contract.
