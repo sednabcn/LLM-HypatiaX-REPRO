@@ -3,7 +3,7 @@
 **Status:** source register drafted; no equation entries approved yet.  
 **Design:** Option 2 — 295 structurally distinct equations, 59 per domain.
 
-The first candidate discovery pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_1.md](CORE295_CANDIDATE_DISCOVERY_BATCH_1.md). It is a review backlog only; none of its candidates count toward the 295 accepted records. The expanded source-universe pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_2.md](CORE295_CANDIDATE_DISCOVERY_BATCH_2.md); it also contains discovery leads only, not accepted equations.
+The first candidate discovery pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_1.md](CORE295_CANDIDATE_DISCOVERY_BATCH_1.md). It is a review backlog only; none of its candidates count toward the 295 accepted records. The expanded source-universe pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_2.md](CORE295_CANDIDATE_DISCOVERY_BATCH_2.md); it also contains discovery leads only, not accepted equations. A third verification pass is recorded in [CORE295_CANDIDATE_DISCOVERY_BATCH_3.md](CORE295_CANDIDATE_DISCOVERY_BATCH_3.md), with exact OpenStax physics equation locations and biology source leads; it likewise does not approve or count candidates.
 
 ## 1. Source policy
 
