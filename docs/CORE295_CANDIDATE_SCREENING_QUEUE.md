@@ -493,3 +493,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 65 (2026-11-11)
 
 [Source Verification Audit 65](CORE295_SOURCE_VERIFICATION_AUDIT_65.md) verifies Basel CRE35's (EL=PD\times LGD\) and (EL_{amount}=EL\times EAD). Source RISK-BASEL-CRE35-EL is candidate_reference. This is a standard credit-risk accounting decomposition, not a distinct structural equation; PD, LGD and EAD need their own model/source contracts.
+
+
+## Source verification audit 66 (2026-11-11)
+
+[Source Verification Audit 66](CORE295_SOURCE_VERIFICATION_AUDIT_66.md) rejects the author-pool ((F-S)/(8S)) expression as a universal funding-rate law. Deribit and Binance use different premium/index definitions, averaging, dampers, caps and interval/payment rules. Retain only as an underspecified basis proxy pending a named protocol and exact version.
