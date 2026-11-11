@@ -198,6 +198,118 @@
       "url": "https://aave.com/docs/aave-v4",
       "use": "Risk premium and position/liquidation mechanics; version-specific",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-MAG",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2: Magnetic Fields and Induction key equations",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/12-key-equations",
+      "use": "Biot-Savart, Ampere, fields from currents, magnetic forces",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-MAXWELL",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2: Maxwell equations",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/16-1-maxwells-equations-and-electromagnetic-waves",
+      "use": "Maxwell equations, EM waves, displacement current",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V2-CIRCUITS",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 2: electrical circuits key equations",
+      "url": "https://openstax.org/books/university-physics-volume-2/pages/9-key-equations",
+      "use": "Ohm law, resistance, current, power and circuit relations",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-OPTICS",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3: optics key equations",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/1-key-equations",
+      "use": "Refraction, reflection, critical angle, Malus and Brewster laws",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-OPENSTAX-V3-QUANTUM",
+      "domain": "Physics",
+      "title": "OpenStax University Physics Volume 3: modern physics key equations",
+      "url": "https://openstax.org/books/university-physics-volume-3/pages/6-key-equations",
+      "use": "Photon energy/momentum, Compton shift, de Broglie, uncertainty, Bohr model",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-DERIVATIONS",
+      "domain": "DeFi AMM",
+      "title": "Curve mathematical derivations",
+      "url": "https://docs.curve.finance/developer/resources/derivations/",
+      "use": "StableSwap invariant and Newton iteration",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-MATH",
+      "domain": "DeFi AMM",
+      "title": "Curve StableSwap NG math contract",
+      "url": "https://docs.curve.finance/developer/stableswap-exchange/stableswap-ng/utility_contracts/math",
+      "use": "Implementation-level invariant solver and numerical algorithm",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-BALANCER-WP",
+      "domain": "DeFi AMM",
+      "title": "Balancer whitepaper",
+      "url": "https://docs.balancer.fi/whitepaper.pdf",
+      "use": "Weighted invariant and normalized-weight spot price",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-COMPOUND-IR",
+      "domain": "DeFi Risk",
+      "title": "Compound III interest rates",
+      "url": "https://docs.compound.finance/interest-rates/",
+      "use": "Utilization-dependent supply and borrow rates with kink model",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-UCL-LIQUIDATIONS",
+      "domain": "DeFi Risk",
+      "title": "An Empirical Study of DeFi Liquidations",
+      "url": "https://discovery.ucl.ac.uk/id/eprint/10150722/",
+      "use": "Borrowing capacity, liquidation mechanisms, protocol risk measures",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-OECD-LIQUIDATIONS",
+      "domain": "DeFi Risk",
+      "title": "OECD DeFi Liquidations",
+      "url": "https://www.oecd.org/content/dam/oecd/en/publications/reports/2023/07/defi-liquidations_89cba79d/0524faaf-en.pdf",
+      "use": "Collateral ratios and liquidation dynamics",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-IACR-LIQUIDATIONS",
+      "domain": "DeFi Risk",
+      "title": "Mitigating Decentralized Finance Liquidations",
+      "url": "https://eprint.iacr.org/2023/254.pdf",
+      "use": "Collateralization, close-factor, liquidation spread and liquidator profit equations",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-BIS-LEVERAGE",
+      "domain": "DeFi Risk",
+      "title": "BIS Working Paper 1171: DeFi leverage",
+      "url": "https://www.bis.org/publications/working-paper-1171-defi-leverage",
+      "use": "Wallet leverage and proximity-to-liquidation risk",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-SOA-CLASSIFICATION",
+      "domain": "DeFi Risk",
+      "title": "A Risk Classification Framework for Decentralized Finance Protocols",
+      "url": "https://www.soa.org/globalassets/assets/files/resources/research-report/2022/decentralized-finance-protocols.pdf",
+      "use": "Collateralization, liquidity and systemic-risk framework",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
