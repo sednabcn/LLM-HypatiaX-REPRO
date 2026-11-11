@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–13. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–14. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -116,6 +116,14 @@
 83. Euler Labs. *Euler Vault Kit: Liquidations*. Official protocol documentation and whitepaper. https://docs.euler.finance/learn/liquidations/ and https://docs.euler.finance/euler-vault-kit-white-paper/. The pinned EVK Liquidation.sol implementation sets the discount factor to risk-adjusted collateral value divided by liability value, bounded below by one minus the configured maximum discount. Treat the health-dependent discount and maximum cap as one reverse-Dutch liquidation incentive family.
 
 84. Liquity. *Stability Pool and Liquidations* and *Recovery Mode*. Official Liquity V1 documentation. https://docs.liquity.org/liquity-v1/faq/stability-pool-and-liquidations and https://docs.liquity.org/liquity-v1/faq/recovery-mode. Describes debt offset against Stability Pool deposits, collateral transfer/pro-rata allocation and Recovery Mode liquidation branches. Use as a source lead for stateful loss-absorption accounting, not as a generic collateral-ratio formula.
+
+85. Michaelis, L., & Menten, M. L. (1913). Die Kinetik der Invertinwirkung. *Biochemische Zeitschrift, 49*, 333–369. The complete original paper is reproduced in a modern translation and historical analysis by Johnson & Goody (2011), *Biochemistry* 50, 8264–8269, DOI https://doi.org/10.1021/bi201284u; see the initial-rate equation and the fuller product-inhibition model. The original rapid-equilibrium assumption and symbol K_S should be distinguished from the later Briggs–Haldane steady-state derivation and modern K_m notation.
+
+86. Hill, A. V. (1910). The possible effects of the aggregation of the molecules of haemoglobin on its dissociation curves. *The Journal of Physiology, 40*, iv–vii. https://doi.org/10.1113/jphysiol.1910.sp001386. Primary source for the empirical cooperative oxygen-saturation relation; the later historical account prints the form \(y=100Kx^n/(1+Kx^n)\).
+
+87. Adair, G. S. (1925). The hemoglobin system: VI. The oxygen dissociation curve of hemoglobin. *Journal of Biological Chemistry, 63*(2), 529–545. https://doi.org/10.1016/S0021-9258(18)85018-9. Primary four-step binding-polynomial source; the modern equation transcription is cross-checked against the 2025 centenary review and should be checked against the original paper before acceptance.
+
+88. Monod, J. (1949). The growth of bacterial cultures. *Annual Review of Microbiology, 3*, 371–394. https://doi.org/10.1146/annurev.mi.03.100149.002103. Primary source for bacterial growth under limiting substrate; the familiar hyperbolic specific-growth relation is printed in later reviews. Exact original equation/page mapping remains outstanding.
 
 ## Bibliographic and provenance cautions
 
