@@ -54,6 +54,11 @@ from sklearn.preprocessing import StandardScaler
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT))
 
+from hypatiax.core.routing import (
+    kde_ood_probability, route_decision_from_diagnostics,
+    structural_risk_tokens, training_edge_split_indices,
+)
+
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
     _ROOT / "hypatiax" / ".env",
@@ -473,78 +478,61 @@ def _eval_formula_r2(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 3 — Routing helpers (Fixes 1, 2, 4)
+# SECTION 3 — Manuscript routing helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TRANSCENDENTAL_TOKENS = [
-    "math.exp", "np.exp", "exp(",
-    "math.log", "np.log", "log(",
-    "math.sqrt", "np.sqrt", "sqrt(",
-    "norm.cdf", "norm.pdf", "scipy.stats",
-    "np.maximum", "np.minimum", "max(", "min(",
-    "math.sin", "np.sin", "math.cos", "np.cos",
-    "**0.",
-]
-
-
-def _formula_has_transcendental(code: str) -> bool:
-    """Fix 2 — True if code contains ops that are structurally bad for NN extrapolation."""
-    low = code.lower()
-    return any(t.lower() in low for t in _TRANSCENDENTAL_TOKENS)
-
-
-def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
-    """
-    FIX 8: Sort samples along the first principal component rather than
-    a single feature axis.  This gives a correct extrapolation split for
-    multivariate inputs where the primary direction of variation is not
-    aligned with any single feature.
-    """
-    Xc = X - X.mean(axis=0)
-    _, _, vh = np.linalg.svd(Xc, full_matrices=False)
-    principal = vh[0]
-    scores = Xc @ principal
-    return np.argsort(scores)
-
-
-def _extrapolation_probe(X_train: np.ndarray, y_train: np.ndarray,
-                          probe_frac: float = 0.15) -> float:
-    """
-    Fix 1 — measure how much an MLP degrades at the edge of training data.
-    Returns degradation = (in-distribution R²) - (probe R²).  Large → route to LLM.
-    """
-    n      = len(X_train)
-    split  = int(n * (1 - probe_frac))
-    # FIX 8: use principal direction for ordering instead of X[:, 0]
-    order  = _sort_by_principal_direction(X_train)
-    Xs, ys = X_train[order], y_train[order]
-    Xf, yf = Xs[:split], ys[:split]
-    Xp, yp = Xs[split:], ys[split:]
-
-    if len(Xp) < 5 or len(Xf) < 10:
-        return 0.0
-
+def _extrapolation_probe(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    probe_frac: float | None = None,
+) -> dict:
+    """Fit an NN on the central training region and score both training tails."""
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float).reshape(-1)
+    if probe_frac is None:
+        try:
+            probe_frac = float(os.getenv("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15"))
+        except ValueError:
+            return {"status": "invalid_probe_fraction", "delta": None}
     try:
+        core_idx, edge_idx = training_edge_split_indices(X, probe_frac)
+        if len(core_idx) < 10 or len(edge_idx) < 5:
+            return {"status": "insufficient_rows", "delta": None}
         probe_result = _train_and_eval_nn(
-            Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
+            X[core_idx], y[core_idx], X[edge_idx], y[edge_idx],
+            epochs=200, hidden=[64, 32], seed=_NN_SEED,
         )
-        return max(0.0, probe_result["train_r2"] - probe_result["test_r2"])
-    except Exception as e:
-        return _m5_record_failure("_extrapolation_probe", e)
+        r2_core = float(probe_result["train_r2"])
+        r2_edge = float(probe_result["test_r2"])
+        if not (
+            probe_result.get("success", False)
+            and np.isfinite(r2_core) and np.isfinite(r2_edge)
+        ):
+            return {"status": "nonfinite_probe_scores", "delta": None,
+                    "r2_core": r2_core, "r2_edge": r2_edge}
+        return {
+            "status": "ok", "r2_train": r2_core, "r2_core": r2_core,
+            "r2_edge": r2_edge, "delta": float(r2_core - r2_edge),
+            "probe_fraction": float(probe_frac),
+            "n_core": int(len(core_idx)), "n_edge": int(len(edge_idx)),
+            "edge_sides": 2,
+        }
+    except Exception as exc:
+        _m5_record_failure("_extrapolation_probe", exc)
+        return {"status": "error", "delta": None,
+                "error": f"{type(exc).__name__}: {exc}"}
 
 
-# B4-reviewed: input-range only (no y_test); see docstring note below.
-def _distance_llm_weight(X_test: np.ndarray, X_train: np.ndarray,
-                          base_weight: float = 0.3) -> float:
-    """
-    Fix 4 — LLM blend weight: increases as test points move outside training range.
-    Returns scalar in [base_weight, 1.0].
-    """
-    # B4-reviewed: uses only the INPUT range of X_test (no y_test, no labels) --
-    # deployable at inference time. Document as an input-dependent blend weight.
-    lo, hi  = X_train.min(axis=0), X_train.max(axis=0)
-    outside = np.mean(np.any((X_test < lo) | (X_test > hi), axis=1))
-    return float(base_weight + (1.0 - base_weight) * outside)
+def _routing_delta_tau() -> float | None:
+    """Read a pre-calibrated training-only tau; absent or invalid fails closed."""
+    raw = os.environ.get("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if np.isfinite(value) and value >= 0.0 else None
 
 
 def _ensemble_llm_nn(
