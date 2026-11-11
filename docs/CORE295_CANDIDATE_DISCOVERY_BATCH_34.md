@@ -28,17 +28,18 @@ The source explicitly assumes small dispersal distances per generation relative 
 
 **Primary source:** A. Gierer and H. Meinhardt (1972), *A theory of biological pattern formation*, Kybernetik 12, 30–39, DOI 10.1007/BF00289234. The original paper and a later 1974 application paper are available as scans.
 
-The 1972 paper develops short-range autocatalytic activation coupled to longer-range inhibition. The original model distinguishes activator and inhibitor concentrations and their sources; the 1974 paper writes explicit coupled reaction–diffusion equations for activator (a(x,t)) and inhibitor (h(x,t)). A commonly used Gierer–Meinhardt activator–inhibitor form is:
-[
+The 1972 paper develops short-range autocatalytic activation coupled to longer-range inhibition. The original model distinguishes activator and inhibitor concentrations and their sources; the 1974 paper writes explicit coupled reaction–diffusion equations for activator (a(x,t)) and inhibitor (h(x,t)). The original paper gives several mechanism-specific variants. One explicit different-source activator–inhibitor model is Eq. (15a,b):
+\[
 \frac{\partial a}{\partial t}
-=\rho_a\frac{a^2}{h}-\mu_a a+D_a\nabla^2a+\rho_a^0,
-]
-[
+=Q_0Q(x)+cQ(x)\frac{a^2}{h}-\mu a
++D_a\frac{\partial^2a}{\partial x^2},
+\]
+\[
 \frac{\partial h}{\partial t}
-=\rho_h a^2-\mu_h h+D_h\nabla^2h.
-]
-
-The exact original-paper parameterization and equation-page transcription remain to be checked before formal source registration. Do not present the common modern form above as a verbatim transcription of the 1972 source.
+=c'Q'(x)a^2-vh
++D_h\frac{\partial^2h}{\partial x^2}.
+\]
+Here \(Q(x)\) and \(Q'(x)\) are distinct activator/inhibitor source-density distributions. This is not identical to the frequently quoted simplified modern form with constant source terms and no explicit source-density fields. Audit 29 transcribes the original Eq. (15a,b) and its assumptions.
 
 **Structural value:** a coupled nonlinear two-field reaction–diffusion system with autocatalytic activator production, inhibitor production, differential degradation and different diffusion scales. It is a more specific kinetic model than Turing's generic linear-stability framework.
 
