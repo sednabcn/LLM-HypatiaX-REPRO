@@ -1835,6 +1835,22 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-RISKMETRICS-1996",
+      "domain": "DeFi Risk",
+      "title": "RiskMetrics Technical Document, Fourth Edition (J.P. Morgan/Reuters, 1996)",
+      "url": "https://www.msci.com/documents/10199/5915b101-4206-4ba0-aee2-3449d5c7e95a",
+      "use": "EWMA variance/covariance recursion and decay-factor convention; EWMA as IGARCH boundary",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-BOLLERSLEV-1986",
+      "domain": "DeFi Risk",
+      "title": "Generalized Autoregressive Conditional Heteroskedasticity (Bollerslev, 1986)",
+      "url": "https://doi.org/10.1016/0304-4076(86)90063-1",
+      "use": "General GARCH(p,q) conditional-variance recursion and GARCH(1,1) specialization",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-HESTON-1993",
       "domain": "DeFi Risk",
       "title": "A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options (Heston, 1993)",
