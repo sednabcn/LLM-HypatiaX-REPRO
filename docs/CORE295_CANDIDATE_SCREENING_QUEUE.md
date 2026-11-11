@@ -473,3 +473,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 61 (2026-11-11)
 
 [Source Verification Audit 61](CORE295_SOURCE_VERIFICATION_AUDIT_61.md) verifies Parkinson's 1980 high–low range variance estimator from the original paper. It is a distinct range-based volatility estimator under driftless continuous Brownian assumptions. Source RISK-PARKINSON-1980 is registered as candidate_reference; the equation remains held pending the DeFi OHLC sampling contract and structural-equivalence policy.
+
+
+## Source verification audit 62 (2026-11-11)
+
+[Source Verification Audit 62](CORE295_SOURCE_VERIFICATION_AUDIT_62.md) verifies Merton's 1974 structural credit model: levered equity as a call on firm assets, risky debt as the residual claim, and a measure-specific default probability. Source RISK-MERTON-1974 is registered as candidate_reference; the DeFi balance-sheet mapping and physical-vs-risk-neutral probability convention remain unresolved.
