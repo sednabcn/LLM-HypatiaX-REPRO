@@ -502,6 +502,46 @@
       "url": "https://openstax.org/books/chemistry-2e/pages/13-introduction",
       "use": "Chapter-level source map for chemical equilibrium, acid-base equilibria, solubility/coupled equilibria, thermodynamics and electrochemistry",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-DEBYE-HUCKEL-1923",
+      "domain": "Chemistry",
+      "title": "Zur Theorie der Elektrolyte II",
+      "url": "https://www.pdf-archive.com/2020/01/07/untitled-pdf-document-9/",
+      "use": "Original 1923 Debye–Hückel electrolyte theory; ionic activity/non-ideality lineage; verify journal issue and exact equation pages",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-VANTHOFF-1885",
+      "domain": "Chemistry",
+      "title": "L’équilibre chimique dans les systèmes gazeux ou dissous à l’état dilué",
+      "url": "https://chg.kncv.nl/l/library/download/urn%3Auuid%3A756b7abc-d782-42ee-ae70-c038cdb2ff08/van--t-hoff---chemical-thermodynamics--contents-.pdf?ext=.pdf&format=save_to_disk",
+      "use": "Primary historical source for equilibrium in dilute gases/solutions and temperature dependence; exact equation pages require verification",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-KING-KESTER-1990",
+      "domain": "Chemistry",
+      "title": "A general approach for calculating polyprotic acid speciation and buffer capacity",
+      "url": "https://doi.org/10.1021/ed067p932",
+      "use": "Research source for general polyprotic-acid speciation; screen buffer-capacity equations for Henderson–Hasselbalch overlap",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-TISSUE-POLYPROTIC-2013",
+      "domain": "Chemistry",
+      "title": "Buffer Solutions and Polyprotic Acids",
+      "url": "https://doi.org/10.1002/9781118647042.ch6",
+      "use": "Chapter-level source for polyprotic alpha fractions, amphiprotic species and titration curves",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-CHRISTIAN-ANALYTICAL-2014",
+      "domain": "Chemistry",
+      "title": "Analytical Chemistry, 7th edition, Chapter 11",
+      "url": "https://dcy.neduet.edu.pk/sites/default/files/Analytical-Chemistry-by-Gary-D.-Christian-Purnendu-K.-Dasgupta-Kevin-A.-Schug-z-lib.org_.pdf",
+      "use": "Chapter 11.3 source lead for complexation-dependent conditional solubility products and coupled equilibria; verify licensed/versioned source and exact equations",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -513,6 +553,7 @@
     "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version.",
     "Tumor-dynamics primary-source leads traced in discovery batch 3 are listed separately in the source register; they remain candidate references and do not approve or count any equation.",
     "Primary biology source leads for Lotka population dynamics, Kermack–McKendrick epidemic theory, Turing morphogenesis and Gyenge physiological transport are recorded as candidate references only; none establishes an accepted equation or independent calibration unit.",
-    "Chemistry source-map expansion in discovery batch 4 adds mass-action historical provenance, IUPAC equilibrium/activity definitions, and OpenStax chapter coverage for equilibrium, acid-base, solubility, thermodynamics and electrochemistry; all remain candidate references."
+    "Chemistry source-map expansion in discovery batch 4 adds mass-action historical provenance, IUPAC equilibrium/activity definitions, and OpenStax chapter coverage for equilibrium, acid-base, solubility, thermodynamics and electrochemistry; all remain candidate references.",
+    "Chemistry discovery batch 4 was deepened with primary/historical leads for Debye–Hückel electrolyte theory and van't Hoff temperature-dependent equilibrium, plus specific polyprotic-acid and conditional-solubility references; all are discovery-only candidate references."
   ]
 }
