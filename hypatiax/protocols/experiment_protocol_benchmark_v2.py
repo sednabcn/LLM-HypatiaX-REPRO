@@ -12,13 +12,15 @@ regression benchmarks independent of the Core 15 suite.
 
 This module provides:
 
-  1. FEYNMAN SR BENCHMARK  (primary — 30-equation physics subset)
-     Source : Udrescu & Tegmark (2020), "AI Feynman: A Physics-Inspired
-              Method for Symbolic Regression"
-     URL    : https://space.mit.edu/home/tegmark/aifeynman.html
-     Data   : pip install pmlb   (or clone lacava/pmlb)
-     Rationale: Same physics domain as Core 15; already cited in related
-                work; 100 ground-truth equations; standard in the field.
+  1. LEGACY 30-EQUATION REGISTRY / MANUSCRIPT PROTOCOL-30
+     Source : Analytic registry in _build_feynman_equations().
+     Content: 30 closed-form equations across 11 domains. It includes
+              Feynman-derived entries and custom crossover equations; it is
+              NOT a strict subset of the AI Feynman benchmark.
+     Adapter: Protocol30 exposes the manuscript identity and domain labels.
+     Note   : Legacy FeynmanEquation class/ID names are retained for
+              compatibility; Protocol30 metadata overrides the benchmark
+              and source labels for paper-facing results.
 
   2. SRBENCH SUBSET  (secondary — 20 real-world datasets)
      Source : La Cava et al. (2021), "Contemporary Symbolic Regression Methods
@@ -476,8 +478,9 @@ class FeynmanEquation:
 
 
 # ---------------------------------------------------------------------------
-# Feynman equation definitions — 30-equation subset selected to match
-# Core 15 operator complexity (depth 2-4, ≤4 variables).
+# Legacy Feynman-labelled equation definitions used by the manuscript's
+# custom Protocol-30 registry. This is not a strict AI Feynman subset:
+# it includes custom crossover equations to match Core-15 operator complexity.
 #
 # Selection criteria:
 #   - Operator depth 2-4 (comparable to Core 15 equations)
@@ -487,7 +490,9 @@ class FeynmanEquation:
 #     so cross-benchmark consistency can be checked
 #   - 8 equations flagged as extrapolation tests (same ratio as Core 15)
 #
-# Reference: Table 1 in Udrescu & Tegmark (2020), Science Advances.
+# Feynman-derived entries reference Udrescu & Tegmark (2020); crossover
+# entries are custom. Protocol30 below gives the complete registry its
+# explicit manuscript identity and non-Feynman provenance.
 # ---------------------------------------------------------------------------
 
 def _build_feynman_equations() -> list[FeynmanEquation]:
