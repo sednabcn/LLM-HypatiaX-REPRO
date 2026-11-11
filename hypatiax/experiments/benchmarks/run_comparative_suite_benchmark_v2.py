@@ -4836,7 +4836,7 @@ Examples
             raise SystemExit(f"Could not load manuscript Protocol-30 registry: {exc}") from exc
         print(
             f"✅ Manuscript Protocol-30 loaded "
-            f"({sum(len(protocol.load_test_data(d, num_samples=1)) for d in protocol.get_all_domains())} equations, "
+            f"({len(protocol._feynman_eqs)} equations, "
             f"{len(protocol.get_all_domains())} domains)"
         )
         print()
