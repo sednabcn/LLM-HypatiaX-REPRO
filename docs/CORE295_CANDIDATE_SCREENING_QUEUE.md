@@ -398,3 +398,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 46 (2026-11-11)
 
 [Source Verification Audit 46](CORE295_SOURCE_VERIFICATION_AUDIT_46.md) verifies Euler EVK's capped linear health-shortfall liquidation discount against official documentation and a pinned implementation commit. The discount is (d(h)=\min(1-h,d_{max})) for (0\le h<1), unlike Morpho Blue's capped reciprocal LIF. Treat health, discount, collateral-yield conversion and repay limits as one liquidation transition.
+
+
+## Source verification audit 47 (2026-11-11)
+
+[Source Verification Audit 47](CORE295_SOURCE_VERIFICATION_AUDIT_47.md) verifies Liquity's Stability Pool product-sum accounting against a pinned contract snapshot. The coupled P/S recurrences allocate pro-rata collateral gains and debt losses over sequential liquidations, with error feedback and scale transitions. Keep the accumulator as one path-dependent system; confirm the exact Liquity V1 deployment/version before any adapter.
