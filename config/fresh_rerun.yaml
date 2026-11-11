@@ -274,16 +274,19 @@ deferred_experiments:
       - pysr_prior
     reason: "scripts/phase3_all.py runs only llm_acceptance and pysr_prior for the Core-15 HDS v50_2 architecture. Probe, NN augmentation and blend weight belong to a different DeFi NN path; complexity routing is disabled in symbolic_engine.py. Do not claim six-gate coverage or compare omitted gates as no-effect."
   protocol30:
-    status: partial_deferred
-    runner_stage: exp2
-    runner_script: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py
+    status: wired_with_registry_gap
+    runner_stages:
+      - exp2
+      - exp2_protocol30_pca_4060
+    random_runner: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py
+    pca_runner: hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py
     protocol_registry: hypatiax/protocols/experiment_protocol_all_30.py
     equations: 30
     registry_domains: 10
     manuscript_domains: 11
-    implemented_protocols: [random_80_20]
-    missing_protocols: [pca_40_60]
-    reason: "The exp2 stage already runs --protocol all_domains over the 30-equation, 10-domain registry. The manuscript specifies 11 domains and both random 80/20 and PCA 40/60. Identify the missing domain and implement/verify the separate PCA 40/60 route before claiming full Protocol-30 coverage. Do not substitute the Feynman PCA stage."
+    implemented_protocols: [random_80_20, pca_40_60]
+    verification_status: not_executed
+    reason: "Both random and PCA 40/60 paths are now wired to the 30-equation, 10-domain registry. The manuscript specifies 11 domains; identify and reconcile the missing domain before claiming full manuscript coverage. Do not substitute the Feynman PCA stage."
 
 # Manuscript §7.3 routing policy. The tau value is intentionally null until a
 # separate training-only calibration protocol is frozen; with no tau, routing
