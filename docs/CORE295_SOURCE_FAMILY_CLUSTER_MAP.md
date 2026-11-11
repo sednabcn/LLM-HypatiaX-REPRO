@@ -184,3 +184,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 18 (2026-11-11)
 
 [Source Verification Audit 18](CORE295_SOURCE_VERIFICATION_AUDIT_18.md) places Marcus outer-sphere transfer in the activated-rate family but records its distinctive quadratic driving-force barrier. It distinguishes the original collision-frequency prefactor from the IUPAC encounter-complex Eyring prefactor. Keep one Marcus family and hold until the benchmark selects one prefactor and resolves Core-15 Arrhenius/generic rate-law overlap; no barrier/prefactor/regime variants are independent entries.
+
+
+## Source verification audit 19 (2026-11-11)
+
+[Source Verification Audit 19](CORE295_SOURCE_VERIFICATION_AUDIT_19.md) verifies the BYL719 tumour-turnover ODE against De Buck et al. (2014), equation 9. It is a drug-specific PK/PD model with zero-order growth modulated by saturable Emax inhibition and first-order loss; its state is the sum of longest tumour diameters, and drug concentration is an external PK input. Keep it as one complete turnover model, not component equations, and hold pending clinical input/range and family-dependence contracts.
