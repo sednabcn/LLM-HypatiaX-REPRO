@@ -13,11 +13,14 @@ The approved operating criteria are:
 
 | Criterion | Approved value | Status and rationale |
 |---|---:|---|
-| Minimum absolute LLM edge recovery | (R^2_{LLM,edge} \geq 0.99) | Grounded in the manuscript's primary recovery criterion |
-| Relative edge-recovery margin | (\delta=0.00) | LLM edge (R^2) must be no worse than ensemble edge (R^2); no unsupported tolerance is introduced |
-| Maximum bad-routing risk | (\alpha=0.05) | Explicit, predeclared 5% risk budget; a protocol choice, not a manuscript result |
-| Confidence bound | One-sided 95% | Matches the 5% risk budget |
-| Minimum calibration size per category | 59 independent equations if zero bad routes are observed for one fixed, pre-specified threshold | Exact one-sided binomial bound for a single test; threshold/category multiplicity can require more |
+| Minimum absolute LLM edge recovery | R² ≥ 0.99 | Grounded in the manuscript's primary recovery criterion |
+| Relative edge-recovery margin | 0.00 | LLM edge R² must be no worse than ensemble edge R² |
+| Tolerated bad-route probability | ε = 0.05 | Explicit predeclared risk tolerance; protocol choice |
+| Family-wise error rate | δ = 0.05 | Explicit predeclared error budget for the ordered threshold family; protocol choice |
+| Confidence level | One-sided 95% | Corresponds to test level δ = 0.05 |
+| Minimum calibration size per category | 59 independent equations with zero bad routes | Exact one-sided binomial test at level δ for risk tolerance ε |
+
+ε and δ are separate free protocol choices: ε bounds the bad-route probability, while δ controls the probability of falsely certifying one or more unsafe thresholds in the fixed sequence.
 
 The implementation convention at the routing boundary is inclusive: (\Delta \leq \tau) is eligible for pure-LLM routing, provided all other gates pass. This equality convention is a project decision, not a boundary rule specified by the manuscript.
 
@@ -60,27 +63,23 @@ This event definition is a proposed operationalization of the approved absolute 
 
 ## 4. Statistical foundation for the 59-equation minimum
 
-Let (p) be the probability of a bad route for a fixed, predeclared category and a fixed candidate routing rule. Under independent, identically distributed Bernoulli calibration units, if (n) units are observed and (k) bad routes occur, use a one-sided exact Clopper–Pearson upper confidence bound (U) at confidence level 95%.
+Let p be the bad-route probability for a fixed category and candidate threshold. Under independent, identically distributed Bernoulli calibration units, observe n units and k bad routes. For a one-sided exact binomial test of H0: p ≥ ε at level δ, certification requires the exact one-sided upper Clopper–Pearson bound U(n,k;δ) to be no greater than ε.
 
-For zero observed bad routes ((k=0)), the exact upper bound is
-
-[
-U=1-\alpha_c^{1/n},
-]
-
-where (\alpha_c=0.05) is the one-sided tail probability (not to be confused with any model blend coefficient). Requiring (U\leq0.05) gives
+For zero observed bad routes (k = 0), the exact upper bound is
 
 [
-1-0.05^{1/n}\leq0.05
-\quad\Longleftrightarrow\quad
-n\geq\frac{\log(0.05)}{\log(0.95)}.
+U=1-delta^{1/n}.
 ]
 
-The smallest integer satisfying this is (n=59). At (n=59), the one-sided upper bound is approximately 0.0495; at (n=58), it is above 0.05. Thus, 59 independent units with zero observed bad routes support the stated 95%-confidence upper risk bound of 5% for **one fixed, pre-specified candidate threshold and one risk claim** under the binomial assumptions.
+Requiring U ≤ ε gives
 
-**The number 59 is conditional, not universal.** If one or more bad routes are observed, the required sample size is larger and must be recalculated using the exact one-sided binomial bound for the observed failure count. Do not retain the 59 minimum as sufficient when (k>0). The operational rule is to require the exact upper bound (U(n,k)\leq0.05); otherwise the category is not certified and pure-LLM routing remains disabled for it.
+[
+ngeqleftlceilrac{log(delta)}{log(1-arepsilon)}ightceil.
+]
 
-For a general failure count k, the one-sided Clopper–Pearson upper bound is the (1−δ) quantile of a Beta distribution with parameters (k+1) and (n−k), with usual boundary handling. Equivalently, reject H0:p_bad ≥ ε when the exact one-sided binomial p-value is at most δ. The implementation should use a trusted statistical library or independently tested exact calculation, not a normal approximation.
+At ε = 0.05 and δ = 0.05, the smallest integer is n = 59. At n = 59, the one-sided upper bound is approximately 0.0495; at n = 58, it exceeds 0.05. This zero-failure minimum is the sample size for one test at level δ and is also the per-category minimum for the fixed-sequence threshold procedure described in Section 6.
+
+If one or more bad routes occur, do not use the zero-failure minimum as sufficient. Use the exact one-sided binomial test (or equivalent Clopper–Pearson bound) for the observed n and k; certify only if U(n,k;δ) ≤ ε. For k < n, the upper bound is the (1−δ) quantile of a Beta distribution with parameters (k+1) and (n−k), with usual boundary handling. Use a trusted statistical library or independently tested exact calculation, not a normal approximation.
 
 ## 5. Independence, categories, and multiplicity
 
