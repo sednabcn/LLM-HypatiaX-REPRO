@@ -1567,6 +1567,94 @@ class BenchmarkProtocol:
         BenchmarkProtocol.print_competitor_table()
 
 
+class Protocol30(BenchmarkProtocol):
+    """Manuscript Protocol-30: the custom 30-equation, 11-domain registry.
+
+    The equations are the analytic entries in FEYNMAN_EQUATIONS, including the
+    crossover equations. This adapter gives them an explicit Protocol-30
+    identity so they cannot be confused with the 10-domain ExperimentProtocolAll
+    registry or described as an AI Feynman benchmark subset.
+    """
+
+    protocol_id = "protocol30_custom_30_equations_11_domains"
+    registry_source = "hypatiax/protocols/experiment_protocol_benchmark_v2.py::_build_feynman_equations"
+
+    def __init__(
+        self,
+        num_samples: int = 200,
+        noise_level: float = 0.0,
+        seed: int = 42,
+        noiseless: bool = True,
+    ):
+        super().__init__(
+            benchmark="feynman",
+            num_samples=num_samples,
+            noise_level=noise_level,
+            seed=seed,
+            feynman_series=None,
+            crossover_only=False,
+            noiseless=noiseless,
+        )
+        if len(self._feynman_eqs) != 30:
+            raise ValueError(
+                f"Protocol-30 registry must contain exactly 30 equations; got {len(self._feynman_eqs)}"
+            )
+        domains = {eq.domain for eq in self._feynman_eqs}
+        if len(domains) != 11:
+            raise ValueError(
+                f"Protocol-30 registry must span exactly 11 domains; got {len(domains)}"
+            )
+
+    def get_all_domains(self) -> list[str]:
+        """Return the 11 manuscript domain names without legacy Feynman prefixes."""
+        domains = sorted({eq.domain for eq in self._feynman_eqs})
+        raw = os.environ.get("SHARD_IDS", "").replace(",", " ").split()
+        if not raw:
+            return domains
+        allowed = set(raw)
+        selected = [
+            domain for domain in domains
+            if domain in allowed
+            or f"protocol30_{domain}" in allowed
+            or f"{self._FEYNMAN_PREFIX}{domain}" in allowed
+        ]
+        if not selected:
+            raise ValueError(
+                f"SHARD_IDS={raw!r} did not match any Protocol-30 domain: {domains}"
+            )
+        return selected
+
+    def load_test_data(
+        self,
+        domain: str,
+        num_samples: int | None = None,
+        noise_level: float | None = None,
+        seed: int | None = None,
+    ) -> list[tuple[str, np.ndarray, np.ndarray, list[str], dict]]:
+        if domain not in self.get_all_domains():
+            raise KeyError(
+                f"Unknown Protocol-30 domain {domain!r}; available: {self.get_all_domains()}"
+            )
+        rows = super().load_test_data(
+            f"{self._FEYNMAN_PREFIX}{domain}",
+            num_samples=num_samples,
+            noise_level=noise_level,
+            seed=seed,
+        )
+        output = []
+        for description, X, y, variable_names, metadata in rows:
+            protocol_meta = dict(metadata)
+            protocol_meta.update({
+                "domain": domain,
+                "benchmark": "protocol30",
+                "protocol_id": self.protocol_id,
+                "registry_source": self.registry_source,
+                "source": self.registry_source,
+            })
+            output.append((description, X, y, variable_names, protocol_meta))
+        return output
+
+
 # ============================================================================
 # MAIN — CLI
 # ============================================================================
