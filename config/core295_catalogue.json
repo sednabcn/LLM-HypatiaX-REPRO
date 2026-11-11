@@ -833,6 +833,97 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "Euler EVK commit 93a1de491531e54cbbcf0e5c8cacfe558f924867, src/EVault/modules/Liquidation.sol"
+    },
+    {
+      "equation_id": "RISK-COMPOUND-BORROW-KINK-001",
+      "name": "Compound III utilization-kink borrow-rate function",
+      "domain": "DeFi Risk",
+      "subdomain": "utilization-dependent interest rates",
+      "formula": "r_b = base + slopeLow*min(U,kink) + slopeHigh*max(U-kink,0)",
+      "canonical_expression": "base+slopeLow*Min(U,kink)+slopeHigh*Max(U-kink,0)",
+      "formula_latex": "r_b=r_{base}+s_{low}\\min(U,U_k)+s_{high}\\max(U-U_k,0)",
+      "structural_fingerprint": "11149650578dfc3c004bfbe401d85103f15971bbfb9a7df8f9960e97aedfa608",
+      "source_ids": [
+        "RISK-COMPOUND-IR"
+      ],
+      "source_family_id": "RISK-UTILIZATION-RATES-COMPOUND-III",
+      "status": "proposed",
+      "assumptions": [
+        "Compound III Comet borrow-rate model at the pinned implementation revision",
+        "Utilization U is the dimensionless base-asset utilization factor",
+        "Borrow kink is a configured utilization threshold",
+        "Base rate and slopes are per-second interest-rate parameters in the Comet factor convention",
+        "The formula is the real-valued abstraction; on-chain arithmetic uses FACTOR_SCALE fixed-point multiplication and uint64 output bounds"
+      ],
+      "variables": {
+        "U": {
+          "meaning": "Base-asset utilization, total borrow divided by total supply",
+          "unit": "dimensionless fraction; Comet FACTOR_SCALE representation"
+        },
+        "kink": {
+          "meaning": "Configured borrow utilization kink",
+          "unit": "dimensionless fraction; FACTOR_SCALE representation"
+        },
+        "base": {
+          "meaning": "Per-second borrow-rate base",
+          "unit": "s^-1 in Comet per-second rate representation"
+        },
+        "slopeLow": {
+          "meaning": "Low-utilization borrow-rate slope",
+          "unit": "s^-1 per unit utilization"
+        },
+        "slopeHigh": {
+          "meaning": "High-utilization borrow-rate slope above the kink",
+          "unit": "s^-1 per unit utilization"
+        }
+      },
+      "validity": {
+        "source_location": "compound-finance/comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol, getBorrowRate; official Compound III Interest Rates documentation",
+        "regime": "Compound III base-asset borrow rate as a continuous piecewise-linear function of utilization",
+        "limitations": [
+          "This is the borrow-rate model; supply rate has an additional utilization and reserve-factor relation and is not a separate candidate in this record",
+          "The low/high branches meet continuously at the kink; the derivative changes there",
+          "Preserve per-second rate convention, FACTOR_SCALE and integer mulFactor rounding for implementation replication",
+          "Do not count Aave two-slope variants as independent merely because protocol parameters differ; they share the utilization-kink family",
+          "Pin Comet implementation and market-specific parameter configuration before acceptance"
+        ]
+      },
+      "input_ranges": {
+        "U": {
+          "train": null,
+          "extrapolation": null
+        },
+        "kink": {
+          "train": null,
+          "extrapolation": null
+        },
+        "base": {
+          "train": null,
+          "extrapolation": null
+        },
+        "slopeLow": {
+          "train": null,
+          "extrapolation": null
+        },
+        "slopeHigh": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Pinned Comet source confirms the low branch base+slopeLow*U and high branch base+slopeLow*kink+slopeHigh*(U-kink)",
+        "Official docs specify per-second rate scaling and distinguish supply from borrow rate",
+        "Canonical min/max expression is a continuous compact form of the two source branches",
+        "Must freeze valid utilization/kink domain, exact market config, FACTOR_SCALE and rounding",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "Compound Comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol"
     }
   ],
   "source_register": [
@@ -1057,7 +1148,7 @@
       "domain": "DeFi Risk",
       "title": "Compound III interest rates",
       "url": "https://docs.compound.finance/interest-rates/",
-      "use": "Utilization-dependent supply and borrow rates with kink model",
+      "use": "Official Compound III interest-rate documentation plus pinned Comet implementation at compound-finance/comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol; per-second borrow rate is piecewise linear around borrowKink",
       "status": "candidate_reference"
     },
     {
@@ -1873,6 +1964,7 @@
     "Fifth proposed-record pass adds the thin-lens imaging relation from OpenStax University Physics Volume 3 §2.4, Eq. 2.19. Its sign convention and do=f singularity are explicit blockers for range design; lens-maker relations remain clustered.",
     "Sixth proposed-record pass adds a fixed three-token adapter to the Balancer weighted geometric invariant. It remains proposed pending a pinned code revision, weight constraints, normalized balance scaling and deterministic generator; equal-weight two-token constant product remains excluded.",
     "Seventh proposed-record pass adds Morpho Blue's LLTV-dependent liquidation incentive factor, pinned to commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d. It remains proposed pending exact discrete LLTV domain, WAD rounding adapter and deterministic generator.",
-    "Eighth proposed-record pass adds Euler EVK's health-dependent capped reverse-auction discount factor, pinned to commit 93a1de491531e54cbbcf0e5c8cacfe558f924867. It remains proposed pending risk-adjusted collateral aggregation, oracle convention, CONFIG_SCALE and deterministic generator."
+    "Eighth proposed-record pass adds Euler EVK's health-dependent capped reverse-auction discount factor, pinned to commit 93a1de491531e54cbbcf0e5c8cacfe558f924867. It remains proposed pending risk-adjusted collateral aggregation, oracle convention, CONFIG_SCALE and deterministic generator.",
+    "Ninth proposed-record pass adds Compound III's borrow utilization-kink function, pinned to Comet commit f766f51583c23acc33b2a7824654ef2029a96804. It remains proposed pending market-specific parameter configuration, fixed-point rounding and deterministic generator."
   ]
 }
