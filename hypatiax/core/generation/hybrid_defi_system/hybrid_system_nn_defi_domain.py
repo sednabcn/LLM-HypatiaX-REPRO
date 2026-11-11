@@ -37,6 +37,7 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from hypatiax.core.r2_canonical import r2_checked
+from hypatiax.core.routing import select_hypatiax_route, structural_risk_tokens
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
 env_path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -842,33 +843,29 @@ EXPLANATION:
 
 
         # =====================================================
-        # 4️⃣  DECISION LOGIC
+        # 4️⃣  DECISION LOGIC — trust gate + structural-risk precedence
         # =====================================================
         decision_margin = fitted_train_r2 - nn_train_r2
-
-        # Fitted symbolic formula clearly dominates
-        if fitted_train_r2 >= 0.85 and decision_margin > 0.05:
-            decision   = "fitted_llm"
-            best_preds = fitted_preds_train
-
-        # Both competitive — adaptive ensemble weighted by R²
-        elif (
-            fitted_train_r2 >= 0.5
-            and nn_train_r2 >= 0.5
-            and abs(decision_margin) <= 0.15
-            and fitted_preds_train is not None
-            and nn_preds_train is not None
-        ):
-            decision = "ensemble"
-            total = fitted_train_r2 + nn_train_r2
-            w = fitted_train_r2 / total if total > 0 else 0.6
-            best_preds = w * fitted_preds_train + (1.0 - w) * nn_preds_train
-
-        # NN fallback
-        else:
-            decision   = "nn"
-            best_preds = nn_preds_train
-
+        _structural_tokens = structural_risk_tokens(
+            llm_result.get("formula"), fitted_code
+        )
+        _route = select_hypatiax_route(
+            fitted_train_r2=fitted_train_r2,
+            nn_train_r2=nn_train_r2,
+            fitted_preds_train=fitted_preds_train,
+            nn_preds_train=nn_preds_train,
+            structural_tokens=_structural_tokens,
+            trust_threshold=0.5,
+        )
+        decision = _route["decision"]
+        best_preds = _route["predictions"]
+        route_reason = _route["route_reason"]
+        if verbose:
+            print(
+                f"[ROUTE] decision={decision} reason={route_reason} "
+                f"trust_passed={_route['trust_gate_passed']} "
+                f"structural_risk={_route['structural_risk_tokens']}"
+            )
 
         # =====================================================
         # 4️⃣  FINAL TRAIN METRICS
@@ -914,6 +911,11 @@ EXPLANATION:
             "nn_train_r2":     float(nn_train_r2),
             "decision_margin": float(decision_margin),
             "decision":        decision,
+            "route_reason":    route_reason,
+            "trust_gate_passed": bool(_route["trust_gate_passed"]),
+            "structural_risk_flag": bool(_route["structural_risk_flag"]),
+            "structural_risk_tokens": list(_route["structural_risk_tokens"]),
+            "blend_weights":   _route["blend_weights"],
 
             # Always keep NN artefacts regardless of decision.  The extrapolation
             # test (test_enhanced_defi_extrapolation.py) checks for a non-None
