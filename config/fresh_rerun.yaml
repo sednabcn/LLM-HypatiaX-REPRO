@@ -258,13 +258,12 @@ deferred_experiments:
     status: partial_deferred
     wired_arms:
       - llm_acceptance
+      - complexity_routing
       - pysr_prior
     unavailable_in_hds_v50_2:
       - neural_degradation_probe
       - nn_augmentation
       - blend_weight
-    disabled_by_construction:
-      - complexity_routing
     required_arms:
       - llm_acceptance
       - neural_degradation_probe
@@ -272,7 +271,7 @@ deferred_experiments:
       - nn_augmentation
       - blend_weight
       - pysr_prior
-    reason: "scripts/phase3_all.py runs only llm_acceptance and pysr_prior for the Core-15 HDS v50_2 architecture. Probe, NN augmentation and blend weight belong to a different DeFi NN path; complexity routing is disabled in symbolic_engine.py. Do not claim six-gate coverage or compare omitted gates as no-effect."
+    reason: "scripts/phase3_all.py now wires llm_acceptance, complexity_routing (structural-risk guard), and pysr_prior for Core-15 HDS v50_2. Neural degradation probe, NN augmentation and blend weight require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not claim six-gate coverage or compare omitted gates as no-effect."
   protocol30:
     status: wired_with_registry_gap
     runner_stages:
