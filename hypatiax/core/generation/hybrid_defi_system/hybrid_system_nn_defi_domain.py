@@ -855,9 +855,9 @@ EXPLANATION:
             llm_result.get("formula"), fitted_code
         )
         _edge_probe = training_edge_degradation_probe(
-            X_train, y_train, fitted_preds_train
-        ) if fitted_preds_train is not None else {
-            "status": "no_fitted_training_predictions",
+            X_train, y_train, nn_preds_train
+        ) if nn_preds_train is not None else {
+            "status": "no_nn_training_predictions",
             "r2_core": None, "r2_edge": None, "delta": None,
         }
         # tau is explicit: absent calibration must not silently create a
