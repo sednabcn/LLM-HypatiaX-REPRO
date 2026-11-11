@@ -686,6 +686,22 @@
       "url": "https://openstax.org/books/university-physics-volume-1/pages/15-5-damped-oscillations",
       "use": "Damped harmonic oscillator ODE and underdamped solution/frequency; ODE and solution are one family",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-DODO-PMM-MATH",
+      "domain": "DeFi AMM",
+      "title": "DODO Proactive Market Maker mathematical principle",
+      "url": "https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm",
+      "use": "Official DODO source for piecewise inventory-dependent marginal price, integral trade amount and quadratic inventory solve; pin PMM version and regression rule",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-LFJ-LIQUIDITY-BOOK",
+      "domain": "DeFi AMM",
+      "title": "LFJ Liquidity Book concentrated liquidity documentation",
+      "url": "https://developers.lfj.gg/concepts/concentrated-liquidity",
+      "use": "Official Liquidity Book source for discrete fixed-price bins, bin-step geometric price progression and per-bin constant-sum behaviour; pin Joe V2/V2.1 version",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
