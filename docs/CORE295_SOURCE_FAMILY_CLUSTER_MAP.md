@@ -329,3 +329,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 33 (2026-11-11)
 
 [Source Verification Audit 33](CORE295_SOURCE_VERIFICATION_AUDIT_33.md) confirms Kepler, Lorentz and Bragg equations and their family boundaries. Keep Kepler linked to Newtonian orbital dynamics; Lorentz as a vector force law coupled to but distinct from Maxwell's field equations; Bragg in the constructive-interference path-difference family.
+
+
+## Source verification audit 34 (2026-11-11)
+
+[Source Verification Audit 34](CORE295_SOURCE_VERIFICATION_AUDIT_34.md) verifies Parkinson range variance, GARCH conditional variance and normal expected shortfall. Group EWMA with GARCH as its IGARCH boundary case; keep Parkinson as a range estimator, GARCH as a conditional-variance recursion, and ES as a tail-mean functional distinct from the VaR quantile but subject to the Core-15 VaR-family exclusion policy.
