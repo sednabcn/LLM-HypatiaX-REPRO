@@ -118,3 +118,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 7 (2026-11-11)
 
 [Source Verification Audit 7](CORE295_SOURCE_VERIFICATION_AUDIT_7.md) classifies the Chainlink feed-freshness lead. Official documentation separates feed-specific heartbeat/deviation update triggers from consumer-defined updatedAt/maxAge checks. These are operational safety rules, not a universal portable equation; retain as risk/provenance context and do not count toward the equation target unless the domain contract explicitly includes version-pinned safety predicates.
+
+
+## Source verification audit 8 (2026-11-11)
+
+[Source Verification Audit 8](CORE295_SOURCE_VERIFICATION_AUDIT_8.md) verifies the DODO PMM's piecewise inventory-dependent marginal price, integrated finite-trade equation and quadratic inversion against official mathematical documentation and the pinned contractV2 implementation commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d. The branches, trade directions, integral, inversion and R-state changes are components of one PMM state-transition family, not separate independent entries. Strong lead; held pending exact pool/version, unit/range and statistical-unit contracts. No candidate accepted.
