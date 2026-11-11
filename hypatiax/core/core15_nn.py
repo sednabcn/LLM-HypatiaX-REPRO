@@ -1,16 +1,19 @@
-"""Experimental NN primitives; NOT integrated into the Core-15 HDS benchmark.
+"""Experimental scaffolding; NOT a manuscript-faithful Core-15 NN.
 
-The current Core-15 HybridDiscoverySystem v50_2 path returns a symbolic
-formula and does not expose the independent LLM prediction stream required by
-the manuscript's LLM/NN blend. Its Phase-3 adapter therefore rejects the
+This file currently wraps sklearn MLPRegressor and supplies a symmetric
+training-only PCA edge split. Neither matches the Core-15 manuscript
+specification: a three-residual-block PyTorch MLP, plus an LLM-formula probe
+on the upper 20% of training rows ordered by the first PCA projection.
+Do not use these helpers to claim that the Core-15 NN or Stage-3 probe is
+implemented.
+
+The current HybridDiscoverySystem v50_2 benchmark path preserves the raw LLM
+candidate metadata, but does not produce the manuscript's residual-NN and
+blended query predictions. The Phase-3 adapter therefore rejects the
 NN-dependent gates rather than silently substituting PySR predictions or
-running a no-op ablation.
-
-These helpers are isolated building blocks only. They are not called by
-HybridDiscoverySystem.discover(), exp1_ablation.run_condition(), or the Phase-3
-adapter. Integration requires a specified Core-15 NN architecture, an
-auditable LLM prediction stream, and a frozen training-only degradation
-threshold before any NN-dependent gate can be counted as wired.
+running a no-op ablation. Integration also requires the unspecified residual
+block widths/training stopping rule and a frozen training-only degradation
+threshold; do not invent these protocol choices.
 """
 from __future__ import annotations
 
