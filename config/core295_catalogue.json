@@ -114,7 +114,7 @@
       "subdomain": "surface adsorption",
       "formula": "theta = u1 p / (1 + u1 p)",
       "canonical_expression": "u1*p/(1+u1*p)",
-      "formula_latex": "\\\\theta = \\\\frac{u_1 p}{1+u_1 p}",
+      "formula_latex": "\\theta = \\frac{u_1 p}{1+u_1 p}",
       "structural_fingerprint": "a6c2f0dcd44fd70c46f3f905067597d482711a860d266c5909de2b8c2675a6be",
       "source_ids": [
         "CHEM-LANGMUIR-1918"
@@ -175,9 +175,9 @@
       "name": "Marcus outer-sphere electron-transfer rate",
       "domain": "Chemistry",
       "subdomain": "electron-transfer kinetics",
-      "formula": "DeltaG_dagger=(lambda+DeltaG0)^2/(4lambda); kET=kappaET*kB*T/h*exp(-DeltaG_dagger/(R*T))",
-      "canonical_expression": "kappaET*kB*T/h*exp(-((lam+deltaG)**2)/(4*lam*R*T))",
-      "formula_latex": "k_{ET}=\\\\kappa_{ET}\\\\frac{k_B T}{h}\\\\exp\\\\left[-\\\\frac{(\\\\lambda+\\\\Delta G^0)^2}{4\\\\lambda R T}\\\\right]",
+      "formula": "DeltaG_dagger=(lambda+DeltaG0)^2/(4lambda); kET=Z*exp(-DeltaG_dagger/(R*T))",
+      "canonical_expression": "Z*exp(-((lam+deltaG)**2)/(4*lam*R*T))",
+      "formula_latex": "\\Delta G^\\ddagger=\\frac{(\\lambda+\\Delta G^0)^2}{4\\lambda};\\quad k_{ET}=Z\\exp\\left(-\\frac{\\Delta G^\\ddagger}{RT}\\right)",
       "structural_fingerprint": "64621216d3861f4afe63474a1b05541967f22cef51ce8e5df371bea7aebee5ac",
       "source_ids": [
         "CHEM-MARCUS-1956",
@@ -193,33 +193,25 @@
         "Consistent molar energy convention for lambda, deltaG and R"
       ],
       "variables": {
-        "kappaET": {
-          "meaning": "Electronic transmission factor, dimensionless",
-          "unit": "dimensionless"
-        },
-        "kB": {
-          "meaning": "Boltzmann constant, J K^-1",
-          "unit": "J K^-1"
+        "Z": {
+          "meaning": "Solution collision frequency (collision number) in the original Marcus rate expression",
+          "unit": "s^-1"
         },
         "T": {
-          "meaning": "Absolute temperature, K",
+          "meaning": "Absolute temperature",
           "unit": "K"
         },
-        "h": {
-          "meaning": "Planck constant, J s",
-          "unit": "J s"
+        "R": {
+          "meaning": "Molar gas constant when DeltaG_dagger is expressed per mole",
+          "unit": "J mol^-1 K^-1"
         },
         "lam": {
-          "meaning": "Total reorganization energy, J mol^-1 with molar R",
+          "meaning": "Outer-sphere reorganization energy in the classical parabolic representation",
           "unit": "J mol^-1"
         },
         "deltaG": {
-          "meaning": "Standard electron-transfer Gibbs energy, J mol^-1",
+          "meaning": "Standard Gibbs energy change for electron transfer in the same molar energy convention",
           "unit": "J mol^-1"
-        },
-        "R": {
-          "meaning": "Molar gas constant, J mol^-1 K^-1",
-          "unit": "J mol^-1 K^-1"
         }
       },
       "validity": {
@@ -268,7 +260,11 @@
         "parameter_sampling": null
       },
       "review_notes": [
-        "Input ranges and deterministic generator remain unspecified",
+        "Marcus (1956) Part I describes the rate as the solution collision number multiplied by exp(-DeltaF_dagger/(kT)); the proposed record uses Z for that collision-frequency prefactor.",
+        "The kappaET*kB*T/h transition-state prefactor in the earlier draft was not the prefactor stated in the cited primary-paper abstract and has been removed.",
+        "The lambda/DeltaG0 parabolic barrier expression is a modern classical Marcus parameterization; verify its exact source and assumptions separately rather than implying it is transcribed verbatim from the 1956 paper.",
+        "The exponential activated-rate structure requires explicit overlap review against the Core-15 Arrhenius and generic Rate Law exclusions; a Marcus mechanism label alone does not establish structural distinctness.",
+        "Input ranges, solvent/electronic coupling assumptions and deterministic generator remain unspecified",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
