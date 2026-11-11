@@ -216,3 +216,61 @@ This verifies Pütter's particular surface-versus-volume mass-balance model. It 
 ### 5.5 Holling 1959 evidence boundary
 
 The original 1959 article's accessible abstract transcribes the saturating count relation as \(y=Ttax/(1+abx)\), with the paper's own notation and definitions for search period, disk density, discovery rate and handling time. It then reports an S-shaped rise in the small-mammal experiment and states that an additional component, apparently stimulation of searching by each prey found, was still being investigated. Thus the article supports the saturating functional-response mechanism but does not establish a fully specified Type III equation from this abstract. Keep the Holling S-curve observation as an unresolved mechanistic lead, not a candidate equation or distinct family.
+
+
+## 6. Biology: primary and later functional-response/growth evidence
+
+### 6.1 Holling Type II versus later Type III formulation
+
+The 1959 Holling article's abstract transcribes the experimental saturating relation as \(y=Ttax/(1+abx)\), where \(x\) is disk density, \(Tt\) the search period, \(a\) the instantaneous discovery rate, and \(b\) handling time. Its separate small-mammal result is described as S-shaped, but the abstract says a search-stimulation component was still being investigated. That observation is not a complete Type III equation.
+
+A later primary model paper, Real (1977), explicitly generalizes the organismal-interaction formulation to Type III and presents an equation intended to account for both Type II and Type III responses. It attributes the sigmoid transition to learning/encounter effects and includes maximal feeding rate, affinity/handling terms and an encounter-count parameter. This is a much better primary equation lead for Type III than assigning the 1959 observed S-curve a formula it did not yet specify.
+
+Sources: Holling (1959), DOI https://doi.org/10.4039/Ent91385-7; Real (1977), *The Kinetics of Functional Response*, The American Naturalist 111(978), 289–300, DOI https://doi.org/10.1086/283161.
+
+**Structural disposition:** Holling's saturating Type II response and Real's generalized Type II/III interaction model share a family lineage but may differ in the full organismal encounter-state contract. Under draft E3/E4, do not count them as distinct scalar equations merely by response label; inspect Real's full equation and mechanism before deciding whether the encounter-history state is irreducible at the chosen benchmark unit. The Type III family is now a traceable primary-source lead, not yet an accepted candidate.
+
+### 6.2 Pütter 1920 and von Bertalanffy 1938: equation lineage boundary
+
+The Pütter 1920 translated primary text directly supports a surface/volume balance: define theoretical linear dimension \(\lambda=W^{1/3}\), assume construction proportional to \(\lambda^2\) and destruction proportional to \(\lambda^3\), then the net mass increment is proportional to \(k_1\lambda^2-k_2\lambda^3\). It derives the limiting dimension \(L=k_1/k_2\) and an integrated growth curve. The translation is Fisheries Research Board of Canada Translation Series No. 325 (1960), based on the 1920 German article, original pp. 298–340: https://waves-vagues.dfo-mpo.gc.ca/Library/147555.pdf.
+
+Later literature writes a generalized Bertalanffy–Pütter family \(dm/dt=p m^a-qm^b\), but this generalized arbitrary-exponent form must not be attributed verbatim to Pütter 1920 solely from the specific surface/volume derivation. Likewise, the familiar weight law \(dW/dt=H_1W^{2/3}-H_2W\) and integrated cube-root length curve are linked by assumptions and solution; they are not independent candidates. A 2013 fisheries model review notes the Pütter 1920 lineage and the later von Bertalanffy rediscovery; a later meta-study formalizes the generalized exponent-pair family.
+
+Sources: Pütter (1920), DOI https://doi.org/10.1007/BF01755094 and translation above; von Bertalanffy (1938), *Human Biology* 10(2), 181–213, https://www.jstor.org/stable/41447359; supporting lineage discussion: https://www.osti.gov/servlets/purl/6163660 and https://pmc.ncbi.nlm.nih.gov/articles/PMC7451746/.
+
+**Disposition:** keep the original Pütter surface/volume balance, the von Bertalanffy mechanistic interpretation, generalized exponent-pair model and integrated length-at-age curve in a single related lineage for pairwise E0–E4 review. Do not accept multiple counts for the ODE, its parameterized special case, and its integrated curve. Exact 1938 equation/page transcription remains open because the primary article's full text was not available in the accessible sources.
+
+## 7. DeFi Risk: Compound Comet specification/implementation version audit
+
+### 7.1 Pinned source snapshot
+
+A reproducible GitHub snapshot was fetched at commit f766f51583c23acc33b2a7824654ef2029a96804 (2026-06-23; development repository snapshot). At that commit:
+- SPEC.md blob SHA: 0a9fb98d505b57494ce2d6ec437c21ae90360091
+- contracts/CometWithExtendedAssetList.sol blob SHA: 3490e984d133789aa1afe2e8f7e37a11d2512396
+- Commit: https://github.com/compound-finance/comet/commit/f766f51583c23acc33b2a7824654ef2029a96804
+- Pinned spec: https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/SPEC.md
+- Pinned contract: https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/contracts/CometWithExtendedAssetList.sol
+
+### 7.2 AbsorbInternal reconstruction and specification/code discrepancy
+
+The pinned SPEC describes the liquidation/absorption sequence as: require liquidatability; read signed account principal and present value; iterate the account's collateral assets; zero the user's collateral and credit seized collateral to the protocol account; add collateral value multiplied by a liquidation-penalty factor to the account balance; record reserve deficit/debt-repaid diagnostics; clamp the resulting balance at zero and convert it back to principal; update the account base balance; increase aggregate supply principal and decrease aggregate borrow principal. The external absorb wrapper accrues interest, loops over accounts and pays an absorber incentive.
+
+The pinned Solidity implementation is not a line-for-line realization of those exact spec operations. Its absorbInternal:
+1. checks isLiquidatable, reads signed principal and presentValue;
+2. iterates the account's assetsIn bitset and obtains each asset's liquidationFactor;
+3. zeros the user's collateral balance and decrements totalsCollateral[asset].totalSupplyAsset;
+4. computes value = mulPrice(seizeAmount, getPrice(priceFeed), scale) and adds mulFactor(value, liquidationFactor) to deltaValue;
+5. converts deltaValue into base units, adds it to the old signed base balance, and clamps a negative result to zero;
+6. converts to new principal, updates the account, resets assetsIn/reserved flags, obtains repay/supply amounts through repayAndSupplyAmount, adjusts totalSupplyBase and totalBorrowBase, and emits debt/collateral events.
+
+Notably, the SPEC's explicit credit of seized collateral to a protocol-owned collateral account and its LiquidationPenalty notation do not appear in that same form in this implementation; the contract uses a liquidationFactor, and its collateral accounting is implemented through token-balance/total-collateral bookkeeping. Do not assume liquidationFactor = 1 + liquidationPenalty or that the specification and this implementation are interchangeable without a precise version/configuration mapping. This is a substantive model/provenance mismatch, not cosmetic wording.
+
+**Disposition:** the full absorption state transition is a strong DeFi Risk system-level candidate lead, but no scalar piece (liquidatability predicate, seize value, debt clamp, principal conversion, reserve update or absorber reward) is independently countable. Before any formal candidate, pin the exact deployed release/market configuration and reconcile the spec-to-contract accounting semantics. The 2026-06 development snapshot is a reproducible source snapshot, not proof of any specific production deployment. No chain/RPC/API query was made.
+
+## 8. DeFi AMM: Solidly implementation gate
+
+The official Solidly V2 documentation specifies volatile \(xy\geq k\) and stable \(x^3y+xy^3\geq k\). The stable polynomial is a plausible separate invariant family from constant product and Curve StableSwap, but the documentation page does not specify the complete implementation-level quote contract: decimal normalization, fee source/application, integer scaling, rounding and exact reserve variables. A generic third-party adapter description also notes that Solidly V2 swap quotes depend on the pool's stable flag, token decimals and factory fee read, and that storage layouts are fork-specific; it is not the protocol's primary implementation.
+
+Sources: official formula documentation https://docs.solidly.com/dex-basics/swaps.html; adapter-level corroboration https://docs.rs/evm-amm-state/latest/evm_amm_state/adapters/solidly_v2/struct.SolidlyV2Adapter.html.
+
+**Disposition:** retain one stable-invariant family lead and one volatile constant-product exclusion. No Solidly equation accepted until the exact source repository/contract revision and the decimal/fee implementation are pinned. Do not use fork code or third-party adapter code as a substitute for the protocol's own source.
