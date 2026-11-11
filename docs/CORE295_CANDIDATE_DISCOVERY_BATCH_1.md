@@ -1,5 +1,7 @@
 # Core-295 candidate discovery backlog — batch 1
 
+**Consolidated bibliography:** [CORE295_REFERENCES.md](CORE295_REFERENCES.md). This reference list collects the literature and source links used across all Core-295 discovery batches and the catalogue plan.
+
 **Status:** discovery candidates only; none of these records is accepted into the 295-entry catalogue.  
 **Review rule:** exact source section/page, units, assumptions, canonicalization, source-family clustering, and input-domain review are still required.
 
