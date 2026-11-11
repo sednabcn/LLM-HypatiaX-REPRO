@@ -46,7 +46,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 | 4 | Feynman five-system exp1 | Core-15 comparison suite; report each method and extrapolation metric separately. Do not substitute the Core-15 PySR-only ablation for the six-gate controlled study. |
 | 5 | Feynman 10-domain exp2 | Separate 10-domain suite. Keep interpolation and extrapolation denominators distinct; where finite held-out extrapolation scores are absent, report no comparison. |
 | 6 | Nguyen-12 | 12 standard equations; per-equation axis-aligned train/extrapolation ranges; 40/60; five seeds (42, 99, 123, 777, 2024); HypatiaX vs PySR-only. Use the manuscript's R² >= 0.9999 convention, count aborts/missing/NaN as failures, and disclose that no NN baseline is specified. |
-| 7 | Protocol-30 | `exp2` runs the random 80/20 route and the new `exp2_protocol30_pca_4060` stage runs the outer PCA 40/60 route. Both use `experiment_protocol_all_30.py`: 30 registered equations across **10** domains. This is separate from Feynman. The manuscript specifies 11 domains, so the registry/domain discrepancy remains open. For PCA, only held-out 60% is extrapolation. Use R² >= 0.999999 and retain formula strings. |
+| 7 | Protocol-30 | **Not yet implemented from the manuscript source.** The manuscript's custom registry spans biology, chemistry, electrochemistry, electromagnetism, electrostatics, magnetism, mechanics, optics, probability, quantum, and thermodynamics. The current `ExperimentProtocolAll` registry has a different 30-equation set across mechanics, thermodynamics, electromagnetism, fluid dynamics, optics, quantum, chemistry, biology, mathematics, and economics. Existing `exp2` and new `exp2_all_domains_pca_4060` are retained as a non-equivalent proxy only; do not report them as Protocol-30. Recover the paper-matching equation registry and its split definitions before wiring a true campaign. |
 | 8 | M3/M4 noise sweep | Same custom 30 equations, n=200, sigma in {0, 0.05, 0.1, 0.5, 1}%. Preserve the threshold used at each noise level in the raw data and caption; because thresholds vary, do not compare recovery percentages as if they shared one threshold. |
 | 9 | M3/M4 sample-complexity sweep | Same 30 equations, noiseless, n in {50, 100, 200, 500, 750, 1000}; preserve the sample-size-specific thresholds. |
 | 10 | Post-run audit | Verify formulas, LLM-call flags, hardcoded/hint bypass flags, seeds, split hashes, raw and scored R², finite/missing status, timeout status, runtime, resource use, and exact evaluator version. Generate manuscript tables/figures only from the audited fresh outputs. |
@@ -64,7 +64,7 @@ Run each campaign into its own fresh output namespace. Keep splits, denominators
 
 The current `ci_runner/run_fresh_experiments.sh` stage list is:
 
-`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_protocol30_pca_4060 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
+`env_check → gt_leak_guard → exp1 → exp1b → portfolio → portfolio_random_holdout → portfolio_bootstrap_pca → portfolio_feature_ranking → portfolio_pca_tail_error → exp1_ablation → exp1_ablation_aggregate → exp1_five → exp1_pca → exp1b_pca → extrap → hybrid_all_domains → exp2_feynman → exp2_feynman_pca_4060 → exp2_feynman_extrap → exp2 → exp2_all_domains_pca_4060 → exp2_five → exp3 → exp3b → suppA → suppB → suppB_sc`
 
 Interpretation and gaps:
 
@@ -74,7 +74,7 @@ Interpretation and gaps:
 - `exp2_five` is the separate 10-domain five-system comparison.
 - `exp3` and `exp3b` are Nguyen-12 seed 42 and additional seeds.
 - `suppB` and `suppB_sc` are the M3/M4 noise and sample-complexity sweeps.
-- `exp2` runs Protocol-30's random 80/20 route via `--protocol all_domains`; `exp2_protocol30_pca_4060` now runs the same 30-equation registry through `run_comparative_suite_benchmark_pca.py` with the outer PCA 40/60 split. These are separate output namespaces and split protocols. The registry currently covers 10 domains while the manuscript specifies 11; do not claim full 11-domain coverage until the missing domain is identified and added consistently to the registry, domain loop, sharding, and manuscript.
+- `exp2` runs the current 10-domain `ExperimentProtocolAll` registry with a random 80/20 split; `exp2_all_domains_pca_4060` runs that same proxy registry through the PCA 40/60 runner. Neither is the manuscript's custom Protocol-30: the equation and domain sets differ, not merely the count. Keep their outputs separate and do not merge them with historical Protocol-30 evidence.
 - The config marks instability as disabled/deferred, consistent with the manuscript's single-run limitation.
 
 ## 5. Supplementary-protocol correction required
@@ -90,7 +90,7 @@ The fresh launcher requires a new empty RESULTS_DIR outside the repository, a cl
 Before any scientific run:
 - Calibrate and freeze the Stage 3 degradation threshold tau using a separate training-only calibration protocol; tau is currently intentionally unset by default.
 - Complete Core-15 gate ablations only where the underlying gates are genuinely implemented in the Core-15 architecture. The Phase 3 harness now wires LLM acceptance, structural-risk complexity routing, and PySR prior. Neural degradation probe, NN augmentation, and blend weight still require the separate DeFi LLM+NN architecture and are not HDS v50_2 switches. Do not call this a completed six-gate study.
-- Resolve the Protocol-30 domain-count mismatch: source registry and both wired runners cover 30 equations across 10 domains; the manuscript claims 11. The PCA route is newly wired but unexecuted. Verify the registry and both fresh output schemas after the user runs the pipeline.
+- Recover or reconstruct the manuscript's actual custom Protocol-30 equation registry (30 equations in the 11 named domains), then implement its own random 80/20 and PCA 40/60 split paths, provenance, clean method arms, and output schemas. The existing 10-domain all-domains runners are only a proxy and must not be presented as paper replication.
 - Audit the R² evaluator's total-sum-of-squares guard, including near-constant targets.
 - Pin/report the actual runtime LLM model and temperature behavior for every call path (including whether the SDK sends a temperature parameter).
 - Confirm each campaign's output schema records exact formula, route, LLM-call flag, seed, split, failure status, timing, raw/scored R², and evaluator output.
