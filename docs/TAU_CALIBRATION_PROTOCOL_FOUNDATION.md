@@ -80,7 +80,7 @@ The smallest integer satisfying this is (n=59). At (n=59), the one-sided upper b
 
 **The number 59 is conditional, not universal.** If one or more bad routes are observed, the required sample size is larger and must be recalculated using the exact one-sided binomial bound for the observed failure count. Do not retain the 59 minimum as sufficient when (k>0). The operational rule is to require the exact upper bound (U(n,k)\leq0.05); otherwise the category is not certified and pure-LLM routing remains disabled for it.
 
-For a general failure count (k), the one-sided Clopper–Pearson upper bound is the (1-0.05) quantile of a Beta distribution with parameters (k+1) and (n-k) (with the usual boundary handling). The implementation should use a trusted statistical library or independently tested exact calculation, not a normal approximation.
+For a general failure count k, the one-sided Clopper–Pearson upper bound is the (1−δ) quantile of a Beta distribution with parameters (k+1) and (n−k), with usual boundary handling. Equivalently, reject H0:p_bad ≥ ε when the exact one-sided binomial p-value is at most δ. The implementation should use a trusted statistical library or independently tested exact calculation, not a normal approximation.
 
 ## 5. Independence, categories, and multiplicity
 
