@@ -494,3 +494,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 63 (2026-11-11)
 
 [Source Verification Audit 63](CORE295_SOURCE_VERIFICATION_AUDIT_63.md) adds the Black–Cox first-passage model to the Merton structural-credit family. The first-passage probability includes paths that cross a covenant/liquidation barrier and later recover; Merton only tests the terminal asset value. Keep their related GBM/source assumptions linked, and do not count survival, default and valuation outputs separately.
+
+
+## Source verification audit 64 (2026-11-11)
+
+[Source Verification Audit 64](CORE295_SOURCE_VERIFICATION_AUDIT_64.md) adds coherent expected shortfall as a distinct tail functional from VaR. For continuous distributions it equals the conditional tail mean; for distributions with atoms, the general quantile-integral definition and quantile-mass correction matter. Normal ES is a specialization, not a separate family.
