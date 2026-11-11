@@ -359,3 +359,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 38 (2026-11-11)
 
 [Source Verification Audit 38](CORE295_SOURCE_VERIFICATION_AUDIT_38.md) verifies Gyro E-CLP as a distinct ellipse invariant with finite price bounds, asymmetric concentration, stretch and rotation. Keep it separate from Gyro 2-CLP's virtual-constant-product curve; keep reserve solves, price derivatives, swaps, liquidity updates and parameter precomputation in one E-CLP family.
+
+
+## Source verification audit 39 (2026-11-11)
+
+[Source Verification Audit 39](CORE295_SOURCE_VERIFICATION_AUDIT_39.md) confirms Gyro 2-CLP belongs to the virtual-reserve constant-product family. Its bounded price range and protocol architecture differ, but the invariant form is shared with Uniswap v3, Maverick and LLAMMA. Gyro E-CLP remains distinct as an affine-transformed ellipse.
