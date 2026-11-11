@@ -12,7 +12,23 @@
     "DeFi Risk"
   ],
   "design_decision": "option_2_structurally_distinct_equations",
-  "core15_exclusion_ids": [],
+  "core15_exclusion_ids": [
+    "Arrhenius",
+    "Henderson-Hasselbalch",
+    "Rate Law",
+    "Allometric Scaling",
+    "Michaelis-Menten",
+    "Logistic Growth",
+    "Kinetic Energy",
+    "Gravitational Force",
+    "Ideal Gas Law",
+    "Impermanent Loss",
+    "Price Impact",
+    "Constant Product",
+    "Value at Risk",
+    "Liquidation Price",
+    "Portfolio Std Dev"
+  ],
   "structural_distinctness_policy": {
     "canonicalization": "sympy_expression_normalization_v1",
     "reject_cosmetic_variants": true,
