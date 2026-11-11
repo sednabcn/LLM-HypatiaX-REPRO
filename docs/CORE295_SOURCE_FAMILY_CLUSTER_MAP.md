@@ -219,3 +219,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 25 (2026-11-11)
 
 [Source Verification Audit 25](CORE295_SOURCE_VERIFICATION_AUDIT_25.md) verifies Langmuir's 1918 single-site monolayer coverage equation. Its rational saturation form is mathematically shared with Michaelis–Menten/Hill-one occupancy despite the different surface-adsorption mechanism. This is a cross-domain structural-equivalence gate against Core-15's MM exclusion; source/domain labels alone do not make it a distinct equation. Keep coverage, adsorbed amount and LH adsorption substeps together.
+
+
+## Source verification audit 26 (2026-11-11)
+
+[Source Verification Audit 26](CORE295_SOURCE_VERIFICATION_AUDIT_26.md) verifies Fick's 1855 original local flux relation and explicitly records Fick's own Fourier/Ohm transport-law analogy. The normalized constitutive form is linear flux proportional to a driving-field gradient. Fick first law and the derived diffusion PDE are one family; cross-domain structural policy must determine whether Fourier/Ohm analogues can count independently.
