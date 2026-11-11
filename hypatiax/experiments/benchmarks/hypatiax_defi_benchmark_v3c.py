@@ -147,6 +147,8 @@ from sklearn.preprocessing import StandardScaler
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT))
 
+from hypatiax.core.routing import kde_ood_probability, structural_risk_tokens
+
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
     _ROOT / "hypatiax" / ".env",
@@ -572,75 +574,64 @@ def _eval_formula_r2(
 # SECTION 3 — Routing helpers (Fixes 1, 2, 4)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TRANSCENDENTAL_TOKENS = [
-    "math.exp", "np.exp", "exp(",
-    "math.log", "np.log", "log(",
-    "math.sqrt", "np.sqrt", "sqrt(",
-    "norm.cdf", "norm.pdf", "scipy.stats",
-    "np.maximum", "np.minimum", "max(", "min(",
-    "math.sin", "np.sin", "math.cos", "np.cos",
-    "**0.",
-]
-
-
-def _formula_has_transcendental(code: str) -> bool:
-    """Fix 2 — True if code contains ops that are structurally bad for NN extrapolation."""
-    low = code.lower()
-    return any(t.lower() in low for t in _TRANSCENDENTAL_TOKENS)
-
-
 def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
-    """
-    FIX 8: Sort samples along the first principal component rather than
-    a single feature axis.  This gives a correct extrapolation split for
-    multivariate inputs where the primary direction of variation is not
-    aligned with any single feature.
-    """
+    """Order training rows along the first PCA direction fitted on X only."""
     Xc = X - X.mean(axis=0)
     _, _, vh = np.linalg.svd(Xc, full_matrices=False)
     principal = vh[0]
     scores = Xc @ principal
-    return np.argsort(scores)
+    return np.argsort(scores, kind="mergesort")
 
 
-def _extrapolation_probe(X_train: np.ndarray, y_train: np.ndarray,
-                          probe_frac: float = 0.15) -> float:
-    """
-    Fix 1 — measure how much an MLP degrades at the edge of training data.
-    Returns degradation = (in-distribution R²) - (probe R²).  Large → route to LLM.
-    """
-    n      = len(X_train)
-    split  = int(n * (1 - probe_frac))
-    # FIX 8: use principal direction for ordering instead of X[:, 0]
-    order  = _sort_by_principal_direction(X_train)
+def _extrapolation_probe(
+    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float = 0.15
+) -> dict:
+    """Training-only NN edge probe; no held-out/query labels are accepted."""
+    n = len(X_train)
+    if not 0.05 <= float(probe_frac) <= 0.4:
+        raise ValueError("probe_frac must be between 0.05 and 0.4")
+    split = int(n * (1.0 - probe_frac))
+    order = _sort_by_principal_direction(X_train)
     Xs, ys = X_train[order], y_train[order]
     Xf, yf = Xs[:split], ys[:split]
     Xp, yp = Xs[split:], ys[split:]
-
     if len(Xp) < 5 or len(Xf) < 10:
-        return 0.0
-
+        return {"status": "insufficient_rows", "delta": None,
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
     try:
         probe_result = _train_and_eval_nn(
             Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
         )
-        return max(0.0, probe_result["train_r2"] - probe_result["test_r2"])
-    except Exception as e:
-        return _m5_record_failure("_extrapolation_probe", e)
+        r2_train = float(probe_result["train_r2"])
+        r2_edge = float(probe_result["test_r2"])
+        if not (np.isfinite(r2_train) and np.isfinite(r2_edge)):
+            return {"status": "nonfinite_probe_scores", "delta": None,
+                    "r2_train": r2_train, "r2_edge": r2_edge,
+                    "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
+        return {
+            "status": "ok", "r2_train": r2_train, "r2_edge": r2_edge,
+            "delta": float(r2_train - r2_edge),
+            "n_fit": int(len(Xf)), "n_edge": int(len(Xp)),
+            "probe_fraction": float(probe_frac),
+        }
+    except Exception as exc:
+        _m5_record_failure("_extrapolation_probe", exc)
+        return {"status": "error", "delta": None,
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
 
 
-# B4-reviewed: input-range only (no y_test); see docstring note below.
-def _distance_llm_weight(X_test: np.ndarray, X_train: np.ndarray,
-                          base_weight: float = 0.3) -> float:
-    """
-    Fix 4 — LLM blend weight: increases as test points move outside training range.
-    Returns scalar in [base_weight, 1.0].
-    """
-    # B4-reviewed: uses only the INPUT range of X_test (no y_test, no labels) --
-    # deployable at inference time. Document as an input-dependent blend weight.
-    lo, hi  = X_train.min(axis=0), X_train.max(axis=0)
-    outside = np.mean(np.any((X_test < lo) | (X_test > hi), axis=1))
-    return float(base_weight + (1.0 - base_weight) * outside)
+def _routing_delta_tau() -> float | None:
+    """Read only a pre-calibrated training-only tau; absent/invalid means fail closed."""
+    raw = os.environ.get("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if np.isfinite(value) and value >= 0.0 else None
 
 
 def _ensemble_llm_nn(
@@ -651,11 +642,30 @@ def _ensemble_llm_nn(
     y_train: np.ndarray,
     llm_r2: float = None,
     nn_r2: float = None,
+    blend_weights: dict | None = None,
 ) -> np.ndarray:
     """
-    Uncertainty-weighted ensemble of LLM and NN predictions.
-    FIX 7: uncertainty is estimated from TRAINING residuals only — no test leakage.
+    Ensemble LLM and NN predictions. If manuscript blend weights are supplied,
+    apply them per query; otherwise retain the legacy training-residual blend.
     """
+    if blend_weights is not None:
+        llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
+        nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
+        n_query = len(llm_pred_test)
+        if llm_w.size == 1:
+            llm_w = np.full(n_query, llm_w.item())
+        if nn_w.size == 1:
+            nn_w = np.full(n_query, nn_w.item())
+        if (
+            llm_w.size != n_query or nn_w.size != n_query
+            or not np.isfinite(llm_w).all() or not np.isfinite(nn_w).all()
+            or np.any((llm_w < 0.0) | (llm_w > 1.0))
+            or np.any((nn_w < 0.0) | (nn_w > 1.0))
+            or not np.allclose(llm_w + nn_w, 1.0)
+        ):
+            raise ValueError("Invalid per-query manuscript blend weights")
+        return llm_w * llm_pred_test + nn_w * nn_pred_test
+
     eps = 1e-8
     # FIX 7: use train residuals, not test residuals, to estimate uncertainty
     llm_unc = float(np.std(llm_pred_train - y_train))
