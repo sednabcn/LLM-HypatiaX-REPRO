@@ -193,3 +193,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 22 (2026-11-11)
 
 [Source Verification Audit 22](CORE295_SOURCE_VERIFICATION_AUDIT_22.md) verifies the thin-lens equation and signed image/focal-length conventions against OpenStax Eq. 2.19, and Hagen–Poiseuille flow against OpenStax Eq. 14.19 with its Eq. 14.18 resistance derivation. The thin-lens rearrangement and Poiseuille resistance/pressure-flow components are not separate entries. Both candidates remain held pending signed optical ranges and a physically constrained laminar Reynolds-number/geometry generator.
+
+
+## Source verification audit 23 (2026-11-11)
+
+[Source Verification Audit 23](CORE295_SOURCE_VERIFICATION_AUDIT_23.md) closes the original-source gap for the Fick cardiac-output relation: the 1870 scanned report gives the measurement principle in prose, not a displayed algebraic equation. The modern faithful mass-balance transcription is ẏVO2 = Q(CaO2−CvO2), hence Q = ẏVO2/(CaO2−CvO2), with oxygen content units and steady-state/system-boundary assumptions explicit. The CO2 cross-check and stroke-volume conversion are not separate equations. This is distinct from Fick's diffusion law despite the shared surname. Candidate remains held pending physiological ranges.
