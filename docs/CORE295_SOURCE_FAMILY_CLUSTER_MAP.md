@@ -444,3 +444,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 53 (2026-11-11)
 
 [Source Verification Audit 53](CORE295_SOURCE_VERIFICATION_AUDIT_53.md) groups BIS actual wallet leverage and LTV-implied leverage as standard balance-sheet metrics. The study's “VaR” label means share of loans near liquidation, not conventional quantile VaR. Wallet addresses are not proven independent economic participants; preserve the reported sample-count discrepancy.
+
+
+## Source verification audit 54 (2026-11-11)
+
+[Source Verification Audit 54](CORE295_SOURCE_VERIFICATION_AUDIT_54.md) records the SOA report as taxonomy context only. It contributes no governing equation, quantitative risk function or independent equation family; use its categories for domain boundaries, not for padding the 295 count.
