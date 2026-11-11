@@ -259,3 +259,5 @@ These are additional official documentation pointers, not independent primary re
 149. Compound Finance. *Compound Comet Specification* (document metadata identifies Comet v2.5). https://github.com/compound-finance/comet/blob/main/SPEC.md. Official protocol specification: kinked utilization-dependent interest rates, index accrual, collateral factors, negative-liquidity liquidation predicate and internal absorption accounting. Pin exact commit before formal reconstruction.
 150. Aave. *Aave V3 Health Factor Preview*. https://www.aave.com/docs/aave-v3/markets/health-factor. Official V3 documentation for liquidation-weighted collateral/debt health factor and HF < 1 eligibility; complementary to the FAQ, not a new equation family.
 
+
+151. Frumkin, A. (1926). “The Influence of the Electric Field on the Adsorption of Neutral Molecules.” *Zeitschrift für Physik*, 35, 792–802. Bibliographic record listed by the Moscow State University Department of Electrochemistry: https://www.elch.chem.msu.ru/article/index.htm. The 1926 paper is the relevant primary lead for field-dependent neutral-molecule adsorption; exact equation/page transcription remains pending.
