@@ -20,7 +20,7 @@ E_{cell}=E_{cell}^{\circ}-\frac{RT}{nF}\ln Q.
 
 ## 2. Debye–Hückel limiting law for ionic activity coefficients
 
-**Sources:** IUPAC Gold Book, *Debye–Hückel equation* (D01534); Debye and Hückel (1923), *Zur Theorie der Elektrolyte*; authoritative physical-chemistry treatment.
+**Sources:** Debye and Hückel (1923), *Zur Theorie der Elektrolyte I*; IUPAC Gold Book, *Debye–Hückel equation* (D01534), with mean-activity/limiting-law convention clarified in Audit 27.
 
 The limiting form is:
 [
@@ -28,7 +28,7 @@ The limiting form is:
 ]
 where (gamma_i) is the ionic activity coefficient, (z_i) the charge number, (I) ionic strength, and (A) a solvent- and temperature-dependent constant.
 
-**Boundary and risks:** the limiting law applies only at sufficiently low ionic strength, where finite-ion-size corrections are negligible. Do not conflate it with the extended Debye–Hückel equation, Davies equation or Bates–Guggenheim convention. Those are related corrections/approximations in one electrolyte-activity family, not automatically independent equations. Individual-ion activity coefficients are convention-dependent and cannot be independently measured thermodynamically.
+**Boundary and risks:** the limiting law applies only at sufficiently low ionic strength, where finite-ion-size corrections are negligible (a common aqueous rule of thumb is about 0.01 mol kg−1 for uni-univalent electrolytes). Do not conflate the mean activity coefficient with the osmotic coefficient or a single-ion convention, and do not conflate the limiting law with the extended Debye–Hückel equation, Davies equation or Bates–Guggenheim convention. Those are related corrections/approximations in one electrolyte-activity family, not automatically independent equations. Individual-ion activity coefficients are convention-dependent and cannot be independently measured thermodynamically.
 
 **Initial disposition:** high-value candidate lead, but freeze solvent, temperature, ionic-strength units, charge and activity convention; compare against existing ionic-activity source records before drafting.
 
