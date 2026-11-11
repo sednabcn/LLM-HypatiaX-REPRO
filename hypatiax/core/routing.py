@@ -72,7 +72,7 @@ def training_edge_degradation_probe(
     """
     X = np.asarray(X_train, dtype=float)
     y = np.asarray(y_train, dtype=float).reshape(-1)
-    pred = np.asarray(train_predictions, dtype=float).reshape(-1)
+    pred = np.asarray(nn_train_predictions, dtype=float).reshape(-1)
     if X.ndim != 2 or X.shape[0] != y.size or y.shape != pred.shape:
         raise ValueError("X_train, y_train, and train_predictions have incompatible shapes")
     if not 0.05 <= float(edge_fraction) <= 0.4:
