@@ -134,3 +134,24 @@ The protocol parameters are approved, but the calibration procedure is not yet r
 ## 9. Reviewer-facing concise justification
 
 > We predefine a conservative pure-LLM eligibility rule requiring both an absolute edge-recovery score of (R^2\geq0.99) and non-inferiority to the ensemble edge score (zero relative margin). The absolute floor follows the manuscript's primary recovery criterion; the zero margin avoids introducing an unsupported tolerance. We control the probability of permitting a bad pure-LLM route at 5% using a one-sided 95% risk bound. Under independent equation-level Bernoulli observations, 59 calibration equations with zero observed bad routes are the smallest sample supporting an exact one-sided binomial upper bound no greater than 5%. This minimum increases when failures occur. Because threshold selection over multiple candidates can invalidate a naïve interval, (\tau) is selected only through a predeclared selection-aware risk-control procedure. Calibration uses training data from a predeclared equation set disjoint from Core-15, and the resulting threshold is frozen before Core-15 evaluation. If the assumptions or risk bound are not satisfied, the system defaults to ensemble routing rather than claiming an unsupported pure-LLM guarantee.
+
+## 10. Machine-checkable pre-run manifest
+
+The repository now includes `config/tau_calibration_manifest.json` as an intentionally incomplete draft and `scripts/validate_tau_calibration_manifest.py` as a pre-run validator. The validator extracts the current 15 equation names from the Core-15 catalogue in `exp1_ablation.py`, requires the manifest's exclusion list to match that catalogue exactly, rejects any calibration entry whose ID overlaps Core-15, requires a distinct independent-unit identifier within each category, and rejects fields that would import held-out/extrapolation outcomes. It also checks that the approved numerical protocol constants have not drifted.
+
+Run the structural check with:
+
+```bash
+python scripts/validate_tau_calibration_manifest.py
+```
+
+The stricter readiness check is:
+
+```bash
+python scripts/validate_tau_calibration_manifest.py --require-ready
+```
+
+The current draft is expected to pass structural validation and fail the readiness check because no calibration equations, candidate thresholds, category definition, independence justification, edge-construction specification, or selection-aware procedure have been supplied. This is intentional. The validator does not calculate `τ`, certify the statistical assumptions, read benchmark outcomes, or launch any experiment. Passing the structural check is not evidence that calibration is ready or statistically valid; human review of the sampling frame and selected risk-control method remains necessary.
+
+The validator and regression tests have been added but have **not been executed** in this review session. A subsequent local/CI test run must verify them before they are treated as operational safeguards.
+
