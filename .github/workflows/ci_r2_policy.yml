@@ -8,6 +8,10 @@ on:
       - "hypatiax/experiments/tests/**"
       - "config/exp1_provenance.yaml"
       - "config/tau_calibration_manifest.json"
+      - "config/core295_catalogue.json"
+      - "docs/CORE295_DESIGN_PROTOCOL.md"
+      - "docs/CORE295_SOURCE_CATALOGUE_PLAN.md"
+      - "scripts/validate_core295_catalogue.py"
       - "scripts/validate_tau_calibration_manifest.py"
       - ".github/scripts/result_subdir_map.py"
       - "ci_runner/**"
@@ -99,6 +103,13 @@ jobs:
         run: bash -n run_all.sh
       - name: Run experiment contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
+      - name: Run Core-295 catalogue and shard-planner safeguards
+        run: >-
+          python -m pytest -q
+          hypatiax/experiments/tests/test_core295_catalogue.py
+          hypatiax/experiments/tests/test_core295_shard_planner.py
+      - name: Validate Core-295 draft catalogue manifest
+        run: python scripts/validate_core295_catalogue.py
       - name: Run tau calibration manifest safeguards
         run: >-
           python -m pytest -q
