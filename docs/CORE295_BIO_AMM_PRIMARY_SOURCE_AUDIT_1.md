@@ -55,6 +55,21 @@ The source register now includes five additional primary/foundational lineages a
 
 **Cross-family screen:** Monod substrate-limited growth, Holling Type II consumption and Michaelis–Menten enzyme rates share a hyperbolic saturation structure after normalization, but represent different biological mechanisms. Under the current draft E3 rule, do not count them as three structurally distinct scalar formulas solely because their variables and interpretations differ. A full enzyme mechanism, consumer-handling model or microbial growth/state system may be a different model unit only when its complete state equations are supplied and the benchmark unit is declared accordingly. The S-shaped small-mammal response reported by Holling (1959) is not yet a complete Type III equation candidate: the paper describes an additional search-stimulation component as unresolved. Any later Type III formulation needs its own primary-source equation and mechanism audit.
 
+## 1A. Pütter (1920): direct equation/page transcription
+
+The Fisheries Research Board of Canada Translation Series No. 325 (1960) reproduces Pütter's 1920 German paper, *Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten* (Pflügers Archiv 180, 298–340). The translation's printed pp. 299–300 (PDF pp. 2–3) explicitly states:
+- theoretical linear dimension \(\lambda=\sqrt[3]{G}\), where \(G\) is body weight;
+- anabolic construction rate proportional to \(\lambda^2\);
+- catabolic destruction rate proportional to \(\lambda^3\);
+- net increment \(d\lambda/dt=k_1\lambda^2-k_2\lambda^3\);
+- limiting dimension \(L=k_1/k_2\), obtained by setting net increment to zero.
+
+This is the directly transcribed governing relation. The familiar mass form with exponents \(2/3\) and \(1\) follows by the chain rule from \(G=\lambda^3\), with coefficient rescaling; it is not a second independent model. Pütter's integrated length expression on printed p. 300 is a solution of the same ODE, not another candidate. The translation's OCR corrupts some equation glyphs, so the explicit differential relation above is reconstructed from the surrounding verbal definition and the displayed powers; confirm the exact original typeset notation from the German scan before claiming a verbatim transcription.
+
+Source: https://waves-vagues.dfo-mpo.gc.ca/Library/147555.pdf (translation pp. 299–300; PDF pp. 2–3). Original DOI: https://doi.org/10.1007/BF01755094.
+
+**Disposition:** strong primary-lineage evidence for the surface/volume growth mechanism; keep the generalized arbitrary-exponent Pütter–Bertalanffy equation as a later family generalization, not a verbatim Pütter (1920) formula. Keep the cube-root length ODE, its mass-variable transform and its integrated solution in one source family; do not count them separately.
+
 ## 2. DeFi AMM: primary invariant reconstruction
 
 ### 2.1 Uniswap constant-product and concentrated liquidity
