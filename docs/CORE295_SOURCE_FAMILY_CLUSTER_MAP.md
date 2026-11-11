@@ -159,3 +159,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 13 (2026-11-11)
 
 [Source Verification Audit 13](CORE295_SOURCE_VERIFICATION_AUDIT_13.md) confirms Euler EVK's capped health-dependent discount (d=min(1-h,m)), equivalently retained factor (f=max(h,1-m)), against a pinned implementation. Unlike Morpho's market-LLTV rational LIF, Euler's discount depends on individual position health. Keep both as distinct mechanisms in one liquidation-incentive source family; neither health ratio, discount complement nor collateral conversion is an extra equation. Euler remains held pending its full valuation and rounding contract.
+
+
+## Source verification audit 14 (2026-11-11)
+
+[Source Verification Audit 14](CORE295_SOURCE_VERIFICATION_AUDIT_14.md) distinguishes Sky LIQ2.0's linear auction-price decay from its exponential decay calculators. Stairstep exponential uses a floor-quantized elapsed-time exponent and becomes identical to continuous per-second exponential at step=1. Treat them as alternative price functions within one Clipper/Abacus liquidation-auction family; the auction architecture, resets, buffers and price-calculator helpers are not extra equation candidates. Hold pending immutable implementation pinning and exact RAY arithmetic/rounding contract.
