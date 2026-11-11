@@ -204,3 +204,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 22 (2026-11-11)
 
 [Source Verification Audit 22](CORE295_SOURCE_VERIFICATION_AUDIT_22.md) confirms the thin-lens imaging relation (with signed real/virtual image conventions) and the viscosity-explicit Hagen–Poiseuille tube-flow relation. Keep thin-lens imaging with geometric-optics/lens-maker relations and Poiseuille flow with laminar viscous-fluid mechanics; do not count rearrangements, resistance identity or pressure-flow components as extra equations.
+
+
+## Source verification audit 23 (2026-11-11)
+
+[Source Verification Audit 23](CORE295_SOURCE_VERIFICATION_AUDIT_23.md) verifies the Fick cardiac-output mass balance directly against the original 1870 report. The source states the principle in prose rather than printing the modern equation; the transcription is oxygen uptake rate divided by the arterial–mixed-venous oxygen-content difference. It is a physiological conservation relation, not Fick diffusion flux. Keep CO2 cross-check and stroke-volume conversion as derived/validation steps, not separate equations.
