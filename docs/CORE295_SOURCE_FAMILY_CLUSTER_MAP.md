@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 24 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 128 candidate source records; 122 bibliography items; 25 discovery batches; 19 proposed equation records; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -229,3 +229,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Proposed-record source verification matrix (2026-11-11)
 
 [Core-295 Proposed-Record Source Verification Matrix](CORE295_PROPOSED_RECORD_SOURCE_VERIFICATION_MATRIX.md) maps all 19 proposed records to their source-verification audit and records the remaining acceptance gates, including cross-domain structural equivalence, source/version pinning, valid ranges and independent-unit definitions. No candidate is accepted by this matrix.
+
+
+## Discovery batch 25 (2026-11-11)
+
+[Candidate Discovery Batch 25](CORE295_CANDIDATE_DISCOVERY_BATCH_25.md) adds source leads for Nernst electrochemical equilibrium and Debye–Hückel ionic activity, with Clausius–Clapeyron/van't Hoff family-overlap review and an osmotic-pressure/Ideal Gas Law exclusion warning. No equation is accepted or added to the formal catalogue.
