@@ -470,6 +470,38 @@
       "url": "https://doi.org/10.1152/ajpheart.1999.277.3.H1215",
       "use": "Primary four-compartment physiological transport model; state variables, fluxes, units and output contract require review",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-GULDBERG-WAAGE-1864",
+      "domain": "Chemistry",
+      "title": "Studies concerning affinity (Guldberg and Waage; English translation)",
+      "url": "https://doi.org/10.1021/ed063p1044",
+      "use": "Historical primary-source lead for the law of mass action and chemical affinity; original 1864 Norwegian paper versus 1986 English translation must be distinguished",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-IUPAC-EQUILIBRIUM",
+      "domain": "Chemistry",
+      "title": "IUPAC Gold Book: equilibrium constant",
+      "url": "https://doi.org/10.1351/goldbook.E02177",
+      "use": "Normative definition of equilibrium-constant bases (pressure, fugacity, concentration, molality, activity); standard-state and convention checks",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-IUPAC-DEBYE-HUCKEL",
+      "domain": "Chemistry",
+      "title": "IUPAC Gold Book: Debye–Hückel equation",
+      "url": "https://doi.org/10.1351/goldbook.D01534",
+      "use": "Ionic activity coefficient relation and dilute-solution convention; primary derivation and validity regime must be verified",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-OPENSTAX-EQ-THERMO",
+      "domain": "Chemistry",
+      "title": "OpenStax Chemistry 2e, Chapters 13–17",
+      "url": "https://openstax.org/books/chemistry-2e/pages/13-introduction",
+      "use": "Chapter-level source map for chemical equilibrium, acid-base equilibria, solubility/coupled equilibria, thermodynamics and electrochemistry",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -480,6 +512,7 @@
     "No calibration-ready independence claim is made by this manifest.",
     "Consolidated bibliography and source metadata are maintained in docs/CORE295_REFERENCES.md; every accepted entry must still include its own exact source location and version.",
     "Tumor-dynamics primary-source leads traced in discovery batch 3 are listed separately in the source register; they remain candidate references and do not approve or count any equation.",
-    "Primary biology source leads for Lotka population dynamics, Kermack–McKendrick epidemic theory, Turing morphogenesis and Gyenge physiological transport are recorded as candidate references only; none establishes an accepted equation or independent calibration unit."
+    "Primary biology source leads for Lotka population dynamics, Kermack–McKendrick epidemic theory, Turing morphogenesis and Gyenge physiological transport are recorded as candidate references only; none establishes an accepted equation or independent calibration unit.",
+    "Chemistry source-map expansion in discovery batch 4 adds mass-action historical provenance, IUPAC equilibrium/activity definitions, and OpenStax chapter coverage for equilibrium, acid-base, solubility, thermodynamics and electrochemistry; all remain candidate references."
   ]
 }
