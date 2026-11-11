@@ -108,3 +108,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 5 (2026-11-11)
 
 [Source Verification Audit 5](CORE295_SOURCE_VERIFICATION_AUDIT_5.md) reviews Fick's 1870 cardiac-output mass-balance principle and Timoshenko's 1921 shear-correction source. Fick remains held pending original-page transcription and a decision on whether measurement equations are in scope; Timoshenko remains a source lead only because the primary equation text was not accessible and the Bresse–Timoshenko lineage needs precise mapping. No candidates were accepted.
+
+
+## Source verification audit 6 (2026-11-11)
+
+[Source Verification Audit 6](CORE295_SOURCE_VERIFICATION_AUDIT_6.md) checks the JOE v2.1 Liquidity Book whitepaper against a pinned joe-v2 implementation commit. The model's per-bin constant-sum accounting, geometric bin-price grid and traversal across nonempty bins form one discrete multi-bin AMM system; bin equations, swap directions and fee/volatility components are not separate independent candidates. The lead remains held pending a frozen model/implementation contract. No candidate was accepted.
