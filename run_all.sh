@@ -2305,8 +2305,8 @@ summary = {
     'expected_equations': 30,
     'result_files': [p.name for p in files],
     'record_count': rows,
-    'status': 'outputs_present' if files else 'incomplete',
-    'note': 'Manuscript specifies 11 domains; current registry contains 10. Resolve before claiming full manuscript coverage.'
+    'status': ('incomplete' if not files else ('outputs_present_with_domain_mismatch' if registry_domains != 11 else 'outputs_present')),
+    'note': f'Manuscript specifies 11 domains; current registry contains {registry_domains}. Resolve any mismatch before claiming full manuscript coverage.'
 }
 (out / 'protocol30_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
 print(f"[Protocol-30 PCA] files={len(files)} records={rows} summary={out / 'protocol30_pca4060_summary.json'}")
