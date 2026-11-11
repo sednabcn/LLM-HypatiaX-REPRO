@@ -551,3 +551,9 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 
 [Biology Stock–Recruitment Family Audit 1](CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md) adds primary lineage records for Beverton–Holt (1957), Ricker (1954), Deriso (1980) and Schnute (1985). Secondary equation-level literature reports Ricker as the \(\gamma\to0\) limit and Beverton–Holt at \(\gamma=-1\) of the generalized Deriso–Schnute form. Count these as one E2 family under the draft policy; the exact generalized equation/page still requires direct primary-paper transcription. The full delay-difference/age-structured model is a separate complete-system unit and must not be split into components. Biology sources rise from 30 to 34; no equation is proposed or accepted by this source audit.
 
+## Chemistry and DeFi Risk protocol/source audits (2026-11-11)
+
+- [Chemistry Adsorption and Marcus Audit 1](CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md): Frumkin adsorption is a nonideal-interaction lead; Langmuir is its (a=0) limit and must not be counted separately under E2. Marcus rate reconstruction requires the Eyring/transmission prefactor and quadratic reorganization-energy barrier; generic collision-frequency prefactor is not source-faithful.
+- [DeFi Risk Protocol Models Audit 1](CORE295_DEFI_RISK_PROTOCOL_MODELS_AUDIT_1.md): Aave V3 health factor and Compound Comet negative-liquidity threshold are related weighted-collateral/debt eligibility tests, not separate scalar families. Comet borrow/supply rates are kinked piecewise-linear/utilization-derived; same normalized structure as other lending kink-rate models. The absorb state machine may be a protocol-level model only after exact version pin and full state-transition reconstruction.
+- Source register adds three references (Frumkin 1920, Compound Comet specification, Aave V3 health-factor developer documentation); total 166. No formal equation entry was added or accepted.
+
