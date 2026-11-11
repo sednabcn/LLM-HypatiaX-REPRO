@@ -577,30 +577,45 @@ def _eval_formula_r2(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
-    """Order training rows along the first PCA direction fitted on X only."""
-    Xc = X - X.mean(axis=0)
-    _, _, vh = np.linalg.svd(Xc, full_matrices=False)
-    principal = vh[0]
-    scores = Xc @ principal
+    """Order rows on a PCA axis after training-only feature standardisation."""
+    X = np.asarray(X, dtype=float)
+    scale = np.std(X, axis=0)
+    scale[scale <= np.finfo(float).eps] = 1.0
+    Z = (X - np.mean(X, axis=0)) / scale
+    _, _, vh = np.linalg.svd(Z, full_matrices=False)
+    scores = Z @ vh[0]
     return np.argsort(scores, kind="mergesort")
 
 
 def _extrapolation_probe(
     X_train: np.ndarray, y_train: np.ndarray, probe_frac: float = 0.15
 ) -> dict:
-    """Training-only NN edge probe; no held-out/query labels are accepted."""
+    """Train on the central training region and probe both training-set tails.
+
+    The PCA axis, split, NN fit and both R² scores use only the outer training
+    partition. probe_frac is the total fraction assigned to the two edge tails.
+    No held-out/query covariates or labels are accepted.
+    """
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
     n = len(X_train)
+    if X_train.ndim != 2 or X_train.shape[0] != y_train.size:
+        raise ValueError("X_train and y_train have incompatible shapes")
     if not 0.05 <= float(probe_frac) <= 0.4:
         raise ValueError("probe_frac must be between 0.05 and 0.4")
-    split = int(n * (1.0 - probe_frac))
+    if n < 20 or not np.isfinite(X_train).all() or not np.isfinite(y_train).all():
+        return {"status": "insufficient_or_nonfinite_training_data", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
     order = _sort_by_principal_direction(X_train)
-    Xs, ys = X_train[order], y_train[order]
-    Xf, yf = Xs[:split], ys[:split]
-    Xp, yp = Xs[split:], ys[split:]
-    if len(Xp) < 5 or len(Xf) < 10:
-        return {"status": "insufficient_rows", "delta": None,
+    n_edge_side = max(2, int(np.ceil(n * float(probe_frac) / 2.0)))
+    if n - 2 * n_edge_side < 10:
+        return {"status": "insufficient_core_rows", "delta": None,
                 "r2_train": None, "r2_edge": None,
-                "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
+                "n_fit": int(n - 2 * n_edge_side), "n_edge": int(2 * n_edge_side)}
+    edge_idx = np.concatenate((order[:n_edge_side], order[-n_edge_side:]))
+    core_idx = order[n_edge_side:-n_edge_side]
+    Xf, yf = X_train[core_idx], y_train[core_idx]
+    Xp, yp = X_train[edge_idx], y_train[edge_idx]
     try:
         probe_result = _train_and_eval_nn(
             Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
@@ -616,6 +631,7 @@ def _extrapolation_probe(
             "delta": float(r2_train - r2_edge),
             "n_fit": int(len(Xf)), "n_edge": int(len(Xp)),
             "probe_fraction": float(probe_frac),
+            "edge_sides": 2,
         }
     except Exception as exc:
         _m5_record_failure("_extrapolation_probe", exc)
@@ -823,7 +839,7 @@ def _hybrid_predict_and_eval(
     llm_trustworthy = (
         has_formula
         and llm_train_ok
-        and llm_train_r2 > 0.5
+        and llm_train_r2 >= 0.5
         and not _formula_has_pathological_behavior(llm_code)
     )
 
