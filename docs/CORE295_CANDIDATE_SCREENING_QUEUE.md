@@ -353,3 +353,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 39 (2026-11-11)
 
 [Source Verification Audit 39](CORE295_SOURCE_VERIFICATION_AUDIT_39.md) verifies Gyro 2-CLP's quadratic invariant against a pinned balancer-maths commit and shows it is constant product in virtual reserves. Group it with Uniswap v3, Maverick tick and LLAMMA per-band virtual-CP structures, not as a new equation; retain Gyro E-CLP as the distinct ellipse invariant.
+
+
+## Structural-equivalence policy decision pending (2026-11-11)
+
+[Structural Equivalence Policy Options](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_OPTIONS.md) compares strict normalized-form, mechanism-aware and hybrid form-and-system rules, with a collision/distinction evidence map across all reviewed candidates. Option C is recommended for consideration but not adopted. No formal catalogue status changes until the rule is selected.
