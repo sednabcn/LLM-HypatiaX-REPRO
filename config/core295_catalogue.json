@@ -443,6 +443,97 @@
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
       "source_location": "OpenStax University Physics Volume 1 §14.7, Eq. 14.19"
+    },
+    {
+      "equation_id": "PHYS-PLANCK-SPECTRUM-001",
+      "name": "Planck blackbody spectral intensity law",
+      "domain": "Physics",
+      "subdomain": "thermal radiation",
+      "formula": "I(lambda,T) = 2 pi h c^2 / [lambda^5 (exp(h c/(lambda kB T)) - 1)]",
+      "canonical_expression": "2*pi*h*c**2/(lam**5*(exp(h*c/(lam*kB*T))-1))",
+      "formula_latex": "I(\\lambda,T)=\\frac{2\\pi h c^2}{\\lambda^5}\\frac{1}{\\exp\\left(\\frac{hc}{\\lambda k_B T}\\right)-1}",
+      "structural_fingerprint": "3591aaa64a9979ff994375a3c1a31869681892e1bfd2319bd69058abda74496a",
+      "source_ids": [
+        "PHYS-PLANCK-1901",
+        "PHYS-OPENSTAX-V3-PLANCK"
+      ],
+      "source_family_id": "PHYS-BLACKBODY-SPECTRAL-DISTRIBUTION-PLANCK",
+      "status": "proposed",
+      "assumptions": [
+        "Ideal blackbody/cavity radiation in thermal equilibrium",
+        "Spectral intensity is expressed per unit wavelength, not per unit frequency",
+        "Wavelength is positive and absolute temperature is positive",
+        "The emitter is treated as a blackbody; real-material emissivity deviations are outside this formula"
+      ],
+      "variables": {
+        "lam": {
+          "meaning": "Wavelength in vacuum",
+          "unit": "m"
+        },
+        "h": {
+          "meaning": "Planck constant",
+          "unit": "J s"
+        },
+        "c": {
+          "meaning": "Speed of light in vacuum",
+          "unit": "m s^-1"
+        },
+        "kB": {
+          "meaning": "Boltzmann constant",
+          "unit": "J K^-1"
+        },
+        "T": {
+          "meaning": "Absolute blackbody temperature",
+          "unit": "K"
+        }
+      },
+      "validity": {
+        "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11; Planck (1901), Annalen der Physik 309, 553-563, Eq. (8) is the primary historical source in the original spectral-distribution convention",
+        "regime": "Blackbody spectral power intensity per unit wavelength at thermal equilibrium",
+        "limitations": [
+          "Do not confuse spectral intensity per wavelength with spectral energy density or frequency-domain forms; conversions require the correct Jacobian",
+          "Wien displacement and Stefan total-power relations are derived from the spectrum and are not separate independent candidates in this source family",
+          "Do not treat a real surface with wavelength-dependent emissivity as an ideal blackbody without adding emissivity",
+          "The original Planck paper uses a different spectral convention; this record selects the OpenStax wavelength-intensity convention explicitly"
+        ]
+      },
+      "input_ranges": {
+        "lam": {
+          "train": null,
+          "extrapolation": null
+        },
+        "h": {
+          "train": null,
+          "extrapolation": null
+        },
+        "c": {
+          "train": null,
+          "extrapolation": null
+        },
+        "kB": {
+          "train": null,
+          "extrapolation": null
+        },
+        "T": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null,
+        "output_units": "W m^-3 (power per area per unit wavelength)"
+      },
+      "review_notes": [
+        "Exact modern wavelength-intensity equation is visible as OpenStax Eq. 6.11",
+        "Primary Planck 1901 source is registered but uses a different original spectral-distribution convention; verify original Eq. (8) before source_verified status",
+        "Use physical constants with fixed SI values; sample only lambda and T in the benchmark adapter, not constants as independent random variables",
+        "Planck spectrum is the parent family for Wien maximum and Stefan integral; do not count those derived laws independently without a separate sampling design",
+        "Proposed only; not scientifically accepted or eligible for shard planning"
+      ],
+      "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11"
     }
   ],
   "source_register": [
@@ -1478,6 +1569,7 @@
     "Chemistry source mapping now includes surface adsorption (Langmuir 1918) and molecular diffusion (Fick 1855) as additional source-family leads; diffusion flux and diffusion PDE are related levels of one transport framework and must not be counted independently without an explicit sampling-unit rule.",
     "First proposed-record pass: Henry gas solubility, Langmuir single-site adsorption, and Marcus outer-sphere electron transfer. All remain proposed with null input ranges and pending generators; none is accepted.",
     "Second proposed-record pass adds the scalar Hill muscle force-velocity relation. It remains proposed pending primary-page transcription, muscle-context selection, ranges and generator. Michaelis-Menten remains excluded because it is a Core-15 exclusion.",
-    "Third proposed-record pass adds the scalar Poiseuille laminar tube-flow relation from OpenStax University Physics Volume 1 §14.7, Eq. 14.19. It remains proposed pending constrained ranges, deterministic generator and numerical review."
+    "Third proposed-record pass adds the scalar Poiseuille laminar tube-flow relation from OpenStax University Physics Volume 1 §14.7, Eq. 14.19. It remains proposed pending constrained ranges, deterministic generator and numerical review.",
+    "Fourth proposed-record pass adds Planck's blackbody spectral intensity law using the explicit per-wavelength intensity convention in OpenStax University Physics Volume 3 §6.1, Eq. 6.11. Wien and Stefan relations remain derived within the same family."
   ]
 }
