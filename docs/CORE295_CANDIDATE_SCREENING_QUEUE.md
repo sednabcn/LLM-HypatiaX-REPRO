@@ -243,3 +243,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 27 (2026-11-11)
 
 [Source Verification Audit 27](CORE295_SOURCE_VERIFICATION_AUDIT_27.md) verifies the modern Nernst equation against IUPAC and Nernst's 1889 electrode-potential theory, while distinguishing the original dissolution-pressure/osmotic-pressure form from the later whole-cell reaction-quotient expression. It also clarifies Debye–Hückel's low-ionic-strength square-root law for the mean ionic activity coefficient; single-ion activity is convention-dependent and not separately measurable. Discovery batch 25 was corrected accordingly. These leads remain discovery-only.
+
+
+## Source verification audit 28 (2026-11-11)
+
+[Source Verification Audit 28](CORE295_SOURCE_VERIFICATION_AUDIT_28.md) verifies Leslie's age-structured matrix recurrence directly against the 1945 original (printed pp. 183–184) and Taylor–Jonker's continuous replicator system directly against the 1978 original Eq. (2). Both are complete vector systems requiring constrained adapters; do not count component equations or derived stability outputs separately. Nicholson–Bailey's 1935 primary paper is bibliographically confirmed, but the equation-level transcription remains secondary and unverified.
