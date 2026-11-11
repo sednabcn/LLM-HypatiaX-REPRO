@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–20. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–21. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -170,6 +170,14 @@
 110. FitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. *Biophysical Journal, 1*(6), 445–466. https://doi.org/10.1016/S0006-3495(61)86902-6. Primary source for the two-variable BVP excitable-membrane reduction, derived in the context of Hodgkin–Huxley and relaxation oscillators.
 
 111. Morris, C., & Lecar, H. (1981). Voltage oscillations in the barnacle giant muscle fiber. *Biophysical Journal, 35*(1), 193–213. https://doi.org/10.1016/S0006-3495(81)84782-0. Primary source for a two-variable conductance-based excitable-cell model; the Physiome Model Repository supplies a CellML transcription of equations 1–2 and unit metadata.
+
+112. Euler, L. (1744). Additamentum I: De curvis elasticis. In *Methodus inveniendi lineas curvas maximi minimive proprietate gaudentes*. Original work on the variational elastica; archive record and downloadable text: https://scholarlycommons.pacific.edu/euler-works/174/. The exact modern rod equation requires careful transcription from the original derivation and its boundary conditions.
+
+113. Euler, L. (1759). Sur la force des colonnes. *Mémoires de l’Académie des sciences de Berlin, 13*, 252–282. Archive record and source text: https://scholarlycommons.pacific.edu/euler-works/238/. Primary source for the critical buckling load of elastic columns; the modern \(\pi^2EI/(KL)^2\) form depends on end restraints and modern flexural-rigidity notation.
+
+114. Timoshenko, S. P. (1921). LXVI. On the correction for shear of the differential equation for transverse vibrations of prismatic bars. *The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science, 41*(245), 744–746. https://doi.org/10.1080/14786442108636264. Primary source for shear correction in transverse beam vibration.
+
+115. TU Delft. *Timoshenko beam theory: governing equations*. https://teachbooks.tudelft.nl/computational-modelling/structural_linear/timoshenko.html. Modern derivation of coupled transverse-displacement and cross-section-rotation equations, shear force, bending moment and boundary conditions; use alongside the 1921 primary paper.
 
 ## Bibliographic and provenance cautions
 
