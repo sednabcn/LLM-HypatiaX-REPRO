@@ -3,6 +3,7 @@ import numpy as np
 from hypatiax.core.routing import (
     kde_ood_probability,
     manuscript_blend_weights,
+    route_decision_from_diagnostics,
     select_hypatiax_route,
     structural_risk_tokens,
     training_edge_degradation_probe,
@@ -158,3 +159,11 @@ def test_training_edge_split_rejects_nonfinite_covariates():
         assert "finite" in str(exc)
     else:
         raise AssertionError("non-finite training covariates must be rejected")
+
+
+def test_missing_training_r2_cannot_enter_pure_llm_route():
+    route = route_decision_from_diagnostics(
+        True, None, [], degradation_delta=0.0, degradation_tau=0.1
+    )
+    assert route["decision"] == "ensemble"
+    assert route["route_reason"] == "degradation_exceeds_tau_or_fit_below_0.95"
