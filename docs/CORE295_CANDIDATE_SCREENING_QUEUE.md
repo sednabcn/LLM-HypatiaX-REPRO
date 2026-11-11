@@ -438,3 +438,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 54 (2026-11-11)
 
 [Source Verification Audit 54](CORE295_SOURCE_VERIFICATION_AUDIT_54.md) classifies the SOA 2022 report as an insurer-oriented DeFi risk taxonomy and incident review, not a mathematical model. Its four principal risk categories and additional social/financial/societal categories inform scope and labels only; incident counts are not equation counts or independent statistical units.
+
+
+## Source verification audit 55 (2026-11-11)
+
+[Source Verification Audit 55](CORE295_SOURCE_VERIFICATION_AUDIT_55.md) verifies the peer-reviewed FC 2022 paper *Speculative Multipliers on DeFi*. Its most distinctive result is the liquidation-constrained maximum leverage bound (m_{max}=1+1/[\max(LS,Credit(B,C))q_{max}]). The source is registered as RISK-WANG-SPECULATIVE-MULTIPLIERS (candidate_reference); equations remain held, with no proposed/accepted record added.
