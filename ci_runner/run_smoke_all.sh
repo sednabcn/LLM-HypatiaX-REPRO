@@ -101,7 +101,7 @@ s_required_files() {
   # only warns or silently degrades a step (WARN). Paths mirror run_all.sh defaults.
   local rc=0 f
   local bench=hypatiax/experiments/benchmarks
-  for f in ci_runner/run_fresh_experiments.sh config/fresh_rerun.yaml hypatiax/core/r2_canonical.py; do
+  for f in ci_runner/run_fresh_experiments.sh config/fresh_rerun.yaml hypatiax/core/r2_canonical.py hypatiax/protocols/experiment_protocol_all_30.py hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py; do
     if [[ -f "$f" ]]; then echo "OK   $f"; else echo "FAIL missing (fresh rerun requires it): $f"; rc=1; fi
   done
   # paper_targets.json is deliberately not committed (hardcoded paper values, not a valid
