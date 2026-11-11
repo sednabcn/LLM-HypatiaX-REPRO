@@ -702,6 +702,38 @@
       "url": "https://developers.lfj.gg/concepts/concentrated-liquidity",
       "use": "Official Liquidity Book source for discrete fixed-price bins, bin-step geometric price progression and per-bin constant-sum behaviour; pin Joe V2/V2.1 version",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-GYRO-ECLP-2022",
+      "domain": "DeFi AMM",
+      "title": "Elliptic Concentrated Liquidity Pool (E-CLP): Technical Overview",
+      "url": "https://3407769812-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MU527HCtxlYaQoNazhF%2Fuploads%2F2HscaHAluwXqLel1O4LI%2FE-CLP%20Technical%20Specification.pdf?alt=media&token=e67627c3-61ee-4786-9bca-9f0f5ab6d4d5",
+      "use": "Primary mathematical specification (Klages-Mundt & Schuldenzucker, Nov 2022), pp. 3–4: ellipse invariant and closed-form reserve/invariant relation; match against deployed implementation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-GYRO-2CLP-CODE",
+      "domain": "DeFi AMM",
+      "title": "Balancer balancer-maths Gyro2CLP math implementation",
+      "url": "https://github.com/balancer/balancer-maths/blob/main/typescript/src/gyro/gyro2CLPMath.ts",
+      "use": "Versioned code snapshot for quadratic Gyro2CLP invariant; fetched blob SHA 635046fb5a6a498321bba8c1e7233ad0dd1cffd0",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-BANCOR-2017-WP",
+      "domain": "DeFi AMM",
+      "title": "Bancor Protocol: Continuous Liquidity and Asynchronous Price Discovery for Tokens through their Smart Contracts",
+      "url": "https://paperzz.com/doc/9208421/whitepaper---bancor-protocol",
+      "use": "Primary 2017 whitepaper (draft v0.99, May 30, 2017), p. 11 purchase/sale return equations and constant reserve ratio; verify against archived official copy and contract version",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-MAVERICK-DYNAMIC",
+      "domain": "DeFi AMM",
+      "title": "Maverick AMM dynamic distribution and directional LPing",
+      "url": "https://medium.com/maverick-protocol/maverick-amm-the-revolutionary-dynamic-distribution-amm-that-enables-directional-lping-unlocking-capital-efficiency",
+      "use": "Protocol source lead for TWAP-triggered movement of discrete liquidity bins; audit report validates selected whitepaper formula numbers but swap/liquidity formula scope is incomplete; algorithmic state-transition lead only",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
