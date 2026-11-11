@@ -261,3 +261,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 151. Frumkin, A. (1926). “The Influence of the Electric Field on the Adsorption of Neutral Molecules.” *Zeitschrift für Physik*, 35, 792–802. Bibliographic record listed by the Moscow State University Department of Electrochemistry: https://www.elch.chem.msu.ru/article/index.htm. The 1926 paper is the relevant primary lead for field-dependent neutral-molecule adsorption; exact equation/page transcription remains pending.
+
+152. Butler, J. A. V. (1924). “Studies in heterogeneous equilibria. Part III. A kinetic theory of reversible oxidation potentials at inert electrodes.” *Transactions of the Faraday Society*, 19, 734–739. https://doi.org/10.1039/TF9241900734. Historical kinetic/dynamic-equilibrium precursor; not treated alone as the complete modern Butler–Volmer relation.
+153. Erdey-Grúz, T., & Volmer, M. (1930). “Zur Theorie der Wasserstoffüberspannung.” *Zeitschrift für Physikalische Chemie A*, 150, 203–213. https://doi.org/10.1515/zpch-1930-15020. Primary slow-discharge/overpotential kinetic treatment associated with the transfer coefficient and the two-direction exponential kinetic formulation.
