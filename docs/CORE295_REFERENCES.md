@@ -93,6 +93,8 @@
 
 72. MakerDAO. (2020). *MIP45: Liquidations 2.0 — Liquidation System Redesign*. Historical primary design specification. https://mips.makerdao.com/mips/details/MIP45. Specifies Dutch collateral auctions and configurable linear, stair-step exponential and continuous exponential price-decrease calculators. The MIP is marked obsolete by a later governance decision; retain only as historical design provenance and pair with current Sky documentation and versioned contract code.
 
+73. OpenStax. *University Physics Volume 3*. Sections 2.4 “Thin Lenses” (Eqs. 2.19–2.21); 4.3–4.4 “Double-Slit Diffraction” and “Diffraction Gratings”; 6.3 “The Compton Effect” (Eqs. 6.28–6.30); 7.3 “The Schrödinger Equation” (Eq. 7.23); and 7.5 “The Quantum Harmonic Oscillator” (Eqs. 7.55–7.58). https://openstax.org/details/books/university-physics-volume-3. Exact section-level equation locations for geometric optics, diffraction, photon scattering and quantum eigenvalue problems; related equations within each derivation system must be clustered rather than counted as independent units.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
