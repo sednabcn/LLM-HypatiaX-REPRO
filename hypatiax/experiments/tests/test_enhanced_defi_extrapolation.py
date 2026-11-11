@@ -783,139 +783,96 @@ class EnhancedExtrapolationTest:
                 test_case["domain"],
                 X_train, y_train, var_names, metadata,
                 verbose=False,
+                X_query=X_test,
             )
 
-            decision   = train_result.get("decision", "nn")
+            decision = train_result.get("decision", "nn")
+            if decision == "fitted_llm":
+                decision = "llm"
             llm_result = train_result.get("llm_result", {})
-            llm_code   = llm_result.get("python_code", "N/A")
+            llm_code = llm_result.get("python_code", "N/A")
             has_formula = bool(llm_code and llm_code != "N/A")
+            _llm_formula_trustworthy = bool(train_result.get("trust_gate_passed")) and has_formula
 
-            # ── Routing improvements (Fixes 1, 2) ───────────────────────────
-            # These run *after* the hybrid's own decision and may upgrade
-            # an "nn" or "ensemble" decision to "llm" when evidence says the
-            # NN will fail on extrapolation.
-
-            # Extract hybrid's own LLM train R² to guard routing overrides.
-            # If the LLM formula was bad at training time (R² ≤ 0), forcing
-            # the test path to use it produces catastrophic scores (cases 31, 40).
-            # FIX: hybrid_predict returns it at the TOP level ("llm_train_r2").
-            # The old llm_result["metrics"]["r2"] key is never set, so this was
-            # always 0.0 and Fixes 1-3 never fired.
-            _llm_train_r2 = float(train_result.get("llm_train_r2", 0.0) or 0.0)
-            _llm_formula_trustworthy = has_formula and (_llm_train_r2 > 0.0)
-
-            if _llm_formula_trustworthy and decision in ("nn", "ensemble"):
-                # Fix 2: formula contains transcendental / piecewise ops → LLM wins.
-                # Guard: only override if LLM formula actually fit training data.
-                if self._formula_has_transcendental(llm_code):
-                    decision = "llm"
-
-            if _llm_formula_trustworthy and decision in ("nn", "ensemble"):
-                # Fix 1: probe NN degradation at the edge of training data.
-                # If the NN loses ≥0.15 R² from fit-region to probe-region,
-                # the hybrid routes to LLM instead.
-                # Guard: same — only override when LLM formula is trustworthy.
-                try:
-                    degradation = self._extrapolation_probe_degradation(
-                        X_train, y_train, probe_frac=0.15
-                    )
-                    if degradation >= 0.15:
-                        decision = "llm"
-                except Exception as _e:
-                    import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-            # FIX 3: evaluate the test split using whichever component the hybrid
-            # *actually chose at training time*.  The old code always used the LLM
-            # formula path when any formula existed, which produced NaN whenever
-            # the formula evaluation failed — even when decision was "nn".
-
+            # Routing is decided once from training labels plus query covariates.
+            # Never upgrade a structural-risk or degraded formula to pure LLM
+            # after looking at held-out target labels.
             if decision == "llm":
-                # Hybrid committed to the LLM formula → evaluate it on test set.
-                # Fix 5: use unified _eval_formula_r2 instead of
-                # hybrid.evaluate_llm_formula, which uses a different variable-
-                # binding namespace and silently diverges from PureLLMBaseline
-                # on quadratic / matrix formulas (e.g. Correlated Portfolio VaR).
                 test_r2, _ok = self._eval_formula_r2(llm_code, X_test, y_test, var_names)
-                # Safety net: if unified evaluator also fails, try evaluate_llm_formula
-                if not _ok:   # (nan, True) = undefined R2 on a degenerate target: keep nan
+                if not _ok:
                     _fallback = hybrid.evaluate_llm_formula(
-                        {"python_code": llm_code},
-                        X_test, y_test, var_names, verbose=False,
+                        {"python_code": llm_code}, X_test, y_test, var_names, verbose=False,
                     )
-                    test_r2 = (float(_fallback["r2"])
-                               if _fallback.get("success") and _fallback.get("r2_status", "ok") == "ok"
-                               else float("nan"))
+                    test_r2 = (
+                        float(_fallback["r2"])
+                        if _fallback.get("success") and _fallback.get("r2_status", "ok") == "ok"
+                        else float("nan")
+                    )
 
             elif decision == "ensemble" and has_formula:
-                # Hybrid blended LLM + NN → blend predictions on test set too,
-                # using the same uncertainty-weighted scheme from the ensemble module.
-                # Fix 5: evaluate LLM on test set via unified evaluator
                 _llm_test_r2, llm_test_ok = self._eval_formula_r2(
                     llm_code, X_test, y_test, var_names
                 )
-                # Wrap result in a dict so downstream code can use .get("r2", ...)
-                test_m_llm = {"r2": _llm_test_r2, "success": llm_test_ok}
-
-                # Train fresh NN on train split and get raw test predictions
-                nn_m = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
-
                 if llm_test_ok:
-                    # Re-run the formula to get actual test predictions.
-                    # FIX: correct module path (the old hypatiax.experiments.tests.* import
-                    # always failed) and NO fallback that picks the winner on test labels.
                     from hypatiax.core.generation.hybrid_defi_llm_nn.hybrid_ensemble_system_defi_domain import (
-                        ensemble_llm_nn,
                         execute_python_code_get_predictions,
                     )
-                    llm_pred = execute_python_code_get_predictions(llm_code, X_test)
-                    nn_pred  = nn_m["y_pred_test"]
-                    llm_pred_tr = execute_python_code_get_predictions(llm_code, X_train)
-                    llm_train_r2 = _llm_train_r2   # top-level hybrid_predict value
-                    # Fix 4: distance-gated blend weight.
-                    llm_w = self._distance_llm_weight(X_test, X_train,
-                                                      base_weight=0.3)
-                    nn_w  = 1.0 - llm_w
-                    _nz = lambda v: float(v) if np.isfinite(v) else 0.0   # undefined -> no weight
-                    # B4: weights are fitted on the TRAIN split only (weight_data), never on y_test.
-                    ensemble_pred, _ = ensemble_llm_nn(
-                        llm_pred, nn_pred, y_test,
-                        llm_r2=_nz(llm_train_r2) * llm_w,
-                        nn_r2=_nz(nn_m["train_r2"]) * nn_w,
-                        weight_data=(llm_pred_tr, nn_m["y_pred_train"], y_train),
+                    from hypatiax.core.generation.hybrid_defi_system.hybrid_system_nn_defi_domain import (
+                        nn_predict,
                     )
-                    test_r2, _ = _r2_reported(y_test, ensemble_pred)
+                    llm_pred = execute_python_code_get_predictions(llm_code, X_test)
+                    nn_pred = nn_predict(
+                        train_result["nn_model"], train_result["scaler_X"],
+                        train_result["scaler_y"], X_test,
+                    )
+                    weights = train_result.get("blend_weights") or {}
+                    llm_w = float(weights.get("llm", 0.3))
+                    nn_w = float(weights.get("nn", 1.0 - llm_w))
+                    if (
+                        np.isfinite(llm_w) and np.isfinite(nn_w)
+                        and 0.0 <= llm_w <= 1.0 and 0.0 <= nn_w <= 1.0
+                        and np.isclose(llm_w + nn_w, 1.0)
+                        and np.isfinite(llm_pred).all() and np.isfinite(nn_pred).all()
+                    ):
+                        ensemble_pred = llm_w * llm_pred + nn_w * nn_pred
+                        test_r2, _ = _r2_reported(y_test, ensemble_pred)
+                    else:
+                        raise RuntimeError("Invalid manuscript blend weights or non-finite predictions")
                 else:
-                    # LLM failed on test set → fall back to NN test result
-                    test_r2 = nn_m["test_r2"]
+                    # Formula invalid on query covariates: use NN, never choose
+                    # between candidates by inspecting held-out target scores.
+                    from hypatiax.core.generation.hybrid_defi_system.hybrid_system_nn_defi_domain import (
+                        nn_predict,
+                    )
+                    nn_pred = nn_predict(
+                        train_result["nn_model"], train_result["scaler_X"],
+                        train_result["scaler_y"], X_test,
+                    )
+                    test_r2, _ = _r2_reported(y_test, nn_pred)
+                    decision = "nn_fallback_formula_invalid"
 
             else:
-                # decision == "nn" (or anything unexpected): use NN on test set.
-                # Fix 3: if a valid, trustworthy LLM formula exists, augment X
-                # with LLM preds so the NN learns residuals rather than fighting
-                # from scratch. Guard: skip augmentation if LLM train R² ≤ 0
-                # (bad formula would poison the NN input).
+                # NN route; augment only when the trust gate passed and formula
+                # predictions are finite on both train and query covariates.
                 if _llm_formula_trustworthy:
                     try:
                         from hypatiax.core.generation.hybrid_defi_llm_nn.hybrid_ensemble_system_defi_domain import (
                             execute_python_code_get_predictions,
                         )
                         llm_pred_train = execute_python_code_get_predictions(llm_code, X_train)
-                        llm_pred_test  = execute_python_code_get_predictions(llm_code, X_test)
-                        if (llm_pred_train is not None and llm_pred_test is not None
-                                and not np.any(np.isnan(llm_pred_train))
-                                and not np.any(np.isnan(llm_pred_test))):
+                        llm_pred_test = execute_python_code_get_predictions(llm_code, X_test)
+                        if np.isfinite(llm_pred_train).all() and np.isfinite(llm_pred_test).all():
                             X_train_aug = np.column_stack([X_train, llm_pred_train])
-                            X_test_aug  = np.column_stack([X_test,  llm_pred_test])
-                            nn_m    = self._train_and_eval_nn(X_train_aug, y_train,
-                                                              X_test_aug,  y_test)
+                            X_test_aug = np.column_stack([X_test, llm_pred_test])
+                            nn_m = self._train_and_eval_nn(
+                                X_train_aug, y_train, X_test_aug, y_test
+                            )
                         else:
-                            nn_m    = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
+                            nn_m = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
                     except Exception:
-                        nn_m    = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
+                        nn_m = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
                 else:
-                    nn_m    = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
+                    nn_m = self._train_and_eval_nn(X_train, y_train, X_test, y_test)
                 test_r2 = nn_m["test_r2"]
 
             _tr_ok = train_result["evaluation"].get("r2_status", "ok") == "ok"
@@ -925,6 +882,13 @@ class EnhancedExtrapolationTest:
                 "train_r2_status": train_result["evaluation"].get("r2_status", "ok"),
                 "test_r2":  float(test_r2),
                 "decision": decision,
+                "route_reason": train_result.get("route_reason"),
+                "trust_gate_passed": train_result.get("trust_gate_passed"),
+                "structural_risk_flag": train_result.get("structural_risk_flag"),
+                "structural_risk_tokens": train_result.get("structural_risk_tokens"),
+                "degradation_probe": train_result.get("degradation_probe"),
+                "ood_diagnostic": train_result.get("ood_diagnostic"),
+                "blend_weights": train_result.get("blend_weights"),
                 "success":  True,
             }
 
