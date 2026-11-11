@@ -224,3 +224,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 26 (2026-11-11)
 
 [Source Verification Audit 26](CORE295_SOURCE_VERIFICATION_AUDIT_26.md) verifies Fick's 1855 original local flux relation and explicitly records Fick's own Fourier/Ohm transport-law analogy. The normalized constitutive form is linear flux proportional to a driving-field gradient. Fick first law and the derived diffusion PDE are one family; cross-domain structural policy must determine whether Fourier/Ohm analogues can count independently.
+
+
+## Proposed-record source verification matrix (2026-11-11)
+
+[Core-295 Proposed-Record Source Verification Matrix](CORE295_PROPOSED_RECORD_SOURCE_VERIFICATION_MATRIX.md) maps all 19 proposed records to their source-verification audit and records the remaining acceptance gates, including cross-domain structural equivalence, source/version pinning, valid ranges and independent-unit definitions. No candidate is accepted by this matrix.
