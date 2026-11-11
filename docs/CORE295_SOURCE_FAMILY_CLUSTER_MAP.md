@@ -344,3 +344,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 36 (2026-11-11)
 
 [Source Verification Audit 36](CORE295_SOURCE_VERIFICATION_AUDIT_36.md) records the Butler–Volmer history and transfer-coefficient convention and the Nernst–Planck mobility/diffusivity distinction. Keep Butler–Volmer as one empirical two-way electrode-kinetics family, with Tafel and linear-response limits derived; keep Nernst–Planck's diffusion/migration/convection and balance/field closure as one coupled electrodiffusion system.
+
+
+## Source verification audit 37 (2026-11-11)
+
+[Source Verification Audit 37](CORE295_SOURCE_VERIFICATION_AUDIT_37.md) verifies Curve CryptoSwap's A–gamma dynamic invariant and pinned Tricrypto implementation. It is distinct from fixed StableSwap but related within the amplified-invariant family; the dynamic price_scale/repeg state is part of the complete pool model. Keep the invariant, K0/K definitions, Newton D/y solvers, swap formulas and repegging machinery together as one family.
