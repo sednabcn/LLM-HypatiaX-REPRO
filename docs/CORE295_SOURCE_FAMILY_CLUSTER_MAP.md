@@ -394,3 +394,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 44 (2026-11-11)
 
 [Source Verification Audit 44](CORE295_SOURCE_VERIFICATION_AUDIT_44.md) adds Aave health factor as a multi-asset weighted collateral/debt ratio and Compound/Aave kinked borrowing rates as one piecewise-linear utilization-rate family. Keep the health-factor aggregate and liquidation predicate together; do not split reserve contributions or weighted-threshold components. Group Aave and Compound rate curves despite protocol-specific parameters.
+
+
+## Source verification audit 45 (2026-11-11)
+
+[Source Verification Audit 45](CORE295_SOURCE_VERIFICATION_AUDIT_45.md) confirms Morpho LIF as a capped reciprocal affine function of LLTV and liquidation cursor. Keep the Morpho Blue/Midnight naming and version distinctions explicit; do not count parameter values or collateral-seizure operations separately.
