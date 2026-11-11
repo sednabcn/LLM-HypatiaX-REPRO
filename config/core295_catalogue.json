@@ -974,6 +974,38 @@
       "url": "https://doi.org/10.1016/S0006-3495(81)84782-0",
       "use": "Primary Morris–Lecar 1981 two-variable conductance model, equations 1–2; CellML source provides machine-readable units and parameter mapping",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-EULER-ELASTICA-1744",
+      "domain": "Physics",
+      "title": "De curvis elasticis",
+      "url": "https://scholarlycommons.pacific.edu/euler-works/174/",
+      "use": "Primary Euler 1744 variational treatment of the elastic curve; exact original equation and boundary-condition conventions need transcription from the Latin source/translation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-EULER-COLUMN-1759",
+      "domain": "Physics",
+      "title": "Sur la force des colonnes",
+      "url": "https://scholarlycommons.pacific.edu/euler-works/238/",
+      "use": "Primary Euler 1759 column buckling analysis, Mémoires de l'Académie de Berlin 13, 252–282; critical load depends on end constraints and historical flexural rigidity notation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-TIMOSHENKO-1921",
+      "domain": "Physics",
+      "title": "On the correction for shear of the differential equation for transverse vibrations of prismatic bars",
+      "url": "https://doi.org/10.1080/14786442108636264",
+      "use": "Primary Timoshenko 1921 shear-correction paper, Philosophical Magazine 41, 744–746; beam vibration correction and shear deformation",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-TIMOSHENKO-BEAM-EQUATIONS",
+      "domain": "Physics",
+      "title": "Timoshenko beam governing equations",
+      "url": "https://teachbooks.tudelft.nl/computational-modelling/structural_linear/timoshenko.html",
+      "use": "Modern exact governing-equation transcription for coupled displacement/rotation fields, shear stiffness and boundary conditions; cross-check with primary Timoshenko source",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
