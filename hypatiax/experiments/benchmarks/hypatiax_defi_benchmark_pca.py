@@ -543,11 +543,30 @@ def _ensemble_llm_nn(
     y_train: np.ndarray,
     llm_r2: float = None,
     nn_r2: float = None,
+    blend_weights: dict | None = None,
 ) -> np.ndarray:
     """
-    Uncertainty-weighted ensemble of LLM and NN predictions.
-    FIX 7: uncertainty is estimated from TRAINING residuals only — no test leakage.
+    Ensemble LLM and NN predictions. Manuscript weights, when supplied, are
+    applied per query; the legacy training-residual blend remains a fallback.
     """
+    if blend_weights is not None:
+        llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
+        nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
+        n_query = len(llm_pred_test)
+        if llm_w.size == 1:
+            llm_w = np.full(n_query, llm_w.item())
+        if nn_w.size == 1:
+            nn_w = np.full(n_query, nn_w.item())
+        if (
+            llm_w.size != n_query or nn_w.size != n_query
+            or not np.isfinite(llm_w).all() or not np.isfinite(nn_w).all()
+            or np.any((llm_w < 0.0) | (llm_w > 1.0))
+            or np.any((nn_w < 0.0) | (nn_w > 1.0))
+            or not np.allclose(llm_w + nn_w, 1.0)
+        ):
+            raise ValueError("Invalid per-query manuscript blend weights")
+        return llm_w * llm_pred_test + nn_w * nn_pred_test
+
     eps = 1e-8
     # FIX 7: use train residuals, not test residuals, to estimate uncertainty
     llm_unc = float(np.std(llm_pred_train - y_train))
