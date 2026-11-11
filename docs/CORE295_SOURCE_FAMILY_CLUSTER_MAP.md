@@ -319,3 +319,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 37 (2026-11-11)
 
 [Candidate Discovery Batch 37](CORE295_CANDIDATE_DISCOVERY_BATCH_37.md) adds Heston stochastic volatility and Cramér–Lundberg reserve ruin. Heston is a coupled price/variance SDE with CIR-like variance and correlated Brownian shocks; Cramér–Lundberg is a compound-Poisson reserve process with a first-passage ruin functional. Keep components and derived pricing/ruin outputs in one complete-system family.
+
+
+## Source verification audit 32 (2026-11-11)
+
+[Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) verifies Heston's coupled stochastic-volatility system from the original 1993 paper and records the physical vs risk-neutral process distinction. It also records the Cramér–Lundberg reserve/compound-Poisson process and its exponential-claim ruin functional. Keep Heston price and variance equations together; keep reserve process and ruin probability together. Applicability to DeFi depends on token-market/insurance-fund assumptions.
