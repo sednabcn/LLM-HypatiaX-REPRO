@@ -83,6 +83,8 @@
 
 67. Raoult, F.-M. (1882). Loi générale de congélation des dissolvants. *Comptes Rendus Hebdomadaires des Séances de l’Académie des Sciences, 95*, 1030–1033. Original source for the empirical freezing-point depression relation; an English historical transcription is available in *A Source Book in Chemistry, 1400–1900*. Confirm the original notation, concentration basis and scope before treating a modern \(\Delta T_f=K_f m\) form as an exact transcription. http://www.originalsources.com/Document.aspx?DocID=FF4QNC1T8Z463L8.
 
+68. Lotka, A. J. (1920). Analytical note on certain rhythmic relations in organic systems. *Proceedings of the National Academy of Sciences, 6*(7), 410–415. https://doi.org/10.1073/pnas.6.7.410. Primary source for a two-species plant–herbivore interaction model and undamped oscillations; the paper’s own equations (5)–(10) and transformed system (15) are more nuanced than the later constant-coefficient textbook Lotka–Volterra form. Cite the original model and its assumptions rather than retrofitting the modern form.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
