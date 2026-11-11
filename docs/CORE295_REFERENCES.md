@@ -1,6 +1,6 @@
 # Core-295 literature and source bibliography
 
-**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–19. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
+**Purpose.** This is the consolidated bibliography for the Core-295 source-universe plan and discovery batches 1–20. It includes textbooks, primary scientific papers, protocol whitepapers/specifications, official documentation, standards and review literature. The references are discovery/provenance sources; listing a reference does **not** approve an equation, establish novelty, or certify statistical independence.
 
 **Citation policy.** Every eventual catalogue entry must cite the most authoritative source for the exact equation (prefer the original paper, textbook equation, protocol whitepaper or versioned specification). Record page/chapter/section/equation number, edition/version, access date where relevant, assumptions, units and source-family ID in the entry itself. Review papers and surveys are discovery indexes: trace selected equations to their cited primary source. Official developer documentation can change; pin protocol version, contract/specification commit or archived version where possible.
 
@@ -162,6 +162,14 @@
 106. Uniswap Labs. *Uniswap v3 Price Oracles*. Official developer documentation. https://developers.uniswap.org/docs/protocols/v3/concepts/price-oracles. The tick accumulator gives an arithmetic mean tick and hence a geometric mean price; the seconds-per-liquidity accumulator gives harmonic mean in-range liquidity. Implementation cross-check: v3-periphery contracts/libraries/OracleLibrary.sol, captured blob SHA ddb82be610e5694581de1553fe86f4ca3da82e55.
 
 107. Chainlink. *What are Chainlink Data Feeds?* Official documentation. https://docs.chain.link/data-feeds/overview. Describes off-chain deviation-threshold and heartbeat triggers and recommends consumer-side updatedAt/latestTimestamp freshness checks, volatility bounds and fallback behavior. Trigger parameters are feed- and network-specific.
+
+108. Hodgkin, A. L., & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. *The Journal of Physiology, 117*(4), 500–544. https://doi.org/10.1113/jphysiol.1952.sp004764. Primary source for the four-state squid-axon membrane model and voltage-dependent gating kinetics.
+
+109. Hodgkin, A. L., & Huxley, A. F. (1952; modern-convention update 2019). *A quantitative description of membrane current and its application to conduction and excitation in nerve: updated original article using the modern convention*. Publisher-supplied supplementary PDF at https://physoc.onlinelibrary.wiley.com/doi/10.1113/jphysiol.1952.sp004764. Use to cross-check current signs, units and modern notation against the original article.
+
+110. FitzHugh, R. (1961). Impulses and physiological states in theoretical models of nerve membrane. *Biophysical Journal, 1*(6), 445–466. https://doi.org/10.1016/S0006-3495(61)86902-6. Primary source for the two-variable BVP excitable-membrane reduction, derived in the context of Hodgkin–Huxley and relaxation oscillators.
+
+111. Morris, C., & Lecar, H. (1981). Voltage oscillations in the barnacle giant muscle fiber. *Biophysical Journal, 35*(1), 193–213. https://doi.org/10.1016/S0006-3495(81)84782-0. Primary source for a two-variable conductance-based excitable-cell model; the Physiome Model Repository supplies a CellML transcription of equations 1–2 and unit metadata.
 
 ## Bibliographic and provenance cautions
 
