@@ -2,7 +2,7 @@
 
 **Status:** review aid only, not an accepted equation catalogue. Cluster labels below are provisional grouping identifiers for equivalence review and statistical sampling. They do not imply that every source in a cluster contributes a structurally distinct equation.
 
-**Current discovery snapshot:** 123 candidate source records; 118 bibliography items; 22 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
+**Current discovery snapshot:** 127 candidate source records; 121 bibliography items; 23 discovery batches; zero accepted equation entries. Option 2 remains 295 accepted structurally distinct equations, 59 per domain. A source record, paper, protocol or formula variant is not itself an equation count.
 
 ## How to use the clusters
 
@@ -23,7 +23,7 @@
 | CHEM-GAS-SOLUBILITY | Henry’s law | Gas partial pressure versus dissolved concentration; preserve dilute regime and Henry-constant convention. |
 | CHEM-IDEAL-SOLUTION-VAPOR | Raoult’s law | Liquid mole fraction versus partial vapor pressure; distinct from Henry’s law but ideal-solution regime only. |
 | CHEM-COLLIGATIVE | Freezing-point depression, boiling-point elevation, osmotic pressure | Related colligative consequences; do not count solvent-specific constants or rearrangements independently. Osmotic pressure requires an explicit overlap check against excluded Ideal Gas Law structure. |
-| CHEM-ADSORPTION-SURFACE | Langmuir adsorption; Langmuir–Hinshelwood surface reaction | Adsorption isotherm and surface-reaction rate law are linked through site balance. Separate only when the reaction mechanism adds a genuinely different mathematical object. |
+| CHEM-ADSORPTION-SURFACE | Langmuir adsorption; Langmuir–Hinshelwood and Rideal–Eley surface reactions | Langmuir–Hinshelwood (two adsorbed reactants) and Rideal–Eley (one gas-phase plus one adsorbed reactant) are distinct mechanisms with different site-balance denominators; cluster within heterogeneous surface catalysis. Langmuir coverage and rate laws remain linked. |
 | CHEM-DIFFUSION | Fick flux law and diffusion equation | Flux law and PDE are linked levels of one transport family unless a predeclared model split justifies otherwise. |
 | CHEM-OPTICAL-ABSORPTION | Beer absorption / Beer–Lambert notation | Decadic absorbance, natural-log attenuation and transmittance forms are equivalent representations. |
 | CHEM-ELECTRODE-KINETICS | Butler/Erdey-Grúz–Volmer; Butler–Volmer; Tafel asymptotes | Kinetic current–overpotential law is distinct from Nernst equilibrium. Tafel forms are asymptotic regimes, not independent families. |
