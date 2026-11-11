@@ -418,3 +418,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 50 (2026-11-11)
 
 [Source Verification Audit 50](CORE295_SOURCE_VERIFICATION_AUDIT_50.md) screens the OECD 2023 DeFi liquidation/DEX volatility study. It verifies a two-hour realized-volatility measure and log-linear OLS/2SLS specifications, but classifies them as conventional empirical estimators tied to a particular 2020–2022 sample and token pair, not universal protocol equations. Retain as systemic-risk context, not a new equation count.
+
+
+## Source verification audit 51 (2026-11-11)
+
+[Source Verification Audit 51](CORE295_SOURCE_VERIFICATION_AUDIT_51.md) verifies Qin et al.'s two-successive fixed-spread liquidation optimizer. The closed-form first repayment (r_1=(D-LT\,C)/[1-LT(1+LS)]), second repayment (r_2=CF(D-r_1)), and profit equations form one constrained strategy under fixed-price/fixed-spread assumptions. Retain as an analytical system lead, not as several independent equation entries.
