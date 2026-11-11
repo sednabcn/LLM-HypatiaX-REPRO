@@ -538,3 +538,8 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 ## Cross-domain equivalence policy draft (2026-11-11)
 
 [Structural Equivalence Policy Draft 1](CORE295_STRUCTURAL_EQUIVALENCE_POLICY_DRAFT_1.md) proposes a strict E0–E5 review scale. Exact duplicates, algebraic rearrangements, derived/limiting forms and identical normalized structures across different domains do not count as distinct structural equations. Different irreducible governing structures may qualify while retaining shared source-family/dependence labels. The policy is a draft only; no formal catalogue policy has been frozen and no entry has been accepted under it.
+
+## DeFi AMM source expansion 1 (2026-11-11)
+
+[DeFi AMM Source Expansion Audit 1](CORE295_AMM_SOURCE_EXPANSION_AUDIT_1.md) adds three traceable protocol/math references: Trader Joe JOE v2.1 Liquidity Book, YieldSpace, and Invariant concentrated liquidity. The Liquidity Book per-bin equation is a fixed-price constant-sum relation, while its aggregate bin state machine needs a full transition contract before it can be considered. YieldSpace's time-to-maturity-dependent constant power-sum invariant is a stronger candidate family; its constant-sum/product limits are not separate equations. Invariant's range formulas derive from translated constant-product geometry and remain grouped with Uniswap v3. The source register rises from 156 to 159 (DeFi AMM 20 to 23); this is source coverage only, not equation growth or acceptance. The manifest remains draft with 19 proposed and zero accepted.
+
