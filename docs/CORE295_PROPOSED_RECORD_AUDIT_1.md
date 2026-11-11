@@ -27,6 +27,11 @@ Primary source: Marcus, R. A. (1956), “On the Theory of Oxidation-Reduction Re
 - `BIO-TUMOR-TURNOVER-001` remains blocked by the embedded hyperbolic Emax/IC50 saturation term's overlap with the excluded Michaelis–Menten family.
 - `CHEM-FICK-FLUX-001` remains blocked pending cross-domain structural comparison with Fourier heat flux and Ohm transport forms.
 
+
+## Planck spectral convention check
+
+OpenStax University Physics Volume 3 §6.1, Eq. 6.11, defines the selected `I(lambda,T)` as emitted power intensity per unit wavelength and gives the exact `2*pi*h*c^2/lambda^5` prefactor. Planck's 1901 original wavelength form (Eq. 13) is expressed as a spectral energy-density distribution with an `8*pi*h*c/lambda^5` prefactor. These are related by the isotropic-field conversion between energy density and hemispherical emitted flux; they are not the same physical observable or notation. The proposed record correctly follows the modern OpenStax intensity convention and must keep that observable/unit definition explicit. Do not state that the OpenStax expression is a verbatim transcription of Planck's original Eq. 13.
+
 ## Current catalogue state
 
 The manifest remains `draft`, with 19 proposed records and zero accepted entries. All train/extrapolation ranges and deterministic generator contracts remain pending. Source records remain provenance leads, not accepted equations.
