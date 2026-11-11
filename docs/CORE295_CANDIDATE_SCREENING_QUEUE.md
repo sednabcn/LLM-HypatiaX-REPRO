@@ -308,3 +308,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Discovery batch 37 (2026-11-11)
 
 [Candidate Discovery Batch 37](CORE295_CANDIDATE_DISCOVERY_BATCH_37.md) adds Heston's coupled stochastic-volatility price/variance system and the Cramér–Lundberg reserve/compound-Poisson ruin model. Heston's CIR variance component and Merton no-jump limits are not extra equations; Cramér–Lundberg's ruin probability is a first-passage output of one reserve system. DeFi applicability requires a token-market or protocol insurance-reserve domain contract.
+
+
+## Source verification audit 32 (2026-11-11)
+
+[Source Verification Audit 32](CORE295_SOURCE_VERIFICATION_AUDIT_32.md) verifies Heston's original price and square-root variance equations (1993 Eqs. 1 and 4) and distinguishes physical-measure drift from the risk-neutralized variance process (Eq. 27). It also checks the Cramér–Lundberg reserve process and the exact infinite-horizon ruin formula for exponential claim sizes. Heston's CIR variance component and pricing PDE are not separate candidates; Cramér–Lundberg's ruin time and distribution-specific ruin probability are outputs of one reserve system. Both remain discovery-only pending DeFi domain and adapter decisions.
