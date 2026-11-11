@@ -428,3 +428,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 52 (2026-11-11)
 
 [Source Verification Audit 52](CORE295_SOURCE_VERIFICATION_AUDIT_52.md) verifies Miqado's reversible-call-option liquidation-mitigation system from IACR ePrint 2023/254 / arXiv:2303.15162v2. The supporter collateral top-up, seller's early termination/reimbursement right, borrower rescue payment and maturity takeover/default form one distinct system lead. The paper's Black–Scholes premium is explicitly an approximation that omits early-termination value.
+
+
+## Source verification audit 53 (2026-11-11)
+
+[Source Verification Audit 53](CORE295_SOURCE_VERIFICATION_AUDIT_53.md) screens BIS Working Paper 1171. Actual wallet asset-to-equity leverage and LTV-implied maximum leverage are standard balance-sheet identities, not new DeFi equations. The study is empirical context only; it also contains a sample-count inconsistency between the prose and Table 3 and an address-level independence limitation.
