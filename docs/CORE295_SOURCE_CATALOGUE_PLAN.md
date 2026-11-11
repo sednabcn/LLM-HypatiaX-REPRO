@@ -66,18 +66,20 @@ Do not force all topics into a single smooth scalar regression task if their nat
 Each entry must carry:
 
 - stable equation ID, display name, domain and subdomain;
-- exact formula and canonical symbolic expression;
+- human-readable formula plus a SymPy-parseable `canonical_expression` using only declared variable symbols;
 - variable meanings, SI/financial units, parameter meanings and valid ranges;
 - exact source citation and source version;
 - assumptions, validity regime, singularities and boundary conditions;
 - source-family/derivation cluster ID;
 - canonicalization and equivalence-review result;
 - independent-unit eligibility decision and rationale;
-- input distribution, train/test/extrapolation range, output transform if any;
+- per-variable `input_ranges` with explicit `train: [lower, upper]` and `extrapolation: [lower, upper]` bounds, plus input distribution and output transform if any;
 - deterministic generator implementation/version and seed policy;
 - human reviewer, review date, and acceptance state.
 
 Candidate states: `proposed`, `source_verified`, `scientifically_reviewed`, `structurally_reviewed`, `accepted`, `rejected`. Only `accepted` entries count toward 59/domain.
+
+The offline adapter in `hypatiax/experiments/benchmarks/core295_catalogue.py` parses `canonical_expression` with SymPy (never Python `eval`), compiles it to NumPy, and maps the record to the Core-15 equation dictionary contract (`name`, `domain`, `vars`, `train_range`, `extrap_range`, `fn`, formula metadata). It requires each variable's train and extrapolation intervals. Its deterministic smoke check is a preflight only; it does not replace scientific validation, dimensional analysis, or range review.
 
 ## 5. Independence is a separate decision
 
