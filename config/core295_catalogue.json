@@ -1006,6 +1006,30 @@
       "url": "https://teachbooks.tudelft.nl/computational-modelling/structural_linear/timoshenko.html",
       "use": "Modern exact governing-equation transcription for coupled displacement/rotation fields, shear stiffness and boundary conditions; cross-check with primary Timoshenko source",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-MARCUS-1956",
+      "domain": "Chemistry",
+      "title": "On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I",
+      "url": "https://doi.org/10.1063/1.1742723",
+      "use": "Primary Marcus 1956 theory paper, J Chem Phys 24, 966–978; outer-sphere electron-transfer free-energy surface and reorganization-energy dependence",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-MARCUS-1965",
+      "domain": "Chemistry",
+      "title": "On the Theory of Electron-Transfer Reactions. VI. Unified Treatment for Homogeneous and Electrode Reactions",
+      "url": "https://doi.org/10.1063/1.1696792",
+      "use": "Primary Marcus 1965 unified homogeneous/electrochemical electron-transfer rate theory; connect to electrochemical kinetics while preserving model assumptions",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-IUPAC-MARCUS",
+      "domain": "Chemistry",
+      "title": "IUPAC Gold Book: Marcus equation",
+      "url": "https://goldbook.iupac.org/terms/view/M03702",
+      "use": "Authoritative modern definition of Marcus electron-transfer rate and quadratic reorganization-energy barrier; modern equation transcription cross-check",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
