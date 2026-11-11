@@ -383,3 +383,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 44 (2026-11-11)
 
 [Source Verification Audit 44](CORE295_SOURCE_VERIFICATION_AUDIT_44.md) verifies Aave V3's weighted collateral/debt health factor against official docs and pinned GenericLogic.sol, including eMode, eligible collateral and debt accrual. It also verifies Compound III's utilization-based piecewise-linear borrow-rate function. Aave/Compound two-slope rate curves are one family; health factor is a distinct collateralization-risk metric, not a liquidation-price equation.
+
+
+## Source verification audit 45 (2026-11-11)
+
+[Source Verification Audit 45](CORE295_SOURCE_VERIFICATION_AUDIT_45.md) verifies Morpho Blue's capped liquidation incentive factor (LIF=\min(M,1/[1-\gamma(1-LLTV)])) against official docs and a pinned Morpho Blue implementation commit. The factor is one protocol-specific liquidation-incentive function; collateral seizure, debt-share conversion, health factor and bad-debt handling belong to the same liquidation system, not separate equation units.
