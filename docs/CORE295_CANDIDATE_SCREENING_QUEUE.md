@@ -547,3 +547,7 @@ The Physics source register has been expanded from 25 to 43 candidate-reference 
 
 [CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md](CORE295_CONSOLIDATED_AUTHOR_POOL_AUDIT_MATRIX_1.md) consolidates the five static domain screens: 299 raw rows (54 Chemistry, 59 Biology, 75 Physics, 54 DeFi AMM, 57 DeFi Risk), zero accepted from the discovery pool, and 159 source-register records. It distinguishes source coverage, proposed formal catalogue entries and accepted equations; records cross-domain overlaps, coupled-system/derived-output blockers, Core-15 exclusions and required acceptance gates. The matrix is an index and synthesis, not a new validation pass; no code or experiments were run.
 
+## Biology stock–recruitment family source audit 1 (2026-11-11)
+
+[Biology Stock–Recruitment Family Audit 1](CORE295_BIO_STOCK_RECRUITMENT_FAMILY_AUDIT_1.md) adds primary lineage records for Beverton–Holt (1957), Ricker (1954), Deriso (1980) and Schnute (1985). Secondary equation-level literature reports Ricker as the \(\gamma\to0\) limit and Beverton–Holt at \(\gamma=-1\) of the generalized Deriso–Schnute form. Count these as one E2 family under the draft policy; the exact generalized equation/page still requires direct primary-paper transcription. The full delay-difference/age-structured model is a separate complete-system unit and must not be split into components. Biology sources rise from 30 to 34; no equation is proposed or accepted by this source audit.
+
