@@ -98,3 +98,8 @@ The second static screen covers all 54 Chemistry, 59 Biology and 75 Physics rows
 ## Selected source-verification leads (2026-11-11)
 
 See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five existing source-register leads were checked at equation/model level: Langmuir–Hinshelwood and Eley–Rideal surface kinetics; Adair's four-step hemoglobin binding polynomial; the age-structured Kermack–McKendrick epidemic model; Turing's coupled reaction–diffusion system; and Euler column stability. These remain held, not accepted. The audit distinguishes different mechanisms/structures from shared source families and requires system-level adapters for coupled models.
+
+
+## Source verification audit 4 (2026-11-11)
+
+[Source Verification Audit 4](CORE295_SOURCE_VERIFICATION_AUDIT_4.md) checks Frank's original Windkessel lineage and the canonical two-element RC equation, and transcribes FitzHugh's original 1961 two-state BVP system and parameter constraints. The diastolic exponential and impedance are derived forms of the Windkessel model; the BVP equations are a coupled system, not separate scalar entries. Both remain held pending exact model contracts, ranges and independence review. No candidates were accepted.
