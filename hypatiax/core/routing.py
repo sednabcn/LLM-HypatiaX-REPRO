@@ -225,6 +225,18 @@ def select_hypatiax_route(
         nn_ok = False
 
     tokens = sorted(set(structural_tokens))
+    try:
+        _delta = float(degradation_delta) if degradation_delta is not None else None
+    except (TypeError, ValueError):
+        _delta = None
+    if _delta is not None and not np.isfinite(_delta):
+        _delta = None
+    try:
+        _tau = float(degradation_tau) if degradation_tau is not None else None
+    except (TypeError, ValueError):
+        _tau = None
+    if _tau is not None and (not np.isfinite(_tau) or _tau < 0.0):
+        _tau = None
     query_weights = None
     if p_ood_per_query is not None:
         _p_query = np.asarray(p_ood_per_query, dtype=float).reshape(-1)
@@ -239,8 +251,8 @@ def select_hypatiax_route(
         "trust_gate_passed": bool(llm_ok),
         "structural_risk_flag": bool(tokens),
         "structural_risk_tokens": tokens,
-        "degradation_delta": (float(degradation_delta) if degradation_delta is not None and np.isfinite(degradation_delta) else None),
-        "degradation_tau": (float(degradation_tau) if degradation_tau is not None and np.isfinite(degradation_tau) else None),
+        "degradation_delta": _delta,
+        "degradation_tau": _tau,
         "p_ood": (float(p_ood) if p_ood is not None and np.isfinite(p_ood) else None),
         "blend_weights": None,
         "query_blend_weights": query_weights,
@@ -249,7 +261,7 @@ def select_hypatiax_route(
         return {**base, "decision": "nn", "predictions": nn_preds if nn_ok else None,
                 "route_reason": "trust_gate_failed"}
 
-    if tokens or degradation_delta is None or degradation_tau is None:
+    if tokens or _delta is None or _tau is None:
         reason = "structural_risk_precedence" if tokens else "degradation_probe_or_tau_unavailable"
         if not nn_ok:
             return {**base, "decision": "nn", "predictions": None,
@@ -259,7 +271,7 @@ def select_hypatiax_route(
         return {**base, "decision": "ensemble", "predictions": predictions,
                 "route_reason": reason, "blend_weights": weights}
 
-    if float(fitted_train_r2) >= 0.95 and float(degradation_delta) <= float(degradation_tau):
+    if float(fitted_train_r2) >= 0.95 and _delta <= _tau:
         return {**base, "decision": "fitted_llm", "predictions": llm_preds,
                 "route_reason": "trusted_high_fit_low_degradation"}
 
