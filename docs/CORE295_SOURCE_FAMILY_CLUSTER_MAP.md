@@ -379,3 +379,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 41 (2026-11-11)
 
 [Source Verification Audit 41](CORE295_SOURCE_VERIFICATION_AUDIT_41.md) confirms the LLAMMA per-band invariant is virtual constant product and groups it with Gyro 2-CLP, Uniswap v3 and Maverick. The full lending/liquidation mechanism couples bands, oracle, interest multiplier, fees, controller and hard-liquidation boundary; consider only as one complete DeFi Risk system if system-level units are permitted.
+
+
+## Source verification audit 42 (2026-11-11)
+
+[Source Verification Audit 42](CORE295_SOURCE_VERIFICATION_AUDIT_42.md) confirms the normalized Solidly stable invariant (XY(X^2+Y^2)=k), a symmetric quartic curve with no StableSwap amplification parameter. Keep Solidly-derived stable forks in one family; the volatile (xy=k) branch, decimal-normalization transforms, solver and swap directions are not additional equation candidates.
