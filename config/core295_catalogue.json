@@ -1811,6 +1811,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-ACERBI-TASCHE-2002",
+      "domain": "DeFi Risk",
+      "title": "On the Coherence of Expected Shortfall (Acerbi & Tasche, 2002)",
+      "url": "https://doi.org/10.1016/S0378-4266(02)00283-2",
+      "use": "Coherent expected shortfall definition; quantile-integral and general-distribution treatment",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
