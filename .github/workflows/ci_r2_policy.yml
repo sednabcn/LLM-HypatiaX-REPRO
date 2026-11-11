@@ -7,6 +7,8 @@ on:
       - "hypatiax/tools/utils/pca_split_utils.py"
       - "hypatiax/experiments/tests/**"
       - "config/exp1_provenance.yaml"
+      - "config/tau_calibration_manifest.json"
+      - "scripts/validate_tau_calibration_manifest.py"
       - ".github/scripts/result_subdir_map.py"
       - "ci_runner/**"
       - "hypatiax/experiments/benchmarks/**"
@@ -25,6 +27,8 @@ on:
       - "hypatiax/tools/utils/pca_split_utils.py"
       - "hypatiax/experiments/tests/**"
       - "config/exp1_provenance.yaml"
+      - "config/tau_calibration_manifest.json"
+      - "scripts/validate_tau_calibration_manifest.py"
       - ".github/scripts/result_subdir_map.py"
       - "ci_runner/**"
       - "hypatiax/experiments/benchmarks/**"
@@ -95,6 +99,10 @@ jobs:
         run: bash -n run_all.sh
       - name: Run experiment contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
+      - name: Run tau calibration manifest safeguards
+        run: >-
+          python -m pytest -q
+          hypatiax/experiments/tests/test_tau_calibration_manifest.py
       - name: Validate fresh-run launcher scope and dry-run
         run: |
           bash -n ci_runner/run_fresh_experiments.sh
