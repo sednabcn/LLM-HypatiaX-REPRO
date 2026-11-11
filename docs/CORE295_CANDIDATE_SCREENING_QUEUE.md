@@ -2,9 +2,9 @@
 
 **Status:** prioritized source-evidence queue, not an equation catalogue. Tier A means the equation or implementation formula is directly visible in an accessible primary/official source and can move to proposed-record drafting after a technical review. It does **not** mean scientifically accepted. Tier B means the formula is visible but exact primary-source mapping, assumptions, units or implementation details remain incomplete. Tier C means a source lead or domain-boundary issue remains.
 
-**Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 8 proposed equation records; zero accepted equation entries.
+**Current manifest:** 127 candidate source records; 121 bibliography items; 23 discovery batches; 9 proposed equation records; zero accepted equation entries.
 
-**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See [CORE295_PROPOSED_RECORD_REVIEW_1.md](CORE295_PROPOSED_RECORD_REVIEW_1.md). The source counts are not equation counts.
+**Proposed-record review pass 1:** `CHEM-HENRY-001`, `CHEM-LANGMUIR-001`, and `CHEM-MARCUS-001`. Pass 2 adds `BIO-HILL-MUSCLE-001`; pass 3 adds `PHYS-POISEUILLE-001`; pass 4 adds `PHYS-PLANCK-SPECTRUM-001`; pass 5 adds `PHYS-THIN-LENS-001`; pass 6 adds `AMM-BALANCER-WEIGHTED-001`; pass 7 adds `RISK-MORPHO-LIF-001`. All have stable IDs, source-family IDs, normalized symbolic fingerprints and stated assumptions. Their train/extrapolation ranges and generator contracts remain deliberately unset; Marcus also requires explicit overlap review against Core-15 exclusions. See [CORE295_PROPOSED_RECORD_REVIEW_1.md](CORE295_PROPOSED_RECORD_REVIEW_1.md). The source counts are not equation counts.
 
 ## Tier A — eligible for proposed-record drafting after technical review
 
