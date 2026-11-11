@@ -72,6 +72,9 @@
 | AMM-CRR-BONDING | Bancor constant-reserve-ratio bonding curve | Purchase, sale and marginal-price expressions are one curve. Include only if the DeFi AMM domain explicitly includes reserve-backed continuous-token issuance. |
 | AMM-RFQ-MARKET-MAKING | Swaap v2 | Stochastic markup optimization and on-chain settlement safeguards form one RfQ architecture, not a conventional invariant pool. Include only if the domain definition includes off-chain RfQ systems. |
 
+
+**Additional screening from the supplied `author_pool.py`:** the pool's 54 AMM rows are discovery leads only; none is accepted. Cluster `swap_out_with_fee`, `spot_price`, `post_trade_price`, `effective_price`, LP minting, arbitrage/rebalance, impermanent-loss and depth metrics under the constant-product family, subject to the frozen Core-15 exclusions. Cluster Balancer `outGivenIn`, `inGivenOut` and spot price as derived relations of one weighted invariant. Cluster Uniswap V3 token amounts, liquidity inversion, position value, virtual reserves, range-order fill, capital efficiency and tick/price transforms as one concentrated-liquidity family. The supplied `three_asset_invariant_price` is not the documented general weighted-pool spot-price equation; `curve_amplified_depth` and `stable_price_impact` are not the documented StableSwap invariant/derivation. Bancor buy/sell/spot are one connector-weight curve. Generic TWAP, LVR, MEV, bonding-curve, fee and reward sketches require exact source/model contracts. See [author-pool DeFi audit 1](CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md).
+
 ## DeFi Risk
 
 | Provisional family ID | Source leads / related structures | Initial screen |
@@ -83,6 +86,9 @@
 | RISK-LOSS-ABSORPTION | Liquity Stability Pool | Stateful debt offset, collateral gain and product/scale/epoch accounting. A scalar pro-rata summary is not the full model. |
 | RISK-ORACLE-TWAP | Uniswap v2 arithmetic cumulative-price TWAP; Uniswap v3 geometric tick TWAP and harmonic mean liquidity | Distinct averaging constructions, but all belong to the oracle manipulation-resistance cluster. Spot price, cumulative accumulator and derived mean are not independent equations. |
 | RISK-ORACLE-FRESHNESS | Chainlink heartbeat/deviation update triggers; consumer updatedAt/maxAge checks | Provider update policy and consumer freshness guard are separate layers. Feed-specific parameters are not universal constants. |
+
+
+**Additional screening from the supplied `author_pool.py`:** the pool's 57 Risk rows are discovery leads only; none is accepted. All supplied VaR variants remain in the Core-15 Value at Risk exclusion family; liquidation-price heuristics remain in the Core-15 Liquidation Price family. Correlation extrapolation to 4 is invalid, covariance/portfolio-weight constraints are missing, and the quartic borrow-rate expression is not Compound III's documented piecewise-linear kink model. Group EWMA/GARCH, portfolio/covariance measures, health-factor rearrangements, utilization/rate/index accrual, APR/APY compounding and Merton/credit-spread measures by their underlying models. Generic funding, liquidation, bridge, oracle, MEV and governance-risk sketches require protocol/venue-specific reconstruction. See [author-pool DeFi audit 1](CORE295_AUTHOR_POOL_DEFI_AUDIT_1.md).
 
 ## Open structural questions before acceptance
 
