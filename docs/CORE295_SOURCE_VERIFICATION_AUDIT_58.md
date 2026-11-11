@@ -8,7 +8,7 @@
 Repository: euler-xyz/euler-vault-kit  
 Commit: 93a1de491531e54cbbcf0e5c8cacfe558f924867  
 File: src/EVault/shared/types/LTVConfig.sol  
-Blob SHA: 48f3e19fbe4c8a3e1e4c2b7b83a6a2a1a9fbe0c1
+Blob SHA: 9e1e53e517661c7620ab5b1026ea08f594819c33
 
 The LTVConfig stores separate borrow LTV and liquidation LTV values, plus initial liquidation LTV, target timestamp and ramp duration. The source comment says liquidation LTV is ramped down when governance lowers it.
 
