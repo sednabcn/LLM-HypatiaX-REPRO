@@ -53,6 +53,12 @@ with sign convention, electron number, transfer coefficients and surface concent
 
 **Structural screen:** This is an electrochemical interfacial charge-transfer kinetic law with two directional exponential contributions. It is not the Frumkin adsorption isotherm and not the Marcus outer-sphere solution electron-transfer barrier model. The shared presence of exponentials is not enough to equate mechanisms. Keep the full current law as a family lead, but do not count its anodic and cathodic terms, Tafel limits, or linear small-overpotential approximation as separate equations. The 1930 primary equation/page locations are now verified from the scan, but a formal catalogue transcription still needs a consistent symbol/sign convention and a precise hydrogen-evolution surface-concentration contract before promotion.
 
+## 4A. Frumkin chronology and primary-source correction
+
+The earlier shorthand that treated Frumkin (1920) as the primary source for the modern interacting-coverage isotherm was too broad. The 1920 *On the Theory of Electrocapillarity* papers are electrocapillarity antecedents. The History of Electrochemistry bibliography explicitly dates the Frumkin isotherm to 1925 and separately lists (i) *Die Kapillarkurve der höheren Fettsäuren und die Zustandsgleichung der Oberflächenschicht* (Z. Phys. Chem. 116, 466–484), (ii) *Einige Bemerkungen zur Theorie der Adsorption und Verteilung* (pp. 501–503), and (iii) the 1926 neutral-molecule electric-field adsorption paper. The latter must not be conflated with the 1925 isotherm source. The accessible 1925 scan has been inspected at printed pp. 466–470: it defines \(\Gamma\), surface coverage and the dilute Gibbs/Langmuir baseline, but the exact non-ideal interaction equation still needs transcription from the relevant 1925 paper/pages. Retain the modern equation as a provisional family lead, not a verified verbatim primary transcription.
+
+Historical source indexes: https://elchi.eu/frumkin-school/frumkins-publications/ and https://www.elch.chem.msu.ru/wp3/index.php/ru/articles/frumkinarticles/.
+
 ## 5. Candidate-family disposition
 
 | Family | Structural relationship | Current action |
@@ -65,8 +71,10 @@ with sign convention, electron number, transfer coefficients and surface concent
 
 ## 5. Source evidence
 
-- Frumkin (1920), primary electrocapillarity source: https://doi.org/10.1080/14786440908636137
-- Frumkin (1926), *The Influence of the Electric Field on the Adsorption of Neutral Molecules*, Z. Phys. 35, 792–802; bibliographic listing: https://www.elch.chem.msu.ru/article/index.htm
+- Frumkin (1920), *On the Theory of Electrocapillarity*, Philosophical Magazine 40, 363–385: electrocapillarity antecedent, not the original Frumkin interacting-adsorption isotherm: https://doi.org/10.1080/14786440908636137
+- Frumkin (1925), *Die Kapillarkurve der höheren Fettsäuren und die Zustandsgleichung der Oberflächenschicht*, Z. Phys. Chem. 116, 466–484, DOI https://doi.org/10.1515/zpch-1925-11629. Original scan: https://elchi.eu/pdf/frumkin/2-article/1914-1930/2-1-1925-29-zpc-Frumkin.pdf. Printed pp. 467–468 define surface coverage and derive the dilute Gibbs/Langmuir baseline; the exact non-ideal interaction equation still needs transcription.
+- Frumkin (1925), *Einige Bemerkungen zur Theorie der Adsorption und Verteilung*, Z. Phys. Chem. 116, 501–503, DOI https://doi.org/10.1515/ZPCH-1925-11632; bibliographic confirmation: https://www.elch.chem.msu.ru/wp3/index.php/ru/articles/frumkinarticles/.
+- Frumkin (1926), *The Influence of the Electric Field on the Adsorption of Neutral Molecules*, Z. Phys. 35, 792–802; a distinct field-dependent adsorption paper, not the original 1925 isotherm source: https://www.nature.com/articles/117790a0
 - Later technical treatment of Frumkin equation of state and isotherm derivation: https://studylib.net/doc/26249563/yuliy-d.-gamburg--giovanni-zangari--auth.----theory-and-p...
 - Frumkin & Obrutsheva (1926), electric-field dependence of adsorption: https://doi.org/10.1038/117790a0
 - Langmuir (1918), primary ideal adsorption source: https://doi.org/10.1021/ja02242a004
