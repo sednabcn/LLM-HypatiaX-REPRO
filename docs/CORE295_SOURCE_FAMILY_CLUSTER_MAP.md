@@ -354,3 +354,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Discovery batch 38 (2026-11-11)
 
 [Candidate Discovery Batch 38](CORE295_CANDIDATE_DISCOVERY_BATCH_38.md) identifies Curve LLAMMA's per-band invariant as virtual constant product, structurally related to Gyro/Maverick/Uniswap v3. Its complete soft-liquidation/de-liquidation mechanism is a potentially distinct protocol-risk system, not a new per-band invariant; it requires oracle, band, fee, interest and hard-liquidation state in one adapter.
+
+
+## Source verification audit 38 (2026-11-11)
+
+[Source Verification Audit 38](CORE295_SOURCE_VERIFICATION_AUDIT_38.md) verifies Gyro E-CLP as a distinct ellipse invariant with finite price bounds, asymmetric concentration, stretch and rotation. Keep it separate from Gyro 2-CLP's virtual-constant-product curve; keep reserve solves, price derivatives, swaps, liquidity updates and parameter precomputation in one E-CLP family.
