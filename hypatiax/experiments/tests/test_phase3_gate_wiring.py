@@ -20,3 +20,26 @@ def test_complexity_gate_context_restores_full_configuration():
     with _gates_off(FakeEngine, ["complexity_routing"]):
         assert FakeEngine._COMPLEXITY_ROUTING is False
     assert FakeEngine._COMPLEXITY_ROUTING is True
+
+def test_nn_specific_core15_gates_are_explicitly_unwired_and_rejected_before_preflight(monkeypatch):
+    import pytest
+    import scripts.phase3_engine_adapter as adapter
+
+    for gate in ("probe", "nn_augmentation", "blend_weight"):
+        assert gate in GATE_SWITCHES
+        assert GATE_SWITCHES[gate] is None
+
+    def unexpected_preflight():
+        raise AssertionError("unwired gates must be rejected before any preflight")
+
+    monkeypatch.setattr(adapter, "_preflight", unexpected_preflight)
+    with pytest.raises(NotImplementedError, match="no engine switch mapped"):
+        adapter.run_case("Newton's Second Law", seed=42,
+                         disabled=["nn_augmentation"], timeout_s=1.0)
+
+
+def test_phase3_wired_and_omitted_gate_sets_are_disjoint_and_complete():
+    all_gates = {"llm_acceptance", "probe", "complexity_routing",
+                 "nn_augmentation", "blend_weight", "pysr_prior"}
+    assert set(phase3_all.WIRED).isdisjoint(phase3_all.OMIT)
+    assert set(phase3_all.WIRED) | set(phase3_all.OMIT) == all_gates
