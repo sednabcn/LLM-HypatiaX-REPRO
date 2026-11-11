@@ -133,3 +133,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 10 (2026-11-11)
 
 [Source Verification Audit 10](CORE295_SOURCE_VERIFICATION_AUDIT_10.md) compares the registered Uniswap v2 and v3 oracle implementations. V2 computes an arithmetic time-weighted mean of reserve-ratio spot prices from cumulative-price deltas; v3 averages ticks and converts the arithmetic mean tick to a geometric mean price, with negative-floor rounding. These are distinct estimands, but they share a broad oracle family and market dependencies. Hold both pending the catalogue's family/independence policy; do not count helper accumulators, token inverses, time windows or v3 harmonic-mean liquidity as extra price equations.
+
+
+## Source verification audit 11 (2026-11-11)
+
+[Source Verification Audit 11](CORE295_SOURCE_VERIFICATION_AUDIT_11.md) verifies the Curve CryptoSwap dynamic-peg invariant against Egorov's 2021 primary whitepaper; Morpho Blue's capped LLTV-dependent liquidation incentive factor against official documentation and the pinned Morpho implementation; and Compound III's piecewise-affine utilization-kink borrow rate against official documentation and the pinned Comet implementation. CryptoSwap remains held pending a pinned deployed implementation and numerical contract; Morpho LIF and Compound borrow kink remain held pending family-level comparisons and frozen unit/parameter/rounding contracts. The audit rejects counting helper definitions, supply-rate conversions, annualization, oracle/price-scale updates or liquidation bookkeeping as additional independent equations. No candidates were accepted and the formal catalogue is unchanged.
