@@ -72,3 +72,10 @@ A deterministic adapter must freeze:
 No formal source-register or equation-catalogue record was changed. The manifest remains 128 source records, 19 proposed records, zero accepted equations and an unfrozen sampling frame.
 
 No experiments, solvers, validators, workflows, paid compute, API calls, on-chain reads or liquidation transactions were run. This is documentation and static-source review only.
+
+
+## Time-dependent liquidation-LTV qualification (Audit 58)
+
+The collateral LTV in the liquidation numerator is not necessarily static. Euler's pinned LTVConfig implementation uses the current liquidation LTV, which can ramp downward linearly from an initial value to a target over a configured duration; borrow LTV remains separate and is used for ordinary account-liquidity checks. See [Source Verification Audit 58](CORE295_SOURCE_VERIFICATION_AUDIT_58.md). The deterministic adapter must include LTVConfig and update timestamps, not just a fixed liquidation-LTV parameter.
+
+The pinned liquidation path also caps collateral yield at available collateral. Before that cap, maximum yield value is liability value divided by the effective discount factor; if collateral value is insufficient, it reduces the repay value to collateral value times the effective discount factor. This is part of the same liquidation transition, not a separate formula candidate.
