@@ -1819,6 +1819,14 @@
       "status": "candidate_reference"
     },
     {
+      "source_id": "RISK-BASEL-CRE35-EL",
+      "domain": "DeFi Risk",
+      "title": "Basel Framework CRE35: IRB Treatment of Expected Losses and Provisions",
+      "url": "https://www.bis.org/committees/bcbs/basel-framework/standard/cre/35",
+      "use": "PD × LGD expected-loss rate and EAD-scaled expected-loss amount; standard credit-risk decomposition",
+      "status": "candidate_reference"
+    },
+    {
       "source_id": "RISK-SOA-CLASSIFICATION",
       "domain": "DeFi Risk",
       "title": "A Risk Classification Framework for Decentralized Finance Protocols",
