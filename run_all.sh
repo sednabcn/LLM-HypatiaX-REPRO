@@ -2283,10 +2283,11 @@ run exp2_protocol30_pca_4060 "Protocol-30 custom 30-equation registry -- PCA-dir
         2>&1 | tee -a "\${_P30_PCA_DIR}/protocol30_pca4060_run.log" \
       || { echo '::error::Protocol-30 PCA domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
-  python3 - "\${_P30_PCA_DIR}" <<'PYEOF'
+  python3 - "\${_P30_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
 import json, sys
 from pathlib import Path
 out = Path(sys.argv[1])
+registry_domains = len(sys.argv[2].split())
 files = sorted(out.glob('protocol_core_noiseless_pca_*.json'))
 rows = 0
 for path in files:
@@ -2299,7 +2300,7 @@ summary = {
     'campaign': 'Protocol-30',
     'protocol': 'pca_40_60',
     'registry': 'hypatiax.protocols.experiment_protocol_all_30.ExperimentProtocolAll',
-    'registry_domains': 10,
+    'registry_domains': registry_domains,
     'expected_equations': 30,
     'result_files': [p.name for p in files],
     'record_count': rows,
