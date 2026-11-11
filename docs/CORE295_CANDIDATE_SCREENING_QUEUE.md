@@ -403,3 +403,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Source verification audit 47 (2026-11-11)
 
 [Source Verification Audit 47](CORE295_SOURCE_VERIFICATION_AUDIT_47.md) verifies Liquity's Stability Pool product-sum accounting against a pinned contract snapshot. The coupled P/S recurrences allocate pro-rata collateral gains and debt losses over sequential liquidations, with error feedback and scale transitions. Keep the accumulator as one path-dependent system; confirm the exact Liquity V1 deployment/version before any adapter.
+
+
+## Source verification audit 48 (2026-11-11)
+
+[Source Verification Audit 48](CORE295_SOURCE_VERIFICATION_AUDIT_48.md) verifies Sky/Maker Liquidations 2.0 against official docs and pinned Dog/Clipper/Abacus sources. The auction supports linear, stair-step exponential and continuous exponential price decay; the stair-step case with step=1 is equivalent to continuous exponential. Treat the price calculator, resets, partial takes, Hole/Dirt capacity and keeper incentives as one versioned Dutch-auction liquidation system.
