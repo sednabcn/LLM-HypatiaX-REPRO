@@ -4,7 +4,8 @@
   "approved_protocol": {
     "edge_r2_floor": 0.99,
     "relative_margin": 0,
-    "bad_routing_risk": 0.05,
+    "tolerated_bad_route_rate_epsilon": 0.05,
+    "family_wise_error_delta": 0.05,
     "one_sided_confidence": 0.95,
     "minimum_n_if_zero_failures": 59
   },
@@ -31,17 +32,34 @@
   "independence_justification": null,
   "frozen_edge_definition": null,
   "selection_procedure": {
-    "name": "NOT_SELECTED",
-    "implementation_or_spec_ref": null
+    "name": "fixed_sequence_exact_binomial",
+    "test": "For each candidate in strictest-to-laxest order, test H0:p_bad(tau)>=epsilon against p_bad(tau)<epsilon using an exact one-sided binomial test at level delta.",
+    "stop_rule": "Stop at the first candidate not certified; select the last candidate that passed.",
+    "no_certified_threshold": "Keep tau unset for that category and route to ensemble.",
+    "zero_failure_minimum_n_formula": "ceil(log(delta)/log(1-epsilon))",
+    "category_guarantee": "Per category only; simultaneous all-category claims require additional category-level multiplicity control.",
+    "implementation_or_spec_ref": "docs/TAU_CALIBRATION_PROTOCOL_FOUNDATION.md#6-selecting-among-candidate-thresholds-fixed-sequence-testing"
   },
   "notes": [
     "Template only: no calibration equations or numeric tau are approved by this manifest.",
-    "Do not populate this file with Core-15 equations or any held-out/extrapolation outcomes.",
-    "The 59-per-category minimum is sufficient only for zero observed bad routes under the stated independent-binomial assumptions.",
-    "A valid selection-aware risk-control method must be selected and implemented before calibration.",
-    "Ready manifests must record SHA-256 hashes for each equation source, canonical formula, and training-row dataset, plus the calibration data-manifest hash, code commit, and evaluator version."
+    "Declare category_list and the finite candidate_tau_values in strictly increasing order (strictest to laxest) before examining calibration outcomes.",
+    "epsilon is the tolerated bad-route probability; delta is the family-wise error rate for the fixed-sequence threshold family. Both are separate protocol choices.",
+    "Count each independent equation or defensible equation family once; seeds, noise levels, and repeated runs of one equation are not independent trials.",
+    "Guarantee is per category. Simultaneous certification claims across categories require a separate multiplicity procedure.",
+    "Applying the calibration guarantee to Core-15 assumes exchangeability/representativeness of Core-15 relative to the declared calibration population.",
+    "Do not populate this file with Core-15 equations or held-out/extrapolation outcomes.",
+    "Bad-route definition, including absolute edge R2 floor and relative ensemble margin, must be frozen before calibration.",
+    "Ready manifests must record SHA-256 hashes for each equation source, canonical formula, and training-row dataset, plus calibration data-manifest hash, code commit, and evaluator version."
   ],
   "calibration_data_manifest_sha256": null,
   "calibration_code_commit": null,
-  "evaluator_version": null
-}
+  "evaluator_version": null,
+  "category_list": [],
+  "candidate_tau_order": "strictest_to_laxest",
+  "bad_route_definition": {
+    "absolute_edge_r2_floor": 0.99,
+    "relative_margin_against_ensemble": 0,
+    "edge_rows": "Upper 20% of training rows ordered by projection onto first PCA direction; freeze exact construction/evaluator before calibration.",
+    "invalid_or_missing_scores": "Fail closed; never drop silently or count as a successful route."
+  }
+}\n
