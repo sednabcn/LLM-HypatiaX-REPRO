@@ -374,3 +374,8 @@ The Chemistry, Biology and Physics portions of the assistant-authored 299-row di
 ## Source verification audit 40 (2026-11-11)
 
 [Source Verification Audit 40](CORE295_SOURCE_VERIFICATION_AUDIT_40.md) verifies Balancer Linear Pool's rate-normalized constant-sum invariant and piecewise nominal-balance fee transform at a pinned V2 commit. The moving-branch source concern is closed; keep invariant, nominal transform, inverse, BPT conversion and swap directions in one family. Resolve whether the constant-sum mechanism is structurally separate from StableSwap's high-amplification limit.
+
+
+## Source verification audit 41 (2026-11-11)
+
+[Source Verification Audit 41](CORE295_SOURCE_VERIFICATION_AUDIT_41.md) confirms the LLAMMA per-band invariant is virtual constant product and groups it with Gyro 2-CLP, Uniswap v3 and Maverick. The full lending/liquidation mechanism couples bands, oracle, interest multiplier, fees, controller and hard-liquidation boundary; consider only as one complete DeFi Risk system if system-level units are permitted.
