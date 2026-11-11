@@ -54,10 +54,12 @@ def validate(data: dict, require_ready: bool = False) -> list[str]:
         entries = []
 
     sources = data.get("source_register", [])
-    source_ids = {
-        item.get("source_id") for item in sources
+    source_domains = {
+        item.get("source_id"): item.get("domain")
+        for item in sources
         if isinstance(item, dict) and isinstance(item.get("source_id"), str)
     }
+    source_ids = set(source_domains)
     ids: set[str] = set()
     fingerprints: dict[str, str] = {}
     counts = {domain: 0 for domain in DOMAINS}
@@ -88,21 +90,25 @@ def validate(data: dict, require_ready: bool = False) -> list[str]:
                 accepted_counts[domain] += 1
 
         fp = entry.get("structural_fingerprint")
-        if isinstance(fp, str) and fp:
-            if not re.fullmatch(r"[0-9a-f]{64}", fp):
-                _fail(errors, f"{where}.structural_fingerprint must be a lowercase SHA-256 hex digest")
-            elif fp in fingerprints:
-                _fail(errors, f"structural fingerprint collision: {equation_id} and {fingerprints[fp]}")
-            else:
-                fingerprints[fp] = str(equation_id)
+        if not isinstance(fp, str) or not re.fullmatch(r"[0-9a-f]{64}", fp):
+            _fail(errors, f"{where}.structural_fingerprint must be a lowercase SHA-256 hex digest")
+        elif fp in fingerprints:
+            _fail(errors, f"structural fingerprint collision: {equation_id} and {fingerprints[fp]}")
+        else:
+            fingerprints[fp] = str(equation_id)
 
         refs = entry.get("source_ids")
-        if isinstance(refs, list):
-            if not refs:
-                _fail(errors, f"{where}.source_ids must contain at least one source")
+        if not isinstance(refs, list) or not refs:
+            _fail(errors, f"{where}.source_ids must be a non-empty list")
+        else:
+            matching_domain_source = False
             for source_id in refs:
                 if source_id not in source_ids:
                     _fail(errors, f"{where} references unknown source_id {source_id!r}")
+                elif source_domains.get(source_id) in {domain, "cross-domain"}:
+                    matching_domain_source = True
+            if domain in DOMAINS and not matching_domain_source:
+                _fail(errors, f"{where} needs at least one source registered for domain {domain!r}")
 
         if entry.get("status") not in {
             "proposed", "source_verified", "scientifically_reviewed",
