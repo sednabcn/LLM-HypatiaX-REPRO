@@ -49,6 +49,21 @@ The consolidated bibliography now includes four additional Chemistry records (it
 
 These leads strengthen the Chemistry source universe but are not equivalent to a verified formula catalogue. For example, the analytical-chemistry worked example supplies a coupled species balance and conditional-solubility mapping, while the polyprotic-acid sources identify alpha-fraction formulations; exact equation/page extraction remains outstanding.
 
+
+## Additional exact equation lead: gas–liquid solubility
+
+**Henry’s law (OpenStax Chemistry 2e, §11.3):** the source gives the proportional relation
+
+\[C_g = k P_g\]
+
+where dissolved-gas concentration is proportional to the gas partial pressure above the liquid; the proportionality constant depends on gas identity, solvent identity and temperature. The source's worked example uses (k=C_g/P_g), so this record must preserve that convention and units (e.g. mol L⁻¹ kPa⁻¹ or mol L⁻¹ atm⁻¹). [Exact section and equation](https://openstax.org/books/chemistry-2e/pages/11-3-solubility#fs-idm169453760).
+
+**Core-15 and family screen:** Henry’s law is not the Ideal Gas Law: it maps gas partial pressure to dissolved concentration in a liquid. It is a plausible distinct chemistry relation, but its accepted domain must be restricted to conditions where the proportional law is valid. Reactive dissolution (e.g. ammonia reacting with water), non-dilute solutions and pressure/temperature-dependent constants require a different coupled-equilibrium or nonideal model. Henry-constant conventions vary between sources (some define the reciprocal), so the equation and units—not the name alone—must define the catalogue record.
+
+**Related equilibrium equations:** OpenStax §15 summary gives (K_{sp}) as the activity/concentration product for a dissolution stoichiometry and identifies formation/dissociation constants and coupled equilibria. Those are useful source-backed mechanisms, but (K_{sp}), (K_f), and (K_d) are instances of the same general mass-action framework; count only genuinely different coupled-system structures after review, not every equilibrium constant as a separate independent equation. [Chapter 15 summary](https://openstax.org/books/chemistry-2e/pages/15-summary).
+
+**Thermodynamic/electrochemical linkage:** OpenStax §16.4 states (G=H-TS), ΔG=ΔH-TΔS and ΔG°=−RT ln K; §17.4 links ΔG°=−nFE°cell. These identities are linked state-function/electrochemical relations, and the last is connected to the Nernst/electrochemical family already listed in batch 1. Do not count these as independent equations by rearrangement. Exact source sections: [§16.4](https://openstax.org/books/chemistry-2e/pages/16-4-free-energy) and [§17.4](https://openstax.org/books/chemistry-2e/pages/17-4-potential-free-energy-and-equilibrium).
+
 ## Acceptance boundary
 
 No equation is promoted to entries. The candidate source map does not establish 59 structurally distinct Chemistry equations, nor 59 independent statistical units. Each eventual entry still requires an exact source location, formula transcription, assumptions, units, validity ranges, source-family ID, equivalence review, and a defensible deterministic benchmark mapping. If the Chemistry stratum cannot supply the required independent units, report the shortfall rather than pad the catalogue.
