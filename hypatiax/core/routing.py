@@ -85,7 +85,7 @@ def training_edge_degradation_probe(
     X_train: Any,
     y_train: Any,
     nn_train_predictions: Any,
-    edge_fraction: float = 0.2,
+    edge_fraction: float = 0.15,
 ) -> dict[str, Any]:
     """Measure neural-network core-to-boundary R² degradation using training rows only.
 
