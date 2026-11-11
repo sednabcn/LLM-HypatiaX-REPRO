@@ -72,6 +72,9 @@
 61. Tissue, B. M. (2013). Buffer Solutions and Polyprotic Acids. In *Basics of Analytical Chemistry and Chemical Equilibria*, Chapter 6. https://doi.org/10.1002/9781118647042.ch6. Textbook chapter covering alpha-fraction plots, polyprotic acid distributions, amphiprotic species and titration curves; exact formula/page references required.
 62. Christian, G. D., Dasgupta, P. K., & Schug, K. A. (2014). *Analytical Chemistry* (7th ed.), Chapter 11, “Precipitation Reactions and Titrations”, §11.3 “Effect of Complexation on Solubility: Conditional Solubility Product”. Wiley. Discovery source for coupled solubility/complexation and conditional solubility; use a versioned copy and verify equation numbers, assumptions and activity conventions before acceptance.
 
+
+63. Flowers, P., Theopold, K., Langley, R., & Robinson, W. R. (2019). *Chemistry 2e*, §11.3 “Solubility”. OpenStax. https://openstax.org/books/chemistry-2e/pages/11-3-solubility. Exact textbook statement of Henry’s law, (C_g=kP_g), for gas solubility in a liquid, with (k) dependent on gas, solvent and temperature. Treat as a candidate gas–liquid partition relation; verify the applicable dilute/ideal-solution regime and distinguish concentration-per-pressure convention from reciprocal Henry constants used elsewhere.
+
 ## Bibliographic and provenance cautions
 
 - Items 8–12 and 29, 36, 38–39 include reviews, teaching resources, empirical studies or risk frameworks. They can guide discovery but are not automatically authoritative formula sources.
