@@ -238,3 +238,8 @@ See [Source Verification Audit 3](CORE295_SOURCE_VERIFICATION_AUDIT_3.md). Five 
 ## Discovery batch 28 (2026-11-11)
 
 [Candidate Discovery Batch 28](CORE295_CANDIDATE_DISCOVERY_BATCH_28.md) expands DeFi Risk discovery to Parkinson high-low range variance, GARCH(1,1), normal expected shortfall and Merton structural credit risk. EWMA is identified as the IGARCH boundary special case of GARCH(1,1), not an independent structure. General financial-risk applicability to DeFi remains a domain-scope decision. Discovery-only; no catalogue entries were added.
+
+
+## Source verification audit 27 (2026-11-11)
+
+[Source Verification Audit 27](CORE295_SOURCE_VERIFICATION_AUDIT_27.md) verifies the modern Nernst equation against IUPAC and Nernst's 1889 electrode-potential theory, while distinguishing the original dissolution-pressure/osmotic-pressure form from the later whole-cell reaction-quotient expression. It also clarifies Debye–Hückel's low-ionic-strength square-root law for the mean ionic activity coefficient; single-ion activity is convention-dependent and not separately measurable. Discovery batch 25 was corrected accordingly. These leads remain discovery-only.
