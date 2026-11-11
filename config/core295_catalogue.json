@@ -570,9 +570,9 @@
     {
       "source_id": "CHEM-RAOULT-1887",
       "domain": "Chemistry",
-      "title": "Loi générale des tensions de vapeur des dissolvants",
-      "url": "https://doi.org/10.1016/S1631-0748(00)00001-8",
-      "use": "Primary historical source for Raoult's vapor-pressure relation; verify original paper metadata, equation transcription and ideal-solution regime",
+      "title": "Raoult's original vapor-pressure law (1887), with OpenStax Chemistry 2e §11.4 equation reference",
+      "url": "https://openstax.org/books/chemistry-2e/pages/11-4-colligative-properties",
+      "use": "Primary historical source metadata: Raoult, Comptes Rendus 104 (1887), 1430–1433; accessible explicit ideal-solution equation and regime reference in OpenStax §11.4. Original paper page-level verification remains required.",
       "status": "candidate_reference"
     }
   ],
