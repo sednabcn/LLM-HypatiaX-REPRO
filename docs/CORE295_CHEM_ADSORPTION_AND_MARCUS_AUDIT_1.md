@@ -41,7 +41,9 @@ The transmission factor distinguishes adiabatic and diabatic transfer; the inver
 
 The full modern two-exponential current–overpotential relation should not be attributed to Butler's 1924 paper alone. Butler's 1924 Part II/III papers developed a kinetic/dynamic-equilibrium interpretation of the Nernst reversible potential. Erdey-Grúz and Volmer's 1930 *Zur Theorie der Wasserstoffüberspannung* is a key primary source for slow-discharge hydrogen overpotential kinetics and the transfer coefficient; the historical record also includes Erdey-Grúz and Volmer's 1931 treatment and Butler's 1932 paper on overvoltage. A recent detailed historical review explicitly cautions that Butler's 1924 works did not set out a complete theory of heterogeneous electron-transfer rates, while the 1930 Erdey-Grúz–Volmer contribution is often omitted from the familiar equation name.
 
-The commonly used charge-transfer-controlled form is
+In the accessible ESTIR scan of the original 1930 paper (8-page scan), the authors explicitly construct two opposing electron-transfer rates, state the equilibrium condition where they are equal, and write the net current density as their difference. The key primary locations are Eqs. (7)–(8) on printed pp. 209–210, Eq. (13) and equilibrium Eq. (14) on printed p. 211, and the overpotential expression Eq. (15) and Tafel limit Eq. (17) on printed p. 212. The authors estimate the transfer coefficient parameter near 0.5 for their stated hydrogen-evolution conditions (printed p. 210). This is a source-verified mechanism-specific kinetic derivation, not proof that every modern multi-reaction Butler–Volmer parameterization is literally present in this 1930 paper.
+
+A common generalized charge-transfer-controlled form is
 
 [
 j=j_0\left[\exp\left(\frac{\alpha_a nF\eta}{RT}\right)-\exp\left(-\frac{\alpha_c nF\eta}{RT}\right)\right],
@@ -49,7 +51,7 @@ j=j_0\left[\exp\left(\frac{\alpha_a nF\eta}{RT}\right)-\exp\left(-\frac{\alpha_c
 
 with sign convention, electron number, transfer coefficients and surface concentrations declared. Some simplified forms impose a relation between anodic and cathodic transfer coefficients; that relation is not a universal identity for every mechanism. If surface concentrations differ from bulk because of mass transport, concentration ratios must be retained and the scalar form above is not the complete mixed-control model.
 
-**Structural screen:** This is an electrochemical interfacial charge-transfer kinetic law with two directional exponential contributions. It is not the Frumkin adsorption isotherm and not the Marcus outer-sphere solution electron-transfer barrier model. The shared presence of exponentials is not enough to equate mechanisms. Keep the full current law as a family lead, but do not count its anodic and cathodic terms, Tafel limits, or linear small-overpotential approximation as separate equations. Exact primary equation/page transcription and scope conditions remain required before promotion.
+**Structural screen:** This is an electrochemical interfacial charge-transfer kinetic law with two directional exponential contributions. It is not the Frumkin adsorption isotherm and not the Marcus outer-sphere solution electron-transfer barrier model. The shared presence of exponentials is not enough to equate mechanisms. Keep the full current law as a family lead, but do not count its anodic and cathodic terms, Tafel limits, or linear small-overpotential approximation as separate equations. The 1930 primary equation/page locations are now verified from the scan, but a formal catalogue transcription still needs a consistent symbol/sign convention and a precise hydrogen-evolution surface-concentration contract before promotion.
 
 ## 5. Candidate-family disposition
 
@@ -72,7 +74,8 @@ with sign convention, electron number, transfer coefficients and surface concent
 - Caltech repository record and attached original paper PDF: https://authors.library.caltech.edu/records/desqy-fmq55
 - IUPAC Marcus equation, prefactor and barrier definition: https://goldbook.iupac.org/terms/view/M03702
 - Butler (1924), *Studies in heterogeneous equilibria, Part III*: https://doi.org/10.1039/TF9241900734
-- Erdey-Grúz & Volmer (1930), *Zur Theorie der Wasserstoffüberspannung*: https://doi.org/10.1515/zpch-1930-15020
+- Erdey-Grúz & Volmer (1930), *Zur Theorie der Wasserstoffüberspannung*, original 8-page scan (Eqs. 7–8, 13–17; printed pp. 209–212): https://knowledge.electrochem.org/estir/hist/hist-34-Volmer-1.pdf
+- DOI record: https://doi.org/10.1515/zpch-1930-15020
 - Dickinson & Wain, historical and equation-form review of Butler–Volmer: https://www.sciencedirect.com/science/article/pii/S1572665720303283
 - Equation-level Frumkin isotherm and surface equation of state: https://pmc.ncbi.nlm.nih.gov/articles/PMC5686271/
 - Interfacial adsorption isotherm comparison: https://pure.rug.nl/ws/portalfiles/portal/3086148/c3.pdf
