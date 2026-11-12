@@ -674,7 +674,8 @@ def _reseed_for_task(task_seed):
 
 
 def run_condition(eq, condition, seed=42, niterations=None,
-                  timeout_secs=None, populations=None, wall_clock_limit=None):
+                  timeout_secs=None, populations=None, wall_clock_limit=None,
+                  dataset_override=None):
     """
     condition='pysr_only' : raw PySRRegressor (clean baseline).
     condition='hypatia'   : HybridDiscoverySystem v5.1 (FIX-A…FIX-POW all active).
@@ -697,13 +698,34 @@ def run_condition(eq, condition, seed=42, niterations=None,
         f"seed={eq_seed}  wall_clock={wall_clock_limit}s")
 
     # ── Data ─────────────────────────────────────────────────────────────────
-    X_train, X_test, y_train, y_test, _, _ = generate_data(
-        eq, N=200, noise_level=0.05, seed=eq_seed
-    )
-    extrap_sets = {}
-    for regime_name, _ in EXTRAP_REGIMES:
-        X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
-        extrap_sets[regime_name] = (X_e, y_e)
+    if dataset_override is None:
+        X_train, X_test, y_train, y_test, _, _ = generate_data(
+            eq, N=200, noise_level=0.05, seed=eq_seed
+        )
+        extrap_sets = {}
+        for regime_name, _ in EXTRAP_REGIMES:
+            X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
+            extrap_sets[regime_name] = (X_e, y_e)
+    else:
+        # Core-295 supplies the exact pre-generated arrays whose hashes are recorded.
+        # Copies isolate an arm from accidental mutation; the default Core-15 path above
+        # remains byte-for-byte unchanged when no override is provided.
+        if not isinstance(dataset_override, dict) or set(dataset_override) != {"train", "extrapolation"}:
+            raise ValueError("dataset_override must contain exactly train and extrapolation")
+        train_data = dataset_override["train"]
+        if not isinstance(train_data, (tuple, list)) or len(train_data) != 6:
+            raise ValueError("dataset_override.train must contain the six generate_data arrays")
+        train_data = tuple(np.array(value, copy=True) for value in train_data)
+        X_train, X_test, y_train, y_test, _, _ = train_data
+        extrap_data = dataset_override["extrapolation"]
+        if not isinstance(extrap_data, dict) or set(extrap_data) != {name for name, _ in EXTRAP_REGIMES}:
+            raise ValueError("dataset_override.extrapolation must cover the configured regimes exactly")
+        extrap_sets = {
+            name: tuple(np.array(value, copy=True) for value in arrays)
+            for name, arrays in extrap_data.items()
+        }
+        if any(len(arrays) != 2 for arrays in extrap_sets.values()):
+            raise ValueError("each extrapolation regime must contain exactly X and y arrays")
 
     # ── Variable sanitisation ─────────────────────────────────────────────────
     sanitizer = VariableNameSanitizer()
