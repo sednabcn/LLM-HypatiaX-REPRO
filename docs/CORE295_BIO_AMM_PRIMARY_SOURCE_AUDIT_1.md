@@ -485,3 +485,41 @@ A second primary-publication route is now identified: Frumkin's Russian-language
 The MSU selected-papers page lists the German article (Z. Phys. Chem. 116, 466–484) but its PDF link currently resolves to a login/reprint-request screen. The De Gruyter DOI record confirms the German article's bibliographic identity and pagination but does not expose its text in the retrieved record. The GPNTB PDF endpoint was identified but could not be opened by the web retrieval service in this pass. No equation, sign convention or page-level definition has therefore been transcribed from the Russian volume yet.
 
 **Disposition:** retain the Russian volume as a high-priority primary-source retrieval lead. Inspect printed pp. 56–74 (not PDF page indices) and compare its symbols, derivation and sign convention against the German pp. 466–484 before using it to resolve the Frumkin equation. Do not yet promote the familiar modern form (bc=\theta/(1-\theta)\exp(-2a\theta)) as an exact primary transcription.
+
+
+## 4.1 Biology primary equations newly recovered: Verhulst (1838) and Gompertz (1825)
+
+### Verhulst, “Notice sur la loi que la population suit dans son accroissement” (1838)
+
+A scan-based English translation of Verhulst's original 1838 notice is now accessible. In the section introducing the population law, the text defines population \(p\), infinitesimal time \(dt\), and the increase \(dp\), first writing the Malthusian term and then the retarding function:
+
+\[
+\frac{dp}{dt}=mp-\phi(p),\qquad \phi(p)=np^2.
+\]
+
+The source gives the integrated relation
+
+\[
+t=\frac{1}{m}\left[\log p-\log(m-np)\right]+C,
+\]
+
+and states the limiting population \(P=m/n\). Crucially, Verhulst also discusses alternatives \(\phi(p)=np^\alpha\) and \(\phi(p)=n\log p\), and reports testing several forms. The logistic choice is the familiar quadratic-retardation case, not the whole set of hypotheses. The translation is scan-based and identifies the original notice as *Correspondance mathématique et physique* 10 (1838), pp. 113–121. A separate original French 1845 memoir is available through Persée as a page-image scan, but the 1838 translation is the source used for the directly readable transcription here.
+
+**Disposition:** add the 1838 source to the Biology source register as provenance and Core-15 exclusion evidence. Logistic growth is already an explicit Core-15 exclusion, so do not add it as a new Core-295 equation or count the alternative retardation functions as independent models without separate primary-source and structural review.
+
+### Gompertz, “On the nature of the function expressive of the law of human mortality” (1825)
+
+An original scan of Gompertz's *Philosophical Transactions of the Royal Society of London* paper, volume 115, pp. 513–583, is now readable. In Article I, section 5, printed p. 518, Gompertz describes the age-dependent “intensity of mortality” as proportional to an exponential function of age, with historical notation transcribed as
+
+\[
+\mu(x)=a q^x,
+\]
+
+where \(a\) and \(q\) are constants. In the same passage he gives the corresponding number living at age \(x\) as \(L_x=d g^{q^x}\), and explicitly cautions that \(g\) is raised to the power \(q^x\), not merely to \(q\) and then to \(x\). The survivor-count expression is the integrated consequence of the mortality-intensity law in the model, not a second candidate. The common modern form \(\mu(x)=\alpha e^{\beta x}\) is a reparameterization, not the original printed notation. The OCR around the displayed survivor formula is noisy; the prose-defined intensity law is the primary transcribed expression.
+
+**Disposition:** add one proposed demographic-survival equation record, with source-family tracking and no claim of acceptance. Its placement in Biology is provisional because the source is human demography/actuarial mortality; cross-domain structural review and scope review remain required. Do not conflate this mortality law with Gompertz growth curves. No experiment or validator was run.
+
+Primary-source links:
+- Verhulst 1838 scan-based translation: https://neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf
+- Verhulst 1845 French memoir scan record: https://www.persee.fr/doc/marb_0770-8157_1845_num_18_1_3438
+- Gompertz 1825 original scan: https://fileserver-az.core.ac.uk/download/pdf/14511273.pdf
