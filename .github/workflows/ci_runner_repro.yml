@@ -1477,7 +1477,7 @@ jobs:
             _EXTRA=()
             [[ "${RESUME}" == "true" ]] && _EXTRA+=(--resume)
             TASK_IDS="${TASK_IDS}" \
-            SHARD_IDS="${_RUN_SHARD_IDS:-${TASK_IDS}}" \
+            SHARD_IDS="${_RUN_SHARD_IDS}" \
             SHARD="${SHARD_INDEX}" \
             RESULTS_DIR="${RESULTS_DIR}" \
             OUT_BASE="${RESULTS_DIR}" \
