@@ -523,3 +523,43 @@ Primary-source links:
 - Verhulst 1838 scan-based translation: https://neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf
 - Verhulst 1845 French memoir scan record: https://www.persee.fr/doc/marb_0770-8157_1845_num_18_1_3438
 - Gompertz 1825 original scan: https://fileserver-az.core.ac.uk/download/pdf/14511273.pdf
+
+
+## 4.2 Holling (1959b): original functional-response derivation and Watt comparison
+
+The original scan of C. S. Holling, “Some Characteristics of Simple Types of Predation and Parasitism,” *The Canadian Entomologist* 91(7) (July 1959), pp. 385–398, is now accessible. On printed pp. 386–390, Holling derives the disc-search response from a constant instantaneous discovery rate \(a\), prey density \(x\), total time \(T_t\), and handling time \(b\):
+
+\[
+y=axT_s,\qquad T_s=T_t-by,
+\]
+
+so
+
+\[
+y=\frac{T_t a x}{1+abx} \tag{Holling 1959, Eq. 4}
+\]
+
+The paper then introduces an identification-time term \(c\), obtaining \(y=T_t a x/[1+(b+c)x]\) (Eq. 7) and \(a=a'/(1+a'cx)\) (Eq. 9). These are extensions/parameter decompositions of the same handling-time response, not separate candidates. The rational saturation form is algebraically the same normalized hyperbola as the Core-15 Michaelis–Menten family; retain this source as mechanism/provenance evidence and an explicit exclusion check.
+
+The same paper is particularly useful for distinguishing Type II from Type III. Holling says the S-shaped responses observed for small mammals cannot be described by Eq. (4), because that equation has a continuously decreasing slope; he reports that an additional prey-stimulated searching component may be involved, but that experiments were then still underway. Therefore this 1959b article does **not** supply the later allosteric/encounter Type III equation attributed to Real (1977).
+
+Holling also reproduces Watt's distinct exponential response as Eq. (11),
+
+\[
+N_a=PK\left(1-e^{-aN_0P^{1-b}}\right),
+\]
+
+and, for fixed predator density, reduces it to Eq. (12),
+
+\[
+y=K'\left(1-e^{-a'x}\right),
+\]
+
+which is equivalent to the differential relation \(dy/dx=a'(K'-y)\) printed in the same comparison. Holling attributes this model to K. E. F. Watt (1959) and notes its connection to Gause (1934). This exponential saturation has a different normalized functional form from the rational Holling Eq. (4), but the original Watt paper (pp. 129–144) remains access-gated in the publisher record. Keep Watt as a primary-source retrieval lead, not a directly transcribed or accepted candidate until its own article is inspected.
+
+**Disposition:** add the Holling scan and Watt retrieval lead to the source register. No Holling Type II candidate is added because of the Core-15 Michaelis–Menten structural exclusion; no Watt candidate is added until its original source is checked. Do not count Holling's Eq. (7), Eq. (9), or fixed-predator-density specializations as additional independent equations. No experiments or validators were run.
+
+Primary and retrieval links:
+- Holling 1959b original scan: https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2010/documents/Holling_1959b.pdf
+- Holling 1959b publisher record: https://doi.org/10.4039/Ent91385-7
+- Watt 1959 original publisher record: https://doi.org/10.4039/Ent91129-3
