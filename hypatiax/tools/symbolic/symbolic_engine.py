@@ -529,7 +529,7 @@ class LLMConfig:
 
     model: str = field(default_factory=lambda: os.environ.get("HYPATIAX_LLM_MODEL", "claude-sonnet-4-6"))
     max_tokens: int = 2000
-    # Shared protocol setting; read at instance creation so environment overrides are honoured.
+    # Core-15 protocol default. The shared API wrapper enforces 0.25 even if a caller supplies another value.
     temperature: float = 0.25
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
@@ -635,8 +635,11 @@ class IntegratedLLMEngine:
         if _replay_dir:
             import hashlib as _hl
             os.makedirs(_replay_dir, exist_ok=True)
+            # Cache identity must use the effective API temperature, not a
+            # legacy caller/config value that create_message() will override.
+            from hypatiax.core.llm_call import configured_temperature
             _key = _hl.sha256(
-                f"{self.config.model}|{self.config.temperature}|{prompt}".encode()).hexdigest()
+                f"{self.config.model}|{configured_temperature()}|{prompt}".encode()).hexdigest()
             _replay_path = os.path.join(_replay_dir, _key + ".json")
             if os.path.isfile(_replay_path):
                 with open(_replay_path, encoding="utf-8") as _fh:
