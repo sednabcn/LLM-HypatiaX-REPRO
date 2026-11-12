@@ -462,7 +462,7 @@ This is useful corroboration of the model's conceptual mechanism, but it is not 
 
 The University of Chicago Press article record and issue contents confirm *The American Naturalist* 111(978), 1 March 1977, pp. 289–300. The publisher abstract says Real generalizes the organismal-interaction formulations underlying Holling Type II into a learning/encounter-dependent Type III model using an allosteric-enzyme analogy, with maximum feeding rate F, affinity G and encounter count n. The publisher page currently presents “Get Access”; the retrieved PDF endpoint resolves to that access page, not readable article pages.
 
-An openly accessible later synthesis by Rosenbaum et al. gives the generalized functional-response form and explicitly attributes the enzyme-kinetics formulation to Real (1977):
+An openly accessible later synthesis by Rosenbaum and Rall (2018) gives the generalized functional-response form and explicitly attributes the enzyme-kinetics formulation to Real (1977):
 \[
 F(N)=\frac{F_{\max}N^{1+q}}{N_{1/2}^{1+q}+N^{1+q}},
 \]
