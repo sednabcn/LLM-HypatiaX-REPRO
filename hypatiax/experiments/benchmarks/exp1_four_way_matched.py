@@ -112,6 +112,51 @@ def _array_hash(*arrays):
     return digest.hexdigest()
 
 
+def _run_fingerprint():
+    """Bind resumable results to the exact driver, dependencies, protocol and run settings."""
+    source_paths = (
+        Path(__file__).resolve(),
+        HERE / "exp1_ablation.py",
+        HERE / "run_comparative_suite_benchmark_v2.py",
+    )
+    source_hashes = {}
+    for path in source_paths:
+        if not path.is_file():
+            raise RuntimeError(f"Cannot fingerprint required source file: {path}")
+        source_hashes[str(path.relative_to(ROOT))] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    protocol_path = os.environ.get("REPRO_CFG")
+    protocol_hash = None
+    if protocol_path:
+        resolved_protocol = Path(protocol_path).expanduser().resolve()
+        if not resolved_protocol.is_file():
+            raise RuntimeError(f"Configured protocol file does not exist: {resolved_protocol}")
+        protocol_hash = hashlib.sha256(resolved_protocol.read_bytes()).hexdigest()
+
+    settings = {
+        "seed": SEED,
+        "common_wall_clock_seconds": COMMON_WALL_CLOCK,
+        "noise_level": NOISE_LEVEL,
+        "n_train_source": N_TRAIN_SOURCE,
+        "n_extrapolation": N_EXTRAP,
+        "shard_index": int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0"))),
+        "n_shards": max(1, int(os.environ.get("N_SHARDS", "1"))),
+        "llm_model": os.environ.get("HYPATIAX_LLM_MODEL", os.environ.get("LLM_MODEL")),
+        "llm_temperature": os.environ.get("LLM_TEMPERATURE"),
+        "pysr_niterations": os.environ.get("PYSR_NITERATIONS", os.environ.get("N_ITERATIONS")),
+        "pysr_populations": os.environ.get("PYSR_POPULATIONS", os.environ.get("POPULATIONS")),
+        "pysr_population_size": os.environ.get("PYSR_POPULATION_SIZE", os.environ.get("PYSR_POPULATION")),
+    }
+    payload = {
+        "schema": 1,
+        "source_sha256": source_hashes,
+        "protocol_sha256": protocol_hash,
+        "settings": settings,
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return {"sha256": hashlib.sha256(encoded).hexdigest(), **payload}
+
+
 def _failure(method, exc, elapsed):
     return {
         "method": method, "success": False,
@@ -424,10 +469,26 @@ def _aggregate(checkpoint):
 def run():
     if not os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-"):
         raise RuntimeError("ANTHROPIC_API_KEY is required for a genuine four-arm run; refusing silent Hybrid downgrade")
+    run_fingerprint = _run_fingerprint()
     checkpoint = {}
     if CHECKPOINT_PATH.exists():
         with CHECKPOINT_PATH.open(encoding="utf-8") as handle:
             checkpoint = json.load(handle)
+        if not isinstance(checkpoint, dict):
+            raise RuntimeError("Checkpoint root must be a JSON object; use a fresh output directory")
+        prior_metadata = checkpoint.get("__run_metadata__")
+        has_equation_rows = any(key != "__run_metadata__" for key in checkpoint)
+        if has_equation_rows and prior_metadata is None:
+            raise RuntimeError(
+                "Existing checkpoint has no run fingerprint; refusing unsafe legacy resume. "
+                "Use a fresh output directory."
+            )
+        if prior_metadata is not None and prior_metadata != run_fingerprint:
+            raise RuntimeError(
+                "Checkpoint driver/protocol/settings fingerprint mismatch; "
+                "use a fresh output directory rather than mixing runs."
+            )
+    checkpoint["__run_metadata__"] = run_fingerprint
 
     llm_method = rcsb.PureLLMBaselineMethod(
         verbose=False, no_cache=os.environ.get("NO_LLM_CACHE", "1") == "1"
@@ -519,6 +580,7 @@ def run():
         json.dump(_json_safe(summary), handle, indent=2, allow_nan=False)
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
+        "run_fingerprint": run_fingerprint,
         "seed": SEED, "noise_level": NOISE_LEVEL,
         "common_method_wall_clock_seconds": COMMON_WALL_CLOCK,
         "n_source_samples": N_TRAIN_SOURCE, "n_extrapolation_samples": N_EXTRAP,
