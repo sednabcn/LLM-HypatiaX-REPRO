@@ -1203,9 +1203,10 @@ def run_hybrid_test_all_domains(
             hybrid.results.append(result)
 
     # Save results
-    os.makedirs("hypatiax/data/results", exist_ok=True)
+    results_root = os.environ.get("HYPATIAX_RESULTS_DIR", "hypatiax/data/results")
+    os.makedirs(results_root, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    hybrid.save_results(f"hypatiax/data/results/hybrid_llm_nn_all_domains_{ts}.json")
+    hybrid.save_results(os.path.join(results_root, f"hybrid_llm_nn_all_domains_{ts}.json"))
 
     # Print detailed results table
     hybrid.print_results_table(all_results)
