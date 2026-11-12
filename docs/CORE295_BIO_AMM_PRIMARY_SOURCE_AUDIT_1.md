@@ -321,3 +321,16 @@ The paired factory implementation is pinned at the same repository commit:
 - Constructor defaults are 5 basis points (0.05%) for stable pools and 30 basis points (0.30%) for volatile pools. `setFee` allows the fee manager to change nonzero defaults up to 300 basis points (3%); `setCustomFee` permits per-pool overrides and the zero-fee sentinel.
 
 This resolves the source-code fee-selection rule, but not the runtime fee of any particular pool: that requires the actual factory and pool state at a specified block/deployment. No chain calls were made. Keep default constructor values distinct from market-specific deployed configuration.
+
+
+## Real (1977) functional response: provenance boundary and equation lead
+
+The publisher record for Real's article confirms its scope and abstract: an allosteric-enzyme-kinetics analogy generalizes Type II into learning/encounter-dependent Type III behaviour, with maximal feeding rate \(F\), affinity \(G\), and encounter number \(n\). A search result that appeared to be a full-text copy was a false positive: opening it shows Harvey J. Gold's 1978 *Biosystems Modeling* volume, which reproduces only Real's abstract on p. 120; it is not the 1977 article and contains no equation transcription. The publisher full text remains access-restricted.
+
+An open 2013 Oecologia paper explicitly attributes the generalized density-response form
+\[
+F_{ij}=\frac{a_{ij}N_i^{q+1}}{1+a_{ij}h_{ij}N_i^{q+1}}
+\]
+to Holling (1959), Real (1977), Hassell (1978), Rall et al. (2008), and Vucic-Pestic et al. (2010b). In that paper, \(q=0\) gives the hyperbolic Type II form and \(q=1\) the sigmoid Type III form. This is useful equation-level secondary evidence for a generalized Holling/Real lineage, but it does not establish that this exact notation or parameterization is printed verbatim in Real (1977), nor does it transcribe Real's abstract's distinct \((F,G,n)\) allosteric-kinetics expression. Keep the generalized exponent family and Real's encounter-history mechanism linked but provenance-distinct until the primary paper is inspected.
+
+**Catalogue disposition:** retain Real as a high-priority source lead, not equation-ready. Do not accept the generalized power-law expression as a direct Real transcription. Do not count Type II/III parameter limits or exponent choices as separate families without applying the structural-equivalence review to the complete governing model.
