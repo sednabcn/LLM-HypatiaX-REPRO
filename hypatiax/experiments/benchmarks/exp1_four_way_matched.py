@@ -153,6 +153,7 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
             regime: {
                 "r2": row.get(f"extrap_r2_{regime}"),
                 "rmse": row.get(f"extrap_rmse_{regime}"),
+                "mae": row.get(f"extrap_mae_{regime}"),
             }
             for regime in ("near", "medium", "far")
         },
