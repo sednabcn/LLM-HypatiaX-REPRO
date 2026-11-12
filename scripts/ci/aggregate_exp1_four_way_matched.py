@@ -119,10 +119,10 @@ def main() -> int:
 
     safe = driver._json_safe(checkpoint)
     for path in (results_path, checkpoint_path):
-        path.write_text(json.dumps(safe, indent=2, allow_nan=False) + "\\n", encoding="utf-8")
+        path.write_text(json.dumps(safe, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     summary = driver._aggregate(merged)
     summary_path.write_text(
-        json.dumps(driver._json_safe(summary), indent=2, allow_nan=False) + "\\n",
+        json.dumps(driver._json_safe(summary), indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     manifest = {
@@ -143,7 +143,7 @@ def main() -> int:
             "LLM-only is zero-shot and does not use training arrays for formula generation."
         ),
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"PASS: merged all {len(merged)} Core-15 equations from five isolated shards.")
     return 0
 
