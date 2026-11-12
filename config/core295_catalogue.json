@@ -2651,7 +2651,11 @@
         "Direct equation transcription from the author-expanded 1927 reprint of the 1926 Lincei memoir, Part II, §2, equations (B)",
         "Source states a_rs=-a_sr, a_rr=0 and beta_r>0",
         "The same source reduces the two-species feeding case to this general n-species system",
-        "Proposed, not accepted; compare against Lotka 1920, the two-species Volterra feeding model, and other multi-species interaction families before counting"
+        "Proposed, not accepted; compare against Lotka 1920, the two-species Volterra feeding model, and other multi-species interaction families before counting",
+        "Primary-source audit 1 (2026-11-12): inspected Volterra's author-expanded 1927 reprint, Part II §2, printed pp. 38–39, Eq. (B), and its prefatory statement that Parts I–III rearrange and add to the 1926 Lincei memoir. The equation and restrictions a_rs=-a_sr, a_rr=0, beta_r>0 are directly visible. See docs/CORE295_VOLTERRA_N_SPECIES_PRIMARY_SOURCE_AND_STRUCTURE_AUDIT_1.md.",
+        "The source defines 1/beta_r as the equivalence assigned to individuals of species r; beta_r is therefore a species-specific conversion weight, not an arbitrary dimensionless constant. The interaction contribution cancels in the derivative of sum_r beta_r N_r, but the full weighted total is conserved only when the intrinsic terms epsilon_r vanish (or under a separately justified condition making their weighted sum zero). With nonzero epsilon_r the model is a conservative interaction structure plus intrinsic growth/depletion, not an unconditionally conserved total.",
+        "The two-species predator-prey case is treated earlier as a special case; do not count it again. Volterra's 1927 preface explicitly acknowledges Lotka's prior treatment of the two-species equations, while distinguishing the broader n-species conservative/dissipative theory. Compare the complete restricted n-species operator with Lotka's generalized Lotka-Volterra family and other multi-species models before assigning E0-E5.",
+        "Source assumptions include continuous positive real-valued population counts, continuous birth/death rates, homogeneous individuals within each species, and pairwise encounter frequency proportional to N_r*N_s. No universal parameter or state ranges are supplied. Keep proposed and generator pending; no acceptance, statistical independence, or benchmark readiness is implied."
       ],
       "source_location": "Volterra (1927 author-expanded reprint of 1926 memoir), Part II, §2, printed pp.38–39",
       "model_definition": {
