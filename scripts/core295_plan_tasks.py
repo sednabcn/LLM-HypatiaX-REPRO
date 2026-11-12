@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
 
@@ -137,8 +138,18 @@ def validate_catalogue(catalogue: object) -> list[dict]:
                 fail(f"{eid}: train and extrapolation ranges are required for independent input {variable}")
         if not isinstance(model.get("constraints"), list) or not model.get("operator_structure"):
             fail(f"{eid}: model constraints and operator_structure are required")
-        if not isinstance(generator.get("constraints_enforced"), bool):
-            fail(f"{eid}: generator.constraints_enforced must be an explicit boolean")
+        if generator.get("constraints_enforced") is not True:
+            fail(f"{eid}: generator.constraints_enforced must be true before planning")
+        if not isinstance(generator.get("constraint_evidence"), str) or not generator["constraint_evidence"].strip():
+            fail(f"{eid}: generator.constraint_evidence is required")
+        for value_field, role in (("fixed_parameter_values", "fixed_parameters"),
+                                  ("physical_constant_values", "physical_constants")):
+            values = entry.get(value_field)
+            if not isinstance(values, dict) or set(values) != set(model[role]):
+                fail(f"{eid}: {value_field} must cover exactly model_definition.{role}")
+            if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(float(v))
+                   for v in values.values()):
+                fail(f"{eid}: {value_field} must contain only finite numeric values")
         tasks.append({"equation_id": eid, "domain": domain, "fingerprint": fingerprint,
                       "model_class": model["model_class"],
                       "source_family_id": entry["source_family_id"],
