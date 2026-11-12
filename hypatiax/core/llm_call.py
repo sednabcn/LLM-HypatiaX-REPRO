@@ -6,7 +6,6 @@ there is no retry at an implicit provider default that would violate arm parity.
 """
 from __future__ import annotations
 
-import os
 import threading
 
 _state = threading.local()
