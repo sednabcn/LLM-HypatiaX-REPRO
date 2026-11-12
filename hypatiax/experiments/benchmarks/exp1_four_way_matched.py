@@ -139,7 +139,29 @@ def _run_fingerprint():
         resolved_protocol = Path(protocol_path).expanduser().resolve()
         if not resolved_protocol.is_file():
             raise RuntimeError(f"Configured protocol file does not exist: {resolved_protocol}")
+    else:
+        # PureLLMBaseline.resolve_model() searches these same ancestors for
+        # config/repro.yaml when REPRO_CFG is unset. Fingerprint that implicit
+        # config too; otherwise editing it could silently change the LLM model
+        # while a checkpoint still appears compatible.
+        resolved_protocol = next(
+            (
+                parent / "config" / "repro.yaml"
+                for parent in Path(
+                    "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py"
+                ).resolve().parents
+                if (parent / "config" / "repro.yaml").is_file()
+            ),
+            None,
+        )
+    if resolved_protocol is not None:
         protocol_hash = hashlib.sha256(resolved_protocol.read_bytes()).hexdigest()
+
+    from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import resolve_model
+    pure_llm_model, pure_llm_model_source = resolve_model()
+    hybrid_llm_model = (
+        os.environ.get("HYPATIAX_LLM_MODEL", "").strip() or "claude-sonnet-4-6"
+    )
 
     settings = {
         "seed": SEED,
@@ -152,7 +174,12 @@ def _run_fingerprint():
         # Record effective imported settings, not just environment aliases:
         # exp1_ablation gives N_ITERATIONS precedence over PYSR_NITERATIONS
         # and POPULATIONS precedence over PYSR_POPULATIONS.
-        "llm_model_effective": abl.MODEL_STRING,
+        # The Pure LLM and Hybrid arms resolve model IDs through distinct
+        # configuration paths; record both effective values and provenance.
+        "pure_llm_model_effective": pure_llm_model,
+        "pure_llm_model_source": pure_llm_model_source,
+        "hybrid_llm_model_effective": hybrid_llm_model,
+        "ablation_llm_model_metadata": abl.MODEL_STRING,
         "llm_temperature_effective": abl.LLM_TEMPERATURE,
         "pysr_niterations_effective": abl.NITERATIONS,
         "pysr_populations_effective": abl.POPULATIONS,
