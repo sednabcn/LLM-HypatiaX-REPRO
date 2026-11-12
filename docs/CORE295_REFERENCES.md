@@ -407,3 +407,10 @@ These are additional official documentation pointers, not independent primary re
 214. Royama, T. (1971). “A comparative study of models for predation and parasitism.” *Researches on Population Ecology* 13, Supplement 1, pp. 1–91. DOI: https://doi.org/10.1007/BF02511547. Full scan: https://www2.dnr.state.mi.us/PUBLICATIONS/pdfs/IFR/ifrlibra/Research/reports/2001rr.PDF. Secondary comparative source used for structural-family review and tracing earlier primary sources.
  
 215. Thompson, W. R. (1924). “La théorie mathématique de l'action des parasites entomophages et le facteur du hasard.” *Annales de la Faculté des Sciences de Marseille*, series 2, vol. 2, pp. 69–89. Bibliographic details reproduced in Royama (1971), p. 87. Original 1924 scan and authoritative DOI/catalogue URL not located in this pass; no primary equation transcription claimed.
+
+ 
+216. Bailey, V. A. (1931). “The interaction between hosts and parasites.” *The Quarterly Journal of Mathematics* os-2(1), pp. 68–77. DOI: https://doi.org/10.1093/qmath/os-2.1.68. Oxford Academic publisher record and first-page preview; full text access-gated.
+ 
+217. Bailey, V. A. (1933). “On the interaction between several species of hosts and parasites.” *Proceedings of the Royal Society A* 143, pp. 75–88. DOI: https://doi.org/10.1098/rspa.1933.0204. Royal Society archival referee reports RR/49/1–3 corroborate the submitted title and 1933 review history; article scan not retrieved.
+ 
+218. Bailey, V. A. (1933). “Non-continuous interaction between hosts and parasites.” *Mathematical Proceedings of the Cambridge Philosophical Society* 29(4), pp. 487–491. DOI: https://doi.org/10.1017/S0305004100011518. Cambridge publisher record and abstract; full text access-gated.
