@@ -58,7 +58,9 @@ def test_replay_cache_one_sample_per_prompt(tmp_path, monkeypatch):
     h1 = eng.generate_hypotheses(**kw)
     h2 = eng.generate_hypotheses(**kw)                       # second arm
     assert len(calls) == 1 and h1[0].equation == h2[0].equation and eng.last_response_replayed
-    assert eng.last_call_attempted is True                   # G3 still sees a call
+    assert eng.last_call_attempted is False                  # replay is not a live API attempt
+    assert eng.last_response_received is True
+    assert eng.last_response_replayed is True
     eng.generate_hypotheses(**dict(kw, data_patterns={"a": 2}))   # different data -> new sample
     assert len(calls) == 2
 
