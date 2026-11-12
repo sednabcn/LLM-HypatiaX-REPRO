@@ -113,10 +113,16 @@ def _failure(method, exc, elapsed):
 def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
     override = {"train": train_tuple, "extrapolation": extrap}
     started = time.monotonic()
-    row = abl.run_condition(
-        eq, condition, seed=SEED, dataset_override=override,
-        wall_clock_limit=COMMON_WALL_CLOCK,
-    )
+    try:
+        row = abl.run_condition(
+            eq, condition, seed=SEED, dataset_override=override,
+            wall_clock_limit=COMMON_WALL_CLOCK,
+        )
+    except Exception as exc:
+        return _failure(
+            "hybrid_llm_pysr" if condition == "hypatia" else "pysr_only",
+            exc, time.monotonic() - started,
+        )
     elapsed = time.monotonic() - started
     if condition == "hypatia" and row.get("llm_enabled") is not True:
         return {
@@ -183,16 +189,20 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
     if provenance.get("is_hardcoded") is True:
         return _failure("llm_only", RuntimeError("hardcoded formula is forbidden in LLM-only arm"), elapsed)
     code = result.formula_full or result.formula
-    y_pred = rcsb._runner_eval_formula(code, X_test, eq["vars"])
-    if y_pred is None:
-        return _failure("llm_only", RuntimeError("LLM formula could not be evaluated on held-out inputs"), elapsed)
-    extrap_rows = {}
-    for regime, (X_e, y_e) in extrap.items():
-        pred = rcsb._runner_eval_formula(code, X_e, eq["vars"])
-        extrap_rows[regime] = _metrics(y_e, pred) if pred is not None else None
+    try:
+        y_pred = rcsb._runner_eval_formula(code, X_test, eq["vars"])
+        if y_pred is None:
+            raise ValueError("LLM formula could not be evaluated on held-out inputs")
+        extrap_rows = {}
+        for regime, (X_e, y_e) in extrap.items():
+            pred = rcsb._runner_eval_formula(code, X_e, eq["vars"])
+            extrap_rows[regime] = _metrics(y_e, pred) if pred is not None else None
+        test_metrics = _metrics(y_test, y_pred)
+    except Exception as exc:
+        return _failure("llm_only", exc, elapsed)
     return {
         "method": "llm_only", "success": True, "error": None,
-        "elapsed_s": elapsed, "test": _metrics(y_test, y_pred),
+        "elapsed_s": elapsed, "test": test_metrics,
         "extrapolation": extrap_rows,
         "diagnostics": {
             "formula": code,
