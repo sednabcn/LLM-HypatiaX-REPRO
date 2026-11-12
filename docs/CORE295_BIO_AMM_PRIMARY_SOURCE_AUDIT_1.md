@@ -395,7 +395,7 @@ The reference math contract defines \(ANN=A N^N\) (with an implementation multip
 
 ### Dynamic fee and endogenous price-scale adjustment
 
-The pool's `_fee` computes a state-dependent convex combination of mid-fee and out-fee using the math library's `reduction_coefficient(xp, fee_gamma)`. Swap execution normalizes the balances using precision and price-scale factors, solves the output reserve, deducts the dynamic fee, updates token balances, and calls `tweak_price`.
+The pool's `_fee` computes a state-dependent convex combination of mid-fee and out-fee using the math library's `reduction_coefficient(xp, fee_gamma)`. The pinned math code defines \(K=\prod_i(3x_i/\sum_jx_j)\) with 1e18 fixed-point normalization, then \(f=fee_\gamma/(fee_\gamma+1-K)\); the pool fee is \(f_{mid}f+f_{out}(1-f)\). Thus the fee moves between mid-fee and out-fee according to normalized pool balance composition. Swap execution normalizes the balances using precision and price-scale factors, solves the output reserve, deducts the dynamic fee, updates token balances, and calls \`tweak_price\`.
 
 `tweak_price` updates the exponential moving-average price oracle from last trade prices, with a cap on the spot price admitted to the EMA. It computes the vector distance between the oracle and current price scale; only when the distance exceeds the configured adjustment step and the profit conditions are met does it move price scale toward the oracle, recompute \(D\), and update virtual price. This is an endogenous re-pegging/rebalancing state transition, not merely a static invariant with an unrelated oracle. Admin fees are accounted through the pool's profit/virtual-price mechanism; the source hardcodes a 50% admin-fee share.
 
