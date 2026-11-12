@@ -3246,6 +3246,77 @@ jobs:
 
 
 
+  protocol30_aggregate:
+    name: "Aggregate - manuscript Protocol-30 (five shards, registry identity gate)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && (needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && needs.worker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RESULTS_DIR: ${{ env.OUT_BASE }}
+      PROTOCOL30_ARTIFACTS_DIR: ${{ github.workspace }}/protocol30_artifacts
+      P30_VARIANT: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'random_8020' || 'pca_4060' }}
+      P30_RESULT_SUBDIR: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'comparison_results/protocol30/random-80-20' || 'comparison_results/protocol30/pca-40-60' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Download all five Protocol-30 worker artifacts
+        uses: actions/download-artifact@v4.3.6
+        with:
+          pattern: results-exp2_protocol30_*-shard*
+          path: ${{ github.workspace }}/protocol30_artifacts
+
+      - name: Validate registry-bound equation coverage and aggregate
+        run: |
+          set -euo pipefail
+          mkdir -p "${RESULTS_DIR}/${P30_RESULT_SUBDIR}"
+          if [[ "${P30_VARIANT}" == "random_8020" ]]; then
+            bash run_all.sh --step exp2_protocol30_random_8020_aggregate
+            RESULT="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_random_8020_aggregate.json"
+            MANIFEST="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_random_8020_aggregate_manifest.json"
+          else
+            bash run_all.sh --step exp2_protocol30_pca_4060_aggregate
+            RESULT="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_pca_4060_aggregate.json"
+            MANIFEST="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_pca_4060_aggregate_manifest.json"
+          fi
+          test -s "${RESULT}" || { echo "::error::missing Protocol-30 aggregate result"; exit 1; }
+          test -s "${MANIFEST}" || { echo "::error::missing Protocol-30 aggregate manifest"; exit 1; }
+
+      - name: Upload validated Protocol-30 aggregate
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-${{ needs.plan.outputs.exp_id }}-merged
+          path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit and push validated Protocol-30 aggregate
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${RESULTS_DIR}/${P30_RESULT_SUBDIR}"
+          git add -f "${TARGET}/protocol30_${P30_VARIANT}_aggregate.json" "${TARGET}/protocol30_${P30_VARIANT}_aggregate_manifest.json"
+          if git diff --cached --quiet; then
+            echo "Protocol-30 aggregate already committed."
+            exit 0
+          fi
+          git commit -m "ci: validated Protocol-30 ${P30_VARIANT} aggregate - run ${{ github.run_id }}"
+          git pull --rebase --autostash origin "${{ github.ref_name }}"
+          git push origin HEAD:"${{ github.ref_name }}"
+
   exp1_four_way_matched_aggregate:
     name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
     needs: [plan, worker]
