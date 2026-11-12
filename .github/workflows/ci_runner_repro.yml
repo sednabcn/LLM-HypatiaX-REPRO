@@ -3256,6 +3256,7 @@ jobs:
     timeout-minutes: 60
     env:
       RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results
+      OUT_BASE: ${{ github.workspace }}/hypatiax/data/results
       PROTOCOL30_ARTIFACTS_DIR: ${{ github.workspace }}/protocol30_artifacts
       P30_VARIANT: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'random_8020' || 'pca_4060' }}
       P30_RESULT_SUBDIR: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'comparison_results/protocol30/random-80-20' || 'comparison_results/protocol30/pca-40-60' }}
