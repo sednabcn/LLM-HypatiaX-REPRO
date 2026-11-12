@@ -13,6 +13,24 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+from hypatiax.core.llm_call import configured_temperature
+
+
+def registry_identities() -> dict[int, dict]:
+    protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
+    rows = []
+    for domain in protocol.get_all_domains():
+        for description, _x, _y, _variables, metadata in protocol.load_test_data(domain, num_samples=200):
+            rows.append({
+                "description": description,
+                "domain": domain,
+                "equation_name": metadata["equation_name"],
+            })
+    if len(rows) != 30:
+        fail(f"Protocol30 registry returned {len(rows)} equations, expected 30")
+    return {index: {"index": index, **row} for index, row in enumerate(rows, start=1)}
+
 
 def load_json(path: Path):
     with path.open(encoding="utf-8") as handle:
@@ -29,6 +47,9 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
     shard_manifests = {}
     shard_payloads = {}
     identities = {}
+    expected_identities = registry_identities()
+    if configured_temperature() != 0.25:
+        fail("shared LLM wrapper temperature is not 0.25")
 
     for manifest_path in sorted(artifacts_dir.rglob("protocol30_shard_manifest.json")):
         manifest = load_json(manifest_path)
@@ -56,6 +77,8 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
             fail(f"{manifest_path}: identity map does not match assigned indices")
         for item in mapping:
             idx = item["index"]
+            if idx not in expected_identities or item != expected_identities[idx]:
+                fail(f"{manifest_path}: equation index {idx} identity does not match the current Protocol30 registry")
             if idx in identities:
                 fail(f"equation index {idx} assigned to multiple shards")
             identities[idx] = item
@@ -97,6 +120,8 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         expected_mode = "noiseless" if variant == "random_8020" else "noiseless_pca"
         if protocol.get("mode") != expected_mode or float(protocol.get("noise_level", -1)) != 0.0:
             fail(f"shard {shard}: protocol mode/noise does not match {variant}")
+        if protocol.get("n_samples") != 200:
+            fail(f"shard {shard}: expected 200 samples per equation, got {protocol.get('n_samples')!r}")
         if variant == "pca_4060" and protocol.get("noise_injected") is not False:
             fail(f"shard {shard}: PCA runner must explicitly report noise_injected=false")
         if common_protocol is None:
