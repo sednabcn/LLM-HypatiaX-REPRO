@@ -127,6 +127,8 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
                     stop(f"{eid}: invalid {kind} interval for {var}")
             valid_lo, valid_hi = map(float, validity[var])
             train_hi = float(bounds["train"][1])
+            if train_hi <= 0:
+                stop(f"{eid}: {var} requires a positive training upper bound for Core-15 near/far extrapolation")
             generated = [*map(float, bounds["train"]), *map(float, bounds["extrapolation"]),
                          train_hi, train_hi * 1.5, train_hi * 4.0, train_hi * 6.0]
             if min(generated) < valid_lo or max(generated) > valid_hi:
