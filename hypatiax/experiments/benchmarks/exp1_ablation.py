@@ -136,7 +136,7 @@ CONDITIONS         = ["pysr_only", "hypatia"] + (
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
 # AUDIT C1: temperature is now env-controlled and recorded in every hypatia row.
 # Default stays 0.3 (previous hard-coded value); the paper cites 0.25 -- decide and set LLM_TEMPERATURE.
-LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
+LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
