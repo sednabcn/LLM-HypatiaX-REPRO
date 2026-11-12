@@ -2,6 +2,8 @@
 
 Use `scripts/core295_final_readiness_report.py` to consolidate the current catalogue, tau-calibration manifest, source pipeline artifacts, workflow wiring, and design-policy state into one read-only report.
 
+- [Generator taxonomy and current catalogue triage](CORE295_GENERATOR_TAXONOMY_AND_CATALOGUE_TRIAGE.md)
+
 ## Usage
 
 From the repository root:
