@@ -381,3 +381,24 @@ and it returns the base fee when \(m\leq10^{10}\). Fee denominator is \(10^{10}\
 ### Structural disposition and limitations
 
 StableSwap NG is an implementation evolution of the 2019 StableSwap family, not a new invariant family merely because it adds normalized rate assets, dynamic fees, oracle state, rebasing-token handling, ERC-4626 support and revised integer arithmetic. Treat the invariant, fee policy, rate/oracle inputs and accounting as one protocol implementation contract when benchmarking executable pool behavior. Do not count the fee function, EMA, solver recurrence or one-coin withdrawal formula as independent equations. Do not assume every deployed pool uses this exact source revision: a candidate must bind a specific deployment, factory, pool configuration and block-state snapshot before any runtime fee or parameter claims. No chain/RPC calls or simulations were made.
+
+
+## 3C. Curve Tricrypto NG: pinned CryptoSwap implementation audit
+
+**Pinned source:** official `curvefi/tricrypto-ng` repository, commit `ecaa8161c240f21dd7c3712eefc5637e1dac742b`. Main pool `contracts/main/CurveTricryptoOptimizedWETH.vy`, blob `d1bf61fd3d6569d18acfc784bb6aeb34943de281`; math reference `contracts/reference/CurveCryptoMath3Reference.vy`, blob `55cca5446e6899b4b8e993c507b9e540422fc077`. The README describes a three-asset auto-rebalancing CryptoSwap implementation for unpegged assets and a factory/blueprint/math/views architecture. It identifies a deployed Ethereum Tricrypto pool as the lineage example, but this repository commit alone does not pin the bytecode/configuration of that or any other live deployment.
+
+### Model state and numerical contract
+
+The pool is explicitly three-coin. Its state includes balances, invariant \(D\), packed internal price scales, EMA price oracle, last prices, \(A\) and \(\gamma\) parameters (which can be ramped over time), fee parameters \((f_{mid},f_{out},fee_\gamma)\), rebalancing parameters and profit/virtual-price accounting. Balances are normalized by token precisions and the internal price scales before entering the math library. The pool delegates invariant and output-balance calculations to a separate math contract.
+
+The reference math contract defines \(ANN=A N^N\) (with an implementation multiplier), \(\gamma\), normalized balances and \(D\) as the solver inputs. `newton_D` uses a three-coin geometric-mean-based initial estimate (or a prior \(K_0\) estimate), then a bounded Newton iteration with integer arithmetic and safety bounds on \(A,\gamma,D\), and normalized balances. `get_y` solves the output reserve; it uses a closed-form cubic-root path when numerically admissible and falls back to a bounded Newton method otherwise. The solver and its fallback are numerical implementations of the same CryptoSwap invariant, not separate model candidates.
+
+### Dynamic fee and endogenous price-scale adjustment
+
+The pool's `_fee` computes a state-dependent convex combination of mid-fee and out-fee using the math library's `reduction_coefficient(xp, fee_gamma)`. Swap execution normalizes the balances using precision and price-scale factors, solves the output reserve, deducts the dynamic fee, updates token balances, and calls `tweak_price`.
+
+`tweak_price` updates the exponential moving-average price oracle from last trade prices, with a cap on the spot price admitted to the EMA. It computes the vector distance between the oracle and current price scale; only when the distance exceeds the configured adjustment step and the profit conditions are met does it move price scale toward the oracle, recompute \(D\), and update virtual price. This is an endogenous re-pegging/rebalancing state transition, not merely a static invariant with an unrelated oracle. Admin fees are accounted through the pool's profit/virtual-price mechanism; the source hardcodes a 50% admin-fee share.
+
+### Structural disposition
+
+CryptoSwap/Tricrypto NG is the implementation lineage for the 2021 CryptoSwap dynamic-peg model, distinct from the StableSwap near-parity invariant. Treat the coupled invariant, \(A,\gamma\), price-scale/oracle state, dynamic fee and re-pegging/profit logic as one governing protocol model. Do not split Newton solvers, fee reduction coefficient, EMA, virtual-price or rebalancing equations into separate equation counts. This is a three-coin optimized implementation snapshot; it must not be generalized automatically to two-coin CryptoSwap, older Tricrypto deployments, or every factory blueprint. Runtime values require a specific pool, factory/blueprint, chain and block-state pin. No chain/RPC calls, simulations or tests were performed.
