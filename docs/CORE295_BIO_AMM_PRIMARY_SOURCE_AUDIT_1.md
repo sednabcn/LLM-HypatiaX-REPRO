@@ -289,3 +289,24 @@ The official Solidly V2 documentation specifies volatile \(xy\geq k\) and stable
 Sources: official formula documentation https://docs.solidly.com/dex-basics/swaps.html; adapter-level corroboration https://docs.rs/evm-amm-state/latest/evm_amm_state/adapters/solidly_v2/struct.SolidlyV2Adapter.html.
 
 **Disposition:** retain one stable-invariant family lead and one volatile constant-product exclusion. No Solidly equation accepted until the exact source repository/contract revision and the decimal/fee implementation are pinned. Do not use fork code or third-party adapter code as a substitute for the protocol's own source.
+
+
+## 3A. Solidly-derived stable AMM: pinned implementation audit
+
+A primary implementation is now pinned from the official Velodrome Finance V2 contracts repository:
+- Repository: https://github.com/velodrome-finance/contracts
+- Commit: https://github.com/velodrome-finance/contracts/commit/b3065d8b6702b14b094f9f6046b752cc9f78c43b (2025-12-18)
+- File: https://github.com/velodrome-finance/contracts/blob/b3065d8b6702b14b094f9f6046b752cc9f78c43b/contracts/Pool.sol
+- Blob SHA: `91412c378bba4d8076271cee52e1397b1520b709`
+
+Implementation details from `Pool.sol`:
+1. `initialize` stores token decimal scales as \(10^{decimals_i}\).
+2. Stable `_k` normalizes raw reserves to 1e18 units, computes \(a=xy/10^{18}\), \(b=(x^2+y^2)/10^{18}\), and returns \(ab/10^{18}\). In real arithmetic this is the polynomial \(x^3y+xy^3\), scaled by \(10^{54}\); integer division introduces truncation at intermediate stages.
+3. Stable `_getAmountOut` obtains the pre-swap invariant, normalizes reserves and input to 1e18 decimal-adjusted units, solves the output reserve with `_get_y`, then rescales output to raw token units.
+4. `_get_y` uses a bounded Newton–Raphson iteration (maximum 255 iterations) over the stable polynomial and handles one-unit rounding cases explicitly.
+5. `getAmountOut` deducts the factory-provided pool fee in basis points before calling the quote routine. The fee source is external factory state, not part of the invariant itself.
+6. Volatile mode instead uses \(xy\) and the constant-product quote.
+
+**Scope warning:** this is the official Velodrome V2 implementation, a partial rewrite/redesign of the Solidly architecture; it is not evidence that every Solidly fork or original Solidly deployment uses identical code, decimal scaling, fee configuration or rounding. The documentation's bare polynomial is not a complete benchmark contract. The pinned Pool.sol plus a pinned factory fee implementation is much closer to one, but market-specific factory/pool deployment configuration remains unpinned. Do not call this original Solidly implementation or count volatile mode separately from the Core-15 constant-product exclusion. Keep one stable polynomial family lead, subject to cross-family structural review and an explicit integer-arithmetic benchmark adapter.
+
+No live chain calls, RPC, contract simulation or tests were performed.
