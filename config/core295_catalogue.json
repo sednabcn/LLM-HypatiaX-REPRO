@@ -2279,50 +2279,55 @@
       "source_family_id": "BIO-TUMOR-PKPD-TURNOVER-DEBUCK-EQ9",
       "status": "proposed",
       "assumptions": [
-        "Tumor state T is the one-dimensional sum of the longest diameters of measurable lesions",
-        "Zero-order untreated tumor growth and first-order tumor death/turnover",
-        "Drug concentration C is an external PK-derived input function",
-        "Drug exposure inhibits the zero-order growth term through an Emax/IC50 saturation relation",
-        "Kgrowth and Kdeg are positive, as constrained in the primary paper"
+        "Tumor state T(t) is the one-dimensional sum of longest diameters of measurable lesions, in cm.",
+        "The model is the empirical BYL719 PK/PD turnover implementation fitted by De Buck et al. (2014), not a universal tumor growth law.",
+        "Drug concentration C(t) is an individual PK-model-predicted time-varying input function, not an independently sampled static scalar.",
+        "The ODE is initialized at the patient's observed baseline sum of tumor diameters.",
+        "The final model fixes Kgrowth=0.581 cm week^-1 and Emax=1; Kdeg and IC50 are estimated population parameters.",
+        "The model applies to the reported advanced-solid-malignancy population and the baseline tumor-size range represented in that study."
       ],
       "variables": {
+        "t": {
+          "meaning": "Time since baseline tumor measurement",
+          "unit": "week"
+        },
         "Tumour": {
-          "meaning": "Sum of longest tumor diameters across measurable lesions",
+          "meaning": "One-dimensional sum of longest diameters of measurable lesions",
           "unit": "cm"
         },
         "C": {
-          "meaning": "Plasma concentration of BYL719 used as the PK input",
+          "meaning": "Individual predicted plasma concentration of BYL719 from the selected PK model",
           "unit": "ng mL^-1"
         },
         "Kgrowth": {
-          "meaning": "Zero-order tumor growth rate",
+          "meaning": "Zero-order tumor growth rate; fixed in final model",
           "unit": "cm week^-1"
         },
         "Emax": {
-          "meaning": "Maximum fractional pharmacodynamic inhibition of the growth term",
+          "meaning": "Maximum pharmacodynamic inhibition of the zero-order growth term; fixed in final model",
           "unit": "dimensionless"
         },
         "IC50": {
-          "meaning": "Plasma concentration producing half of Emax inhibition",
+          "meaning": "Plasma BYL719 concentration at 50% of maximum inhibitory effect; estimated typical population value",
           "unit": "ng mL^-1"
         },
         "Kdeg": {
-          "meaning": "First-order tumor death/turnover rate constant",
+          "meaning": "First-order tumor death/turnover rate; estimated typical population value",
           "unit": "week^-1"
         }
       },
       "validity": {
-        "source_location": "De Buck et al. (2014), Br J Clin Pharmacol 78(3), Eq. 9, printed p. 547; DOI 10.1111/bcp.12378",
-        "regime": "BYL719 exposure-linked tumor growth turnover model fitted to the sum of longest lesion diameters in adults with advanced solid malignancies",
+        "source_location": "De Buck et al. (2014), Eq. (9), final tumor turnover ODE; printed source page mapping p.547; open-access primary article PMCID PMC4243905.",
+        "regime": "Empirical BYL719 exposure-linked tumor growth turnover model fitted to longitudinal sum of longest tumor diameters in adults with advanced solid malignancies; individual PK-predicted C(t) forcing and observed baseline state.",
         "limitations": [
-          "This is a specific clinical PK/PD model for BYL719, not a universal tumor growth law",
-          "C is an externally supplied concentration-time input; the PK model and its transit-compartment ODEs are separate linked model components",
-          "The Emax*C/(C+IC50) term has a hyperbolic saturation structure related to Michaelis-Menten; explicit Core-15 exclusion/equivalence review is required before acceptance",
-          "Do not count the zero-order/first-order no-drug turnover special case or algebraic rearrangements as separate candidates",
-          "Parameter estimates are clinical population-model estimates; use clinically defensible ranges and preserve the sum-of-longest-diameters state definition",
-          "The primary study reports Emax fixed at 1 and Kgrowth fixed at 0.581 cm/week in the final model; a benchmark that samples these freely is a modified model and must be labelled as such.",
-          "The primary study cautions that the model cannot be generalized beyond the baseline tumor-size range represented in its population (2–20 cm); this is a study-specific evidence boundary, not a universal safe extrapolation interval.",
-          "Concentration is an individual PK-derived time-varying input; independently sampling C at each equation row would break the dosing/PK dependence structure."
+          "This is a specific empirical clinical PK/PD model for BYL719, not a universal tumor-growth law.",
+          "C(t) is an individual PK-model-predicted time series; PK model and dosing history must be pinned and linked. Do not independently sample concentration at each ODE time point.",
+          "Final model fixed Kgrowth=0.581 cm/week and Emax=1; Kdeg=0.0123 week^-1 and IC50=101 ng/mL are estimated typical population values, not fixed universal constants.",
+          "The study included 47 patients with evaluable PD data and 146 tumor-size measurements; observed baseline sums ranged 2.4-21.5 cm.",
+          "Authors caution against generalizing beyond baseline tumor sizes represented in the population (about 2-20 cm); this is a study-specific evidence boundary, not a universal validity guarantee.",
+          "The authors describe the implementation as empirical and note potential confounding of turnover parameters because serial pretreatment tumor measurements were unavailable.",
+          "The Emax*C/(C+IC50) subexpression is hyperbolic and related to Michaelis-Menten, but full ODE equivalence must be assessed under E0-E5 and Core-15 exclusions.",
+          "Natural boundary Kgrowth/Kdeg is about 47 cm at the reported estimates; it is a model implication, not a clinical sampling limit."
         ]
       },
       "input_ranges": {
@@ -2334,19 +2339,7 @@
           "train": null,
           "extrapolation": null
         },
-        "Kgrowth": {
-          "train": null,
-          "extrapolation": null
-        },
-        "Emax": {
-          "train": null,
-          "extrapolation": null
-        },
-        "IC50": {
-          "train": null,
-          "extrapolation": null
-        },
-        "Kdeg": {
+        "t": {
           "train": null,
           "extrapolation": null
         }
@@ -2373,15 +2366,21 @@
         "Audit 6: De Buck et al. describe this as an empirical BYL719 clinical PK/PD implementation, not a universal tumor-growth law; the state is the one-dimensional sum of longest lesion diameters, and the authors caution against generalization beyond baseline sizes represented in the study (2–20 cm).",
         "Audit 6: Emax was fixed at 1 in the reported final model, while Kgrowth was fixed at 0.581 cm/week; do not treat these as freely sampled parameters in a source-faithful reproduction. Kdeg and IC50 were estimated.",
         "Audit 6: C(t) is an individual PK-model-predicted concentration-time input; it must be generated as a coherent time series from a declared dosing/PK contract, not sampled as independent static values.",
-        "Audit 6: the Emax*C/(C+IC50) inhibition fraction has a Michaelis-Menten-like hyperbolic saturation motif, but that motif alone does not prove the complete tumor-turnover ODE is algebraically equivalent to the excluded Michaelis-Menten equation. The structural policy must state whether embedded subexpressions trigger exclusion or whether full-model equivalence is required."
+        "Audit 6: the Emax*C/(C+IC50) inhibition fraction has a Michaelis-Menten-like hyperbolic saturation motif, but that motif alone does not prove the complete tumor-turnover ODE is algebraically equivalent to the excluded Michaelis-Menten equation. The structural policy must state whether embedded subexpressions trigger exclusion or whether full-model equivalence is required.",
+        "Source/input audit 1 (2026-11-12): De Buck et al. primary open article Eq.9 defines an empirical BYL719 tumor-turnover ODE; C(t) is individual PK-predicted forcing and T(0) is observed baseline sum of longest lesion diameters. 47 patients/146 PD observations; baseline range observed 2.4-21.5 cm and authors warn against generalizing outside about 2-20 cm. Final model fixes Kgrowth=0.581 and Emax=1; estimates Kdeg=0.0123 and IC50=101 ng/mL (abstract rounds 100). See docs/CORE295_DEBUCK_TUMOR_TURNOVER_SOURCE_AND_INPUT_AUDIT_1.md.",
+        "Corrected ODE contract: independent time t and exogenous forcing C(t); dependent/state output Tumour(t). The PK trajectory and patient-specific initial state are required; do not sample C independently at each time point.",
+        "The accessible primary source explicitly describes the implementation as empirical and reports possible confounding because serial pretreatment tumor measurements were unavailable. The Emax hyperbolic subexpression remains a Core-15 Michaelis-Menten comparison blocker; full-model equivalence must be decided under E0-E5."
       ],
       "source_location": "De Buck et al. (2014), Eq. 9, printed p. 547",
       "model_definition": {
         "model_class": "ode_ivp",
         "independent_variables": [
+          "t",
           "C"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "Tumour"
+        ],
         "state_variables": [
           "Tumour"
         ],
@@ -2392,32 +2391,39 @@
           "Kdeg"
         ],
         "physical_constants": [],
-        "state_dimension": "declared_by_model",
-        "operator_structure": "First-order tumour-state turnover ODE with concentration-modulated growth.",
+        "state_dimension": 1,
+        "operator_structure": "Empirical BYL719 PK/PD tumor turnover ODE dT/dt=Kgrowth*(1-Emax*C(t)/(C(t)+IC50))-Kdeg*T with individual PK-derived concentration forcing.",
         "constraints": [
-          "Tumour(0) must be specified; C(t) forcing contract required.",
-          "C+IC50>0; parameter bounds and integration interval required."
+          "Tumour(0) is the observed patient baseline sum of longest lesion diameters and must be supplied.",
+          "C(t) must be a coherent individual PK-predicted concentration-time trajectory under a declared BYL719 dosing/PK model.",
+          "C(t)>=0; IC50>0; Kgrowth>0; Kdeg>0; 0<=Emax<=1.",
+          "Final model fixes Kgrowth=0.581 cm week^-1 and Emax=1; Kdeg and IC50 are typical population estimates, not universal constants.",
+          "Authors caution against generalization outside baseline tumor sums represented in the study (about 2-20 cm)."
         ],
         "assumptions": [
-          "Tumor state T is the one-dimensional sum of the longest diameters of measurable lesions",
-          "Zero-order untreated tumor growth and first-order tumor death/turnover",
-          "Drug concentration C is an external PK-derived input function",
-          "Drug exposure inhibits the zero-order growth term through an Emax/IC50 saturation relation",
-          "Kgrowth and Kdeg are positive, as constrained in the primary paper"
+          "Tumor state T(t) is the one-dimensional sum of longest diameters of measurable lesions, in cm.",
+          "The model is the empirical BYL719 PK/PD turnover implementation fitted by De Buck et al. (2014), not a universal tumor growth law.",
+          "Drug concentration C(t) is an individual PK-model-predicted time-varying input function, not an independently sampled static scalar.",
+          "The ODE is initialized at the patient's observed baseline sum of tumor diameters.",
+          "The final model fixes Kgrowth=0.581 cm week^-1 and Emax=1; Kdeg and IC50 are estimated population parameters.",
+          "The model applies to the reported advanced-solid-malignancy population and the baseline tumor-size range represented in that study."
         ],
-        "validity_regime": "BYL719 exposure-linked tumor growth turnover model fitted to the sum of longest lesion diameters in adults with advanced solid malignancies",
+        "validity_regime": "Empirical BYL719 exposure-linked tumor growth turnover model fitted to longitudinal sum of longest tumor diameters in adults with advanced solid malignancies; individual PK-predicted C(t) forcing and observed baseline state.",
         "limitations": [
-          "This is a specific clinical PK/PD model for BYL719, not a universal tumor growth law",
-          "C is an externally supplied concentration-time input; the PK model and its transit-compartment ODEs are separate linked model components",
-          "The Emax*C/(C+IC50) term has a hyperbolic saturation structure related to Michaelis-Menten; explicit Core-15 exclusion/equivalence review is required before acceptance",
-          "Do not count the zero-order/first-order no-drug turnover special case or algebraic rearrangements as separate candidates",
-          "Parameter estimates are clinical population-model estimates; use clinically defensible ranges and preserve the sum-of-longest-diameters state definition",
-          "The primary study reports Emax fixed at 1 and Kgrowth fixed at 0.581 cm/week in the final model; a benchmark that samples these freely is a modified model and must be labelled as such.",
-          "The primary study cautions that the model cannot be generalized beyond the baseline tumor-size range represented in its population (2–20 cm); this is a study-specific evidence boundary, not a universal safe extrapolation interval.",
-          "Concentration is an individual PK-derived time-varying input; independently sampling C at each equation row would break the dosing/PK dependence structure."
+          "This is a specific empirical clinical PK/PD model for BYL719, not a universal tumor-growth law.",
+          "C(t) is an individual PK-model-predicted time series; PK model and dosing history must be pinned and linked. Do not independently sample concentration at each ODE time point.",
+          "Final model fixed Kgrowth=0.581 cm/week and Emax=1; Kdeg=0.0123 week^-1 and IC50=101 ng/mL are estimated typical population values, not fixed universal constants.",
+          "The study included 47 patients with evaluable PD data and 146 tumor-size measurements; observed baseline sums ranged 2.4-21.5 cm.",
+          "Authors caution against generalizing beyond baseline tumor sizes represented in the population (about 2-20 cm); this is a study-specific evidence boundary, not a universal validity guarantee.",
+          "The authors describe the implementation as empirical and note potential confounding of turnover parameters because serial pretreatment tumor measurements were unavailable.",
+          "The Emax*C/(C+IC50) subexpression is hyperbolic and related to Michaelis-Menten, but full ODE equivalence must be assessed under E0-E5 and Core-15 exclusions.",
+          "Natural boundary Kgrowth/Kdeg is about 47 cm at the reported estimates; it is a model implication, not a clinical sampling limit."
         ]
       },
-      "fixed_parameter_values": {},
+      "fixed_parameter_values": {
+        "Kgrowth": 0.581,
+        "Emax": 1
+      },
       "physical_constant_values": {},
       "input_validity_bounds": {}
     },
