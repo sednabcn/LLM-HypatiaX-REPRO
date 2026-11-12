@@ -2997,7 +2997,10 @@
         "The a=0 limiting case is Langmuir; the nonzero interaction term changes coverage dependence, but structural inequivalence must be reviewed explicitly",
         "Do not count Eqs. (5)–(9) as separate candidates; they belong to the coupled potential-dependent adsorption/capacitance model",
         "Input ranges, generator, and statistical independence unit remain unspecified",
-        "Proposed only; not accepted or eligible for shard planning"
+        "Proposed only; not accepted or eligible for shard planning",
+        "Branch/parameter audit 2 (2026-11-12): q_a(theta)=theta/(1-theta)*exp(-2a theta) has logarithmic derivative 1/[theta(1-theta)]-2a. For a<=2 it is monotone on (0,1), so positive Bc has one root; for a>2 it has two stationary points theta±=(1±sqrt(1-2/a))/2 and may have three roots. Specialized implicit generator requires explicit root branch/stability policy. This is mathematical branch analysis, not evidence all branches are physical. See docs/CORE295_FRUMKIN_BRANCH_AND_PARAMETER_AUDIT_2.md.",
+        "No transferable numerical parameter intervals for B, a, c, temperature or electrode potential are supported by inspected primary evidence. Keep train/extrapolation ranges and fixed parameter values empty. B is potential-dependent in source Eq. (5); Eq. (4) must be scoped at fixed potential or fixed B.",
+        "2017 drop-profile tensiometry article independently corroborates Frumkin isotherm definitions but is secondary modern context; do not borrow material-specific surfactant ranges as universal parameter bounds."
       ],
       "source_location": "Frumkin and Damaskin (1967), printed p.268, Eq. (4)",
       "model_definition": {
@@ -3017,7 +3020,11 @@
         "state_dimension": null,
         "operator_structure": "Implicit Frumkin adsorption coverage relation with lateral interactions.",
         "constraints": [
-          "0<theta<1; B>0; admissible root branch and uniqueness policy required."
+          "0<theta<1; B>0; c>0; B*c is dimensionless.",
+          "For a<=2, the implicit right-hand side is monotone and exactly one physical theta root exists for positive B*c.",
+          "For a>2, the equation can admit three physical roots for a range of B*c; a branch-selection/stability policy is mandatory.",
+          "The a=0 case is the Langmuir limiting case and is not a separate candidate.",
+          "B is potential-dependent through Eq. (5) in the cited source; Eq. (4) is scoped at fixed potential or a specified fixed B."
         ],
         "assumptions": [
           "Adsorption at the mercury–electrolyte interface as treated in the cited Frumkin–Damaskin model",
@@ -4832,6 +4839,14 @@
       "url": "https://openstax.org/books/chemistry-2e/pages/11-4-colligative-properties",
       "use": "Explicit modern component relation PA=XA*PAstar for any component of an ideal solution. Example 11.6 specifies ideal ethanol-glycerin at 40 °C, treats glycerin as essentially nonvolatile, gives pure ethanol vapor pressure 0.178 atm, XA=0.800 and calculated solution vapor pressure 0.142 atm. Worked illustration, not empirical validation or a sampling design.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-KOVALCHUK-2017-DROP-PROFILE-FRUMKIN",
+      "domain": "Chemistry",
+      "title": "Kovalchuk et al. (2017), Surface Tension and Adsorption Studies by Drop Profile Analysis Tensiometry",
+      "url": "https://doi.org/10.1007/s11743-017-2016-y",
+      "use": "Modern secondary corroboration: prints Frumkin surface-layer equation of state and adsorption isotherm, defines theta, Gamma, omega, B, a and c, and discusses material-dependent interaction effects. Not a source for universal parameter bounds and not a substitute for the 1967 primary equation source.",
+      "status": "supporting_reference"
     }
   ],
   "notes": [
