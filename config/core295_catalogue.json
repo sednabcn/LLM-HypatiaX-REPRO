@@ -3025,6 +3025,14 @@
       "url": "https://github.com/morpho-org/morpho-blue/commit/430bd61d8ab9238c1bde327eec2bfcd3f494fe9d",
       "use": "Pinned official core Solidity snapshot at commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d (2026-11-09); Morpho.sol blob ab064b646bf161b1510e2575a99412cdc2a43ebb, ConstantsLib.sol blob 1046e6a03462fb68b78dbdcee26339c983dc00de, MathLib.sol blob 3c0afc991c3bfa9314498b43047a0675be4a9410 and SharesMathLib.sol blob c63d937e81d5470e2d073383f45dd66c46f36a6b. Single-market LLTV eligibility, LLTV-dependent LIF, direct repay/seize sizing with directional rounding, interest/share accrual and collateral-exhaustion bad-debt write-off. Core source snapshot only; no production deployment or market-parameter pin.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-SKY-LIQUIDATION-2",
+      "domain": "DeFi Risk",
+      "title": "Maker/Sky Liquidation 2.0 Dog, Clipper and Abaci implementation",
+      "url": "https://github.com/sky-ecosystem/dss/commit/c8d4c806691dacb903ff281b81f316bea974e4c7",
+      "use": "Pinned official DSS Liquidation 2.0 implementation snapshot at commit c8d4c806691dacb903ff281b81f316bea974e4c7 (2021-04-02): Dog.sol blob 7ded73181503e85e79b0d2e58f668426b60ff03d, Clipper.sol blob 96a085848cb26cc5d3232004adcd6782e43253a2, Abaci.sol blob 8aa7fb96cfc5c630512751096d62a3bf551fd917. Coupled unsafe-vault eligibility, global/per-ilk Hole/Dirt constraints, partial/dust-aware liquidation, OSM-buffered Dutch auction, configurable linear/stairstep/continuous exponential price curves, partial take/chost settlement and accounting. One candidate protocol-level family only; Abacus alternatives and substeps are not independent rows. MIP45 is obsolete by MIP102c2-SP1; source snapshot only, no current deployment or parameter mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3057,7 +3065,8 @@
     "Fifteenth proposed-record pass adds Fick's one-dimensional diffusive flux law, with the original transfer equation confirmed on page 66 of the Wiley scan. It remains proposed because its linear-gradient structure may overlap Fourier/Ohm transport forms; the derived diffusion PDE is not counted separately.",
     "Sixteenth proposed-record pass adds the Beer-Lambert decadic spectral attenuation law. The exact modern equation is sourced from IUPAC Gold Book B00626; the primary Beer 1852 paper is registered for historical lineage but its full-text equation page remains unavailable.",
     "Seventeenth proposed-record pass adds De Buck et al.'s exact tumor-turnover ODE, Eq. 9 on printed page 547. It remains proposed pending a clinically coherent generator and explicit equivalence review of its hyperbolic Emax term against the Core-15 Michaelis-Menten exclusion.",
-    "2026-11-11: Corrected Frumkin chronology. Frumkin (1920) is the electrocapillarity precursor; the interacting-adsorption isotherm is historically dated to 1925. Frumkin (1926) neutral-molecule field adsorption is distinct. Added a 1925 primary-source lead; exact interaction-equation/page transcription remains pending."
+    "2026-11-11: Corrected Frumkin chronology. Frumkin (1920) is the electrocapillarity precursor; the interacting-adsorption isotherm is historically dated to 1925. Frumkin (1926) neutral-molecule field adsorption is distinct. Added a 1925 primary-source lead; exact interaction-equation/page transcription remains pending.",
+    "2026-11-12: Added pinned Maker/Sky Liquidation 2.0 Dog/Clipper/Abaci source snapshot. The official repository is sky-ecosystem/dss; MIP45 is obsolete by MIP102c2-SP1, so it is historical design context only. This adds a DeFi Risk source reference, not an accepted equation or deployment claim."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
