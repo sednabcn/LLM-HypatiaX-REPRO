@@ -3596,6 +3596,14 @@
       "url": "https://doi.org/10.1007/BF02347017",
       "use": "Primary publisher-hosted abstract includes the original generalized attack equation as an equation image: A(N0)=Tt/(th+1/(a' N0 exp(c N0))). Abstract defines A as attacks per predator during exposure Tt, N0 prey density, Tt total exposure time, th handling time per prey, a' successful search rate, c facilitation coefficient. Authors state parameter cases encompass pseudo Type I, Type II (c=0), Type III and Type IV responses. Full article PDF remains access-gated; equation is directly transcribed from publisher's primary abstract image, but printed page/equation number not available from abstract.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-UTIDA-1957-CYCLIC-HOST-PARASITE",
+      "domain": "Biology",
+      "title": "Utida (1957), Cyclic Fluctuations of Population Density Intrinsic to the Host-Parasite System",
+      "url": "https://doi.org/10.2307/1929888",
+      "use": "Primary Ecology article, 38(3) (July 1957), pp.442–449. Wiley exposes the original first-page scan (printed p.442), which describes an experimental azuki bean weevil–parasitoid system and a multi-generation continuation study. Full article PDF remains access-gated; no equations or complete model specification transcribed. Source lead only; compare discrete host-parasitoid dynamics with Nicholson–Bailey and DeBach–Smith before classifying.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
