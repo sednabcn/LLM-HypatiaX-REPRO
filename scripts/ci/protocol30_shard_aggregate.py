@@ -178,6 +178,7 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         "validated_shards": sorted(shard_manifests),
         "validated_equation_indices": sorted(merged_records),
         "equation_count": len(merged_records),
+        "equation_identities": [identities[i] for i in range(1, 31)],
         "methods": common_methods,
         "protocol": common_protocol,
         "all_method_records_retained": True,
