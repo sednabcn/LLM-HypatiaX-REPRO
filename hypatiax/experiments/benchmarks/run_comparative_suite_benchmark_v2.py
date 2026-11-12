@@ -1462,9 +1462,20 @@ class ImprovedNNMethod(BaseMethod):
             # NN / log-OLS / linear fallbacks. It does NOT produce near/medium/far numbers
             # (those come from ._predict_fn on the separate extrapolation arrays).
             # CAVEAT: the headline r2/rmse below is computed on the FULL dataset (in-sample).
-            X_train, X_test, y_train, y_test = train_test_split(  # audit: ignore[D5]
-                X, y, test_size=0.2, random_state=42
-            )
+            # The matched Core-15 NN-only arm has no fallback/model-selection
+            # step, so an internal validation split would needlessly discard 20%
+            # of the shared training partition. In that arm, fit on every supplied
+            # training row; keep the default split unchanged for all other callers.
+            _use_all_training_data = bool(metadata.get("use_all_training_data", False))
+            if _use_all_training_data:
+                X_train, y_train = np.asarray(X), np.asarray(y)
+                # These aliases are used only by legacy diagnostic code below.
+                # They are not a validation set and must not be reported as one.
+                X_test, y_test = X_train, y_train
+            else:
+                X_train, X_test, y_train, y_test = train_test_split(  # audit: ignore[D5]
+                    X, y, test_size=0.2, random_state=42
+                )
 
             # ── Log-space detection ──────────────────────────────────────────
             # Equations like Coulomb (1/r²), Newton (G*m1*m2/r²), Ideal Gas
@@ -1776,12 +1787,15 @@ class ImprovedNNMethod(BaseMethod):
             # [AUDIT-NN-HELDOUT] headline r2 above is scored on the FULL (X, y), i.e. it
             # includes training rows. Also score the held-out test split, reported
             # separately; the headline is unchanged.
-            try:
-                _yp_ho   = _predict_new(X_test)
-                _r2_ho   = self._safe_r2(y_test, _yp_ho)
-                _rmse_ho = self._safe_rmse(y_test, _yp_ho)
-            except Exception:
+            if _use_all_training_data:
                 _r2_ho = _rmse_ho = None
+            else:
+                try:
+                    _yp_ho   = _predict_new(X_test)
+                    _r2_ho   = self._safe_r2(y_test, _yp_ho)
+                    _rmse_ho = self._safe_rmse(y_test, _yp_ho)
+                except Exception:
+                    _r2_ho = _rmse_ho = None
             # ── Single-seed result (may be returned directly or aggregated) ──
             single_result = MethodResult(
                 method=self.name, success=True,
@@ -1798,6 +1812,10 @@ class ImprovedNNMethod(BaseMethod):
             _fin = lambda v: float(v) if v is not None and np.isfinite(v) else None
             single_result.metadata["r2_heldout"]         = _fin(_r2_ho)
             single_result.metadata["rmse_heldout"]       = _fin(_rmse_ho)
+            single_result.metadata["heldout_scope"]      = (
+                "not_applicable_all_supplied_training_rows_used"
+                if _use_all_training_data else "internal_validation_split"
+            )
             single_result.metadata["headline_r2_scope"]  = "full_data_in_sample"
             return single_result
 
