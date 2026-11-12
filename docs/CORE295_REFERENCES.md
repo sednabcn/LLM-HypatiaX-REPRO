@@ -287,7 +287,7 @@ These are additional official documentation pointers, not independent primary re
 168. von Bertalanffy, L. (1938). “A Quantitative Theory of Organic Growth (Inquiries on Growth Laws II).” *Human Biology*, 10(2), 181–213. Bibliographic record: https://www.jstor.org/stable/41447359.
 
 
-169. Marcus, R. A. (1956). “On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I.” *The Journal of Chemical Physics*, 24(5), 966–978. https://doi.org/10.1063/1.1742723. Primary solution-phase electron-transfer theory; Part I's conditional overall rate statement uses the solution collision number multiplied by exp(−ΔF*/kT) for the stated intermediate-state mechanism. Exact equation/page and collision-number convention still require PDF transcription.
+169. Marcus, R. A. (1956). “On the Theory of Oxidation-Reduction Reactions Involving Electron Transfer. I.” *The Journal of Chemical Physics*, 24(5), 966–978. https://doi.org/10.1063/1.1742723. Primary solution-phase electron-transfer theory; full PDF verifies Eq. 7–8 (printed p. 969), Eq. 44 (p. 975), and Eq. 47 (p. 976). In the stated small-overlap mechanism and rate regime, \(k_{bi}\cong k_1=Z\exp(-\Delta F^*/kT)\), with \(Z\) the solution collision number; Eq. 7 gives the more general two-intermediate rate expression.
 
 
 170. Pütter, A. (1920). “Studien über physiologische Ähnlichkeit VI. Wachstumsähnlichkeiten.” *Pflügers Archiv für die gesamte Physiologie des Menschen und der Tiere*, 180, 298–340. https://doi.org/10.1007/BF01755094. Primary lineage for the generalized two-power mass-growth law; exact equation/page transcription remains to be checked against the original paper.
