@@ -606,3 +606,21 @@ The coefficients encode reciprocal encounter effects. Volterra describes the con
 
 Primary scan: https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf
 Bibliographic corroboration for the original 1926 Lincei memoir: https://ndlsearch.ndl.go.jp/books/R100000136-I1574231874580495104
+
+
+## 4.5 Nicholson–Bailey (1935): discrete-generation host–parasitoid source lead
+
+The primary publisher record for A. J. Nicholson and V. A. Bailey, “The Balance of Animal Populations.—Part I,” *Proceedings of the Zoological Society of London* 105(3) (September 1935), pp. 551–598, is confirmed. Its abstract describes random searching, host–parasitoid interactions, steady-state analysis, discontinuous interactions, and multiple parasite/host configurations. The Wiley/Zoological Society PDF and ePDF endpoints were not accessible in this retrieval pass; no equation or page-level transcription from the original article has been completed.
+
+The commonly reproduced discrete-generation system is
+
+\[
+H_{t+1}=\lambda H_t e^{-aP_t},\qquad
+P_{t+1}=H_t\left(1-e^{-aP_t}\right),
+\]
+
+but this formula is retained here only as a retrieval target, not as a primary transcription. The original paper must be inspected for exact variable definitions, whether parasitoid progeny yield is normalized to one or separately parameterized, timing convention, and the derivation from the Poisson zero-attack probability. Later versions add density dependence, aggregation, handling/egg limitation or stage structure and must not be conflated with the original.
+
+**Disposition:** add the publisher record as a primary-source retrieval lead only. Do not add an equation candidate or count later textbook notation as the 1935 original until the source PDF or a faithful scan is obtained. This is a discrete-generation host–parasitoid model and is structurally different from the continuous-time Lotka/Volterra predator–prey systems, subject to formal review. No experiment or validator was run.
+
+Primary publisher record: https://doi.org/10.1111/j.1096-3642.1935.tb01680.x
