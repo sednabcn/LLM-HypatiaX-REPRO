@@ -2963,7 +2963,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
-          path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
+          path: ${{ needs.plan.outputs.exp_id == 'exp1_four_way_matched' && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir) }}
           if-no-files-found: error
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
