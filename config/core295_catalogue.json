@@ -3430,6 +3430,30 @@
       "url": "https://doi.org/10.1007/BF02511547",
       "use": "Full 91-page secondary comparative synthesis, Population Ecology 13(S1), pp.1–91. Reproduces and critically compares Lotka–Volterra, Nicholson–Bailey, Holling, Ivlev, Watt, Thompson–Stoy and Hassell–Varley model structures. Use for cross-family screening and source leads only; not as substitute for original equation transcription.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BAILEY-1931-CONTINUOUS-HOST-PARASITE",
+      "domain": "Biology",
+      "title": "Bailey (1931), The Interaction between Hosts and Parasites",
+      "url": "https://doi.org/10.1093/qmath/os-2.1.68",
+      "use": "Primary journal record, The Quarterly Journal of Mathematics os-2(1), pp.68–77. Publisher exposes title, author and issue metadata plus first-page preview; full PDF is access-gated. A continuous-time host–parasite interaction model lead. Do not infer exact equations from later papers; inspect full text and compare with Lotka–Volterra and Thompson before candidate promotion.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BAILEY-1933-MULTISPECIES-HOST-PARASITE",
+      "domain": "Biology",
+      "title": "Bailey (1933), On the Interaction between Several Species of Hosts and Parasites",
+      "url": "https://doi.org/10.1098/rspa.1933.0204",
+      "use": "Primary Royal Society paper, Proceedings of the Royal Society A 143, pp.75–88. Royal Society archival referee records from April–June 1933 confirm manuscript title and mathematical review; full article scan not retrieved. Multi-host/multi-parasite coupled-system lead; not a candidate equation until primary text inspected.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BAILEY-1933-DISCONTINUOUS-HOST-PARASITE",
+      "domain": "Biology",
+      "title": "Bailey (1933), Non-continuous Interaction between Hosts and Parasites",
+      "url": "https://doi.org/10.1017/S0305004100011518",
+      "use": "Primary Cambridge record, Mathematical Proceedings of the Cambridge Philosophical Society 29(4), pp.487–491. Abstract says it follows a prior two-species interaction study and establishes fundamental equations; full text access-gated. Discrete/non-continuous interaction lead; do not assume it is merely a time-discretized Lotka–Volterra system without inspecting equations.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
