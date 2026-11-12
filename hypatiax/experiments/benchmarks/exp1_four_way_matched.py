@@ -501,6 +501,10 @@ def run():
 
     shard = int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0")))
     shards = max(1, int(os.environ.get("N_SHARDS", "1")))
+    if shard < 0 or shard >= shards:
+        raise ValueError(
+            f"Invalid shard configuration: shard index {shard} must be in [0, {shards - 1}]"
+        )
     equations = [
         (i, eq) for i, eq in enumerate(abl.CORE_15)
         if i % shards == shard
