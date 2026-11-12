@@ -223,6 +223,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "difficulty": eq.get("difficulty", "medium"),
         "random_seed": int(SEED + abl.EQ_ID[eq["name"]] * 7),
         "disable_fallback": True,
+        "use_all_training_data": True,
         "benchmark_arm": "nn_only",
     }
     try:
