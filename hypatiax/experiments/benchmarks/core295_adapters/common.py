@@ -14,10 +14,10 @@ import numpy as np
 
 from hypatiax.experiments.benchmarks.core295_catalogue import equations_from_manifest
 
-METHOD = "catalogue_expression_v1"
+METHOD = "catalogue_expression_fixed_v1"
 SEED_POLICY = "sha256_run_equation_v1"
-PARAMETER_SAMPLING = "independent_uniform_over_declared_ranges"
-SAMPLING_SEMANTICS = "all_declared_variables_are_independent_inputs"
+PARAMETER_SAMPLING = "fixed_per_equation_declared_numeric_values"
+SAMPLING_SEMANTICS = "independent_inputs_with_fixed_parameters_and_physical_constants"
 ARMS = ("pysr_only", "hypatia", "hypatia_nollm")
 
 
@@ -72,15 +72,41 @@ def _validate_generator(entry: dict, domain: str) -> None:
     if not isinstance(model, dict) or model.get("model_class") != "explicit_scalar":
         raise ValueError("shared adapter supports only model_definition.model_class=explicit_scalar")
     independent = model.get("independent_variables")
+    fixed = model.get("fixed_parameters")
+    constants = model.get("physical_constants")
+    dependent = model.get("dependent_variables")
+    states = model.get("state_variables")
     variables, ranges = entry.get("variables"), entry.get("input_ranges")
-    if not isinstance(variables, dict) or not variables or not isinstance(independent, list):
-        raise ValueError("variables and explicit independent_variables are required")
-    if set(independent) != set(variables):
-        raise ValueError("shared adapter only supports records where every declared symbol is an independent input; fixed parameters/constants need a specialized generator")
-    if model.get("fixed_parameters") or model.get("physical_constants") or model.get("state_variables") or model.get("dependent_variables"):
-        raise ValueError("shared adapter cannot sample fixed parameters, constants, dependent variables, or dynamic states")
-    if not isinstance(ranges, dict) or set(ranges) != set(independent):
+    if not isinstance(variables, dict) or not variables:
+        raise ValueError("variables must be a non-empty object")
+    role_lists = (independent, fixed, constants, dependent, states)
+    if any(not isinstance(role, list) for role in role_lists):
+        raise ValueError("all model variable roles must be explicit lists")
+    roles = [symbol for role in role_lists for symbol in role]
+    if len(roles) != len(set(roles)) or set(roles) != set(variables):
+        raise ValueError("model variable roles must partition variables exactly")
+    if dependent or states:
+        raise ValueError("static scalar adapter does not support dependent variables or dynamic states")
+    if not isinstance(ranges, dict) or set(ranges) != set(independent) or not independent:
         raise ValueError("input_ranges must cover exactly the independent input variables")
+    parameter_values = entry.get("fixed_parameter_values")
+    constant_values = entry.get("physical_constant_values")
+    if not isinstance(parameter_values, dict) or set(parameter_values) != set(fixed):
+        raise ValueError("fixed_parameter_values must provide every fixed parameter")
+    if not isinstance(constant_values, dict) or set(constant_values) != set(constants):
+        raise ValueError("physical_constant_values must provide every physical constant")
+    for field, values in (("fixed_parameter_values", parameter_values),
+                          ("physical_constant_values", constant_values)):
+        for name, value in values.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+                raise ValueError(f"{field}.{name} must be a finite numeric value")
+    if generator.get("parameter_sampling_scope") != "fixed_per_equation":
+        raise ValueError("parameter_sampling_scope must be fixed_per_equation")
+    if generator.get("constraints_enforced") is not True:
+        raise ValueError("generator must explicitly attest that declared constraints are enforced")
+    if not isinstance(generator.get("constraint_evidence"), str) or not generator["constraint_evidence"].strip():
+        raise ValueError("generator.constraint_evidence is required")
+
     for variable in variables:
         bounds = ranges[variable]
         if not isinstance(bounds, dict):
