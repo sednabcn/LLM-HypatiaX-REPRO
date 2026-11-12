@@ -62,3 +62,8 @@ A machine-readable starting point is also provided at [core295_candidate_record.
 ## Evidence-assembled review packets
 
 The extraction queue can be assembled into individual, deterministic human-review packets with [`scripts/core295_prepare_candidate_reviews.py`](../scripts/core295_prepare_candidate_reviews.py). See the [open-access retrieval and extraction guide](CORE295_OPEN_ACCESS_RETRIEVAL.md#assemble-human-review-packets) for inputs, matching rules and usage. Packets embed the full source-review template and supporting bibliographic/retrieval metadata, but remain proposed, unverified, E5/unresolved and unaccepted. The helper does not modify the canonical catalogue or source queues.
+
+
+## Candidate evidence-readiness report
+
+Use [`scripts/core295_candidate_readiness_report.py`](../scripts/core295_candidate_readiness_report.py) after packet preparation to report operational evidence gaps, missing PDF artifacts, packet coverage and accepted shortfalls by domain. The output is `data/core295_candidate_readiness.md`. Its “ready for human source-page review” category is strictly an evidence-linkage check, not scientific acceptance or proof of distinctness/independence. See the [retrieval guide](CORE295_OPEN_ACCESS_RETRIEVAL.md#candidate-evidence-readiness-report).
