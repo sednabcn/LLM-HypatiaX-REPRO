@@ -65,7 +65,7 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
             fail(f"shard {shard}: declared detailed result file is absent or invalid: {result_name!r}")
         payload = load_json(result_path)
         if not isinstance(payload.get("tests"), list):
-            fail(f"{result_files[0]}: missing tests list")
+            fail(f"{result_path}: missing tests list")
         if len(payload["tests"]) != len(assigned):
             fail(f"shard {shard}: {len(payload['tests'])} records for {len(assigned)} assigned equations")
         shard_payloads[shard] = payload
