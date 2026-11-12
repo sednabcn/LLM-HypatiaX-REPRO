@@ -1008,3 +1008,26 @@ This abstract-level evidence is enough to distinguish Real's proposed mechanisti
 **Disposition:** upgrade Real (1977) from abstract-only lead to a publisher-confirmed primary source with explicit model description and access barrier. Keep as a proposed retrieval/review lead; no formula or candidate is added from the abstract alone.
 
 Sources checked: University of Chicago Press primary article record, including abstract and access information (https://www.journals.uchicago.edu/doi/abs/10.1086/283161); DOI 10.1086/283161.
+
+
+### 4.34 Frumkin–Damaskin (1967): full accessible primary-authored treatment exposes the interaction isotherm and potential-coupled equations
+
+A full 19-page paper by A. Frumkin and B. Damaskin, “Adsorption of Organic Substances on the Free Water Surface and at the Water-Mercury Interface,” is openly available in *Pure and Applied Chemistry* 15(2), pp. 263–281 (1967). The IUPAC-hosted PDF gives explicit numbered equations and cites the earlier Frumkin foundations. This is materially stronger than the previously located abstract-only or access-gated 1925/1926 records: the 1967 paper is itself authored by Frumkin and Damaskin and presents the equations in the authors' own theoretical treatment, although it is not the original 1925 publication.
+
+For adsorption at the mercury–electrolyte interface, the paper prints the Frumkin interaction isotherm as Eq. (4), p. 268:
+`Bc = [θ/(1−θ)] exp(−2aθ)`.
+It states that positive (a) indicates attraction between adsorbed molecules. The paper then gives the potential-dependent adsorption parameter as Eq. (5), p. 268:
+`B = B₀ exp{[−Δσₑ + C′φ(φN−φ/2)]/(RTΓM)}`.
+Here the article defines Δσₑ as the field-induced interfacial-tension decrease without organic adsorption, φ as electrode potential measured from the zero-charge point at θ=0, φN as the zero-charge potential at full coverage relative to zero coverage, B₀ as B at φ=0, and ΓM as maximum adsorption. The authors explicitly say the thermodynamic development yields the potential dependence of B.
+
+For the same mercury interface, Eq. (6), p. 268, gives differential capacity:
+`C = C₀(1−θ) + C′θ + (ε′−ε₀) ∂θ/∂φ`.
+The paper subsequently introduces a potential-dependent interaction parameter, Eq. (7), p. 269:
+`a = a₀ + βφ`,
+and gives the resulting capacity expression as Eq. (8), p. 269, with the auxiliary factor h in Eq. (9). These are coupled components of one potential-dependent adsorption/capacitance model; do not automatically count each numbered relation as an independent equation entry. The free solution surface has a separate dipole relation, Eq. (3), p. 267, but that is a different interface configuration and requires a mechanism-level structural comparison before any separate count.
+
+The paper itself cites Frumkin's 1925 *Z. phys. Chem.* 116, 466 (reference 12) and Frumkin's 1926 *Z. Physik* 35, 792 (reference 10) as earlier sources. The 1967 accessible paper therefore gives a reliable equation transcription and explicit provenance pointers, but the exact equation's first appearance and original notation in 1925/1926 still need inspection. The 1926 Nature letter “Influence of Electrical Field on the Adsorption of Neutral Molecules” (Frumkin and Obrutschewa, *Nature* 117, 790, DOI 10.1038/117790a0) is a distinct short primary record whose abstract confirms field-dependent adsorption of undissociated molecules; its full text is paywalled and the abstract contains no formula.
+
+**Disposition:** promote the Frumkin adsorption-interaction model from unresolved lead to a source-verified equation candidate for structural review, but keep it proposed pending comparison with the Core-15 exclusion registry and other adsorption models. Do not count Eqs. (4)–(9) as six separate catalogue entries. The potential-coupled isotherm/capacitance relations should be treated as one governing model family unless review demonstrates irreducible independent operators. No accepted catalogue count changes in this audit.
+
+Sources checked: Frumkin, A. and B. Damaskin (1967), *Pure and Applied Chemistry* 15(2), 263–281, IUPAC-hosted full PDF (https://publications.iupac.org/pac/pdf/1967/pdf/1502x0263.pdf), especially pp. 267–269, Eqs. (2)–(9); Nature primary record for Frumkin and Obrutschewa (1926), DOI 10.1038/117790a0 (https://www.nature.com/articles/117790a0).
