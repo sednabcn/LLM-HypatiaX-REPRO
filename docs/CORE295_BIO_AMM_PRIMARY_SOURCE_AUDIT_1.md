@@ -754,3 +754,33 @@ Sources:
 - Current Sky Protocol docs: https://developers.skyeco.com/protocol/vaults/collateral-liquidation/
 - MIP45 governance status: https://mips.makerdao.com/mips/details/MIP45
 - MIP102c2-SP1 portal record: https://mips.makerdao.com/mips/details/MIP102c2SP1
+
+
+## 6.8 Aave V4 BabylonSpoke: cap-bounded liquidation path (pinned source)
+
+Aave's official changelog says Aave V4 launched on Ethereum mainnet on 30 March 2026. The official Aave V4 docs describe the Hub/Spoke architecture and the standard liquidation path: repay enough debt to restore a governance-configured Target Health Factor, use a health-factor-dependent variable liquidation bonus, and prevent residual dust. The official source repository contains a second specialized path in BabylonSpoke.
+
+Pinned source snapshot: `aave/aave-v4` commit `8be3e0d59efc23cd1d4664a88743340533dd5a0c` (11 November 2026).
+- `src/spoke/libraries/BabylonLiquidationLogic.sol`, blob `8343dbfc3d48eb23391decb42a5f40875763f367`.
+- `src/spoke/BabylonSpoke.sol`, blob `3643a55129e32eab8e18fcd53ccd54e646b11ddb`.
+- Shared `src/spoke/libraries/LiquidationLogic.sol`, blob `2b2443915688ab0f0354fe2ba20660e6cc97141d`.
+
+The specialized path is constrained to one managed collateral reserve and one debt reserve per user. A deployment-configured `LIQUIDATION_MANAGER` is the only permitted caller; the canonical Spoke `liquidationCall` overload reverts. There is no liquidation fee and the liquidator receives removed collateral in underlying assets. The function takes `debtToCover` and `maxCollateralToRemove`, unlike standard V4's Target Health Factor sizing.
+
+The pinned implementation:
+1. Computes the health-factor-dependent liquidation bonus using the shared V4 function.
+2. Applies `debtToCover` to premium debt first, then drawn debt.
+3. Prices the corresponding collateral shares using the shared canonical debt/collateral pricing function.
+4. Converts the caller's collateral cap to removable shares with `previewAddByAssets`, rounded down and limited by supplied shares.
+5. If priced collateral exceeds that cap, sets collateral shares to the cap and inversely computes the debt amount using `ceil(collateralAssets × collateralPrice × debtUnit × 10,000 × RAY / (debtPrice × collateralUnit × liquidationBonus))`; it then allocates the resized repayment to premium debt first and drawn shares second.
+
+This is a meaningful operator difference from standard Aave V4: the primary sizing constraint is an exogenous collateral-removal cap, and the code inversely resizes repayment to consume at most that cap. It does not use Target Health Factor sizing or the standard V4 dust-validation branch. At the same time, it reuses V4's bonus and collateral pricing functions, so do not count every helper formula separately. Keep it as a candidate structural family for E0–E5 review, not a separate accepted equation at this stage.
+
+The repository's latest commit at the time of inspection adds BabylonSpoke and its dedicated liquidation library. This is source-code provenance only; the source snapshot does not prove which Babylon Spoke deployments are active or provide their live manager/collateral configuration. Aave's official changelog confirms V4's Ethereum mainnet launch, but exact deployment address and configuration remain to be pinned.
+
+Sources:
+- Aave V4 source commit: https://github.com/aave/aave-v4/commit/8be3e0d59efc23cd1d4664a88743340533dd5a0c
+- Standard V4 overview and liquidation design: https://github.com/aave/aave-v4/blob/8be3e0d59efc23cd1d4664a88743340533dd5a0c/docs/overview.md
+- Official Aave V4 docs: https://aave.com/docs/aave-v4
+- Official Aave V4 mainnet launch: https://www.aave.com/blog/aave-v4-live-ethereum
+- Official changelog: https://www.aave.com/docs/resources/changelog
