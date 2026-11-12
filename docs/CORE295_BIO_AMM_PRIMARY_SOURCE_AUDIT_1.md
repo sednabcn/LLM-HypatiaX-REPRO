@@ -416,3 +416,35 @@ Archive records:
 - MSU selected Frumkin papers (entries for both 1925 articles): https://www.elch.chem.msu.ru/wp3/index.php/ru/articles/frumkinarticles/
 - MSU 1914–1930 bibliography (Russian collected-work entry): https://www.elch.chem.msu.ru/wp3/index.php/ru/1914-1930/
 - Direct MSU PDF route for the 466–484 article (currently authorization-gated): https://www.elch.chem.msu.ru/cgi-bin/getpdf.cgi?pdf=zpc1925.pdf
+
+
+## 3D. DODO PMM: pinned Solidity pricing and numerical audit
+
+**Pinned source:** official DODOEX/contractV2 repository at commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d (latest repository commit available in the connector at review time; 2025-11-12). Relevant files:
+- contracts/lib/PMMPricing.sol, blob SHA 257332467f7973b74f2ebae441a894c93d54a579
+- contracts/lib/DODOMath.sol, blob SHA 8e4e6a1254afeab8bfe70ee552a1ebde2117423a
+- contracts/lib/DecimalMath.sol, blob SHA 5a11899a9adf8b5f9cb90f9b46f9c06121f1d88e
+
+Pinned source URLs:
+- https://github.com/DODOEX/contractV2/blob/2f1bcdac7ef1beee7599a756e2eed26732c2536d/contracts/lib/PMMPricing.sol
+- https://github.com/DODOEX/contractV2/blob/2f1bcdac7ef1beee7599a756e2eed26732c2536d/contracts/lib/DODOMath.sol
+- https://github.com/DODOEX/contractV2/blob/2f1bcdac7ef1beee7599a756e2eed26732c2536d/contracts/lib/DecimalMath.sol
+
+### Pricing law and piecewise trade integration
+
+The implementation's PMM state is (i,K,B,Q,B0,Q0,R): guide price i, slippage curvature K, current base/quote inventories B,Q, target inventories B0,Q0, and discrete regime R in {ONE, ABOVE_ONE, BELOW_ONE}. The library does not implement one globally smooth quote expression. sellBaseToken and sellQuoteToken select among the R=1, R>1, and R<1 regions, split trades that cross the R=1 target boundary, and update the regime. The source caps certain computed outputs at the amount available to reach the target to guard against fixed-point precision error.
+
+The DODOMath source documents the continuous marginal-price integral for a reserve variable V, moving from V1 to V2 relative to target V0:
+\[
+\mathrm{res}
+=i(V_1-V_2)\left(1-K+K\frac{V_0^2}{V_1V_2}\right),
+\]
+for the stated ordering V0 >= V1 >= V2 > 0. The code evaluates this with 18-decimal fixed-point arithmetic and explicit K=0 handling. This is the integrated PMM curve, not an independent candidate beside its marginal-price law.
+
+For a finite trade, _SolveQuadraticFunctionForTrade solves the corresponding quadratic reserve equation, handles K=0 and K=1 separately, selects the nonnegative root, and uses ceiling division in the final reserve calculation before returning the reserve difference. _SolveQuadraticFunctionForTarget inversely solves an equilibrium target update. These are inverse/implementation operators for the same PMM curve and state contract, not separate equation counts.
+
+### State and implementation limits
+
+adjustedTarget updates Q0 or B0 when the state is below or above target. getMidPrice uses the corresponding target/current reserve ratio and K to calculate a state-dependent marginal price. DecimalMath uses 1e18 fixed-point multiplication/division and floor/ceiling variants. The pinned library therefore adds concrete integer precision, rounding and regime-transition behavior beyond the documentation's real-valued presentation.
+
+**Structural disposition:** this supports DODO PMM as one guide-price-anchored, inventory-sensitive, piecewise-integrated pricing/state model. Do not count marginal price, integrated quote, quadratic inverse, mid-price, target adjustment and the three R regimes as separate equations. It is not a static reserve-only constant-product invariant. However, the library snapshot alone does not establish which DODO pool type/version wraps it, nor any deployed pool's current i,K,B,Q,B0,Q0, fee or oracle configuration. Bind the intended DVM/DPP/DSP contract family and a versioned pool adapter before formal candidate acceptance. No chain/RPC calls or simulations were made.
