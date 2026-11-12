@@ -2401,7 +2401,7 @@ run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Pro
   set -euo pipefail
   : \"\${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
   python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
-    --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --artifacts-dir \"\${PROTOCOL30_ARTIFACTS_DIR}\" \
     --output-dir '${RESULTS_DIR}/comparison_results/protocol30/random-80-20' \
     --variant random_8020
 "
@@ -2410,7 +2410,7 @@ run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protoc
   set -euo pipefail
   : \"\${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
   python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
-    --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --artifacts-dir \"\${PROTOCOL30_ARTIFACTS_DIR}\" \
     --output-dir '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60' \
     --variant pca_4060
 "
