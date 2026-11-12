@@ -97,7 +97,7 @@ def validate_catalogue(catalogue: object) -> list[dict]:
         generator = entry.get("generator")
         if not isinstance(generator, dict) or generator.get("status") != "ready":
             fail(f"{eid}: generator.status must be ready before task planning")
-        for field in ("method", "seed_policy", "parameter_sampling"):
+        for field in ("method", "seed_policy", "parameter_sampling", "sampling_semantics"):
             if not generator.get(field):
                 fail(f"{eid}: generator.{field} is required")
         ranges = entry.get("input_ranges")
