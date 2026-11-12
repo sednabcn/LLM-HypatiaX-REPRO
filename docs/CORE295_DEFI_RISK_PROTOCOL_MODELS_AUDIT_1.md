@@ -151,3 +151,22 @@ The later snapshot retains the same high-level 50% default close factor, 0.95 HF
 GenericLogic's health-factor numerator is accumulated directly as the sum of collateral base value times its liquidation-threshold percentage, then converted to WAD and divided by 10,000 and total debt. The prior snapshot first computed a collateral-value-weighted average threshold and then multiplied total collateral by that average threshold. These are algebraically equivalent in exact arithmetic, but not necessarily bit-for-bit identical under integer truncation and changed rounding rules. The later code comments explicitly document the intermediate decimal scales.
 
 **Version rule:** retain the 2025 source snapshot above as a historical pinned implementation; do not silently treat it as current. For a current 3.7 implementation adapter, use the 2026-09-09 aave-dao snapshot and its rounding semantics. Both are source snapshots only; the deployed proxy implementation and reserve configuration must still be pinned separately. No live chain calls were made.
+
+
+## 7. Compound Comet liquidation-factor semantics: specification versus Solidity
+
+A closer cross-check of the pinned v2.5 specification and Solidity implementation resolves an important naming trap, but does not eliminate the version/release reconciliation requirement.
+
+The specification distinguishes three asset-level risk parameters: (i) the borrow collateral factor, used to constrain new borrowing; (ii) the liquidation collateral factor, used in the liquidatability test; and (iii) the liquidation factor, described as the fraction of collateral value received in the base token when liquidated. The first two are threshold weights in the signed-liquidity calculation; the third is a collateral valuation/settlement parameter, not another threshold.
+
+The Solidity `AssetInfo` struct likewise stores separate `borrowCollateralFactor`, `liquidateCollateralFactor`, and `liquidationFactor` fields. The implementation-level absorb path values seized collateral using `liquidationFactor`, while `isLiquidatable` uses `liquidateCollateralFactor`. The later `buyCollateral` path uses `storeFrontPriceFactor` together with the complement of `liquidationFactor` to determine the storefront discount. Thus the code's factor is not simply a percentage fee applied to the user's debt; it is part of the protocol's collateral acquisition/resale economics.
+
+For interpretation, keep these operations separate within one coupled Comet state-transition model:
+
+- **Eligibility:** signed base liquidity plus each collateral value weighted by its liquidation collateral factor; absorb is allowed when the resulting liquidity is negative.
+- **Absorption settlement:** seized collateral is removed from the account, valued with oracle/scale conversions and the liquidation factor, and applied to the signed base balance; a negative residual is clamped to zero, with aggregate principal/supply/borrow accounting updated.
+- **Reserve restoration:** protocol-held collateral can later be sold through `buyCollateral`, with the storefront discount derived from the storefront factor and the complement of the liquidation factor, subject to reserve and minimum-output constraints.
+
+This cross-check supports the prior warning that the specification's prose and Solidity's accounting should not be mixed as if they were one line-for-line algorithm. It does **not** establish that the pinned development snapshot matches any deployed market. The exact source release, deployed implementation bytecode, immutable configuration and market-specific asset factors remain necessary for a production reconstruction. No RPC, explorer API, contract execution or live protocol call was made.
+
+**Structural disposition:** retain one candidate coupled protocol-level absorption/settlement state machine. Do not count the liquidation-factor formula, liquidatability inequality, collateral offset, storefront quote and principal update as independent equation rows. The threshold component remains structurally related to Aave's weighted collateral/debt health-factor eligibility test.
