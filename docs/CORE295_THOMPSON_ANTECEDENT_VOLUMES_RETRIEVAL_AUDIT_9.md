@@ -84,3 +84,12 @@ Accordingly:
 - No antecedent is attributed to Thompson, no exact citation corrected by guesswork, and no source-family decision is made.
 
 Primary volume-175 text remains the evidence for what the 1922 note cites; page-image inspection of each cited volume is still the next required action.
+
+
+## Core-295 shard output-write correction
+
+A second source-level inspection found the shard driver opened the output in binary-exclusive mode (`"xb"`) while also passing `encoding="utf-8"` and writing a decoded string. Python rejects an encoding argument in binary mode, so this would fail at artifact emission after the adapter calls. The driver now writes the canonical JSON bytes directly to the exclusive binary stream.
+
+- Corrective commit: `b287a3124c29f8f3e6b6a40e6065d4032248b8f1`
+- Re-fetched file blob SHA: `464b38a301bdb28aea08f71f0179326132ae1360`
+- Source-level correction only; no driver execution or test was performed.
