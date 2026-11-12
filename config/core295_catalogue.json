@@ -51,9 +51,9 @@
       "name": "Henry solubility relation for CO2 in pure water at 298.15 K",
       "domain": "Chemistry",
       "subdomain": "gas-liquid equilibrium",
-      "formula": "c_CO2(aq) = Hs_cp p_CO2",
+      "formula": "c_CO2(aq) = kH pCO2",
       "canonical_expression": "kH*pCO2",
-      "formula_latex": "c_{\\mathrm{CO_2(aq)}} = H_s^{cp} p_{\\mathrm{CO_2}}",
+      "formula_latex": "c_{\\mathrm{CO_2(aq)}} = k_H p_{\\mathrm{CO_2}}",
       "structural_fingerprint": "103cedf4fd987fc13cfc14b654b5a2ccfba05ffe3ec7e81fea867d6b31462227",
       "source_ids": [
         "CHEM-OPENSTAX-HENRY-11-3",
@@ -131,7 +131,7 @@
         ],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Linear dilute-gas partition relation for molecular CO2(aq) concentration versus CO2 partial pressure at fixed solvent and temperature.",
+        "operator_structure": "Linear dilute-gas partition relation c_CO2(aq)=kH*pCO2, with kH denoting the solubility-form Hs_cp coefficient, at fixed solvent and temperature.",
         "constraints": [
           "pCO2>=0.",
           "kH is fixed at 3.4e-4 mol m^-3 Pa^-1 for CO2 in pure water at 298.15 K.",
