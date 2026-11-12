@@ -198,7 +198,7 @@ def main() -> int:
         if not args.dry_run:
             provenance.parent.mkdir(parents=True, exist_ok=True)
             with provenance.open("a", encoding="utf-8") as out:
-                out.write(json.dumps(result, ensure_ascii=False) + "\\n")
+                out.write(json.dumps(result, ensure_ascii=False) + "\n")
         if args.sleep:
             time.sleep(args.sleep)
     print(f"Processed {processed}; retrieval errors {failures}; dry_run={args.dry_run}")
