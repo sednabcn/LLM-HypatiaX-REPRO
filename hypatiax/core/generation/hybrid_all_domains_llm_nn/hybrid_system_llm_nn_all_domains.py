@@ -105,8 +105,9 @@ def _hardcoded_disabled() -> bool:
     return _switch_on("HYPATIAX_DISABLE_HARDCODED")
 
 
-_PROV_KEYS = ("llm_called", "bypass_kind", "bypass_flags", "stop_reason", "usage",
-              "prompt_sha256", "temperature_sent", "error_stage")
+_PROV_KEYS = ("llm_called", "llm_attempted", "bypass_kind", "bypass_flags",
+              "stop_reason", "usage", "prompt_sha256", "temperature_sent",
+              "temperature_requested", "error_stage", "delegate_attempt")
 
 
 def _prov(llm_result: dict) -> dict:
@@ -226,6 +227,9 @@ class HybridSystemAllDomains:
         if not self._no_cache and _cache_key in self._formula_cache:
             return self._formula_cache[_cache_key]
 
+        # Preserve delegate provenance if an unusable result triggers a second request.
+        _delegate_attempt = None
+
         # ── Delegate to PureLLMBaseline (preferred path) ─────────────────────
         if self._llm_baseline is not None:
             try:
@@ -253,7 +257,15 @@ class HybridSystemAllDomains:
                     if not self._no_cache:
                         self._formula_cache[_cache_key] = result
                     return result
-                # Empty/N/A or error dict — fall through to local fallback below.
+                # Retain provenance before a possible second live request.
+                _delegate_attempt = {
+                    key: result.get(key)
+                    for key in (
+                        "llm_attempted", "llm_called", "bypass_kind",
+                        "temperature_sent", "temperature_requested",
+                        "error_stage", "generation_path",
+                    )
+                }
                 print(
                     f"⚠️  delegate returned no code "
                     f"({str(result.get('error', 'empty/N/A'))[:80]}); "
@@ -268,6 +280,8 @@ class HybridSystemAllDomains:
         # ── Local fallback implementation ─────────────────────────────────────
         prompt = self._generate_prompt(description, domain, variable_names, metadata)
 
+        _fallback_attempted = False
+        _fallback_response_received = False
         try:
             # FIX-ISSUE2B-LLM-TEMPERATURE: same fix as PureLLMBaseline's
             # call site (baseline_pure_llm_defi_discovery.py) -- this local
@@ -278,12 +292,16 @@ class HybridSystemAllDomains:
             # delegate can fail on live-LLM errors, so fallback use is
             # NOT guaranteed to be zero: each use is logged ("local fallback")
             # and tagged llm_source="local_fallback" in the result.
+            _fallback_attempted = True
             response = _create_message_deterministic(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
+            _fallback_response_received = True
+            from hypatiax.core.llm_call import last_call_info
+            _fallback_call_info = last_call_info()
             # Anthropic extended-thinking responses may put a ThinkingBlock
             # before the answer. Select the first text block rather than
             # assuming response.content[0] has a .text attribute.
@@ -306,11 +324,28 @@ class HybridSystemAllDomains:
                 "explanation": parsed.get("explanation", "N/A"),
                 "llm_source": "local_fallback",
                 "llm_called": True,
+                "llm_attempted": True,
+                "temperature_sent": _fallback_call_info.get("temperature_sent", False),
+                "temperature_requested": _fallback_call_info.get("temperature_requested", 0.25),
+                "delegate_attempt": _delegate_attempt,
                 "bypass_kind": "local_fallback",
             }
         except Exception as e:
-            result = {"error": str(e), "llm_source": "local_fallback",
-                      "llm_called": False, "bypass_kind": "local_fallback"}
+            _fallback_call_info = {}
+            if _fallback_attempted:
+                from hypatiax.core.llm_call import last_call_info
+                _fallback_call_info = last_call_info()
+            result = {
+                "error": str(e),
+                "llm_source": "local_fallback",
+                "llm_called": _fallback_response_received,
+                "llm_attempted": _fallback_attempted,
+                "temperature_sent": _fallback_call_info.get("temperature_sent", False),
+                "temperature_requested": _fallback_call_info.get("temperature_requested", 0.25),
+                "delegate_attempt": _delegate_attempt,
+                "error_stage": "post_response" if _fallback_response_received else "api_request",
+                "bypass_kind": "local_fallback",
+            }
 
         # Cache only usable formulas. Caching an API error or an empty/N/A
         # parse would turn a transient failure into a permanent miss for this
