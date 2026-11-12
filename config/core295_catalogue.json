@@ -99,13 +99,47 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Input ranges and deterministic generator remain unspecified",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "OpenStax Chemistry 2e §11.3"
+      "source_location": "OpenStax Chemistry 2e §11.3",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "Pg"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "kH"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Linear gas-liquid equilibrium response Cg=kH*Pg.",
+        "constraints": [
+          "Fixed temperature and fixed gas-solvent pair.",
+          "Dilute/ideal regime."
+        ],
+        "assumptions": [
+          "Gas-liquid equilibrium at fixed temperature",
+          "Dilute/ideal-solution regime where dissolved concentration is proportional to gas partial pressure",
+          "Gas and solvent identities fixed for the Henry coefficient",
+          "No significant chemical reaction of dissolved gas"
+        ],
+        "validity_regime": "Dilute/ideal gas-solubility proportionality at fixed temperature and fixed gas-solvent pair",
+        "limitations": [
+          "No significant reactive dissolution",
+          "gas and solvent identities fixed",
+          "do not confuse with Ideal Gas Law"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-LANGMUIR-001",
@@ -162,13 +196,49 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Input ranges and deterministic generator remain unspecified",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)"
+      "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "p"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "u1"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Single-site monolayer equilibrium coverage as a scalar function of pressure.",
+        "constraints": [
+          "u1>0.",
+          "p>=0."
+        ],
+        "assumptions": [
+          "Equivalent elementary adsorption sites",
+          "One molecule per site",
+          "Monolayer coverage",
+          "Adsorption/desorption equilibrium",
+          "Negligible lateral interactions in the simple model"
+        ],
+        "validity_regime": "Simple single-site monolayer adsorption equilibrium",
+        "limitations": [
+          "Equivalent sites",
+          "one molecule per site",
+          "monolayer",
+          "adsorption/desorption equilibrium"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-MARCUS-001",
@@ -249,7 +319,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Marcus (1956) Part I describes the rate as the solution collision number multiplied by exp(-DeltaF_dagger/(kT)); the proposed record uses Z for that collision-frequency prefactor.",
@@ -262,7 +336,42 @@
         "Audit 2 (2026-11-11): distinguish Marcus (1956) solution collision-number prefactor from the current IUPAC encounter-complex/intramolecular Eyring-prefactor Marcus equation; current hybrid formulation remains source-scope unresolved. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md.",
         "Audit 3 (2026-11-11): prefactor scope remains unresolved; do not benchmark this hybrid record until it declares solution-bimolecular collision-number Z versus encounter-complex/intramolecular kappa_ET*kB*T/h convention. Neither prefactor is universally interchangeable. See docs/CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md."
       ],
-      "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723"
+      "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "T",
+          "deltaG"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "Z",
+          "lam"
+        ],
+        "physical_constants": [
+          "R"
+        ],
+        "state_dimension": null,
+        "operator_structure": "Activated outer-sphere electron-transfer rate with parabolic reorganization barrier.",
+        "constraints": [
+          "T>0; lam>0; R is a physical constant.",
+          "Prefactor convention remains source-scope unresolved."
+        ],
+        "assumptions": [
+          "Outer-sphere electron transfer",
+          "Classical parabolic free-energy surfaces",
+          "Temperature and solvent regime where classical Marcus barrier is appropriate",
+          "Transmission factor captures adiabatic/diabatic effects",
+          "Consistent molar energy convention for lambda, deltaG and R"
+        ],
+        "validity_regime": "Classical outer-sphere Marcus relation, especially normal region",
+        "limitations": [
+          "Inverted region generally needs Franck-Condon correction",
+          "energy units must be consistent",
+          "explicit Core-15 Arrhenius/Rate Law overlap review required"
+        ]
+      }
     },
     {
       "equation_id": "BIO-HILL-MUSCLE-001",
@@ -334,7 +443,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Primary source record and characteristic equation lineage identified",
@@ -343,7 +456,39 @@
         "Train/extrapolation ranges and deterministic generator remain pending",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Hill (1938), DOI 10.1098/rspb.1938.0050"
+      "source_location": "Hill (1938), DOI 10.1098/rspb.1938.0050",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "P"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "P0",
+          "a",
+          "b"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Steady isotonic force-velocity characteristic.",
+        "constraints": [
+          "P0>0; a>0; b>0; 0<=P<=P0 under the stated shortening convention."
+        ],
+        "assumptions": [
+          "Steady isotonic concentric shortening",
+          "Tetanic activation and approximately constant load during the measured shortening interval",
+          "Force and velocity refer to the contractile element under the stated series-elastic assumptions",
+          "Parameters a and b are positive and specific to the muscle preparation/condition"
+        ],
+        "validity_regime": "Steady force-velocity relation during isotonic concentric shortening",
+        "limitations": [
+          "Do not treat the normalized Hill force-velocity relation as the Hill ligand-binding equation",
+          "The rectangular hyperbola is empirical and does not fit all force/velocity extremes or all muscle preparations",
+          "Freeze force/velocity sign convention, muscle type, temperature and activation protocol before benchmarking",
+          "No algebraic rearrangement or parameter rescaling is a separate equation"
+        ]
+      }
     },
     {
       "equation_id": "PHYS-POISEUILLE-001",
@@ -424,7 +569,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Exact equation and section location are visible in OpenStax §14.7, Eq. 14.19",
@@ -434,7 +583,42 @@
         "Proposed only; not scientifically accepted or eligible for shard planning",
         "Audit 4 (2026-11-11): distinguish the modern viscosity-explicit Hagen–Poiseuille expression in OpenStax §14.7 Eq. 14.19 from Poiseuille's original empirical K*DeltaP*D^4/L relation; viscosity-explicit derivation is later, commonly attributed to Hagenbach (1860). Preserve Navier–Stokes special-solution lineage and decide whether PDE special solutions count as distinct equations. See docs/CORE295_PROPOSED_RECORD_AUDIT_4.md."
       ],
-      "source_location": "OpenStax University Physics Volume 1 §14.7, Eq. 14.19"
+      "source_location": "OpenStax University Physics Volume 1 §14.7, Eq. 14.19",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "p2",
+          "p1"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "r",
+          "eta",
+          "l"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Pressure-driven steady laminar flow through a rigid cylindrical tube.",
+        "constraints": [
+          "p2>p1; r,eta,l>0.",
+          "Samples must satisfy laminar-flow validity criteria."
+        ],
+        "assumptions": [
+          "Steady laminar flow through a straight cylindrical tube",
+          "Incompressible Newtonian fluid with constant dynamic viscosity",
+          "No-slip at the tube wall and fully developed parabolic velocity profile",
+          "Rigid tube with constant radius and length",
+          "Pressure difference is measured between tube ends and flow is driven from higher to lower pressure"
+        ],
+        "validity_regime": "Laminar viscous flow through a cylindrical tube",
+        "limitations": [
+          "Equation 14.18 defines hydraulic resistance; Eq. 14.19 combines it with Q=DeltaP/R and is the Poiseuille flow relation",
+          "Do not count resistance relation or algebraic rearrangements as separate equations",
+          "Not valid for turbulent flow, non-Newtonian fluids, significant entrance effects or compliant/noncylindrical conduits without model changes",
+          "Check Reynolds number and physical geometry for every generated sample"
+        ]
+      }
     },
     {
       "equation_id": "PHYS-PLANCK-SPECTRUM-001",
@@ -516,7 +700,11 @@
         "method": null,
         "seed_policy": null,
         "parameter_sampling": null,
-        "output_units": "W m^-3 (power per area per unit wavelength)"
+        "output_units": "W m^-3 (power per area per unit wavelength)",
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Exact modern wavelength-intensity equation is visible as OpenStax Eq. 6.11",
@@ -526,7 +714,40 @@
         "Proposed only; not scientifically accepted or eligible for shard planning",
         "Audit 5 (2026-11-11): OpenStax defines I(lambda,T) as power per unit area per unit wavelength (spectral exitance, W m^-3), not radiance per solid angle. Planck 1901 Eq. (13) is spectral energy density per wavelength; multiplying by c/4 for isotropic equilibrium radiation gives the OpenStax exitance formula. Keep Wien/Stefan consequences in the same family. See docs/CORE295_PROPOSED_RECORD_AUDIT_5.md."
       ],
-      "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11"
+      "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "lam",
+          "T"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [],
+        "physical_constants": [
+          "h",
+          "c",
+          "kB"
+        ],
+        "state_dimension": null,
+        "operator_structure": "Blackbody spectral exitance per unit wavelength.",
+        "constraints": [
+          "lam>0; T>0; h,c,kB are fixed physical constants."
+        ],
+        "assumptions": [
+          "Ideal blackbody/cavity radiation in thermal equilibrium",
+          "Spectral intensity is expressed per unit wavelength, not per unit frequency",
+          "Wavelength is positive and absolute temperature is positive",
+          "The emitter is treated as a blackbody; real-material emissivity deviations are outside this formula"
+        ],
+        "validity_regime": "Blackbody spectral power intensity per unit wavelength at thermal equilibrium",
+        "limitations": [
+          "Do not confuse spectral intensity per wavelength with spectral energy density or frequency-domain forms; conversions require the correct Jacobian",
+          "Wien displacement and Stefan total-power relations are derived from the spectrum and are not separate independent candidates in this source family",
+          "Do not treat a real surface with wavelength-dependent emissivity as an ideal blackbody without adding emissivity",
+          "The original Planck paper uses a different spectral convention; this record selects the OpenStax wavelength-intensity convention explicitly"
+        ]
+      }
     },
     {
       "equation_id": "PHYS-THIN-LENS-001",
@@ -582,7 +803,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Exact thin-lens equation is printed as OpenStax Eq. 2.19",
@@ -591,7 +816,37 @@
         "Benchmark ranges must exclude do=f and retain signed real/virtual image cases consistently",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "OpenStax University Physics Volume 3 §2.4, Eq. 2.19"
+      "source_location": "OpenStax University Physics Volume 3 §2.4, Eq. 2.19",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "do"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "f"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Thin-lens object-to-image distance mapping.",
+        "constraints": [
+          "f>0; do>f for the declared real-image branch; do!=f."
+        ],
+        "assumptions": [
+          "Paraxial ray approximation and thin-lens limit",
+          "Object and image distances are measured from the lens plane using the source sign convention",
+          "Lens is in a uniform surrounding medium and focal length is defined for that medium",
+          "Negligible lens thickness relative to the relevant image distances and radii of curvature"
+        ],
+        "validity_regime": "Thin lens under paraxial geometric optics",
+        "limitations": [
+          "Image distance is signed; di>0 denotes a real image on the opposite side and di<0 a virtual image on the object side",
+          "Singularity at do=f must be excluded from finite-output samples",
+          "Do not count lens-maker equation, sign variants or algebraic rearrangements as independent units without separate derivation review",
+          "Thick lenses, aberrations and non-paraxial rays require richer models"
+        ]
+      }
     },
     {
       "equation_id": "AMM-BALANCER-WEIGHTED-001",
@@ -681,7 +936,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Official documentation gives the invariant V=product(B_t^W_t) and states normalized weights sum to one",
@@ -690,7 +949,44 @@
         "Require a pinned implementation commit, explicit weight constraints, token scaling and fixed-point rounding before source_verified",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Balancer Weighted Math documentation; Balancer V2 WeightedMath.sol _calculateInvariant"
+      "source_location": "Balancer Weighted Math documentation; Balancer V2 WeightedMath.sol _calculateInvariant",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "B1",
+          "B2",
+          "B3"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "w1",
+          "w2",
+          "w3"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Weighted geometric invariant of a three-token Balancer pool.",
+        "constraints": [
+          "Bi>0; wi>0; sum(wi)=1.",
+          "Pool weights are configuration, not independently sampled features."
+        ],
+        "assumptions": [
+          "Three-token weighted pool with strictly positive normalized weights",
+          "Weights sum to one",
+          "All balances are expressed in consistent normalized/upscaled units",
+          "Pool invariant is held constant across a swap before fees and implementation rounding are applied",
+          "Pool uses the Balancer weighted math model and a pinned protocol implementation"
+        ],
+        "validity_regime": "Three-asset weighted geometric pool invariant",
+        "limitations": [
+          "The two-token equal-weight special case reduces to the excluded constant-product family; this candidate is explicitly three-token",
+          "Weights must be positive and sum to one; the benchmark generator must enforce this constraint rather than sampling weights independently",
+          "Balances must be scaled consistently for token decimals and protocol fixed-point implementation",
+          "Do not treat weighted spot-price or swap-output rearrangements as separate independent candidates without a family-level design",
+          "Pin the exact Balancer V2 code commit and pool version before source_verified or acceptance"
+        ]
+      }
     },
     {
       "equation_id": "RISK-MORPHO-LIF-001",
@@ -737,10 +1033,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": "Use only governance-approved LLTV values from the pinned Morpho Blue market parameter set; do not sample arbitrary continuous LLTVs"
+        "parameter_sampling": "Use only governance-approved LLTV values from the pinned Morpho Blue market parameter set; do not sample arbitrary continuous LLTVs",
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "The pinned Morpho Blue source confirms LIF=min(maxFactor,1/(1-cursor*(1-LLTV)))",
@@ -749,7 +1049,38 @@
         "The benchmark should preserve the discrete governance-approved LLTV domain and WAD rounding",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Morpho Blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d"
+      "source_location": "Morpho Blue commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "LLTV"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Piecewise capped liquidation-incentive factor indexed by configured LLTV.",
+        "constraints": [
+          "LLTV must be selected from valid market configurations.",
+          "Preserve exact rational and cap semantics."
+        ],
+        "assumptions": [
+          "Morpho Blue core liquidation path at the pinned implementation revision",
+          "LLTV is a dimensionless fraction in [0,1] represented in WAD fixed-point arithmetic on chain",
+          "Liquidation cursor is fixed at 0.3e18 and maximum incentive factor at 1.15e18 for this implementation",
+          "Formula is applied to an unhealthy position after the oracle-based health check",
+          "Fixed-point division and multiplication use the implementation's rounding direction"
+        ],
+        "validity_regime": "Morpho Blue core liquidation incentive calculation for a market's LLTV",
+        "limitations": [
+          "This is the incentive factor, not the health-factor or liquidation-eligibility equation",
+          "Cursor 0.3 and cap 1.15 are version-pinned implementation constants, not universal Morpho parameters",
+          "The contract uses WAD fixed-point arithmetic with downward rounding in the reciprocal; exact integer rounding must be preserved for implementation replication",
+          "Do not substitute newer Morpho Midnight per-collateral cursor or post-maturity ramp mechanics",
+          "Pin this exact commit; later contract versions may change constants or calculation"
+        ]
+      }
     },
     {
       "equation_id": "RISK-EULER-AUCTION-001",
@@ -813,10 +1144,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Exact source implementation was fetched at the pinned EVK commit; discountFactor is calculated as collateralAdjustedValue/liabilityValue and floored at 1-maxDiscount",
@@ -825,7 +1160,42 @@
         "Need freeze oracle mid-point pricing, LTV aggregation, collateral set, CONFIG_SCALE and integer rounding",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Euler EVK commit 93a1de491531e54cbbcf0e5c8cacfe558f924867, src/EVault/modules/Liquidation.sol"
+      "source_location": "Euler EVK commit 93a1de491531e54cbbcf0e5c8cacfe558f924867, src/EVault/modules/Liquidation.sol",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "Cadj",
+          "L"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "Dmax"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Health-dependent capped liquidation discount factor.",
+        "constraints": [
+          "L>0; 0<=Dmax<=1.",
+          "Preserve protocol branch and rounding semantics."
+        ],
+        "assumptions": [
+          "EVK liquidation path at the pinned implementation revision",
+          "Account is unhealthy: risk-adjusted collateral value is less than or equal to liability value",
+          "Liability value is strictly positive",
+          "Collateral value is computed using the liquidation valuation mode and risk-adjusted by the configured liquidation LTV",
+          "Maximum liquidation discount is a configured fraction in [0,1)",
+          "Discount factor is the health score floored at 1-Dmax"
+        ],
+        "validity_regime": "Reverse Dutch auction liquidation discount factor for an unhealthy EVK position",
+        "limitations": [
+          "The implementation defines discountFactor = health score = 1 - discount, then floors it at 1 - maxLiquidationDiscount",
+          "The expression is a scalar abstraction of the discount factor; collateral seizure and debt repayment are separate downstream calculations",
+          "Risk-adjusted collateral value depends on collateral-specific liquidation LTVs and mid-point oracle prices; the aggregation must be frozen",
+          "Fixed-point CONFIG_SCALE and rounding must be preserved in an implementation-faithful benchmark",
+          "Do not mix this EVK mechanism with Euler V1's distinct boosted discount formula"
+        ]
+      }
     },
     {
       "equation_id": "RISK-COMPOUND-BORROW-KINK-001",
@@ -904,10 +1274,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Pinned Comet source confirms the low branch base+slopeLow*U and high branch base+slopeLow*kink+slopeHigh*(U-kink)",
@@ -916,7 +1290,42 @@
         "Must freeze valid utilization/kink domain, exact market config, FACTOR_SCALE and rounding",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Compound Comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol"
+      "source_location": "Compound Comet commit f766f51583c23acc33b2a7824654ef2029a96804, contracts/CometWithExtendedAssetList.sol",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "U"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "kink",
+          "base",
+          "slopeLow",
+          "slopeHigh"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Piecewise utilization-dependent borrow-rate curve.",
+        "constraints": [
+          "0<=U<=1; 0<kink<1; rates and slopes follow pinned market configuration."
+        ],
+        "assumptions": [
+          "Compound III Comet borrow-rate model at the pinned implementation revision",
+          "Utilization U is the dimensionless base-asset utilization factor",
+          "Borrow kink is a configured utilization threshold",
+          "Base rate and slopes are per-second interest-rate parameters in the Comet factor convention",
+          "The formula is the real-valued abstraction; on-chain arithmetic uses FACTOR_SCALE fixed-point multiplication and uint64 output bounds"
+        ],
+        "validity_regime": "Compound III base-asset borrow rate as a continuous piecewise-linear function of utilization",
+        "limitations": [
+          "This is the borrow-rate model; supply rate has an additional utilization and reserve-factor relation and is not a separate candidate in this record",
+          "The low/high branches meet continuously at the kink; the derivative changes there",
+          "Preserve per-second rate convention, FACTOR_SCALE and integer mulFactor rounding for implementation replication",
+          "Do not count Aave two-slope variants as independent merely because protocol parameters differ; they share the utilization-kink family",
+          "Pin Comet implementation and market-specific parameter configuration before acceptance"
+        ]
+      }
     },
     {
       "equation_id": "AMM-DODO-PMM-BASE-SHORTAGE-001",
@@ -988,10 +1397,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": "Enforce i>0, B0>0, 0<B<B0 and 0<=k<=1"
+        "parameter_sampling": "Enforce i>0, B0>0, 0<B<B0 and 0<=k<=1",
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Official DODO docs state the base-shortage marginal price P=i(1-k+(B0/B)^2 k)",
@@ -1000,7 +1413,43 @@
         "Need freeze pool type, guide-price oracle context, regression state and DecimalMath precision",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol"
+      "source_location": "DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "B"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "i",
+          "k",
+          "B0"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Base-token shortage branch of the DODO PMM marginal-price curve.",
+        "constraints": [
+          "i>0; B0>0; 0<B<B0; 0<=k<=1.",
+          "Pool parameters are fixed configuration."
+        ],
+        "assumptions": [
+          "DODO PMM V2 pricing model at the pinned contract revision",
+          "Base-token inventory is below its equilibrium/regression target: 0 < B < B0",
+          "Guide price i is positive and fixed during the quote",
+          "Slippage factor k is in [0,1]",
+          "P is the marginal quote price for one unit of base token, before transaction fee treatment",
+          "Pool state is already classified as the base-shortage/ABOVE_ONE branch"
+        ],
+        "validity_regime": "Marginal price in DODO PMM V2 when base-token inventory is below its equilibrium target",
+        "limitations": [
+          "The quote-shortage branch is the reciprocal counterpart and belongs to the same PMM price-curve family; do not count it independently",
+          "The equilibrium R=1 branch gives P=i and is a state boundary, not a separate candidate",
+          "Integrated trade amount is the integral of the marginal curve and is linked, not a separate independent equation in this record",
+          "Regression target updates and pool-specific DVM/DSP/DPP state transitions are not captured by this scalar branch",
+          "Preserve DecimalMath fixed-point rounding and the pinned contract revision before implementation-level acceptance"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-RAOULT-VAPOR-001",
@@ -1058,7 +1507,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Exact modern component equation is printed in OpenStax Chemistry 2e §11.4",
@@ -1066,7 +1519,39 @@
         "Freeze a named binary/ternary ideal-solution system and temperature-dependent pure-component vapor pressure before sampling",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "OpenStax Chemistry 2e §11.4; Raoult (1887), Comptes Rendus 104, 1430-1433"
+      "source_location": "OpenStax Chemistry 2e §11.4; Raoult (1887), Comptes Rendus 104, 1430-1433",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "XA"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "PAstar"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Ideal-solution component partial vapor pressure.",
+        "constraints": [
+          "0<=XA<=1; PAstar>=0."
+        ],
+        "assumptions": [
+          "Ideal liquid solution with component activities approximated by mole fractions",
+          "Liquid-vapor equilibrium at fixed temperature",
+          "P_A_star is the saturation vapor pressure of pure component A at the same temperature",
+          "Component A is volatile; vapor-phase partial pressure is measured at equilibrium",
+          "No chemical reaction or association/dissociation that invalidates the ideal-solution activity model"
+        ],
+        "validity_regime": "Ideal-solution liquid-vapor equilibrium at fixed temperature",
+        "limitations": [
+          "Original 1887 empirical paper page-level equation transcription remains to be checked; OpenStax is the explicit modern equation source",
+          "Nonideal solutions require activity coefficients; do not apply this ideal relation without checking mixture behavior",
+          "Henry's law describes a different limiting regime for dilute solutes; do not merge or count algebraic limiting cases separately",
+          "Total vapor pressure obtained by summing component partial pressures is linked through Dalton's law, not an independent candidate here",
+          "Do not confuse this vapor-liquid equilibrium relation with the excluded Ideal Gas Law"
+        ]
+      }
     },
     {
       "equation_id": "BIO-FICK-CARDIAC-OUTPUT-001",
@@ -1132,7 +1617,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Primary historical source metadata identifies Fick's 1870 paper and pages XVI-XVII",
@@ -1141,7 +1630,39 @@
         "Benchmark must specify steady-state physiological context, mixed venous sampling and positive arteriovenous oxygen difference",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Fick (1870), Neue Folge 2, XVI-XVII; Geerts et al. (2011), Fick section"
+      "source_location": "Fick (1870), Neue Folge 2, XVI-XVII; Geerts et al. (2011), Fick section",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "VO2",
+          "CaO2",
+          "CvO2"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Cardiac output from oxygen consumption and arterial-venous oxygen content difference.",
+        "constraints": [
+          "CaO2>CvO2; VO2>=0."
+        ],
+        "assumptions": [
+          "Steady-state oxygen balance across the pulmonary circulation",
+          "Oxygen uptake measured at the lungs equals oxygen transferred into the blood stream",
+          "No material oxygen consumption or storage within the lung control volume",
+          "Arterial and mixed venous samples represent the blood entering and leaving the systemic circulation",
+          "No significant shunt or unaccounted oxygen transfer across the chosen control volume"
+        ],
+        "validity_regime": "Direct Fick method for cardiac output under steady-state oxygen balance",
+        "limitations": [
+          "Original Fick 1870 scan is linked through Hathi Trust but access is restricted; exact original equation transcription remains to be checked",
+          "The formula requires mixed venous oxygen content, not an arbitrary central venous substitute",
+          "Steady-state and complete-mixing assumptions are essential; shunts and pulmonary gas-exchange abnormalities can bias the relation",
+          "This is an application of conservation of mass; do not count rearrangements or carbon-dioxide analogues as independent equations",
+          "Ensure unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L min^-1"
+        ]
+      }
     },
     {
       "equation_id": "RISK-UNISWAP-V3-GEOMETRIC-TWAP-001",
@@ -1188,10 +1709,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": "Generate valid mean ticks within the pinned TickMath min/max bounds; specify observation interval and token direction in the adapter"
+        "parameter_sampling": "Generate valid mean ticks within the pinned TickMath min/max bounds; specify observation interval and token direction in the adapter",
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Pinned OracleLibrary source computes arithmeticMeanTick from cumulative tick delta divided by secondsAgo",
@@ -1200,7 +1725,38 @@
         "Need pin core TickMath version, observation window, token order, decimal scaling and deterministic generator",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol"
+      "source_location": "Uniswap/v3-periphery commit 24ccf014fe7f81d74a14c1689d6fdf123f280e45, contracts/libraries/OracleLibrary.sol",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "meanTick"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Geometric mean price reconstructed from the integer mean tick.",
+        "constraints": [
+          "meanTick is an integer in pinned TickMath bounds.",
+          "Token ordering and observation interval are part of the protocol context."
+        ],
+        "assumptions": [
+          "Uniswap v3 tick grid and pool price convention at the pinned periphery/core revision",
+          "Token0/token1 ordering is fixed; output is raw token1 per token0 ratio before decimal normalization",
+          "Mean tick is computed over a nonzero observation interval from cumulative tick differences",
+          "Integer division for negative cumulative tick deltas rounds toward negative infinity",
+          "The price is the geometric time average implied by the arithmetic mean of log-price ticks"
+        ],
+        "validity_regime": "Geometric mean price ratio over a specified observation interval, represented by the arithmetic mean tick",
+        "limitations": [
+          "This record covers the price ratio from mean tick; meanTick itself is computed from tickCumulativesDelta/secondsAgo with negative-infinity rounding",
+          "Token ordering and decimal scaling must be explicit; reciprocal price is a direction conversion, not a separate equation",
+          "The harmonic mean liquidity returned by consult is a related but distinct oracle output; do not merge it into the price equation",
+          "Preserve int56 cumulative tick subtraction, uint32 secondsAgo and int24 mean tick bounds",
+          "Uniswap v2 arithmetic cumulative-price TWAP is a distinct averaging construction but shares the oracle-manipulation source family"
+        ]
+      }
     },
     {
       "equation_id": "RISK-UNISWAP-V2-ARITHMETIC-TWAP-001",
@@ -1255,10 +1811,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": "Use positive observation intervals and paired cumulative-price observations from the same token ordering; preserve fixed-point wrap semantics"
+        "parameter_sampling": "Use positive observation intervals and paired cumulative-price observations from the same token ordering; preserve fixed-point wrap semantics",
+        "model_class": "protocol_simulation",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Pinned example implementation computes priceAverage=(priceCumulative-priceCumulativeLast)/timeElapsed",
@@ -1267,7 +1827,39 @@
         "Need freeze observation schedule, UQ112x112 conversion, token ordering, timestamp wrap and deterministic generator",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2, contracts/examples/ExampleOracleSimple.sol"
+      "source_location": "Uniswap/v2-periphery commit ed24991304291297c3b4a52818d02f46a17aa9a2, contracts/examples/ExampleOracleSimple.sol",
+      "model_definition": {
+        "model_class": "protocol_simulation",
+        "independent_variables": [
+          "deltaC",
+          "deltaT"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Arithmetic time-weighted price from cumulative-price delta over elapsed time.",
+        "constraints": [
+          "deltaT>0; cumulative observations share token ordering.",
+          "Preserve uint arithmetic and modular wrap behavior."
+        ],
+        "assumptions": [
+          "Uniswap v2 cumulative-price oracle semantics at the pinned periphery/core revision",
+          "C(t) is the cumulative integral of the pair's instantaneous UQ112x112 price over time",
+          "Observation interval is strictly positive",
+          "The same token direction and pair ordering are used at both observations",
+          "Cumulative arithmetic uses modular uint256 subtraction and uint32 timestamp wrap semantics"
+        ],
+        "validity_regime": "Arithmetic time-weighted mean of the pair price over a nonzero observation interval",
+        "limitations": [
+          "This is the arithmetic average of spot price over time, distinct from Uniswap v3's geometric mean tick construction",
+          "The cumulative price is fixed-point UQ112x112 and has price-seconds units; conversion back to human price requires the correct 2^112 scaling and token decimal orientation",
+          "The example oracle enforces a minimum PERIOD (24 hours in the example); production windows are an adapter choice",
+          "Preserve uint32 timestamp wrap and uint256 cumulative subtraction semantics",
+          "The formula is a manipulation-resistant oracle statistic only when observations are spaced and maintained according to the chosen security design"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-FICK-FLUX-001",
@@ -1325,7 +1917,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Primary Wiley scan confirms the local transfer relation on printed page 66",
@@ -1335,7 +1931,39 @@
         "Proposed only; not scientifically accepted or eligible for shard planning",
         "Audit 2 (2026-11-11): scalar Fick flux law shares normalized first-order linear-gradient constitutive structure with Fourier heat flux and Ohm current density; cross-domain equivalence policy decision required before counting. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md."
       ],
-      "source_location": "Fick (1855), Annalen der Physik 170(1), p. 66"
+      "source_location": "Fick (1855), Annalen der Physik 170(1), p. 66",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "gradC"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "D"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "One-dimensional diffusive flux from concentration gradient.",
+        "constraints": [
+          "D>=0; sign convention and spatial coordinate fixed."
+        ],
+        "assumptions": [
+          "One-dimensional diffusion in a homogeneous isotropic medium",
+          "Diffusion coefficient D is constant over the local spatial and concentration range",
+          "No bulk advection or convection in the flux being modelled",
+          "Flux is proportional to the local concentration gradient and points down-gradient",
+          "The concentration field and coordinate use a fixed sign convention"
+        ],
+        "validity_regime": "One-dimensional constitutive diffusive flux in a homogeneous medium with constant diffusivity",
+        "limitations": [
+          "The original paper's equation (1) gives the diffusion PDE for variable cross-section; equation (2) is the constant-cross-section specialization. These are derived from the same local flux law and are not separate candidates",
+          "Modern notation D,C,J maps to original k,y and the mass transferred through area Q over dt",
+          "The functional form is linearly proportional to a gradient, structurally analogous to Fourier heat flux and Ohm current-density laws; cross-domain structural equivalence review is required before counting it as distinct",
+          "Fick's second law follows from this flux relation plus mass conservation and is not an independent entry here",
+          "Variable diffusivity, nonideal chemical-potential gradients, advection and anisotropic media require generalized transport equations"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-BEER-LAMBERT-001",
@@ -1410,7 +2038,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "IUPAC Gold Book gives the exact decadic spectral-power relation and the conditions on monochromatic radiation and homogeneous isotropic medium",
@@ -1419,7 +2051,41 @@
         "Need choose wavelength-specific material, coefficient, concentration and path-length domain; preserve decadic convention",
         "Proposed only; not scientifically accepted or eligible for shard planning"
       ],
-      "source_location": "IUPAC Gold Book B00626; Beer (1852), DOI 10.1002/andp.18521620505"
+      "source_location": "IUPAC Gold Book B00626; Beer (1852), DOI 10.1002/andp.18521620505",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "I0",
+          "c"
+        ],
+        "dependent_variables": [],
+        "state_variables": [],
+        "fixed_parameters": [
+          "eps",
+          "l"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Decadic optical attenuation through a homogeneous path.",
+        "constraints": [
+          "I0>=0; c>=0; eps>=0; l>=0."
+        ],
+        "assumptions": [
+          "Collimated monochromatic radiation with spectral bandwidth narrow relative to absorption linewidths",
+          "Homogeneous isotropic absorbing medium",
+          "Absorption dominates; reflection and scattering are negligible in the chosen optical path",
+          "Decadic absorbance convention is used",
+          "Molar absorption coefficient is constant over the selected concentration and path-length regime"
+        ],
+        "validity_regime": "Decadic spectral-power attenuation through a homogeneous isotropic absorbing medium",
+        "limitations": [
+          "The primary Beer 1852 Wiley record confirms metadata, but full-text equation-page transcription remains unavailable; the exact modern expression is sourced from IUPAC",
+          "Lambert's natural-exponential path attenuation and the decadic absorbance form A=epsilon*c*l are linked representations of this same Beer-Lambert family, not separate candidates",
+          "At high concentrations, chemical association, refractive effects, scattering or spectral bandwidth can cause deviations",
+          "Do not mix decadic epsilon with a natural-log attenuation coefficient; conversion includes ln(10)",
+          "The exponential form is physically distinct from Arrhenius kinetics, but an explicit Core-15 exclusion overlap review remains required"
+        ]
+      }
     },
     {
       "equation_id": "BIO-TUMOR-TURNOVER-001",
@@ -1509,10 +2175,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "ode_ivp",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Primary PDF Eq. 9 is directly visible on printed page 547",
@@ -1526,7 +2196,48 @@
         "Audit 6: C(t) is an individual PK-model-predicted concentration-time input; it must be generated as a coherent time series from a declared dosing/PK contract, not sampled as independent static values.",
         "Audit 6: the Emax*C/(C+IC50) inhibition fraction has a Michaelis-Menten-like hyperbolic saturation motif, but that motif alone does not prove the complete tumor-turnover ODE is algebraically equivalent to the excluded Michaelis-Menten equation. The structural policy must state whether embedded subexpressions trigger exclusion or whether full-model equivalence is required."
       ],
-      "source_location": "De Buck et al. (2014), Eq. 9, printed p. 547"
+      "source_location": "De Buck et al. (2014), Eq. 9, printed p. 547",
+      "model_definition": {
+        "model_class": "ode_ivp",
+        "independent_variables": [
+          "C"
+        ],
+        "dependent_variables": [],
+        "state_variables": [
+          "Tumour"
+        ],
+        "fixed_parameters": [
+          "Kgrowth",
+          "Emax",
+          "IC50",
+          "Kdeg"
+        ],
+        "physical_constants": [],
+        "state_dimension": "declared_by_model",
+        "operator_structure": "First-order tumour-state turnover ODE with concentration-modulated growth.",
+        "constraints": [
+          "Tumour(0) must be specified; C(t) forcing contract required.",
+          "C+IC50>0; parameter bounds and integration interval required."
+        ],
+        "assumptions": [
+          "Tumor state T is the one-dimensional sum of the longest diameters of measurable lesions",
+          "Zero-order untreated tumor growth and first-order tumor death/turnover",
+          "Drug concentration C is an external PK-derived input function",
+          "Drug exposure inhibits the zero-order growth term through an Emax/IC50 saturation relation",
+          "Kgrowth and Kdeg are positive, as constrained in the primary paper"
+        ],
+        "validity_regime": "BYL719 exposure-linked tumor growth turnover model fitted to the sum of longest lesion diameters in adults with advanced solid malignancies",
+        "limitations": [
+          "This is a specific clinical PK/PD model for BYL719, not a universal tumor growth law",
+          "C is an externally supplied concentration-time input; the PK model and its transit-compartment ODEs are separate linked model components",
+          "The Emax*C/(C+IC50) term has a hyperbolic saturation structure related to Michaelis-Menten; explicit Core-15 exclusion/equivalence review is required before acceptance",
+          "Do not count the zero-order/first-order no-drug turnover special case or algebraic rearrangements as separate candidates",
+          "Parameter estimates are clinical population-model estimates; use clinically defensible ranges and preserve the sum-of-longest-diameters state definition",
+          "The primary study reports Emax fixed at 1 and Kgrowth fixed at 0.581 cm/week in the final model; a benchmark that samples these freely is a modified model and must be labelled as such.",
+          "The primary study cautions that the model cannot be generalized beyond the baseline tumor-size range represented in its population (2–20 cm); this is a study-specific evidence boundary, not a universal safe extrapolation interval.",
+          "Concentration is an individual PK-derived time-varying input; independently sampling C at each equation row would break the dosing/PK dependence structure."
+        ]
+      }
     },
     {
       "equation_id": "BIO-GOMPERTZ-1825-MORTALITY-001",
@@ -1597,7 +2308,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Direct equation-level transcription from the original 1825 paper, Article I, section 5, printed p. 518",
@@ -1605,7 +2320,43 @@
         "OCR is imperfect around the displayed survivor-count formula, so the hazard expression is the primary transcribed formula and survivor form is retained as corroborating context",
         "Proposed only; no generator, input ranges, domain acceptance or Core-15/global equivalence review has been completed"
       ],
-      "source_location": "Gompertz (1825), Article I, section 5, printed p. 518"
+      "source_location": "Gompertz (1825), Article I, section 5, printed p. 518",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "x"
+        ],
+        "dependent_variables": [
+          "mu"
+        ],
+        "state_variables": [],
+        "fixed_parameters": [
+          "a",
+          "q"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Age-dependent mortality intensity mu(x)=a*q^x.",
+        "constraints": [
+          "a>0; q>0; x is age under a declared unit convention."
+        ],
+        "assumptions": [
+          "x denotes age measured on the time scale used to define q",
+          "a is a positive baseline mortality-intensity scale",
+          "q is a positive age-multiplication factor; the increasing-mortality case considered in the paper has q greater than one",
+          "The law is an empirical approximation over an age interval and is not asserted as a universal law over all ages",
+          "The original model treats the age-dependent mortality intensity separately from any age-independent chance component discussed in the surrounding text"
+        ],
+        "validity_regime": "Age-dependent mortality intensity over the age range where logarithms of survivor counts exhibit approximately geometric progression over equal age intervals",
+        "limitations": [
+          "The original paper's notation is mu(x)=a q^x in prose and gives the corresponding survivor count as L_x=d g^(q^x); Gompertz explicitly warns that g is raised to q^x, not to q and then x",
+          "The modern exponential hazard form alpha exp(beta x) is a reparameterization of the historical hazard law, not the verbatim equation printed in 1825",
+          "The survivor-count expression is the integrated consequence of the age-dependent intensity under the paper's assumptions and must not be counted as a second equation",
+          "The paper discusses a possible age-independent chance component alongside age-related deterioration; the candidate isolates only the age-dependent Gompertz component",
+          "Human mortality/life-table modelling is demographic biology; retain proposed status until domain-scope and cross-domain structural-equivalence review is completed",
+          "Do not conflate this mortality law with Gompertz growth curves used in tumor or organism growth; same surname does not imply same governing model"
+        ]
+      }
     },
     {
       "equation_id": "BIO-VOLTERRA-1926-N-SPECIES-CONSERVATIVE-001",
@@ -1687,10 +2438,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "ode_ivp",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Direct equation transcription from the author-expanded 1927 reprint of the 1926 Lincei memoir, Part II, §2, equations (B)",
@@ -1698,7 +2453,48 @@
         "The same source reduces the two-species feeding case to this general n-species system",
         "Proposed, not accepted; compare against Lotka 1920, the two-species Volterra feeding model, and other multi-species interaction families before counting"
       ],
-      "source_location": "Volterra (1927 author-expanded reprint of 1926 memoir), Part II, §2, printed pp.38–39"
+      "source_location": "Volterra (1927 author-expanded reprint of 1926 memoir), Part II, §2, printed pp.38–39",
+      "model_definition": {
+        "model_class": "ode_ivp",
+        "independent_variables": [
+          "t"
+        ],
+        "dependent_variables": [],
+        "state_variables": [
+          "N_r"
+        ],
+        "fixed_parameters": [
+          "n",
+          "epsilon_r",
+          "beta_r",
+          "a_sr"
+        ],
+        "physical_constants": [],
+        "state_dimension": "n",
+        "operator_structure": "Coupled n-species conservative biological association ODE system.",
+        "constraints": [
+          "n>=2; beta_r>0; a_rs=-a_sr; a_rr=0.",
+          "Full interaction matrix and initial state required."
+        ],
+        "assumptions": [
+          "n is an integer with n at least 2",
+          "N_r is the positive continuous population count of species r",
+          "The species interact through pairwise encounter terms",
+          "a_rs = -a_sr and a_rr = 0 encode reciprocal, antisymmetric pairwise interaction coefficients",
+          "beta_r is a positive species-specific equivalence/weight used to convert population counts into the conserved association value",
+          "epsilon_r is the intrinsic per-capita growth or depletion coefficient of species r when interactions are absent",
+          "Time is continuous and birth/death and encounter effects are represented as continuous rates"
+        ],
+        "validity_regime": "n coexisting species whose pairwise encounters are reciprocal and conserve a weighted association value; the intrinsic growth/depletion terms may be nonzero",
+        "limitations": [
+          "The conservative property applies to the weighted sum's interaction contribution; nonzero epsilon_r terms can still change the total weighted value",
+          "The antisymmetric coefficients encode a restricted conservative interaction class, not arbitrary food-web networks or all predator-prey systems",
+          "Volterra's two-species feeding equations are explicitly identified as a special case and must not be counted separately from this n-species family",
+          "Lotka's 1920 two-species plant-herbivore model is a related independent primary formulation; pairwise structural equivalence and source-family treatment require review",
+          "The 1927 text is an author-expanded reprint: its preface states that Parts I–III rearrange and add to the 1926 Lincei memoir, while Part IV reprints 1927 notes",
+          "No generator, input ranges, calibration or acceptance review has been completed"
+        ]
+      }
     },
     {
       "equation_id": "BIO-LESLIE-1945-AGE-STRUCTURED-MATRIX-001",
@@ -1775,10 +2571,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "matrix_operator",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Direct transcription of Leslie's original matrix equation M n_0=n_1 on printed p.184",
@@ -1787,7 +2587,46 @@
         "One coupled age-structured operator; do not split age classes, stable vectors, eigenvalues or powers M^t into separate equation records",
         "Proposed pending cross-family review against other matrix population models and Core-15 exclusions"
       ],
-      "source_location": "Leslie (1945), printed p.184"
+      "source_location": "Leslie (1945), printed p.184",
+      "model_definition": {
+        "model_class": "matrix_operator",
+        "independent_variables": [],
+        "dependent_variables": [],
+        "state_variables": [
+          "n_t"
+        ],
+        "fixed_parameters": [
+          "M",
+          "F_x",
+          "P_x",
+          "x",
+          "m"
+        ],
+        "physical_constants": [],
+        "state_dimension": "declared_by_model",
+        "operator_structure": "Age-structured vector recurrence n_(t+1)=M*n_t with Leslie matrix structure.",
+        "constraints": [
+          "Nonnegative fertility/survival; dimension and age-index conventions required.",
+          "Initial population vector required."
+        ],
+        "assumptions": [
+          "Population is represented by female individuals, as in Leslie's original formulation",
+          "Age classes are consecutive equal-width intervals and the time step equals one age interval",
+          "Age-specific survival and fertility rates remain constant over the projection period",
+          "F_x is the number of daughters born in the interval and surviving into age class 0–1 at the next census per female in age class x at the current census",
+          "P_x is the probability of surviving from age class x to age class x+1 over one time step",
+          "The final age class is terminal and contributes no next age class beyond the modelled life table"
+        ],
+        "validity_regime": "Discrete census projection of a female population with fixed age-specific fertility and survival schedules",
+        "limitations": [
+          "The source's F_x coefficients include survival of daughters to the next census, not merely births during the interval",
+          "Leslie notes the fertility coefficients require an approximation based on within-interval mortality and maternal-frequency curves",
+          "The matrix depends on the age-class width and the chosen time step; coarse grouping introduces approximation error",
+          "The paper derives eigenvalues, stable age distribution and asymptotic growth from this same operator; these are not separate candidates",
+          "This discrete age-structured operator is not interchangeable with continuous-time Lotka renewal equations or scalar exponential/logistic growth laws",
+          "No generator, benchmark input ranges or statistical independence review has been completed"
+        ]
+      }
     },
     {
       "equation_id": "BIO-FUJII-HOLLING-MACE-1986-GENERALIZED-ATTACK-001",
@@ -1872,7 +2711,11 @@
         "status": "pending_benchmark_contract",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "explicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Primary publisher abstract equation image inspected; variable definitions transcribed from same abstract",
@@ -1881,7 +2724,44 @@
         "Requires E0–E5 review, source-family comparison and benchmark-domain suitability review",
         "Input ranges and deterministic generator remain unspecified; not eligible for shard planning"
       ],
-      "source_location": "Wiley publisher abstract equation image (un-numbered); article pp.141–156"
+      "source_location": "Wiley publisher abstract equation image (un-numbered); article pp.141–156",
+      "model_definition": {
+        "model_class": "explicit_scalar",
+        "independent_variables": [
+          "N0"
+        ],
+        "dependent_variables": [
+          "A"
+        ],
+        "state_variables": [],
+        "fixed_parameters": [
+          "Tt",
+          "th",
+          "ap",
+          "c"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Generalized predator/parasitoid attack count over a finite interval.",
+        "constraints": [
+          "N0>0; Tt>0; th>0; ap>0.",
+          "Parameter meanings and exact source transcription require review."
+        ],
+        "assumptions": [
+          "Descriptive attack-rate model for a fixed exposure interval Tt",
+          "Prey density N0 is treated as the density governing attack over the exposure interval",
+          "Handling time th and successful-search rate a' are constant over the interval",
+          "Facilitation/interference coefficient c is constant for the modeled predator-prey/parasite interaction",
+          "Units are chosen so c*N0 is dimensionless and the denominator terms have units of time"
+        ],
+        "validity_regime": "Generalized descriptive predator/parasite attack response; publisher abstract states c=0 gives Type II, c>a'th Type III, c<a'th Type IV and c=a'th pseudo Type I",
+        "limitations": [
+          "Full article text and printed equation location remain inaccessible",
+          "Special case c=0 reduces to the Holling Type II rational response; do not count that special case separately",
+          "Do not create separate candidates for Type I, II, III and IV parameter regimes",
+          "Structural distinctness from the Core-15/Holling Type II family requires explicit E0–E5 review"
+        ]
+      }
     },
     {
       "equation_id": "CHEM-FRUMKIN-1967-INTERACTION-001",
@@ -1952,10 +2832,14 @@
         }
       },
       "generator": {
-        "status": "pending_benchmark_contract",
+        "status": "pending_specialized_generator",
         "method": null,
         "seed_policy": null,
-        "parameter_sampling": null
+        "parameter_sampling": null,
+        "model_class": "implicit_scalar",
+        "parameter_sampling_scope": null,
+        "sampling_semantics": null,
+        "constraints_enforced": null
       },
       "review_notes": [
         "Equation directly printed as Eq. (4), p.268 in accessible author-authored primary paper by Frumkin and Damaskin",
@@ -1965,7 +2849,42 @@
         "Input ranges, generator, and statistical independence unit remain unspecified",
         "Proposed only; not accepted or eligible for shard planning"
       ],
-      "source_location": "Frumkin and Damaskin (1967), printed p.268, Eq. (4)"
+      "source_location": "Frumkin and Damaskin (1967), printed p.268, Eq. (4)",
+      "model_definition": {
+        "model_class": "implicit_scalar",
+        "independent_variables": [
+          "c"
+        ],
+        "dependent_variables": [
+          "theta"
+        ],
+        "state_variables": [],
+        "fixed_parameters": [
+          "B",
+          "a"
+        ],
+        "physical_constants": [],
+        "state_dimension": null,
+        "operator_structure": "Implicit Frumkin adsorption coverage relation with lateral interactions.",
+        "constraints": [
+          "0<theta<1; B>0; admissible root branch and uniqueness policy required."
+        ],
+        "assumptions": [
+          "Adsorption at the mercury–electrolyte interface as treated in the cited Frumkin–Damaskin model",
+          "Equilibrium surface coverage theta with 0<theta<1",
+          "Single adsorbed layer in the regime represented by the isotherm",
+          "Mean-field lateral adsorbate interaction represented by constant a for Eq. (4)",
+          "B and c use the source's concentration/activity convention; B*c is dimensionless"
+        ],
+        "validity_regime": "Equilibrium adsorption of organic surface-active compounds at mercury–electrolyte interface with lateral interactions",
+        "limitations": [
+          "The 1967 paper cites earlier Frumkin sources (1925 and 1926); first-publication provenance remains to be checked in the original articles",
+          "Potential dependence of B is coupled through Eq. (5); this candidate records Eq. (4), not a standalone claim that B is constant across electrode potential",
+          "At a=0 it reduces to the Langmuir form; this limiting case is not a separate candidate",
+          "Full model includes related potential and differential-capacitance relations Eqs. (5)–(9), which must not be counted as separate rows without a structural review",
+          "Compare with CHEM-LANGMUIR-001 and all adsorption source families under the E0–E5 policy before acceptance"
+        ]
+      }
     }
   ],
   "source_register": [
