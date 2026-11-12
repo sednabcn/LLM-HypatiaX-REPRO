@@ -551,3 +551,79 @@ For non-smart-debt vault types, the liquidated debt is paid back into Fluid Liqu
 **Structural disposition:** a strong candidate for one coupled tick/branch liquidation-and-absorb family: geometric debt/collateral tick quantization, bitmap traversal, partially liquidated branch topology, branch debt-factor scaling/merging, automatic absorb above a maximum-limit tick, optional absorbed-buffer-first settlement, and slippage-constrained debt/collateral transfer. This is structurally distinct from scalar per-position liquidation formulas and from the other auction/repay/redistribution mechanisms audited above. Do not count TickMath, the tick-walk equation, branch debt-factor update, absorb buffer or per-token rounding as independent equations.
 
 **Version and deployment caveats.** The shared base commit uses the older Oracle V1 interface for this engine, while T1's standalone path imports Oracle V2; T2/T3/T4 additionally differ in smart collateral/debt DEX interactions. This audit does not map a specific vault address, vault type, oracle nonce, liquidation threshold, max limit, penalty, token exchange price, branch/tick storage state or block. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
+
+
+## 15. Notional V3: multi-route portfolio liquidation by haircut removal and maturity-aware asset unwind
+
+**Pinned implementation snapshot.** Official repository `notional-finance/contracts-v3`, commit `ae20d99ebfb0b14cf7b08421722b85849fb11edf` (2025-02-03):
+- `contracts/internal/liquidation/LiquidationHelpers.sol`, blob SHA `f2e433ccd75561a0e9853edb0b0e8a0c43433484`
+- `contracts/internal/liquidation/LiquidateCurrency.sol`, blob SHA `e15e99fb541b7a4a3e6d89962ba834f856ba0458`
+- `contracts/internal/liquidation/LiquidatefCash.sol`, blob SHA `b6ac53c9cbafe36264ba0625f3bf6c025bad2ab9`
+- `contracts/external/actions/LiquidateCurrencyAction.sol`, blob SHA `fa65e90b262c3f740e2dca2985e0d8465ec75704`
+- `contracts/external/actions/LiquidatefCashAction.sol`, blob SHA `e065e306113dfc9ca35168e35673bd2c588be596`
+
+Pinned commit: https://github.com/notional-finance/contracts-v3/commit/ae20d99ebfb0b14cf7b08421722b85849fb11edf. This is a reproducible source snapshot; the commit is not a deployment/proxy implementation match or evidence of current liquidation enablement.
+
+### Portfolio preparation and eligibility
+
+Before liquidation, the helper obtains the account's liquidation factors and portfolio, updates account context, and constructs a portfolio state. The Notional liquidation design first settles matured portfolio assets and evaluates the resulting free-collateral state. The relevant quantities distinguish:
+- local-currency available value, which may be positive or negative;
+- collateral-currency available value;
+- aggregate negative free collateral in ETH;
+- currency-specific exchange-rate haircuts and debt buffers;
+- asset-type haircuts and liquidation discounts for cash, nTokens, liquidity tokens and fCash.
+
+This means the system is not simply a scalar LTV threshold followed by a fixed bonus. It unwinds risky claims into cash while ensuring that the account's free-collateral position improves.
+
+### Local-currency and collateral-currency routes
+
+The local-currency route sells or converts same-currency nTokens and liquidity-token claims into cash. It can increase free collateral by removing the haircut on a risky asset even when it does not directly repay debt in another currency. The amount required is derived by converting the negative ETH free-collateral value back into local currency and dividing by the relevant local haircut (when local available is positive) or debt buffer (when it is negative):
+\[
+A_{local,req}
+=
+\frac{\operatorname{convertETHToLocal}(-FC_{ETH})\;P}
+{m_{local}},
+\]
+where (P) is the percentage scale and (m_{local}) selects the applicable haircut or buffer. The implementation rejects a zero multiplier because liquidation of a zero-haircut asset cannot improve free collateral.
+
+For cross-currency liquidation, let (FC_c) be the negative free-collateral shortfall expressed in collateral currency, (b_l) the local-currency debt buffer, (h_c) the collateral haircut, (d) the liquidation discount and (X_{l\to c}) the local-to-collateral exchange rate. The liquidator supplies local cash and purchases collateral. The source's relationship is:
+\[
+A_{local}=
+\frac{C_{sell}}{X_{l\to c}\,d},
+\qquad
+FC_c=A_{local}b_lX_{l\to c}-C_{sell}h_c.
+\]
+Solving for the collateral sale:
+\[
+C_{sell}
+=
+\frac{FC_c}{b_l/d-h_c}.
+\]
+The liquidation discount is the greater of the local- and collateral-currency discounts. The code caps local cash supplied so that the account's local available balance is not pushed above zero, and caps collateral sold so that collateral available is not pushed below zero. The liquidator can also specify a maximum purchase. A default liquidation portion permits at least 40% of the available asset amount where required, subject to available-balance and user-specified caps.
+
+### Maturity-aware fCash routes
+
+The fCash liquidation engine has local-currency and cross-currency paths. For local fCash, the amount required to restore free collateral is divided by the difference between the liquidation discount factor and risk-adjusted discount factor:
+\[
+fCash_{sell}
+=
+\frac{Benefit_{required}}
+{|d_{liq}(maturity,t)-d_{risk}(maturity,t)|}.
+\]
+The discount factors depend on the fCash maturity, time to maturity and whether the fCash notional is positive or negative. Maturities must be supplied in descending order, causing the longest-dated (more exposed) positions to be processed first. Negative fCash positions may also be liquidated through the local route, with the associated cash transfer effectively allowing the liquidator to borrow at the liquidation discount.
+
+The cross-currency fCash route combines the fCash haircut-removal benefit with the cross-currency collateral benefit. The code's benefit divisor contains both the difference between liquidation and risk-adjusted fCash discount factors and the collateral-side term:
+\[
+d_{liq}-d_{risk}
++
+d_{liq}\left(\frac{b_l}{d}-h_c\right).
+\]
+This is a maturity-sensitive portfolio unwind, not a single collateral token seizure. The engine limits purchases to preserve nonnegative local/collateral available constraints and to ensure the account's free collateral does not deteriorate.
+
+### Structural disposition
+
+A strong candidate for one coupled multi-route portfolio liquidation/state-transition family: pre-liquidation settlement, free-collateral restoration, currency-specific haircuts/buffers, local and cross-currency cash conversion, nToken/liquidity-token redemption, maturity-dependent fCash discounting, negative-fCash handling, ordered asset liquidation and balance-sign constraints. Its key structural distinction is that liquidation benefit arises partly from removing risk haircuts and converting portfolio claims into cash, rather than only transferring debt and seizing collateral at a discount.
+
+Do not count local-currency liquidation, collateral-currency liquidation, local fCash, cross-currency fCash, haircut removal and maturity discounting as independent equations. They are coupled routes within the same portfolio liquidation framework. Pairwise E0–E5 review should compare this with the other multi-asset risk systems before any separate candidate rows are admitted.
+
+**Version and deployment caveats.** This repository snapshot is dated 2025-02-03. Notional's router can enable/disable liquidation routes; this audit does not map the current mainnet proxy implementation, enabled liquidation bitmap, currency configuration, cash-group/market parameters, oracle state, account portfolio or block. The user-facing documentation and the pinned source explain the design, but neither is a live deployment check. No RPC, contract execution, tests, simulation or experiment was performed.
