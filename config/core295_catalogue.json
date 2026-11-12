@@ -3009,6 +3009,14 @@
       "url": "https://doi.org/10.1515/zpch-1925-11629",
       "use": "Primary Frumkin (1925), Zeitschrift für Physikalische Chemie 116, pp. 466–484. Original scan: https://elchi.eu/pdf/frumkin/2-article/1914-1930/2-1-1925-29-zpc-Frumkin.pdf. Pages 467–468 define surface-coverage variables and derive the dilute Gibbs/Langmuir baseline; the exact non-ideal interaction equation still requires page-by-page transcription before promotion. Historical source lists date the Frumkin isotherm to 1925, not 1920 or the separate 1926 neutral-molecule field paper.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-TRICRYPTO-NG-CODE",
+      "domain": "DeFi AMM",
+      "title": "Curve Tricrypto NG pinned CryptoSwap pool and math implementation",
+      "url": "https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b",
+      "use": "Pinned official three-coin CryptoSwap implementation: CurveTricryptoOptimizedWETH.vy and CurveCryptoMath3Reference.vy. Coupled A-gamma dynamic invariant, bounded numerical solvers, state-dependent mid/out fee, EMA price oracle, internal price-scale rebalancing and virtual-price/profit accounting. Commit ecaa8161c240f21dd7c3712eefc5637e1dac742b; implementation lineage for CryptoSwap dynamic peg, distinct from StableSwap; not evidence for all deployments or 2-coin variants.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
