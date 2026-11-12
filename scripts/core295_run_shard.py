@@ -125,6 +125,18 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
             stop(f"{eid}: generator.constraints_enforced must be true before execution")
         if not isinstance(gen.get("constraint_evidence"), str) or not gen["constraint_evidence"].strip():
             stop(f"{eid}: generator.constraint_evidence is required")
+        if gen.get("constraint_enforcement_method") != "rectangular_input_bounds_v1":
+            stop(f"{eid}: only rectangular_input_bounds_v1 is currently supported")
+        validity = entry.get("input_validity_bounds")
+        inputs = set(model["independent_variables"])
+        if not isinstance(validity, dict) or set(validity) != inputs:
+            stop(f"{eid}: input_validity_bounds must cover exactly independent inputs")
+        for variable in inputs:
+            bounds = validity[variable]
+            if (not isinstance(bounds, list) or len(bounds) != 2
+                    or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not __import__("math").isfinite(float(v)) for v in bounds)
+                    or float(bounds[0]) >= float(bounds[1])):
+                stop(f"{eid}: invalid input_validity_bounds for {variable}")
         for value_field, role in (("fixed_parameter_values", "fixed_parameters"),
                                   ("physical_constant_values", "physical_constants")):
             values = entry.get(value_field)
