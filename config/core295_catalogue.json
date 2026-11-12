@@ -1671,7 +1671,7 @@
       "domain": "DeFi Risk",
       "title": "Aave V3 overview",
       "url": "https://aave.dev/docs/aave-v3/overview",
-      "use": "Official Aave V3 overview plus pinned aave-v3-origin commit 5c2eb37f39959dd491ba97fdc2af94bb4ee88f41: GenericLogic health-factor aggregation and LiquidationLogic close factor, collateral conversion/bonus, protocol fee, dust guard and bad-debt transition. Snapshot only; production market proxy/configuration still to pin.",
+      "use": "Official Aave V3 overview plus two pinned aave-v3-origin source snapshots: historical 2025 commit 5c2eb37f39959dd491ba97fdc2af94bb4ee88f41 and later 3.7-era 2026-09-09 commit 8305565ae342f1773c42cd2e4593f175fe5968a0. GenericLogic health-factor aggregation and LiquidationLogic close factor, collateral conversion/bonus, protocol fee, dust guard and bad-debt transition; later snapshot changes arithmetic ordering and explicit rounding. Deployed market proxy/configuration still to pin.",
       "status": "candidate_reference"
     },
     {
