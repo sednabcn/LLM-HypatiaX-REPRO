@@ -385,3 +385,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 207. Lotka, A. J. “Analytical Note on Certain Rhythmic Relations in Organic Systems.” *Proceedings of the National Academy of Sciences* 6(7) (15 July 1920), pp. 410–415. Publisher-hosted full text, including the original coupled plant–herbivore equations (5)–(10): https://www.pnas.org/doi/10.1073/pnas.6.7.410. DOI: https://doi.org/10.1073/pnas.6.7.410.
+
+
+208. Volterra, V. “Variazioni e fluttuazioni del numero d’individui in specie animali conviventi.” *Memorie della R. Accademia Nazionale dei Lincei*, series VI, vol. II (1926), pp. 31–113. Author-expanded reprint in *Memorie del R. Comitato talassografico italiano*, Mem. CXXXI (1927), scan: https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf. The reprint's opening note specifies that Parts I–III rearrange and add to the 1926 Lincei memoir. Original 1926 bibliographic record: https://ndlsearch.ndl.go.jp/books/R100000136-I1574231874580495104.
