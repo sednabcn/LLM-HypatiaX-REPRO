@@ -66,7 +66,10 @@ def verify_manifest(m: object) -> tuple[dict, dict[int, set[str]]]:
         seen.extend(ids)
     if set(seen) != set(task_ids) or len(seen) != len(set(seen)):
         blocked("manifest shard assignment is not exact-once")
-    if len(shard_map) != m.get("shard_count") or set(shard_map) != set(range(m["shard_count"])):
+    shard_count = m.get("shard_count")
+    if type(shard_count) is not int or shard_count < 1:
+        blocked("manifest shard_count must be a positive integer")
+    if len(shard_map) != shard_count or set(shard_map) != set(range(shard_count)):
         blocked("manifest shard IDs are not contiguous or shard_count mismatches")
     return m, shard_map
 
@@ -186,8 +189,12 @@ def main() -> int:
            if failures else ["- None"])
     md += ["", "This report verifies artifact identity and exact coverage only. It does not compute metrics, validate scientific results, or accept equations.", ""]
 
+    if args.report_json.resolve() == args.report_md.resolve():
+        blocked("JSON and Markdown report paths must be different")
     for path in (args.report_json, args.report_md):
         path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            blocked(f"refusing to overwrite existing report output: {path}")
     try:
         with args.report_json.open("xb", encoding="utf-8") as f:
             f.write(canonical(report).decode())
