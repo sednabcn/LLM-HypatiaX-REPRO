@@ -3478,6 +3478,22 @@
       "url": "https://github.com/aave/aave-v4/commit/8be3e0d59efc23cd1d4664a88743340533dd5a0c",
       "use": "Pinned official Aave V4 source snapshot at commit 8be3e0d59efc23cd1d4664a88743340533dd5a0c (2026-11-11). BabylonLiquidationLogic.sol blob 8343dbfc3d48eb23391decb42a5f40875763f367; BabylonSpoke.sol blob 3643a55129e32eab8e18fcd53ccd54e646b11ddb; shared LiquidationLogic.sol blob 2b2443915688ab0f0354fe2ba20660e6cc97141d. Specialized one-collateral/one-debt Spoke, only a deployment-configured liquidation manager may call liquidationCall, collateral removal is capped by maxCollateralToRemove, premium debt is repaid first, and when priced collateral exceeds cap the code inversely resizes debt repayment using upward rounding; no liquidation fee, no target-HF sizing and no dust validation in this path. Reuses shared HF-dependent variable bonus and canonical collateral pricing. Potential structurally distinct cap-constrained liquidation operator versus standard Aave V4 target-HF path, but treat as one specialized integration/source family pending E0–E5 review; no separate accepted equation candidate. Aave announced V4 mainnet launch 2026-03-30; this source commit is code provenance, not a pinned deployment/proxy/market-parameter mapping.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-DEBACH-SMITH-1941-OSCILLATIONS",
+      "domain": "Biology",
+      "title": "DeBach & Smith (1941), Are Population Oscillations Inherent in the Host-Parasite Relation?",
+      "url": "https://doi.org/10.2307/1930709",
+      "use": "Primary Ecology article, 22(4) (October 1941), pp.363–369. Publisher record confirms title/authors/pages/DOI. Theoretical/empirical source testing whether oscillations are inherent to host-parasite dynamics; full article equation transcription not yet obtained. Compare with Lotka–Volterra and Nicholson–Bailey; source lead only.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-DEBACH-SMITH-1947-PARASITE-DENSITY-DYNAMICS",
+      "domain": "Biology",
+      "title": "DeBach & Smith (1947), Effects of Parasite Population Density on Rate of Change of Host and Parasite Populations",
+      "url": "https://doi.org/10.2307/1930515",
+      "use": "Primary Ecology article, 28(3) (July 1947), pp.290–298. Bibliographic metadata corroborated by multiple primary-source citations; equation-level transcription and exact mechanism not yet obtained. Potential host-parasitoid density-dependent population system; source lead only, not an accepted equation.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
