@@ -8,7 +8,7 @@
 `scripts/core295_run_shard.py` owns the orchestration boundary for one planned shard:
 
 1. Requires the exact catalogue bytes hashed into the task manifest.
-2. Requires a frozen, ready 295-entry catalogue: 59 accepted equations per domain, complete generator declarations and non-null train/extrapolation ranges.
+2. Requires a frozen, ready 295-entry catalogue: 59 accepted equations per domain, complete model-class and variable-role declarations, generator contracts, and train/extrapolation ranges for independent inputs only.
 3. Validates task-set and shard-plan hashes, exact-once shard assignment, and task/catalogue identity.
 4. Requires one trusted adapter callable for every domain present in that shard.
 5. Supplies the full accepted entry, run/shard identity, required three-arm list, and deterministic seed material derived from run ID, equation ID, and the entry's declared seed-policy string.
@@ -107,3 +107,12 @@ Example domain adapter arguments for a shard containing all five domains:
 The task planner now also requires `generator.sampling_semantics`. This prevents a catalogue from appearing executable with only a method label and an underspecified sampling assumption.
 
 **Scope limit:** these are five domain-checked adapters for one shared scalar benchmark contract, not five scientifically bespoke simulators. More specialized equation classes require explicit implementations and review before acceptance. No adapter, model, generator, test, validator, API, experiment, or workflow was executed while adding these files.
+
+
+## Model-class and variable-role gate
+
+The task planner and shard driver now require each accepted entry to declare a supported `model_definition.model_class` and matching `generator.model_class`. The variable dictionary must be partitioned exactly into independent inputs, dependent variables, dynamic states, fixed parameters, and physical constants. Input ranges must cover only independent inputs; fixed parameters and constants are not silently sampled as features. The generator must also declare parameter-sampling scope and an explicit boolean stating whether its constraints are enforced.
+
+The supported class labels are `explicit_scalar`, `implicit_scalar`, `coupled_algebraic_system`, `ode_ivp`, `difference_system`, `stochastic_process`, `protocol_simulation`, and `matrix_operator`. These labels are a classification gate, not a promise that an adapter exists. The shared `core295_adapters.common` implementation remains limited to its exact all-variables-independent scalar contract. Other classes require their own reviewed adapter implementation and scientifically appropriate data-generation contract.
+
+See [Core-295 generator taxonomy and current catalogue triage](CORE295_GENERATOR_TAXONOMY_AND_CATALOGUE_TRIAGE.md). The current 24-entry catalogue has not yet been annotated with these roles, so it remains blocked from planning and execution. This change is a fail-closed schema/driver improvement, not a claim of new scientific coverage.
