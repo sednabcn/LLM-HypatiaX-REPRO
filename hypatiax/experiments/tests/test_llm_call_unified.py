@@ -1,4 +1,4 @@
-"""All arms send the same configured temperature, with one honest fallback."""
+"""All arms request fixed Core-15 temperature=0.25 and fail closed."""
 import pytest
 from hypatiax.core import llm_call
 
@@ -21,17 +21,25 @@ def test_default_temperature_is_025(monkeypatch):
     assert llm_call.last_call_info()["temperature_sent"] is True
 
 
-def test_env_override(monkeypatch):
+def test_env_override_is_ignored_by_fixed_protocol(monkeypatch):
     monkeypatch.setenv("LLM_TEMPERATURE", "0.5")
     c = _C(); llm_call.create_message(c, model="m")
-    assert c.calls[0]["temperature"] == 0.5
+    assert len(c.calls) == 1
+    assert c.calls[0]["temperature"] == 0.25
+    assert llm_call.last_call_info() == {
+        "temperature_requested": 0.25,
+        "temperature_sent": True,
+    }
 
 
 @pytest.mark.parametrize("exc", [TypeError("create() got an unexpected keyword argument 'temperature'"),
                                  Exception("400 `temperature` is deprecated for this model")])
-def test_fallback_once_and_recorded(exc):
-    c = _C(reject=exc); llm_call.create_message(c, model="m")
-    assert len(c.calls) == 2 and "temperature" not in c.calls[1]
+def test_temperature_rejection_fails_closed_without_retry(exc):
+    c = _C(reject=exc)
+    with pytest.raises(type(exc), match="temperature"):
+        llm_call.create_message(c, model="m")
+    assert len(c.calls) == 1
+    assert c.calls[0]["temperature"] == 0.25
     info = llm_call.last_call_info()
     assert info["temperature_sent"] is False and info["temperature_requested"] == 0.25
 
