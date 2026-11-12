@@ -2311,7 +2311,11 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+from hypatiax.core.llm_call import configured_temperature
 out, shard, *indices = sys.argv[1:]
+effective_temperature = configured_temperature()
+if effective_temperature != 0.25:
+    raise SystemExit(f"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}")
 protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
 rows = []
 for domain in protocol.get_all_domains():
@@ -2323,7 +2327,8 @@ if not result_files:
     raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
-            "equation_identities":mapping,"result_file":result_files[-1].name}
+            "equation_identities":mapping,"result_file":result_files[-1].name,
+            "effective_llm_temperature":effective_temperature}
 Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
 PYMAN
   fi
@@ -2369,7 +2374,11 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+from hypatiax.core.llm_call import configured_temperature
 out, shard, *indices = sys.argv[1:]
+effective_temperature = configured_temperature()
+if effective_temperature != 0.25:
+    raise SystemExit(f"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}")
 protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
 rows = []
 for domain in protocol.get_all_domains():
@@ -2381,7 +2390,8 @@ if not result_files:
     raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
-            "equation_identities":mapping,"result_file":result_files[-1].name}
+            "equation_identities":mapping,"result_file":result_files[-1].name,
+            "effective_llm_temperature":effective_temperature}
 Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
 PYMAN
   fi
