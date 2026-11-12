@@ -142,6 +142,17 @@ def validate_catalogue(catalogue: object) -> list[dict]:
             fail(f"{eid}: generator.constraints_enforced must be true before planning")
         if not isinstance(generator.get("constraint_evidence"), str) or not generator["constraint_evidence"].strip():
             fail(f"{eid}: generator.constraint_evidence is required")
+        if generator.get("constraint_enforcement_method") != "rectangular_input_bounds_v1":
+            fail(f"{eid}: only rectangular_input_bounds_v1 is currently supported")
+        validity = entry.get("input_validity_bounds")
+        if not isinstance(validity, dict) or set(validity) != inputs:
+            fail(f"{eid}: input_validity_bounds must cover exactly independent inputs")
+        for variable in inputs:
+            bounds = validity[variable]
+            if (not isinstance(bounds, list) or len(bounds) != 2
+                    or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(float(v)) for v in bounds)
+                    or float(bounds[0]) >= float(bounds[1])):
+                fail(f"{eid}: invalid input_validity_bounds for {variable}")
         for value_field, role in (("fixed_parameter_values", "fixed_parameters"),
                                   ("physical_constant_values", "physical_constants")):
             values = entry.get(value_field)
