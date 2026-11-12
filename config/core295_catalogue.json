@@ -1882,6 +1882,90 @@
         "Input ranges and deterministic generator remain unspecified; not eligible for shard planning"
       ],
       "source_location": "Wiley publisher abstract equation image (un-numbered); article pp.141–156"
+    },
+    {
+      "equation_id": "CHEM-FRUMKIN-1967-INTERACTION-001",
+      "name": "Frumkin lateral-interaction adsorption isotherm",
+      "domain": "Chemistry",
+      "subdomain": "electrochemical surface adsorption",
+      "formula": "B*c = theta/(1-theta) * exp(-2*a*theta)",
+      "canonical_expression": "B*c-theta/(1-theta)*exp(-2*a*theta)",
+      "formula_latex": "Bc=\\\\frac{\\\\theta}{1-\\\\theta}\\\\exp(-2a\\\\theta)",
+      "structural_fingerprint": "83521c07c8fbc6dcf88507ffc55202104563c352618479caa2ed82f7997c1ba6",
+      "source_ids": [
+        "CHEM-FRUMKIN-DAMASKIN-1967-INTERACTION-ISOTHERM"
+      ],
+      "source_family_id": "CHEM-SURFACE-ADSORPTION-FRUMKIN-LATERAL-INTERACTION",
+      "status": "proposed",
+      "assumptions": [
+        "Adsorption at the mercury–electrolyte interface as treated in the cited Frumkin–Damaskin model",
+        "Equilibrium surface coverage theta with 0<theta<1",
+        "Single adsorbed layer in the regime represented by the isotherm",
+        "Mean-field lateral adsorbate interaction represented by constant a for Eq. (4)",
+        "B and c use the source's concentration/activity convention; B*c is dimensionless"
+      ],
+      "variables": {
+        "B": {
+          "meaning": "Adsorption parameter; its dependence on electrode potential is given separately by Eq. (5)",
+          "unit": "inverse concentration under the selected concentration convention"
+        },
+        "c": {
+          "meaning": "Bulk concentration of the surface-active substance",
+          "unit": "concentration"
+        },
+        "theta": {
+          "meaning": "Fractional surface coverage",
+          "unit": "dimensionless"
+        },
+        "a": {
+          "meaning": "Frumkin lateral-interaction parameter; positive a denotes attraction in the paper's convention",
+          "unit": "dimensionless"
+        }
+      },
+      "validity": {
+        "source_location": "Frumkin and Damaskin (1967), Pure Appl. Chem. 15(2), printed p.268, Eq. (4); IUPAC full PDF",
+        "regime": "Equilibrium adsorption of organic surface-active compounds at mercury–electrolyte interface with lateral interactions",
+        "limitations": [
+          "The 1967 paper cites earlier Frumkin sources (1925 and 1926); first-publication provenance remains to be checked in the original articles",
+          "Potential dependence of B is coupled through Eq. (5); this candidate records Eq. (4), not a standalone claim that B is constant across electrode potential",
+          "At a=0 it reduces to the Langmuir form; this limiting case is not a separate candidate",
+          "Full model includes related potential and differential-capacitance relations Eqs. (5)–(9), which must not be counted as separate rows without a structural review",
+          "Compare with CHEM-LANGMUIR-001 and all adsorption source families under the E0–E5 policy before acceptance"
+        ]
+      },
+      "input_ranges": {
+        "B": {
+          "train": null,
+          "extrapolation": null
+        },
+        "c": {
+          "train": null,
+          "extrapolation": null
+        },
+        "theta": {
+          "train": null,
+          "extrapolation": null
+        },
+        "a": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Equation directly printed as Eq. (4), p.268 in accessible author-authored primary paper by Frumkin and Damaskin",
+        "Positive a denotes attraction in the source's convention",
+        "The a=0 limiting case is Langmuir; the nonzero interaction term changes coverage dependence, but structural inequivalence must be reviewed explicitly",
+        "Do not count Eqs. (5)–(9) as separate candidates; they belong to the coupled potential-dependent adsorption/capacitance model",
+        "Input ranges, generator, and statistical independence unit remain unspecified",
+        "Proposed only; not accepted or eligible for shard planning"
+      ],
+      "source_location": "Frumkin and Damaskin (1967), printed p.268, Eq. (4)"
     }
   ],
   "source_register": [
@@ -3611,6 +3695,14 @@
       "title": "Curve Twocrypto NG pinned two-coin CryptoSwap math implementation",
       "url": "https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d",
       "use": "Pinned official production-v2.1.0 Vyper 0.3.10 source snapshot at commit 89c8dfb6c9b3204647954018d2a0238b9c69349d. Math blob contracts/main/CurveCryptoMathOptimized2.vy = 3947686b080ed3e5c88141d8fc998f7ca5c27ba5. Two-coin A-gamma dynamic-peg CryptoSwap implementation: newton_D uses K0, gamma, ANN and iterative invariant correction; get_y uses specialized cubic solution/branch selection; get_p computes marginal price. Same CryptoSwap family as Tricrypto NG with N=2, not a distinct invariant family or separate candidate. Snapshot pins source code, not a deployed pool or market-specific parameters.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-FRUMKIN-DAMASKIN-1967-INTERACTION-ISOTHERM",
+      "domain": "Chemistry",
+      "title": "Frumkin, A. and B. Damaskin (1967), Adsorption of Organic Substances on the Free Water Surface and at the Water-Mercury Interface",
+      "url": "https://publications.iupac.org/pac/pdf/1967/pdf/1502x0263.pdf",
+      "use": "IUPAC-hosted full text, Pure and Applied Chemistry 15(2), pp.263–281. Eq. (4), printed p.268, gives the Frumkin interaction isotherm Bc=theta/(1-theta)*exp(-2a*theta); Eq. (5) supplies potential dependence of B and Eqs. (6)–(9) extend the coupled capacitance model. Authors cite Frumkin (1925), Z. phys. Chem. 116, 466 and Frumkin (1926), Z. Physik 35, 792 as earlier sources. Author-authored primary treatment and equation transcription, but not proof of first publication. Structural comparison with Langmuir and Core-15 registry required.",
       "status": "candidate_reference"
     }
   ],
