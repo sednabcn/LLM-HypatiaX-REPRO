@@ -7,7 +7,10 @@ Primary arms:
   pysr_only       : exp1_ablation.run_condition("pysr_only")
   nn_only         : ImprovedNNMethod
 
-Every arm receives the same equation/seed training arrays. The outer test
+The data-conditioned arms receive the same equation/seed training arrays.
+The LLM-only arm receives those arrays through its wrapper interface, but
+PureLLMBaseline intentionally ignores X/y and is therefore a zero-shot,
+task-description-conditioned prior-knowledge baseline. The outer test
 partition is held back from fitting and is scored using R2, RMSE and MAE.
 Near/medium/far extrapolation arrays are also shared across arms.
 
