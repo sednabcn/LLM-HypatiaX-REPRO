@@ -134,8 +134,8 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
-# AUDIT C1: temperature is now env-controlled and recorded in every hypatia row.
-# Default stays 0.3 (previous hard-coded value); the paper cites 0.25 -- decide and set LLM_TEMPERATURE.
+# Both Core-15 LLM arms use the shared wrapper's 0.25 default unless overridden.
+# Keep Hybrid's explicit request aligned with PureLLM's implicit wrapper request.
 LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
@@ -954,6 +954,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_enabled":           bool(_use_llm),
             "llm_model":             MODEL_STRING,
             "llm_temperature":       LLM_TEMPERATURE,
+            "llm_temperature_requested": res.get("llm_temperature_requested"),
+            "llm_temperature_sent":      res.get("llm_temperature_sent"),
             "wall_clock_budget_s":   wall_clock_limit,        # AUDIT C1: unequal arms are disclosed per row
             "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
             "validation_score":      res.get("validation_score"),
