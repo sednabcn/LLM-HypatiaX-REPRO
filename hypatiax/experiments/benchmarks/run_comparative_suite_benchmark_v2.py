@@ -379,7 +379,7 @@ def _runner_eval_formula(
             return None
 
         code = str(python_code).strip()
-        code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+        code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
         code = code.replace("^", "**")
         if not code:
             return None
@@ -389,7 +389,7 @@ def _runner_eval_formula(
             y_pred = func(*(X[:, i] for i in range(X.shape[1])))
         else:
             assignment = re.fullmatch(
-                r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)\s*",
                 code, flags=re.DOTALL,
             )
             expression = assignment.group(1) if assignment else code
