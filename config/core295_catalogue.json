@@ -2090,7 +2090,7 @@
       "domain": "DeFi AMM",
       "title": "Curve StableSwap NG pinned pool and math implementation",
       "url": "https://github.com/curvefi/stableswap-ng/tree/3332cd44656ec64b3c048885e1dd71955254b262/contracts/main",
-      "use": "Pinned official Vyper implementation: N-coin StableSwap invariant, rate-normalized balances, linearly ramped amplification, integer D and output-reserve solvers, off-peg dynamic fee, admin-fee accounting and EMA state oracles. Commit 3332cd44656ec64b3c048885e1dd71955254b262; implementation evolution of StableSwap 2019, not a separate invariant family. Pool deployment/configuration and block state remain necessary for runtime claims.",
+      "use": "Pinned official Vyper implementation: N-coin StableSwap invariant, rate-normalized balances, linearly ramped amplification, integer D and output-reserve solvers, off-peg dynamic fee, admin-fee accounting and EMA state oracles. Commit 3332cd44656ec64b3c048885e1dd71955254b262; implementation evolution of StableSwap 2019, not a separate invariant family. Pool deployment/configuration and block state remain necessary for runtime claims. Exact snapshot re-inspected 2026-11-12: commit 3332cd44656ec64b3c048885e1dd71955254b262, math blob 25acc73e8b5cf0a0652bf833d7a1d9cd22cf83c5. `get_D` solves the N-coin StableSwap invariant by 255-step bounded integer iteration (unit convergence threshold); `get_y` solves the reserve quadratic iteratively. The source code is an implementation-level transcription of the 2019 StableSwap invariant, not a new invariant family. Official current docs say NG supports 2–8 coins, plain pools and metapools, and oracle/rebasing/ERC4626 asset classes; deployment-specific parameters remain unpinned.",
       "status": "candidate_reference"
     },
     {
@@ -3370,7 +3370,7 @@
       "domain": "DeFi AMM",
       "title": "Curve Tricrypto NG pinned CryptoSwap pool and math implementation",
       "url": "https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b",
-      "use": "Pinned official three-coin CryptoSwap implementation: CurveTricryptoOptimizedWETH.vy and CurveCryptoMath3Reference.vy. Coupled A-gamma dynamic invariant, bounded numerical solvers, state-dependent mid/out fee, EMA price oracle, internal price-scale rebalancing and virtual-price/profit accounting. Commit ecaa8161c240f21dd7c3712eefc5637e1dac742b; implementation lineage for CryptoSwap dynamic peg, distinct from StableSwap; not evidence for all deployments or 2-coin variants.",
+      "use": "Pinned official three-coin CryptoSwap implementation: CurveTricryptoOptimizedWETH.vy and CurveCryptoMath3Reference.vy. Coupled A-gamma dynamic invariant, bounded numerical solvers, state-dependent mid/out fee, EMA price oracle, internal price-scale rebalancing and virtual-price/profit accounting. Commit ecaa8161c240f21dd7c3712eefc5637e1dac742b; implementation lineage for CryptoSwap dynamic peg, distinct from StableSwap; not evidence for all deployments or 2-coin variants. Re-inspected pinned math blob `contracts/main/CurveCryptoMathOptimized3.vy` = 695c794cb8035e4b2848ad0354d0993dcfb9c7cb. The three-coin solver initializes D from a geometric mean (or K0-informed cube root), then uses bounded Newton iteration; get_y solves the selected reserve from A-gamma invariant and get_p returns two marginal price ratios. It is an N=3 specialization of CryptoSwap, not an independent invariant from the two-coin CryptoSwap family.",
       "status": "candidate_reference"
     },
     {
@@ -3603,6 +3603,14 @@
       "title": "Utida (1957), Cyclic Fluctuations of Population Density Intrinsic to the Host-Parasite System",
       "url": "https://doi.org/10.2307/1929888",
       "use": "Primary Ecology article, 38(3) (July 1957), pp.442–449. Wiley exposes the original first-page scan (printed p.442), which describes an experimental azuki bean weevil–parasitoid system and a multi-generation continuation study. Full article PDF remains access-gated; no equations or complete model specification transcribed. Source lead only; compare discrete host-parasitoid dynamics with Nicholson–Bailey and DeBach–Smith before classifying.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "AMM-CURVE-TWOCRYPTO-NG-CODE",
+      "domain": "DeFi AMM",
+      "title": "Curve Twocrypto NG pinned two-coin CryptoSwap math implementation",
+      "url": "https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d",
+      "use": "Pinned official production-v2.1.0 Vyper 0.3.10 source snapshot at commit 89c8dfb6c9b3204647954018d2a0238b9c69349d. Math blob contracts/main/CurveCryptoMathOptimized2.vy = 3947686b080ed3e5c88141d8fc998f7ca5c27ba5. Two-coin A-gamma dynamic-peg CryptoSwap implementation: newton_D uses K0, gamma, ANN and iterative invariant correction; get_y uses specialized cubic solution/branch selection; get_p computes marginal price. Same CryptoSwap family as Tricrypto NG with N=2, not a distinct invariant family or separate candidate. Snapshot pins source code, not a deployed pool or market-specific parameters.",
       "status": "candidate_reference"
     }
   ],
