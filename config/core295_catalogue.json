@@ -3049,6 +3049,14 @@
       "url": "https://github.com/liquity/bold/commit/d262669ef3c4d37bf0544df3bb2624c07b8a5ee0",
       "use": "Pinned official Liquity V2 source snapshot at commit d262669ef3c4d37bf0544df3bb2624c07b8a5ee0 (2026-09-26): TroveManager.sol blob 389586974a407e59bb31dcd588070927d0992452; StabilityPool.sol blob db0a24a56921e84c12d95f53f1841eff60f410a6; Constants.sol blob 9e0231988039464b070dc5cd325f7e35d35f1e22; LiquityMath.sol blob d6d2474f370c27a630d92732de430b910e458ac5. Individual ICR liquidation threshold, priority BOLD Stability Pool offset and P/S depositor accounting, branch-specific collateral penalty/surplus, residual stake-weighted debt/collateral redistribution with carried error, snapshots and gas compensation. One coupled liquidation/loss-allocation family; no deployment or branch-parameter mapping. JIT documentation requires separate transaction-path mapping.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-SILO-V3-PARTIAL-LIQUIDATION-CDS",
+      "domain": "DeFi Risk",
+      "title": "Silo V3 partial liquidation and internal collateral-debt defaulting hook",
+      "url": "https://github.com/silo-finance/silo-contracts-v3/commit/ed18f3a33be1a08e786279c50b914b1d6eaf04c7",
+      "use": "Pinned official Silo V3 source snapshot at commit ed18f3a33be1a08e786279c50b914b1d6eaf04c7 (2026-10-07): PartialLiquidation.sol blob d335836e347b7617e675e462f49a551b9666f301; PartialLiquidationLib.sol blob 3b9755b8abaa7fdb8e3262b6c69dcc4b695a7cb4; PartialLiquidationExecLib.sol blob ecffe43e71cc74cee3f57309a169ee190712625a; PartialLiquidationByDefaulting.sol blob 72db29f8402348be3da485f106e76a0b6b8577b9; DefaultingSiloLogic.sol blob 581b46cbbe33dacc2d74e614299f2e6025b12e09; DefaultingRepayLib.sol blob e0a011e985d977bd8751aa25168d2281b4379544; SiloSolvencyLib.sol blob f4bc66a364110c4f711f6d5a47faea61ad4de8db; SiloHookV2.sol blob 920075bee5a302f64e74fb31bebdce542dc64630; SiloHookV3.sol blob d2960743f7f4b5cf4db44e6a3980b657d96c1a4b; SiloConfig.sol blob dd68772bd7936d2ba8391b58a2872f0b146de231. Standard partial collateral-sale liquidation and internal collateral-debt defaulting/CDS are distinct settlement modes sharing the same target-LTV sizing family. V2 and V3 hook versions differ: V2 exposes standard liquidation and 1% defaulting margin; V3 disables standard liquidation and sets margin to zero. No deployed Silo/config mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3084,7 +3092,8 @@
     "2026-11-11: Corrected Frumkin chronology. Frumkin (1920) is the electrocapillarity precursor; the interacting-adsorption isotherm is historically dated to 1925. Frumkin (1926) neutral-molecule field adsorption is distinct. Added a 1925 primary-source lead; exact interaction-equation/page transcription remains pending.",
     "2026-11-12: Added pinned Maker/Sky Liquidation 2.0 Dog/Clipper/Abaci source snapshot. The official repository is sky-ecosystem/dss; MIP45 is obsolete by MIP102c2-SP1, so it is historical design context only. This adds a DeFi Risk source reference, not an accepted equation or deployment claim.",
     "2026-11-12: Added pinned Euler V2 EVK liquidation implementation as a DeFi Risk candidate reference. It uses health-shortfall-dependent capped discount and internal debt transfer to the liquidator, unlike direct external repayment/seizure or Dutch-auction collateral sale. Deployment and per-vault configuration remain unpinned; no accepted equation count changes.",
-    "2026-11-12: Added pinned Liquity V2 TroveManager/StabilityPool liquidation source as a DeFi Risk candidate reference. It combines priority Stability Pool offset and product-sum depositor accounting with residual stake-weighted redistribution and carried rounding error. The docs' JIT mode is not represented as a separate code path without a deployment/transaction-path mapping."
+    "2026-11-12: Added pinned Liquity V2 TroveManager/StabilityPool liquidation source as a DeFi Risk candidate reference. It combines priority Stability Pool offset and product-sum depositor accounting with residual stake-weighted redistribution and carried rounding error. The docs' JIT mode is not represented as a separate code path without a deployment/transaction-path mapping.",
+    "2026-11-12: Added pinned Silo V3 hook source. Documents standard partial collateral-sale liquidation and separate internal collateral-debt defaulting/CDS path, with V2/V3 hook differences. Structural candidate classification remains subject to E0–E5 pairwise review; no deployment mapping or accepted-equation count change."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
