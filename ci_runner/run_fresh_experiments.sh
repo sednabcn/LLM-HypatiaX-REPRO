@@ -260,7 +260,7 @@ if status == "failed":
     data["failed_stage"] = stage
 json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
 with open(path, "a", encoding="utf-8") as stream:
-    stream.write("\\n")
+    stream.write("\n")
 PY
 }
 
@@ -286,7 +286,7 @@ if data.get("status") != "failed":
     data["runner_exit_code"] = rc
 with open(path, "w", encoding="utf-8") as stream:
     json.dump(data, stream, indent=2)
-    stream.write("\\n")
+    stream.write("\n")
 PY
   fi
   return "$rc"
