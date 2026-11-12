@@ -106,8 +106,13 @@ def _validate_generator(entry: dict, domain: str) -> None:
         raise ValueError("generator must explicitly attest that declared constraints are enforced")
     if not isinstance(generator.get("constraint_evidence"), str) or not generator["constraint_evidence"].strip():
         raise ValueError("generator.constraint_evidence is required")
+    if generator.get("constraint_enforcement_method") != "rectangular_input_bounds_v1":
+        raise ValueError("only constraints implied by rectangular input bounds are supported")
+    validity = entry.get("input_validity_bounds")
+    if not isinstance(validity, dict) or set(validity) != set(independent):
+        raise ValueError("input_validity_bounds must cover every independent input")
 
-    for variable in variables:
+    for variable in independent:
         bounds = ranges[variable]
         if not isinstance(bounds, dict):
             raise ValueError(f"{variable}: range record must be an object")
@@ -117,6 +122,19 @@ def _validate_generator(entry: dict, domain: str) -> None:
                     or any(isinstance(x, bool) or not isinstance(x, (int, float)) for x in interval)
                     or not np.isfinite(interval).all() or float(interval[0]) >= float(interval[1])):
                 raise ValueError(f"{variable}: {kind} must be a finite increasing [low, high] pair")
+        valid = validity[variable]
+        if (not isinstance(valid, list) or len(valid) != 2
+                or any(isinstance(x, bool) or not isinstance(x, (int, float)) for x in valid)
+                or not np.isfinite(valid).all() or float(valid[0]) >= float(valid[1])):
+            raise ValueError(f"{variable}: input validity bounds must be finite increasing [low, high]")
+        valid_lo, valid_hi = map(float, valid)
+        train_lo, train_hi = map(float, bounds["train"])
+        extra_lo, extra_hi = map(float, bounds["extrapolation"])
+        generated = [train_lo, train_hi, extra_lo, extra_hi]
+        for factor in (1.0, 1.5, 4.0, 6.0):
+            generated.append(train_hi * factor)
+        if min(generated) < valid_lo or max(generated) > valid_hi:
+            raise ValueError(f"{variable}: train, medium, near, or far extrapolation exceeds declared validity bounds")
 
 
 def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
@@ -147,7 +165,16 @@ def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
         regime: exp1.generate_extrap_data(equation, regime=regime, N=100, seed=seed)
         for regime, _ in exp1.EXTRAP_REGIMES
     }
+    binding_record = {
+        "fixed_parameter_values": entry["fixed_parameter_values"],
+        "physical_constant_values": entry["physical_constant_values"],
+        "input_validity_bounds": entry["input_validity_bounds"],
+    }
+    binding_sha256 = hashlib.sha256(
+        __import__("json").dumps(binding_record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     dataset_hashes = {
+        "model_binding_sha256": binding_sha256,
         "train_all": _digest_arrays(train[4], train[5]),
         "train_split": _digest_arrays(train[0], train[2]),
         "ordinary_test_split": _digest_arrays(train[1], train[3]),
