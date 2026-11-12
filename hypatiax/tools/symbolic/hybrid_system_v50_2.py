@@ -1671,8 +1671,14 @@ class HybridDiscoverySystem:
                 "structural_risk_tokens": [],
                 "complexity_routing_enabled": False,
                 "routing_reason": "discovery_failed",
-                "bypass_kind": "live" if (bool(getattr(self, "_llm_attempt_modes", None))) else "none",
-                "generation_path": "symbolic+llm" if (bool(getattr(self, "_llm_attempt_modes", None))) else "symbolic",
+                "bypass_kind": "live" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "none",
+                "generation_path": "symbolic+llm" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "symbolic",
                 "validations": 0,
                 "scale_log": False,
                 "x_log_flags": [False] * len(var_names),
