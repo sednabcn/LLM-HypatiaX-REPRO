@@ -87,13 +87,20 @@ def _json_safe(value):
 def _metrics(y_true, y_pred):
     yt = np.asarray(y_true, dtype=float).reshape(-1)
     yp = np.asarray(y_pred, dtype=float).reshape(-1)
-    if yt.shape != yp.shape or yt.size == 0 or not np.all(np.isfinite(yp)):
-        raise ValueError("prediction shape mismatch or non-finite predictions")
-    return {
+    if (
+        yt.shape != yp.shape or yt.size == 0
+        or not np.all(np.isfinite(yt))
+        or not np.all(np.isfinite(yp))
+    ):
+        raise ValueError("target/prediction shape mismatch or non-finite values")
+    values = {
         "r2": abl._safe_r2(yt, yp),
         "rmse": abl._safe_rmse(yt, yp),
         "mae": abl._safe_mae(yt, yp),
     }
+    if any(value is None or not np.isfinite(float(value)) for value in values.values()):
+        raise ValueError("one or more evaluation metrics are undefined or non-finite")
+    return {key: float(value) for key, value in values.items()}
 
 
 def _array_hash(*arrays):
