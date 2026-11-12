@@ -281,10 +281,10 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
                 extrap_errors[regime] = f"{type(regime_exc).__name__}: {regime_exc}"
         test_metrics = _metrics(y_test, y_pred)
     except Exception as exc:
-        return _failure("llm_only", exc, elapsed)
+        return _failure("llm_only", exc, time.monotonic() - started)
     return {
         "method": "llm_only", "success": True, "error": None,
-        "elapsed_s": elapsed, "test": test_metrics,
+        "elapsed_s": time.monotonic() - started, "test": test_metrics,
         "extrapolation": extrap_rows,
         "diagnostics": {
             "formula": code,
@@ -333,7 +333,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
                 extrap_errors[regime] = f"{type(regime_exc).__name__}: {regime_exc}"
         return {
             "method": "nn_only", "success": True, "error": None,
-            "elapsed_s": elapsed, "test": test_metrics,
+            "elapsed_s": time.monotonic() - started, "test": test_metrics,
             "extrapolation": extrap_rows,
             "diagnostics": {
                 "extrapolation_errors": extrap_errors,
@@ -346,7 +346,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
             },
         }
     except Exception as exc:
-        return _failure("nn_only", exc, elapsed)
+        return _failure("nn_only", exc, time.monotonic() - started)
 
 
 def _aggregate(checkpoint):
