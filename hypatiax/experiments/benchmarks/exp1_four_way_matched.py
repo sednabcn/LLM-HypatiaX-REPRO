@@ -234,7 +234,14 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
     if condition == "hypatia" and row.get("llm_called") is not True:
         return {
             "method": "hybrid_llm_pysr", "success": False,
-            "error": "Hybrid discovery completed without a verified LLM proposal call",
+            "error": "Hybrid discovery completed without a successful live LLM response",
+            "elapsed_s": elapsed, "test": None, "extrapolation": {},
+            "diagnostics": row,
+        }
+    if condition == "hypatia" and row.get("llm_proposal_generated") is not True:
+        return {
+            "method": "hybrid_llm_pysr", "success": False,
+            "error": "Hybrid discovery completed without a parseable live LLM proposal",
             "elapsed_s": elapsed, "test": None, "extrapolation": {},
             "diagnostics": row,
         }
