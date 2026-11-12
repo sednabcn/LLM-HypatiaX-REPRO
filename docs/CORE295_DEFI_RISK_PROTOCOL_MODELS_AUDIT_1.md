@@ -170,3 +170,50 @@ For interpretation, keep these operations separate within one coupled Comet stat
 This cross-check supports the prior warning that the specification's prose and Solidity's accounting should not be mixed as if they were one line-for-line algorithm. It does **not** establish that the pinned development snapshot matches any deployed market. The exact source release, deployed implementation bytecode, immutable configuration and market-specific asset factors remain necessary for a production reconstruction. No RPC, explorer API, contract execution or live protocol call was made.
 
 **Structural disposition:** retain one candidate coupled protocol-level absorption/settlement state machine. Do not count the liquidation-factor formula, liquidatability inequality, collateral offset, storefront quote and principal update as independent equation rows. The threshold component remains structurally related to Aave's weighted collateral/debt health-factor eligibility test.
+
+
+## 8. Morpho Blue: pinned direct-liquidation and bad-debt accounting audit
+
+**Pinned source:** official `morpho-org/morpho-blue` repository, commit `430bd61d8ab9238c1bde327eec2bfcd3f494fe9d` (2026-11-09).
+- Core implementation: `src/Morpho.sol`, blob SHA `ab064b646bf161b1510e2575a99412cdc2a43ebb`.
+- Constants: `src/libraries/ConstantsLib.sol`, blob SHA `1046e6a03462fb68b78dbdcee26339c983dc00de`.
+- Fixed-point arithmetic: `src/libraries/MathLib.sol`, blob SHA `3c0afc991c3bfa9314498b43047a0675be4a9410`.
+- Share/asset conversion: `src/libraries/SharesMathLib.sol`, blob SHA `c63d937e81d5470e2d073383f45dd66c46f36a6b`.
+- Commit: https://github.com/morpho-org/morpho-blue/commit/430bd61d8ab9238c1bde327eec2bfcd3f494fe9d
+- Core implementation: https://github.com/morpho-org/morpho-blue/blob/430bd61d8ab9238c1bde327eec2bfcd3f494fe9d/src/Morpho.sol
+
+This is a pinned repository snapshot, not a mapping to a particular deployed contract address, chain, market or oracle state. Morpho Blue markets are isolated one-loan-token/one-collateral-token markets with an oracle and immutable market LLTV. The source snapshot must not be mistaken for the market's runtime values or for optional periphery liquidation products.
+
+### Eligibility
+
+For a borrower position in one market, the implementation converts borrow shares to debt assets with upward rounding and computes collateral borrowing capacity with downward rounding:
+\[
+D=\operatorname{toAssetsUp}(s_D;B_D,S_D),
+\qquad
+C_{\max}=\operatorname{wMulDown}\!\left(
+\operatorname{mulDivDown}(c\,P,10^{36}),\,LLTV
+\right).
+\]
+The position is healthy iff \(C_{\max}\ge D\); it is liquidatable when this predicate is false. The oracle price uses the source's \(10^{36}\) scale and the market's fixed LLTV. This is a single-market collateral/debt threshold, not a weighted multi-collateral aggregation.
+
+### Liquidation incentive and direct exchange
+
+The implementation defines:
+\[
+LIF=\min\!\left(
+1.15,\,
+\frac{1}{1-0.3(1-LLTV)}
+\right),
+\]
+with WAD-scaled fixed-point operations, downward rounding in the division and the constants \(LIQUIDATION\_CURSOR=0.3\), \(MAX\_LIQUIDATION\_INCENTIVE\_FACTOR=1.15\). The incentive decreases as LLTV rises, subject to the 1.15 cap. This is a direct repay-for-collateral transaction, not an auction. The core contract permits the caller to specify exactly one of collateral assets seized or debt shares repaid; it derives the other amount using the oracle, LIF and share/asset conversion routines. The two directions intentionally use different rounding:
+- specified seized collateral: quote collateral with upward rounding, divide by LIF with upward rounding, then convert repayment assets into shares with upward rounding;
+- specified repayment shares: convert shares to debt assets with downward rounding, multiply by LIF with downward rounding, then convert quote value to collateral assets with downward rounding.
+The final repaid asset amount is converted from shares with upward rounding.
+
+### Bad debt and market accounting
+
+After repayment and collateral seizure, if the borrower's collateral balance reaches zero while debt shares remain, the implementation writes off the remaining borrower debt shares. It computes the residual debt assets, bounded by aggregate borrow assets, then reduces aggregate `totalBorrowAssets`, `totalSupplyAssets` and `totalBorrowShares`, and clears the borrower's borrow shares. This is a lender-side loss realization through the market's supply accounting, not Aave's reserve-deficit path or Comet's absorption/reserve model.
+
+Interest is accrued before liquidation. The core accrual uses the configured IRM's borrow rate and a three-nonzero-term Taylor approximation to continuous compounding, then adds interest to both total borrow and supply assets; any market fee is converted to fee-recipient supply shares. These accrual and share-conversion operations are integral to the state transition and should not be split into extra liquidation equation rows.
+
+**Structural disposition:** Morpho Blue is a strong candidate for one protocol-level direct-liquidation/state-transition family: single-market LLTV eligibility, LLTV-dependent incentive, caller-selected partial/full repay/seize sizing, fixed-point rounding and collateral-exhaustion bad-debt write-off. The threshold inequality alone remains related to Aave and Comet collateral/debt eligibility and is not a separate structural equation. Do not split LIF, the two quote directions, share conversions and bad-debt accounting into independent candidate rows. Optional pre-liquidation periphery contracts are a separate extension and are not part of this core `Morpho.sol` snapshot. No RPC, deployment lookup, contract execution, tests or simulation were performed.
