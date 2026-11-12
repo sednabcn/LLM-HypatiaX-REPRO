@@ -430,3 +430,6 @@ These are additional official documentation pointers, not independent primary re
 
  
 224. Fujii, K., Holling, C. S., and Mace, P. M. (1986). “A simple generalized model of attack by predators and parasites.” *Ecological Research* 1(2), pp. 141–156. DOI: https://doi.org/10.1007/BF02347017. The publisher-hosted abstract includes the original generalized equation as an equation image and defines all symbols; full article PDF remains access-gated.
+
+ 
+225. Utida, S. (1957). “Cyclic fluctuations of population density intrinsic to the host-parasite system.” *Ecology* 38(3), pp. 442–449. DOI: https://doi.org/10.2307/1929888. Wiley publisher record and original first-page scan; complete article remains access-gated.
