@@ -579,3 +579,28 @@ where Lotka explicitly states that \(A_1,A_2,B_1,B_2\) are, in general, function
 **Disposition:** record as a primary-source lead and direct equation transcription. Do not yet create a proposed catalogue equation entry: the original leaves four constitutive coefficients as general state-dependent functions, so a benchmarkable instance would require a separately sourced and explicitly specified constitutive closure. Do not replace the source's general system with a later textbook constant-coefficient form and call that the verbatim 1920 model. The publisher HTML provides the article text and equation numbers; the PDF endpoint exists, but this transcription uses the publisher's readable full-text HTML. No experiment or validator was run.
 
 Primary source: https://www.pnas.org/doi/10.1073/pnas.6.7.410
+
+
+## 4.4 Volterra (1926): n-species conservative interaction system
+
+An author-expanded reprint of Vito Volterra's 1926 Lincei memoir is now accessible as a scan-based PDF. Its opening editorial note states that Parts I–III rearrange and add to the work previously published in *Memorie della R. Accademia Nazionale dei Lincei*, series VI, vol. II (1926), pp. 31–113; Part IV reprints separate 1927 notes. The reprint therefore provides a direct authorial primary-source route to the 1926 model, while the 1927 reprint date and its expanded status must remain explicit.
+
+In Part II, §2, printed pp. 38–39, Volterra derives the general n-species system (equation B):
+
+\[
+\beta_r\frac{dN_r}{dt}=\left(\varepsilon_r\beta_r+\sum_{s=1}^{n}a_{sr}N_s\right)N_r,
+\qquad r=1,\ldots,n,
+\]
+
+with
+
+\[
+a_{rs}=-a_{sr},\qquad a_{rr}=0,\qquad \beta_r>0.
+\]
+
+The coefficients encode reciprocal encounter effects. Volterra describes the conservative association in terms of a weighted value assigned to individuals: the antisymmetric interaction contribution cancels in the derivative of the aggregate weighted value, although the intrinsic \(\varepsilon_r\) growth/depletion terms need not vanish. The source explicitly identifies the two-species feeding system in Part I, §2 as a special case of this general n-species form. It also treats chains of species feeding on one another, conservative and dissipative associations, forced environmental fluctuations, and adding a new species to an existing association.
+
+**Disposition:** add one proposed n-species conservative-interaction candidate. Do not separately count the two-species Volterra feeding equations or the constant-coefficient Lotka–Volterra special case. This family is related to Lotka's independently published 1920 two-species plant–herbivore system, but its arbitrary n-dimensional antisymmetric interaction matrix and weighted-conservation constraint warrant a separate structural review. Acceptance remains pending; no benchmark ranges or generator are defined. No experiment or validator was run.
+
+Primary scan: https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf
+Bibliographic corroboration for the original 1926 Lincei memoir: https://ndlsearch.ndl.go.jp/books/R100000136-I1574231874580495104
