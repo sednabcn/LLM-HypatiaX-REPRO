@@ -339,7 +339,7 @@ def _aggregate(checkpoint):
                 vals = [
                     value for row in rows
                     if row.get("success")
-                    for value in [_valid_metric(row.get("extrapolation", {}).get(regime), metric)]
+                    for value in [_valid_metric((row.get("extrapolation") or {}).get(regime), metric)]
                     if value is not None
                 ]
                 method_extrapolation[key][regime][metric] = {
