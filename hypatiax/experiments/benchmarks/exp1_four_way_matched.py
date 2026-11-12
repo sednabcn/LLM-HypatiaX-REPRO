@@ -693,7 +693,7 @@ def run():
         "summary_file": str(SUMMARY_PATH),
         "results_file": str(RESULTS_PATH),
         "checkpoint_file": str(CHECKPOINT_PATH),
-        "execution_status": "not_run_by_source_implementation",
+        "execution_status": "runner_completed",
     }
     with MANIFEST_PATH.open("w", encoding="utf-8") as handle:
         json.dump(manifest, handle, indent=2)
