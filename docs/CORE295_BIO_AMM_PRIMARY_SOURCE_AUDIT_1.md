@@ -734,3 +734,13 @@ These papers offer useful candidates for the Biology pool's continuous/discrete 
 ## 4.15 Watt DOI ownership and primary access check
 
 Cambridge's official landing page for Watt's 1959 paper confirms *The Canadian Entomologist* 91(3), March 1959, pp. 129–144 and DOI 10.4039/Ent91129-3. Its access section currently reports the article purchase option as temporarily unavailable. The DOI is Watt's, not Thompson's. Cambridge's own reference list on the Watt article separately cites Thompson's 1924 Marseille paper at vol. 2, pp. 69–89. This cross-check removes the earlier metadata ambiguity: retain Watt's DOI only on the Watt record; Thompson has no verified DOI in this audit. The Watt primary article remains not fully inspected, and all equation forms remain secondary transcriptions pending primary-page access.
+
+
+## 4.16 Earlier quantitative-parasitology sources: Lotka (1923) and Bodenheimer–Schiffer (1952)
+
+Two additional primary-source leads have been identified from the contemporary bibliography on Cambridge's Watt (1959) article and independent bibliographic records:
+
+- A. J. Lotka, “Contribution to Quantitative Parasitology,” *Journal of the Washington Academy of Sciences* 13(8) (1923), pp. 152–158. The Biodiversity Heritage Library confirms that volume 13 (1923) has been digitized and identifies the American Museum of Natural History as holding institution. The article-specific page scan has not yet been isolated/retrieved; no equations are transcribed.
+- F. S. Bodenheimer and M. Schiffer, “Mathematical Studies in Animal Populations. I. A Mathematical Study of Insect Parasitism,” *Acta Biotheoretica* 10 (1952), pp. 23–56. Schiffer's publication list and independent citations corroborate the title, co-authors, volume and pages. The exact article landing page/DOI and original scan remain to be located; no equations are transcribed.
+
+These are promising because they may contain host-parasite formulations beyond the familiar Lotka–Volterra and Nicholson–Bailey examples. However, their relationship to Thompson, Bailey and each other cannot be classified from bibliography alone. They remain source leads and do not increase the equation count.
