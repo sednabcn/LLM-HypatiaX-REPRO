@@ -303,7 +303,17 @@ class HybridSystemAllDomains:
             result = {"error": str(e), "llm_source": "local_fallback",
                       "llm_called": False, "bypass_kind": "local_fallback"}
 
-        if not self._no_cache:
+        # Cache only usable formulas. Caching an API error or an empty/N/A
+        # parse would turn a transient failure into a permanent miss for this
+        # task during the run, preventing a later live retry.
+        _result_code = result.get("python_code", "") or result.get("formula_code", "")
+        if (
+            not self._no_cache
+            and isinstance(_result_code, str)
+            and _result_code.strip()
+            and _result_code.strip() != "N/A"
+            and not result.get("error")
+        ):
             self._formula_cache[_cache_key] = result
         return result
 
