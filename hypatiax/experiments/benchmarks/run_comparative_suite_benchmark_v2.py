@@ -1067,10 +1067,11 @@ class BaseMethod:
             return None  # audit-M3: was float('inf')
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
-    def _unavailable(self, reason: str) -> MethodResult:
+    def _unavailable(self, reason: str, metadata: Optional[Dict[str, Any]] = None) -> MethodResult:
         return MethodResult(
             method=self.name, success=False,
-            r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
+            r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,
+            metadata=metadata or {},
         )
 
     @staticmethod
@@ -1347,6 +1348,7 @@ class PureLLMBaselineMethod(BaseMethod):
         if self._no_cache:
             self._clear_llm_cache()
 
+        result = None
         try:
             result = self._baseline.generate_formula(
                 description, metadata.get("domain", "unknown"), var_names, metadata,
@@ -1364,7 +1366,7 @@ class PureLLMBaselineMethod(BaseMethod):
             # the real cause is surfaced instead of misdiagnosed.
             if result.get("error"):
                 self._log(f"generate_formula() failed: {result['error'][:150]}")
-                return self._unavailable(f"generate_formula_error: {result['error'][:200]}")
+                return self._unavailable(f"generate_formula_error: {result['error'][:200]}", metadata=_provenance(result))
 
             python_code = result.get("python_code", "") or result.get("formula_code", "") or ""
 
@@ -1395,7 +1397,7 @@ class PureLLMBaselineMethod(BaseMethod):
             if metrics.get("success"):
                 _is_hardcoded = result.get("method") == "pure_llm_hardcoded"
                 if metrics.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                    return self._unavailable("AUDIT L36: success reported without an r2")
+                    return self._unavailable("AUDIT L36: success reported without an r2", metadata=_provenance(result))
                 return MethodResult(
                     method=self.name, success=True,
                     r2=float(metrics["r2"]),
@@ -1426,11 +1428,11 @@ class PureLLMBaselineMethod(BaseMethod):
                                       "is_hardcoded": result.get("method") == "pure_llm_hardcoded"},
                         )
 
-            return self._unavailable(metrics.get("error", "Formula evaluation failed"))
+            return self._unavailable(metrics.get("error", "Formula evaluation failed"), metadata=_provenance(result))
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(str(exc)[:150], metadata=_provenance(result) if isinstance(result, dict) else {})
 
 # ============================================================================
 # METHOD 2 — ImprovedNN
