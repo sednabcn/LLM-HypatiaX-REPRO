@@ -3065,6 +3065,14 @@
       "url": "https://github.com/FraxFinance/fraxlend/commit/2bed49d4dcc6702d92dede825c3424893517d841",
       "use": "Pinned official Fraxlend source snapshot at commit 2bed49d4dcc6702d92dede825c3424893517d841 (2025-11-12): FraxlendPairCore.sol blob ad3be86d383ffa3dde691f8960c82d4101760fbb; FraxlendPair.sol blob 5133f41c73f49a3b1dcca94f91ac28a66d858340; VaultAccount.sol blob 3a7ad956c83d4e32f811d5751acef9b88cb1b0c8. Dual-oracle low-rate liquidation eligibility, share-based partial repayment, clean-vs-dirty collateral fee branch, protocol fee extraction and residual debt write-off against total lender asset claim. One coupled candidate family; per-pair deployment and parameters unpinned.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-FLUID-VAULT-TICK-BRANCH-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Fluid Vault shared tick/branch liquidation and absorb engine",
+      "url": "https://github.com/Instadapp/fluid-contracts-public/commit/404d73f91e6806f881f8dabeb30494f93f9e99b7",
+      "use": "Pinned official Fluid source snapshot at commit 404d73f91e6806f881f8dabeb30494f93f9e99b7 (2026-11-05), shared T2/T3/T4 engine: vaultTypesCommon/coreModule/main.sol blob 5ede8aace90cc92709a3d4cc63191abf53f5ac51; main2.sol blob 2a70187234a4b8b02a68ef09fdfae0b9c2134cca; helpersLiquidate.sol blob ddd46dd80ffc35e0a43fd2e0588f1a13eb50672b; common/variables.sol blob ab4f4e083cc9e16721751d7f7055efae2d5a7f69; coreModule/structs.sol blob 53c4ec9d69eac5e80088565d0d8b6d009dd3c61b; libraries/tickMath.sol blob a939a15df5251ed124af54b82a212a7e3b9956c4; shared SPEC blob 65f1299c8956c49882ac43a4e89b08cb91d2d3f3. Geometric tick/branch state, partial tick liquidation, debt-factor branch merging, absorb above max-limit tick, optional absorbed-buffer-first settlement and slippage-constrained liquidation. One coupled candidate family; T1 and T2/T3/T4 paths/oracles differ; no deployment or parameter mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3102,7 +3110,8 @@
     "2026-11-12: Added pinned Euler V2 EVK liquidation implementation as a DeFi Risk candidate reference. It uses health-shortfall-dependent capped discount and internal debt transfer to the liquidator, unlike direct external repayment/seizure or Dutch-auction collateral sale. Deployment and per-vault configuration remain unpinned; no accepted equation count changes.",
     "2026-11-12: Added pinned Liquity V2 TroveManager/StabilityPool liquidation source as a DeFi Risk candidate reference. It combines priority Stability Pool offset and product-sum depositor accounting with residual stake-weighted redistribution and carried rounding error. The docs' JIT mode is not represented as a separate code path without a deployment/transaction-path mapping.",
     "2026-11-12: Added pinned Silo V3 hook source. Documents standard partial collateral-sale liquidation and separate internal collateral-debt defaulting/CDS path, with V2/V3 hook differences. Structural candidate classification remains subject to E0–E5 pairwise review; no deployment mapping or accepted-equation count change.",
-    "2026-11-12: Added pinned Fraxlend Pair liquidation implementation. Records dual-oracle eligibility, clean/dirty fee switch and write-off of residual debt against total lender asset claims. No deployed pair mapping; no accepted-equation count change."
+    "2026-11-12: Added pinned Fraxlend Pair liquidation implementation. Records dual-oracle eligibility, clean/dirty fee switch and write-off of residual debt against total lender asset claims. No deployed pair mapping; no accepted-equation count change.",
+    "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
