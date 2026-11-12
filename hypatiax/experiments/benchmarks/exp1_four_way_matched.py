@@ -181,7 +181,7 @@ def _run_fingerprint():
         "pure_llm_model_source": pure_llm_model_source,
         "hybrid_llm_model_effective": hybrid_llm_model,
         "ablation_llm_model_metadata": abl.MODEL_STRING,
-        "llm_temperature_effective": abl.LLM_TEMPERATURE,
+        "llm_temperature_effective": 0.25,
         "pysr_niterations_effective": abl.NITERATIONS,
         "pysr_populations_effective": abl.POPULATIONS,
         "pysr_timeout_seconds_effective": abl.PYSR_TIMEOUT_SECS,
