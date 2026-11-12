@@ -132,6 +132,27 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
     merged["timestamp"] = datetime.now(timezone.utc).isoformat()
     merged["total_tests"] = 30
     merged["tests"] = [merged_records[i] for i in range(1, 31)]
+    truncation_details = {}
+    for record in merged["tests"]:
+        llm = record.get("results", {}).get("PureLLM Baseline (core)", {})
+        if llm:
+            truncation_details[record.get("description", "")[:60]] = {
+                "truncated": llm.get("metadata", {}).get("truncated_formula", False),
+                "r2": llm.get("r2"),
+                "success": llm.get("success"),
+                "formula": llm.get("formula", "")[:80],
+            }
+    truncated_count = sum(1 for item in truncation_details.values() if item["truncated"])
+    merged["purelm_truncation_audit"] = {
+        "truncated_count": truncated_count,
+        "total_purelm_tests": len(truncation_details),
+        "note": (
+            f"{truncated_count} PureLLM formulas were syntactically incomplete and remain invalid."
+            if truncated_count else
+            "No truncated PureLLM formulas detected in the merged 30-equation run."
+        ),
+        "details": truncation_details,
+    }
     merged["protocol30_aggregate"] = {
         "variant": variant,
         "shard_count": 5,
