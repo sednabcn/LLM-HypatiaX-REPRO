@@ -1,0 +1,74 @@
+{
+  "_template_notice": "Human decision record template only. Complete from inspected primary evidence. This record does not itself accept an equation.",
+  "decision_record_version": "1.0",
+  "candidate_review_packet_id": null,
+  "candidate_equation_id": null,
+  "decision_status": "hold",
+  "source_verification": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "equation_transcription": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "variables_units_assumptions": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "complete_model_boundary": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "core15_overlap": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "structural_equivalence": {
+    "classification": "E5",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "compared_candidates": [],
+    "rationale": null
+  },
+  "source_family": {
+    "source_family_id": null,
+    "rationale": null,
+    "reviewer": null
+  },
+  "statistical_unit": {
+    "independence_unit_id": null,
+    "eligible_for_calibration": false,
+    "rationale": null,
+    "reviewer": null
+  },
+  "benchmark_generator": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "independent_second_review": {
+    "decision": "pending",
+    "reviewer": null,
+    "reviewed_on_utc": null,
+    "evidence": null
+  },
+  "primary_reviewer": null,
+  "primary_reviewed_on_utc": null,
+  "second_reviewer": null,
+  "second_reviewed_on_utc": null,
+  "final_disposition": "hold",
+  "limitations_and_open_issues": [],
+  "change_log": []
+}
