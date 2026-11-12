@@ -38,11 +38,23 @@ def main() -> int:
         print("ERROR: unable to parse reconciliation inputs: " + str(exc), file=sys.stderr)
         return 2
 
+    if not all(isinstance(x, dict) for x in (current, proposed, approval, backup)):
+        print("ERROR: catalogue, proposal, approval and backup must each be JSON objects.", file=sys.stderr)
+        return 2
     current_hash, proposal_hash, diff_hash = sha(a.catalogue), sha(a.proposal), sha(a.diff)
     backup_hash = hashlib.sha256(backup_bytes).hexdigest()
-    manifest = proposed.get("promotion_proposal", {}) if isinstance(proposed, dict) else {}
-    ids = manifest.get("appended_equation_ids", [])
-    approval_ids = approval.get("approved_appended_equation_ids", [])
+    manifest = proposed.get("promotion_proposal")
+    if not isinstance(manifest, dict):
+        print("ERROR: proposal is missing its promotion_proposal manifest.", file=sys.stderr)
+        return 2
+    ids = manifest.get("appended_equation_ids")
+    approval_ids = approval.get("approved_appended_equation_ids")
+    if not isinstance(ids, list) or not all(isinstance(x, str) and x for x in ids):
+        print("ERROR: proposal appended_equation_ids must be a list of non-empty strings.", file=sys.stderr)
+        return 2
+    if not isinstance(approval_ids, list):
+        print("ERROR: approval approved_appended_equation_ids must be a list.", file=sys.stderr)
+        return 2
 
     def check(name, condition, detail):
         checks.append((name, bool(condition), detail))
