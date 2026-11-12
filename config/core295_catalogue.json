@@ -3039,7 +3039,7 @@
       "domain": "DeFi Risk",
       "title": "Euler V2 EVault liquidation module and debt-transfer accounting",
       "url": "https://github.com/euler-xyz/euler-vault-kit/commit/93a1de491531e54cbbcf0e5c8cacfe558f924867",
-      "use": "Pinned official Euler Vault Kit snapshot at commit 93a1de491531e54cbbcf0e5c8cacfe558f924867 (2026-10-29): Liquidation.sol blob 8ce05719f1200e543b1b81ad5c749780e4cf7df4; LiquidityUtils.sol blob e6b68e28284c404b72608bd9213721ab9b54ad0c; BorrowUtils.sol blob e60faf14e1d1d9fcc607f793455c96d7e0188688; RiskManager.sol blob 4f78db4dab2ba07ad0e6dc9c9f41822109a55140. Multi-collateral liquidation-LTV health aggregation, capped health-shortfall discount, collateral-limited debt/yield sizing, internal transfer of liability to liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. One coupled candidate family; no deployed EVault/module/configuration mapping.",
+      "use": "Pinned official Euler Vault Kit snapshot at commit 93a1de491531e54cbbcf0e5c8cacfe558f924867 (2026-10-29): Liquidation.sol blob 8ce05719f1200e543b1b81ad5c749780e4cf7df4; LiquidityUtils.sol blob e6b68e28284c404b72608bd9213721ab9b54ad0c; BorrowUtils.sol blob e60faf14e1d1d9fcc607f793455c96d7e0188688; RiskManager.sol blob 4f78db4dab2ba07ad0e6dc9c9f41822109a55140; Governance.sol blob 08c5c96f0a356381ca14d02d48defe1b570c6120. Multi-collateral liquidation-LTV health aggregation, capped health-shortfall discount, collateral-limited debt/yield sizing, internal transfer of liability to liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. One coupled candidate family; no deployed EVault/module/configuration mapping.",
       "status": "candidate_reference"
     }
   ],
