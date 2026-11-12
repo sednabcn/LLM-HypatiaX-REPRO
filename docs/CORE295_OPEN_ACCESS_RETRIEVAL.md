@@ -144,3 +144,20 @@ python scripts/core295_audit_staged_promotions.py --stdout
 The audit compares staged candidates with the canonical catalogue and embedded source register. It flags equation-ID/fingerprint collisions, missing or duplicate source-register IDs, source-domain mismatches, shared source IDs requiring family review, source-family cross-domain reuse, statistical-unit/source-family conflicts, missing or inconsistent reviewer decisions, and invalid staging status. It writes a Markdown report only; it does not modify the catalogue or staged records.
 
 A clean report means only that these mechanical checks found no issue. It is not a scientific acceptance, a complete pairwise proof of structural inequivalence, or evidence of statistical independence. A maintainer must still inspect primary sources and review the complete catalogue and sampling design before any separate catalogue change.
+
+
+## Build a non-applying catalogue proposal
+
+Once staged candidates have passed the catalogue-wide audit, create a proposed catalogue snapshot and unified diff:
+
+```bash
+python scripts/core295_build_catalogue_proposal.py \
+  --output data/core295_proposals/core295_catalogue.proposed.json \
+  --diff data/core295_proposals/core295_catalogue.diff
+```
+
+The command reruns the read-only audit against the same catalogue and staging directory. It stops if there are no staged records, any audit blocker/error, duplicate IDs, or if the staged set changes during assembly. Audit warnings are carried into the proposal manifest for maintainer disposition.
+
+The proposal appends only `structurally_reviewed` entries, preserves the canonical catalogue's draft status, records the canonical input SHA-256 and hashes of staged inputs, and emits a unified diff. It does not set accepted flags, edit the canonical catalogue, or run the catalogue validator. Outputs are new files and are never overwritten.
+
+A maintainer must inspect the complete diff, verify source-page evidence and all cross-candidate structural/sampling implications, resolve or explicitly disposition warnings, and separately authorize any application. The proposal is not a merge request, scientific acceptance, or permission to apply changes.
