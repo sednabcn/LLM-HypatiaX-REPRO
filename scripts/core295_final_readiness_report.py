@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, fail-closed static readiness audit for Core-295."""
 from __future__ import annotations
-import argparse, json
+import argparse, json, re
 from collections import Counter
 from pathlib import Path
 
@@ -82,7 +82,7 @@ def build(a):
         try: text=path.read_text(encoding="utf-8")
         except OSError as exc: text=""; b.append(f"{label} workflow unreadable: {exc}")
         workflows[label]={"exists":bool(text),"workflow_dispatch":"workflow_dispatch:" in text,
-            "exp295_ablation":"exp295_ablation" in text,"exp295":"exp295" in text,"exp295b":"exp295b" in text,
+            "exp295_ablation":bool(re.search(r"(?<![A-Za-z0-9_])exp295_ablation(?![A-Za-z0-9_])",text)),\n            "exp295":bool(re.search(r"(?<![A-Za-z0-9_])exp295(?![A-Za-z0-9_])",text)),\n            "exp295b":bool(re.search(r"(?<![A-Za-z0-9_])exp295b(?![A-Za-z0-9_])",text)),
             "n_shards":"n_shards" in text,"JULIA_NUM_THREADS":"JULIA_NUM_THREADS" in text}
     if not workflows["runner"]["exp295_ablation"] or not workflows["runner"]["exp295"]: b.append("runner workflow does not register exp295_ablation and exp295")
     if not workflows["runner"]["exp295b"]: b.append("exp295b is not registered")
