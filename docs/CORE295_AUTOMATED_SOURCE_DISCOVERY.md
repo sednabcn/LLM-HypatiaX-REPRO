@@ -61,3 +61,8 @@ The default output is `data/core295_discovery_queue.jsonl`. Each record is label
 - It does not run scientific experiments, validators, solvers, GitHub Actions, or live DeFi RPC/API calls.
 - It does not commit or push results. The user reviews the queue and decides whether to update the canonical manifest.
 - It is a repeatable discovery assistant, not an autonomous scientific reviewer and cannot guarantee that 295 defensibly distinct equations exist in the available source universe.
+
+
+## Open-access PDF retrieval
+
+After reviewing the metadata leads, use [`scripts/core295_fetch_open_access.py`](../scripts/core295_fetch_open_access.py) and the [retrieval guide](CORE295_OPEN_ACCESS_RETRIEVAL.md) to locate and download explicitly OA PDFs through OpenAlex. This is a separate, opt-in command; it does not run as part of source discovery. It records file hashes and provenance, but does not OCR, extract equations, or accept candidates.
