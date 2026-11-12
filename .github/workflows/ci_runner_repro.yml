@@ -354,9 +354,18 @@ jobs:
 
       - name: Emit experiment metadata
         id: meta
+        env:
+          N_SAMPLES: ${{ github.event.inputs.n_samples || '200' }}
         run: |
           EXP="${{ github.event.inputs.experiment }}"
           SEEDS_IN="${{ github.event.inputs.seeds }}"
+
+          if [[ "$EXP" == "exp2_protocol30_random_8020" || "$EXP" == "exp2_protocol30_pca_4060" ]]; then
+            if [[ "$N_SAMPLES" != "200" ]]; then
+              echo "::error::Manuscript Protocol-30 is fixed at 200 samples per equation; n_samples=$N_SAMPLES is not supported."
+              exit 1
+            fi
+          fi
 
           case "$EXP" in
 
