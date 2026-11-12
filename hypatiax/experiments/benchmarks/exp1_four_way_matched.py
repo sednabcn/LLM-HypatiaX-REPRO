@@ -43,7 +43,9 @@ def _load(filename: str, module_name: str):
 abl = _load("exp1_ablation.py", "matched_four_way_ablation")
 rcsb = _load("run_comparative_suite_benchmark_v2.py", "matched_four_way_rcsb")
 
+os.environ["HYPATIAX_STRICT"] = "1"
 SEED = int(os.environ.get("PYSR_SEED", os.environ.get("NN_SEED", "42")))
+COMMON_WALL_CLOCK = int(os.environ.get("FOUR_WAY_METHOD_TIMEOUT", os.environ.get("METHOD_TIMEOUT", "900")))
 NOISE_LEVEL = float(os.environ.get("FOUR_WAY_NOISE_LEVEL", "0.05"))
 N_TRAIN_SOURCE = int(os.environ.get("FOUR_WAY_N_SAMPLES", "200"))
 N_EXTRAP = int(os.environ.get("FOUR_WAY_N_EXTRAP", "100"))
@@ -97,7 +99,8 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
     override = {"train": train_tuple, "extrapolation": extrap}
     started = time.monotonic()
     row = abl.run_condition(
-        eq, condition, seed=SEED, dataset_override=override
+        eq, condition, seed=SEED, dataset_override=override,
+        wall_clock_limit=COMMON_WALL_CLOCK,
     )
     elapsed = time.monotonic() - started
     if not row.get("success"):
@@ -137,10 +140,11 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "difficulty": eq.get("difficulty", "medium"),
         "benchmark_arm": "llm_only_no_pysr_refinement",
     }
-    result = method.run(
-        description=eq["name"], X=X_train, y=y_train,
-        var_names=eq["vars"], metadata=metadata, verbose=False,
-    )
+    with abl._Timeout(COMMON_WALL_CLOCK):
+        result = method.run(
+            description=eq["name"], X=X_train, y=y_train,
+            var_names=eq["vars"], metadata=metadata, verbose=False,
+        )
     elapsed = time.monotonic() - started
     if not result.success:
         return _failure("llm_only", RuntimeError(result.error or "LLM baseline unavailable"), elapsed)
@@ -174,10 +178,11 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "random_seed": int(SEED + abl.EQ_ID[eq["name"]] * 7),
         "benchmark_arm": "nn_only",
     }
-    result = method.run(
-        description=eq["name"], X=X_train, y=y_train,
-        var_names=eq["vars"], metadata=metadata, verbose=False,
-    )
+    with abl._Timeout(COMMON_WALL_CLOCK):
+        result = method.run(
+            description=eq["name"], X=X_train, y=y_train,
+            var_names=eq["vars"], metadata=metadata, verbose=False,
+        )
     elapsed = time.monotonic() - started
     predictor = getattr(result, "_predict_fn", None)
     if not result.success or predictor is None:
@@ -278,10 +283,12 @@ def run():
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
         "seed": SEED, "noise_level": NOISE_LEVEL,
+        "common_method_wall_clock_seconds": COMMON_WALL_CLOCK,
         "n_source_samples": N_TRAIN_SOURCE, "n_extrapolation_samples": N_EXTRAP,
         "arms": list(METHOD_KEYS),
         "primary_metrics": ["test.r2", "test.rmse", "test.mae"],
         "test_policy": "same untouched outer test rows per equation and seed",
+        "budget_policy": "same per-arm wall-clock cap; PySR population/iteration settings inherited from frozen rerun config",
         "extrapolation_regimes": ["near", "medium", "far"],
         "routing_tau": "null; ensemble fallback; no calibrated routing claim",
         "ablation_scope": "three implemented Core-15 gates only",
