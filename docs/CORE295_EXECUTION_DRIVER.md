@@ -119,3 +119,23 @@ See [Core-295 generator taxonomy and current catalogue triage](CORE295_GENERATOR
 
 
 The common scalar adapter was further restricted: it now refuses any entry whose declared variables include fixed parameters, physical constants, dependent variables, or dynamic states. It requires every declared symbol to be an independent input with a corresponding range. This is intentionally stricter than the general planner contract. A model can be classified as `explicit_scalar` and still require a dedicated parameter-aware generator; the label alone does not make it compatible with the shared adapter. The catalogue's current model-class annotations are preliminary, and all generator statuses remain pending.
+
+
+## Fixed-parameter scalar binding contract
+
+The scalar converter and shared adapter now support a restricted explicit-scalar case with independent input features plus fixed numeric parameter and physical-constant bindings. Each entry must provide `fixed_parameter_values` and `physical_constant_values` mappings that exactly cover the corresponding model-role lists. The converter substitutes those values into the symbolic expression before lambdification, so the Core-15 engine receives only the declared independent inputs as features. The substituted expression is also the formula used for its symbolic OOD evaluation.
+
+The generator contract is versioned as:
+
+- `method = catalogue_expression_fixed_v1`
+- `parameter_sampling = fixed_per_equation_declared_numeric_values`
+- `sampling_semantics = independent_inputs_with_fixed_parameters_and_physical_constants`
+- `parameter_sampling_scope = fixed_per_equation`
+
+This deliberately does not sample fixed parameters. A parameter value must be supported by the candidate's reviewed source/model context; the adapter will not invent a distribution or silently vary it. Binding values and input validity bounds are included in the dataset-binding provenance hash.
+
+### Constraint boundary
+
+The adapter currently supports only constraints that can be guaranteed by independent rectangular input bounds plus fixed parameter values. Every independent input must declare `input_validity_bounds`; the planner, driver, and adapter verify that training, medium extrapolation, and the Core-15 near/far extrapolation ranges all remain within those bounds. The supported policy identifier is `rectangular_input_bounds_v1`.
+
+This does **not** support coupled constraints such as `x+y<1`, state-dependent validity, conditional branches requiring rejection sampling, or protocol-specific integer/fixed-point constraints. Such candidates must remain pending and receive a specialized generator. `constraint_evidence` is a reviewer-supplied rationale, not a machine proof. Do not set `constraints_enforced=true` unless the rectangular-bound policy genuinely guarantees every declared constraint for every generated regime.
