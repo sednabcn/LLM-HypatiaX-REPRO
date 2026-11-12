@@ -285,6 +285,7 @@ def _aggregate(checkpoint):
         paired[competitor] = {}
         for metric, direction in (("r2", "higher"), ("rmse", "lower"), ("mae", "lower")):
             differences = []
+            per_equation = []
             for entry in checkpoint.values():
                 if not isinstance(entry, dict):
                     continue
@@ -299,7 +300,13 @@ def _aggregate(checkpoint):
                     continue
                 hv, ov = float(hv), float(ov)
                 if np.isfinite(hv) and np.isfinite(ov):
-                    differences.append(hv - ov if direction == "higher" else ov - hv)
+                    delta = hv - ov if direction == "higher" else ov - hv
+                    differences.append(delta)
+                    per_equation.append({
+                        "equation": entry.get("name"),
+                        "domain": entry.get("domain"),
+                        "difference_favoring_hybrid": delta,
+                    })
             n = len(differences)
             mean = float(np.mean(differences)) if n else None
             sd = float(np.std(differences, ddof=1)) if n > 1 else None
@@ -321,6 +328,7 @@ def _aggregate(checkpoint):
                 "hybrid_wins": sum(v > tol for v in differences),
                 "ties": sum(abs(v) <= tol for v in differences),
                 "hybrid_losses": sum(v < -tol for v in differences),
+                "per_equation": per_equation,
                 "direction": "positive favors Hybrid",
             }
     return {
