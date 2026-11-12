@@ -414,3 +414,8 @@ These are additional official documentation pointers, not independent primary re
 217. Bailey, V. A. (1933). “On the interaction between several species of hosts and parasites.” *Proceedings of the Royal Society A* 143, pp. 75–88. DOI: https://doi.org/10.1098/rspa.1933.0204. Royal Society archival referee reports RR/49/1–3 corroborate the submitted title and 1933 review history; article scan not retrieved.
  
 218. Bailey, V. A. (1933). “Non-continuous interaction between hosts and parasites.” *Mathematical Proceedings of the Cambridge Philosophical Society* 29(4), pp. 487–491. DOI: https://doi.org/10.1017/S0305004100011518. Cambridge publisher record and abstract; full text access-gated.
+
+ 
+219. Lotka, A. J. (1923). “Contribution to quantitative parasitology.” *Journal of the Washington Academy of Sciences* 13(8), pp. 152–158. Biodiversity Heritage Library volume record: https://www.biodiversitylibrary.org/bibliography/2087 (volume digitized; article-specific pages not yet inspected).
+ 
+220. Bodenheimer, F. S., and Schiffer, M. (1952). “Mathematical studies in animal populations. I. A mathematical study of insect parasitism.” *Acta Biotheoretica* 10, pp. 23–56. Bibliographic record corroborated by Schiffer's publication list and contemporary citations; primary full text not yet located.
