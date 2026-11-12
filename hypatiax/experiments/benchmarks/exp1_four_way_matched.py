@@ -294,7 +294,16 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
 
 def _aggregate(checkpoint):
     """Descriptive paired summaries; equation is the independent comparison unit."""
+    def _valid_metric(row, metric):
+        value = (row or {}).get(metric) if isinstance(row, dict) else None
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            return None
+        return value if np.isfinite(value) else None
+
     methods = {key: {} for key in METHOD_KEYS}
+    method_extrapolation = {key: {} for key in METHOD_KEYS}
     for key in METHOD_KEYS:
         rows = [
             entry.get("methods", {}).get(key, {})
@@ -302,76 +311,102 @@ def _aggregate(checkpoint):
         ]
         for metric in ("r2", "rmse", "mae"):
             vals = [
-                float(row["test"][metric])
-                for row in rows
-                if row.get("success") and isinstance(row.get("test"), dict)
-                and row["test"].get(metric) is not None
-                and np.isfinite(float(row["test"][metric]))
+                value for row in rows
+                if row.get("success")
+                for value in [_valid_metric(row.get("test"), metric)]
+                if value is not None
             ]
             methods[key][metric] = {
                 "n_equations": len(vals),
                 "mean": float(np.mean(vals)) if vals else None,
                 "median": float(np.median(vals)) if vals else None,
             }
+        for regime in ("near", "medium", "far"):
+            method_extrapolation[key][regime] = {}
+            for metric in ("r2", "rmse", "mae"):
+                vals = [
+                    value for row in rows
+                    if row.get("success")
+                    for value in [_valid_metric(row.get("extrapolation", {}).get(regime), metric)]
+                    if value is not None
+                ]
+                method_extrapolation[key][regime][metric] = {
+                    "n_equations": len(vals),
+                    "mean": float(np.mean(vals)) if vals else None,
+                    "median": float(np.median(vals)) if vals else None,
+                }
 
-    paired = {}
+    def _paired(competitor, metric, regime=None):
+        differences, per_equation = [], []
+        for entry in checkpoint.values():
+            if not isinstance(entry, dict):
+                continue
+            arms = entry.get("methods", {})
+            hybrid, other = arms.get("hybrid_llm_pysr", {}), arms.get(competitor, {})
+            if not (hybrid.get("success") and other.get("success")):
+                continue
+            hrow = (hybrid.get("extrapolation") or {}).get(regime) if regime else hybrid.get("test")
+            orow = (other.get("extrapolation") or {}).get(regime) if regime else other.get("test")
+            hv, ov = _valid_metric(hrow, metric), _valid_metric(orow, metric)
+            if hv is None or ov is None:
+                continue
+            delta = hv - ov if metric == "r2" else ov - hv
+            differences.append(delta)
+            per_equation.append({
+                "equation": entry.get("name"),
+                "domain": entry.get("domain"),
+                "difference_favoring_hybrid": delta,
+            })
+        n = len(differences)
+        mean = float(np.mean(differences)) if n else None
+        sd = float(np.std(differences, ddof=1)) if n > 1 else None
+        ci = None
+        if n > 1:
+            try:
+                from scipy.stats import t as student_t
+                critical = float(student_t.ppf(0.975, df=n - 1))
+                half = critical * sd / np.sqrt(n)
+                ci = [mean - half, mean + half]
+            except Exception:
+                ci = None
+        tol = 1e-12
+        return {
+            "n_paired_equations": n,
+            "mean_paired_difference_favoring_hybrid": mean,
+            "sd_paired_difference": sd,
+            "descriptive_95pct_t_interval": ci,
+            "hybrid_wins": sum(v > tol for v in differences),
+            "ties": sum(abs(v) <= tol for v in differences),
+            "hybrid_losses": sum(v < -tol for v in differences),
+            "per_equation": per_equation,
+            "direction": "positive favors Hybrid",
+        }
+
+    paired_test, paired_extrapolation = {}, {}
     for competitor in ("llm_only", "pysr_only", "nn_only"):
-        paired[competitor] = {}
-        for metric, direction in (("r2", "higher"), ("rmse", "lower"), ("mae", "lower")):
-            differences = []
-            per_equation = []
-            for entry in checkpoint.values():
-                if not isinstance(entry, dict):
-                    continue
-                arms = entry.get("methods", {})
-                h = arms.get("hybrid_llm_pysr", {})
-                other = arms.get(competitor, {})
-                if not (h.get("success") and other.get("success")):
-                    continue
-                hv = (h.get("test") or {}).get(metric)
-                ov = (other.get("test") or {}).get(metric)
-                if hv is None or ov is None:
-                    continue
-                hv, ov = float(hv), float(ov)
-                if np.isfinite(hv) and np.isfinite(ov):
-                    delta = hv - ov if direction == "higher" else ov - hv
-                    differences.append(delta)
-                    per_equation.append({
-                        "equation": entry.get("name"),
-                        "domain": entry.get("domain"),
-                        "difference_favoring_hybrid": delta,
-                    })
-            n = len(differences)
-            mean = float(np.mean(differences)) if n else None
-            sd = float(np.std(differences, ddof=1)) if n > 1 else None
-            ci = None
-            if n > 1:
-                try:
-                    from scipy.stats import t as student_t
-                    critical = float(student_t.ppf(0.975, df=n - 1))
-                    half = critical * sd / np.sqrt(n)
-                    ci = [mean - half, mean + half]
-                except Exception:
-                    ci = None
-            tol = 1e-12
-            paired[competitor][metric] = {
-                "n_paired_equations": n,
-                "mean_paired_difference_favoring_hybrid": mean,
-                "sd_paired_difference": sd,
-                "descriptive_95pct_t_interval": ci,
-                "hybrid_wins": sum(v > tol for v in differences),
-                "ties": sum(abs(v) <= tol for v in differences),
-                "hybrid_losses": sum(v < -tol for v in differences),
-                "per_equation": per_equation,
-                "direction": "positive favors Hybrid",
+        paired_test[competitor] = {
+            metric: _paired(competitor, metric)
+            for metric in ("r2", "rmse", "mae")
+        }
+        paired_extrapolation[competitor] = {
+            regime: {
+                metric: _paired(competitor, metric, regime=regime)
+                for metric in ("r2", "rmse", "mae")
             }
+            for regime in ("near", "medium", "far")
+        }
     return {
         "independent_unit": "equation (paired within equation; not individual generated samples)",
         "method_test_metrics": methods,
-        "paired_hybrid_comparisons": paired,
-        "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Report missing/failed arms and small n.",
+        "paired_hybrid_test_comparisons": paired_test,
+        "method_extrapolation_metrics": method_extrapolation,
+        "paired_hybrid_extrapolation_comparisons": paired_extrapolation,
+        "interpretation": (
+            "Descriptive paired summaries only; do not infer universal Hybrid superiority. "
+            "Each metric/regime reports its own available-equation denominator; missing or "
+            "failed extrapolation predictions are excluded from that metric's denominator."
+        ),
     }
-
 
 def run():
     if not os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-"):
