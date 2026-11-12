@@ -509,6 +509,11 @@ def run():
         (i, eq) for i, eq in enumerate(abl.CORE_15)
         if i % shards == shard
     ]
+    if not equations:
+        raise ValueError(
+            f"Shard {shard}/{shards} contains no Core-15 equations; "
+            "reduce N_SHARDS so every shard has work."
+        )
 
     for eq_idx, eq in equations:
         key = str(abl.EQ_ID[eq["name"]])
