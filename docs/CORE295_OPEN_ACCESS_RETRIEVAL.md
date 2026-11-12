@@ -54,3 +54,17 @@ A completed DOI with status `downloaded` is skipped on later runs. A failed or u
 - PDF files may contain malicious or malformed content. Keep them in the designated data directory and use a patched PDF reader; the script does not parse or execute PDF content.
 - The downloader is not run automatically and has not been run as part of this repository change.
 - It does not run experiments, validators, solvers or GitHub Actions.
+
+
+## Page-referenced equation snippet leads
+
+After reviewing the downloaded PDFs, run the optional extraction helper:
+
+```bash
+python scripts/core295_extract_equation_leads.py --dry-run
+python scripts/core295_extract_equation_leads.py
+```
+
+It requires Poppler's `pdftotext` executable. It extracts layout-preserving text page by page, flags broad equation-like lines and nearby context, and appends records to `data/core295_equation_review_queue.jsonl`. Each lead includes the source PDF SHA-256, DOI metadata where available, PDF page index, text-line range, snippet and snippet hash. Re-running deduplicates the same source-page-snippet tuple.
+
+**Important:** PDF page index is not the printed page number. The patterns are recall-oriented cues, not mathematical parsing; tables, multi-line equations, scans and OCR-only content can be missed or fragmented. Every snippet is marked `unverified_extraction_lead`; a reviewer must inspect the PDF, verify printed pagination and equation transcription, and assess assumptions and structural distinctness. This helper never updates the canonical catalogue or accepts an equation.
