@@ -752,7 +752,7 @@ class HybridDiscoverySystem:
                 r2 = result.get("r2_score", 0)
                 expr = result.get("expression", "")
 
-                # Track whether LLM was actually used this attempt
+                # Track live LLM response/proposal provenance for this attempt.
                 if result.get("llm_mode") and result["llm_mode"] != "none":
                     self.stats["llm_guided"] += 1
                     if not hasattr(self, "_llm_attempt_modes"):
@@ -1570,8 +1570,8 @@ class HybridDiscoverySystem:
                 # B2: explicit provenance so result checkers can verify the
                 # LLM actually participated, and that no hardcoded-formula
                 # bypass was used (this engine has none: always "none").
-                # llm_called = an LLM attempt happened; llm_mode says what became of it
-                # (e.g. hybrid_pysr_better = prior discarded).
+                # llm_called means a live API response was received; proposal
+                # availability is recorded separately from mere request attempts.
                 "llm_attempted": any(
                     item.get("llm_attempted") is True
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
