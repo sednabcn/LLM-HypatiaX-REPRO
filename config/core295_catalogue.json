@@ -3470,6 +3470,14 @@
       "url": "https://link.springer.com/journal/10483/volumes-and-issues/10-1",
       "use": "F. S. Bodenheimer and M. Schiffer, Acta Biotheoretica 10 (1952), pp.23–56. Bibliographic identity and pagination corroborated by contemporary citation records and Schiffer's publication list; exact publisher issue/article DOI and full text scan not located in this pass. Potential mathematical host-parasite family; primary equation transcription and structural comparison pending.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-AAVE-V4-BABYLON-CAP-LIMITED-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Aave V4 BabylonSpoke cap-bounded liquidation logic",
+      "url": "https://github.com/aave/aave-v4/commit/8be3e0d59efc23cd1d4664a88743340533dd5a0c",
+      "use": "Pinned official Aave V4 source snapshot at commit 8be3e0d59efc23cd1d4664a88743340533dd5a0c (2026-11-11). BabylonLiquidationLogic.sol blob 8343dbfc3d48eb23391decb42a5f40875763f367; BabylonSpoke.sol blob 3643a55129e32eab8e18fcd53ccd54e646b11ddb; shared LiquidationLogic.sol blob 2b2443915688ab0f0354fe2ba20660e6cc97141d. Specialized one-collateral/one-debt Spoke, only a deployment-configured liquidation manager may call liquidationCall, collateral removal is capped by maxCollateralToRemove, premium debt is repaid first, and when priced collateral exceeds cap the code inversely resizes debt repayment using upward rounding; no liquidation fee, no target-HF sizing and no dust validation in this path. Reuses shared HF-dependent variable bonus and canonical collateral pricing. Potential structurally distinct cap-constrained liquidation operator versus standard Aave V4 target-HF path, but treat as one specialized integration/source family pending E0–E5 review; no separate accepted equation candidate. Aave announced V4 mainnet launch 2026-03-30; this source commit is code provenance, not a pinned deployment/proxy/market-parameter mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
