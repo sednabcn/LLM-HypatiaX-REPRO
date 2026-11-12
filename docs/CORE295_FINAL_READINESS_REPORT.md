@@ -47,3 +47,6 @@ The Core-295 shard result envelope and strict exact-coverage verifier are docume
 ## Core-295 shard execution driver
 
 The fail-closed shard harness is documented in [CORE295_EXECUTION_DRIVER.md](CORE295_EXECUTION_DRIVER.md) and implemented in [core295_run_shard.py](../scripts/core295_run_shard.py). It requires a frozen 295-entry catalogue, exact manifest identity, and reviewed per-domain adapter callables. It is not wired into the runner or workflow; the current draft catalogue and missing domain adapters block execution.
+
+
+The first five domain-guarded adapters are implemented for the restricted explicit-scalar generator contract. They share Core-15's unchanged data and ablation functions, but do not cover implicit, coupled, ODE, stochastic, or protocol-simulation equations. See [CORE295_EXECUTION_DRIVER.md](CORE295_EXECUTION_DRIVER.md). The catalogue must explicitly adopt and justify the adapter's independent-input sampling semantics per equation; merely changing generator status is not sufficient.
