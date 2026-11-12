@@ -3301,6 +3301,14 @@
       "url": "https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf",
       "use": "Author-expanded reprint of Vito Volterra's 1926 Memorie della R. Accademia Nazionale dei Lincei memoir, with the first three parts rearranged and expanded. Part II, §2, printed pp.38–39, derives the n-species weighted interaction system beta_r dN_r/dt=(epsilon_r beta_r+sum_s a_sr N_s)N_r, with antisymmetric interaction coefficients a_rs=-a_sr, a_rr=0 and beta_r>0. The same source explicitly identifies the two-species feeding model as a special case. Proposed as a distinct n-species conservative-interaction family; compare structurally against Lotka 1920 and all other population-interaction sources before acceptance.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-NICHOLSON-BAILEY-1935-HOST-PARASITOID",
+      "domain": "Biology",
+      "title": "Nicholson and Bailey 1935 discrete-generation host–parasitoid interaction model",
+      "url": "https://doi.org/10.1111/j.1096-3642.1935.tb01680.x",
+      "use": "Primary publisher record for Nicholson & Bailey, 'The Balance of Animal Populations.—Part I', Proceedings of the Zoological Society of London 105(3) (1935), pp.551–598. The publisher abstract covers random searching, parasite-host interactions, steady states and discontinuous interaction. The PDF and ePDF endpoints are not accessible in this retrieval pass. The familiar discrete-generation pair H_(t+1)=lambda H_t exp(-a P_t), P_(t+1)=H_t[1-exp(-a P_t)] is widely reproduced in later sources but is not transcribed here as a verbatim primary equation until the original paper is inspected. Candidate retrieval lead only; continuous-time Lotka/Volterra systems are not interchangeable with this discrete-generation encounter model.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
