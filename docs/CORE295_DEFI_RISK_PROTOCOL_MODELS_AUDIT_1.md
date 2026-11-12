@@ -274,3 +274,56 @@ An auction needs reset when elapsed time exceeds `tail` or current price divided
 **Structural disposition:** this is a strong lead for one coupled protocol-level Dutch-auction liquidation/state-transition family: unsafe-vault test, global/per-collateral capacity constraints, partial/dust-aware confiscation, oracle-buffered starting price, time-decaying price, partial purchase/settlement and accumulator updates. It is structurally different from Morpho Blue's direct repay-for-collateral liquidation, while the collateral/debt eligibility inequality remains a related risk-threshold motif shared with Aave and Comet. Do not count `Dog.bark`, the three Abacus alternatives, `Clipper.take`, reset logic or keeper incentives as separate equations.
 
 **Version and evidence caveats.** MIP45 is explicitly marked obsolete by MIP102c2-SP1. Sky's current developer documentation still describes Liquidation 2.0's Dutch-auction mechanics, but this audit does not map a current deployment, chain, Dog/Clipper/Abacus addresses, bytecode, collateral ilk, OSM state or governance parameters. The source snapshot and historical MIP must therefore remain provenance evidence, not a claim about live market configuration. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
+
+
+## 10. Euler V2 / Euler Vault Kit: reverse-Dutch discount and debt-transfer liquidation
+
+**Pinned implementation snapshot.** Official repository `euler-xyz/euler-vault-kit`, commit `93a1de491531e54cbbcf0e5c8cacfe558f924867` (2026-10-29):
+- `src/EVault/modules/Liquidation.sol`, blob SHA `8ce05719f1200e543b1b81ad5c749780e4cf7df4`
+- `src/EVault/shared/LiquidityUtils.sol`, blob SHA `e6b68e28284c404b72608bd9213721ab9b54ad0c`
+- `src/EVault/shared/BorrowUtils.sol`, blob SHA `e60faf14e1d1d9fcc607f793455c96d7e0188688`
+- `src/EVault/modules/RiskManager.sol`, blob SHA `4f78db4dab2ba07ad0e6dc9c9f41822109a55140`
+
+Pinned commit: https://github.com/euler-xyz/euler-vault-kit/commit/93a1de491531e54cbbcf0e5c8cacfe558f924867. This is a versioned source snapshot, not a deployment/proxy or live vault-configuration match.
+
+### Health and liquidation discount
+
+The liability vault evaluates all enabled collateral assets using the liquidation LTVs and oracle mid-point quotes. For each collateral (j), the collateral contribution is the mid-point oracle value multiplied by its configured liquidation LTV and divided by `CONFIG_SCALE`; contributions are summed. Liability value is the current accrued debt, rounded up to assets, valued at the mid-point oracle quote (or directly in the unit of account). Let the aggregate adjusted collateral and liability values be (C_L) and (D). Liquidation is eligible when
+\[
+C_L\le D,\qquad D>0.
+\]
+The liquidation health ratio is
+\[
+h=\frac{C_L}{D}.
+\]
+The code clamps the discount factor from below using the configured maximum liquidation discount (d_{max}):
+\[
+q=\max\!\left(h,1-d_{max}\right).
+\]
+Thus the effective collateral discount is (1-q): it is zero at the threshold, grows with the health shortfall, and is capped by (d_{max}). This is health-dependent pricing, not an elapsed-time Dutch auction. Euler documentation calls the mechanism a reverse Dutch auction; do not infer a time-decay state variable from that label.
+
+### Debt transfer and collateral yield
+
+For the selected collateral, the implementation values the violator's available collateral at the mid-point oracle price. Before collateral caps, it sets maximum repay value to the full liability value and maximum collateral yield value to
+\[
+V_{repay}^{max}=D,
+\qquad
+V_{yield}^{max}=\frac{D}{q}.
+\]
+If the selected collateral is insufficient to deliver that yield, the source caps yield to the available collateral value (V_c) and reduces repay value:
+\[
+V_{yield}^{max}=V_c,
+\qquad
+V_{repay}^{max}=V_c q.
+\]
+These values are converted proportionally into the actual debt asset amount and collateral-token balance using the accrued liability amount and collateral balance. A caller may request a smaller repay; the corresponding collateral yield is scaled pro rata using integer division. The implementation rejects self-liquidation, unrecognized or disabled collateral, a violator with deferred EVC account checks, and liquidation inside the configured cool-off interval. The liquidator must satisfy the EVC/controller and collateral constraints.
+
+Unlike Aave- or Morpho-style repay-and-seize flows, the liquidator takes over the violator's selected liability through an internal debt transfer and receives collateral in the same operation; the liquidator does not simply send an external repayment asset to extinguish the debt. The transfer uses the vault's accrued debt accounting and includes dust-aware exact-owed handling.
+
+### Residual debt socialization
+
+After the debt and collateral transfer, remaining debt may be socialized only if all code gates pass: the pre-liquidation liability value is at least (10^6) units of the unit of account; the vault has not disabled debt socialization; the violator still has liability exceeding the transferred repay; and no recognized collateral balance remains. The remaining owed amount is then removed from the violator's borrow balance and reflected in vault accounting. This is conditional loss allocation, not an unconditional consequence of every liquidation.
+
+**Structural disposition:** a strong candidate for one coupled Euler V2 liquidation/state-transition family: multi-collateral liquidation-LTV health aggregation, health-shortfall-dependent capped discount, collateral-limited repay/yield sizing, internal debt transfer to the liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. The weighted collateral/debt eligibility test is related to Aave and Compound risk aggregation, but the reverse-discount function and debt-transfer settlement are a distinct mechanism. Do not count the health ratio, discount cap, collateral cap, debt transfer and socialization branches as independent equations.
+
+**Version and deployment caveats.** Euler V2 uses modular EVault deployments and per-vault integrations/configuration. This snapshot does not identify a deployed EVault proxy, module set, collateral-vault list, oracle route, unit of account, LTV schedule, max discount, cool-off value, configuration flags or block state. The source's `BUSL-1.1` liquidation module and GPL-2.0-or-later shared utility files are also distinct license headers; preserve these provenance details. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
