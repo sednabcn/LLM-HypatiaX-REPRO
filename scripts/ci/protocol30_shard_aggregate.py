@@ -92,6 +92,8 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         methods = payload.get("methods")
         if not isinstance(protocol, dict) or not isinstance(methods, list):
             fail(f"shard {shard}: missing protocol/method metadata")
+        if len(methods) != 6 or len(set(methods)) != 6:
+            fail(f"shard {shard}: expected six distinct registered methods, got {methods!r}")
         expected_mode = "noiseless" if variant == "random_8020" else "noiseless_pca"
         if protocol.get("mode") != expected_mode or float(protocol.get("noise_level", -1)) != 0.0:
             fail(f"shard {shard}: protocol mode/noise does not match {variant}")
@@ -136,7 +138,10 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
     for record in merged["tests"]:
         llm = record.get("results", {}).get("PureLLM Baseline (core)", {})
         if llm:
-            truncation_details[record.get("description", "")[:60]] = {
+            audit_key = f"{record.get('domain', '')}::{record.get('description', '')}"
+            truncation_details[audit_key] = {
+                "domain": record.get("domain", ""),
+                "description": record.get("description", ""),
                 "truncated": llm.get("metadata", {}).get("truncated_formula", False),
                 "r2": llm.get("r2"),
                 "success": llm.get("success"),
