@@ -22,6 +22,12 @@ def sha256(data):
 def load_json(path):
     return json.loads(read_bytes(path).decode("utf-8"))
 
+def staging_snapshot(directory):
+    if not directory.exists():
+        return {}
+    return {str(path.resolve()): sha256(read_bytes(path))
+            for path in sorted(directory.rglob("*.json"))}
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--catalogue", type=Path, default=ROOT / "config/core295_catalogue.json")
@@ -42,6 +48,7 @@ def main():
     if not isinstance(catalogue, dict) or not isinstance(catalogue.get("entries"), list):
         p.error("catalogue must contain an entries array")
 
+    staged_snapshot_before = staging_snapshot(a.staging_dir)
     cmd = [sys.executable, str(AUDIT), "--catalogue", str(a.catalogue),
            "--staging-dir", str(a.staging_dir), "--stdout"]
     audit = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, check=False)
@@ -56,6 +63,13 @@ def main():
         print(audit.stdout)
         return 2
     staged_count, blockers, errors, warnings = map(int, summary.groups())
+    if sha256(read_bytes(a.catalogue)) != sha256(original_bytes):
+        print("BLOCKED: canonical catalogue changed while the audit was running.")
+        return 2
+    staged_snapshot_after = staging_snapshot(a.staging_dir)
+    if staged_snapshot_after != staged_snapshot_before:
+        print("BLOCKED: staged inputs changed while the audit was running.")
+        return 2
     if staged_count < 1:
         print("BLOCKED: no staged candidate records found; no proposal written.")
         return 2
