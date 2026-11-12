@@ -46,6 +46,9 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
             fail(f"{manifest_path}: invalid equation indices {assigned!r}")
         if len(assigned) != len(set(assigned)):
             fail(f"{manifest_path}: duplicate assigned equation indices")
+        expected_assignment = list(range(shard * 6 + 1, shard * 6 + 7))
+        if sorted(assigned) != expected_assignment:
+            fail(f"{manifest_path}: shard {shard} must own indices {expected_assignment}, got {sorted(assigned)}")
         shard_manifests[shard] = manifest
 
         mapping = manifest.get("equation_identities")
@@ -92,6 +95,12 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         elif protocol != common_protocol or methods != common_methods:
             fail(f"shard {shard}: protocol settings or method order differ")
         for record in payload["tests"]:
+            results = record.get("results")
+            if not isinstance(results, dict) or set(results) != set(methods):
+                fail(f"shard {shard}: equation record does not retain every declared method result")
+            for method_name, method_result in results.items():
+                if not isinstance(method_result, dict) or "success" not in method_result:
+                    fail(f"shard {shard}: {method_name!r} result is missing its explicit success status")
             domain = record.get("domain")
             description = record.get("description")
             matches = [
