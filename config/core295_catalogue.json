@@ -1733,9 +1733,9 @@
     {
       "source_id": "AMM-CURVE-MATH",
       "domain": "DeFi AMM",
-      "title": "Curve StableSwap NG math contract",
-      "url": "https://docs.curve.finance/developer/stableswap-exchange/stableswap-ng/utility_contracts/math",
-      "use": "Implementation-level invariant solver and numerical algorithm",
+      "title": "Curve StableSwap NG pinned pool and math implementation",
+      "url": "https://github.com/curvefi/stableswap-ng/tree/3332cd44656ec64b3c048885e1dd71955254b262/contracts/main",
+      "use": "Pinned official Vyper implementation: N-coin StableSwap invariant, rate-normalized balances, linearly ramped amplification, integer D and output-reserve solvers, off-peg dynamic fee, admin-fee accounting and EMA state oracles. Commit 3332cd44656ec64b3c048885e1dd71955254b262; implementation evolution of StableSwap 2019, not a separate invariant family. Pool deployment/configuration and block state remain necessary for runtime claims.",
       "status": "candidate_reference"
     },
     {
