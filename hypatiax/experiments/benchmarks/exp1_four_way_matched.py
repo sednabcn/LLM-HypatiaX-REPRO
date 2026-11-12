@@ -26,6 +26,9 @@ from pathlib import Path
 
 import numpy as np
 
+# Enforce the real LLM-backed Hybrid arm before importing the engine modules.
+os.environ["HYPATIAX_STRICT"] = "1"
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 REPO = "sednabcn/LLM-HypatiaX-REPRO"
@@ -43,7 +46,6 @@ def _load(filename: str, module_name: str):
 abl = _load("exp1_ablation.py", "matched_four_way_ablation")
 rcsb = _load("run_comparative_suite_benchmark_v2.py", "matched_four_way_rcsb")
 
-os.environ["HYPATIAX_STRICT"] = "1"
 SEED = int(os.environ.get("PYSR_SEED", os.environ.get("NN_SEED", "42")))
 COMMON_WALL_CLOCK = int(os.environ.get("FOUR_WAY_METHOD_TIMEOUT", os.environ.get("METHOD_TIMEOUT", "900")))
 NOISE_LEVEL = float(os.environ.get("FOUR_WAY_NOISE_LEVEL", "0.05"))
@@ -140,11 +142,14 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "difficulty": eq.get("difficulty", "medium"),
         "benchmark_arm": "llm_only_no_pysr_refinement",
     }
-    with abl._Timeout(COMMON_WALL_CLOCK):
-        result = method.run(
-            description=eq["name"], X=X_train, y=y_train,
-            var_names=eq["vars"], metadata=metadata, verbose=False,
-        )
+    try:
+        with abl._Timeout(COMMON_WALL_CLOCK):
+            result = method.run(
+                description=eq["name"], X=X_train, y=y_train,
+                var_names=eq["vars"], metadata=metadata, verbose=False,
+            )
+    except Exception as exc:
+        return _failure("llm_only", exc, time.monotonic() - started)
     elapsed = time.monotonic() - started
     if not result.success:
         return _failure("llm_only", RuntimeError(result.error or "LLM baseline unavailable"), elapsed)
@@ -178,11 +183,14 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "random_seed": int(SEED + abl.EQ_ID[eq["name"]] * 7),
         "benchmark_arm": "nn_only",
     }
-    with abl._Timeout(COMMON_WALL_CLOCK):
-        result = method.run(
-            description=eq["name"], X=X_train, y=y_train,
-            var_names=eq["vars"], metadata=metadata, verbose=False,
-        )
+    try:
+        with abl._Timeout(COMMON_WALL_CLOCK):
+            result = method.run(
+                description=eq["name"], X=X_train, y=y_train,
+                var_names=eq["vars"], metadata=metadata, verbose=False,
+            )
+    except Exception as exc:
+        return _failure("nn_only", exc, time.monotonic() - started)
     elapsed = time.monotonic() - started
     predictor = getattr(result, "_predict_fn", None)
     if not result.success or predictor is None:
