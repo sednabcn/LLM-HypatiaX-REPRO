@@ -69,19 +69,6 @@ The extraction queue can be assembled into individual, deterministic human-revie
 Use [`scripts/core295_candidate_readiness_report.py`](../scripts/core295_candidate_readiness_report.py) after packet preparation to report operational evidence gaps, missing PDF artifacts, packet coverage and accepted shortfalls by domain. The output is `data/core295_candidate_readiness.md`. Its “ready for human source-page review” category is strictly an evidence-linkage check, not scientific acceptance or proof of distinctness/independence. See the [retrieval guide](CORE295_OPEN_ACCESS_RETRIEVAL.md#candidate-evidence-readiness-report).
 
 
-## Human decision record and controlled staging
+## Human decision records and candidate staging
 
-Use the [machine-readable review decision template](templates/core295_review_decision.template.json) for each candidate. Record explicit pass/hold/fail decisions, evidence, dates and reviewers. E5 is a hold; only an independently reviewed E4 candidate can proceed under the current strict draft policy.
-
-After completing the candidate record and decision record, the staging helper can produce a standalone proposed catalogue entry:
-
-```bash
-python scripts/core295_stage_reviewed_candidate.py \
-  --candidate path/to/completed_candidate.json \
-  --decision path/to/completed_review_decision.json \
-  --output data/core295_staging/DOMAIN-CANDIDATE.json
-```
-
-The helper blocks unless all required review gates pass, the E4 rationale is recorded, source-family and statistical-unit assignments are documented, and two distinct reviewers and dates are supplied. It writes a new staging artifact only; it refuses to overwrite an existing output. The staged status is `structurally_reviewed`, never `accepted`. It does not edit the canonical catalogue or validate scientific correctness.
-
-Before a maintainer manually adds any staged record to the catalogue, they must inspect it, verify every `source_id` exists in the source register, compare it against all current and proposed catalogue entries (including cross-domain and Core-15 exclusions), and consider source-family clustering and the frozen sampling frame. Catalogue validation is a separate, explicitly authorized step. Acceptance remains a separate human decision and is never performed by this helper.
+The [review decision template](templates/core295_review_decision.template.json) captures gate outcomes, evidence, reviewer identities/dates, E0–E5 classification, source-family and statistical-unit rationale, and final disposition. The [staging helper](../scripts/core295_stage_reviewed_candidate.py) checks for complete human sign-off and emits a standalone `structurally_reviewed` staging JSON. It never sets `accepted`, writes to the canonical catalogue, or substitutes for catalogue-wide equivalence review and source-register checks. See the [controlled staging procedure](CORE295_OPEN_ACCESS_RETRIEVAL.md#human-decision-record-and-controlled-staging).
