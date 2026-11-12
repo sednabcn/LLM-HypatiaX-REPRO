@@ -161,3 +161,7 @@ Important: this is a source implementation pass, not a validated experiment. No 
 ### 8.4 Gate-ablation execution prerequisite
 
 Further inspection of `scripts/phase3_all.py` shows that the three wired leave-one-gate-out arms are not independently runnable as a clean fresh study: Phase 3 requires a fresh Phase 2 closure manifest and fresh Pure-LLM rows, followed by its own preflight and close procedure. Phase 2 is explicitly deferred in `config/fresh_rerun.yaml` because its candidate-count, timeout, and evaluator/prompt-provenance decisions are unresolved. Historical `p2/` or `phase2_out/` artifacts are expressly forbidden as substitutes. Therefore the Nov 15 fresh campaign does **not** claim or execute a three-gate leave-one-out ablation. The three implemented switches are documented as available; the three absent switches remain unavailable. Completing even the three-gate study requires a separate Phase 2 protocol decision and fresh closure before Phase 3 can proceed.
+
+### 8.5 NN arm purity correction
+
+Inspection of `ImprovedNNMethod` revealed that its legacy wrapper can replace a weak NN with log-space OLS or a second linear-space NN. Those fallback paths would make the fourth arm a composite fallback system rather than NN-only. The matched driver now passes `disable_fallback=True`; the wrapper honors this flag and the result provenance records `fallbacks_disabled=True`. Log preprocessing and the primary neural architecture remain enabled. If the primary NN fails, the arm is recorded as failed rather than substituted with OLS or another model.
