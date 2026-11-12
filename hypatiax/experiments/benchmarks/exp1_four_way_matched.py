@@ -58,7 +58,7 @@ COMMON_WALL_CLOCK = int(os.environ.get("FOUR_WAY_METHOD_TIMEOUT", os.environ.get
 NOISE_LEVEL = float(os.environ.get("FOUR_WAY_NOISE_LEVEL", "0.05"))
 N_TRAIN_SOURCE = int(os.environ.get("FOUR_WAY_N_SAMPLES", "200"))
 N_EXTRAP = int(os.environ.get("FOUR_WAY_N_EXTRAP", "100"))
-OUT_DIR = Path(os.environ.get("RESULTS_DIR", str(Path.cwd()))) / "four_way_matched"
+OUT_DIR = Path(os.environ.get("FOUR_WAY_OUTPUT_DIR", str(Path(os.environ.get("RESULTS_DIR", str(Path.cwd()))) / "four_way_matched")))
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_PATH = OUT_DIR / "exp1_four_way_matched_results.json"
 CHECKPOINT_PATH = OUT_DIR / "exp1_four_way_matched_checkpoint.json"
@@ -186,8 +186,6 @@ def _run_fingerprint():
         "noise_level": NOISE_LEVEL,
         "n_train_source": N_TRAIN_SOURCE,
         "n_extrapolation": N_EXTRAP,
-        "shard_index": int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0"))),
-        "n_shards": max(1, int(os.environ.get("N_SHARDS", "1"))),
         # Record effective imported settings, not just environment aliases:
         # exp1_ablation gives N_ITERATIONS precedence over PYSR_NITERATIONS
         # and POPULATIONS precedence over PYSR_POPULATIONS.
@@ -560,20 +558,21 @@ def run():
     nn_method = rcsb.ImprovedNNMethod(verbose=False, nn_seeds=1)
 
     shard = int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0")))
-    shards = max(1, int(os.environ.get("N_SHARDS", "1")))
-    if shard < 0 or shard >= shards:
-        raise ValueError(
-            f"Invalid shard configuration: shard index {shard} must be in [0, {shards - 1}]"
-        )
-    equations = [
-        (i, eq) for i, eq in enumerate(abl.CORE_15)
-        if i % shards == shard
-    ]
+    task_ids_raw = os.environ.get("TASK_IDS", "").strip()
+    if task_ids_raw:
+        requested_ids = [item for item in task_ids_raw.split() if item]
+        if len(requested_ids) != len(set(requested_ids)):
+            raise ValueError("TASK_IDS contains duplicate Core-15 equation IDs")
+        valid_ids = {str(i) for i in range(len(abl.CORE_15))}
+        unknown = sorted(set(requested_ids) - valid_ids)
+        if unknown:
+            raise ValueError(f"Unknown Core-15 equation task IDs: {unknown}; expected 0..14")
+        selected = {int(item) for item in requested_ids}
+    else:
+        selected = set(range(len(abl.CORE_15)))
+    equations = [(i, eq) for i, eq in enumerate(abl.CORE_15) if i in selected]
     if not equations:
-        raise ValueError(
-            f"Shard {shard}/{shards} contains no Core-15 equations; "
-            "reduce N_SHARDS so every shard has work."
-        )
+        raise ValueError("No Core-15 equations assigned to this worker")
 
     for eq_idx, eq in equations:
         key = str(abl.EQ_ID[eq["name"]])
@@ -686,6 +685,8 @@ def run():
         "common_method_wall_clock_seconds": COMMON_WALL_CLOCK,
         "n_source_samples": N_TRAIN_SOURCE, "n_extrapolation_samples": N_EXTRAP,
         "arms": list(METHOD_KEYS),
+        "shard_index": int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0"))),
+        "assigned_equation_ids": [str(i) for i, _ in equations],
         "arm_definitions": {
             "hybrid_llm_pysr": "Core-15 HybridDiscoverySystem with LLM enabled and PySR refinement",
             "llm_only": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement; live API provenance required",
