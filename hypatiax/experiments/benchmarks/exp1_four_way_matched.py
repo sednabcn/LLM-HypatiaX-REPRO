@@ -29,6 +29,8 @@ import numpy as np
 
 # Enforce the real LLM-backed Hybrid arm before importing the engine modules.
 os.environ["HYPATIAX_STRICT"] = "1"
+os.environ["HYPATIAX_DISABLE_HARDCODED"] = "1"
+os.environ["HYPATIAX_DISABLE_PROMPT_HINTS"] = "1"
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
@@ -57,6 +59,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 RESULTS_PATH = OUT_DIR / "exp1_four_way_matched_results.json"
 CHECKPOINT_PATH = OUT_DIR / "exp1_four_way_matched_checkpoint.json"
 MANIFEST_PATH = OUT_DIR / "exp1_four_way_matched_manifest.json"
+SUMMARY_PATH = OUT_DIR / "exp1_four_way_matched_summary.json"
 
 METHOD_KEYS = ("hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only")
 
@@ -241,6 +244,79 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         return _failure("nn_only", exc, elapsed)
 
 
+def _aggregate(checkpoint):
+    """Descriptive paired summaries; equation is the independent comparison unit."""
+    methods = {key: {} for key in METHOD_KEYS}
+    for key in METHOD_KEYS:
+        rows = [
+            entry.get("methods", {}).get(key, {})
+            for entry in checkpoint.values() if isinstance(entry, dict)
+        ]
+        for metric in ("r2", "rmse", "mae"):
+            vals = [
+                float(row["test"][metric])
+                for row in rows
+                if row.get("success") and isinstance(row.get("test"), dict)
+                and row["test"].get(metric) is not None
+                and np.isfinite(float(row["test"][metric]))
+            ]
+            methods[key][metric] = {
+                "n_equations": len(vals),
+                "mean": float(np.mean(vals)) if vals else None,
+                "median": float(np.median(vals)) if vals else None,
+            }
+
+    paired = {}
+    for competitor in ("llm_only", "pysr_only", "nn_only"):
+        paired[competitor] = {}
+        for metric, direction in (("r2", "higher"), ("rmse", "lower"), ("mae", "lower")):
+            differences = []
+            for entry in checkpoint.values():
+                if not isinstance(entry, dict):
+                    continue
+                arms = entry.get("methods", {})
+                h = arms.get("hybrid_llm_pysr", {})
+                other = arms.get(competitor, {})
+                if not (h.get("success") and other.get("success")):
+                    continue
+                hv = (h.get("test") or {}).get(metric)
+                ov = (other.get("test") or {}).get(metric)
+                if hv is None or ov is None:
+                    continue
+                hv, ov = float(hv), float(ov)
+                if np.isfinite(hv) and np.isfinite(ov):
+                    differences.append(hv - ov if direction == "higher" else ov - hv)
+            n = len(differences)
+            mean = float(np.mean(differences)) if n else None
+            sd = float(np.std(differences, ddof=1)) if n > 1 else None
+            ci = None
+            if n > 1:
+                try:
+                    from scipy.stats import t as student_t
+                    critical = float(student_t.ppf(0.975, df=n - 1))
+                    half = critical * sd / np.sqrt(n)
+                    ci = [mean - half, mean + half]
+                except Exception:
+                    ci = None
+            tol = 1e-12
+            paired[competitor][metric] = {
+                "n_paired_equations": n,
+                "mean_paired_difference_favoring_hybrid": mean,
+                "sd_paired_difference": sd,
+                "descriptive_95pct_t_interval": ci,
+                "hybrid_wins": sum(v > tol for v in differences),
+                "ties": sum(abs(v) <= tol for v in differences),
+                "hybrid_losses": sum(v < -tol for v in differences),
+                "direction": "positive favors Hybrid",
+            }
+    return {
+        "independent_unit": "equation (paired within equation; not individual generated samples)",
+        "method_test_metrics": methods,
+        "paired_hybrid_comparisons": paired,
+        "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Report missing/failed arms and small n.",
+    }
+
+
 def run():
     if not os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-"):
         raise RuntimeError("ANTHROPIC_API_KEY is required for a genuine four-arm run; refusing silent Hybrid downgrade")
@@ -319,6 +395,9 @@ def run():
 
     with RESULTS_PATH.open("w", encoding="utf-8") as handle:
         json.dump(_json_safe(checkpoint), handle, indent=2, allow_nan=False)
+    summary = _aggregate(checkpoint)
+    with SUMMARY_PATH.open("w", encoding="utf-8") as handle:
+        json.dump(_json_safe(summary), handle, indent=2, allow_nan=False)
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
         "seed": SEED, "noise_level": NOISE_LEVEL,
