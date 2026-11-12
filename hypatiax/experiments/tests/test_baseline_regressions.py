@@ -113,6 +113,7 @@ def test_error_row_is_not_counted_as_llm_call_even_in_legacy_mode(mod, monkeypat
     assert r["error_stage"] == "api_request"
     assert r["bypass_kind"] == "live"
     assert r["prompt_sha256"] and r["temperature_sent"] is False
+    assert r["temperature_requested"] == 0.25
     assert b.client.prompts, "prompt was never built"
     assert not any(s in b.client.prompts[0] for s in FORBIDDEN)
 
