@@ -295,7 +295,7 @@ def main() -> int:
                     cursor_state[state_key] = {
                         "cursor": next_cursor if not exhausted else None,
                         "exhausted": exhausted,
-                        "pages_completed": int(state.get("pages_completed", 0)) + page_number + 1,
+                        "pages_completed": int(state.get("pages_completed", 0)) + 1,
                         "last_page_items": len(items),
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
