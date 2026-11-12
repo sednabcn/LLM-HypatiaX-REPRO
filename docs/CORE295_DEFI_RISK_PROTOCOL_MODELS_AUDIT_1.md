@@ -491,3 +491,63 @@ If the clean-fee calculation consumes all collateral, the code computes the borr
 **Structural disposition:** one coupled Fraxlend pair liquidation/state-transition family: dual-oracle low-rate eligibility, share-based debt repayment, clean-versus-dirty collateral incentive selection, protocol fee extraction and residual bad-debt write-off against lender asset claims. The clean/dirty fee branch is one integrated collateral-exhaustion rule, not two independent equation candidates. The lender-claim write-off is related to Compound, Liquity, Silo and Euler loss-allocation motifs, but the exact mechanism here couples partial share repayment with pair-level asset-claim reduction. Retain for pairwise structural review.
 
 **Version and parameter caveats.** The constructor configures max LTV, clean liquidation fee and protocol fee per pair; dirty fee is derived as 90% of clean fee in this source snapshot. Oracle contract, max deviation, pair parameters, fToken share price and block state remain deployment-specific. No deployed pair was mapped. No RPC, contract execution, tests, simulation or experiment was performed.
+
+
+## 14. Fluid Vault (shared T2/T3/T4 engine): tick/branch liquidation and absorb buffer
+
+**Pinned implementation snapshot.** Official repository `Instadapp/fluid-contracts-public`, commit `404d73f91e6806f881f8dabeb30494f93f9e99b7` (2026-11-05):
+- `contracts/protocols/vault/vaultTypesCommon/coreModule/main.sol`, blob SHA `5ede8aace90cc92709a3d4cc63191abf53f5ac51`
+- `contracts/protocols/vault/vaultTypesCommon/coreModule/main2.sol`, blob SHA `2a70187234a4b8b02a68ef09fdfae0b9c2134cca`
+- `contracts/protocols/vault/vaultTypesCommon/coreModule/helpersLiquidate.sol`, blob SHA `ddd46dd80ffc35e0a43fd2e0588f1a13eb50672b`
+- `contracts/protocols/vault/vaultTypesCommon/common/variables.sol`, blob SHA `ab4f4e083cc9e16721751d7f7055efae2d5a7f69`
+- `contracts/protocols/vault/vaultTypesCommon/coreModule/structs.sol`, blob SHA `53c4ec9d69eac5e80088565d0d8b6d009dd3c61b`
+- `contracts/libraries/tickMath.sol`, blob SHA `a939a15df5251ed124af54b82a212a7e3b9956c4`
+- `contracts/protocols/vault/vaultTypesCommon/SPEC.md`, blob SHA `65f1299c8956c49882ac43a4e89b08cb91d2d3f3`
+
+Pinned commit: https://github.com/Instadapp/fluid-contracts-public/commit/404d73f91e6806f881f8dabeb30494f93f9e99b7. This audit covers the shared tick/branch engine used by Fluid Vault T2/T3/T4; T1 has a standalone mirrored implementation and type-specific execution paths. Do not assume the same exact source path, oracle implementation or DEX settlement for every vault type.
+
+### Tick geometry and liquidation thresholds
+
+Each position is assigned to a discrete tick using the debt-to-collateral ratio
+\[
+r(t)=1.0015^t\cdot 2^{96}.
+\]
+Ticks are indexed by integer (t), with a packed bitmap locating ticks that still contain debt. Positions in a tick share a ratio bucket; partially liquidated ticks are represented by a branch containing a partial-tick fraction, branch debt and a debt factor. This compresses many position updates into tick/branch state rather than iterating every NFT.
+
+The shared liquidation engine updates supply and borrow exchange prices, reads the configured liquidation oracle rate, converts it through the vault exchange prices, and derives:
+- a liquidation threshold tick from the configured liquidation threshold;
+- a higher maximum-limit tick from the configured liquidation max limit;
+- a collateral-per-debt liquidation quote including the configured penalty.
+
+The source rounds debt-per-collateral upward before taking its reciprocal, so collateral-per-debt rounds down; the liquidator's collateral quote is therefore not inflated by reciprocal-rounding error. The configured liquidation penalty is stored in 4-decimal precision; source comments cap it at 10.23%, and the admin spec constrains liquidation max limit plus penalty below 99.7%.
+
+### Absorb above the maximum-limit tick
+
+Before the ordinary tick walk, if the current top tick is above the maximum-limit tick, the core calls the secondary module's `absorb` path. It walks populated ticks above the maximum limit, marks their debt as 100% liquidated, closes or merges affected branches, and accumulates the corresponding debt and collateral into `absorbedLiquidity`. This is an accounting buffer: the absorbed position amounts are subsequently available to a liquidator through the `absorb_` settlement option; the absorb step itself is not a market sale.
+
+When `absorb_` is enabled, the liquidation call consumes the absorbed debt/collateral buffer first, proportionally if the caller's requested debt amount is smaller than the buffer. Any remaining requested liquidation then walks the ordinary tick/branch structure.
+
+### Partial tick/branch liquidation
+
+The engine walks from the current top tick toward the liquidation-threshold tick. At each step it selects the next reference point from the next populated perfect tick, the current branch's minima tick, or the liquidation threshold. For current aggregate debt (D), current ratio (R_s), reference ratio (R_e), and collateral-per-debt quote (q), the debt required to move the aggregate position to the reference ratio is calculated as
+\[
+x=
+\frac{
+\left(D-\frac{R_eD}{R_s}\right)10^{27}
+}{
+10^{27}-\frac{qR_e}{2^{96}}
+},
+\qquad
+C_x=\frac{xq}{10^{27}}.
+\]
+The code adjusts a one-unit debt dust edge before calculating collateral. If the requested liquidation amount ends inside a tick, it solves the new terminal ratio, maps it back to a tick and partial fraction, and stores the new branch state. When a branch reaches its minima, the engine merges it into the base branch using a connection factor derived from the ratio of branch debt factors. A per-branch debt factor scales remaining debt after each liquidation; tick bitmaps and branch minima avoid scanning every position.
+
+The caller supplies a minimum collateral-per-debt value as a slippage floor. Final debt charged to the liquidator rounds up through the borrow exchange price, while collateral paid out rounds down through the supply exchange price. The engine caps actual debt by the caller's debt amount, rejects dust-only outcomes, and reverts if the realized collateral/debt ratio falls below the caller's minimum.
+
+### State settlement and scope
+
+For non-smart-debt vault types, the liquidated debt is paid back into Fluid Liquidity; for non-smart-collateral types, collateral is withdrawn from Liquidity to the recipient. T2/T3/T4 add type-specific DEX callbacks and smart collateral/debt share settlement around the shared engine. The engine updates aggregate vault supply and borrow amounts and emits the liquidation event. The secondary module also supports dust-debt absorption for already liquidated positions.
+
+**Structural disposition:** a strong candidate for one coupled tick/branch liquidation-and-absorb family: geometric debt/collateral tick quantization, bitmap traversal, partially liquidated branch topology, branch debt-factor scaling/merging, automatic absorb above a maximum-limit tick, optional absorbed-buffer-first settlement, and slippage-constrained debt/collateral transfer. This is structurally distinct from scalar per-position liquidation formulas and from the other auction/repay/redistribution mechanisms audited above. Do not count TickMath, the tick-walk equation, branch debt-factor update, absorb buffer or per-token rounding as independent equations.
+
+**Version and deployment caveats.** The shared base commit uses the older Oracle V1 interface for this engine, while T1's standalone path imports Oracle V2; T2/T3/T4 additionally differ in smart collateral/debt DEX interactions. This audit does not map a specific vault address, vault type, oracle nonce, liquidation threshold, max limit, penalty, token exchange price, branch/tick storage state or block. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
