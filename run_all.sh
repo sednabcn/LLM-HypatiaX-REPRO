@@ -948,8 +948,8 @@ run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-on
 run exp1_four_way_matched_aggregate "Strict aggregation of the five isolated Core-15 four-way shards" bash -c "
   set -euo pipefail
   cd '${REPO_ROOT}'
-  _FOUR_ARTIFACTS="${FOUR_WAY_ARTIFACTS_DIR:-}"
-  [[ -n "${_FOUR_ARTIFACTS}" && -d "${_FOUR_ARTIFACTS}" ]] || { echo '::error::FOUR_WAY_ARTIFACTS_DIR must point to downloaded worker artifacts'; exit 1; }
+  _FOUR_ARTIFACTS="\${FOUR_WAY_ARTIFACTS_DIR:-}"
+  [[ -n "\${_FOUR_ARTIFACTS}" && -d "\${_FOUR_ARTIFACTS}" ]] || { echo '::error::FOUR_WAY_ARTIFACTS_DIR must point to downloaded worker artifacts'; exit 1; }
   python3 '${REPO_ROOT}/scripts/ci/aggregate_exp1_four_way_matched.py' \
     --artifacts-dir "${_FOUR_ARTIFACTS}" \
     --output-dir '${RESULTS_DIR}/four_way_matched' \
