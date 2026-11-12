@@ -686,3 +686,21 @@ References:
 - Journal article record: https://doi.org/10.1139/f54-039
 - Separate 65-page board publication record: https://books.google.com/books/about/Stock_and_Recruitment.html?id=d6pqPwAACAAJ
 - Rejected DFO resolver PDF (2000 habitat report): https://waves-vagues.dfo-mpo.gc.ca/Library/249096.pdf
+
+
+## 4.11 Beverton–Holt (1957) NOAA repository false-positive rejection
+
+Two NOAA repository search results appeared to point to the 533-page 1957 monograph *On the Dynamics of Exploited Fish Populations*. Both PDFs were opened and title pages inspected. The purported monograph URL ending in `noaa_8519_DS1.pdf` is actually Ault et al., *Site Characterization for Biscayne National Park: Assessment of Fisheries Resources and Habitats*, NOAA Technical Memorandum NMFS-SEFSC-468 (October 2001), 156 pp. The other purported URL ending in `noaa_8701_DS1.pdf` is John M. Ward's *Annotated Bibliography of Economic and Biological Research Related to the Fishery Resources of the United States* (June 1997). Neither is the Beverton–Holt primary source. These are false-positive repository search results and must not be used as equation sources.
+
+The 1957 monograph remains a high-priority Biology primary-source lead. Its bibliographic identity and 533-page extent are independently supported by the Open British National Bibliography and Google Books; the Springer record provides a later scanned reissue with chapter structure. No original equation has been transcribed from the 1957 edition in this retrieval pass. The correct bibliographic record is R. J. H. Beverton and S. J. Holt, *On the Dynamics of Exploited Fish Populations*, Fishery Investigations, Series II, vol. XIX, H.M.S.O., London, 1957, 533 pp. Do not cite the two rejected NOAA PDFs as scans of the monograph.
+
+Primary-source access leads:
+- OBNB catalogue: https://obnb.uk/p10291970-on-the-dynamics-of-exploited-fish-populations
+- Google Books record: https://books.google.com/books?id=1JntoCImKC8C
+- Later Springer scanned reissue record: https://link.springer.com/book/10.1007/978-94-011-2106-4
+- Rejected NOAA PDF (actually Ault et al. 2001): https://repository.library.noaa.gov/view/noaa/8519/noaa_8519_DS1.pdf
+- Rejected NOAA PDF (actually Ward 1997): https://repository.library.noaa.gov/view/noaa/8701/noaa_8701_DS1.pdf
+
+## 4.12 Hassell–Varley (1969) retrieval status
+
+Hassell and Varley's “New Inductive Population Model for Insect Parasites and its Bearing on Biological Control,” *Nature* 223(5211) (13 September 1969), pp. 1133–1137, DOI 10.1038/2231133a0, is a promising discrete parasitoid-population model lead. Nature's page confirms the article identity and abstract-level claim that mutual interference among searching insect parasites provides a theoretical basis for biological control. PubMed independently confirms the citation and indexing under biological models and parasites. The full text remains subscription-gated in this retrieval pass, so no equation, notation or page-level transcription is asserted. Treat as a source lead only, not an equation-ready candidate. It must be compared with Nicholson–Bailey and later Hassell family models before structural distinctness is assigned.
