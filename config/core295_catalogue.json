@@ -1527,6 +1527,85 @@
         "Audit 6: the Emax*C/(C+IC50) inhibition fraction has a Michaelis-Menten-like hyperbolic saturation motif, but that motif alone does not prove the complete tumor-turnover ODE is algebraically equivalent to the excluded Michaelis-Menten equation. The structural policy must state whether embedded subexpressions trigger exclusion or whether full-model equivalence is required."
       ],
       "source_location": "De Buck et al. (2014), Eq. 9, printed p. 547"
+    },
+    {
+      "equation_id": "BIO-GOMPERTZ-1825-MORTALITY-001",
+      "name": "Gompertz age-dependent mortality intensity law",
+      "domain": "Biology",
+      "subdomain": "demography and survival",
+      "formula": "mu(x) = a * q**x",
+      "canonical_expression": "a*q**x",
+      "formula_latex": "\\mu(x)=a q^x",
+      "structural_fingerprint": "4b9e1ec1b41f2dd792a5de1a633649d00676935dbf75a8de1a0252cebdf8f325",
+      "source_ids": [
+        "BIO-GOMPERTZ-1825-MORTALITY-LAW"
+      ],
+      "source_family_id": "BIO-GOMPERTZ-AGE-DEPENDENT-MORTALITY",
+      "status": "proposed",
+      "assumptions": [
+        "x denotes age measured on the time scale used to define q",
+        "a is a positive baseline mortality-intensity scale",
+        "q is a positive age-multiplication factor; the increasing-mortality case considered in the paper has q greater than one",
+        "The law is an empirical approximation over an age interval and is not asserted as a universal law over all ages",
+        "The original model treats the age-dependent mortality intensity separately from any age-independent chance component discussed in the surrounding text"
+      ],
+      "variables": {
+        "mu": {
+          "meaning": "Age-dependent intensity of mortality in the original Gompertz formulation",
+          "unit": "time^-1"
+        },
+        "x": {
+          "meaning": "Age",
+          "unit": "time"
+        },
+        "a": {
+          "meaning": "Positive baseline mortality-intensity coefficient",
+          "unit": "time^-1"
+        },
+        "q": {
+          "meaning": "Multiplicative age factor per unit of the chosen age scale",
+          "unit": "dimensionless"
+        }
+      },
+      "validity": {
+        "source_location": "Gompertz (1825), Philosophical Transactions of the Royal Society of London 115, Article I, section 5, printed p. 518; original scan OCR lines corresponding to printed pp. 518–519",
+        "regime": "Age-dependent mortality intensity over the age range where logarithms of survivor counts exhibit approximately geometric progression over equal age intervals",
+        "limitations": [
+          "The original paper's notation is mu(x)=a q^x in prose and gives the corresponding survivor count as L_x=d g^(q^x); Gompertz explicitly warns that g is raised to q^x, not to q and then x",
+          "The modern exponential hazard form alpha exp(beta x) is a reparameterization of the historical hazard law, not the verbatim equation printed in 1825",
+          "The survivor-count expression is the integrated consequence of the age-dependent intensity under the paper's assumptions and must not be counted as a second equation",
+          "The paper discusses a possible age-independent chance component alongside age-related deterioration; the candidate isolates only the age-dependent Gompertz component",
+          "Human mortality/life-table modelling is demographic biology; retain proposed status until domain-scope and cross-domain structural-equivalence review is completed",
+          "Do not conflate this mortality law with Gompertz growth curves used in tumor or organism growth; same surname does not imply same governing model"
+        ]
+      },
+      "input_ranges": {
+        "x": {
+          "train": null,
+          "extrapolation": null
+        },
+        "a": {
+          "train": null,
+          "extrapolation": null
+        },
+        "q": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Direct equation-level transcription from the original 1825 paper, Article I, section 5, printed p. 518",
+        "Original scan states the age-dependent mortality intensity as a q^x and the survivor count as d g^(q^x); author explicitly clarifies nested exponent notation",
+        "OCR is imperfect around the displayed survivor-count formula, so the hazard expression is the primary transcribed formula and survivor form is retained as corroborating context",
+        "Proposed only; no generator, input ranges, domain acceptance or Core-15/global equivalence review has been completed"
+      ],
+      "source_location": "Gompertz (1825), Article I, section 5, printed p. 518"
     }
   ],
   "source_register": [
@@ -3080,6 +3159,22 @@
       "title": "Notional V3 multi-route portfolio liquidation and maturity-aware fCash unwind",
       "url": "https://github.com/notional-finance/contracts-v3/commit/ae20d99ebfb0b14cf7b08421722b85849fb11edf",
       "use": "Pinned official Notional V3 source snapshot at commit ae20d99ebfb0b14cf7b08421722b85849fb11edf (2025-02-03): LiquidationHelpers.sol blob f2e433ccd75561a0e9853edb0b0e8a0c43433484; LiquidateCurrency.sol blob e15e99fb541b7a4a3e6d89962ba834f856ba0458; LiquidatefCash.sol blob b6ac53c9cbafe36264ba0625f3bf6c025bad2ab9; LiquidateCurrencyAction.sol blob fa65e90b262c3f740e2dca2985e0d8465ec75704; LiquidatefCashAction.sol blob e065e306113dfc9ca35168e35673bd2c588be596. Coupled portfolio liquidation routes use free-collateral restoration, local/cross-currency haircut removal, nToken/liquidity-token conversion, maturity-aware fCash discounting and balance-sign constraints. Route enablement and current deployment not mapped.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-VERHULST-1838-POPULATION-GROWTH",
+      "domain": "Biology",
+      "title": "Verhulst 1838 population-growth law (original French article; accessible English translation)",
+      "url": "https://neo-classical-physics.info/uploads/3/4/3/6/34363841/verhulst_-_law_of_population.pdf",
+      "use": "Scan-based English translation of Verhulst, 'Notice sur la loi que la population suit dans son accroissement', Correspondance mathématique et physique 10 (1838), pp.113–121. Directly states dp/dt = mp - phi(p), with phi(p)=n p^2 as the simplest logistic choice, and gives alternative retardation functions. The equation is directly traceable to the original text through this translation, but logistic growth is already in the Core-15 exclusion registry; retain as primary-source provenance/exclusion evidence, not as a new Core-295 candidate.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-GOMPERTZ-1825-MORTALITY-LAW",
+      "domain": "Biology",
+      "title": "Gompertz 1825 original age-dependent mortality law",
+      "url": "https://fileserver-az.core.ac.uk/download/pdf/14511273.pdf",
+      "use": "Original scan of Gompertz, Philosophical Transactions of the Royal Society of London 115 (1825), pp.513–583. Article I, section 5, printed p.518 directly states age-dependent mortality intensity a q^x and the corresponding number living L_x = d g^(q^x), with g and q constants and Gompertz explicitly clarifying the nested exponent. Modern mu(x)=alpha exp(beta x) is a reparameterization, not the paper's printed notation. Proposed demographic survival/mortality model; biological-domain scope and structural review remain pending.",
       "status": "candidate_reference"
     }
   ],
