@@ -2794,7 +2794,12 @@
         "The matrix is lower-Hessenberg with fertility in row zero and survival probabilities on the subdiagonal",
         "Section 2 explicitly derives fertility coefficients using midpoint exposure and within-interval daughter survival",
         "One coupled age-structured operator; do not split age classes, stable vectors, eigenvalues or powers M^t into separate equation records",
-        "Proposed pending cross-family review against other matrix population models and Core-15 exclusions"
+        "Proposed pending cross-family review against other matrix population models and Core-15 exclusions",
+        "Primary-source audit 1 (2026-11-12): inspected Leslie (1945), sections 1–2, printed pp. 183–185. The article directly states M n_0=n_1 and displays the fertility first row plus survival subdiagonal on printed p. 184. Source definitions: P_x is survival from age class x to x+1 over one step; F_x counts daughters born during the interval and surviving into age class 0–1 at the next census. See docs/CORE295_LESLIE_1945_PRIMARY_SOURCE_AND_MATRIX_AUDIT_1.md.",
+        "Leslie's F_x is not simply the number of births or a raw age-specific fertility rate. The derivation on pp. 184–185 approximates within-interval maternal exposure by splitting the interval at its midpoint, treating deaths as occurring around the midpoint, interpolating maternal-frequency values, and applying daughter-survival factors. This is a source-stated approximation, not an exact identity for arbitrary age distributions.",
+        "The time step must equal the age-class width; age-specific fertility and mortality schedules are assumed constant over projection periods. The source's numerical example is an imaginary rat population using 30-day time units and a specific constructed life/fertility table; do not treat its rates as universal parameter ranges.",
+        "The stable age distribution, eigenvalues, powers M^t, transformed canonical matrix, and special reproductive schedules are analyses or consequences of the same projection operator, not independent equation entries. Structural review must compare the complete discrete age-structured matrix operator against other population matrix/renewal models; no Core-15 equivalence decision is made here.",
+        "Proposed only; no generator, input ranges, equation acceptance, or statistical independence review is complete."
       ],
       "source_location": "Leslie (1945), printed p.184",
       "model_definition": {
