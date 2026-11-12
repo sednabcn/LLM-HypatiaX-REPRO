@@ -443,3 +443,6 @@ These are additional official documentation pointers, not independent primary re
 
  
 229. Frumkin, A. (1925). “Einige Bemerkungen zur Theorie der Adsorption und Verteilung.” *Zeitschrift für Physikalische Chemie* 116, pp. 501–503 (German-language MSU bibliography; English MSU index gives pp. 501–504, discrepancy pending original-issue inspection). DOI: https://doi.org/10.1515/zpch-1925-11632. Listed in the MSU Department of Electrochemistry's 1914–1930 bibliography; original PDF access remains authorization-gated. Do not substitute secondary abstract OCR for primary equation transcription.
+
+
+230. Frumkin, A. and B. Damaskin. (1967). “Adsorption of Organic Substances on the Free Water Surface and at the Water-Mercury Interface.” *Pure and Applied Chemistry* 15(2), 263–281. IUPAC-hosted full text: https://publications.iupac.org/pac/pdf/1967/pdf/1502x0263.pdf. Equations (2)–(9), especially the Frumkin interaction isotherm Eq. (4), potential-dependent parameter Eq. (5), and differential-capacity relations Eqs. (6)–(9), pp. 267–269. The article cites Frumkin's 1925 and 1926 foundations; treat the 1967 transcription as author-authored primary treatment, not proof of the first publication of the equation.
