@@ -3007,7 +3007,7 @@
       "domain": "Chemistry",
       "title": "Die Kapillarkurve der höheren Fettsäuren und die Zustandsgleichung der Oberflächenschicht",
       "url": "https://doi.org/10.1515/zpch-1925-11629",
-      "use": "Primary Frumkin (1925), Zeitschrift für Physikalische Chemie 116, pp. 466–484. Original scan: https://elchi.eu/pdf/frumkin/2-article/1914-1930/2-1-1925-29-zpc-Frumkin.pdf. Pages 467–468 define surface-coverage variables and derive the dilute Gibbs/Langmuir baseline; the exact non-ideal interaction equation still requires page-by-page transcription before promotion. Historical source lists date the Frumkin isotherm to 1925, not 1920 or the separate 1926 neutral-molecule field paper.",
+      "use": "Primary Frumkin (1925), Zeitschrift für Physikalische Chemie 116, pp. 466–484. Original scan: https://elchi.eu/pdf/frumkin/2-article/1914-1930/2-1-1925-29-zpc-Frumkin.pdf. Pages 467–468 define surface-coverage variables and derive the dilute Gibbs/Langmuir baseline; the exact non-ideal interaction equation still requires page-by-page transcription before promotion. Historical source lists date the Frumkin isotherm to 1925, not 1920 or the separate 1926 neutral-molecule field paper. A parallel Russian-language primary publication is bibliographically identified in Сборник работ по чистой и прикладной химии, Chemical Institute of L. Ya. Karpov, issue 4 (1925), pp. 56–74; GPNTB volume record/PDF resolver: https://www.jacquedesign.net/ru/nodes/6168-sbornik-rabot-po-chistoy-i-prikladnoy-himii-himicheskiy-in-t-im-l-ya-karpova-vyp-4-petrograd-1925. This possible parallel version is not yet inspected; no equation-level evidence added.",
       "status": "candidate_reference"
     },
     {
@@ -3120,7 +3120,8 @@
     "2026-11-12: Added pinned Silo V3 hook source. Documents standard partial collateral-sale liquidation and separate internal collateral-debt defaulting/CDS path, with V2/V3 hook differences. Structural candidate classification remains subject to E0–E5 pairwise review; no deployment mapping or accepted-equation count change.",
     "2026-11-12: Added pinned Fraxlend Pair liquidation implementation. Records dual-oracle eligibility, clean/dirty fee switch and write-off of residual debt against total lender asset claims. No deployed pair mapping; no accepted-equation count change.",
     "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change.",
-    "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change."
+    "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change.",
+    "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
