@@ -130,3 +130,17 @@ python scripts/core295_stage_reviewed_candidate.py \
 The helper blocks unless all required review gates pass, the E4 rationale is recorded, source-family and statistical-unit assignments are documented, and two distinct reviewers and dates are supplied. It writes a new staging artifact only; it refuses to overwrite an existing output. The staged status is `structurally_reviewed`, never `accepted`. It does not edit the canonical catalogue or validate scientific correctness.
 
 Before a maintainer manually adds any staged record to the catalogue, they must inspect it, verify every `source_id` exists in the source register, compare it against all current and proposed catalogue entries (including cross-domain and Core-15 exclusions), and consider source-family clustering and the frozen sampling frame. Catalogue validation is a separate, explicitly authorized step. Acceptance remains a separate human decision and is never performed by this helper.
+
+
+## Catalogue-wide staged-promotion audit
+
+After generating one or more staging JSON files, run the read-only consistency audit:
+
+```bash
+python scripts/core295_audit_staged_promotions.py
+python scripts/core295_audit_staged_promotions.py --stdout
+```
+
+The audit compares staged candidates with the canonical catalogue and embedded source register. It flags equation-ID/fingerprint collisions, missing or duplicate source-register IDs, source-domain mismatches, shared source IDs requiring family review, source-family cross-domain reuse, statistical-unit/source-family conflicts, missing or inconsistent reviewer decisions, and invalid staging status. It writes a Markdown report only; it does not modify the catalogue or staged records.
+
+A clean report means only that these mechanical checks found no issue. It is not a scientific acceptance, a complete pairwise proof of structural inequivalence, or evidence of statistical independence. A maintainer must still inspect primary sources and review the complete catalogue and sampling design before any separate catalogue change.
