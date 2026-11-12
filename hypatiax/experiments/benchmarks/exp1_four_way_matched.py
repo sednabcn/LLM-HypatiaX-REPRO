@@ -11,8 +11,9 @@ Every arm receives the same equation/seed training arrays. The outer test
 partition is held back from fitting and is scored using R2, RMSE and MAE.
 Near/medium/far extrapolation arrays are also shared across arms.
 
-This script is source implementation only; it is not automatically invoked
-by the existing workflow and must be reviewed before any execution.
+This script is wired as the primary Core-15 comparison stage in the fresh
+rerun launcher. Source changes are not execution authorization; it must be
+reviewed before the user starts the experiment.
 """
 
 from __future__ import annotations
@@ -434,6 +435,7 @@ def run():
         "test_policy": "same untouched outer test rows per equation and seed",
         "budget_policy": "same per-arm wall-clock cap; PySR population/iteration settings inherited from frozen rerun config",
         "extrapolation_regimes": ["near", "medium", "far"],
+        "extrapolation_metrics": ["r2", "rmse", "mae"],
         "routing_tau": "null; ensemble fallback; no calibrated routing claim",
         "ablation_scope": "three implemented Core-15 gates only",
         "source_paths": [
