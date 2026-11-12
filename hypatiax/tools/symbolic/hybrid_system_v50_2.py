@@ -448,7 +448,7 @@ class HybridDiscoverySystem:
         llm_n_candidates : int
             Number of equation hypotheses to request from the LLM per call.
         llm_temperature : float
-            Sampling temperature passed to the LLM API.
+            Legacy-compatible value; the shared Core-15 API wrapper enforces temperature=0.25 for every live request.
         allow_nondeterministic : bool
             When False (default), forces deterministic=True + parallelism=
             'serial' on the engine call so PySR suppresses its non-determinism
