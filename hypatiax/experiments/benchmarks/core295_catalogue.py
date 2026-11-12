@@ -126,7 +126,7 @@ def _safe_symbolic_expression(source: str, symbols: dict[str, sp.Symbol]) -> sp.
                 return sp.E
             if node.id in {"True", "False"}:
                 return node.id == "True"
-            raise ValueError(f"undeclared name {node.id!r}")
+            raise ValueError(f"undeclared symbols: {node.id!r}")
         if isinstance(node, ast.BinOp):
             left, right = visit(node.left), visit(node.right)
             operations = {
