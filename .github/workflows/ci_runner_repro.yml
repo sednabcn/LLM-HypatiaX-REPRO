@@ -788,7 +788,7 @@ jobs:
           }
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
-          if EXP == "exp1_four_way_matched" and set(all_ids) != {str(i) for i in range(15)}:
+          if EXP == "exp1_four_way_matched" and all_ids != [str(i) for i in range(15)]:
               print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
               sys.exit(1)
           if not all_ids:
