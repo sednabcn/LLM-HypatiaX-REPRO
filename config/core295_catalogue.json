@@ -410,7 +410,7 @@
     },
     {
       "equation_id": "BIO-HILL-MUSCLE-001",
-      "name": "Hill muscle force-velocity characteristic relation",
+      "name": "Hill frog sartorius force-velocity characteristic at 0 C",
       "domain": "Biology",
       "subdomain": "muscle mechanics",
       "formula": "(P + a)(V + b) = (P0 + a)b; equivalently V = b(P0 - P)/(P + a)",
@@ -423,53 +423,48 @@
       "source_family_id": "BIO-MUSCLE-FORCE-VELOCITY-HILL",
       "status": "proposed",
       "assumptions": [
-        "Steady isotonic concentric shortening",
-        "Tetanic activation and approximately constant load during the measured shortening interval",
-        "Force and velocity refer to the contractile element under the stated series-elastic assumptions",
-        "Parameters a and b are positive and specific to the muscle preparation/condition"
+        "Frog sartorius muscle in Ringer's solution at 0 °C, as in Hill (1938) p.177 worked example.",
+        "Tetanically maintained contraction at 11.4 shocks per second.",
+        "Steady isotonic concentric shortening under approximately constant applied load.",
+        "P is applied load in gram-weight; V and b are shortening velocity in cm s^-1.",
+        "The reported equation is an empirical characteristic for the stated preparation and condition."
       ],
       "variables": {
         "P": {
-          "meaning": "Applied load or shortening force",
-          "unit": "N or other force unit"
+          "meaning": "Applied isotonic load",
+          "unit": "gram-weight (gf)"
         },
         "P0": {
-          "meaning": "Isometric force at zero shortening velocity",
-          "unit": "Same force unit as P"
+          "meaning": "Isometric tension, reconstructed from Hill's printed constant (P0+a)b=87.6",
+          "unit": "gram-weight (gf)"
         },
         "a": {
-          "meaning": "Hill force constant controlling curvature",
-          "unit": "Same force unit as P"
+          "meaning": "Hill force/shortening-heat constant",
+          "unit": "gram-weight (gf)"
         },
         "b": {
           "meaning": "Hill velocity constant",
-          "unit": "m s^-1 or muscle lengths s^-1"
+          "unit": "cm s^-1"
+        },
+        "V": {
+          "meaning": "Steady shortening velocity",
+          "unit": "cm s^-1"
         }
       },
       "validity": {
-        "source_location": "Hill (1938), Proc. R. Soc. B 126, 136-195; characteristic relation, cited source mapping pp. 174-177",
-        "regime": "Steady force-velocity relation during isotonic concentric shortening",
+        "source_location": "Hill (1938), printed p.174 derivation of characteristic equation and printed p.177 frog sartorius example: (P+14.35)(v+1.03)=87.6; Figure 12 and associated experimental conditions.",
+        "regime": "Steady isotonic shortening of frog sartorius in Ringer's solution at 0 °C under tetanic stimulation at 11.4 shocks/s.",
         "limitations": [
-          "Do not treat the normalized Hill force-velocity relation as the Hill ligand-binding equation",
-          "The rectangular hyperbola is empirical and does not fit all force/velocity extremes or all muscle preparations",
-          "Freeze force/velocity sign convention, muscle type, temperature and activation protocol before benchmarking",
-          "No algebraic rearrangement or parameter rescaling is a separate equation"
+          "The worked parameters are preparation- and condition-specific, not universal muscle constants.",
+          "P0≈70.65 gf is reconstructed algebraically from (P0+a)b=87.6, a=14.35 gf and b=1.03 cm/s; it is not separately transcribed as a measured value.",
+          "Hill notes b scales with muscle length and has a temperature coefficient about 2.05 per 10 °C; do not vary temperature or geometry with fixed b.",
+          "Empirical steady isotonic shortening relation, not a transient contraction or excitation-contraction model.",
+          "The source example reports means of two observations in a series/reverse and does not define a statistical sampling distribution.",
+          "Do not mix gram-weight force and SI newtons without an explicit conversion of P, P0 and a."
         ]
       },
       "input_ranges": {
         "P": {
-          "train": null,
-          "extrapolation": null
-        },
-        "P0": {
-          "train": null,
-          "extrapolation": null
-        },
-        "a": {
-          "train": null,
-          "extrapolation": null
-        },
-        "b": {
           "train": null,
           "extrapolation": null
         }
@@ -487,19 +482,20 @@
         "constraint_evidence": null
       },
       "review_notes": [
-        "Primary source record and characteristic equation lineage identified",
-        "Modern sources reproduce the original equation and explain its isotonic shortening context",
-        "Exact page image transcription should be checked against the Royal Society original before source_verified status",
-        "Train/extrapolation ranges and deterministic generator remain pending",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Primary-source audit 1 (2026-11-12): Hill's printed p.174 derives the characteristic equation; printed p.177 gives frog sartorius in Ringer's solution at 0 °C, tetanus 11.4 shocks/s, (P+14.35)(v+1.03)=87.6. Reconstruct P0=87.6/1.03-14.35≈70.65 gf. See docs/CORE295_HILL_MUSCLE_PRIMARY_SOURCE_AUDIT_1.md.",
+        "Corrected model roles: P is the independent load; V is the dependent shortening velocity; P0, a and b are fixed parameters.",
+        "Parameter set is a source-grounded worked example, not a population distribution or general muscle range. b varies with muscle length and temperature; hold condition fixed.",
+        "No training/extrapolation distribution or statistical independent unit has been established. Proposed only; generator pending."
       ],
-      "source_location": "Hill (1938), DOI 10.1098/rspb.1938.0050",
+      "source_location": "Hill (1938), printed pp.174 and 177, Figure 12 and frog sartorius example.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
           "P"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "V"
+        ],
         "state_variables": [],
         "fixed_parameters": [
           "P0",
@@ -508,27 +504,44 @@
         ],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Steady isotonic force-velocity characteristic.",
+        "operator_structure": "Steady isotonic force-velocity hyperbola for the Hill (1938) frog sartorius example at 0 °C.",
         "constraints": [
-          "P0>0; a>0; b>0; 0<=P<=P0 under the stated shortening convention."
+          "P0>0; a>0; b>0; 0<=P<=P0 under the shortening convention.",
+          "P in gram-weight; V and b in cm s^-1; units must remain consistent.",
+          "Fixed parameter values apply only to the source's frog sartorius/Ringer's/0 °C/tetanus condition."
         ],
         "assumptions": [
-          "Steady isotonic concentric shortening",
-          "Tetanic activation and approximately constant load during the measured shortening interval",
-          "Force and velocity refer to the contractile element under the stated series-elastic assumptions",
-          "Parameters a and b are positive and specific to the muscle preparation/condition"
+          "Frog sartorius muscle in Ringer's solution at 0 °C, as in Hill (1938) p.177 worked example.",
+          "Tetanically maintained contraction at 11.4 shocks per second.",
+          "Steady isotonic concentric shortening under approximately constant applied load.",
+          "P is applied load in gram-weight; V and b are shortening velocity in cm s^-1.",
+          "The reported equation is an empirical characteristic for the stated preparation and condition."
         ],
-        "validity_regime": "Steady force-velocity relation during isotonic concentric shortening",
+        "validity_regime": "Steady isotonic shortening of frog sartorius in Ringer's solution at 0 °C under tetanic stimulation at 11.4 shocks/s.",
         "limitations": [
-          "Do not treat the normalized Hill force-velocity relation as the Hill ligand-binding equation",
-          "The rectangular hyperbola is empirical and does not fit all force/velocity extremes or all muscle preparations",
-          "Freeze force/velocity sign convention, muscle type, temperature and activation protocol before benchmarking",
-          "No algebraic rearrangement or parameter rescaling is a separate equation"
+          "The worked parameters are preparation- and condition-specific, not universal muscle constants.",
+          "P0≈70.65 gf is reconstructed algebraically from (P0+a)b=87.6, a=14.35 gf and b=1.03 cm/s; it is not separately transcribed as a measured value.",
+          "Hill notes b scales with muscle length and has a temperature coefficient about 2.05 per 10 °C; do not vary temperature or geometry with fixed b.",
+          "Empirical steady isotonic shortening relation, not a transient contraction or excitation-contraction model.",
+          "The source example reports means of two observations in a series/reverse and does not define a statistical sampling distribution.",
+          "Do not mix gram-weight force and SI newtons without an explicit conversion of P, P0 and a."
         ]
       },
-      "fixed_parameter_values": {},
+      "fixed_parameter_values": {
+        "P0": 70.65,
+        "a": 14.35,
+        "b": 1.03
+      },
       "physical_constant_values": {},
-      "input_validity_bounds": {}
+      "input_validity_bounds": {
+        "P": {
+          "min": 0,
+          "max": 70.65,
+          "closed": true,
+          "unit": "gram-weight",
+          "meaning": "Shortening-load domain for the stated convention; P=P0 is isometric zero-velocity boundary."
+        }
+      }
     },
     {
       "equation_id": "PHYS-POISEUILLE-001",
