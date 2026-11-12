@@ -213,7 +213,16 @@ class HybridSystemAllDomains:
         API call every time — required so HybridSystemLLMNN and PureLLMBaseline
         are evaluated independently in benchmarks.
         """
-        _cache_key = (description, domain, tuple(variable_names))
+        # Constants are part of the LLM prompt/task specification. Include
+        # them in the cache key so equal descriptions with different physical
+        # constants cannot reuse one another's generated formula.
+        _constants_key = json.dumps(
+            (metadata or {}).get("constants") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        _cache_key = (description, domain, tuple(variable_names), _constants_key)
         if not self._no_cache and _cache_key in self._formula_cache:
             return self._formula_cache[_cache_key]
 
