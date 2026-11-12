@@ -105,7 +105,7 @@ def _hardcoded_disabled() -> bool:
     return _switch_on("HYPATIAX_DISABLE_HARDCODED")
 
 
-_PROV_KEYS = ("llm_called", "llm_attempted", "bypass_kind", "bypass_flags",
+_PROV_KEYS = ("llm_called", "llm_attempted", "generation_path", "bypass_kind", "bypass_flags",
               "stop_reason", "usage", "prompt_sha256", "temperature_sent",
               "temperature_requested", "error_stage", "delegate_attempt")
 
