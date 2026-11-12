@@ -416,9 +416,9 @@ The solvency library converts protected and collateral shares into underlying as
 \[
 LTV=\left\lceil\frac{D_v\cdot 10^{18}}{C_v}\right\rceil.
 \]
-A position is liquidatable when its LTV exceeds the configured collateral liquidation threshold (LT). The collateral and debt may live in separate Silos; their SiloConfig binds the collateral Silo, debt Silo, share tokens, oracle routes, (LT), target post-liquidation LTV and liquidation fee. Interest is accrued before execution.
+A position is liquidatable when its LTV exceeds the configured collateral liquidation threshold `LT`. The collateral and debt may live in separate Silos; their SiloConfig binds the collateral Silo, debt Silo, share tokens, oracle routes, `LT`, target post-liquidation LTV and liquidation fee. Interest is accrued before execution.
 
-For a healthy-but-liquidatable position, the maximum debt value to repay is derived from the target post-liquidation LTV (T), total debt value (D_v), collateral value (C_v), and liquidation fee (f). The source documents the rearrangement
+For a healthy-but-liquidatable position, the maximum debt value to repay is derived from the target post-liquidation LTV `T`, total debt value `D_v`, collateral value `C_v`, and liquidation fee `f`. The source documents the rearrangement
 \[
 \frac{D_v-x}{C_v-(x+xf)}=T,
 \qquad
@@ -434,9 +434,9 @@ The amount is converted back to collateral assets and then to collateral shares 
 
 ### Internal collateral-debt swap / defaulting mode
 
-The defaulting hook reuses the partial-liquidation sizing logic but changes settlement. In V2, the defaulting threshold adds a 1 percentage-point margin to the collateral (LT); V3 overrides that margin to zero. The defaulting initializer validates a one-way market (one side has (LT=0)), requires zero liquidation fee on the non-collateral side, and constrains (LT+margin+feele100%).
+The defaulting hook reuses the partial-liquidation sizing logic but changes settlement. In V2, the defaulting threshold adds a 1 percentage-point margin to the collateral `LT`; V3 overrides that margin to zero. The defaulting initializer validates a one-way market (one side has `LT = 0`), requires zero liquidation fee on the non-collateral side, and requires `LT + margin + fee <= 1e18`.
 
-The hook calculates the full permitted collateral/debt amounts, converts the seized collateral and protected collateral to shares, and splits each share amount between keeper and lenders. `KEEPER_FEE=20%) is the keeper's fraction of the liquidation-fee component; the keeper share calculation is rounded down and the remaining seized shares are assigned to lenders. Lender shares are transferred to the configured incentives controller for immediate distribution; keeper shares go directly to the liquidator.
+The hook calculates the maximum permitted liquidation amounts (which may still be partial under the target-LTV rule), converts the seized collateral and protected collateral to shares, and splits each share amount between keeper and lenders. `KEEPER_FEE = 0.2e18` (20%) is the keeper's fraction of the liquidation-fee component; the keeper share calculation is rounded down and the remaining seized shares are assigned to lenders. Lender shares are transferred to the configured incentives controller for immediate distribution; keeper shares go directly to the liquidator.
 
 Instead of transferring debt tokens into the debt Silo, the defaulting logic reduces the collateral Silo's recorded collateral assets by the defaulted debt amount (using DAO/deployer revenue as a secondary accounting buffer if collateral assets are insufficient), and burns the borrower's debt shares while reducing the debt Silo's total debt assets. This is an internal loss-allocation mechanism: lenders receive collateral shares, the borrower debt is erased, and the keeper receives a fee share. It is materially different from the standard sale path, which requires the liquidator to provide debt assets and repays the debt Silo.
 
@@ -456,7 +456,7 @@ Pinned commit: https://github.com/FraxFinance/fraxlend/commit/2bed49d4dcc6702d92
 
 ### Solvency and oracle selection
 
-The pair accrues interest before liquidation and updates its dual-oracle exchange rate. The exchange rate represents collateral units per (10^{18}) asset units; liquidation uses the lower returned exchange rate. The borrower debt amount is obtained from borrow shares using upward rounding. With collateral balance (C), debt amount (B), exchange rate (E), and configured maximum LTV (L_{max}), the code computes
+The pair accrues interest before liquidation and updates its dual-oracle exchange rate. The exchange rate represents collateral units per `10^18` asset units; liquidation uses the lower returned exchange rate. The borrower debt amount is obtained from borrow shares using upward rounding. With collateral balance `C`, debt amount `B`, exchange rate `E`, and configured maximum LTV `L_max`,  the code computes
 \[
 LTV=\left\lfloor
 \frac{\left\lfloor B E/E_{prec}\right\rfloor L_{prec}}{C}
@@ -475,14 +475,14 @@ C_{clean}=\left\lfloor
 \cdot\frac{L_{prec}+f_{clean}}{L_{prec}}
 \right\rfloor.
 \]
-It compares the borrower's collateral balance (C_b) with this amount. If (C_b-C_{clean}\le0), the liquidation is treated as a clean/full collateral liquidation and the liquidator receives all borrower collateral. Otherwise, the collateral reward uses the dirty fee:
+It compares the borrower's collateral balance `C_b` with this amount. If `C_b - C_clean <= 0`,  the liquidation is treated as a clean/full collateral liquidation and the liquidator receives all borrower collateral. Otherwise, the collateral reward uses the dirty fee:
 \[
 C_{liq}=\left\lfloor
 \frac{B_{repay}^{down}E}{E_{prec}}
 \cdot\frac{L_{prec}+f_{dirty}}{L_{prec}}
 \right\rfloor.
 \]
-The constructor sets (f_{dirty}=0.9f_{clean}). A separate protocol fee is then taken as a fraction of (C_{liq}) and retained as protocol collateral in the pair. The amount actually transferred by the liquidator is calculated from the selected borrow shares using upward rounding, so it is not identical to the down-rounded collateral-quote amount.
+The constructor sets `f_dirty = 0.9 * f_clean`. A separate protocol fee is then taken as a fraction of `C_liq` and retained as protocol collateral in the pair. The amount actually transferred by the liquidator is calculated from the selected borrow shares using upward rounding, so it is not identical to the down-rounded collateral-quote amount.
 
 ### Residual bad-debt restructuring
 
