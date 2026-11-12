@@ -50,3 +50,10 @@ The completeness score is not a quality or confidence score. Exact text collisio
 For each candidate, inspect the original PDF and verify source identity/version, printed pagination and equation number. Transcribe the complete governing equation or coupled system, variables, units, assumptions and validity regime. Then assign source-family identity, assess Core-15 overlap and E0–E5 structural distinctness, and justify the independent statistical unit separately. Only the established human review process may update catalogue status.
 
 The script reads the queue and catalogue only. It writes a Markdown report to the selected output path; it never changes candidate records or the canonical catalogue. It performs no network access, OCR, experiments, validators, solvers, CI workflows, or live protocol calls.
+
+
+## Source verification and transcription template
+
+Use the [Core-295 source verification and equation transcription template](templates/CORE295_EQUATION_SOURCE_REVIEW_TEMPLATE.md) for the full human review record. It captures primary-source identity, artifact hashes, printed and PDF pagination, page-image transcription checks, model assumptions and units, E0–E5 comparison, source-family and statistical-unit rationale, generator contract, and independent sign-off.
+
+A machine-readable starting point is also provided at [core295_candidate_record.template.json](templates/core295_candidate_record.template.json). It is intentionally incomplete and is not an accepted catalogue entry; populate and review it before adapting its fields into the canonical catalogue schema.
