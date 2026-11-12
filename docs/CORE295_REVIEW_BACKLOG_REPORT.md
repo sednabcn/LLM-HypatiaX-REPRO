@@ -87,3 +87,8 @@ After the read-only promotion audit is clear, [`core295_build_catalogue_proposal
 ## Approval and application controls
 
 A two-maintainer approval template and guarded applier are now available: [approval template](templates/core295_catalogue_application_approval.template.json) and [application script](../scripts/core295_apply_approved_catalogue_proposal.py). The applier requires explicit `--apply`, exact input hashes, two distinct approvers, scientific-review attestations, a separate application authorization, append-only integrity checks, structural validation, and an exact pre-application backup. It leaves the catalogue draft and does not accept entries.
+
+
+## Post-application reconciliation
+
+After an authorized proposal application, use [`core295_reconcile_applied_catalogue.py`](../scripts/core295_reconcile_applied_catalogue.py) to compare the current catalogue bytes with the approved proposal and reconcile the diff, approval record, original backup, appended equation IDs, and non-accepted review states. The report is read-only and does not change catalogue statuses.
