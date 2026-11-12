@@ -57,11 +57,13 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
                 fail(f"equation index {idx} assigned to multiple shards")
             identities[idx] = item
 
-        result_files = sorted(manifest_path.parent.glob("protocol_core_*.json"))
-        result_files = [p for p in result_files if "aggregate" not in p.name]
-        if len(result_files) != 1:
-            fail(f"shard {shard}: expected exactly one detailed result JSON, found {len(result_files)}")
-        payload = load_json(result_files[0])
+        result_name = manifest.get("result_file")
+        if not isinstance(result_name, str) or Path(result_name).name != result_name:
+            fail(f"{manifest_path}: missing/unsafe result_file")
+        result_path = manifest_path.parent / result_name
+        if not result_path.is_file() or not result_name.startswith("protocol_core_") or "aggregate" in result_name:
+            fail(f"shard {shard}: declared detailed result file is absent or invalid: {result_name!r}")
+        payload = load_json(result_path)
         if not isinstance(payload.get("tests"), list):
             fail(f"{result_files[0]}: missing tests list")
         if len(payload["tests"]) != len(assigned):
