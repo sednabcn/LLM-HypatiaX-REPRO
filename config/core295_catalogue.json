@@ -2090,7 +2090,7 @@
     },
     {
       "equation_id": "CHEM-BEER-LAMBERT-001",
-      "name": "Beer–Lambert decadic spectral attenuation law",
+      "name": "Beer-Lambert decadic attenuation of aqueous permanganate at 525 nm",
       "domain": "Chemistry",
       "subdomain": "optical absorption spectroscopy",
       "formula": "I = I0 * 10^(-epsilon * c * l)",
@@ -2099,52 +2099,57 @@
       "structural_fingerprint": "a6493c9f84de997280640d05fd3c0bc41e5457ebf21772c3a5cab2bc819b4f57",
       "source_ids": [
         "CHEM-BEER-1852",
-        "CHEM-IUPAC-BEER-LAMBERT"
+        "CHEM-IUPAC-BEER-LAMBERT",
+        "CHEM-MCBEATH-2020-PERMANGANATE-525NM"
       ],
       "source_family_id": "CHEM-OPTICAL-ABSORPTION-BEER-LAMBERT",
       "status": "proposed",
       "assumptions": [
-        "Collimated monochromatic radiation with spectral bandwidth narrow relative to absorption linewidths",
-        "Homogeneous isotropic absorbing medium",
-        "Absorption dominates; reflection and scattering are negligible in the chosen optical path",
-        "Decadic absorbance convention is used",
-        "Molar absorption coefficient is constant over the selected concentration and path-length regime"
+        "Direct spectrophotometric measurement of aqueous permanganate ion (MnO4-) at 525 nm.",
+        "Neutral aqueous phosphate buffer matrix, pH 7.1 and 0.1 M, as in McBeath et al. (2020).",
+        "Collimated monochromatic radiation at 525 nm; spectral bandwidth narrow relative to absorption features.",
+        "Homogeneous isotropic absorbing medium; scattering and reflection are negligible or blank-corrected.",
+        "Decadic attenuation convention is used.",
+        "The molar decadic absorption coefficient is fixed for the specified species, wavelength and matrix.",
+        "Measurement timing is controlled because the direct method reports permanganate instability during the first 60 minutes."
       ],
       "variables": {
         "I0": {
-          "meaning": "Incident spectral radiant power or intensity at the selected wavelength",
+          "meaning": "Incident spectral radiant intensity/power at 525 nm",
           "unit": "same units as I"
         },
-        "eps": {
-          "meaning": "Molar decadic absorption coefficient",
-          "unit": "m^2 mol^-1 when c is mol m^-3 and l is m"
-        },
         "c": {
-          "meaning": "Concentration of the absorbing species",
+          "meaning": "Molar concentration of aqueous permanganate ion",
           "unit": "mol m^-3"
         },
         "l": {
-          "meaning": "Optical path length through the absorbing medium",
+          "meaning": "Optical path length",
           "unit": "m"
+        },
+        "eps": {
+          "meaning": "Decadic molar absorption coefficient for aqueous permanganate at 525 nm in the reported neutral-pH matrix; converted from 3340 L mol^-1 cm^-1",
+          "unit": "m^2 mol^-1"
+        },
+        "I": {
+          "meaning": "Transmitted spectral radiant intensity/power at 525 nm",
+          "unit": "same units as I0"
         }
       },
       "validity": {
-        "source_location": "IUPAC Gold Book B00626 exact expression P_lambda=P_lambda^0 10^(-epsilon c l); Beer (1852), Annalen der Physik 162, 78-88, primary historical source",
-        "regime": "Decadic spectral-power attenuation through a homogeneous isotropic absorbing medium",
+        "source_location": "IUPAC Gold Book B00626 for exact decadic spectral-power relation. McBeath, Wilkinson & Graham (2020), direct aqueous permanganate method: 525 nm, epsilon=3340 M^-1 cm^-1, standards 0-63 uM in neutral pH phosphate buffer pH 7.1, 0.1 M; direct-method LOD 0.45 uM, LOQ 1.51 uM.",
+        "regime": "Direct spectrophotometric attenuation of aqueous MnO4- at 525 nm in the reported neutral-pH phosphate-buffer matrix, with controlled measurement timing.",
         "limitations": [
-          "The primary Beer 1852 Wiley record confirms metadata, but full-text equation-page transcription remains unavailable; the exact modern expression is sourced from IUPAC",
-          "Lambert's natural-exponential path attenuation and the decadic absorbance form A=epsilon*c*l are linked representations of this same Beer-Lambert family, not separate candidates",
-          "At high concentrations, chemical association, refractive effects, scattering or spectral bandwidth can cause deviations",
-          "Do not mix decadic epsilon with a natural-log attenuation coefficient; conversion includes ln(10)",
-          "The exponential form is physically distinct from Arrhenius kinetics, but an explicit Core-15 exclusion overlap review remains required"
+          "Coefficient is specific to permanganate at 525 nm and the reported matrix; do not reuse for other species, wavelengths, pH or buffers.",
+          "0-63 uM is the prepared standards range; direct-method LOQ is 1.51 uM and LOD is 0.45 uM. These are not interchangeable.",
+          "The accessible source does not establish a transferable optical path length for the calibration coefficient; l remains an explicit input and its numerical range is unset.",
+          "Direct permanganate measurements show instability during the first 60 minutes; future data protocol must control sample age and measurement timing.",
+          "Do not mix decadic epsilon with a natural-log attenuation coefficient.",
+          "Original Beer (1852) paper remains bibliographic lineage; exact modern equation is sourced from IUPAC.",
+          "Absorbance and transmitted-intensity forms are linked expressions in the same equation family, not separate candidates."
         ]
       },
       "input_ranges": {
         "I0": {
-          "train": null,
-          "extrapolation": null
-        },
-        "eps": {
           "train": null,
           "extrapolation": null
         },
@@ -2170,50 +2175,69 @@
         "constraint_evidence": null
       },
       "review_notes": [
-        "IUPAC Gold Book gives the exact decadic spectral-power relation and the conditions on monochromatic radiation and homogeneous isotropic medium",
-        "Primary Beer (1852) article metadata is confirmed, but the Wiley full text is unavailable; do not claim direct transcription of its original formula",
-        "Keep Beer and Lambert contributions within one optical-absorption source family; absorbance and transmitted-intensity equations are linked",
-        "Need choose wavelength-specific material, coefficient, concentration and path-length domain; preserve decadic convention",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Source/scope audit 1 (2026-11-12): scoped to aqueous MnO4- at 525 nm in neutral phosphate buffer (pH 7.1, 0.1 M), using McBeath et al. (2020) direct method. Reported epsilon=3340 M^-1 cm^-1, standards 0-63 uM, LOD 0.45 uM, LOQ 1.51 uM, and early time instability. SI conversion for c in mol m^-3 and l in m: epsilon=334 m^2 mol^-1. See docs/CORE295_BEER_LAMBERT_PERMANGANATE_SCOPE_AUDIT_1.md.",
+        "Corrected model roles: independent variables I0,c,l; dependent variable I; fixed epsilon. Previously dependent_variables was empty despite the equation predicting I.",
+        "The 1.51-63 uM interval is an operational direct-method quantification interval derived from LOQ and prepared standard maximum; it is not a universal Beer-Lambert linearity bound or train/extrapolation split.",
+        "Optical path length and incident intensity numerical ranges remain unset; do not assume a 1 cm cell without explicit source support.",
+        "Proposed only; generator pending; no benchmark acceptance."
       ],
-      "source_location": "IUPAC Gold Book B00626; Beer (1852), DOI 10.1002/andp.18521620505",
+      "source_location": "IUPAC Gold Book B00626 for exact modern decadic equation; McBeath, Wilkinson & Graham (2020), direct aqueous permanganate method at 525 nm for scoped coefficient and method limits.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
           "I0",
-          "c"
+          "c",
+          "l"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "I"
+        ],
         "state_variables": [],
         "fixed_parameters": [
-          "eps",
-          "l"
+          "eps"
         ],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Decadic optical attenuation through a homogeneous path.",
+        "operator_structure": "Decadic optical attenuation I=I0*10^(-eps*c*l) at 525 nm for aqueous permanganate in the reported neutral-pH phosphate buffer matrix.",
         "constraints": [
-          "I0>=0; c>=0; eps>=0; l>=0."
+          "I0>=0; c>=0; l>=0; eps=334 m^2 mol^-1 for the declared system only.",
+          "c in 0.00151 to 0.063 mol m^-3 is the method-specific direct quantification interval, not universal physical validity.",
+          "Decadic exponent eps*c*l is dimensionless; use SI units.",
+          "Measurement timing must be controlled due to reported early permanganate instability."
         ],
         "assumptions": [
-          "Collimated monochromatic radiation with spectral bandwidth narrow relative to absorption linewidths",
-          "Homogeneous isotropic absorbing medium",
-          "Absorption dominates; reflection and scattering are negligible in the chosen optical path",
-          "Decadic absorbance convention is used",
-          "Molar absorption coefficient is constant over the selected concentration and path-length regime"
+          "Direct spectrophotometric measurement of aqueous permanganate ion (MnO4-) at 525 nm.",
+          "Neutral aqueous phosphate buffer matrix, pH 7.1 and 0.1 M, as in McBeath et al. (2020).",
+          "Collimated monochromatic radiation at 525 nm; spectral bandwidth narrow relative to absorption features.",
+          "Homogeneous isotropic absorbing medium; scattering and reflection are negligible or blank-corrected.",
+          "Decadic attenuation convention is used.",
+          "The molar decadic absorption coefficient is fixed for the specified species, wavelength and matrix.",
+          "Measurement timing is controlled because the direct method reports permanganate instability during the first 60 minutes."
         ],
-        "validity_regime": "Decadic spectral-power attenuation through a homogeneous isotropic absorbing medium",
+        "validity_regime": "Direct spectrophotometric attenuation of aqueous MnO4- at 525 nm in the reported neutral-pH phosphate-buffer matrix, with controlled measurement timing.",
         "limitations": [
-          "The primary Beer 1852 Wiley record confirms metadata, but full-text equation-page transcription remains unavailable; the exact modern expression is sourced from IUPAC",
-          "Lambert's natural-exponential path attenuation and the decadic absorbance form A=epsilon*c*l are linked representations of this same Beer-Lambert family, not separate candidates",
-          "At high concentrations, chemical association, refractive effects, scattering or spectral bandwidth can cause deviations",
-          "Do not mix decadic epsilon with a natural-log attenuation coefficient; conversion includes ln(10)",
-          "The exponential form is physically distinct from Arrhenius kinetics, but an explicit Core-15 exclusion overlap review remains required"
+          "Coefficient is specific to permanganate at 525 nm and the reported matrix; do not reuse for other species, wavelengths, pH or buffers.",
+          "0-63 uM is the prepared standards range; direct-method LOQ is 1.51 uM and LOD is 0.45 uM. These are not interchangeable.",
+          "The accessible source does not establish a transferable optical path length for the calibration coefficient; l remains an explicit input and its numerical range is unset.",
+          "Direct permanganate measurements show instability during the first 60 minutes; future data protocol must control sample age and measurement timing.",
+          "Do not mix decadic epsilon with a natural-log attenuation coefficient.",
+          "Original Beer (1852) paper remains bibliographic lineage; exact modern equation is sourced from IUPAC.",
+          "Absorbance and transmitted-intensity forms are linked expressions in the same equation family, not separate candidates."
         ]
       },
-      "fixed_parameter_values": {},
+      "fixed_parameter_values": {
+        "eps": 334
+      },
       "physical_constant_values": {},
-      "input_validity_bounds": {}
+      "input_validity_bounds": {
+        "c": {
+          "min": 0.00151,
+          "max": 0.063,
+          "closed": true,
+          "unit": "mol m^-3",
+          "meaning": "Method-specific direct-method quantification interval corresponding to reported LOQ 1.51 uM through maximum prepared standard 63 uM; not a universal mathematical validity bound."
+        }
+      }
     },
     {
       "equation_id": "BIO-TUMOR-TURNOVER-001",
@@ -4860,6 +4884,14 @@
       "url": "https://doi.org/10.1080/14786445508641925",
       "use": "Contemporary English translation, Philosophical Magazine 10 (1855), 30-39. Corroborates the local transfer relation and original notation; original German Wiley article remains the primary source of record.",
       "status": "supporting_reference"
+    },
+    {
+      "source_id": "CHEM-MCBEATH-2020-PERMANGANATE-525NM",
+      "domain": "Chemistry",
+      "title": "McBeath, Wilkinson & Graham (2020), Analytical quantification of aqueous permanganate: Direct and indirect spectrophotometric determination for water treatment processes",
+      "url": "https://doi.org/10.1016/j.chemosphere.2020.126626",
+      "use": "Primary research article, Chemosphere 251, 126626. Direct spectrophotometric method reports molar absorption coefficient 3340 M^-1 cm^-1 at 525 nm, prepared standards 0-63 uM in neutral pH aqueous phosphate buffer (pH 7.1, 0.1 M), direct-method LOD 0.45 uM and LOQ 1.51 uM, and early time instability. Scope the coefficient to this species/wavelength/matrix; accessible article abstract/sections do not establish path length or a general linearity interval.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -4902,7 +4934,8 @@
     "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change.",
     "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed.",
     "2026-11-12: Henry candidate narrowed to molecular CO2(aq) in pure water at 298.15 K with solubility-form Hs_cp=3.4e-4 mol m^-3 Pa^-1 from Sander (2023) v5.0.0 CO2 compilation (Burkholder et al. 2019, literature-evaluation type L; Carroll et al. 1991 review also lists 3.4e-4). Pressure sampling range remains unset; candidate proposed and generator pending. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md.",
-    "2026-11-12: Raoult candidate narrowed to OpenStax Chemistry 2e §11.4 Example 11.6 (ethanol-glycerin ideal-solution illustration, 40 °C, pure ethanol vapor pressure 0.178 atm). Original 1887 source remains bibliographic lineage pending direct equation transcription. Mole-fraction [0,1] is definitional only; Henry/Raoult structural-family review remains open. See docs/CORE295_RAOUlt_SOURCE_AND_SCOPE_AUDIT_1.md."
+    "2026-11-12: Raoult candidate narrowed to OpenStax Chemistry 2e §11.4 Example 11.6 (ethanol-glycerin ideal-solution illustration, 40 °C, pure ethanol vapor pressure 0.178 atm). Original 1887 source remains bibliographic lineage pending direct equation transcription. Mole-fraction [0,1] is definitional only; Henry/Raoult structural-family review remains open. See docs/CORE295_RAOUlt_SOURCE_AND_SCOPE_AUDIT_1.md.",
+    "2026-11-12: Beer-Lambert candidate scoped to direct aqueous permanganate at 525 nm in neutral phosphate buffer pH 7.1, 0.1 M; eps=334 m^2 mol^-1 after SI conversion of 3340 L mol^-1 cm^-1. Fixed missing dependent output role I; inputs I0,c,l. Method-specific LOQ 1.51 uM, max standard 63 uM; path length range remains unset. See docs/CORE295_BEER_LAMBERT_PERMANGANATE_SCOPE_AUDIT_1.md."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
