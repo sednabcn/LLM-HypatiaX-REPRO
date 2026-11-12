@@ -624,3 +624,16 @@ but this formula is retained here only as a retrieval target, not as a primary t
 **Disposition:** add the publisher record as a primary-source retrieval lead only. Do not add an equation candidate or count later textbook notation as the 1935 original until the source PDF or a faithful scan is obtained. This is a discrete-generation host–parasitoid model and is structurally different from the continuous-time Lotka/Volterra predator–prey systems, subject to formal review. No experiment or validator was run.
 
 Primary publisher record: https://doi.org/10.1111/j.1096-3642.1935.tb01680.x
+
+ 
+## 4.6 Retrieval follow-up: Nicholson–Bailey and Frumkin archive endpoints
+
+### Nicholson–Bailey (1935)
+
+The Wiley/Zoological Society publisher landing page confirms the complete bibliographic record (vol. 105, issue 3, pp. 551–598; first published September 1935) and exposes a first-page image. Its dedicated PDF link resolves to the DOI PDF endpoint but returns HTTP 403 to the retrieval service; the epdf route is also inaccessible. The publisher landing page has a “share full-text access” control, but it requires accepting Wiley's terms and does not expose the article text in the retrieved page. Thus the previous decision stands: the well-known Nicholson–Bailey recurrence is not transcribed as a verbatim equation from the 1935 paper. Do not use a later textbook, lecture note or review as if it were the original equation page.
+
+### Frumkin (1925), Russian issue 4
+
+The alternate GPNTB catalogue mirror exposes the exact volume image filename Resource-6567_Version-6678_application-pdf_0.pdf, as well as the issue date (1 September 1925) and extent (231, [4] pages). I attempted the mirror's direct download URL and the GPNTB resolver URL; both are inaccessible to the available retrieval service. The earlier GPNTB record describes the volume as 233 pages. These metadata descriptions remain discrepant; neither is evidence that the scan was inspected. No equation transcription or sign convention is added.
+
+**Disposition:** no new source or equation count is added by these retrieval attempts. Preserve the original Frumkin and Nicholson–Bailey access blockers. No experiments, validators or live protocol calls were run.
