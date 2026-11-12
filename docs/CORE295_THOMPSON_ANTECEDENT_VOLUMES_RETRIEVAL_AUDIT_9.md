@@ -138,3 +138,14 @@ The adapter now temporarily overrides the two Core-15 data-generator functions w
 - This is source-level inspection and re-fetch verification only. No adapter invocation, tests, planner, driver, validator, workflow, model/API call, or experiment was run.
 
 The adapter remains limited to explicit scalar equations. The five domain wrappers still route to this same adapter; this provenance fix does not expand model-class coverage or constitute scientific acceptance of any catalogue entry.
+
+
+## Addendum 3 — volume indexes narrow the antecedent trail
+
+The Wikisource alphabetical contents for tome 153 (1911) explicitly lists **Silvanus-P. Thompson**, “Nouvelle méthode d’analyse harmonique par la sommation algébrique d’ordonnées déterminées,” at p.88. This is Silvanus P. Thompson, not W. R. Thompson, and is not the 1922d footnote's cited p.1401. A full-text search of the tome-153 contents page finds no other “Thompson” entry. Therefore the tome-153 index does not support attribution of a W. R. Thompson communication to that volume. The separate p.1401 citation still needs page-image identification; do not conflate the p.88 Silvanus-P. Thompson note with it. Source: Wikisource tome-153 contents, lines 203–206 (turn118683view0; targeted find turn497697view0).
+
+For tome 164 (January–June 1917), the volume's Gallica-derived DjVu record reports 1,070 scan pages, while the 1922d OCR renders the cited page as `i433` / 1433. A printed page 1433 cannot occur in this volume as described; the OCR reference is therefore corrupted or otherwise misread and must not be treated as a valid page number. The tome-164 contents index also has no “Thompson” entry (turn935836search1, turn583314view0, targeted find turn105470view0). This strengthens the conclusion that the 1917 citation is unresolved and likely contains OCR error, but does not identify the intended page or article.
+
+Tome 156 (1913) has a Gallica-derived 2,124-page DjVu scan, digital identifier `bpt6k3109m`; this is a concrete primary-volume retrieval route, not yet a page-level identification. Its scan record and metadata are documented at turn935836search0.
+
+No equation has been transcribed from any of these cited antecedent pages. No source-family attribution, candidate acceptance, or catalogue update follows from this bibliographic narrowing.
