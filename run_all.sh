@@ -2332,7 +2332,7 @@ manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
             "equation_identities":mapping,"result_file":result_files[-1].name,
             "effective_llm_temperature":effective_temperature}
-Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
+Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
 PYMAN
   fi
 "
@@ -2398,7 +2398,7 @@ manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
             "equation_identities":mapping,"result_file":result_files[-1].name,
             "effective_llm_temperature":effective_temperature}
-Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
+Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
 PYMAN
   fi
 "
