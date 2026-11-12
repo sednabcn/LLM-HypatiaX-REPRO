@@ -703,18 +703,6 @@
           "train": null,
           "extrapolation": null
         },
-        "h": {
-          "train": null,
-          "extrapolation": null
-        },
-        "c": {
-          "train": null,
-          "extrapolation": null
-        },
-        "kB": {
-          "train": null,
-          "extrapolation": null
-        },
         "T": {
           "train": null,
           "extrapolation": null
@@ -740,7 +728,8 @@
         "Planck spectrum is the parent family for Wien maximum and Stefan integral; do not count those derived laws independently without a separate sampling design",
         "Proposed only; not scientifically accepted or eligible for shard planning",
         "Audit 5 (2026-11-11): OpenStax defines I(lambda,T) as power per unit area per unit wavelength (spectral exitance, W m^-3), not radiance per solid angle. Planck 1901 Eq. (13) is spectral energy density per wavelength; multiplying by c/4 for isotropic equilibrium radiation gives the OpenStax exitance formula. Keep Wien/Stefan consequences in the same family. See docs/CORE295_PROPOSED_RECORD_AUDIT_5.md.",
-        "SI defining-constant values populated from NIST SP 330 §2 / BIPM SI defining constants: h=6.62607015e-34 J s, c=299792458 m s^-1, kB=1.380649e-23 J K^-1; all exact by SI definition. These values only ground the constants, not the input sampling intervals or candidate source verification."
+        "SI defining-constant values populated from NIST SP 330 §2 / BIPM SI defining constants: h=6.62607015e-34 J s, c=299792458 m s^-1, kB=1.380649e-23 J K^-1; all exact by SI definition. These values only ground the constants, not the input sampling intervals or candidate source verification.",
+        "input_ranges now contains only independent variables lam and T, per the model-role contract; intervals intentionally remain null pending a documented benchmark sampling/validity design."
       ],
       "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11",
       "model_definition": {
