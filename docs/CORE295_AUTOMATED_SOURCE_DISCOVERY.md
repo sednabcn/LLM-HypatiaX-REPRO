@@ -45,7 +45,7 @@ The default output is `data/core295_discovery_queue.jsonl`. Each record is label
 
 ## Recommended review workflow
 
-1. Review DOI, title, publication type, venue, date, pagination and publisher URL.
+1. Review DOI, title, publication type, venue, date, pagination and publisher URL. Inspect `crossref_fulltext_links`, `crossref_license_metadata` and `crossref_resource_url` as retrieval leads; a PDF link or license URL is not by itself proof that the particular file is openly accessible or that reuse is permitted.
 2. Retrieve the original paper, standard, textbook or pinned official implementation.
 3. Confirm that the source actually contains the proposed governing equation and record its printed page/equation number.
 4. Transcribe variables, units, assumptions, regime and limitations from the source.
@@ -56,6 +56,7 @@ The default output is `data/core295_discovery_queue.jsonl`. Each record is label
 ## Limits and safety
 
 - The script requires outbound HTTPS access to Crossref when run.
+- Crossref `link`, `license` and `resource` fields are preserved as publisher-supplied metadata. Links are not fetched, licenses are not legally interpreted, and no paywall or access control is bypassed. A reviewer must check the actual source version, access terms and page-level equation evidence.
 - It uses only Python's standard library; no API key is required.
 - It does not run scientific experiments, validators, solvers, GitHub Actions, or live DeFi RPC/API calls.
 - It does not commit or push results. The user reviews the queue and decides whether to update the canonical manifest.
