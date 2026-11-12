@@ -76,11 +76,16 @@
     "parameter_sampling": null,
     "sampling_semantics": null,
     "parameter_sampling_scope": null,
-    "constraints_enforced": null
+    "constraints_enforced": null,
+    "constraint_enforcement_method": null,
+    "constraint_evidence": null
   },
   "reviewer": null,
   "reviewed_on": null,
   "review_notes": [
     "Template placeholder; do not treat as a candidate until all source and review evidence is completed."
-  ]
+  ],
+  "fixed_parameter_values": {},
+  "physical_constant_values": {},
+  "input_validity_bounds": {}
 }
