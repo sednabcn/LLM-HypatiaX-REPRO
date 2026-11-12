@@ -38,6 +38,28 @@ Allowed terminal statuses are `success`, `failed`, `timeout`, and `skipped`. Eac
 
 The three arm names are read from the current Core-15 ablation implementation. The runner currently enables the no-LLM arm by default in strict CI. Core-295 must keep all three enabled to preserve that contract.
 
+
+## Native checkpoint envelope adapter
+
+[\u0060core295_wrap_ablation_checkpoint.py\u0060](../scripts/core295_wrap_ablation_checkpoint.py) packages an already-produced native checkpoint into the versioned wrapper. It requires an explicit mapping JSON keyed by stable Core-295 equation ID. Each mapping value supplies the runner-local `checkpoint_key` and an explicit `arm_statuses` object containing all three arm statuses. The adapter verifies that mapping IDs exactly match the manifest shard, checkpoint keys are unique, and successful arms have native payload objects. It records SHA-256 hashes of the checkpoint and mapping as provenance and refuses to overwrite an existing artifact.
+
+Example mapping shape:
+
+\u0060\u0060\u0060json
+{
+  "CHEM-EQUATION-001": {
+    "checkpoint_key": "0",
+    "arm_statuses": {
+      "pysr_only": "success",
+      "hypatia": "success",
+      "hypatia_nollm": "timeout"
+    }
+  }
+}
+\u0060\u0060\u0060
+
+The mapping is an explicit assertion by the shard producer, not something inferred from the legacy checkpoint. In particular, do not map legacy Core-15 equation indices to Core-295 IDs by position or name similarity. A real Core-295 runner must supply the stable-ID mapping and arm statuses from its own execution ledger. This wrapper does not launch or adapt the current hard-coded Core-15 equation generator; that execution adapter remains unimplemented.
+
 ## Verifier
 
 From repository root, after shard adapters have emitted the wrapper artifacts:
