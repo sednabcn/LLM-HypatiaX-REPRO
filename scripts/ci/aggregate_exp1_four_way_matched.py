@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -26,6 +27,7 @@ def main() -> int:
     parser.add_argument("--repo-root", type=Path, default=Path.cwd())
     args = parser.parse_args()
 
+    os.environ.setdefault("FOUR_WAY_OUTPUT_DIR", str(args.output_dir.resolve()))
     driver = load_driver(args.repo_root.resolve())
     expected_ids = {str(i) for i in range(len(driver.abl.CORE_15))}
     shard_dirs = sorted(
