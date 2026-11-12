@@ -117,29 +117,10 @@ def _json_safe(o):
 
 
 def _create_message(client, **kwargs):
-    """Make one direct Anthropic API call (single attempt, no retry/cache).
+    """Make exactly one shared-wrapper API attempt using Core-15 temperature=0.25.
 
-    NOTE: the shared create_message wrapper requests the fixed benchmark
-    temperature (0.25) and retries once without it only when the SDK/model
-    explicitly rejects the parameter. The returned provenance records whether
-    the parameter was accepted by the client call.
-
-
-    Diagnostic/JMLR reproducibility mode: pass through whatever kwargs the
-    caller supplies (including ``temperature`` when the caller sets it —
-    see FIX-ISSUE2B-LLM-TEMPERATURE at the generate_formula() call site)
-    with no retry-on-error logic, so a failure can't be obscured by a
-    silent retry.
-
-    CORRECTED (previously claimed "Claude 4.6 models reject
-    `temperature`" and said this function deliberately omitted it — a
-    live smoke test against model="claude-sonnet-4-6" confirmed
-    `temperature=0.0` is accepted, so that claim was wrong and the
-    generate_formula() call site now sends it).
-
-    The function deliberately has no cache, memoization, retry, or fallback.
-    Every invocation reaches ``client.messages.create`` exactly once unless
-    the client raises before returning.
+    The wrapper inserts the protocol-fixed temperature and fails closed if the
+    client rejects it. No retry may silently fall back to a provider default.
     """
     t0 = time.perf_counter()
     print(
@@ -149,7 +130,7 @@ def _create_message(client, **kwargs):
         f"messages={len(kwargs.get('messages', []))}"
     )
     try:
-        from hypatiax.core.llm_call import create_message, last_call_info  # UNIFIED-TEMPERATURE
+        from hypatiax.core.llm_call import create_message
         response = create_message(client, **kwargs)
     except Exception as e:
         dt = time.perf_counter() - t0
@@ -458,8 +439,10 @@ class PureLLMBaseline:
             # constants are sent verbatim ("task spec"); record exactly which
             "prompt_constants": dict(metadata.get("constants") or {}),
             "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-            "temperature_sent": bool(__import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info().get("temperature_sent", False)),
-            "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info().get("temperature_requested"),
+            # These are intended defaults until this call updates them;
+            # never inherit provenance from a previous thread-local API call.
+            "temperature_sent": False,
+            "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).configured_temperature(),
             "model_source": self.model_source,
         }
         _llm_attempted = False
