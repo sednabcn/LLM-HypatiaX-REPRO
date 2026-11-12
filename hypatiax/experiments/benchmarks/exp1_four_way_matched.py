@@ -159,15 +159,22 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
             "elapsed_s": elapsed, "test": None, "extrapolation": {},
             "diagnostics": row,
         }
+    test_values = {
+        "r2": row.get("test_r2"),
+        "rmse": row.get("test_rmse"),
+        "mae": row.get("test_mae"),
+    }
+    test_metrics_valid = all(
+        value is not None and np.isfinite(float(value))
+        for value in test_values.values()
+    )
     return {
         "method": "hybrid_llm_pysr" if condition == "hypatia" else "pysr_only",
-        "success": row.get("test_r2") is not None,
-        "error": None if row.get("test_r2") is not None else "outer test predictor unavailable",
+        "success": test_metrics_valid,
+        "error": None if test_metrics_valid else "outer test predictor unavailable or metrics undefined",
         "elapsed_s": elapsed,
         "test": {
-            "r2": row.get("test_r2"),
-            "rmse": row.get("test_rmse"),
-            "mae": row.get("test_mae"),
+            **test_values,
             "scope": row.get("test_scope"),
         },
         "extrapolation": {
