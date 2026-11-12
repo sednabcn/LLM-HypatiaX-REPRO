@@ -561,6 +561,7 @@ class IntegratedLLMEngine:
         self.last_call_attempted = False
         self.last_response_received = False
         self.last_response_replayed = False
+        self.last_proposal_generated = False
         self.last_error = None
         self.last_call_info = {}
 
@@ -622,6 +623,7 @@ class IntegratedLLMEngine:
         self.last_response_received = False
         self.last_error = None
         self.last_response_replayed = False
+        self.last_proposal_generated = False
         self.last_call_info = {}
         # Opt-in replay (HYPATIAX_LLM_REPLAY_DIR): the response is keyed on the full prompt, which
         # embeds the data patterns, so each (equation, seed) gets ONE sample reused by every arm
@@ -641,6 +643,7 @@ class IntegratedLLMEngine:
                 self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
+                self.last_proposal_generated = bool(hypotheses)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
@@ -666,6 +669,7 @@ class IntegratedLLMEngine:
                 raise
             return []
         hypotheses = self._parse_response(response)
+        self.last_proposal_generated = bool(hypotheses)
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
         return hypotheses
@@ -2309,7 +2313,9 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             result["llm_time"] = llm_time
             result["llm_attempted"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
             result["llm_called"] = _response_received and not _response_replayed
-            result["llm_proposal_generated"] = False
+            result["llm_proposal_generated"] = bool(
+                getattr(self.llm_engine, "last_proposal_generated", False)
+            )
             result["llm_response_replayed"] = _response_replayed
             result["llm_temperature_requested"] = _call_info.get("temperature_requested")
             result["llm_temperature_sent"] = _call_info.get("temperature_sent")
@@ -2339,7 +2345,9 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 and not bool(getattr(self.llm_engine, "last_response_replayed", False))
             ),
             "llm_response_replayed": bool(getattr(self.llm_engine, "last_response_replayed", False)),
-            "llm_proposal_generated": True,
+            "llm_proposal_generated": bool(
+                getattr(self.llm_engine, "last_proposal_generated", False)
+            ),
             "llm_temperature_requested": getattr(self.llm_engine, "last_call_info", {}).get("temperature_requested"),
             "llm_temperature_sent": getattr(self.llm_engine, "last_call_info", {}).get("temperature_sent"),
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
