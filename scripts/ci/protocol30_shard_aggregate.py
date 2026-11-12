@@ -13,6 +13,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Direct script execution sets sys.path[0] to scripts/ci, not the repository root.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
 from hypatiax.core.llm_call import configured_temperature
 
