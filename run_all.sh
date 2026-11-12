@@ -1268,7 +1268,8 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
 
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
-  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+  # Only collect from this run's results tree; never move source-tree artifacts.
+  for _search_root in '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \\
     \\( \\
         -name 'defi_pca_v4_*.json' \\
