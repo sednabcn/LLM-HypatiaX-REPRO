@@ -91,6 +91,15 @@ for attempt in range(1, MAX_RETRIES + 1):
     except anthropic.RateLimitError as e:
         print(f"⚠️  Rate limited: {e}")
 
+    # These SDK exception classes inherit from APIError, so keep the
+    # retryable subclasses before the general APIError handler.
+    except (
+        anthropic.APIConnectionError,
+        anthropic.APITimeoutError,
+        anthropic.InternalServerError,
+    ) as e:
+        print(f"⚠️  Temporary API failure: {type(e).__name__}: {e}")
+
     except anthropic.APIError as e:
         if getattr(e, "status_code", None) == 529:
             # handle overloaded server
@@ -100,13 +109,6 @@ for attempt in range(1, MAX_RETRIES + 1):
             # other API errors
             print("❌ Unexpected API error")
             sys.exit(1)
-
-    except (
-        anthropic.APIConnectionError,
-        anthropic.APITimeoutError,
-        anthropic.InternalServerError,
-    ) as e:
-        print(f"⚠️  Temporary API failure: {type(e).__name__}: {e}")
 
     # ---- unknown fatal ----
 
