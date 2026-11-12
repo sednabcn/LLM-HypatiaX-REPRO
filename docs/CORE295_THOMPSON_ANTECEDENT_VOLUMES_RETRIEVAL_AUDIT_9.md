@@ -104,3 +104,14 @@ Both now require non-empty string identifiers and reject any repeated `independe
 - Planner commit: `1ef2149146796c1e0c021808712bf5405cf7a993`; re-fetched blob SHA: `8d6b2a554810fb02c147d40442bf40dd6316a136`.
 - Shard-driver commit: `50c3f7f8c2c78a87eb0c00c5e72ca46a6bb6f2be`; re-fetched blob SHA: `f69927911df1346901e0278b3ef9c7cb3bb0b55a`.
 - Source-level corrections verified by re-fetch only. No planner, driver, tests, validators, experiments, or workflows were run.
+
+
+## Core-295 planner validity-bound ordering correction
+
+A separate read-through of `scripts/core295_plan_tasks.py` found the same ordering defect previously corrected in the shard driver: the planner accessed `validity[variable]` while checking input ranges before assigning and validating `input_validity_bounds`. This would prevent task planning from reaching its intended fail-closed validation.
+
+The planner now validates the complete input-validity map and its finite, increasing bounds before checking train/extrapolation ranges, and removes the duplicate later block.
+
+- Corrective commit: `e9b447639660ac4aa444427eb83b6809aa80fad0`
+- Re-fetched content SHA: `127ad7c4a17d370205312afcdb9cc8d88d87fae3`
+- Verified by re-fetch only; no planner invocation, tests, validators, or experiments.
