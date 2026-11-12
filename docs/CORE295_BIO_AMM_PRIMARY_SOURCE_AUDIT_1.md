@@ -448,3 +448,31 @@ For a finite trade, _SolveQuadraticFunctionForTrade solves the corresponding qua
 adjustedTarget updates Q0 or B0 when the state is below or above target. getMidPrice uses the corresponding target/current reserve ratio and K to calculate a state-dependent marginal price. DecimalMath uses 1e18 fixed-point multiplication/division and floor/ceiling variants. The pinned library therefore adds concrete integer precision, rounding and regime-transition behavior beyond the documentation's real-valued presentation.
 
 **Structural disposition:** this supports DODO PMM as one guide-price-anchored, inventory-sensitive, piecewise-integrated pricing/state model. Do not count marginal price, integrated quote, quadratic inverse, mid-price, target adjustment and the three R regimes as separate equations. It is not a static reserve-only constant-product invariant. However, the library snapshot alone does not establish which DODO pool type/version wraps it, nor any deployed pool's current i,K,B,Q,B0,Q0, fee or oracle configuration. Bind the intended DVM/DPP/DSP contract family and a versioned pool adapter before formal candidate acceptance. No chain/RPC calls or simulations were made.
+
+
+## 4. Biology primary-source retrieval checkpoint: von Bertalanffy (1938) and Real (1977)
+
+### von Bertalanffy, “A Quantitative Theory of Organic Growth” (1938)
+
+The JSTOR issue contents now independently confirm the article's identity, title, author and pagination: *Human Biology* 10(2), May 1938, pp. 181–213. The publisher's issue page links directly to stable record 41447359. A separate bibliographic abstract describes the proposed mechanism as construction proportional to a surface function and destruction proportional to a volume function, and says growth equations are derived from those assumptions.
+
+This is useful corroboration of the model's conceptual mechanism, but it is not a transcription of the primary differential equation. The apparent alternative PDFs already tested in the retrieval log were false positives (a 1987 proceedings volume containing only a bibliography entry). The JSTOR article record remains access-controlled in this review. Do not substitute the later 1957 synthesis, Pütter 1920, or later fisheries parameterizations for the 1938 equation. Keep the source as a high-priority primary lead; exact equation, notation and page remain unverified.
+
+### Real, “The Kinetics of Functional Response” (1977)
+
+The University of Chicago Press article record and issue contents confirm *The American Naturalist* 111(978), 1 March 1977, pp. 289–300. The publisher abstract says Real generalizes the organismal-interaction formulations underlying Holling Type II into a learning/encounter-dependent Type III model using an allosteric-enzyme analogy, with maximum feeding rate F, affinity G and encounter count n. The publisher page currently presents “Get Access”; the retrieved PDF endpoint resolves to that access page, not readable article pages.
+
+An openly accessible later synthesis by Rosenbaum et al. gives the generalized functional-response form and explicitly attributes the enzyme-kinetics formulation to Real (1977):
+\[
+F(N)=\frac{F_{\max}N^{1+q}}{N_{1/2}^{1+q}+N^{1+q}},
+\]
+with q controlling the Type-II-to-Type-III shape transition. The equivalent attack-rate parametrization is \(a=bN^q\), \(F(N)=bN^{1+q}/(1+bhN^{1+q})\). This is secondary equation-level corroboration and a useful retrieval clue, not proof that this notation or parameterization is verbatim from Real's original paper. Do not transcribe it as a direct Real quotation or accept the candidate until the original article's equation and page are inspected.
+
+**Disposition:** both works remain primary-source leads rather than equation-ready entries. Their mechanisms are sufficiently supported to guide retrieval, but the original equation/page evidence gate remains open. No catalogue candidate was promoted, no source-count target was adjusted, and no experiment was run.
+
+Retrieval and corroboration links:
+- JSTOR 1938 issue contents and article record: https://www.jstor.org/stable/i40070616 and https://www.jstor.org/stable/41447359
+- 1938 bibliographic abstract: https://eurekamag.com/research/029/761/029761670.php
+- Real (1977) publisher article record/PDF endpoint: https://www.journals.uchicago.edu/doi/10.1086/283161
+- Real (1977) publisher issue contents: https://www.journals.uchicago.edu/toc/an/1977/111/978
+- Rosenbaum et al. open secondary equation-level discussion: https://pure.knaw.nl/portal/files/6764896/6543_Rosenbaum_AM.pdf
