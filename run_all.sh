@@ -2314,9 +2314,12 @@ for domain in protocol.get_all_domains():
     for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
         rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
 mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
+result_files = sorted(Path(out).glob("protocol_core_*.json"), key=lambda p: p.stat().st_mtime_ns)
+if not result_files:
+    raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
-            "equation_identities":mapping}
+            "equation_identities":mapping,"result_file":result_files[-1].name}
 Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
 PYMAN
   fi
@@ -2369,9 +2372,12 @@ for domain in protocol.get_all_domains():
     for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
         rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
 mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
+result_files = sorted(Path(out).glob("protocol_core_*.json"), key=lambda p: p.stat().st_mtime_ns)
+if not result_files:
+    raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
-            "equation_identities":mapping}
+            "equation_identities":mapping,"result_file":result_files[-1].name}
 Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
 PYMAN
   fi
