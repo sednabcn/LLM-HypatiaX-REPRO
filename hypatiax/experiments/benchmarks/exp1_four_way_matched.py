@@ -528,6 +528,24 @@ def run():
             },
         }
         prior_split = existing.get("split")
+        prior_methods = existing.get("methods", {})
+        has_successful_prior_arm = (
+            isinstance(prior_methods, dict)
+            and any(
+                isinstance(row, dict) and row.get("success") is True
+                for row in prior_methods.values()
+            )
+        )
+        if prior_split is None and has_successful_prior_arm:
+            raise RuntimeError(
+                f"Checkpoint has successful arm results but no dataset fingerprints for {eq['name']}; "
+                "refusing to reuse scores without proving dataset identity. Use a fresh output directory."
+            )
+        if prior_split is not None and not isinstance(prior_split, dict):
+            raise RuntimeError(
+                f"Checkpoint split metadata is malformed for {eq['name']}; "
+                "use a fresh output directory rather than mixing results."
+            )
         if isinstance(prior_split, dict):
             for field, expected in expected_split.items():
                 if prior_split.get(field) != expected:
