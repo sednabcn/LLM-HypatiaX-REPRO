@@ -718,3 +718,14 @@ Royama §4(g), printed pp.61–65, distinguishes Thompson's indiscriminate-paras
 Royama §4(h), printed pp.66–69, transcribes the Hassell–Varley interference relation `\ln \beta=\ln Q-m\ln Y`, equivalently `\beta=QY^{-m}`, and combines it with the Thompson-type parasitism model. Royama explicitly treats Hassell–Varley as a special case of generalized Thompson parasitism with a density-dependent hunting coefficient. Therefore the 1969 interference model should not be assumed to be a wholly independent structural family relative to Thompson; assign a common provisional source-family pending direct comparison of the primary papers and application of the E0–E5 policy.
 
 Royama's conclusions and equations are an audit aid only. No equation from Watt, Thompson, Stoy or Hassell–Varley is promoted to primary-transcribed or accepted status here.
+
+
+## 4.14 V. A. Bailey host–parasite series: three primary-source leads
+
+Three distinct Bailey papers merit separate retrieval records and must not be collapsed into a single "Bailey model":
+
+1. V. A. Bailey, “The Interaction between Hosts and Parasites,” *The Quarterly Journal of Mathematics* os-2(1) (1931), pp. 68–77, DOI 10.1093/qmath/os-2.1.68. Oxford Academic confirms the title, author, volume, pages and date and exposes a first-page PDF preview, but the article is PDF-only and full access is gated. It is a two-species interaction source lead; no equation transcription has been obtained.
+2. V. A. Bailey, “On the Interaction between Several Species of Hosts and Parasites,” *Proceedings of the Royal Society A* 143 (1933), pp. 75–88, DOI 10.1098/rspa.1933.0204. The Royal Society archive preserves the original 1933 referee reports on the submitted paper. Yule recommended publication subject to clarification; Greenwood suggested further mathematical review; Whittaker reported that he had checked the mathematics and found it sound, while recommending biological review. This archival evidence corroborates manuscript identity and peer-review history, not equation contents. The primary article scan remains unlocated.
+3. V. A. Bailey, “Non-continuous Interaction between Hosts and Parasites,” *Mathematical Proceedings of the Cambridge Philosophical Society* 29(4) (30 October 1933), pp. 487–491, DOI 10.1017/S0305004100011518. Cambridge's abstract says it follows the earlier two-species abundance problem and establishes fundamental equations. The full text is gated. It is a potentially distinct discrete/non-continuous formulation; do not assume it is merely a time discretization of a continuous model without reading the equations.
+
+These papers offer useful candidates for the Biology pool's continuous/discrete and multi-species coverage, but all remain source leads only. No equations have been transcribed and no Core-295 candidates are added. Relevant records: Oxford Academic 1931 article and issue contents; Cambridge 1933 article and issue contents; Royal Society archival reports RR/49/1–3.
