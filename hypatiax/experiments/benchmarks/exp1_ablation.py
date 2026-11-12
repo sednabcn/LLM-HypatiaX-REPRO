@@ -969,6 +969,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         print(f"  [pysr_only] ❌ ERROR: {e}")
         return _build_error_result("pysr_only", str(e), sr_time)
 
+    test_r2 = test_rmse = test_mae = None
     try:
         y_pred_train = model.predict(X_train)
         train_r2     = _safe_r2(y_train, y_pred_train)
