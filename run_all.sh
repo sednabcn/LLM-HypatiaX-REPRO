@@ -234,7 +234,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_four_way_matched exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability exp2_all_domains_pca_4060"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -918,6 +918,29 @@ PYMERGE
 }
 
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
+
+# Primary matched Core-15 comparison. The legacy five-system stage remains
+# manually selectable for historical/exploratory continuity, but is excluded
+# from the fresh rerun campaign in ci_runner/run_fresh_experiments.sh.
+run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-only comparison" bash -c "
+  set -euo pipefail
+  cd '${REPO_ROOT}'
+  _FOUR_DIR='${RESULTS_DIR}/four_way_matched'
+  mkdir -p \"${_FOUR_DIR}\"
+  PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \\
+  RESULTS_DIR='${RESULTS_DIR}' \\
+  NO_LLM_CACHE=1 \\
+  PYSR_SEED='${PYSR_SEED}' \\
+  PYSR_POPULATIONS='${PYSR_POPULATIONS}' \\
+  PYSR_TIMEOUT='${PYSR_TIMEOUT}' \\
+  METHOD_TIMEOUT='${METHOD_TIMEOUT}' \\
+  JOB_DEADLINE='${JOB_DEADLINE}' \\
+    python3 '${EXPERIMENTS_DIR}/exp1_four_way_matched.py' 2>&1 | tee \"${_FOUR_DIR}/exp1_four_way_matched_run.log\"
+  for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json; do
+    [[ -s \"${_FOUR_DIR}/${artifact}\" ]] || { echo \"::error::missing four-way artifact: ${artifact}\"; exit 1; }
+  done
+  echo '=== matched four-way comparison artifacts verified ==='
+"
 
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   set -euo pipefail
