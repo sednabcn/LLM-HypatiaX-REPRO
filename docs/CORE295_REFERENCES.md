@@ -433,3 +433,10 @@ These are additional official documentation pointers, not independent primary re
 
  
 225. Utida, S. (1957). “Cyclic fluctuations of population density intrinsic to the host-parasite system.” *Ecology* 38(3), pp. 442–449. DOI: https://doi.org/10.2307/1929888. Wiley publisher record and original first-page scan; complete article remains access-gated.
+
+ 
+226. Curve Finance. (2026). *StableSwap NG* source repository, commit `3332cd44656ec64b3c048885e1dd71955254b262`, math blob `25acc73e8b5cf0a0652bf833d7a1d9cd22cf83c5`. https://github.com/curvefi/stableswap-ng/tree/3332cd44656ec64b3c048885e1dd71955254b262. Pinned N-coin StableSwap invariant and iterative integer solver.
+ 
+227. Curve Finance. (2026). *Twocrypto NG* source repository, commit `89c8dfb6c9b3204647954018d2a0238b9c69349d`, math blob `3947686b080ed3e5c88141d8fc998f7ca5c27ba5`. https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d. Pinned two-coin CryptoSwap implementation.
+ 
+228. Curve Finance. (2026). *Tricrypto NG* source repository, commit `ecaa8161c240f21dd7c3712eefc5637e1dac742b`, math blob `695c794cb8035e4b2848ad0354d0993dcfb9c7cb`. https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b. Pinned three-coin CryptoSwap implementation.
