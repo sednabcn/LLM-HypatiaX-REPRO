@@ -609,17 +609,17 @@ class IntegratedLLMEngine:
                   "CACHE / DUPLICATE RESULT DETECTED: RMSE=X shared by MethodA, MethodB"
         """
 
-        if not self.config.enabled or not self.client:
-            return []
-
-        # Reset per-invocation state before prompt construction so an error
-        # while building a prompt cannot leak the previous call's provenance.
+        # Reset per-invocation state before any early return or prompt
+        # construction so previous-call provenance can never leak forward.
         self.last_call_attempted = False
         self.last_response_received = False
         self.last_error = None
         self.last_response_replayed = False
         self.last_proposal_generated = False
         self.last_call_info = {}
+
+        if not self.config.enabled or not self.client:
+            return []
 
         n_candidates = n_candidates or self.config.n_candidates
 
