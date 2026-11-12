@@ -741,7 +741,10 @@ JSON ARRAY:"""
 
     def _call_llm(self, prompt: str) -> str:
         """Call Anthropic API."""
-        message = self.client.messages.create(
+        from hypatiax.core.llm_call import create_message
+
+        message = create_message(
+            self.client,
             model=self.config.model,
             max_tokens=self.config.max_tokens,
             temperature=self.config.temperature,
