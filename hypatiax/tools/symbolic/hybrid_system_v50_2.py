@@ -1593,11 +1593,10 @@ class HybridDiscoverySystem:
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
                     if item.get("llm_temperature_requested") is not None
                 ), None),
-                "llm_temperature_sent": next((
-                    item.get("llm_temperature_sent")
+                "llm_temperature_sent": any(
+                    item.get("llm_temperature_sent") is True
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
-                    if item.get("llm_temperature_requested") is not None
-                ), None),
+                ),
                 "bypass_kind": "live" if any(
                     item.get("llm_called") is True
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
@@ -1607,6 +1606,7 @@ class HybridDiscoverySystem:
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
                 ) else "symbolic",
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
+                "llm_attempt_info": list(getattr(self, "_llm_attempt_info", None) or []),
                 "structural_risk_flag": bool(discovery.get("structural_risk_flag", False)),
                 "structural_risk_tokens": list(discovery.get("structural_risk_tokens", [])),
                 "complexity_routing_enabled": bool(discovery.get("complexity_routing_enabled", True)),
@@ -1639,7 +1639,7 @@ class HybridDiscoverySystem:
                 "final_formula": "N/A",
                 "variable_names": var_names,
                 "strategy": "error",
-                "llm_mode": "none",
+                "llm_mode": (getattr(self, "_llm_attempt_modes", None) or ["none"])[0],
                 "llm_attempted": any(
                     item.get("llm_attempted") is True
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
@@ -1661,12 +1661,12 @@ class HybridDiscoverySystem:
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
                     if item.get("llm_temperature_requested") is not None
                 ), None),
-                "llm_temperature_sent": next((
-                    item.get("llm_temperature_sent")
+                "llm_temperature_sent": any(
+                    item.get("llm_temperature_sent") is True
                     for item in (getattr(self, "_llm_attempt_info", None) or [])
-                    if item.get("llm_temperature_requested") is not None
-                ), None),
+                ),
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
+                "llm_attempt_info": list(getattr(self, "_llm_attempt_info", None) or []),
                 "structural_risk_flag": False,
                 "structural_risk_tokens": [],
                 "complexity_routing_enabled": False,
