@@ -48,49 +48,52 @@
   "entries": [
     {
       "equation_id": "CHEM-HENRY-001",
-      "name": "Henry gas-solubility relation",
+      "name": "Henry solubility relation for CO2 in pure water at 298.15 K",
       "domain": "Chemistry",
       "subdomain": "gas-liquid equilibrium",
-      "formula": "C_g = k_H P_g",
-      "canonical_expression": "kH*Pg",
-      "formula_latex": "C_g = k_H P_g",
-      "structural_fingerprint": "75060ec1b48014701529030f0bd7eb564970fa65d4013093d53555ab922a5625",
+      "formula": "c_CO2(aq) = Hs_cp p_CO2",
+      "canonical_expression": "kH*pCO2",
+      "formula_latex": "c_{\\mathrm{CO_2(aq)}} = H_s^{cp} p_{\\mathrm{CO_2}}",
+      "structural_fingerprint": "103cedf4fd987fc13cfc14b654b5a2ccfba05ffe3ec7e81fea867d6b31462227",
       "source_ids": [
-        "CHEM-OPENSTAX-HENRY-11-3"
+        "CHEM-OPENSTAX-HENRY-11-3",
+        "CHEM-SANDER-2023-HENRY-CO2",
+        "CHEM-CARROLL-1991-CO2-WATER-LOW-PRESSURE",
+        "CHEM-NIST-SOLUBILITY-CO2-WATER-1935"
       ],
       "source_family_id": "CHEM-GAS-LIQUID-SOLUBILITY-HENRY",
       "status": "proposed",
       "assumptions": [
-        "Gas-liquid equilibrium at fixed temperature",
-        "Dilute/ideal-solution regime where dissolved concentration is proportional to gas partial pressure",
-        "Gas and solvent identities fixed for the Henry coefficient",
-        "No significant chemical reaction of dissolved gas"
+        "Gas-liquid equilibrium at fixed temperature 298.15 K.",
+        "Dilute/low-pressure Henry-law regime for CO2 in pure water.",
+        "The dissolved concentration is molecular CO2(aq), not total dissolved inorganic carbon.",
+        "Gas partial pressure is pCO2, not total mixture pressure.",
+        "The Henry solubility coefficient Hs_cp is fixed for this gas-solvent-temperature convention."
       ],
       "variables": {
-        "Pg": {
-          "meaning": "Gas partial pressure; kPa or other pressure unit matched by kH",
-          "unit": "kPa (or another pressure unit with matching kH)"
+        "pCO2": {
+          "meaning": "Carbon dioxide partial pressure in the gas phase",
+          "unit": "Pa"
         },
         "kH": {
-          "meaning": "Concentration/pressure Henry coefficient; mol L^-1 kPa^-1",
-          "unit": "mol L^-1 kPa^-1 for the selected convention"
+          "meaning": "Solubility-form Henry coefficient Hs_cp for CO2 in pure water at 298.15 K",
+          "unit": "mol m^-3 Pa^-1"
         }
       },
       "validity": {
-        "source_location": "OpenStax Chemistry 2e §11.3",
-        "regime": "Dilute/ideal gas-solubility proportionality at fixed temperature and fixed gas-solvent pair",
+        "source_location": "Sander (2023), CO2 record in Henry's law constants v5.0.0; Hs_cp at reference temperature 298.15 K. Carroll, Slupsky & Mather (1991), low-pressure CO2-water solubility review.",
+        "regime": "Dilute/low-pressure gas-liquid equilibrium for molecular CO2(aq) in pure water at fixed 298.15 K.",
         "limitations": [
-          "No significant reactive dissolution",
-          "gas and solvent identities fixed",
-          "do not confuse with Ideal Gas Law"
+          "Not total dissolved inorganic carbon; carbonate and hydration equilibria are excluded.",
+          "No numeric pressure interval is inferred from the accessible source record; input ranges remain unset.",
+          "Do not vary temperature with a fixed coefficient.",
+          "Do not mix Hs_cp with reciprocal Henry-constant conventions.",
+          "Do not convert units without an explicit solvent-density conversion.",
+          "Not the Ideal Gas Law."
         ]
       },
       "input_ranges": {
-        "Pg": {
-          "train": null,
-          "extrapolation": null
-        },
-        "kH": {
+        "pCO2": {
           "train": null,
           "extrapolation": null
         }
@@ -108,41 +111,52 @@
         "constraint_evidence": null
       },
       "review_notes": [
-        "Input ranges and deterministic generator remain unspecified",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Source/parameter audit 1 (2026-11-12): narrowed to molecular CO2(aq) in pure water at 298.15 K, using solubility-form Hs_cp in mol m^-3 Pa^-1. Sander (2023) v5.0.0 CO2 record lists 3.4e-4 at 298.15 K (Burkholder et al. 2019, literature-evaluation type L); Carroll et al. (1991) also listed at 3.4e-4. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md.",
+        "Set fixed_parameter_values.kH=3.4e-4 only for this declared gas/solvent/temperature/convention. Do not average unlike Henry conventions or source classes.",
+        "The dissolved variable is molecular CO2(aq), not total dissolved inorganic carbon. Numeric pressure train/extrapolation ranges and validity bounds remain unset; low-pressure label does not justify inventing a rectangular sampling interval.",
+        "Proposed only; not scientifically accepted or eligible for shard planning."
       ],
-      "source_location": "OpenStax Chemistry 2e §11.3",
+      "source_location": "Sander (2023), Henry's law constants v5.0.0, CO2 record, Hs_cp at 298.15 K; Carroll, Slupsky & Mather (1991), low-pressure CO2-water solubility review.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
-          "Pg"
+          "pCO2"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "cCO2aq"
+        ],
         "state_variables": [],
         "fixed_parameters": [
           "kH"
         ],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Linear gas-liquid equilibrium response Cg=kH*Pg.",
+        "operator_structure": "Linear dilute-gas partition relation for molecular CO2(aq) concentration versus CO2 partial pressure at fixed solvent and temperature.",
         "constraints": [
-          "Fixed temperature and fixed gas-solvent pair.",
-          "Dilute/ideal regime."
+          "pCO2>=0.",
+          "kH is fixed at 3.4e-4 mol m^-3 Pa^-1 for CO2 in pure water at 298.15 K.",
+          "Henry-law dilute/low-pressure regime; numeric pressure bound is not yet established."
         ],
         "assumptions": [
-          "Gas-liquid equilibrium at fixed temperature",
-          "Dilute/ideal-solution regime where dissolved concentration is proportional to gas partial pressure",
-          "Gas and solvent identities fixed for the Henry coefficient",
-          "No significant chemical reaction of dissolved gas"
+          "Gas-liquid equilibrium at fixed temperature 298.15 K.",
+          "Dilute/low-pressure Henry-law regime for CO2 in pure water.",
+          "The dissolved concentration is molecular CO2(aq), not total dissolved inorganic carbon.",
+          "Gas partial pressure is pCO2, not total mixture pressure.",
+          "The Henry solubility coefficient Hs_cp is fixed for this gas-solvent-temperature convention."
         ],
-        "validity_regime": "Dilute/ideal gas-solubility proportionality at fixed temperature and fixed gas-solvent pair",
+        "validity_regime": "Dilute/low-pressure gas-liquid equilibrium for molecular CO2(aq) in pure water at fixed 298.15 K.",
         "limitations": [
-          "No significant reactive dissolution",
-          "gas and solvent identities fixed",
-          "do not confuse with Ideal Gas Law"
+          "Not total dissolved inorganic carbon; carbonate and hydration equilibria are excluded.",
+          "No numeric pressure interval is inferred from the accessible source record; input ranges remain unset.",
+          "Do not vary temperature with a fixed coefficient.",
+          "Do not mix Hs_cp with reciprocal Henry-constant conventions.",
+          "Do not convert units without an explicit solvent-density conversion.",
+          "Not the Ideal Gas Law."
         ]
       },
-      "fixed_parameter_values": {},
+      "fixed_parameter_values": {
+        "kH": 0.00034
+      },
       "physical_constant_values": {},
       "input_validity_bounds": {}
     },
@@ -4767,6 +4781,30 @@
       "url": "https://www.nist.gov/system/files/documents/pml/div685/pub/sp250-1.pdf",
       "use": "Primary metrology report for a specific blackbody-based spectral-radiance calibration service. Reports 225–2400 nm service wavelengths, a variable-temperature blackbody up to about 2700 K and gold-point reference 1337.58 K; Eq. (2) is spectral radiance per solid angle with wavelength-in-air/refractive-index convention. Supporting calibration-context evidence only: it does not define the candidate's spectral-exitance convention, a rectangular independent-input sampling domain, or universal validity bounds.",
       "status": "supporting_reference"
+    },
+    {
+      "source_id": "CHEM-SANDER-2023-HENRY-CO2",
+      "domain": "Chemistry",
+      "title": "Sander (2023), Compilation of Henry's law constants v5.0.0 for water as solvent; CO2 record",
+      "url": "https://henrys-law.org/henry/casrn/124-38-9",
+      "use": "Authoritative versioned Henry-constant compilation record. Defines Hs_cp in mol m^-3 Pa^-1 at reference 298.15 K; CO2 entry lists 3.4e-4 with 2300 K from Burkholder et al. (2019), literature-evaluation type L, and several other distinct entries. Use the declared convention and selected source row only; do not average unlike sources or conventions. Companion review: Sander (2023), ACP 23, 10901-12440, DOI 10.5194/acp-23-10901-2023.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-CARROLL-1991-CO2-WATER-LOW-PRESSURE",
+      "domain": "Chemistry",
+      "title": "Carroll, Slupsky & Mather (1991), The solubility of carbon dioxide in water at low pressure",
+      "url": "https://doi.org/10.1063/1.555900",
+      "use": "J. Phys. Chem. Ref. Data 20, 1201-1209. Sander (2023) CO2 compilation lists the Carroll et al. literature-review entry at Hs_cp=3.4e-4 mol m^-3 Pa^-1 at 298.15 K. Full article was not accessible in this audit; do not claim a direct transcription of its equation, data table or numeric pressure interval.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "CHEM-NIST-SOLUBILITY-CO2-WATER-1935",
+      "domain": "Chemistry",
+      "title": "IUPAC-NIST Solubility Database, CO2 + water, original measurements by Shedlovsky & MacInnes (1935)",
+      "url": "https://srdata.nist.gov/solubility/sol_detail.aspx?sysID=62_26",
+      "use": "NIST SRD 106 record for CO2-water at 298.15 K and 101.325 kPa; reports an independently defined Henry-constant convention, experimental procedure and source purity. Supporting context only; do not copy its differently dimensioned Henry constant into Hs_cp without conversion.",
+      "status": "supporting_reference"
     }
   ],
   "notes": [
@@ -4807,7 +4845,8 @@
     "2026-11-12: Added pinned Fraxlend Pair liquidation implementation. Records dual-oracle eligibility, clean/dirty fee switch and write-off of residual debt against total lender asset claims. No deployed pair mapping; no accepted-equation count change.",
     "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change.",
     "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change.",
-    "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed."
+    "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed.",
+    "2026-11-12: Henry candidate narrowed to molecular CO2(aq) in pure water at 298.15 K with solubility-form Hs_cp=3.4e-4 mol m^-3 Pa^-1 from Sander (2023) v5.0.0 CO2 compilation (Burkholder et al. 2019, literature-evaluation type L; Carroll et al. 1991 review also lists 3.4e-4). Pressure sampling range remains unset; candidate proposed and generator pending. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
