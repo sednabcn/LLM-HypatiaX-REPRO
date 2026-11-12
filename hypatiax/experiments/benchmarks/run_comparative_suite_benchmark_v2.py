@@ -697,8 +697,11 @@ sys.path.insert(0, str(_PKG_ROOT.parent))      # parent of hypatiax/ → import 
 # orchestrator can give each condition (noisy/noiseless) its own file and
 # prevent the two passes from colliding on the same JSON.
 _CHECKPOINT_NAME: str = "protocol_core_checkpoint"
-_OUTPUT_DIR: Path = _PKG_ROOT / "data/results/comparison_results"
-# _FLAT_OUTPUT_DIR: always comparison_results/ root — never overridden by
+_RESULTS_ROOT: Path = Path(
+    os.environ.get("RESULTS_DIR", str(_PKG_ROOT / "data/results"))
+).expanduser().resolve()
+_OUTPUT_DIR: Path = _RESULTS_ROOT / "comparison_results"
+# _FLAT_OUTPUT_DIR: always the configured comparison_results/ root — never overridden by
 # --output-dir.  benchmark_results.json lands here so it is NOT buried or
 # clobbered across multi-run sweeps (noise-sweep/, sample-complexity/).
 # Checkpoints also land here.
@@ -706,7 +709,7 @@ _OUTPUT_DIR: Path = _PKG_ROOT / "data/results/comparison_results"
 # FIX-EXTRAP-OUTPUT-DIR comment near its write site — it now uses
 # _OUTPUT_DIR (honors --output-dir) so it lands alongside
 # protocol_core_extrap_*.json in the per-experiment directory.
-_FLAT_OUTPUT_DIR: Path = _OUTPUT_DIR
+_FLAT_OUTPUT_DIR: Path = _RESULTS_ROOT / "comparison_results"
 
 # ---------------------------------------------------------------------------
 # juliacall MUST be imported before torch to prevent a segfault when PySR
