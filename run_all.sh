@@ -925,7 +925,11 @@ run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIB
 run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-only comparison" bash -c "
   set -euo pipefail
   cd '${REPO_ROOT}'
-  _FOUR_DIR='${RESULTS_DIR}/four_way_matched/shard${SHARD:-0}'
+  if [[ -n "\${TASK_IDS:-}" ]]; then
+    _FOUR_DIR='${RESULTS_DIR}/four_way_matched/shard${SHARD:-0}'
+  else
+    _FOUR_DIR='${RESULTS_DIR}/four_way_matched'
+  fi
   mkdir -p \"\${_FOUR_DIR}\"
   PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \\
   RESULTS_DIR='${RESULTS_DIR}' \\
