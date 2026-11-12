@@ -440,3 +440,6 @@ These are additional official documentation pointers, not independent primary re
 227. Curve Finance. (2026). *Twocrypto NG* source repository, commit `89c8dfb6c9b3204647954018d2a0238b9c69349d`, math blob `3947686b080ed3e5c88141d8fc998f7ca5c27ba5`. https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d. Pinned two-coin CryptoSwap implementation.
  
 228. Curve Finance. (2026). *Tricrypto NG* source repository, commit `ecaa8161c240f21dd7c3712eefc5637e1dac742b`, math blob `695c794cb8035e4b2848ad0354d0993dcfb9c7cb`. https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b. Pinned three-coin CryptoSwap implementation.
+
+ 
+229. Frumkin, A. (1925). “Einige Bemerkungen zur Theorie der Adsorption und Verteilung.” *Zeitschrift für Physikalische Chemie* 116, pp. 501–503 (German-language MSU bibliography; English MSU index gives pp. 501–504, discrepancy pending original-issue inspection). DOI: https://doi.org/10.1515/zpch-1925-11632. Listed in the MSU Department of Electrochemistry's 1914–1930 bibliography; original PDF access remains authorization-gated. Do not substitute secondary abstract OCR for primary equation transcription.
