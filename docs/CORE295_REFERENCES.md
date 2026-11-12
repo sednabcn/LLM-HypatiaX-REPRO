@@ -394,3 +394,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 210. Nicholson, A. J., and Bailey, V. A. “The Balance of Animal Populations.—Part I.” *Proceedings of the Zoological Society of London* 105(3) (September 1935), pp. 551–598. Primary publisher record: https://doi.org/10.1111/j.1096-3642.1935.tb01680.x. Publisher PDF/ePDF endpoints were inaccessible in this retrieval pass; equations remain untranscribed from the original.
+
+ 
+211. Leslie, P. H. “On the Use of Matrices in Certain Population Mathematics.” *Biometrika* 33(3) (November 1945), pp. 183–212. Original scan: https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.pdf. The age projection matrix is defined on printed p. 184; the survival and fertility matrix elements are derived on printed pp. 184–185. DOI: https://doi.org/10.1093/biomet/33.3.183.
