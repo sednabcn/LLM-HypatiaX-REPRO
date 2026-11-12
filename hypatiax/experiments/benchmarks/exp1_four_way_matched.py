@@ -508,6 +508,17 @@ def run():
             "name": eq["name"], "domain": eq["domain"],
             "seed": SEED, "methods": {},
         })
+        if not isinstance(existing, dict):
+            raise RuntimeError(
+                f"Checkpoint row is malformed for {eq['name']}; "
+                "use a fresh output directory rather than reusing partial results."
+            )
+        prior_methods = existing.get("methods", {})
+        if not isinstance(prior_methods, dict):
+            raise RuntimeError(
+                f"Checkpoint methods are malformed for {eq['name']}; "
+                "use a fresh output directory rather than reusing partial results."
+            )
         eq_seed = SEED + abl.EQ_ID[eq["name"]] * 7
         train_tuple = abl.generate_data(
             eq, N=N_TRAIN_SOURCE, noise_level=NOISE_LEVEL, seed=eq_seed
@@ -528,7 +539,6 @@ def run():
             },
         }
         prior_split = existing.get("split")
-        prior_methods = existing.get("methods", {})
         has_successful_prior_arm = (
             isinstance(prior_methods, dict)
             and any(
