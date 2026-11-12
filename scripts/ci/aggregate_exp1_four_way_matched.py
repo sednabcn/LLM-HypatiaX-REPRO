@@ -70,6 +70,8 @@ def main() -> int:
         if not isinstance(assigned, list) or not assigned:
             errors.append(f"{manifest_path}: missing assigned_equation_ids")
             assigned = []
+        elif len(assigned) != len(set(assigned)):
+            errors.append(f"{manifest_path}: duplicate equation IDs in assigned_equation_ids")
         shard_rows = {key for key in checkpoint if key != "__run_metadata__"}
         if shard_rows != set(assigned):
             errors.append(
@@ -84,8 +86,14 @@ def main() -> int:
                 errors.append(f"equation {key} appears in more than one shard")
                 continue
             row = checkpoint[key]
-            if not isinstance(row, dict) or not isinstance(row.get("split"), dict):
+            split = row.get("split") if isinstance(row, dict) else None
+            required_split_fields = {"train_data_sha256", "outer_test_sha256", "extrapolation_sha256"}
+            if not isinstance(split, dict) or not required_split_fields.issubset(split):
                 errors.append(f"equation {key}: missing row or shared-split fingerprints")
+                continue
+            extrap_hashes = split.get("extrapolation_sha256")
+            if not isinstance(extrap_hashes, dict) or set(extrap_hashes) != {"near", "medium", "far"}:
+                errors.append(f"equation {key}: incomplete extrapolation dataset fingerprints")
                 continue
             methods = row.get("methods")
             if not isinstance(methods, dict) or set(methods) != set(driver.METHOD_KEYS):
@@ -125,9 +133,19 @@ def main() -> int:
         json.dumps(driver._json_safe(summary), indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    arm_failure_counts = {
+        method: sum(
+            not bool((row.get("methods", {}).get(method) or {}).get("success"))
+            for row in merged.values()
+        )
+        for method in driver.METHOD_KEYS
+    }
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
         "execution_status": "aggregated_complete",
+        "coverage_complete": True,
+        "all_arms_successful": all(count == 0 for count in arm_failure_counts.values()),
+        "arm_failure_counts": arm_failure_counts,
         "expected_equations": 15,
         "observed_equations": len(merged),
         "validated_shards": sorted(observed_shards),
