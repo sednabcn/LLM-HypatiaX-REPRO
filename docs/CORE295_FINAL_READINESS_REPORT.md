@@ -52,3 +52,8 @@ The fail-closed shard harness is documented in [CORE295_EXECUTION_DRIVER.md](COR
 
 
 The first five domain-guarded adapters are implemented for the restricted explicit-scalar generator contract. They share Core-15's unchanged data and ablation functions, but do not cover implicit, coupled, ODE, stochastic, or protocol-simulation equations. See [CORE295_EXECUTION_DRIVER.md](CORE295_EXECUTION_DRIVER.md). The catalogue must explicitly adopt and justify the adapter's independent-input sampling semantics per equation; merely changing generator status is not sufficient.
+
+
+## Fixed-parameter scalar generator contract update
+
+The scalar converter now binds explicit fixed-parameter and physical-constant values into the formula and exposes only independent inputs to the Core-15 engine. The planner and shard driver require exact role/value mappings, explicit rectangular input-validity bounds, and evidence that all generated train/near/medium/far ranges remain within those bounds. Cross-variable constraints and non-scalar model classes remain unsupported by the shared adapter. No catalogue record has been promoted to generator-ready; the catalogue remains a 24-entry draft.
