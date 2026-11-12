@@ -104,6 +104,8 @@ def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
 
     # Reproduce the Core-15 data split/noise/extrapolation functions exactly.
     from hypatiax.experiments.benchmarks import exp1_ablation as exp1
+    if equation["name"] in exp1.EQ_ID:
+        raise ValueError("Core-295 equation name collides with Core-15 EQ_ID; refusing positional seed mapping")
     train = exp1.generate_data(equation, N=200, noise_level=0.05, seed=seed)
     extrap = {
         regime: exp1.generate_extrap_data(equation, regime=regime, N=100, seed=seed)
@@ -111,6 +113,8 @@ def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
     }
     dataset_hashes = {
         "train_all": _digest_arrays(train[4], train[5]),
+        "train_split": _digest_arrays(train[0], train[2]),
+        "ordinary_test_split": _digest_arrays(train[1], train[3]),
         **{regime: _digest_arrays(*arrays) for regime, arrays in extrap.items()},
     }
 
