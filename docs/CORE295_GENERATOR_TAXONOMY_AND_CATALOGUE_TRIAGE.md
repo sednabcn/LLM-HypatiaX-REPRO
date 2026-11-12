@@ -83,6 +83,12 @@ A slash indicates a boundary requiring source/model review, not permission to se
 6. Unsupported classes remain pending and cannot pass the task planner by filling arbitrary strings or ranges.
 7. Human source-page/code review, structural-equivalence review, source-family grouping and independent statistical-unit decisions remain separate acceptance gates.
 
+## Catalogue annotation pass
+
+The 24 current draft records have now been annotated with preliminary `model_definition` role partitions and matching `generator.model_class` labels. Current counts are 14 `explicit_scalar`, 6 `protocol_simulation`, 2 `ode_ivp`, 1 `matrix_operator`, and 1 `implicit_scalar`. These are triage labels, not completed generator implementations or scientific approvals. The annotations should be checked against primary sources and model definitions during candidate review.
+
+The shared scalar adapter was tightened to reject any record that declares fixed parameters, physical constants, dependent variables, or states. It accepts only records where every declared symbol is explicitly an independent input and every such input has a range. Consequently, the 14 records labelled `explicit_scalar` are not automatically compatible with that adapter; most separate inputs from fixed parameters and need a more expressive generator contract. The current adapter must not be used as a shortcut to sample those parameters independently.
+
 ## Current status
 
-The catalogue remains draft with 24 proposed records and a non-frozen sampling frame. This triage does not alter any candidate's status, verify equations, assign acceptance, or make any record executable. No tests, validators, scripts, generators, experiments, workflows, or live services were run to produce this document.
+The catalogue remains draft with 24 proposed records and a non-frozen sampling frame. No generator is marked ready, no equation is accepted, and the new role annotations do not verify equations, assign acceptance, or make any record executable. No tests, validators, scripts, generators, experiments, workflows, or live services were run to produce this document.
