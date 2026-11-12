@@ -2285,6 +2285,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
     _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
   fi
   mkdir -p \"\${_P30_RANDOM_DIR}\"
+  _P30_RUN_START_NS=\$(date +%s%N)
   _P30_EQ_ARGS=()
   [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2312,7 +2313,8 @@ import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
 from hypatiax.core.llm_call import configured_temperature
-out, shard, *indices = sys.argv[1:]
+out, shard, started_ns, *indices = sys.argv[1:]
+run_started_ns = int(started_ns)
 effective_temperature = configured_temperature()
 if effective_temperature != 0.25:
     raise SystemExit(f"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}")
@@ -2322,8 +2324,10 @@ for domain in protocol.get_all_domains():
     for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
         rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
 mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
-result_files = sorted(Path(out).glob("protocol_core_*.json"), key=lambda p: p.stat().st_mtime_ns)
+result_files = [p for p in Path(out).glob("protocol_core_*.json") if p.stat().st_mtime_ns >= run_started_ns]
+result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
+    raise SystemExit("no detailed Protocol-30 result JSON created during this shard run")
     raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
@@ -2353,6 +2357,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
     _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
   fi
   mkdir -p \"\${_P30_PCA_DIR}\"
+  _P30_RUN_START_NS=\$(date +%s%N)
   _P30_EQ_ARGS=()
   [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2375,7 +2380,8 @@ import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
 from hypatiax.core.llm_call import configured_temperature
-out, shard, *indices = sys.argv[1:]
+out, shard, started_ns, *indices = sys.argv[1:]
+run_started_ns = int(started_ns)
 effective_temperature = configured_temperature()
 if effective_temperature != 0.25:
     raise SystemExit(f"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}")
@@ -2385,8 +2391,10 @@ for domain in protocol.get_all_domains():
     for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
         rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
 mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
-result_files = sorted(Path(out).glob("protocol_core_*.json"), key=lambda p: p.stat().st_mtime_ns)
+result_files = [p for p in Path(out).glob("protocol_core_*.json") if p.stat().st_mtime_ns >= run_started_ns]
+result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
+    raise SystemExit("no detailed Protocol-30 result JSON created during this shard run")
     raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
