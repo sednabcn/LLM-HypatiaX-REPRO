@@ -115,6 +115,13 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
         wall_clock_limit=COMMON_WALL_CLOCK,
     )
     elapsed = time.monotonic() - started
+    if condition == "hypatia" and row.get("llm_enabled") is not True:
+        return {
+            "method": "hybrid_llm_pysr", "success": False,
+            "error": "LLM-enabled Hybrid arm was not active",
+            "elapsed_s": elapsed, "test": None, "extrapolation": {},
+            "diagnostics": row,
+        }
     if not row.get("success"):
         return {
             "method": "hybrid_llm_pysr" if condition == "hypatia" else "pysr_only",
@@ -163,6 +170,15 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
     elapsed = time.monotonic() - started
     if not result.success:
         return _failure("llm_only", RuntimeError(result.error or "LLM baseline unavailable"), elapsed)
+    provenance = dict(result.metadata or {})
+    if provenance.get("llm_called") is not True or provenance.get("bypass_kind") != "live":
+        return _failure(
+            "llm_only",
+            RuntimeError("LLM-only arm lacks verified live-API provenance"),
+            elapsed,
+        )
+    if provenance.get("is_hardcoded") is True:
+        return _failure("llm_only", RuntimeError("hardcoded formula is forbidden in LLM-only arm"), elapsed)
     code = result.formula_full or result.formula
     y_pred = rcsb._runner_eval_formula(code, X_test, eq["vars"])
     if y_pred is None:
