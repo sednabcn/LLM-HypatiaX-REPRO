@@ -141,11 +141,15 @@ def _run_fingerprint():
         "n_extrapolation": N_EXTRAP,
         "shard_index": int(os.environ.get("SHARD_INDEX", os.environ.get("SHARD", "0"))),
         "n_shards": max(1, int(os.environ.get("N_SHARDS", "1"))),
-        "llm_model": os.environ.get("HYPATIAX_LLM_MODEL", os.environ.get("LLM_MODEL")),
-        "llm_temperature": os.environ.get("LLM_TEMPERATURE"),
-        "pysr_niterations": os.environ.get("PYSR_NITERATIONS", os.environ.get("N_ITERATIONS")),
-        "pysr_populations": os.environ.get("PYSR_POPULATIONS", os.environ.get("POPULATIONS")),
-        "pysr_population_size": os.environ.get("PYSR_POPULATION_SIZE", os.environ.get("PYSR_POPULATION")),
+        # Record effective imported settings, not just environment aliases:
+        # exp1_ablation gives N_ITERATIONS precedence over PYSR_NITERATIONS
+        # and POPULATIONS precedence over PYSR_POPULATIONS.
+        "llm_model_effective": abl.MODEL_STRING,
+        "llm_temperature_effective": abl.LLM_TEMPERATURE,
+        "pysr_niterations_effective": abl.NITERATIONS,
+        "pysr_populations_effective": abl.POPULATIONS,
+        "pysr_timeout_seconds_effective": abl.PYSR_TIMEOUT_SECS,
+        "hybrid_max_retries_effective": abl._HYPATIA_MAX_RETRIES,
     }
     payload = {
         "schema": 1,
