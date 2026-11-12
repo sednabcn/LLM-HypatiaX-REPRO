@@ -519,6 +519,9 @@ class PureLLMBaseline:
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
+            _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
+            _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
+            _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
             _response_received = True
             print(
                 "GENERATE_API_RETURN "
@@ -570,6 +573,9 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
+            _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
+            _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
+            _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
             print(
                 f"\n❌ ERROR: {type(e).__name__}: {str(e)}"
             )
