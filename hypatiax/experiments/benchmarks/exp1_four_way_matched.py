@@ -433,6 +433,12 @@ def run():
         "common_method_wall_clock_seconds": COMMON_WALL_CLOCK,
         "n_source_samples": N_TRAIN_SOURCE, "n_extrapolation_samples": N_EXTRAP,
         "arms": list(METHOD_KEYS),
+        "arm_definitions": {
+            "hybrid_llm_pysr": "Core-15 HybridDiscoverySystem with LLM enabled and PySR refinement",
+            "llm_only": "PureLLMBaseline generated formula; no PySR refinement; live API provenance required",
+            "pysr_only": "raw PySRRegressor with no LLM proposal",
+            "nn_only": "ImprovedNN neural network with log preprocessing; OLS and secondary NN fallbacks disabled",
+        },
         "primary_metrics": ["test.r2", "test.rmse", "test.mae"],
         "test_policy": "same untouched outer test rows per equation and seed",
         "budget_policy": "same per-arm wall-clock cap; PySR population/iteration settings inherited from frozen rerun config",
