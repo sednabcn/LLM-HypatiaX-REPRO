@@ -1637,7 +1637,7 @@ class ImprovedNNMethod(BaseMethod):
             # fall back to ordinary least-squares in log-space.  This perfectly
             # recovers any equation that is a monomial product (Coulomb, Newton,
             # Ideal Gas, Fourier) because log(y) = linear combination of log(Xi).
-            if _use_log_y and r2_nn < 0.5:
+            if _use_log_y and r2_nn < 0.5 and not metadata.get("disable_fallback", False):
                 try:
                     from numpy.linalg import lstsq as _lstsq
                     A_train = np.column_stack(
@@ -1667,7 +1667,7 @@ class ImprovedNNMethod(BaseMethod):
             # mean), the equation is not a power-law — e.g. Bose-Einstein
             # 1/(exp(hf/kT)-1) whose log is -log(exp(x)-1), highly non-linear.
             # Retrain from scratch in linear space with standardised inputs.
-            if _use_log_y and r2_nn < 0.0:
+            if _use_log_y and r2_nn < 0.0 and not metadata.get("disable_fallback", False):
                 try:
                     self._log(f"log-space R²={r2_nn:.4f} < 0 — falling back to linear-space NN")
                     scaler_X_lin = StandardScaler()
