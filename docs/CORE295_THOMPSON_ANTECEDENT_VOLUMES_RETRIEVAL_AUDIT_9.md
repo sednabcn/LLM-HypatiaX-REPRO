@@ -93,3 +93,14 @@ A second source-level inspection found the shard driver opened the output in bin
 - Corrective commit: `b287a3124c29f8f3e6b6a40e6065d4032248b8f1`
 - Re-fetched file blob SHA: `464b38a301bdb28aea08f71f0179326132ae1360`
 - Source-level correction only; no driver execution or test was performed.
+
+
+## Core-295 statistical-unit uniqueness guard
+
+A further inspection found that the task planner required each accepted record to carry an `independence_unit_id`, but did not enforce uniqueness across the 295 records. The shard driver likewise checked presence but not uniqueness. That left a gap between the declared 295-independent-unit calibration design and the executable preflight.
+
+Both now require non-empty string identifiers and reject any repeated `independence_unit_id`. Repeated `source_family_id` values remain permitted because source-family clustering is distinct from the statistical independence unit.
+
+- Planner commit: `1ef2149146796c1e0c021808712bf5405cf7a993`; re-fetched blob SHA: `8d6b2a554810fb02c147d40442bf40dd6316a136`.
+- Shard-driver commit: `50c3f7f8c2c78a87eb0c00c5e72ca46a6bb6f2be`; re-fetched blob SHA: `f69927911df1346901e0278b3ef9c7cb3bb0b55a`.
+- Source-level corrections verified by re-fetch only. No planner, driver, tests, validators, experiments, or workflows were run.
