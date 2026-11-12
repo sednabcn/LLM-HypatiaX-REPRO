@@ -382,3 +382,6 @@ These are additional official documentation pointers, not independent primary re
 205. Holling, C. S. “Some Characteristics of Simple Types of Predation and Parasitism.” *The Canadian Entomologist* 91(7) (1959), pp. 385–398. Original scan, including Eqs. (1)–(13), printed pp. 386–397: https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2010/documents/Holling_1959b.pdf. Publisher record: https://doi.org/10.4039/Ent91385-7.
 
 206. Watt, K. E. F. “A Mathematical Model for the Effect of Densities of Attacked and Attacking Species on the Number Attacked.” *The Canadian Entomologist* 91(3) (1959), pp. 129–144. Publisher record and abstract: https://doi.org/10.4039/Ent91129-3. Holling (1959b) reproduces Watt's exponential response as Eqs. (11)–(13); original Watt equation-page inspection remains pending.
+
+
+207. Lotka, A. J. “Analytical Note on Certain Rhythmic Relations in Organic Systems.” *Proceedings of the National Academy of Sciences* 6(7) (15 July 1920), pp. 410–415. Publisher-hosted full text, including the original coupled plant–herbivore equations (5)–(10): https://www.pnas.org/doi/10.1073/pnas.6.7.410. DOI: https://doi.org/10.1073/pnas.6.7.410.
