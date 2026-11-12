@@ -1,10 +1,8 @@
 """Single LLM call wrapper shared by every arm (hybrids, PureLLM, benchmarks).
 
-Why: arms used to differ -- hybrids hard-coded temperature=0.0 (and crashed with a
-client-side TypeError on SDKs that dropped the argument), PureLLM sent none, and the
-engine/CI config says LLM_TEMPERATURE=0.25.  Now every arm requests the SAME configured
-temperature, falls back ONCE without it if the SDK/model rejects it, and records what was
-really sent so rows can report 'temperature_sent' honestly.
+Core-15 fixes the requested sampling temperature at 0.25. Every live call sends
+that parameter exactly once. If the SDK/model rejects it, the call fails closed:
+there is no retry at an implicit provider default that would violate arm parity.
 """
 from __future__ import annotations
 
@@ -24,29 +22,16 @@ def last_call_info() -> dict:
     return dict(getattr(_state, "info", {}) or {})
 
 
-def _rejects_temperature(exc: Exception) -> bool:
-    m = str(exc).lower()
-    if isinstance(exc, TypeError) and "temperature" in m:
-        return True
-    return "temperature" in m and any(k in m for k in ("deprecated", "not supported", "unexpected", "invalid"))
-
-
 def create_message(client, **kwargs):
-    """client.messages.create(**kwargs) with the configured temperature, one fallback."""
-    # The benchmark protocol fixes this value; ignore caller/env overrides so
-    # legacy call sites cannot silently create unmatched LLM conditions.
+    """Make exactly one API attempt with the protocol-fixed temperature."""
+    # Ignore caller/env overrides so legacy call sites cannot silently create
+    # unmatched LLM conditions. Never retry without temperature: that would
+    # silently use a provider default instead of the Core-15 protocol value.
     req = configured_temperature()
     kwargs = {**kwargs, "temperature": req}
-    # Clear prior-call state so failed requests cannot inherit stale provenance.
-    _state.info = {"temperature_requested": req, "temperature_sent": None}
-    try:
-        resp = client.messages.create(**kwargs)
-        _state.info = {"temperature_requested": req, "temperature_sent": True}
-        return resp
-    except Exception as e:  # noqa: BLE001
-        if not _rejects_temperature(e):
-            raise
-        kwargs.pop("temperature", None)
-        resp = client.messages.create(**kwargs)
-        _state.info = {"temperature_requested": req, "temperature_sent": False}
-        return resp
+    # Clear prior-call state before the request. False means no successful
+    # response confirmed that the requested parameter was accepted.
+    _state.info = {"temperature_requested": req, "temperature_sent": False}
+    resp = client.messages.create(**kwargs)
+    _state.info = {"temperature_requested": req, "temperature_sent": True}
+    return resp
