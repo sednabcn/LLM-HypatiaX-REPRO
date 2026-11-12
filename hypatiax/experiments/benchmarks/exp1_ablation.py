@@ -134,9 +134,8 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
-# Both Core-15 LLM arms use the shared wrapper's 0.25 default unless overridden.
-# Keep Hybrid's explicit request aligned with PureLLM's implicit wrapper request.
-LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
+# Core-15 protocol: all LLM arms use a fixed sampling temperature.
+LLM_TEMPERATURE    = 0.25
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
