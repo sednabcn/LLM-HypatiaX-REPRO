@@ -3176,6 +3176,22 @@
       "url": "https://fileserver-az.core.ac.uk/download/pdf/14511273.pdf",
       "use": "Original scan of Gompertz, Philosophical Transactions of the Royal Society of London 115 (1825), pp.513–583. Article I, section 5, printed p.518 directly states age-dependent mortality intensity a q^x and the corresponding number living L_x = d g^(q^x), with g and q constants and Gompertz explicitly clarifying the nested exponent. Modern mu(x)=alpha exp(beta x) is a reparameterization, not the paper's printed notation. Proposed demographic survival/mortality model; biological-domain scope and structural review remain pending.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-HOLLING-1959-TYPE-II-FUNCTIONAL-RESPONSE",
+      "domain": "Biology",
+      "title": "Holling 1959 handling-time functional response and model comparison",
+      "url": "https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2010/documents/Holling_1959b.pdf",
+      "use": "Original scan of C. S. Holling, The Canadian Entomologist 91(7) (1959), pp.385–398. Equations (1)–(10), printed pp.386–390, derive the handling-time/searching-time response y=T_t a x/(1+abx), including identification-time extension; equations (11)–(13) reproduce and compare K. E. F. Watt's exponential response. Type II rational saturation is structurally equivalent to the Core-15 Michaelis–Menten exclusion and is provenance/exclusion evidence, not a new candidate. Holling explicitly notes the observed S-shaped small-mammal response is not explained by Eq. (4); do not misattribute the later Real Type III model to this paper.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-WATT-1959-EXPONENTIAL-FUNCTIONAL-RESPONSE",
+      "domain": "Biology",
+      "title": "Watt 1959 exponential functional-response model (primary source retrieval lead)",
+      "url": "https://doi.org/10.4039/Ent91129-3",
+      "use": "Watt, 'A Mathematical Model for the Effect of Densities of Attacked and Attacking Species on the Number Attacked', The Canadian Entomologist 91(3) (1959), pp.129–144. Holling (1959b), equations (11)–(13), transcribes Watt's model as N_a=P K(1-exp(-a N_0 P^(1-b))) and, at fixed predator density, y=K'(1-exp(-a'x)); the original Watt paper remains access-gated and must be inspected before direct equation transcription or candidate promotion.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
