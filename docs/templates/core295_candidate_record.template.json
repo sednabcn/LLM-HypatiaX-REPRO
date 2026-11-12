@@ -1,0 +1,80 @@
+{
+  "_template_notice": "Working template only. This file is intentionally incomplete and is not a valid accepted catalogue entry.",
+  "equation_id": "DOMAIN-SOURCE-MODEL-NNN",
+  "name": null,
+  "domain": "Chemistry | Biology | Physics | DeFi AMM | DeFi Risk",
+  "subdomain": null,
+  "formula": null,
+  "formula_latex": null,
+  "canonical_expression": null,
+  "structural_fingerprint": null,
+  "source_ids": [],
+  "source_family_id": null,
+  "independence_unit_id": null,
+  "status": "proposed",
+  "source_verification": {
+    "full_citation": null,
+    "doi_isbn_standard_or_commit": null,
+    "primary_source_type": null,
+    "primary_source_rationale": null,
+    "version_inspected": null,
+    "landing_page_url": null,
+    "artifact_url": null,
+    "artifact_sha256": null,
+    "retrieved_at_utc": null,
+    "printed_page": null,
+    "pdf_page_index": null,
+    "equation_section_or_code_location": null,
+    "source_equation_label": null,
+    "direct_evidence_notes": null,
+    "access_and_license_evidence": null
+  },
+  "transcription": {
+    "source_notation": null,
+    "faithful_latex": null,
+    "complete_system_included": false,
+    "page_image_checked": false,
+    "second_pass_checked": false,
+    "transcription_notes": null
+  },
+  "model_definition": {
+    "model_class": null,
+    "state_variables": [],
+    "independent_variables": [],
+    "dependent_variables": [],
+    "state_dimension": null,
+    "operator_structure": null,
+    "initial_boundary_conditions": null,
+    "constraints": [],
+    "assumptions": [],
+    "validity_regime": null,
+    "limitations": []
+  },
+  "variables": {},
+  "validity": {
+    "source_location": null,
+    "regime": null,
+    "limitations": []
+  },
+  "equivalence_review": {
+    "classification": "E5",
+    "compared_candidates": [],
+    "derivation_parents": [],
+    "core15_overlap_review": null,
+    "rationale": null,
+    "reviewer": null,
+    "reviewed_on": null
+  },
+  "input_ranges": {},
+  "generator": {
+    "status": "pending_benchmark_contract",
+    "method": null,
+    "seed_policy": null,
+    "parameter_sampling": null
+  },
+  "reviewer": null,
+  "reviewed_on": null,
+  "review_notes": [
+    "Template placeholder; do not treat as a candidate until all source and review evidence is completed."
+  ]
+}
