@@ -260,11 +260,41 @@ if status == "failed":
     data["failed_stage"] = stage
 json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
 with open(path, "a", encoding="utf-8") as stream:
-    stream.write("\n")
+    stream.write("\\n")
 PY
 }
 
+CURRENT_STAGE="runner_initialization"
+runner_exit_manifest() {
+  local rc=$?
+  if [[ "$rc" -ne 0 && -f "$MANIFEST" ]]; then
+    python3 - "$MANIFEST" "${CURRENT_STAGE:-runner_exit}" "$rc" <<'PY' || true
+import datetime, json, sys
+path, stage, rc = sys.argv[1], sys.argv[2], int(sys.argv[3])
+with open(path, encoding="utf-8") as stream:
+    data = json.load(stream)
+if data.get("status") != "failed":
+    data.setdefault("stages", []).append({
+        "stage": stage,
+        "status": "failed",
+        "recorded_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "reason": "runner exited before successful completion",
+        "exit_code": rc,
+    })
+    data["status"] = "failed"
+    data["failed_stage"] = stage
+    data["runner_exit_code"] = rc
+with open(path, "w", encoding="utf-8") as stream:
+    json.dump(data, stream, indent=2)
+    stream.write("\\n")
+PY
+  fi
+  return "$rc"
+}
+trap runner_exit_manifest EXIT
+
 for stage in "${STAGES[@]}"; do
+  CURRENT_STAGE="$stage"
   echo "===== FRESH EXPERIMENT STAGE: $stage ====="
   if bash "$RUN_ALL" --step "$stage" 2>&1 | tee "$RESULTS_DIR/logs/$stage.log"; then
     record_stage "$stage" "passed"
@@ -275,6 +305,7 @@ for stage in "${STAGES[@]}"; do
   fi
 
   if [[ "$stage" == "env_check" ]]; then
+    CURRENT_STAGE="live_llm_preflight"
     echo "Performing a live API round-trip with the protocol model/temperature..."
     if python3 "$REPO_ROOT/config/check_key_status.py" 2>&1 | tee "$RESULTS_DIR/logs/live-llm-preflight.log"; then
       record_stage "live_llm_preflight" "passed"
@@ -283,6 +314,7 @@ for stage in "${STAGES[@]}"; do
       echo "ERROR: live LLM preflight failed; no benchmark stages will run" >&2
       exit 1
     fi
+    CURRENT_STAGE="pysr_warmup"
     echo "Warming PySR/Julia with a tiny synthetic fit (not a benchmark result)..."
     if timeout 900s python3 - "$RESULTS_DIR" <<'PY' > "$RESULTS_DIR/logs/pysr-warmup.log" 2>&1
 import sys
@@ -314,6 +346,7 @@ PY
       echo "ERROR: PySR/Julia warm-up failed (exit $warmup_rc); see $RESULTS_DIR/logs/pysr-warmup.log" >&2
       exit "$warmup_rc"
     fi
+    CURRENT_STAGE="runtime_provenance"
     echo "Capturing exact Python and Julia runtime provenance..."
     python3 -m pip freeze --all > "$RESULTS_DIR/python-environment-freeze.txt"
     python3 - <<'PY' > "$RESULTS_DIR/python-runtime-versions.txt"
