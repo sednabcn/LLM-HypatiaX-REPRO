@@ -3233,7 +3233,8 @@ jobs:
       - name: Install aggregation dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install "pandas==2.2.3" "pysr==2.0.0a1" numpy scipy sympy "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn pmlb pint psutil torch --index-url https://download.pytorch.org/whl/cpu
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3" "pysr==2.0.0a1" numpy scipy sympy "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn pmlb pint psutil
 
       - name: Download all five worker artifacts
         uses: actions/download-artifact@v4.3.6
