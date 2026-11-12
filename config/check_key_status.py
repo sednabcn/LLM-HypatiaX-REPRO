@@ -88,19 +88,18 @@ for attempt in range(1, MAX_RETRIES + 1):
         sys.exit(1)
 
     # ---- transient/retryable failures ----
+    except anthropic.RateLimitError as e:
+        print(f"⚠️  Rate limited: {e}")
+
     except anthropic.APIError as e:
         if getattr(e, "status_code", None) == 529:
             # handle overloaded server
             print("⚠️ Anthropic servers overloaded (HTTP 529)")
             print("   Recommendation: wait a few seconds and retry; consider a lighter model.")
-            first_error = False
         else:
             # other API errors
             print("❌ Unexpected API error")
             sys.exit(1)
-
-    except anthropic.RateLimitError as e:
-        print(f"⚠️  Rate limited: {e}")
 
     except (
         anthropic.APIConnectionError,
