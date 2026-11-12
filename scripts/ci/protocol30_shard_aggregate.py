@@ -86,6 +86,8 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         payload = shard_payloads[shard]
         if manifest.get("expected_equation_count") != 30 or manifest.get("n_shards") != 5:
             fail(f"shard {shard}: expected 30 equations and five shards")
+        if manifest.get("effective_llm_temperature") != 0.25:
+            fail(f"shard {shard}: effective LLM temperature must be exactly 0.25")
         protocol = payload.get("protocol")
         methods = payload.get("methods")
         if not isinstance(protocol, dict) or not isinstance(methods, list):
@@ -142,6 +144,7 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         "methods": common_methods,
         "protocol": common_protocol,
         "all_method_records_retained": True,
+        "effective_llm_temperature": 0.25,
         "result_file": result_path.name,
     }
     manifest_path = output_dir / f"protocol30_{variant}_aggregate_manifest.json"
