@@ -65,6 +65,7 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
     if not isinstance(entries, list) or len(entries) != 295:
         stop("catalogue must contain exactly 295 entries")
     by_id = {}
+    seen_independence_units = set()
     counts = {domain: 0 for domain in DOMAINS}
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("equation_id"), str):
@@ -77,8 +78,15 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
         review = entry.get("equivalence_review")
         if not isinstance(review, dict) or review.get("classification") != "E4" or not review.get("rationale"):
             stop(f"{eid}: documented E4 structural review is required")
-        if not entry.get("source_family_id") or not entry.get("independence_unit_id"):
-            stop(f"{eid}: source-family and statistical-unit IDs are required")
+        family_id = entry.get("source_family_id")
+        unit_id = entry.get("independence_unit_id")
+        if not isinstance(family_id, str) or not family_id.strip():
+            stop(f"{eid}: source_family_id must be a non-empty string")
+        if not isinstance(unit_id, str) or not unit_id.strip():
+            stop(f"{eid}: independence_unit_id must be a non-empty string")
+        if unit_id in seen_independence_units:
+            stop(f"{eid}: duplicate independence_unit_id {unit_id!r}; statistical units must be unique")
+        seen_independence_units.add(unit_id)
         if entry.get("domain") not in counts:
             stop(f"{eid}: unsupported domain")
         counts[entry["domain"]] += 1
