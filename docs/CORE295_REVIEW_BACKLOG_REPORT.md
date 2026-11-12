@@ -72,3 +72,8 @@ Use [`scripts/core295_candidate_readiness_report.py`](../scripts/core295_candida
 ## Human decision records and candidate staging
 
 The [review decision template](templates/core295_review_decision.template.json) captures gate outcomes, evidence, reviewer identities/dates, E0–E5 classification, source-family and statistical-unit rationale, and final disposition. The [staging helper](../scripts/core295_stage_reviewed_candidate.py) checks for complete human sign-off and emits a standalone `structurally_reviewed` staging JSON. It never sets `accepted`, writes to the canonical catalogue, or substitutes for catalogue-wide equivalence review and source-register checks. See the [controlled staging procedure](CORE295_OPEN_ACCESS_RETRIEVAL.md#human-decision-record-and-controlled-staging).
+
+
+## Catalogue-wide promotion audit
+
+Run `python scripts/core295_audit_staged_promotions.py` after staging candidates. This read-only report checks staged IDs and fingerprints against the catalogue, verifies source IDs against the embedded source register, flags source-ID reuse and domain/family mismatches, and checks statistical-unit/source-family consistency and human sign-off metadata. It does not edit the catalogue, certify scientific validity, or authorize acceptance. See the [audit procedure](CORE295_OPEN_ACCESS_RETRIEVAL.md#catalogue-wide-staged-promotion-audit).
