@@ -392,3 +392,54 @@ The liquidation sequence closes the trove, accounts for batch interest/managemen
 **JIT terminology caveat.** Liquity's current user documentation describes a just-in-time (JIT) fallback when a Stability Pool is empty. The pinned TroveManager source path inspected here exposes the ordinary Stability Pool offset plus redistribution path; it does not expose a separately named `liquidateJIT` function. Treat JIT as an operational/composability mode to be mapped to the exact deployed transaction path before formalizing it as a distinct mechanism.
 
 **Version and deployment caveats.** The current repository is multi-branch and the TroveManager constructor loads MCR, SCR, CCR and penalty ratios from an AddressesRegistry. This audit does not map a deployed branch, registry, price feed, trove manager, pool balance, parameter set or block. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
+
+
+## 12. Silo V3: partial collateral liquidation and internal collateral-debt defaulting
+
+**Pinned implementation snapshot.** Official repository `silo-finance/silo-contracts-v3`, commit `ed18f3a33be1a08e786279c50b914b1d6eaf04c7` (2026-10-07):
+- `silo-core/contracts/hooks/liquidation/PartialLiquidation.sol`, blob SHA `d335836e347b7617e675e462f49a551b9666f301`
+- `silo-core/contracts/hooks/liquidation/lib/PartialLiquidationLib.sol`, blob SHA `3b9755b8abaa7fdb8e3262b6c69dcc4b695a7cb4`
+- `silo-core/contracts/hooks/liquidation/lib/PartialLiquidationExecLib.sol`, blob SHA `ecffe43e71cc74cee3f57309a169ee190712625a`
+- `silo-core/contracts/hooks/defaulting/PartialLiquidationByDefaulting.sol`, blob SHA `72db29f8402348be3da485f106e76a0b6b8577b9`
+- `silo-core/contracts/hooks/defaulting/DefaultingSiloLogic.sol`, blob SHA `581b46cbbe33dacc2d74e614299f2e6025b12e09`
+- `silo-core/contracts/hooks/defaulting/DefaultingRepayLib.sol`, blob SHA `e0a011e985d977bd8751aa25168d2281b4379544`
+- `silo-core/contracts/lib/SiloSolvencyLib.sol`, blob SHA `f4bc66a364110c4f711f6d5a47faea61ad4de8db`
+- `silo-core/contracts/hooks/SiloHookV2.sol`, blob SHA `920075bee5a302f64e74fb31bebdce542dc64630`
+- `silo-core/contracts/hooks/SiloHookV3.sol`, blob SHA `d2960743f7f4b5cf4db44e6a3980b657d96c1a4b`
+- `silo-core/contracts/SiloConfig.sol`, blob SHA `dd68772bd7936d2ba8391b58a2872f0b146de231`
+
+Pinned commit: https://github.com/silo-finance/silo-contracts-v3/commit/ed18f3a33be1a08e786279c50b914b1d6eaf04c7. Hook source reports versions `SiloHookV2 4.19.0` and `SiloHookV3 4.19.0`. V2 inherits both standard partial liquidation and defaulting; V3 inherits the defaulting implementation, overrides standard `liquidationCall` to revert, and sets the defaulting LT margin to zero. These hook versions must not be conflated.
+
+### Solvency and standard collateral-sale liquidation
+
+The solvency library converts protected and collateral shares into underlying assets, converts debt shares into debt assets with debt-side rounding, values collateral and debt through their configured solvency oracles, and computes
+\[
+LTV=\left\lceil\frac{D_v\cdot 10^{18}}{C_v}\right\rceil.
+\]
+A position is liquidatable when its LTV exceeds the configured collateral liquidation threshold (LT). The collateral and debt may live in separate Silos; their SiloConfig binds the collateral Silo, debt Silo, share tokens, oracle routes, (LT), target post-liquidation LTV and liquidation fee. Interest is accrued before execution.
+
+For a healthy-but-liquidatable position, the maximum debt value to repay is derived from the target post-liquidation LTV (T), total debt value (D_v), collateral value (C_v), and liquidation fee (f). The source documents the rearrangement
+\[
+\frac{D_v-x}{C_v-(x+xf)}=T,
+\qquad
+x=\frac{D_v-TC_v}{1-T-Tf}.
+\]
+The implementation uses 18-decimal integer arithmetic, explicit early exits and rounding. If debt value is at least collateral value, or target LTV is zero, it forces full liquidation. A partial repay that would exceed 90% of total debt is also promoted to full liquidation to avoid dust. Bad debt (LTV at least 100%) bypasses the target-LTV restriction and allows the caller's requested repay up to the debt balance.
+
+Collateral value seized is capped at
+\[
+C_{seize}=\min\bigl(x(1+f),C_v\bigr).
+\]
+The amount is converted back to collateral assets and then to collateral shares with the implementation's specified rounding; the 2-wei underestimation guard addresses the assets-to-shares-to-assets conversion path. Protected collateral is consumed before ordinary collateral. The standard liquidation hook takes the debt asset from the liquidator, approves and repays the debt Silo, transfers collateral/protected shares from the borrower, and either returns shares or redeems the underlying to the liquidator. If the calculated liquidation requires more debt repayment than the caller's maximum, it reverts rather than silently exceeding that cap.
+
+### Internal collateral-debt swap / defaulting mode
+
+The defaulting hook reuses the partial-liquidation sizing logic but changes settlement. In V2, the defaulting threshold adds a 1 percentage-point margin to the collateral (LT); V3 overrides that margin to zero. The defaulting initializer validates a one-way market (one side has (LT=0)), requires zero liquidation fee on the non-collateral side, and constrains (LT+margin+feele100%).
+
+The hook calculates the full permitted collateral/debt amounts, converts the seized collateral and protected collateral to shares, and splits each share amount between keeper and lenders. `KEEPER_FEE=20%) is the keeper's fraction of the liquidation-fee component; the keeper share calculation is rounded down and the remaining seized shares are assigned to lenders. Lender shares are transferred to the configured incentives controller for immediate distribution; keeper shares go directly to the liquidator.
+
+Instead of transferring debt tokens into the debt Silo, the defaulting logic reduces the collateral Silo's recorded collateral assets by the defaulted debt amount (using DAO/deployer revenue as a secondary accounting buffer if collateral assets are insufficient), and burns the borrower's debt shares while reducing the debt Silo's total debt assets. This is an internal loss-allocation mechanism: lenders receive collateral shares, the borrower debt is erased, and the keeper receives a fee share. It is materially different from the standard sale path, which requires the liquidator to provide debt assets and repays the debt Silo.
+
+**Structural disposition:** this pinned source contains two related but structurally distinct settlement modes: (a) partial collateral-sale liquidation that transfers borrower collateral to a liquidator in exchange for debt repayment, and (b) internal collateral-debt defaulting that writes off borrower debt and distributes collateral shares to lenders. The latter is a strong distinct DeFi Risk lead because it allocates losses directly to lender collateral accounting instead of relying on a market sale. Both modes share the target-LTV partial-liquidation sizing operator; do not count the sizing formula, share conversions, fee split, and accounting branches as separate equations. Pairwise E0–E5 review should decide whether the two settlement modes qualify as separate structural candidates or one multi-mode family.
+
+**Version and deployment caveats.** The source repo includes multiple hook versions and immutable per-Silo configurations. This audit does not map a particular deployed hook, SiloConfig, Silo pair, oracle, collateral LT, liquidation target LTV, fee, incentive controller or block. The source uses mixed license headers across core and library files; preserve file-level license provenance. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
