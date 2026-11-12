@@ -563,3 +563,19 @@ Primary and retrieval links:
 - Holling 1959b original scan: https://hahana.soest.hawaii.edu/cmoreserver/summercourse/2010/documents/Holling_1959b.pdf
 - Holling 1959b publisher record: https://doi.org/10.4039/Ent91385-7
 - Watt 1959 original publisher record: https://doi.org/10.4039/Ent91129-3
+
+
+## 4.3 Lotka (1920): original coupled plant–herbivore system
+
+The publisher-hosted full text of A. J. Lotka, “Analytical Note on Certain Rhythmic Relations in Organic Systems,” *Proceedings of the National Academy of Sciences* 6(7) (15 July 1920), pp. 410–415, is now accessible. Lotka starts with a plant species \(S_1\) drawing nourishment from an effectively constant source and a herbivore species \(S_2\) feeding on \(S_1\). The original equations (5)–(10), printed in the article, reduce to the coupled system
+
+\[
+\frac{dX_1}{dt}=X_1\left(A_1-B_1X_2\right),\qquad
+\frac{dX_2}{dt}=X_2\left(A_2X_1-B_2\right),
+\]
+
+where Lotka explicitly states that \(A_1,A_2,B_1,B_2\) are, in general, functions of both \(X_1\) and \(X_2\). The components are mechanistically distinguished: plant formation, plant rejection/waste, plant loss through herbivory, conversion of consumed plant matter into herbivore growth, and herbivore loss. The original paper gives the equilibrium \(X_1=B_2/A_2\), \(X_2=A_1/B_1\), and analyzes the oscillatory behavior around it. The constant-coefficient textbook Lotka–Volterra system follows when these coefficient functions are fixed constants; that restriction must not be counted as a second equation.
+
+**Disposition:** record as a primary-source lead and direct equation transcription. Do not yet create a proposed catalogue equation entry: the original leaves four constitutive coefficients as general state-dependent functions, so a benchmarkable instance would require a separately sourced and explicitly specified constitutive closure. Do not replace the source's general system with a later textbook constant-coefficient form and call that the verbatim 1920 model. The publisher HTML provides the article text and equation numbers; the PDF endpoint exists, but this transcription uses the publisher's readable full-text HTML. No experiment or validator was run.
+
+Primary source: https://www.pnas.org/doi/10.1073/pnas.6.7.410
