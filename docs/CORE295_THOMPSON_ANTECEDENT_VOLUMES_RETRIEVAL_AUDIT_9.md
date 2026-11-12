@@ -124,3 +124,17 @@ After correcting the planner's validity-bound ordering, the shared scalar adapte
 The adapter precomputes dataset hashes from the same deterministic Core-15 generator functions that `run_condition` calls again for each arm. The precomputed arrays are not passed into `run_condition`; identity depends on the generation routines remaining deterministic under the same seed and configuration. Before execution is authorized, a later implementation review should either pass the exact arrays into the run function or capture hashes from the arrays actually consumed, to make provenance direct rather than inferential.
 
 No adapter, planner, driver, tests, validators, workflows, or experiments were run during this inspection.
+
+
+## Dataset provenance correction — exact arrays now enter every arm
+
+The shared scalar adapter previously generated and hashed Core-295 train/test/extrapolation arrays, then called `exp1.run_condition`, which regenerated those arrays independently for each arm. Although the same deterministic generator and seed were used, the recorded hashes were not direct hashes of the arrays consumed by the model calls.
+
+The adapter now temporarily overrides the two Core-15 data-generator functions while each arm runs. It supplies fresh copies of the exact pre-generated arrays that were hashed by the adapter, and restores the original generator functions in a `finally` block. Thus all three arms receive byte-identical values for a given equation/seed, and the dataset hashes now describe the arrays actually passed through the unchanged `run_condition` data-loading interface. The default Core-15 generator path is untouched outside this narrow adapter context.
+
+- Adapter commit: `f24ff5deb57d3f9e5c8b7524b810678cd5215262`
+- Re-fetched adapter blob SHA: `58b5a64e77a9f6b606c613dfb2dfd7912e128283`
+- Implementation uses a scoped override and restores both functions even if an arm raises.
+- This is source-level inspection and re-fetch verification only. No adapter invocation, tests, planner, driver, validator, workflow, model/API call, or experiment was run.
+
+The adapter remains limited to explicit scalar equations. The five domain wrappers still route to this same adapter; this provenance fix does not expand model-class coverage or constitute scientific acceptance of any catalogue entry.
