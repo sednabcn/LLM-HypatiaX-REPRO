@@ -808,3 +808,8 @@ The full PDF remains access-gated, and the abstract image has no printed page/eq
 
 Publisher source: https://esj-journals.onlinelibrary.wiley.com/doi/abs/10.1007/BF02347017
 Equation image: https://esj-journals.onlinelibrary.wiley.com/cms/asset/8da22c3f-1c5f-4af3-9d3b-dbfaf7a4c360/ere0141-math-0001.png
+
+
+## 4.19 Utida (1957): experimental host–parasitoid cycles
+
+The Wiley publisher page confirms S. Utida, “Cyclic Fluctuations of Population Density Intrinsic to the Host-Parasite System,” *Ecology* 38(3) (July 1957), pp. 442–449, DOI 10.2307/1929888. The publisher-hosted first-page image (printed p.442) was retrieved and visually inspected. It identifies the experimental system as the azuki bean weevil *Callosobruchus chinensis* and its larval parasitoid *Heterospilus prosopidis*, and describes continuation of earlier experiments over multiple generations. The article is relevant to discrete host–parasitoid population cycles, but the complete PDF remains gated and the first page contains no governing recurrence. No equation or candidate entry is asserted. Compare its experimental mechanism with Nicholson–Bailey, Bailey's non-continuous model and DeBach–Smith before structural classification.
