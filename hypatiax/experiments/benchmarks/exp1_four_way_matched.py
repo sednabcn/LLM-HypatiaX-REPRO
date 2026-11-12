@@ -222,6 +222,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "domain": eq["domain"].lower().replace(" ", "_"),
         "difficulty": eq.get("difficulty", "medium"),
         "random_seed": int(SEED + abl.EQ_ID[eq["name"]] * 7),
+        "disable_fallback": True,
         "benchmark_arm": "nn_only",
     }
     try:
@@ -250,6 +251,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
                 "architecture": result.formula,
                 "metadata": dict(result.metadata or {}),
                 "headline_training_metric_not_used": True,
+                "fallbacks_disabled": True,
             },
         }
     except Exception as exc:
