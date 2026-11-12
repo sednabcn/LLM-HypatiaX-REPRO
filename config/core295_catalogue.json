@@ -3192,6 +3192,14 @@
       "url": "https://doi.org/10.4039/Ent91129-3",
       "use": "Watt, 'A Mathematical Model for the Effect of Densities of Attacked and Attacking Species on the Number Attacked', The Canadian Entomologist 91(3) (1959), pp.129–144. Holling (1959b), equations (11)–(13), transcribes Watt's model as N_a=P K(1-exp(-a N_0 P^(1-b))) and, at fixed predator density, y=K'(1-exp(-a'x)); the original Watt paper remains access-gated and must be inspected before direct equation transcription or candidate promotion.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LOTKA-1920-PLANT-HERBIVORE-PRIMARY",
+      "domain": "Biology",
+      "title": "Lotka 1920 original plant–herbivore interaction system",
+      "url": "https://www.pnas.org/doi/10.1073/pnas.6.7.410",
+      "use": "Publisher-hosted full text of A. J. Lotka, 'Analytical Note on Certain Rhythmic Relations in Organic Systems', PNAS 6(7) (1920), pp.410–415. Equations (5)–(10), especially (8) and (10), directly transcribe the coupled plant/herbivore mass dynamics; the author explicitly says A1, A2, B1, B2 are in general functions of both state variables. This is a source-level primary transcription, not a new catalogue equation candidate because the constitutive functions are not specified. The constant-coefficient Lotka–Volterra system is a restriction, not a second independent equation.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
