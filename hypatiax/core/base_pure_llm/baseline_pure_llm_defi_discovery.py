@@ -522,9 +522,13 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
-            _prov["temperature_sent"] = bool(_temperature_info.get("temperature_sent", False))
-            _prov["temperature_requested"] = _temperature_info.get("temperature_requested", 0.25)
+            # Only read thread-local wrapper metadata after this invocation
+            # actually entered the API wrapper. Otherwise it may describe a
+            # previous call on the same thread.
+            if _llm_attempted:
+                _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
+                _prov["temperature_sent"] = bool(_temperature_info.get("temperature_sent", False))
+                _prov["temperature_requested"] = _temperature_info.get("temperature_requested", 0.25)
             print(
                 f"\n❌ ERROR: {type(e).__name__}: {str(e)}"
             )
