@@ -926,7 +926,7 @@ run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-on
   set -euo pipefail
   cd '${REPO_ROOT}'
   _FOUR_DIR='${RESULTS_DIR}/four_way_matched'
-  mkdir -p \"${_FOUR_DIR}\"
+  mkdir -p \"\${_FOUR_DIR}\"
   PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \\
   RESULTS_DIR='${RESULTS_DIR}' \\
   NO_LLM_CACHE=1 \\
@@ -935,9 +935,9 @@ run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-on
   PYSR_TIMEOUT='${PYSR_TIMEOUT}' \\
   METHOD_TIMEOUT='${METHOD_TIMEOUT}' \\
   JOB_DEADLINE='${JOB_DEADLINE}' \\
-    python3 '${EXPERIMENTS_DIR}/exp1_four_way_matched.py' 2>&1 | tee \"${_FOUR_DIR}/exp1_four_way_matched_run.log\"
+    python3 '${EXPERIMENTS_DIR}/exp1_four_way_matched.py' 2>&1 | tee \"\${_FOUR_DIR}/exp1_four_way_matched_run.log\"
   for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json; do
-    [[ -s \"${_FOUR_DIR}/${artifact}\" ]] || { echo \"::error::missing four-way artifact: ${artifact}\"; exit 1; }
+    [[ -s \"\${_FOUR_DIR}/\${artifact}\" ]] || { echo \"::error::missing four-way artifact: \${artifact}\"; exit 1; }
   done
   echo '=== matched four-way comparison artifacts verified ==='
 "
