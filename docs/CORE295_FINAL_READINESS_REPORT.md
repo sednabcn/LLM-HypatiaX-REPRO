@@ -29,3 +29,8 @@ The report is deliberately fail-closed. Missing or incomplete evidence prevents 
 `READY_FOR_AUTHORIZED_RERUN` means only that the static checks implemented here found no blockers in the supplied local snapshot. User authorization and actual scientific run evidence remain separate gates. Do not interpret source-pipeline artifact counts as verified equations.
 
 The script is not run automatically by this change. No tests, validators, scientific experiments, paid/live API calls, or GitHub Actions workflows are executed during its creation.
+## Verified stage correspondence
+
+The three requested Core-295 IDs now have a verified Core-15 stage mapping, documented in [CORE295_STAGE_MAPPING_AUDIT.md](CORE295_STAGE_MAPPING_AUDIT.md): `exp295_ablation` follows `exp1_ablation`; `exp295` follows `exp1_ablation_aggregate`; and `exp295b` follows `exp1_five`. This resolves the naming/contract ambiguity only. The three Core-295 stages are still absent from `run_all.sh` and the dispatch workflow, so the readiness gate must continue to fail until their implementations and registration exist.
+
+The structural-equivalence policy remains a draft with open design decisions. It must be explicitly frozen through a reviewed design decision; the readiness report must not infer approval from the existence of the draft.
