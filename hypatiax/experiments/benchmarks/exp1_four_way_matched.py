@@ -158,6 +158,7 @@ def _run_fingerprint():
         "pysr_populations_effective": abl.POPULATIONS,
         "pysr_timeout_seconds_effective": abl.PYSR_TIMEOUT_SECS,
         "hybrid_max_retries_effective": abl._HYPATIA_MAX_RETRIES,
+        "llm_cache_disabled": os.environ.get("NO_LLM_CACHE", "1") == "1",
     }
     payload = {
         "schema": 1,
@@ -651,8 +652,16 @@ def run():
         "routing_tau": "null; ensemble fallback; no calibrated routing claim",
         "ablation_scope": "not run by this driver; three-gate leave-one-out remains deferred pending a fresh Phase 2 closure manifest and Phase 3 preflight; three other gates are unavailable in HDS v50_2",
         "source_paths": [
+            "hypatiax/experiments/benchmarks/exp1_four_way_matched.py",
             "hypatiax/experiments/benchmarks/exp1_ablation.py",
             "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
+            "hypatiax/safe_formula.py",
+            "hypatiax/core/r2_canonical.py",
+            "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py",
+            "hypatiax/core/training/baseline_neural_network_defi_improved.py",
+            "hypatiax/tools/symbolic/symbolic_engine.py",
+            "hypatiax/tools/symbolic/hybrid_system_v50_2.py",
+            "hypatiax/core/enforce_flags.py",
         ],
         "summary_file": str(SUMMARY_PATH),
         "results_file": str(RESULTS_PATH),
