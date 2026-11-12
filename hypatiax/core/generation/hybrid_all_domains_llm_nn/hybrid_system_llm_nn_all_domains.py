@@ -343,7 +343,8 @@ class HybridSystemAllDomains:
                 "temperature_sent": _fallback_call_info.get("temperature_sent", False),
                 "temperature_requested": _fallback_call_info.get("temperature_requested", 0.25),
                 "delegate_attempt": _delegate_attempt,
-                "error_stage": "post_response" if _fallback_response_received else "api_request",
+                "error_stage": ("post_response" if _fallback_response_received else
+                                "api_request" if _fallback_attempted else "pre_request"),
                 "bypass_kind": "local_fallback",
             }
 
