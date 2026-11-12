@@ -3033,6 +3033,14 @@
       "url": "https://github.com/sky-ecosystem/dss/commit/c8d4c806691dacb903ff281b81f316bea974e4c7",
       "use": "Pinned official DSS Liquidation 2.0 implementation snapshot at commit c8d4c806691dacb903ff281b81f316bea974e4c7 (2021-04-02): Dog.sol blob 7ded73181503e85e79b0d2e58f668426b60ff03d, Clipper.sol blob 96a085848cb26cc5d3232004adcd6782e43253a2, Abaci.sol blob 8aa7fb96cfc5c630512751096d62a3bf551fd917. Coupled unsafe-vault eligibility, global/per-ilk Hole/Dirt constraints, partial/dust-aware liquidation, OSM-buffered Dutch auction, configurable linear/stairstep/continuous exponential price curves, partial take/chost settlement and accounting. One candidate protocol-level family only; Abacus alternatives and substeps are not independent rows. MIP45 is obsolete by MIP102c2-SP1; source snapshot only, no current deployment or parameter mapping.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-EULER-V2-EVK-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Euler V2 EVault liquidation module and debt-transfer accounting",
+      "url": "https://github.com/euler-xyz/euler-vault-kit/commit/93a1de491531e54cbbcf0e5c8cacfe558f924867",
+      "use": "Pinned official Euler Vault Kit snapshot at commit 93a1de491531e54cbbcf0e5c8cacfe558f924867 (2026-10-29): Liquidation.sol blob 8ce05719f1200e543b1b81ad5c749780e4cf7df4; LiquidityUtils.sol blob e6b68e28284c404b72608bd9213721ab9b54ad0c; BorrowUtils.sol blob e60faf14e1d1d9fcc607f793455c96d7e0188688; RiskManager.sol blob 4f78db4dab2ba07ad0e6dc9c9f41822109a55140. Multi-collateral liquidation-LTV health aggregation, capped health-shortfall discount, collateral-limited debt/yield sizing, internal transfer of liability to liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. One coupled candidate family; no deployed EVault/module/configuration mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3066,7 +3074,8 @@
     "Sixteenth proposed-record pass adds the Beer-Lambert decadic spectral attenuation law. The exact modern equation is sourced from IUPAC Gold Book B00626; the primary Beer 1852 paper is registered for historical lineage but its full-text equation page remains unavailable.",
     "Seventeenth proposed-record pass adds De Buck et al.'s exact tumor-turnover ODE, Eq. 9 on printed page 547. It remains proposed pending a clinically coherent generator and explicit equivalence review of its hyperbolic Emax term against the Core-15 Michaelis-Menten exclusion.",
     "2026-11-11: Corrected Frumkin chronology. Frumkin (1920) is the electrocapillarity precursor; the interacting-adsorption isotherm is historically dated to 1925. Frumkin (1926) neutral-molecule field adsorption is distinct. Added a 1925 primary-source lead; exact interaction-equation/page transcription remains pending.",
-    "2026-11-12: Added pinned Maker/Sky Liquidation 2.0 Dog/Clipper/Abaci source snapshot. The official repository is sky-ecosystem/dss; MIP45 is obsolete by MIP102c2-SP1, so it is historical design context only. This adds a DeFi Risk source reference, not an accepted equation or deployment claim."
+    "2026-11-12: Added pinned Maker/Sky Liquidation 2.0 Dog/Clipper/Abaci source snapshot. The official repository is sky-ecosystem/dss; MIP45 is obsolete by MIP102c2-SP1, so it is historical design context only. This adds a DeFi Risk source reference, not an accepted equation or deployment claim.",
+    "2026-11-12: Added pinned Euler V2 EVK liquidation implementation as a DeFi Risk candidate reference. It uses health-shortfall-dependent capped discount and internal debt transfer to the liquidator, unlike direct external repayment/seizure or Dutch-auction collateral sale. Deployment and per-vault configuration remain unpinned; no accepted equation count changes."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
