@@ -1470,7 +1470,7 @@ class PureLLMBaselineMethod(BaseMethod):
             if metrics.get("success"):
                 _is_hardcoded = result.get("method") == "pure_llm_hardcoded"
                 if metrics.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                    return self._unavailable("AUDIT L36: success reported without an r2")
+                    return self._unavailable("AUDIT L36: success reported without an r2", metadata=_provenance(result))
                 return MethodResult(
                     method=self.name, success=True,
                     r2=float(metrics["r2"]),
@@ -1500,11 +1500,11 @@ class PureLLMBaselineMethod(BaseMethod):
                                       "truncated_formula": False},
                         )
 
-            return self._unavailable(metrics.get("error", "Formula evaluation failed"))
+            return self._unavailable(metrics.get("error", "Formula evaluation failed"), metadata=_provenance(result))
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(str(exc)[:150], metadata=_provenance(result) if isinstance(result, dict) else {})
 
 # ============================================================================
 # METHOD 2 — ImprovedNN
