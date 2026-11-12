@@ -2957,9 +2957,9 @@
     {
       "source_id": "AMM-SOLIDLY-STABLE-V2-DOCS",
       "domain": "DeFi AMM",
-      "title": "Solidly V2 swaps: volatile and stable pool invariants",
-      "url": "https://docs.solidly.com/dex-basics/swaps.html",
-      "use": "Official Solidly V2 documentation specifies volatile x*y≥k and stable x^3*y + y^3*x≥k for correlated assets. Stable invariant is polynomial and differs from Curve StableSwap; exact reserve scaling, token decimal normalization and implementation revision must be checked before formal candidate transcription. Volatile pool remains constant-product family.",
+      "title": "Velodrome V2 Pool.sol implementation (Solidly-derived stable/volatile AMM)",
+      "url": "https://github.com/velodrome-finance/contracts/blob/b3065d8b6702b14b094f9f6046b752cc9f78c43b/contracts/Pool.sol",
+      "use": "Pinned official Velodrome V2 implementation snapshot, repository commit b3065d8b6702b14b094f9f6046b752cc9f78c43b (2025-12-18); contracts/Pool.sol blob SHA 91412c378bba4d8076271cee52e1397b1520b709. Stable invariant uses decimal-normalized x,y at 1e18 precision: k=(x*y/1e18)*((x*x/1e18+y*y/1e18))/1e18, equivalent in real arithmetic to x^3*y+x*y^3 up to scale/rounding. _get_y solves the invariant with bounded Newton-Raphson iteration (max 255); getAmountOut subtracts factory fee in basis points before quoting, normalizes amount/reserves by token decimal scales, then converts output back with integer truncation. Volatile branch is xy=k and constant-product output. This is a Velodrome V2 Solidly-derived implementation, not proof of the original Solidly deployment bytecode; protocol lineage and deployment identity must be kept explicit.",
       "status": "candidate_reference"
     },
     {
