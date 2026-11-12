@@ -38,7 +38,8 @@ class _RejectTemperatureClient:
         return self._Messages(self)
 
 
-def test_shared_wrapper_forces_temperature_025_even_when_caller_overrides():
+def test_shared_wrapper_forces_temperature_025_even_when_caller_or_env_overrides(monkeypatch):
+    monkeypatch.setenv("LLM_TEMPERATURE", "0.9")
     client = _SuccessClient()
 
     create_message(
