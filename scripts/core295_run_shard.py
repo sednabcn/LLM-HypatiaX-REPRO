@@ -54,6 +54,13 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
         stop("catalogue.status must be ready")
     if catalogue.get("target_equation_count") != 295 or catalogue.get("per_domain_target") != 59:
         stop("catalogue must declare the frozen 295/59 design")
+    frame = catalogue.get("sampling_frame")
+    if not isinstance(frame, dict) or frame.get("status") != "frozen":
+        stop("sampling_frame.status must be frozen")
+    for field in ("source_universe", "inclusion_exclusion_rules", "selection_method",
+                  "independent_statistical_unit", "source_family_definition"):
+        if not frame.get(field):
+            stop(f"sampling_frame.{field} is required")
     entries = catalogue.get("entries")
     if not isinstance(entries, list) or len(entries) != 295:
         stop("catalogue must contain exactly 295 entries")
@@ -67,6 +74,11 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
             stop(f"duplicate catalogue equation ID {eid}")
         if entry.get("status") != "accepted":
             stop(f"{eid}: entry is not accepted")
+        review = entry.get("equivalence_review")
+        if not isinstance(review, dict) or review.get("classification") != "E4" or not review.get("rationale"):
+            stop(f"{eid}: documented E4 structural review is required")
+        if not entry.get("source_family_id") or not entry.get("independence_unit_id"):
+            stop(f"{eid}: source-family and statistical-unit IDs are required")
         if entry.get("domain") not in counts:
             stop(f"{eid}: unsupported domain")
         counts[entry["domain"]] += 1
