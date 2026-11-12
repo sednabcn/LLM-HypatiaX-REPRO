@@ -754,7 +754,10 @@ class HybridDiscoverySystem:
                     self._llm_attempt_info.append({
                         k: result.get(k) for k in (
                             "llm_mode", "llm_time", "llm_best_expression", "llm_best_r2",
-                            "llm_confidence", "llm_hypotheses_raw", "llm_error")})
+                            "llm_confidence", "llm_hypotheses_raw", "llm_error",
+                            "llm_attempted", "llm_called", "llm_proposal_generated",
+                            "llm_response_replayed", "llm_temperature_requested",
+                            "llm_temperature_sent")})
                 else:
                     self.stats["llm_skipped"] += 1
 
@@ -1540,21 +1543,40 @@ class HybridDiscoverySystem:
                 # bypass was used (this engine has none: always "none").
                 # llm_called = an LLM attempt happened; llm_mode says what became of it
                 # (e.g. hybrid_pysr_better = prior discarded).
-                "llm_called": bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
+                "llm_attempted": any(
+                    item.get("llm_attempted") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
                 ),
-                "bypass_kind": "live" if (bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
-                )) else "none",
-                "generation_path": "symbolic+llm" if (bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
-                )) else "symbolic",
+                "llm_called": any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_proposal_generated": any(
+                    item.get("llm_proposal_generated") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_response_replayed": any(
+                    item.get("llm_response_replayed") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_temperature_requested": next((
+                    item.get("llm_temperature_requested")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
+                "llm_temperature_sent": next((
+                    item.get("llm_temperature_sent")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
+                "bypass_kind": "live" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "none",
+                "generation_path": "symbolic+llm" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "symbolic",
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
                 "structural_risk_flag": bool(discovery.get("structural_risk_flag", False)),
                 "structural_risk_tokens": list(discovery.get("structural_risk_tokens", [])),
@@ -1589,7 +1611,32 @@ class HybridDiscoverySystem:
                 "variable_names": var_names,
                 "strategy": "error",
                 "llm_mode": "none",
-                "llm_called": bool(getattr(self, "_llm_attempt_modes", None)),
+                "llm_attempted": any(
+                    item.get("llm_attempted") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_called": any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_proposal_generated": any(
+                    item.get("llm_proposal_generated") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_response_replayed": any(
+                    item.get("llm_response_replayed") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_temperature_requested": next((
+                    item.get("llm_temperature_requested")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
+                "llm_temperature_sent": next((
+                    item.get("llm_temperature_sent")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
                 "structural_risk_flag": False,
                 "structural_risk_tokens": [],
