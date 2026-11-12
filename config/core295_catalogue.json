@@ -3017,6 +3017,14 @@
       "url": "https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b",
       "use": "Pinned official three-coin CryptoSwap implementation: CurveTricryptoOptimizedWETH.vy and CurveCryptoMath3Reference.vy. Coupled A-gamma dynamic invariant, bounded numerical solvers, state-dependent mid/out fee, EMA price oracle, internal price-scale rebalancing and virtual-price/profit accounting. Commit ecaa8161c240f21dd7c3712eefc5637e1dac742b; implementation lineage for CryptoSwap dynamic peg, distinct from StableSwap; not evidence for all deployments or 2-coin variants.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-MORPHO-BLUE-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Morpho Blue direct liquidation and bad-debt accounting",
+      "url": "https://github.com/morpho-org/morpho-blue/commit/430bd61d8ab9238c1bde327eec2bfcd3f494fe9d",
+      "use": "Pinned official core Solidity snapshot at commit 430bd61d8ab9238c1bde327eec2bfcd3f494fe9d (2026-11-09); Morpho.sol blob ab064b646bf161b1510e2575a99412cdc2a43ebb, ConstantsLib.sol blob 1046e6a03462fb68b78dbdcee26339c983dc00de, MathLib.sol blob 3c0afc991c3bfa9314498b43047a0675be4a9410 and SharesMathLib.sol blob c63d937e81d5470e2d073383f45dd66c46f36a6b. Single-market LLTV eligibility, LLTV-dependent LIF, direct repay/seize sizing with directional rounding, interest/share accrual and collateral-exhaustion bad-debt write-off. Core source snapshot only; no production deployment or market-parameter pin.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
