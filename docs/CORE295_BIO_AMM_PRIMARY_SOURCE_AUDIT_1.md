@@ -794,3 +794,17 @@ Two further primary papers are now registered as retrieval leads:
 - P. DeBach and H. S. Smith, “Effects of Parasite Population Density on Rate of Change of Host and Parasite Populations,” *Ecology* 28(3) (July 1947), pp. 290–298, DOI 10.2307/1930515. Multiple independent contemporary citations confirm the article and pagination. This is a likely source for a density-dependent coupled host/parasitoid model.
 
 The full primary texts have not yet been retrieved and inspected. No equations or candidate entries are asserted from titles, abstracts or later citations alone. These papers should be compared with Bailey, Thompson, Nicholson–Bailey and Hassell–Varley before structural classification.
+
+
+## 4.18 Fujii–Holling–Mace (1986): publisher-hosted primary equation recovered
+
+The Wiley publisher page for K. Fujii, C. S. Holling and P. M. Mace, “A Simple Generalized Model of Attack by Predators and Parasites,” *Ecological Research* 1(2) (August 1986), pp. 141–156, DOI 10.1007/BF02347017, exposes the paper's generalized attack equation as an image in the primary abstract. The equation image was opened and visually inspected:
+
+`A(N_0)=\frac{T_t}{t_h+\frac{1}{a'N_0\exp(cN_0)}}`
+
+The abstract defines (A(N_0)) as attacks per predator during time (T_t), (N_0) as prey density, (T_t) as total exposure time, (t_h) as handling time per prey, (a') as successful search rate, and (c) as facilitation coefficient. It states that (c=a't_h) gives pseudo Type I, (c=0) gives Type II, (c>a't_h) gives Type III, and (c<0) gives Type IV. This is one generalized equation with parameter regimes—not four independent equations.
+
+The full PDF remains access-gated, and the abstract image has no printed page/equation number. The primary publisher equation image is nevertheless direct primary-source evidence for the displayed formula and symbol definitions. One proposed catalogue entry has been added. The (c=0) special case reduces to the Holling Type II rational response, so structural distinctness from the Core-15/Holling family is pending E0–E5 review; do not count Type II or other parameter regimes separately. No acceptance decision is made.
+
+Publisher source: https://esj-journals.onlinelibrary.wiley.com/doi/abs/10.1007/BF02347017
+Equation image: https://esj-journals.onlinelibrary.wiley.com/cms/asset/8da22c3f-1c5f-4af3-9d3b-dbfaf7a4c360/ere0141-math-0001.png
