@@ -55,7 +55,20 @@ def main() -> int:
     shards = manifest.get("shards")
     if not isinstance(shards, list):
         fail("manifest shards must be an array")
-    matches = [s for s in shards if isinstance(s, dict) and s.get("shard_id") == args.shard_id]
+    if type(manifest.get("shard_count")) is not int or manifest["shard_count"] < 1:
+        fail("manifest shard_count must be a positive integer")
+    if len(shards) != manifest["shard_count"]:
+        fail("manifest shard_count does not match shard list")
+    tasks = manifest.get("tasks")
+    if not isinstance(tasks, list):
+        fail("manifest tasks must be an array")
+    task_hash = hashlib.sha256(canonical(tasks)).hexdigest()
+    plan_hash = hashlib.sha256(canonical({"tasks": tasks, "shards": shards})).hexdigest()
+    if task_hash != manifest.get("task_set_sha256") or plan_hash != manifest.get("shard_plan_sha256"):
+        fail("manifest task/shard hashes do not validate")
+    if type(args.shard_id) is not int or args.shard_id < 0:
+        fail("shard ID must be a non-negative integer")
+    matches = [s for s in shards if isinstance(s, dict) and type(s.get("shard_id")) is int and s.get("shard_id") == args.shard_id]
     if len(matches) != 1:
         fail(f"shard_id {args.shard_id} is not uniquely present in manifest")
     expected_ids = matches[0].get("equation_ids")
@@ -86,7 +99,7 @@ def main() -> int:
         arms = {}
         for arm in ARMS:
             status = statuses[arm]
-            if status not in STATUSES:
+            if not isinstance(status, str) or status not in STATUSES:
                 fail(f"{equation_id}/{arm}: invalid explicit status {status!r}")
             payload = native.get(arm)
             if status == "success" and not isinstance(payload, dict):
