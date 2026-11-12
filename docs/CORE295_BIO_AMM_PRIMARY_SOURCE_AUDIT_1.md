@@ -670,3 +670,19 @@ Primary scan: https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.p
 ## 4.8 False-positive rejection: Ricker (1954) stock–recruitment scan
 
 A search result labelled as W. E. Ricker's 1954 “Stock and Recruitment” PDF at the Fisheries and Oceans Canada DFO library resolver was opened and inspected. The PDF is actually the Pacific Fisheries Resource Conservation Council's 2000 *Sand and Gravel Management and Fish-Habitat Protection in British Columbia Salmon and Steelhead Streams* (Background Paper 2000/3), not Ricker's 1954 article. It is therefore rejected as a false-positive retrieval and is not used for equation transcription, source registration or candidate creation. The genuine Ricker bibliographic record is *Journal of the Fisheries Research Board of Canada* 11(5) (1954), pp. 559–623, DOI 10.1139/f54-039; its correct original scan remains to be located. This is a reminder that a search-result snippet or URL label is not sufficient provenance: inspect the actual document title page before transcribing.
+
+ 
+## 4.9 Nicholson–Bailey first-page primary-image inspection
+
+Wiley's official article page exposes the original first-page image (printed p. 551), which was retrieved and visually inspected. It confirms the title and authors, and the original receipt/read dates (9 November 1934 / 2 April 1935). The introduction states that the authors' mathematical theory concerns associations of multiple species and that the rate of change in mass of each species depends on the masses of all species in the association, food-material masses and parameters. It also explicitly discusses the relation to Lotka's prior equations and says that their own theory was developed independently. This is an important scope and provenance correction: the 1935 article is not merely a discrete host–parasitoid recurrence paper; it begins with a broader multispecies mass-interaction framework and later treats host/parasite cases.
+
+Only the first page was inspected. The publisher PDF is still inaccessible, so this image does not establish the later equations, page locations or the familiar Nicholson–Bailey discrete-generation recurrence. The earlier recurrence remains a secondary-source retrieval target, not a direct transcription. The article's complete publisher record is pp. 551–598. Primary image and publisher record: https://zslpublications.onlinelibrary.wiley.com/doi/10.1111/j.1096-3642.1935.tb01680.x
+
+## 4.10 Ricker (1954) bibliography disambiguation
+
+The genuine journal article is W. E. Ricker, “Stock and Recruitment,” *Journal of the Fisheries Research Board of Canada* 11(5) (1954), pp. 559–623, DOI 10.1139/f54-039. Its abstract describes a domed stock-to-net-reproduction relationship, possible oscillations and the role of mixing generations. A separate Google Books record identifies a 65-page Fisheries Research Board of Canada 1954 item also titled *Stock and Recruitment*. The title and author overlap, but the 65-page board publication is not the 65-page journal page range (559–623); preserve these as distinct bibliographic objects until their contents are inspected. The DFO PDF resolver hit is definitively a different 2000 habitat report and remains rejected. Publisher DOI PDF and ePDF endpoints were inaccessible in this retrieval pass. No Ricker equation is transcribed from the primary source and no candidate is added.
+
+References:
+- Journal article record: https://doi.org/10.1139/f54-039
+- Separate 65-page board publication record: https://books.google.com/books/about/Stock_and_Recruitment.html?id=d6pqPwAACAAJ
+- Rejected DFO resolver PDF (2000 habitat report): https://waves-vagues.dfo-mpo.gc.ca/Library/249096.pdf
