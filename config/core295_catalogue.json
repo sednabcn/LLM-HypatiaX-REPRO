@@ -739,7 +739,8 @@
         "Use physical constants with fixed SI values; sample only lambda and T in the benchmark adapter, not constants as independent random variables",
         "Planck spectrum is the parent family for Wien maximum and Stefan integral; do not count those derived laws independently without a separate sampling design",
         "Proposed only; not scientifically accepted or eligible for shard planning",
-        "Audit 5 (2026-11-11): OpenStax defines I(lambda,T) as power per unit area per unit wavelength (spectral exitance, W m^-3), not radiance per solid angle. Planck 1901 Eq. (13) is spectral energy density per wavelength; multiplying by c/4 for isotropic equilibrium radiation gives the OpenStax exitance formula. Keep Wien/Stefan consequences in the same family. See docs/CORE295_PROPOSED_RECORD_AUDIT_5.md."
+        "Audit 5 (2026-11-11): OpenStax defines I(lambda,T) as power per unit area per unit wavelength (spectral exitance, W m^-3), not radiance per solid angle. Planck 1901 Eq. (13) is spectral energy density per wavelength; multiplying by c/4 for isotropic equilibrium radiation gives the OpenStax exitance formula. Keep Wien/Stefan consequences in the same family. See docs/CORE295_PROPOSED_RECORD_AUDIT_5.md.",
+        "SI defining-constant values populated from NIST SP 330 §2 / BIPM SI defining constants: h=6.62607015e-34 J s, c=299792458 m s^-1, kB=1.380649e-23 J K^-1; all exact by SI definition. These values only ground the constants, not the input sampling intervals or candidate source verification."
       ],
       "source_location": "OpenStax University Physics Volume 3 §6.1, Eq. 6.11",
       "model_definition": {
@@ -776,8 +777,15 @@
         ]
       },
       "fixed_parameter_values": {},
-      "physical_constant_values": {},
-      "input_validity_bounds": {}
+      "physical_constant_values": {
+        "h": 6.62607015e-34,
+        "c": 299792458,
+        "kB": 1.380649e-23
+      },
+      "input_validity_bounds": {},
+      "physical_constant_source_ids": [
+        "PHYS-SI-2019-DEFINING-CONSTANTS"
+      ]
     },
     {
       "equation_id": "PHYS-THIN-LENS-001",
@@ -4750,6 +4758,14 @@
       "title": "Stokes, G. G. (1845), On the theories of the internal friction of fluids in motion and of the equilibrium and motion of elastic solids",
       "url": "https://commons.wikimedia.org/wiki/File:Mathematical_and_physical_papers_(IA_cu31924004181339).pdf",
       "use": "Primary work bibliographically identified in Transactions of the Cambridge Philosophical Society 8 (1845), pp. 287 onward; collected reprint in Stokes, Mathematical and Physical Papers, vol. I, pp.75–129. Public-domain Cornell/Internet Archive digitized collection record identifies a 434-page scan reprinting original papers. Exact article pages and equations still require inspection. Historical/secondary sources describe the linear stress–strain-rate constitutive law but must not be used as primary transcription.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHYS-SI-2019-DEFINING-CONSTANTS",
+      "domain": "Physics",
+      "title": "The International System of Units (SI): Defining Constants",
+      "url": "https://www.bipm.org/en/measurement-units/si-defining-constants",
+      "use": "Authoritative exact SI values for Planck constant h, speed of light c, and Boltzmann constant k; constants are fixed, not sampled.",
       "status": "candidate_reference"
     }
   ],
