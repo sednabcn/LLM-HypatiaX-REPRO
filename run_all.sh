@@ -2302,6 +2302,10 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
       --methods 1 2 3 4 5 6 --no-llm-cache --no-checkpoint \
       --output-dir \"\${_P30_RANDOM_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"\${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
+  # Capture the v2 runner's flat exports (written outside --output-dir) with this shard.
+  for _flat in '${RESULTS_DIR}/comparison_results/'*"_shrd\${SHARD:-0}.json"; do
+    [[ -f "\${_flat}" ]] && cp -f "\${_flat}" "\${_P30_RANDOM_DIR}/"
+  done
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
     SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
