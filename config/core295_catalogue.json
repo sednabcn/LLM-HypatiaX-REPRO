@@ -2044,7 +2044,9 @@
         "The same linear-gradient algebra occurs in Fourier and Ohm transport laws; source-family distinction does not prove structural uniqueness",
         "Need freeze medium/species, concentration units, diffusivity range and a deterministic spatial-gradient generator",
         "Proposed only; not scientifically accepted or eligible for shard planning",
-        "Audit 2 (2026-11-11): scalar Fick flux law shares normalized first-order linear-gradient constitutive structure with Fourier heat flux and Ohm current density; cross-domain equivalence policy decision required before counting. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md."
+        "Audit 2 (2026-11-11): scalar Fick flux law shares normalized first-order linear-gradient constitutive structure with Fourier heat flux and Ohm current density; cross-domain equivalence policy decision required before counting. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md.",
+        "Source/operator audit 1 (2026-11-12): original Fick p.66 local transfer equation is dM=-Q*k*(dy/dx)*dt; modern J=-D*dC/dx follows by dividing by Q*dt and mapping variables. Fick explicitly develops the diffusion equation by analogy with Fourier's heat-flow development. Same normalized scalar first-gradient flux operator as Fourier/Ohm; draft E3 likely applies, so do not count until cross-domain E0-E5 decision. See docs/CORE295_FICK_FLUX_SOURCE_AND_OPERATOR_AUDIT_1.md.",
+        "No transferable numerical diffusivity or gradient range established. Freeze a specific solute/medium/temperature and measured D dataset before sampling. Keep proposed and generator pending."
       ],
       "source_location": "Fick (1855), Annalen der Physik 170(1), p. 66",
       "model_definition": {
@@ -2061,7 +2063,10 @@
         "state_dimension": null,
         "operator_structure": "One-dimensional diffusive flux from concentration gradient.",
         "constraints": [
-          "D>=0; sign convention and spatial coordinate fixed."
+          "D>=0; sign convention and spatial coordinate fixed.",
+          "For modern SI mapping, C is amount concentration in mol m^-3 and J is molar flux in mol m^-2 s^-1; original 1855 k,y notation requires unit mapping.",
+          "Homogeneous medium, one-dimensional local transport, constant D, no bulk advection.",
+          "Cross-domain structural-equivalence review is mandatory: normalized first-gradient flux operator matches Fourier and Ohmic constitutive laws."
         ],
         "assumptions": [
           "One-dimensional diffusion in a homogeneous isotropic medium",
@@ -4846,6 +4851,14 @@
       "title": "Kovalchuk et al. (2017), Surface Tension and Adsorption Studies by Drop Profile Analysis Tensiometry",
       "url": "https://doi.org/10.1007/s11743-017-2016-y",
       "use": "Modern secondary corroboration: prints Frumkin surface-layer equation of state and adsorption isotherm, defines theta, Gamma, omega, B, a and c, and discusses material-dependent interaction effects. Not a source for universal parameter bounds and not a substitute for the 1967 primary equation source.",
+      "status": "supporting_reference"
+    },
+    {
+      "source_id": "CHEM-FICK-1855-ENGLISH-TRANSLATION",
+      "domain": "Chemistry",
+      "title": "Fick (1855), On liquid diffusion, English translation",
+      "url": "https://doi.org/10.1080/14786445508641925",
+      "use": "Contemporary English translation, Philosophical Magazine 10 (1855), 30-39. Corroborates the local transfer relation and original notation; original German Wiley article remains the primary source of record.",
       "status": "supporting_reference"
     }
   ],
