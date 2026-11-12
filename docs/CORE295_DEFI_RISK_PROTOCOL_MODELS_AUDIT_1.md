@@ -217,3 +217,60 @@ After repayment and collateral seizure, if the borrower's collateral balance rea
 Interest is accrued before liquidation. The core accrual uses the configured IRM's borrow rate and a three-nonzero-term Taylor approximation to continuous compounding, then adds interest to both total borrow and supply assets; any market fee is converted to fee-recipient supply shares. These accrual and share-conversion operations are integral to the state transition and should not be split into extra liquidation equation rows.
 
 **Structural disposition:** Morpho Blue is a strong candidate for one protocol-level direct-liquidation/state-transition family: single-market LLTV eligibility, LLTV-dependent incentive, caller-selected partial/full repay/seize sizing, fixed-point rounding and collateral-exhaustion bad-debt write-off. The threshold inequality alone remains related to Aave and Comet collateral/debt eligibility and is not a separate structural equation. Do not split LIF, the two quote directions, share conversions and bad-debt accounting into independent candidate rows. Optional pre-liquidation periphery contracts are a separate extension and are not part of this core `Morpho.sol` snapshot. No RPC, deployment lookup, contract execution, tests or simulation were performed.
+
+
+## 9. Maker/Sky Liquidation 2.0: Dog, Clipper and Abaci
+
+**Pinned implementation snapshot.** The official repository is now maintained as `sky-ecosystem/dss`. The source snapshot used here is commit `c8d4c806691dacb903ff281b81f316bea974e4c7` (2021-04-02, the upstream “Liq 2.0” integration commit):
+- `src/dog.sol`, blob SHA `7ded73181503e85e79b0d2e58f668426b60ff03d`
+- `src/clip.sol`, blob SHA `96a085848cb26cc5d3232004adcd6782e43253a2`
+- `src/abaci.sol`, blob SHA `8aa7fb96cfc5c630512751096d62a3bf551fd917`
+
+Pinned commit: https://github.com/sky-ecosystem/dss/commit/c8d4c806691dacb903ff281b81f316bea974e4c7. This is an implementation snapshot, not evidence that a particular present-day Sky deployment uses these exact bytecodes or parameters. MIP45 itself is marked obsolete by MIP102c2-SP1; it remains useful as historical design context, not as the current governance specification.
+
+### Liquidation eligibility and debt/collateral extraction
+
+For collateral type (i), the source checks the unsafe-vault predicate
+\[
+ink\cdot spot < art\cdot rate,
+\]
+where (ink) is collateral, (art) is normalized debt, and (spot)/(rate) are the Vat collateral safety price and accumulated debt rate. The liquidation capacity is constrained by both global and collateral-specific auction headroom:
+\[
+room=\min(Hole-Dirt,\;hole_i-dirt_i),
+\qquad
+dart=\min\!\left(art,\left\lfloor\frac{room\cdot WAD}{rate\cdot chop_i}\right\rfloor\right).
+\]
+If the residual debt after a partial liquidation would be below the collateral's dust threshold, the implementation liquidates the full remaining debt instead; otherwise it rejects a partial auction whose debt is itself below dust. Collateral removed is proportional and rounded down:
+\[
+dink=\left\lfloor\frac{ink\cdot dart}{art}\right\rfloor.
+\]
+The debt engine confiscates (dink,dart), the Vow records due debt (due=dart\cdot rate), and the auction target is
+\[
+tab=\left\lfloor\frac{due\cdot chop_i}{WAD}\right\rfloor.
+\]
+Global and per-collateral `Dirt` accumulators are increased by (tab), then `Clipper.kick` is called. The exact code order, integer divisions and dusty-vault exception matter; these expressions are not interchangeable with a continuous-arithmetic simplification.
+
+### Dutch auction start and time-dependent price
+
+`Clipper.kick` reads the OSM feed, converts it against `par`, and sets
+\[
+feedPrice=\operatorname{rdiv}(val\cdot 10^9,par),
+\qquad
+top=\operatorname{rmul}(feedPrice,buf).
+\]
+The configured Abacus implementation then maps initial price and elapsed seconds to the current auction price. The pinned `abaci.sol` contains three alternatives:
+- Linear: (P(t)=top\,(tau-t)/tau) for (t<tau), and zero thereafter.
+- Stairstep exponential: (P(t)=top\cdot cut^{\lfloor t/step\rfloor}).
+- Continuous exponential: (P(t)=top\cdot cut^t).
+
+The exponential forms use RAY fixed-point exponentiation-by-squaring with half-up intermediate rounding in `rpow`; the stairstep form quantizes elapsed time by integer division. These are configurable alternative implementations of one price-calculator interface, not three independent liquidation-system candidates. The source also allows governance to change calculator and parameters, so a running auction's quote need not be monotone if governance changes its configuration or calls `redo`.
+
+### Purchase, auction reset and accounting
+
+`Clipper.take` enforces the buyer's maximum price, caps the collateral slice by the caller's requested amount and remaining lot, and caps DAI owed by the auction's remaining `tab`. The implementation applies a `chost` floor to partial purchases to avoid leaving a small residual target; `chost` is refreshed from Vat dust and Dog liquidation penalty. It transfers collateral, optionally invokes the composable callee, moves DAI to the Vow, and calls `Dog.digs` to release the corresponding global/per-collateral auction capacity. Completion either removes the auction or returns excess collateral when the debt target is reached.
+
+An auction needs reset when elapsed time exceeds `tail` or current price divided by starting price falls below `cusp`. `redo` resets the timestamp and recomputes `top` from the current OSM price and `buf`; eligible keeper incentives use the flat `tip` plus a `chip)-scaled amount. Circuit-breaker levels separately disable new kicks, resets, and takes.
+
+**Structural disposition:** this is a strong lead for one coupled protocol-level Dutch-auction liquidation/state-transition family: unsafe-vault test, global/per-collateral capacity constraints, partial/dust-aware confiscation, oracle-buffered starting price, time-decaying price, partial purchase/settlement and accumulator updates. It is structurally different from Morpho Blue's direct repay-for-collateral liquidation, while the collateral/debt eligibility inequality remains a related risk-threshold motif shared with Aave and Comet. Do not count `Dog.bark`, the three Abacus alternatives, `Clipper.take`, reset logic or keeper incentives as separate equations.
+
+**Version and evidence caveats.** MIP45 is explicitly marked obsolete by MIP102c2-SP1. Sky's current developer documentation still describes Liquidation 2.0's Dutch-auction mechanics, but this audit does not map a current deployment, chain, Dog/Clipper/Abacus addresses, bytecode, collateral ilk, OSM state or governance parameters. The source snapshot and historical MIP must therefore remain provenance evidence, not a claim about live market configuration. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
