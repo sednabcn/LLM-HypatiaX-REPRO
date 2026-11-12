@@ -788,6 +788,9 @@ jobs:
           }
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
+          if EXP == "exp1_four_way_matched" and set(all_ids) != {str(i) for i in range(15)}:
+              print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
+              sys.exit(1)
           if not all_ids:
               if EXP in ("exp1_pca", "exp1b_pca"):
                   print(f"ERROR: no task IDs for experiment '{EXP}' — this experiment's "
@@ -809,6 +812,11 @@ jobs:
               except Exception as e:
                   print(f"Warning: could not read checkpoint: {e}")
 
+          # Core-15 has its own per-equation resumable checkpoints in isolated shard
+          # directories. The planner checkpoint is not authoritative for this protocol;
+          # dispatch all 15 equation IDs so the aggregate can prove full coverage.
+          if EXP == "exp1_four_way_matched":
+              done = set()
           pending = [t for t in all_ids if t not in done]
           print(f"Total={len(all_ids)}  Done={len(done)}  Pending={len(pending)}")
 
