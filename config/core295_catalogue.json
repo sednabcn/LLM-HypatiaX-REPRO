@@ -2941,7 +2941,11 @@
         "Only one generalized equation proposed; Type I–IV cases are parameter regimes, not separate equations",
         "Potentially overlaps Holling Type II/Michaelis-Menten at c=0; generalized exponential facilitation operator may be structurally distinct when c is nonzero",
         "Requires E0–E5 review, source-family comparison and benchmark-domain suitability review",
-        "Input ranges and deterministic generator remain unspecified; not eligible for shard planning"
+        "Input ranges and deterministic generator remain unspecified; not eligible for shard planning",
+        "Primary publisher-source audit 1 (2026-11-12): inspected the Wiley/Ecological Research publisher abstract and its linked equation image. The image directly displays A(N0)=Tt/[th+1/(a′N0 exp(cN0))]; the abstract defines A as attacks per predator during exposure time Tt, N0 as prey density, th as handling time per prey, a′ as successful-search rate and c as facilitation coefficient. See docs/CORE295_FUJII_HOLLING_MACE_1986_PUBLISHER_EQUATION_AUDIT_1.md.",
+        "The accessible primary evidence is the publisher abstract and equation image, not the full 16-page article; the equation has no printed equation number in the abstract image. Do not claim the full paper's experimental datasets, fitted values or page-level derivation have been inspected. The abstract says applicability was tested against a simulation model and available laboratory/field predation data, but supplies no transferable parameter intervals.",
+        "The source labels c=0 as Type II, c>a′th as Type III, c<0 as Type IV and c=a′th as pseudo Type I. These are parameter regimes of one generalized equation, not separate candidate equations. The c=0 subcase is the Holling Type II hyperbola; because the Core-15 exclusion registry includes Michaelis-Menten, explicit equivalence review is mandatory. Nonzero c changes the effective prey-density argument by an exponential facilitation factor, but this does not by itself prove structural distinctness.",
+        "Retain the output semantics A = total attacks per predator over exposure duration Tt, rather than treating A as a rate per unit time. Keep all input ranges and fixed parameter values unset; the candidate remains proposed and is not generator-ready."
       ],
       "source_location": "Wiley publisher abstract equation image (un-numbered); article pp.141–156",
       "model_definition": {
