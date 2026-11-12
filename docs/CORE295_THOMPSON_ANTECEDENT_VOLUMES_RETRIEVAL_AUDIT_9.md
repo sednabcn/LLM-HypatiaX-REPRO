@@ -71,3 +71,16 @@ A separate code inspection found that `scripts/core295_run_shard.py` referenced 
 - Corrective commit: `df5fe9b53d40748d9ed44457bfb30bb563ab48a2`
 - Re-fetched file blob SHA: `55180479ff63aaaefb3866bea6797889985c6a42`
 - This is a source-level correction verified by re-fetching the committed file. No driver execution, tests, validators, experiments, or workflows were run.
+
+
+## Addendum 2 — 1917 citation page number remains OCR-ambiguous
+
+The primary OCR at `turn692343view0`, line 3425, renders the third reference as `t. 164, 1917, p. i433`. The tome-164 (January–June 1917) Wikisource contents index is available and contains no Thompson entry; a search for “1433” also finds no such page in that index (`turn540992search0`, `turn316325view0`, `turn711779view0`). Since the volume is a first-semester 1917 volume, “1433” is not safe to treat as a verified printed page number. The OCR may have introduced a leading character, and the actual reference could be a lower page number; only the scan can resolve it.
+
+Accordingly:
+- The volume number and year are OCR-rendered as tome 164 (1917), but the page number is **unverified**.
+- The 1911 and 1913 references likewise remain unverified at page-image level.
+- The 1917 tome's contents index does not establish that W.-R. Thompson authored an article in that volume.
+- No antecedent is attributed to Thompson, no exact citation corrected by guesswork, and no source-family decision is made.
+
+Primary volume-175 text remains the evidence for what the 1922 note cites; page-image inspection of each cited volume is still the next required action.
