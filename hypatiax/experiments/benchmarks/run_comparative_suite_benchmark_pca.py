@@ -1032,10 +1032,11 @@ class BaseMethod:
             return None  # audit-M3: was float('inf')
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
-    def _unavailable(self, reason: str) -> MethodResult:
+    def _unavailable(self, reason: str, metadata: Optional[Dict[str, Any]] = None) -> MethodResult:
         return MethodResult(
             method=self.name, success=False,
             r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
+            metadata=metadata or {},
         )
 
     @staticmethod
