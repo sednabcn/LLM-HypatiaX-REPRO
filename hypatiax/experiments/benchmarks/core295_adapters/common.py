@@ -6,7 +6,6 @@ the repository's restricted symbolic parser and lambdified by SymPy.
 """
 from __future__ import annotations
 
-import contextlib
 import hashlib
 import json
 import os
@@ -140,29 +139,6 @@ def _validate_generator(entry: dict, domain: str) -> None:
             raise ValueError(f"{variable}: train, medium, near, or far extrapolation exceeds declared validity bounds")
 
 
-@contextlib.contextmanager
-def _data_override(exp1, train_arrays: tuple, extrap_arrays: dict):
-    """Feed the exact hashed arrays to every Core-15 arm without changing defaults."""
-    original_generate = exp1.generate_data
-    original_extrap = exp1.generate_extrap_data
-    train_copy = tuple(np.array(value, copy=True) for value in train_arrays)
-    extrap_copy = {
-        regime: tuple(np.array(value, copy=True) for value in arrays)
-        for regime, arrays in extrap_arrays.items()
-    }
-    exp1.generate_data = lambda eq, N=200, noise_level=0.05, seed=42: tuple(
-        np.array(value, copy=True) for value in train_copy
-    )
-    exp1.generate_extrap_data = lambda eq, regime="medium", N=100, seed=42: tuple(
-        np.array(value, copy=True) for value in extrap_copy[regime]
-    )
-    try:
-        yield
-    finally:
-        exp1.generate_data = original_generate
-        exp1.generate_extrap_data = original_extrap
-
-
 def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
     """Run the unchanged Core-15 three-arm condition function for one Core-295 row."""
     _validate_generator(entry, domain)
@@ -222,8 +198,10 @@ def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
             }
             continue
         try:
-            with _data_override(exp1, train, extrap):
-                result = exp1.run_condition(equation, arm, seed=seed)
+            result = exp1.run_condition(
+                equation, arm, seed=seed,
+                dataset_override={"train": train, "extrapolation": extrap},
+            )
             if result.get("timed_out"):
                 status = "timeout"
             elif result.get("success") is True:
