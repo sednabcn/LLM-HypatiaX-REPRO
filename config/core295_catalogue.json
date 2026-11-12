@@ -1606,6 +1606,99 @@
         "Proposed only; no generator, input ranges, domain acceptance or Core-15/global equivalence review has been completed"
       ],
       "source_location": "Gompertz (1825), Article I, section 5, printed p. 518"
+    },
+    {
+      "equation_id": "BIO-VOLTERRA-1926-N-SPECIES-CONSERVATIVE-001",
+      "name": "Volterra n-species conservative biological association system",
+      "domain": "Biology",
+      "subdomain": "multi-species population interaction",
+      "formula": "beta_r * dN_r/dt = (epsilon_r * beta_r + sum_s(a_sr * N_s)) * N_r, with a_rs = -a_sr, a_rr = 0, beta_r > 0",
+      "canonical_expression": "system{dN_r/dt=(epsilon_r+(1/beta_r)*sum_s(a_sr*N_s))*N_r; a_rs=-a_sr; a_rr=0; beta_r>0; r=1..n; n>=2}",
+      "formula_latex": "\\beta_r\\frac{dN_r}{dt}=\\left(\\varepsilon_r\\beta_r+\\sum_{s=1}^{n}a_{sr}N_s\\right)N_r,\\quad a_{rs}=-a_{sr},\\ a_{rr}=0,\\ \\beta_r>0",
+      "structural_fingerprint": "7ab663881ae16ce5a613b201c8e41401a6a2a697c6a2a68b286ce98221f1bc09",
+      "source_ids": [
+        "BIO-VOLTERRA-1926-N-SPECIES-CONSERVATIVE-ASSOCIATION"
+      ],
+      "source_family_id": "BIO-VOLTERRA-CONSERVATIVE-N-SPECIES-INTERACTION",
+      "status": "proposed",
+      "assumptions": [
+        "n is an integer with n at least 2",
+        "N_r is the positive continuous population count of species r",
+        "The species interact through pairwise encounter terms",
+        "a_rs = -a_sr and a_rr = 0 encode reciprocal, antisymmetric pairwise interaction coefficients",
+        "beta_r is a positive species-specific equivalence/weight used to convert population counts into the conserved association value",
+        "epsilon_r is the intrinsic per-capita growth or depletion coefficient of species r when interactions are absent",
+        "Time is continuous and birth/death and encounter effects are represented as continuous rates"
+      ],
+      "variables": {
+        "N_r": {
+          "meaning": "Population count of species r",
+          "unit": "individuals"
+        },
+        "t": {
+          "meaning": "Time",
+          "unit": "time"
+        },
+        "n": {
+          "meaning": "Number of interacting species",
+          "unit": "integer"
+        },
+        "epsilon_r": {
+          "meaning": "Intrinsic per-capita growth or depletion coefficient for species r",
+          "unit": "time^-1"
+        },
+        "beta_r": {
+          "meaning": "Positive species-specific equivalence/weight in the conserved association value",
+          "unit": "source-defined weight"
+        },
+        "a_sr": {
+          "meaning": "Pairwise interaction coefficient exerted by species s on species r; antisymmetric under index exchange",
+          "unit": "population^-1 time^-1 times beta_r, as implied by the weighted equation"
+        }
+      },
+      "validity": {
+        "source_location": "Volterra (1927 author-expanded reprint of the 1926 Lincei memoir), Part II, §2, printed pp.38–39, equations (B); source scan PDF lines around 1354–1392",
+        "regime": "n coexisting species whose pairwise encounters are reciprocal and conserve a weighted association value; the intrinsic growth/depletion terms may be nonzero",
+        "limitations": [
+          "The conservative property applies to the weighted sum's interaction contribution; nonzero epsilon_r terms can still change the total weighted value",
+          "The antisymmetric coefficients encode a restricted conservative interaction class, not arbitrary food-web networks or all predator-prey systems",
+          "Volterra's two-species feeding equations are explicitly identified as a special case and must not be counted separately from this n-species family",
+          "Lotka's 1920 two-species plant-herbivore model is a related independent primary formulation; pairwise structural equivalence and source-family treatment require review",
+          "The 1927 text is an author-expanded reprint: its preface states that Parts I–III rearrange and add to the 1926 Lincei memoir, while Part IV reprints 1927 notes",
+          "No generator, input ranges, calibration or acceptance review has been completed"
+        ]
+      },
+      "input_ranges": {
+        "N_r": {
+          "train": null,
+          "extrapolation": null
+        },
+        "epsilon_r": {
+          "train": null,
+          "extrapolation": null
+        },
+        "beta_r": {
+          "train": null,
+          "extrapolation": null
+        },
+        "a_sr": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Direct equation transcription from the author-expanded 1927 reprint of the 1926 Lincei memoir, Part II, §2, equations (B)",
+        "Source states a_rs=-a_sr, a_rr=0 and beta_r>0",
+        "The same source reduces the two-species feeding case to this general n-species system",
+        "Proposed, not accepted; compare against Lotka 1920, the two-species Volterra feeding model, and other multi-species interaction families before counting"
+      ],
+      "source_location": "Volterra (1927 author-expanded reprint of 1926 memoir), Part II, §2, printed pp.38–39"
     }
   ],
   "source_register": [
@@ -3199,6 +3292,14 @@
       "title": "Lotka 1920 original plant–herbivore interaction system",
       "url": "https://www.pnas.org/doi/10.1073/pnas.6.7.410",
       "use": "Publisher-hosted full text of A. J. Lotka, 'Analytical Note on Certain Rhythmic Relations in Organic Systems', PNAS 6(7) (1920), pp.410–415. Equations (5)–(10), especially (8) and (10), directly transcribe the coupled plant/herbivore mass dynamics; the author explicitly says A1, A2, B1, B2 are in general functions of both state variables. This is a source-level primary transcription, not a new catalogue equation candidate because the constitutive functions are not specified. The constant-coefficient Lotka–Volterra system is a restriction, not a second independent equation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-VOLTERRA-1926-N-SPECIES-CONSERVATIVE-ASSOCIATION",
+      "domain": "Biology",
+      "title": "Volterra 1926 n-species conservative biological association system (author-expanded 1927 reprint)",
+      "url": "https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf",
+      "use": "Author-expanded reprint of Vito Volterra's 1926 Memorie della R. Accademia Nazionale dei Lincei memoir, with the first three parts rearranged and expanded. Part II, §2, printed pp.38–39, derives the n-species weighted interaction system beta_r dN_r/dt=(epsilon_r beta_r+sum_s a_sr N_s)N_r, with antisymmetric interaction coefficients a_rs=-a_sr, a_rr=0 and beta_r>0. The same source explicitly identifies the two-species feeding model as a special case. Proposed as a distinct n-species conservative-interaction family; compare structurally against Lotka 1920 and all other population-interaction sources before acceptance.",
       "status": "candidate_reference"
     }
   ],
