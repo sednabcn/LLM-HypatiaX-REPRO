@@ -3454,6 +3454,22 @@
       "url": "https://doi.org/10.1017/S0305004100011518",
       "use": "Primary Cambridge record, Mathematical Proceedings of the Cambridge Philosophical Society 29(4), pp.487–491. Abstract says it follows a prior two-species interaction study and establishes fundamental equations; full text access-gated. Discrete/non-continuous interaction lead; do not assume it is merely a time-discretized Lotka–Volterra system without inspecting equations.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LOTKA-1923-QUANTITATIVE-PARASITOLOGY",
+      "domain": "Biology",
+      "title": "Lotka (1923), Contribution to Quantitative Parasitology",
+      "url": "https://www.biodiversitylibrary.org/bibliography/2087",
+      "use": "A. J. Lotka, Journal of the Washington Academy of Sciences 13(8) (1923), pp.152–158. BHL catalogue confirms volume 13 (1923) is digitized and held by the American Museum of Natural History; article-specific page extraction and primary equation inspection not completed. Also cited by Cambridge's Watt 1959 article. Treat as a primary-source retrieval lead, not a transcribed equation or candidate.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-BODENHEIMER-SCHIFFER-1952-INSECT-PARASITISM",
+      "domain": "Biology",
+      "title": "Bodenheimer & Schiffer (1952), Mathematical Studies in Animal Populations I: A Mathematical Study of Insect Parasitism",
+      "url": "https://link.springer.com/journal/10483/volumes-and-issues/10-1",
+      "use": "F. S. Bodenheimer and M. Schiffer, Acta Biotheoretica 10 (1952), pp.23–56. Bibliographic identity and pagination corroborated by contemporary citation records and Schiffer's publication list; exact publisher issue/article DOI and full text scan not located in this pass. Potential mathematical host-parasite family; primary equation transcription and structural comparison pending.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
