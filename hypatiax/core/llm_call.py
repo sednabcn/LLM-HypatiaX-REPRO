@@ -40,6 +40,8 @@ def create_message(client, **kwargs):
     else:
         req = configured_temperature()
         kwargs = {**kwargs, "temperature": req}
+    # Clear prior-call state so failed requests cannot inherit stale provenance.
+    _state.info = {"temperature_requested": req, "temperature_sent": None}
     try:
         resp = client.messages.create(**kwargs)
         _state.info = {"temperature_requested": req, "temperature_sent": True}
