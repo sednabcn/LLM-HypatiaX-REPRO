@@ -49,7 +49,8 @@
     "constraints": [],
     "assumptions": [],
     "validity_regime": null,
-    "limitations": []
+    "limitations": [],
+    "physical_constants": []
   },
   "variables": {},
   "validity": {
