@@ -91,7 +91,7 @@ def build(a):
     if not workflows["runner"]["n_shards"]: b.append("runner workflow has no visible shard input")
     try:
         design=a.design.read_text(encoding="utf-8")
-        if "Structural-equivalence policy decision pending" in design or "no option has been selected" in design: b.append("structural-equivalence policy remains undecided")
+        if "Open decisions before freezing" in design: b.append("structural-equivalence policy remains a draft with open decisions")
     except OSError as exc: b.append(f"design protocol unreadable: {exc}")
     return {"report_schema":"core295-final-readiness-v1","status":"READY_FOR_AUTHORIZED_RERUN" if not b else "NOT_READY",
         "scope":"static evidence/configuration audit only; not scientific certification or run authorization",
@@ -102,8 +102,8 @@ def build(a):
         "equations":len(tau.get("calibration_equations",[])) if isinstance(tau.get("calibration_equations"),list) else None,
         "candidate_tau_values":len(tau.get("candidate_tau_values",[])) if isinstance(tau.get("candidate_tau_values"),list) else None,
         "missing_ready_fields":missing_tau},"source_pipeline":pipeline,"workflow_static_audit":workflows,
-        "stage_mapping":{"exp295_ablation":"Core-15 exp1_ablation lineage","exp295":"method/contract mapping needs explicit confirmation",
-        "exp295b":"unresolved new stage or verified Core-15 counterpart"}}}
+        "stage_mapping":{"mapping_status":"verified correspondence; Core-295 implementation absent","exp295_ablation":"exp1_ablation — per-equation ablation execution","exp295":"exp1_ablation_aggregate — same-run shard merge and aggregate ablation analysis",
+        "exp295b":"exp1_five — separate five-system comparison"}}}
 
 def markdown(r):
     e=r["evidence"]; out=["# Core-295 final readiness report","",f"**Status:** {r['status']}","",r["scope"],"",
