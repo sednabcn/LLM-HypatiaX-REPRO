@@ -82,3 +82,19 @@ python scripts/core295_extract_equation_leads.py
 Requires Poppler `pdftotext`. It checks each PDF against the retrieval provenance SHA-256, extracts text page by page, and stores equation-like snippets with source DOI, PDF page index, text-line span and snippet hash in `data/core295_equation_review_queue.jsonl`. Repeated runs deduplicate by PDF hash, page index and snippet hash.
 
 The extraction is deliberately heuristic. Page index is not printed pagination; OCR is not performed; multi-line equations and scanned pages may be missed. All records remain `unverified_extraction_lead`, never accepted. A reviewer must compare each snippet against the original PDF and transcribe the complete governing equation, assumptions and printed page before structural review. No canonical catalogue is changed.
+
+
+## Assemble human-review packets
+
+After extraction, create one evidence packet per snippet:
+
+```bash
+python scripts/core295_prepare_candidate_reviews.py --stdout-summary
+python scripts/core295_prepare_candidate_reviews.py
+```
+
+The helper reads the extraction queue, the retrieval provenance file and the Crossref discovery queue. It matches records by source record ID where available and otherwise by DOI, then assembles the snippet, source PDF hash/page index, retrieval metadata, bibliographic metadata and the full human review template into a deterministic Markdown packet under `data/core295_candidate_review_packets/`.
+
+Existing packets are skipped by default. Use `--overwrite` only when intentionally regenerating packets from updated evidence. Missing or malformed supporting records are reported; they are not inferred. Each packet explicitly remains proposed, unverified, E5/unresolved and unaccepted. The helper does not edit any input queue or the canonical catalogue, and does not establish source primacy, equation correctness, structural distinctness or statistical independence.
+
+The retrieval provenance writer uses actual JSONL record separators so these downstream readers can parse one provenance record per line.
