@@ -139,7 +139,7 @@ def crossref_search(query: str, rows: int, offset: int, timeout: int,
         "query.bibliographic": query,
         "rows": str(rows),
         "offset": str(offset),
-        "select": "DOI,title,author,published,issued,created,type,container-title,volume,issue,page,URL,abstract,score,subject",
+        "select": "DOI,title,author,published,issued,created,type,container-title,volume,issue,page,URL,abstract,subject",
     }
     if mailto:
         params["mailto"] = mailto
