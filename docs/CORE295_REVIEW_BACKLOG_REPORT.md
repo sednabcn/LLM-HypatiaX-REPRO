@@ -57,3 +57,8 @@ The script reads the queue and catalogue only. It writes a Markdown report to th
 Use the [Core-295 source verification and equation transcription template](templates/CORE295_EQUATION_SOURCE_REVIEW_TEMPLATE.md) for the full human review record. It captures primary-source identity, artifact hashes, printed and PDF pagination, page-image transcription checks, model assumptions and units, E0–E5 comparison, source-family and statistical-unit rationale, generator contract, and independent sign-off.
 
 A machine-readable starting point is also provided at [core295_candidate_record.template.json](templates/core295_candidate_record.template.json). It is intentionally incomplete and is not an accepted catalogue entry; populate and review it before adapting its fields into the canonical catalogue schema.
+
+
+## Evidence-assembled review packets
+
+The extraction queue can be assembled into individual, deterministic human-review packets with [`scripts/core295_prepare_candidate_reviews.py`](../scripts/core295_prepare_candidate_reviews.py). See the [open-access retrieval and extraction guide](CORE295_OPEN_ACCESS_RETRIEVAL.md#assemble-human-review-packets) for inputs, matching rules and usage. Packets embed the full source-review template and supporting bibliographic/retrieval metadata, but remain proposed, unverified, E5/unresolved and unaccepted. The helper does not modify the canonical catalogue or source queues.
