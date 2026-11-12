@@ -224,10 +224,16 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         y_pred = rcsb._runner_eval_formula(code, X_test, eq["vars"])
         if y_pred is None:
             raise ValueError("LLM formula could not be evaluated on held-out inputs")
-        extrap_rows = {}
+        extrap_rows, extrap_errors = {}, {}
         for regime, (X_e, y_e) in extrap.items():
-            pred = rcsb._runner_eval_formula(code, X_e, eq["vars"])
-            extrap_rows[regime] = _metrics(y_e, pred) if pred is not None else None
+            try:
+                pred = rcsb._runner_eval_formula(code, X_e, eq["vars"])
+                if pred is None:
+                    raise ValueError("formula evaluator returned no predictions")
+                extrap_rows[regime] = _metrics(y_e, pred)
+            except Exception as regime_exc:
+                extrap_rows[regime] = None
+                extrap_errors[regime] = f"{type(regime_exc).__name__}: {regime_exc}"
         test_metrics = _metrics(y_test, y_pred)
     except Exception as exc:
         return _failure("llm_only", exc, elapsed)
@@ -239,6 +245,7 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
             "formula": code,
             "formula_hash": result.formula_hash,
             "metadata": dict(result.metadata or {}),
+            "extrapolation_errors": extrap_errors,
             "definition": "Zero-shot PureLLMBaseline formula from task description/domain/variable names; training arrays are not used; no PySR refinement",
             "information_regime": "zero_shot_task_description_only",
             "training_arrays_used_by_model": False,
@@ -271,15 +278,20 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         return _failure("nn_only", RuntimeError(result.error or "NN predictor unavailable"), elapsed)
     try:
         test_pred = predictor(X_test)
-        extrap_rows = {
-            regime: _metrics(y_e, predictor(X_e))
-            for regime, (X_e, y_e) in extrap.items()
-        }
+        test_metrics = _metrics(y_test, test_pred)
+        extrap_rows, extrap_errors = {}, {}
+        for regime, (X_e, y_e) in extrap.items():
+            try:
+                extrap_rows[regime] = _metrics(y_e, predictor(X_e))
+            except Exception as regime_exc:
+                extrap_rows[regime] = None
+                extrap_errors[regime] = f"{type(regime_exc).__name__}: {regime_exc}"
         return {
             "method": "nn_only", "success": True, "error": None,
-            "elapsed_s": elapsed, "test": _metrics(y_test, test_pred),
+            "elapsed_s": elapsed, "test": test_metrics,
             "extrapolation": extrap_rows,
             "diagnostics": {
+                "extrapolation_errors": extrap_errors,
                 "architecture": result.formula,
                 "metadata": dict(result.metadata or {}),
                 "headline_training_metric_not_used": True,
