@@ -413,9 +413,9 @@ def fit_formula_params(
 # ---------------------------------------------------------------------------
 
 def _create_message_deterministic(client, **kwargs):
-    """Call client.messages.create(), preferring temperature=0.0 for
-    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE), but tolerate newer
-    models that no longer accept the parameter at all.
+    """Call the shared wrapper with Core-15 temperature=0.25.
+    The wrapper fails closed if the request is rejected; it does not retry
+    without temperature.
 
     FIX-ISSUE2B-LLM-TEMPERATURE-DEPRECATED: duplicated from the identical
     helper in hybrid_system_llm_nn_all_domains.py (HSL) / baseline_pure_llm_
@@ -427,13 +427,10 @@ def _create_message_deterministic(client, **kwargs):
     on any model that has deprecated the temperature/top_p/top_k sampling
     parameters (Claude Sonnet 4.6+, Opus 4.7+), and that exception was
     swallowed by generate_llm_formula's bare except into an N/A/error
-    result rather than retried, unlike HSL's equivalent fallback. Tries
-    a fixed temperature first and retries once without it only on that
-    specific deprecation error, so determinism is preserved wherever the
-    model still supports it, and the fallback degrades the same way HSL's
-    does instead of going silently dark.
+    result rather than retried, unlike HSL's equivalent fallback. The shared wrapper makes exactly one request with temperature=0.25 and
+    fails closed on rejection. No untempered fallback request is made.
     """
-    # UNIFIED-TEMPERATURE: shared wrapper (LLM_TEMPERATURE, default 0.25, one fallback).
+    # UNIFIED-TEMPERATURE: shared wrapper enforces 0.25 and fails closed.
     from hypatiax.core.llm_call import create_message
     return create_message(client, **kwargs)
 
