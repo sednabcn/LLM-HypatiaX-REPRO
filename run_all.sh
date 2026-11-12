@@ -2303,7 +2303,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
       --output-dir \"${_P30_RANDOM_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
   if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
-    python3 - \"${_P30_RANDOM_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+    SHARD_IDS='' python3 - \"${_P30_RANDOM_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
@@ -2358,7 +2358,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
       --output-dir \"${_P30_PCA_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
   if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
-    python3 - \"${_P30_PCA_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+    SHARD_IDS='' python3 - \"${_P30_PCA_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
