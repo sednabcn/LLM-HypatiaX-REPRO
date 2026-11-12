@@ -139,9 +139,9 @@ def _resolve_domains_from_env() -> list[str] | None:
 
 
 def _create_message_deterministic(client, **kwargs):
-    """Call client.messages.create(), preferring temperature=0.0 for
-    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE below), but tolerate
-    newer models that no longer accept the parameter at all.
+    """Call the shared wrapper with Core-15 temperature=0.25.
+    The wrapper fails closed if the request is rejected; it does not retry
+    without temperature.
 
     FIX-TEMPERATURE-DEPRECATED: mirrors the identical helper in
     baseline_pure_llm_defi_discovery.py. Anthropic deprecated the
@@ -150,11 +150,10 @@ def _create_message_deterministic(client, **kwargs):
     default model), and these newer models reject the request outright
     with a 400 "`temperature` is deprecated for this model." error rather
     than ignoring the field, as observed failing the CI benchmark run.
-    Tries temperature=0.0 first and retries once without it only on that
-    specific deprecation error, so determinism is preserved wherever the
-    model still supports it.
+    The shared wrapper makes exactly one request with temperature=0.25 and
+    fails closed on rejection. No untempered fallback request is made.
     """
-    # UNIFIED-TEMPERATURE: shared wrapper (LLM_TEMPERATURE, default 0.25, one fallback).
+    # UNIFIED-TEMPERATURE: shared wrapper enforces 0.25 and fails closed.
     from hypatiax.core.llm_call import create_message
     return create_message(client, **kwargs)
 
