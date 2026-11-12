@@ -143,7 +143,7 @@ Arm definitions:
 3. `pysr_only`: existing raw PySR-only `run_condition`, scored on the same outer-test and extrapolation arrays.
 4. `nn_only`: `ImprovedNNMethod` trained on the shared training partition with log preprocessing retained and OLS/secondary-NN fallbacks disabled; its returned neural predictor is scored on the untouched outer test and shared extrapolation arrays.
 
-A common per-arm wall-clock cap is passed to all four arms. The PySR population/iteration settings come from the frozen fresh-rerun environment. The driver fails closed if no Anthropic API key is present and enforces `HYPATIAX_STRICT=1` before loading the experiment modules.
+A common per-arm wall-clock cap is passed to all four arms. The PySR population/iteration settings come from the frozen fresh-rerun environment. The driver fails closed if no Anthropic API key is present and enforces `HYPATIAX_STRICT=1` before loading the experiment modules. The summary also reports paired Hybrid-minus-baseline differences, wins/losses and per-equation deltas; the equation is the comparison unit, not the 200 generated rows. These are descriptive summaries, not a confirmatory significance claim.
 
 ### 8.2 Integration and limitations
 
