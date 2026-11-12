@@ -111,9 +111,14 @@ def main() -> int:
         return fail("proposal entries are not exactly the approved append-only ID sequence")
     if any(x.get("status") != "structurally_reviewed" or x.get("accepted") is True for x in new_rows):
         return fail("new entries must remain structurally_reviewed and not accepted")
-    if any(x.get("status") != y.get("status") or x.get("equation_id") != y.get("equation_id")
-           for x, y in zip(before_entries, after_entries[:len(before_entries)])):
+    if before_entries != after_entries[:len(before_entries)]:
         return fail("proposal modifies or reorders existing catalogue entries")
+    original_catalogue = load(a.catalogue)
+    for key, value in original_catalogue.items():
+        if key not in {"entries", "promotion_proposal"} and proposal.get(key) != value:
+            return fail("proposal modifies canonical top-level field: " + key)
+    if proposal.get("promotion_proposal") != manifest:
+        return fail("proposal provenance manifest is malformed")
 
     # Validate the proposed file before touching the canonical path.
     with tempfile.NamedTemporaryFile("wb", suffix=".json", dir=a.catalogue.parent, delete=False) as tmp:
