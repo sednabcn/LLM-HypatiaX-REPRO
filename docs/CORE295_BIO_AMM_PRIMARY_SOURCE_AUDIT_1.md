@@ -637,3 +637,31 @@ The Wiley/Zoological Society publisher landing page confirms the complete biblio
 The alternate GPNTB catalogue mirror exposes the exact volume image filename Resource-6567_Version-6678_application-pdf_0.pdf, as well as the issue date (1 September 1925) and extent (231, [4] pages). I attempted the mirror's direct download URL and the GPNTB resolver URL; both are inaccessible to the available retrieval service. The earlier GPNTB record describes the volume as 233 pages. These metadata descriptions remain discrepant; neither is evidence that the scan was inspected. No equation transcription or sign convention is added.
 
 **Disposition:** no new source or equation count is added by these retrieval attempts. Preserve the original Frumkin and Nicholson–Bailey access blockers. No experiments, validators or live protocol calls were run.
+
+ 
+## 4.7 Leslie (1945): direct age-structured matrix equation transcription
+
+The complete scan of P. H. Leslie, “On the Use of Matrices in Certain Population Mathematics,” *Biometrika* 33(3) (November 1945), pp. 183–212, is accessible. On printed p. 184, Leslie defines (P_x) as the probability that a female in age class (x) survives into age class (x+1) over one time unit, and (F_x) as the number of daughters born during the interval who survive into age class 0–1 at the next census per female in age class (x) at the current census. He writes the age projection as
+
+[
+mathbf n_{t+1}=Mmathbf n_t,
+]
+
+where the ((m+1)	imes(m+1)) matrix has the form
+
+[
+M=
+egin{bmatrix}
+F_0&F_1&F_2&cdots&F_m\
+P_0&0&0&cdots&0\
+0&P_1&0&cdots&0\
+dots&ddots&ddots&ddots&dots\
+0&cdots&0&P_{m-1}&0
+end{bmatrix}.
+]
+
+Leslie immediately notes that all other entries are zero, (0<P_x<1), and (F_xge0) (some fertility entries may be zero). The same section states (mathbf n_t=M^tmathbf n_0). On printed pp. 184–185, he derives (P_x=L_{x+1}/L_x) using life-table age-class totals and derives (F_x) from age-specific maternal frequency plus the survival of daughters to the next census. This latter derivation matters: (F_x) is not simply births per female during the interval; it includes the within-interval survival of daughters into the census age class.
+
+**Disposition:** add one proposed discrete age-structured matrix operator. Do not separately count individual age-class recurrences, matrix powers, eigenvalue equations, stable age distributions or the derived asymptotic growth rate. Leslie's own paper treats those as consequences/properties of the same operator. Its discrete stage-transition topology differs from the continuous-time scalar growth and Lotka/Volterra systems, but the broader relationship to other age-structured renewal and matrix models still requires structural-family review. No benchmark ranges or generator have been set; no experiment or validator was run.
+
+Primary scan: https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.pdf
