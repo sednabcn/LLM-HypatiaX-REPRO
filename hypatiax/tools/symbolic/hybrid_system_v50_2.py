@@ -427,7 +427,7 @@ class HybridDiscoverySystem:
         use_llm: bool = False,
         llm_mode: str = "hybrid",          # none | seed | hybrid | fallback
         llm_n_candidates: int = 3,
-        llm_temperature: float = float(os.environ.get("LLM_TEMPERATURE", "0.25")),  # AUDIT C1
+        llm_temperature: float = 0.25,  # Core-15 protocol default; API wrapper enforces 0.25
         # FIX-C: deterministic PySR (eliminates non-determinism warning).
         allow_nondeterministic: bool = False,
     ):
