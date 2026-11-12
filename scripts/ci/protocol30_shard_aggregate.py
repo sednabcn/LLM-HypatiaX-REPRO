@@ -152,6 +152,11 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
                         f"shard {shard}: {method_name!r} is missing an explicit "
                         "llm_attempted provenance flag"
                     )
+                if not isinstance(llm_called, bool):
+                    fail(
+                        f"shard {shard}: {method_name!r} is missing an explicit "
+                        "llm_called provenance flag"
+                    )
                 if llm_called is True and llm_attempted is not True:
                     fail(
                         f"shard {shard}: {method_name!r} reports a live LLM response "
