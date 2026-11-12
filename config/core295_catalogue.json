@@ -2255,7 +2255,7 @@
       "domain": "DeFi AMM",
       "title": "DODO Proactive Market Maker mathematical principle",
       "url": "https://docs-next.dodoex.io/en/product/pmm-algorithm/the-mathematical-principle-of-pmm",
-      "use": "Official DODO PMM mathematical principle plus pinned DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d, contracts/lib/PMMPricing.sol; marginal price and integrated trade formulas, state/regression rules",
+      "use": "Official DODO PMM mathematical principle plus pinned DODOEX/contractV2 commit 2f1bcdac7ef1beee7599a756e2eed26732c2536d: PMMPricing.sol, DODOMath.sol and DecimalMath.sol; guide-price/inventory state, piecewise R regimes, integrated trade law, quadratic inverse/target solver and fixed-point rounding. Deployment/pool wrapper remains to pin.",
       "status": "candidate_reference"
     },
     {
