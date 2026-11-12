@@ -87,17 +87,29 @@ Keep unchanged:
 
 Inspected current workflow settings include `JULIA_NUM_THREADS=4`, `PYSR_POPULATIONS=30`, a 330-minute worker timeout, and `JOB_DEADLINE=19800` seconds. The workflow exposes `n_shards`; no separate `n_worker` dispatch input was found in the inspected workflow/Core-15 runner. Thus, `n_worker` remains unchanged/not separately configurable unless a concrete setting is identified. Shard count is scheduling, not a model hyperparameter, and must be recorded in provenance.
 
-## 6. Requested pipeline stages
+## 6. Core-295 pipeline stage mapping
 
-Add these Core-295 stages to root `run_all.sh` and `.github/workflows/ci_runner_repro.yml` in the same relative order as the corresponding Core-15 stages:
+The Core-15 stage sequence in `run_all.sh` is explicit:
 
-1. `exp295_ablation`
-2. `exp295`
-3. `exp295b`
+1. `exp1_ablation` — execute the three ablation arms for each equation.
+2. `exp1_ablation_aggregate` — merge shard checkpoints, enforce equation/arm completeness, and produce the aggregate ablation analysis.
+3. `exp1_five` — run the separate five-system comparison through `exp1_five_system.py`.
 
-Before implementation, verify the exact Core-15 script/stage counterpart for each name. The inspected tree clearly contains `exp1_ablation.py` and `exp1_five_system.py`; do not guess the third mapping. Each stage needs isolated result/checkpoint namespaces, stable equation task IDs, workflow metadata, Julia requirement, seed policy, shard allocation, artifact paths, aggregation, and completeness checks.
+The Core-295 names map to those three distinct responsibilities, in order:
 
-Acceptance checks must reject missing, duplicated, or unexpected equation IDs and report 295/295 overall and 59/59 per domain. Add dry-run/offline checks for task planning, sharding, checkpoint identity, aggregation, and result completeness. Do not alter existing Core-15 stages or dispatch the workflow as part of implementation.
+| Core-295 stage | Core-15 counterpart | Responsibility |
+|---|---|---|
+| `exp295_ablation` | `exp1_ablation` | Per-equation ablation execution |
+| `exp295` | `exp1_ablation_aggregate` | Shard merge, completeness checks, aggregate ablation analysis |
+| `exp295b` | `exp1_five` | Separate five-system comparison |
+
+This resolves the earlier mapping ambiguity: `exp295` is the aggregate stage, not a second independent five-system experiment. `exp295b` is the five-system comparison. These mappings preserve the Core-15 sequence and do not conflate ablation execution, aggregation, and five-system benchmarking.
+
+**Implementation status:** the mapping is now documented, but none of the three Core-295 stages is implemented or dispatchable yet. The current `run_all.sh` step registry and `.github/workflows/ci_runner_repro.yml` dispatch options contain the Core-15 IDs, not these Core-295 IDs. Do not dispatch a run until the Core-295 catalogue, stage implementations, sharding, result namespaces, and completeness contracts are ready.
+
+Each stage needs isolated result/checkpoint namespaces, stable equation task IDs, workflow metadata, Julia requirement, seed policy, shard allocation, artifact paths, aggregation, and completeness checks. The aggregate stage must consume only artifacts from the same declared run and must reject missing, duplicated, or unexpected equation IDs. Final completeness must report 295/295 overall and 59/59 per domain.
+
+Add dry-run/offline checks for task planning, sharding, checkpoint identity, aggregation, and result completeness. Preserve all existing Core-15 stage behavior and settings. Do not dispatch the workflow as part of implementation.
 
 ## 7. Approved tau-calibration protocol
 
