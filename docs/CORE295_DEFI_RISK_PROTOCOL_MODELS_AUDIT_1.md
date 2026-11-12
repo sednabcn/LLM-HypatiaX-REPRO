@@ -283,6 +283,7 @@ An auction needs reset when elapsed time exceeds `tail` or current price divided
 - `src/EVault/shared/LiquidityUtils.sol`, blob SHA `e6b68e28284c404b72608bd9213721ab9b54ad0c`
 - `src/EVault/shared/BorrowUtils.sol`, blob SHA `e60faf14e1d1d9fcc607f793455c96d7e0188688`
 - `src/EVault/modules/RiskManager.sol`, blob SHA `4f78db4dab2ba07ad0e6dc9c9f41822109a55140`
+- `src/EVault/modules/Governance.sol`, blob SHA `08c5c96f0a356381ca14d02d48defe1b570c6120`
 
 Pinned commit: https://github.com/euler-xyz/euler-vault-kit/commit/93a1de491531e54cbbcf0e5c8cacfe558f924867. This is a versioned source snapshot, not a deployment/proxy or live vault-configuration match.
 
@@ -296,7 +297,7 @@ The liquidation health ratio is
 \[
 h=\frac{C_L}{D}.
 \]
-The code clamps the discount factor from below using the configured maximum liquidation discount (d_{max}):
+The code clamps the discount factor from below using the configured maximum liquidation discount. Governance rejects a maximum discount equal to `CONFIG_SCALE`, because that would make the liquidation division by zero (d_{max}):
 \[
 q=\max\!\left(h,1-d_{max}\right).
 \]
