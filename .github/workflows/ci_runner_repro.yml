@@ -838,7 +838,9 @@ jobs:
           # Core-15 has its own per-equation resumable checkpoints in isolated shard
           # directories. The planner checkpoint is not authoritative for this protocol;
           # dispatch all 15 equation IDs so the aggregate can prove full coverage.
-          if EXP == "exp1_four_way_matched":
+          if EXP in ("exp1_four_way_matched", "exp2_protocol30_random_8020", "exp2_protocol30_pca_4060"):
+              # These protocols have no resumable per-equation checkpoint contract in this
+              # workflow. Every dispatch must execute the full assigned registry exactly.
               done = set()
           pending = [t for t in all_ids if t not in done]
           print(f"Total={len(all_ids)}  Done={len(done)}  Pending={len(pending)}")
