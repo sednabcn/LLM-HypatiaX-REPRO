@@ -310,3 +310,14 @@ Implementation details from `Pool.sol`:
 **Scope warning:** this is the official Velodrome V2 implementation, a partial rewrite/redesign of the Solidly architecture; it is not evidence that every Solidly fork or original Solidly deployment uses identical code, decimal scaling, fee configuration or rounding. The documentation's bare polynomial is not a complete benchmark contract. The pinned Pool.sol plus a pinned factory fee implementation is much closer to one, but market-specific factory/pool deployment configuration remains unpinned. Do not call this original Solidly implementation or count volatile mode separately from the Core-15 constant-product exclusion. Keep one stable polynomial family lead, subject to cross-family structural review and an explicit integer-arithmetic benchmark adapter.
 
 No live chain calls, RPC, contract simulation or tests were performed.
+
+
+### 3A.1 Factory fee source pinned
+
+The paired factory implementation is pinned at the same repository commit:
+- File: https://github.com/velodrome-finance/contracts/blob/b3065d8b6702b14b094f9f6046b752cc9f78c43b/contracts/factories/PoolFactory.sol
+- Blob SHA: `6a415031333011c4bb1196eabeeaf3b5f8deb0b2`
+- `PoolFactory.getFee(pool, stable)` returns a per-pool custom fee when configured, otherwise the stable/volatile default; sentinel `ZERO_FEE_INDICATOR=420` explicitly represents a zero-fee override.
+- Constructor defaults are 5 basis points (0.05%) for stable pools and 30 basis points (0.30%) for volatile pools. `setFee` allows the fee manager to change nonzero defaults up to 300 basis points (3%); `setCustomFee` permits per-pool overrides and the zero-fee sentinel.
+
+This resolves the source-code fee-selection rule, but not the runtime fee of any particular pool: that requires the actual factory and pool state at a specified block/deployment. No chain calls were made. Keep default constructor values distinct from market-specific deployed configuration.
