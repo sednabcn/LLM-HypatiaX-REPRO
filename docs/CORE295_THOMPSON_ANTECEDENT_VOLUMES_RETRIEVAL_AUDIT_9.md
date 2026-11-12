@@ -170,3 +170,18 @@ A new indexed volume search surfaced William-R. Thompson's “Sur une Tachinaire
 This is a distinct bibliographic lead only. The equation-bearing content has not been inspected, and no evidence currently links this biological note to the cyclic-parasitism formula. It is not accepted as a Core-295 equation or assigned an independence unit.
 
 The 1922d footnote trail remains unresolved at the cited page images: tome 153 p.1401, tome 156 p.1401, and tome 164 with OCR-rendered page “i433”. Continue to verify those exact references rather than inferring them from nearby Thompson bibliography entries.
+
+
+## Addendum 4 — volume 164 page 235 is Bordas, not Thompson; adapter isolation improved
+
+The tome-164 (1917) table of contents identifies the well-known Ichneumonid paper as L. Bordas, “Sur le rôle des Ichneumonides dans la lutte contre les parasites des arbres forestiers,” p.235. It is not a W.R. Thompson paper and must not be treated as the antecedent cited by Thompson's 1922d note. The same table's Parasitologie section lists Roubaud p.453 and other unrelated entries; no Thompson title is visible in the indexed contents (Wikisource tome-164 contents, source turn879267search0). The OCR-rendered “i433” therefore remains unresolved; it is not safe to normalize it to 235 or any other nearby page.
+
+The 1922d antecedent citations remain unresolved: tome 153 (1911), p.1401; tome 156 (1913), p.1401; and tome 164 (1917), OCR “i433”. BnF states that the historical *Comptes rendus* collection is digitized through Gallica, providing the preferred primary-source retrieval route (source turn809822search0). Tome 156 has a digitized Commons volume record with 2,124 pages (source turn809822search7), but the cited page still requires inspection.
+
+### Adapter concurrency correction
+
+The Core-295 adapter previously supplied hashed arrays by temporarily replacing module-level `generate_data` and `generate_extrap_data` functions. That was vulnerable to cross-talk if equations were ever run concurrently in one process. Replaced the monkeypatch with an explicit optional `dataset_override` argument to `exp1_ablation.run_condition`; the no-override Core-15 generation path remains unchanged, and Core-295 passes the exact pre-generated arrays directly. Each invocation makes defensive copies. Changes:
+- `hypatiax/experiments/benchmarks/exp1_ablation.py`, commit `5b9a7f86247d9d57c6816c8c10fff0ef60e0e1c0`, blob `e633cb3e57e988bdac82616c6fb088f91d1798cf`.
+- `hypatiax/experiments/benchmarks/core295_adapters/common.py`, commit `c6f6e1d6df7d8663205d0f1cb8e1730d2e2ef028`, blob `ad479b89b419313fb1be2f4b32c3ad3a8a4a6792`.
+
+Both file contents were re-fetched after commit. No tests or execution were performed; the change is source-inspected only.
