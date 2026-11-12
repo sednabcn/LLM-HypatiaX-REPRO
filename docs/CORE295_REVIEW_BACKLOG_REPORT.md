@@ -82,3 +82,8 @@ Run `python scripts/core295_audit_staged_promotions.py` after staging candidates
 ## Non-applying catalogue proposal
 
 After the read-only promotion audit is clear, [`core295_build_catalogue_proposal.py`](../scripts/core295_build_catalogue_proposal.py) can generate a proposed catalogue snapshot and unified diff. It reruns the audit, records input hashes and appends only `structurally_reviewed` entries. It leaves the canonical catalogue untouched and never accepts candidates. The diff still requires explicit maintainer inspection and separate approval before application.
+
+
+## Approval and application controls
+
+A two-maintainer approval template and guarded applier are now available: [approval template](templates/core295_catalogue_application_approval.template.json) and [application script](../scripts/core295_apply_approved_catalogue_proposal.py). The applier requires explicit `--apply`, exact input hashes, two distinct approvers, scientific-review attestations, a separate application authorization, append-only integrity checks, structural validation, and an exact pre-application backup. It leaves the catalogue draft and does not accept entries.
