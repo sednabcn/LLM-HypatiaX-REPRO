@@ -171,6 +171,7 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
         "equation_name": eq["name"],
         "domain": eq["domain"].lower().replace(" ", "_"),
         "difficulty": eq.get("difficulty", "medium"),
+        "random_seed": int(SEED + abl.EQ_ID[eq["name"]] * 7),
         "benchmark_arm": "nn_only",
     }
     result = method.run(
