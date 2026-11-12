@@ -120,3 +120,41 @@ Until the matched four-arm evaluator is implemented and reviewed, do not use `ex
 
 - Keep `degradation_tau: null`; runner intentionally unsets the inherited tau environment variable. Record ensemble fallback and make no calibrated selective-routing claim.
 - Report only the three implemented Core-15 gates (`llm_acceptance`, `complexity_routing`, `pysr_prior`). The three missing gates remain unavailable, not zero-effect.
+
+## 8. Four-arm evaluator implementation — source committed, not executed (12 November)
+
+The first implementation pass is now committed on `promotion/rerun-code-review`:
+
+- `hypatiax/experiments/benchmarks/exp1_four_way_matched.py` — new primary four-arm driver.
+- `hypatiax/experiments/benchmarks/exp1_ablation.py` — Hybrid and PySR arms now additionally score their fitted predictors on the generated untouched outer test partition and record test R²/RMSE/MAE. Existing training and extrapolation fields are retained.
+- `hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py` — NN accepts a per-equation random seed from metadata; its test prediction uses the returned trained predictor, not its in-sample headline metric.
+- `run_all.sh` — new `exp1_four_way_matched` stage; the legacy `exp1_five` stage remains manually selectable.
+- `ci_runner/run_fresh_experiments.sh` — fresh campaign selects `exp1_four_way_matched` instead of legacy `exp1_five`.
+- `config/fresh_rerun.yaml` — registers the four arms, shared outer test protocol, common predictive metrics and extrapolation regimes.
+
+### 8.1 Evaluation design now encoded
+
+Each Core-15 equation/seed uses the same deterministic `generate_data()` output for all four arms: one 80/20 split of the same 200 noisy samples. The training partition alone is supplied to fitting/prompting/model selection. The held-back 20% partition is scored after fitting using R², RMSE and MAE. The same generated near/medium/far extrapolation arrays are scored for all arms. The checkpoint records SHA-256 fingerprints for training, outer-test and extrapolation arrays.
+
+Arm definitions:
+
+1. `hybrid_llm_pysr`: existing Core-15 `run_condition('hypatia')` path, with strict live-LLM mode enforced.
+2. `llm_only`: `PureLLMBaselineMethod` generated formula, evaluated on outer-test and extrapolation inputs with the repository's restricted formula evaluator; no PySR refinement.
+3. `pysr_only`: existing raw PySR-only `run_condition`, scored on the same outer-test and extrapolation arrays.
+4. `nn_only`: `ImprovedNNMethod` trained on the shared training partition; its internal validation selection remains within training data, and the returned predictor is scored on the untouched outer test and shared extrapolation arrays.
+
+A common per-arm wall-clock cap is passed to all four arms. The PySR population/iteration settings come from the frozen fresh-rerun environment. The driver fails closed if no Anthropic API key is present and enforces `HYPATIAX_STRICT=1` before loading the experiment modules.
+
+### 8.2 Integration and limitations
+
+The fresh campaign stage list now invokes the matched four-way driver and no longer invokes `exp1_five` as the primary comparison. The legacy five-system script and stage remain available for explicitly exploratory/manual use, but its scores must not be substituted for the matched table.
+
+Important: this is a source implementation pass, not a validated experiment. No Python import check, unit test, static checker, dry run, benchmark, API call, or workflow was run. Before scientific execution, code review must still verify that all 15 equations produce valid predictors for all four arms, that the restricted LLM formula evaluator accepts the actual generated formula forms, and that timeouts/partial failures are recorded as missing rather than silently scored. A failed arm remains an explicit failure and must not be replaced with a fallback score.
+
+### 8.3 Routing and ablation disclosure
+
+- `degradation_tau` remains null. The manifest records ensemble fallback/no calibrated selective-routing claim. Do not tune tau on the outer test set.
+- The Core-15 gate coverage remains three implemented gates only (`llm_acceptance`, `complexity_routing`, `pysr_prior`). Three unavailable gates are not interpreted as no-effect.
+- The new four-way driver does not claim a complete six-gate ablation.
+
+**Status after implementation:** matched evaluator and fresh-run stage are wired in source; scientific validity and operational readiness remain unverified until the user authorizes and executes the run.
