@@ -1534,7 +1534,7 @@ PYEOF
   python3 hybrid_system_llm_nn_all_domains.py \
     --samples '${FEYNMAN_SAMPLES}' \
     2>&1 | tee '${RESULTS_DIR}'/hybrid_all_domains_run.log
-  _HYBRID_OUT_SRC='hypatiax/data/results'
+  _HYBRID_OUT_SRC='${RESULTS_DIR}'
   if [[ -d \"\${_HYBRID_OUT_SRC}\" ]]; then
     find \"\${_HYBRID_OUT_SRC}\" -maxdepth 1 -name 'hybrid_llm_nn_all_domains_*.json' \
       -exec mv -f {} '${RESULTS_DIR}/hybrid_llm_nn/all_domains/' \;
