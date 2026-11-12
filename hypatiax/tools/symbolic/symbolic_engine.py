@@ -612,19 +612,21 @@ class IntegratedLLMEngine:
         if not self.config.enabled or not self.client:
             return []
 
-        n_candidates = n_candidates or self.config.n_candidates
-
-        prompt = self._build_prompt(
-            domain, variables, description, data_patterns, n_candidates,
-            caller_id=caller_id,
-        )
-
+        # Reset per-invocation state before prompt construction so an error
+        # while building a prompt cannot leak the previous call's provenance.
         self.last_call_attempted = False
         self.last_response_received = False
         self.last_error = None
         self.last_response_replayed = False
         self.last_proposal_generated = False
         self.last_call_info = {}
+
+        n_candidates = n_candidates or self.config.n_candidates
+
+        prompt = self._build_prompt(
+            domain, variables, description, data_patterns, n_candidates,
+            caller_id=caller_id,
+        )
         # Opt-in replay (HYPATIAX_LLM_REPLAY_DIR): the response is keyed on the full prompt, which
         # embeds the data patterns, so each (equation, seed) gets ONE sample reused by every arm
         # and an ablation differs only by its gate. Unset = unchanged live behaviour.
