@@ -7,6 +7,7 @@ the repository's restricted symbolic parser and lambdified by SymPy.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from typing import Any
 
@@ -172,7 +173,7 @@ def run_equation(*, entry: dict, context: dict, domain: str) -> dict:
         "input_validity_bounds": entry["input_validity_bounds"],
     }
     binding_sha256 = hashlib.sha256(
-        __import__("json").dumps(binding_record, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        json.dumps(binding_record, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
     dataset_hashes = {
         "model_binding_sha256": binding_sha256,
