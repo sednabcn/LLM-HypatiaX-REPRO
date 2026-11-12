@@ -195,6 +195,13 @@ if any("expected" in section for section in (cfg.get("benchmarks") or {}).values
 def git(*args):
     return subprocess.check_output(["git", "-C", str(repo), *args], text=True).strip()
 
+try:
+    protocol_reference = str(protocol.relative_to(repo))
+except ValueError:
+    # REPRO_CFG may intentionally point outside the checkout. Preserve its
+    # absolute location rather than failing manifest creation before stage 1.
+    protocol_reference = str(protocol)
+
 manifest = {
     "status": "started",
     "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -203,7 +210,7 @@ manifest = {
     "repository_clean_at_start": True,
     "python": sys.version,
     "platform": platform.platform(),
-    "protocol_file": str(protocol.relative_to(repo)),
+    "protocol_file": protocol_reference,
     "protocol_sha256": hashlib.sha256(protocol.read_bytes()).hexdigest(),
     "protocol": {
         "run_id": cfg.get("run_id"),
