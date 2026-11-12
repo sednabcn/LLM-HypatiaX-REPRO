@@ -3704,6 +3704,14 @@
       "url": "https://publications.iupac.org/pac/pdf/1967/pdf/1502x0263.pdf",
       "use": "IUPAC-hosted full text, Pure and Applied Chemistry 15(2), pp.263–281. Eq. (4), printed p.268, gives the Frumkin interaction isotherm Bc=theta/(1-theta)*exp(-2a*theta); Eq. (5) supplies potential dependence of B and Eqs. (6)–(9) extend the coupled capacitance model. Authors cite Frumkin (1925), Z. phys. Chem. 116, 466 and Frumkin (1926), Z. Physik 35, 792 as earlier sources. Author-authored primary treatment and equation transcription, but not proof of first publication. Structural comparison with Langmuir and Core-15 registry required.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "PHY-STOKES-1845-INTERNAL-FRICTION-FLUIDS",
+      "domain": "Physics",
+      "title": "Stokes, G. G. (1845), On the theories of the internal friction of fluids in motion and of the equilibrium and motion of elastic solids",
+      "url": "https://commons.wikimedia.org/wiki/File:Mathematical_and_physical_papers_(IA_cu31924004181339).pdf",
+      "use": "Primary work bibliographically identified in Transactions of the Cambridge Philosophical Society 8 (1845), pp. 287 onward; collected reprint in Stokes, Mathematical and Physical Papers, vol. I, pp.75–129. Public-domain Cornell/Internet Archive digitized collection record identifies a 434-page scan reprinting original papers. Exact article pages and equations still require inspection. Historical/secondary sources describe the linear stress–strain-rate constitutive law but must not be used as primary transcription.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
