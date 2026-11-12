@@ -68,9 +68,19 @@ def _validate_generator(entry: dict, domain: str) -> None:
             raise ValueError(f"generator.{key} must equal {value!r}; generic adapter will not infer it")
     if not isinstance(entry.get("canonical_expression"), str) or not entry["canonical_expression"].strip():
         raise ValueError("canonical_expression is required")
+    model = entry.get("model_definition")
+    if not isinstance(model, dict) or model.get("model_class") != "explicit_scalar":
+        raise ValueError("shared adapter supports only model_definition.model_class=explicit_scalar")
+    independent = model.get("independent_variables")
     variables, ranges = entry.get("variables"), entry.get("input_ranges")
-    if not isinstance(variables, dict) or not variables or not isinstance(ranges, dict) or set(ranges) != set(variables):
-        raise ValueError("all declared variables must have explicit input ranges")
+    if not isinstance(variables, dict) or not variables or not isinstance(independent, list):
+        raise ValueError("variables and explicit independent_variables are required")
+    if set(independent) != set(variables):
+        raise ValueError("shared adapter only supports records where every declared symbol is an independent input; fixed parameters/constants need a specialized generator")
+    if model.get("fixed_parameters") or model.get("physical_constants") or model.get("state_variables") or model.get("dependent_variables"):
+        raise ValueError("shared adapter cannot sample fixed parameters, constants, dependent variables, or dynamic states")
+    if not isinstance(ranges, dict) or set(ranges) != set(independent):
+        raise ValueError("input_ranges must cover exactly the independent input variables")
     for variable in variables:
         bounds = ranges[variable]
         if not isinstance(bounds, dict):
