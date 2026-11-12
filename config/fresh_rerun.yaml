@@ -102,6 +102,15 @@ benchmarks:
     enabled: true
     script: "hypatiax/experiments/benchmarks/exp1_ablation.py"
     output_subdir: "exp1_ablation"
+  core15_four_way:
+    enabled: true
+    script: "hypatiax/experiments/benchmarks/exp1_four_way_matched.py"
+    output_subdir: "four_way_matched"
+    comparison_arms: ["hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"]
+    primary_metrics: ["test_r2", "test_rmse", "test_mae"]
+    test_split: "shared_untouched_outer_20_percent"
+    extrapolation_regimes: ["near", "medium", "far"]
+    legacy_five_system_stage: "exploratory_only_not_primary"
   feynman:
     enabled: true
     script: "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
