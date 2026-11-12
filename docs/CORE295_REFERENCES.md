@@ -320,3 +320,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 182. Aave DAO. aave-v3-origin 3.7-era official Solidity source, pinned commit 8305565ae342f1773c42cd2e4593f175fe5968a0 (2026-09-09). LiquidationLogic.sol, blob SHA 581d451f0e24bc6853aece8afc2228226c50c510; GenericLogic.sol, blob SHA 7b9820133e7f76c2acf6e7b304c7143b2da3f126. https://github.com/aave-dao/aave-v3-origin/commit/8305565ae342f1773c42cd2e4593f175fe5968a0. Later implementation retains the high-level close-factor/HF thresholds but changes health-factor arithmetic ordering and uses explicit floor/ceiling rounding in collateral conversion and protocol-fee calculation. Source snapshot only; no production deployment mapping.
+
+
+183. Compound Finance. “Liquidation.” Official Compound III / Comet documentation. https://docs.compound.finance/liquidation/. Documents liquidation eligibility using the liquidation collateral factor, absorption of underwater accounts, protocol acquisition of collateral and storefront resale discount. Read alongside the pinned v2.5 SPEC and Solidity source: the documentation's user-facing explanation is not a substitute for release-specific implementation and market configuration.
