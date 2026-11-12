@@ -1587,18 +1587,9 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
   if [[ ! -s \"\${_CANON_CSV}\" ]]; then
     echo \"::error::[instability] \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
-    _STRAY_CSV=\$(find '${REPO_ROOT}' -maxdepth 6 -name 'instability_analysis.csv' \
-                   -not -path \"\${_CANON_CSV}\" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
-    if [[ -n \"\${_STRAY_CSV}\" && -s \"\${_STRAY_CSV}\" ]]; then
-      echo \"[instability] Found stray CSV at \${_STRAY_CSV} -- copying into canonical location.\"
-      mkdir -p '${RESULTS_DIR}/figures'
-      cp \"\${_STRAY_CSV}\" \"\${_CANON_CSV}\"
-    else
-      echo '[instability] No stray instability_analysis.csv found anywhere under REPO_ROOT either.'
-      echo '              run_instability_suite.py likely failed internally before writing the CSV'
-      exit 1
-      echo '              (e.g. \"Loaded 0 cases\") -- check instability_run.log above for the real cause.'
-    fi
+    echo '[instability] run_instability_suite.py exited without producing the required canonical CSV.'
+    echo '              Refusing to substitute a possibly stale CSV from elsewhere in the repository.'
+    exit 1
   fi
 "
 
