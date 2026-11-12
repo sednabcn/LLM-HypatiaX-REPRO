@@ -3073,6 +3073,14 @@
       "url": "https://github.com/Instadapp/fluid-contracts-public/commit/404d73f91e6806f881f8dabeb30494f93f9e99b7",
       "use": "Pinned official Fluid source snapshot at commit 404d73f91e6806f881f8dabeb30494f93f9e99b7 (2026-11-05), shared T2/T3/T4 engine: vaultTypesCommon/coreModule/main.sol blob 5ede8aace90cc92709a3d4cc63191abf53f5ac51; main2.sol blob 2a70187234a4b8b02a68ef09fdfae0b9c2134cca; helpersLiquidate.sol blob ddd46dd80ffc35e0a43fd2e0588f1a13eb50672b; common/variables.sol blob ab4f4e083cc9e16721751d7f7055efae2d5a7f69; coreModule/structs.sol blob 53c4ec9d69eac5e80088565d0d8b6d009dd3c61b; libraries/tickMath.sol blob a939a15df5251ed124af54b82a212a7e3b9956c4; shared SPEC blob 65f1299c8956c49882ac43a4e89b08cb91d2d3f3. Geometric tick/branch state, partial tick liquidation, debt-factor branch merging, absorb above max-limit tick, optional absorbed-buffer-first settlement and slippage-constrained liquidation. One coupled candidate family; T1 and T2/T3/T4 paths/oracles differ; no deployment or parameter mapping.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-NOTIONAL-V3-MULTI-ROUTE-PORTFOLIO-LIQUIDATION",
+      "domain": "DeFi Risk",
+      "title": "Notional V3 multi-route portfolio liquidation and maturity-aware fCash unwind",
+      "url": "https://github.com/notional-finance/contracts-v3/commit/ae20d99ebfb0b14cf7b08421722b85849fb11edf",
+      "use": "Pinned official Notional V3 source snapshot at commit ae20d99ebfb0b14cf7b08421722b85849fb11edf (2025-02-03): LiquidationHelpers.sol blob f2e433ccd75561a0e9853edb0b0e8a0c43433484; LiquidateCurrency.sol blob e15e99fb541b7a4a3e6d89962ba834f856ba0458; LiquidatefCash.sol blob b6ac53c9cbafe36264ba0625f3bf6c025bad2ab9; LiquidateCurrencyAction.sol blob fa65e90b262c3f740e2dca2985e0d8465ec75704; LiquidatefCashAction.sol blob e065e306113dfc9ca35168e35673bd2c588be596. Coupled portfolio liquidation routes use free-collateral restoration, local/cross-currency haircut removal, nToken/liquidity-token conversion, maturity-aware fCash discounting and balance-sign constraints. Route enablement and current deployment not mapped.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3111,7 +3119,8 @@
     "2026-11-12: Added pinned Liquity V2 TroveManager/StabilityPool liquidation source as a DeFi Risk candidate reference. It combines priority Stability Pool offset and product-sum depositor accounting with residual stake-weighted redistribution and carried rounding error. The docs' JIT mode is not represented as a separate code path without a deployment/transaction-path mapping.",
     "2026-11-12: Added pinned Silo V3 hook source. Documents standard partial collateral-sale liquidation and separate internal collateral-debt defaulting/CDS path, with V2/V3 hook differences. Structural candidate classification remains subject to E0–E5 pairwise review; no deployment mapping or accepted-equation count change.",
     "2026-11-12: Added pinned Fraxlend Pair liquidation implementation. Records dual-oracle eligibility, clean/dirty fee switch and write-off of residual debt against total lender asset claims. No deployed pair mapping; no accepted-equation count change.",
-    "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change."
+    "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change.",
+    "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
