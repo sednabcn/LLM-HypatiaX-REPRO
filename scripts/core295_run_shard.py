@@ -85,15 +85,44 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
         gen = entry.get("generator")
         if not isinstance(gen, dict) or gen.get("status") != "ready":
             stop(f"{eid}: generator.status is not ready")
-        for field in ("method", "seed_policy", "parameter_sampling"):
+        for field in ("model_class", "method", "seed_policy", "parameter_sampling",
+                      "sampling_semantics", "parameter_sampling_scope"):
             if not isinstance(gen.get(field), str) or not gen[field].strip():
                 stop(f"{eid}: generator.{field} is required")
-        ranges, variables = entry.get("input_ranges"), entry.get("variables")
-        if not isinstance(variables, dict) or not variables or not isinstance(ranges, dict) or set(ranges) != set(variables):
-            stop(f"{eid}: variable and input range definitions do not match")
+        model = entry.get("model_definition")
+        allowed_model_classes = {
+            "explicit_scalar", "implicit_scalar", "coupled_algebraic_system",
+            "ode_ivp", "difference_system", "stochastic_process",
+            "protocol_simulation", "matrix_operator",
+        }
+        if not isinstance(model, dict) or model.get("model_class") not in allowed_model_classes:
+            stop(f"{eid}: model_definition.model_class is missing or unsupported")
+        if gen.get("model_class") != model.get("model_class"):
+            stop(f"{eid}: generator.model_class must match model_definition.model_class")
+        role_fields = ("independent_variables", "dependent_variables", "state_variables",
+                       "fixed_parameters", "physical_constants")
+        roles = {}
+        for role in role_fields:
+            values = model.get(role)
+            if not isinstance(values, list) or any(not isinstance(x, str) or not x for x in values):
+                stop(f"{eid}: model_definition.{role} must be a list of symbol names")
+            for symbol in values:
+                if symbol in roles:
+                    stop(f"{eid}: symbol {symbol} is assigned to multiple variable roles")
+                roles[symbol] = role
+        variables = entry.get("variables")
+        if not isinstance(variables, dict) or not variables or set(roles) != set(variables):
+            stop(f"{eid}: variable-role declarations must partition the variables dictionary")
+        ranges = entry.get("input_ranges")
+        if not isinstance(ranges, dict) or set(ranges) != set(model["independent_variables"]):
+            stop(f"{eid}: input_ranges must cover exactly independent_variables")
         for var, bounds in ranges.items():
             if not isinstance(bounds, dict) or bounds.get("train") is None or bounds.get("extrapolation") is None:
                 stop(f"{eid}: {var} requires train and extrapolation ranges")
+        if not isinstance(model.get("constraints"), list) or not model.get("operator_structure"):
+            stop(f"{eid}: model constraints and operator_structure are required")
+        if not isinstance(gen.get("constraints_enforced"), bool):
+            stop(f"{eid}: generator.constraints_enforced must be an explicit boolean")
         by_id[eid] = entry
     if any(counts[d] != 59 for d in DOMAINS):
         stop(f"domain counts must be exactly 59 each; found {counts}")
