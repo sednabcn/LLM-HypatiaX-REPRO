@@ -92,3 +92,12 @@ The shared scalar adapter was tightened to reject any record that declares fixed
 ## Current status
 
 The catalogue remains draft with 24 proposed records and a non-frozen sampling frame. No generator is marked ready, no equation is accepted, and the new role annotations do not verify equations, assign acceptance, or make any record executable. No tests, validators, scripts, generators, experiments, workflows, or live services were run to produce this document.
+
+
+## Fixed-parameter scalar adapter extension
+
+The restricted scalar conversion path now separates independent inputs from fixed parameters and physical constants. The catalogue carries exact numeric bindings in `fixed_parameter_values` and `physical_constant_values`; only independent inputs receive train/extrapolation feature ranges. The converter substitutes the bindings into the symbolic expression and lambdifies only the independent inputs. This supports fixed-per-equation values, not a parameter distribution.
+
+The shared adapter requires all input ranges to remain within explicit `input_validity_bounds` across the Core-15 training, medium, near and far generation regimes. Its only current constraint policy is `rectangular_input_bounds_v1`. Cross-variable inequalities, coupled domains, state-dependent constraints and protocol semantics remain unsupported and require specialized generation. A reviewer-provided `constraint_evidence` string is not an automatic proof.
+
+The existing 24 records have not been assigned numeric parameter values or validity intervals by this implementation pass. Those values must be grounded in primary-source/model review. Consequently, no candidate was promoted to generator-ready.
