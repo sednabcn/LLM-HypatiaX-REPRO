@@ -784,3 +784,13 @@ Sources:
 - Official Aave V4 docs: https://aave.com/docs/aave-v4
 - Official Aave V4 mainnet launch: https://www.aave.com/blog/aave-v4-live-ethereum
 - Official changelog: https://www.aave.com/docs/resources/changelog
+
+
+## 4.17 DeBach–Smith (1941, 1947): host–parasitoid density dynamics
+
+Two further primary papers are now registered as retrieval leads:
+
+- P. DeBach and H. S. Smith, “Are Population Oscillations Inherent in the Host-Parasite Relation?”, *Ecology* 22(4) (October 1941), pp. 363–369, DOI 10.2307/1930709. The publisher record confirms the article identity. This is relevant to whether cyclic dynamics follow necessarily from the assumed host–parasitoid mechanism or depend on additional biological assumptions.
+- P. DeBach and H. S. Smith, “Effects of Parasite Population Density on Rate of Change of Host and Parasite Populations,” *Ecology* 28(3) (July 1947), pp. 290–298, DOI 10.2307/1930515. Multiple independent contemporary citations confirm the article and pagination. This is a likely source for a density-dependent coupled host/parasitoid model.
+
+The full primary texts have not yet been retrieved and inspected. No equations or candidate entries are asserted from titles, abstracts or later citations alone. These papers should be compared with Bailey, Thompson, Nicholson–Bailey and Hassell–Varley before structural classification.
