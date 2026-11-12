@@ -422,3 +422,8 @@ These are additional official documentation pointers, not independent primary re
 
  
 221. Aave Labs. (2026). *Aave V4* source repository, commit `8be3e0d59efc23cd1d4664a88743340533dd5a0c` (11 November 2026), including `BabylonLiquidationLogic.sol`, `BabylonSpoke.sol`, and shared `LiquidationLogic.sol`. https://github.com/aave/aave-v4/commit/8be3e0d59efc23cd1d4664a88743340533dd5a0c. Source snapshot for cap-bounded BabylonSpoke liquidation; deployment configuration not pinned.
+
+ 
+222. DeBach, P., and Smith, H. S. (1941). “Are population oscillations inherent in the host-parasite relation?” *Ecology* 22(4), pp. 363–369. DOI: https://doi.org/10.2307/1930709. Publisher metadata; primary equation transcription pending.
+ 
+223. DeBach, P., and Smith, H. S. (1947). “Effects of parasite population density on rate of change of host and parasite populations.” *Ecology* 28(3), pp. 290–298. DOI: https://doi.org/10.2307/1930515. Bibliographic metadata corroborated; primary equation transcription pending.
