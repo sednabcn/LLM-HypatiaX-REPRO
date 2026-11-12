@@ -402,3 +402,8 @@ These are additional official documentation pointers, not independent primary re
 212. Nicholson, A. J., and Bailey, V. A. “The Balance of Animal Populations.—Part I.” *Proceedings of the Zoological Society of London* 105(3) (September 1935), pp. 551–598. Wiley official publisher page, with original first-page image (printed p. 551): https://zslpublications.onlinelibrary.wiley.com/doi/10.1111/j.1096-3642.1935.tb01680.x. The complete PDF was inaccessible in the current retrieval pass; only first-page scope and provenance statements were inspected.
  
 213. Ricker, W. E. “Stock and Recruitment.” *Journal of the Fisheries Research Board of Canada* 11(5) (May 1954), pp. 559–623. DOI: https://doi.org/10.1139/f54-039. Publisher PDF and ePDF endpoints were inaccessible in the current retrieval pass. Do not conflate with Ricker's separate 65-page 1954 Fisheries Research Board item of the same title: https://books.google.com/books/about/Stock_and_Recruitment.html?id=d6pqPwAACAAJ.
+
+ 
+214. Royama, T. (1971). “A comparative study of models for predation and parasitism.” *Researches on Population Ecology* 13, Supplement 1, pp. 1–91. DOI: https://doi.org/10.1007/BF02511547. Full scan: https://www2.dnr.state.mi.us/PUBLICATIONS/pdfs/IFR/ifrlibra/Research/reports/2001rr.PDF. Secondary comparative source used for structural-family review and tracing earlier primary sources.
+ 
+215. Thompson, W. R. (1924). “La théorie mathématique de l'action des parasites entomophages et le facteur du hasard.” *Annales de la Faculté des Sciences de Marseille*, series 2, vol. 2, pp. 69–89. Bibliographic details reproduced in Royama (1971), p. 87. Original 1924 scan and authoritative DOI/catalogue URL not located in this pass; no primary equation transcription claimed.
