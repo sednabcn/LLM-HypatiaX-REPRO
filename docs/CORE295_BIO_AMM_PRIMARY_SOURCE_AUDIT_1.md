@@ -341,3 +341,43 @@ to Holling (1959), Real (1977), Hassell (1978), Rall et al. (2008), and Vucic-Pe
 A search result labelled as a PDF of *A Quantitative Theory of Organic Growth* (1938) was opened and found to be an unrelated 1987 Russian fisheries proceedings volume; the Bertalanffy article appears only in its bibliography. The JSTOR stable-PDF URL redirects to the article record rather than exposing the paper text in this retrieval path. The bibliographic identity and abstract-level mechanism are corroborated by the article record and secondary records: growth is modelled as construction proportional to surface and destruction proportional to volume. This supports the Pütter-lineage interpretation, but it does not provide a direct transcription of von Bertalanffy's 1938 equation, numbered equation, or page.
 
 **Catalogue disposition:** keep the 1938 article as a primary-source lead only. Do not backfill its equation from the 1957 generalization, from Pütter (1920), or from later fisheries parameterizations. The direct original equation/page remains unresolved; the Pütter 1920 equation already transcribed above is a separate historically earlier primary source within the same broad surface–volume growth lineage.
+
+
+## 3B. Curve StableSwap NG: pinned implementation audit
+
+**Pinned source:** official repository `curvefi/stableswap-ng`, commit `3332cd44656ec64b3c048885e1dd71955254b262`. The main pool source is `contracts/main/CurveStableSwapNG.vy` (blob `f192932a22958735acad4ca24c977cc4e058f1aa`); the associated math helper is `contracts/main/CurveStableSwapNGMath.vy` (blob `25acc73e8b5cf0a0652bf833d7a1d9cd22cf83c5`). The repository README describes permissionless plain/metapool deployment, up to eight coins in plain pools and two in metapools, and identifies the implementation contract and factory/blueprint deployment pattern.
+
+### Invariant and numerical solution
+
+The implementation's `get_D` comment states the N-coin StableSwap invariant in the form
+\[
+A\,n^n\sum_i x_i + D
+=
+A\,n^n D + \frac{D^{n+1}}{n^n\prod_i x_i},
+\]
+with the implementation's amplification integer scaled by `A_PRECISION = 100`. The state variables used in the invariant are not raw token balances: `_xp_mem` constructs normalized balances as \(x_i=\lfloor r_i b_i/10^{18}\rfloor\), where \(b_i\) is the pool balance net of admin balances and \(r_i\) is the stored rate. Rates can incorporate external rate oracles or ERC-4626 `convertToAssets` calls. The active amplification is linearly ramped between initial and future values according to timestamps.
+
+The integer solver initializes \(D=\sum_i x_i\), iteratively computes the product term \(D_P\), and updates \(D\) using the source's rational recurrence. It allows up to 255 iterations and returns when successive integer values differ by at most one. The output-balance solver `get_y` solves the corresponding quadratic relation by Newton iteration, also with a 255-iteration cap and one-unit convergence threshold. These are implementation-specific integer algorithms for the same StableSwap invariant, not additional invariant families.
+
+### Swap fee and state handling
+
+The swap path:
+1. reads stored balances and normalized rates;
+2. applies the received input to normalized balance \(x_i\);
+3. computes invariant \(D\) and solves the output reserve \(y_j\);
+4. subtracts one unit as a rounding guard;
+5. calculates the off-peg dynamic fee from the average pre/post normalized balances;
+6. converts net output back using the output token's rate, with integer truncation;
+7. accrues the admin share and updates the state-price and invariant EMAs.
+
+For off-peg multiplier \(m>10^{10}\), the contract's dynamic fee is
+\[
+f_{dyn}=
+\frac{m f_0}{
+(m-10^{10})\,\frac{4x_i x_j}{(x_i+x_j)^2}+10^{10}},
+\]
+and it returns the base fee when \(m\leq10^{10}\). Fee denominator is \(10^{10}\); the admin share constant is 50% of the fee. The contract documentation explicitly warns that dynamic fee estimates can differ slightly from realized fees. Fee values, amplification, rates, and pool coin configuration are deployment state; the pinned source does not determine a universal deployed pool parameter set.
+
+### Structural disposition and limitations
+
+StableSwap NG is an implementation evolution of the 2019 StableSwap family, not a new invariant family merely because it adds normalized rate assets, dynamic fees, oracle state, rebasing-token handling, ERC-4626 support and revised integer arithmetic. Treat the invariant, fee policy, rate/oracle inputs and accounting as one protocol implementation contract when benchmarking executable pool behavior. Do not count the fee function, EMA, solver recurrence or one-coin withdrawal formula as independent equations. Do not assume every deployed pool uses this exact source revision: a candidate must bind a specific deployment, factory, pool configuration and block-state snapshot before any runtime fee or parameter claims. No chain/RPC calls or simulations were made.
