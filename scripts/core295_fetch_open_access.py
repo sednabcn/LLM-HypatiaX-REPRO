@@ -123,7 +123,7 @@ def main() -> int:
         print(f"ERROR: queue not found: {args.queue}", file=sys.stderr)
         return 2
     provenance = args.provenance or (args.output_dir / "provenance.jsonl")
-    seen: set[str] = set()
+    completed_downloads: set[str] = set()
     records = []
     with args.queue.open(encoding="utf-8") as handle:
         for line in handle:
@@ -132,34 +132,23 @@ def main() -> int:
             except json.JSONDecodeError:
                 continue
             doi = str(item.get("doi") or "").strip().lower()
-            if doi and doi not in seen:
-                seen.add(doi)
+            if doi:
                 records.append(item)
     if provenance.exists():
         with provenance.open(encoding="utf-8") as handle:
             for line in handle:
                 try:
                     prior = json.loads(line)
-                    if prior.get("doi"):
-                        seen.add(str(prior["doi"]).lower())
+                    if prior.get("doi") and prior.get("status") == "downloaded":
+                        completed_downloads.add(str(prior["doi"]).lower())
                 except json.JSONDecodeError:
                     continue
     processed = 0
     failures = 0
     for item in records:
         doi = str(item.get("doi") or "").strip().lower()
-        if not doi or doi in {str(x.get("doi") or "").strip().lower()
-                              for x in records[:0]}:
+        if not doi or doi in completed_downloads:
             continue
-        # Existing provenance is checked separately; skip completed DOI records.
-        if provenance.exists():
-            try:
-                prior_rows = [json.loads(x) for x in provenance.read_text(encoding="utf-8").splitlines() if x.strip()]
-                if any(str(x.get("doi", "")).lower() == doi and x.get("status") == "downloaded"
-                       for x in prior_rows):
-                    continue
-            except (OSError, json.JSONDecodeError):
-                pass
         if processed >= args.limit:
             break
         processed += 1
@@ -195,7 +184,7 @@ def main() -> int:
                     pdf_url, path, args.timeout, args.max_bytes, args.mailto
                 )
                 result.update({
-                    "status": "downloaded", "local_file": str(path.relative_to(ROOT)),
+                    "status": "downloaded", "local_file": str(path),
                     "sha256": digest, "size_bytes": size, "content_type": content_type,
                     "final_source_url": pdf_url,
                 })
