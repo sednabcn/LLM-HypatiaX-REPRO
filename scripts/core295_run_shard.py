@@ -104,6 +104,21 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
         stop("manifest shard_count must be a positive integer")
     if len(shards) != manifest["shard_count"]:
         stop("manifest shard_count does not match shard list")
+    shard_ids = [s.get("shard_id") for s in shards if isinstance(s, dict)]
+    if len(shard_ids) != len(shards) or len(set(shard_ids)) != len(shard_ids):
+        stop("manifest shard rows are malformed or duplicated")
+    if set(shard_ids) != set(range(manifest["shard_count"])):
+        stop("manifest shard IDs must be contiguous from zero")
+    flattened = []
+    for shard in shards:
+        ids_in_shard = shard.get("equation_ids")
+        if not isinstance(ids_in_shard, list) or not all(isinstance(x, str) for x in ids_in_shard):
+            stop("manifest contains malformed shard equation_ids")
+        if shard.get("equation_count") != len(ids_in_shard):
+            stop("manifest shard equation_count mismatch")
+        flattened.extend(ids_in_shard)
+    if len(flattened) != len(set(flattened)) or set(flattened) != {t.get("equation_id") for t in tasks if isinstance(t, dict)}:
+        stop("manifest shard assignment is not exact-once")
     matches = [s for s in shards if isinstance(s, dict) and type(s.get("shard_id")) is int and s["shard_id"] == shard_id]
     if len(matches) != 1:
         stop(f"shard {shard_id} is not uniquely defined")
