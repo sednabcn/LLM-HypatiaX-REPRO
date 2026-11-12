@@ -3041,6 +3041,14 @@
       "url": "https://github.com/euler-xyz/euler-vault-kit/commit/93a1de491531e54cbbcf0e5c8cacfe558f924867",
       "use": "Pinned official Euler Vault Kit snapshot at commit 93a1de491531e54cbbcf0e5c8cacfe558f924867 (2026-10-29): Liquidation.sol blob 8ce05719f1200e543b1b81ad5c749780e4cf7df4; LiquidityUtils.sol blob e6b68e28284c404b72608bd9213721ab9b54ad0c; BorrowUtils.sol blob e60faf14e1d1d9fcc607f793455c96d7e0188688; RiskManager.sol blob 4f78db4dab2ba07ad0e6dc9c9f41822109a55140; Governance.sol blob 08c5c96f0a356381ca14d02d48defe1b570c6120. Multi-collateral liquidation-LTV health aggregation, capped health-shortfall discount, collateral-limited debt/yield sizing, internal transfer of liability to liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. One coupled candidate family; no deployed EVault/module/configuration mapping.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "RISK-LIQUITY-V2-STABILITY-POOL-REDISTRIBUTION",
+      "domain": "DeFi Risk",
+      "title": "Liquity V2 Stability Pool offset and stake-weighted liquidation redistribution",
+      "url": "https://github.com/liquity/bold/commit/d262669ef3c4d37bf0544df3bb2624c07b8a5ee0",
+      "use": "Pinned official Liquity V2 source snapshot at commit d262669ef3c4d37bf0544df3bb2624c07b8a5ee0 (2026-09-26): TroveManager.sol blob 389586974a407e59bb31dcd588070927d0992452; StabilityPool.sol blob db0a24a56921e84c12d95f53f1841eff60f410a6; Constants.sol blob 9e0231988039464b070dc5cd325f7e35d35f1e22; LiquityMath.sol blob d6d2474f370c27a630d92732de430b910e458ac5. Individual ICR liquidation threshold, priority BOLD Stability Pool offset and P/S depositor accounting, branch-specific collateral penalty/surplus, residual stake-weighted debt/collateral redistribution with carried error, snapshots and gas compensation. One coupled liquidation/loss-allocation family; no deployment or branch-parameter mapping. JIT documentation requires separate transaction-path mapping.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -3075,7 +3083,8 @@
     "Seventeenth proposed-record pass adds De Buck et al.'s exact tumor-turnover ODE, Eq. 9 on printed page 547. It remains proposed pending a clinically coherent generator and explicit equivalence review of its hyperbolic Emax term against the Core-15 Michaelis-Menten exclusion.",
     "2026-11-11: Corrected Frumkin chronology. Frumkin (1920) is the electrocapillarity precursor; the interacting-adsorption isotherm is historically dated to 1925. Frumkin (1926) neutral-molecule field adsorption is distinct. Added a 1925 primary-source lead; exact interaction-equation/page transcription remains pending.",
     "2026-11-12: Added pinned Maker/Sky Liquidation 2.0 Dog/Clipper/Abaci source snapshot. The official repository is sky-ecosystem/dss; MIP45 is obsolete by MIP102c2-SP1, so it is historical design context only. This adds a DeFi Risk source reference, not an accepted equation or deployment claim.",
-    "2026-11-12: Added pinned Euler V2 EVK liquidation implementation as a DeFi Risk candidate reference. It uses health-shortfall-dependent capped discount and internal debt transfer to the liquidator, unlike direct external repayment/seizure or Dutch-auction collateral sale. Deployment and per-vault configuration remain unpinned; no accepted equation count changes."
+    "2026-11-12: Added pinned Euler V2 EVK liquidation implementation as a DeFi Risk candidate reference. It uses health-shortfall-dependent capped discount and internal debt transfer to the liquidator, unlike direct external repayment/seizure or Dutch-auction collateral sale. Deployment and per-vault configuration remain unpinned; no accepted equation count changes.",
+    "2026-11-12: Added pinned Liquity V2 TroveManager/StabilityPool liquidation source as a DeFi Risk candidate reference. It combines priority Stability Pool offset and product-sum depositor accounting with residual stake-weighted redistribution and carried rounding error. The docs' JIT mode is not represented as a separate code path without a deployment/transaction-path mapping."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
