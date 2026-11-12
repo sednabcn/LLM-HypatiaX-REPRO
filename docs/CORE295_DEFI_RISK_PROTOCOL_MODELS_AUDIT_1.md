@@ -443,3 +443,51 @@ Instead of transferring debt tokens into the debt Silo, the defaulting logic red
 **Structural disposition:** this pinned source contains two related but structurally distinct settlement modes: (a) partial collateral-sale liquidation that transfers borrower collateral to a liquidator in exchange for debt repayment, and (b) internal collateral-debt defaulting that writes off borrower debt and distributes collateral shares to lenders. The latter is a strong distinct DeFi Risk lead because it allocates losses directly to lender collateral accounting instead of relying on a market sale. Both modes share the target-LTV partial-liquidation sizing operator; do not count the sizing formula, share conversions, fee split, and accounting branches as separate equations. Pairwise E0–E5 review should decide whether the two settlement modes qualify as separate structural candidates or one multi-mode family.
 
 **Version and deployment caveats.** The source repo includes multiple hook versions and immutable per-Silo configurations. This audit does not map a particular deployed hook, SiloConfig, Silo pair, oracle, collateral LT, liquidation target LTV, fee, incentive controller or block. The source uses mixed license headers across core and library files; preserve file-level license provenance. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
+
+
+## 13. Fraxlend: clean/dirty liquidation fee and lender-claim write-off
+
+**Pinned implementation snapshot.** Official repository `FraxFinance/fraxlend`, commit `2bed49d4dcc6702d92dede825c3424893517d841` (2025-11-12):
+- `src/contracts/FraxlendPairCore.sol`, blob SHA `ad3be86d383ffa3dde691f8960c82d4101760fbb`
+- `src/contracts/FraxlendPair.sol`, blob SHA `5133f41c73f49a3b1dcca94f91ac28a66d858340`
+- `src/contracts/libraries/VaultAccount.sol`, blob SHA `3a7ad956c83d4e32f811d5751acef9b88cb1b0c8`
+
+Pinned commit: https://github.com/FraxFinance/fraxlend/commit/2bed49d4dcc6702d92dede825c3424893517d841. This is a versioned pair implementation snapshot, not a mapping to a particular deployed pair's immutable parameters or current state.
+
+### Solvency and oracle selection
+
+The pair accrues interest before liquidation and updates its dual-oracle exchange rate. The exchange rate represents collateral units per (10^{18}) asset units; liquidation uses the lower returned exchange rate. The borrower debt amount is obtained from borrow shares using upward rounding. With collateral balance (C), debt amount (B), exchange rate (E), and configured maximum LTV (L_{max}), the code computes
+\[
+LTV=\left\lfloor
+\frac{\left\lfloor B E/E_{prec}\right\rfloor L_{prec}}{C}
+\right\rfloor,
+\qquad
+\text{solvent iff }LTV\le L_{max}.
+\]
+A liquidation reverts if the borrower is solvent. The low exchange rate is used for this liquidation test and collateral quote; the high exchange rate is used by the post-operation solvency modifier for borrower-initiated actions.
+
+### Clean versus dirty liquidation
+
+The liquidator chooses the number of borrow shares to repay. The pair converts those shares to a debt amount rounded down for the collateral quote, multiplies by the selected exchange rate, then calculates an optimistic collateral amount using the clean fee:
+\[
+C_{clean}=\left\lfloor
+\frac{B_{repay}^{down}E}{E_{prec}}
+\cdot\frac{L_{prec}+f_{clean}}{L_{prec}}
+\right\rfloor.
+\]
+It compares the borrower's collateral balance (C_b) with this amount. If (C_b-C_{clean}\le0), the liquidation is treated as a clean/full collateral liquidation and the liquidator receives all borrower collateral. Otherwise, the collateral reward uses the dirty fee:
+\[
+C_{liq}=\left\lfloor
+\frac{B_{repay}^{down}E}{E_{prec}}
+\cdot\frac{L_{prec}+f_{dirty}}{L_{prec}}
+\right\rfloor.
+\]
+The constructor sets (f_{dirty}=0.9f_{clean}). A separate protocol fee is then taken as a fraction of (C_{liq}) and retained as protocol collateral in the pair. The amount actually transferred by the liquidator is calculated from the selected borrow shares using upward rounding, so it is not identical to the down-rounded collateral-quote amount.
+
+### Residual bad-debt restructuring
+
+If the clean-fee calculation consumes all collateral, the code computes the borrow shares remaining after the liquidator's selected shares. Any remaining shares are marked for adjustment; their corresponding debt amount is converted down and removed from both `totalBorrow.amount` and `totalAsset.amount`. The subsequent repayment burns both the liquidator-repaid shares and adjusted shares, but the liquidator only transfers the asset amount corresponding to the shares they selected. Thus the uncollateralized residual is written off against the pair's total lender asset claim rather than being left as a borrower debt balance. The fToken supply is not reduced by this amount, so the loss is reflected in the value backing lender shares.
+
+**Structural disposition:** one coupled Fraxlend pair liquidation/state-transition family: dual-oracle low-rate eligibility, share-based debt repayment, clean-versus-dirty collateral incentive selection, protocol fee extraction and residual bad-debt write-off against lender asset claims. The clean/dirty fee branch is one integrated collateral-exhaustion rule, not two independent equation candidates. The lender-claim write-off is related to Compound, Liquity, Silo and Euler loss-allocation motifs, but the exact mechanism here couples partial share repayment with pair-level asset-claim reduction. Retain for pairwise structural review.
+
+**Version and parameter caveats.** The constructor configures max LTV, clean liquidation fee and protocol fee per pair; dirty fee is derived as 90% of clean fee in this source snapshot. Oracle contract, max deviation, pair parameters, fToken share price and block state remain deployment-specific. No deployed pair was mapped. No RPC, contract execution, tests, simulation or experiment was performed.
