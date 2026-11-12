@@ -1674,7 +1674,8 @@
       "formula_latex": "Q=\\frac{\\dot V_{O_2}}{C_{aO_2}-C_{vO_2}}",
       "structural_fingerprint": "f3a85ff2827c3c0f6b7619e942b5243b468b26e1012399ea4f93796c902afdab",
       "source_ids": [
-        "BIO-FICK-1870"
+        "BIO-FICK-1870",
+        "BIO-LASZLO-2004-FICK-CARDIAC-OUTPUT"
       ],
       "source_family_id": "BIO-FICK-OXYGEN-MASS-BALANCE",
       "status": "proposed",
@@ -1697,17 +1698,23 @@
         "CvO2": {
           "meaning": "Mixed venous oxygen content",
           "unit": "mL O2 L^-1 blood"
+        },
+        "Q": {
+          "meaning": "Cardiac output, blood volume flow rate",
+          "unit": "L blood min^-1"
         }
       },
       "validity": {
-        "source_location": "Fick (1870), Sitzungsberichte der Physikalisch-Medizinischen Gesellschaft zu Würzburg, Neue Folge 2, XVI-XVII; modern explicit equation in Geerts, Aarts & Jansen (2011), section Fick's cardiac output measurement",
+        "source_location": "Fick (1870), original report pp. XVI-XVII states oxygen uptake / arteriovenous oxygen content mass balance in prose; Laszlo (2004) gives modern explicit equation and mixed-venous sampling scope.",
         "regime": "Direct Fick method for cardiac output under steady-state oxygen balance",
         "limitations": [
-          "Original Fick 1870 scan is linked through Hathi Trust but access is restricted; exact original equation transcription remains to be checked",
-          "The formula requires mixed venous oxygen content, not an arbitrary central venous substitute",
-          "Steady-state and complete-mixing assumptions are essential; shunts and pulmonary gas-exchange abnormalities can bias the relation",
-          "This is an application of conservation of mass; do not count rearrangements or carbon-dioxide analogues as independent equations",
-          "Ensure unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L min^-1"
+          "The compact modern equation is an algebraic rendering of Fick's 1870 prose mass balance, not a verbatim displayed equation on the original page.",
+          "The original report's venous sample must represent blood leaving the systemic circulation; modern direct method uses mixed-venous pulmonary-artery blood, not an arbitrary central/peripheral venous substitute.",
+          "Steady-state oxygen uptake and oxygen-content samples must correspond to the same physiological interval.",
+          "Shunts, incomplete mixing, changing oxygen stores or non-steady oxygen consumption can invalidate or bias the simple balance.",
+          "Fick's original CO2 calculation is a related application of the same mass-balance principle, not a separate candidate.",
+          "The original note's example uses existing data and does not establish a population sampling distribution or universal clinical input ranges.",
+          "Unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L blood min^-1."
         ]
       },
       "input_ranges": {
@@ -1737,13 +1744,12 @@
         "constraint_evidence": null
       },
       "review_notes": [
-        "Primary historical source metadata identifies Fick's 1870 paper and pages XVI-XVII",
-        "Modern physiology review states the oxygen mass balance and the direct cardiac-output formula",
-        "Exact primary page equation remains unverified; remain proposed and Tier B",
-        "Benchmark must specify steady-state physiological context, mixed venous sampling and positive arteriovenous oxygen difference",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Primary-source audit 1 (2026-11-12): recovered the original one-page Fick 1870 report scan from the NLM History of Medicine collection. Fick's prose specifies oxygen uptake per time and the oxygen-content difference between arterial and venous blood; division gives blood volume per time, and division by heart beats gives stroke volume. The compact equation is modern algebraic notation, not a verbatim displayed formula. See docs/CORE295_FICK_CARDIAC_OUTPUT_PRIMARY_SOURCE_AUDIT_1.md.",
+        "Corrected model roles: independent inputs VO2,CaO2,CvO2; dependent output Q.",
+        "Modern direct Fick method requires mixed-venous pulmonary-arterial oxygen content; steady-state interval and complete-mixing/control-volume assumptions are required.",
+        "No train/extrapolation ranges or statistical independent units established. Proposed only; generator pending."
       ],
-      "source_location": "Fick (1870), Neue Folge 2, XVI-XVII; Geerts et al. (2011), Fick section",
+      "source_location": "Fick (1870), pp. XVI-XVII, primary prose mass balance; Laszlo (2004), modern explicit equation and mixed-venous sample.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
@@ -1751,14 +1757,18 @@
           "CaO2",
           "CvO2"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "Q"
+        ],
         "state_variables": [],
         "fixed_parameters": [],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Cardiac output from oxygen consumption and arterial-venous oxygen content difference.",
+        "operator_structure": "Steady-state oxygen mass-balance cardiac output Q=VO2/(CaO2-CvO2).",
         "constraints": [
-          "CaO2>CvO2; VO2>=0."
+          "VO2>=0; CaO2>CvO2; all oxygen-content and uptake units must be consistent.",
+          "Venous oxygen content is mixed-venous systemic return (pulmonary-arterial sample) for the direct method.",
+          "Oxygen uptake and blood samples represent the same steady-state interval."
         ],
         "assumptions": [
           "Steady-state oxygen balance across the pulmonary circulation",
@@ -1769,11 +1779,13 @@
         ],
         "validity_regime": "Direct Fick method for cardiac output under steady-state oxygen balance",
         "limitations": [
-          "Original Fick 1870 scan is linked through Hathi Trust but access is restricted; exact original equation transcription remains to be checked",
-          "The formula requires mixed venous oxygen content, not an arbitrary central venous substitute",
-          "Steady-state and complete-mixing assumptions are essential; shunts and pulmonary gas-exchange abnormalities can bias the relation",
-          "This is an application of conservation of mass; do not count rearrangements or carbon-dioxide analogues as independent equations",
-          "Ensure unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L min^-1"
+          "The compact modern equation is an algebraic rendering of Fick's 1870 prose mass balance, not a verbatim displayed equation on the original page.",
+          "The original report's venous sample must represent blood leaving the systemic circulation; modern direct method uses mixed-venous pulmonary-artery blood, not an arbitrary central/peripheral venous substitute.",
+          "Steady-state oxygen uptake and oxygen-content samples must correspond to the same physiological interval.",
+          "Shunts, incomplete mixing, changing oxygen stores or non-steady oxygen consumption can invalidate or bias the simple balance.",
+          "Fick's original CO2 calculation is a related application of the same mass-balance principle, not a separate candidate.",
+          "The original note's example uses existing data and does not establish a population sampling distribution or universal clinical input ranges.",
+          "Unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L blood min^-1."
         ]
       },
       "fixed_parameter_values": {},
@@ -3982,8 +3994,8 @@
       "source_id": "BIO-FICK-1870",
       "domain": "Biology",
       "title": "Ueber die Messung des Blutquantums in den Herzventrikeln",
-      "url": "https://historyofmedicine.com/id/251",
-      "use": "Primary Fick 1870 report, Würzburg proceedings, pp. XVI–XVII; cardiac output from oxygen uptake and arteriovenous oxygen-content difference",
+      "url": "https://www.w.mriquestions.com/uploads/3/4/5/7/34572113/fick_original.pdf",
+      "use": "Primary one-page Fick 1870 report scan reproduced from the U.S. National Library of Medicine History of Medicine collection, pp. XVI-XVII. Original prose describes oxygen uptake per time divided by the arterial-venous oxygen-content difference to obtain blood volume per time; compact formula is modern algebraic rendering, not verbatim displayed equation.",
       "status": "candidate_reference"
     },
     {
@@ -4905,6 +4917,14 @@
       "url": "https://doi.org/10.1016/j.chemosphere.2020.126626",
       "use": "Primary research article, Chemosphere 251, 126626. Direct spectrophotometric method reports molar absorption coefficient 3340 M^-1 cm^-1 at 525 nm, prepared standards 0-63 uM in neutral pH aqueous phosphate buffer (pH 7.1, 0.1 M), direct-method LOD 0.45 uM and LOQ 1.51 uM, and early time instability. Scope the coefficient to this species/wavelength/matrix; accessible article abstract/sections do not establish path length or a general linearity interval.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LASZLO-2004-FICK-CARDIAC-OUTPUT",
+      "domain": "Biology",
+      "title": "Laszlo (2004), Respiratory measurements of cardiac output: from elegant idea to useful test",
+      "url": "https://doi.org/10.1152/japplphysiol.01074.2001",
+      "use": "Modern physiology review explicitly states Q=VO2/(CaO2-CvO2) and clarifies that the venous content is mixed venous blood; supporting modern equation rendering, not the original 1870 source.",
+      "status": "supporting_reference"
     }
   ],
   "notes": [
@@ -4948,7 +4968,8 @@
     "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed.",
     "2026-11-12: Henry candidate narrowed to molecular CO2(aq) in pure water at 298.15 K with solubility-form Hs_cp=3.4e-4 mol m^-3 Pa^-1 from Sander (2023) v5.0.0 CO2 compilation (Burkholder et al. 2019, literature-evaluation type L; Carroll et al. 1991 review also lists 3.4e-4). Pressure sampling range remains unset; candidate proposed and generator pending. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md.",
     "2026-11-12: Raoult candidate narrowed to OpenStax Chemistry 2e §11.4 Example 11.6 (ethanol-glycerin ideal-solution illustration, 40 °C, pure ethanol vapor pressure 0.178 atm). Original 1887 source remains bibliographic lineage pending direct equation transcription. Mole-fraction [0,1] is definitional only; Henry/Raoult structural-family review remains open. See docs/CORE295_RAOUlt_SOURCE_AND_SCOPE_AUDIT_1.md.",
-    "2026-11-12: Beer-Lambert candidate scoped to direct aqueous permanganate at 525 nm in neutral phosphate buffer pH 7.1, 0.1 M; eps=334 m^2 mol^-1 after SI conversion of 3340 L mol^-1 cm^-1. Fixed missing dependent output role I; inputs I0,c,l. Method-specific LOQ 1.51 uM, max standard 63 uM; path length range remains unset. See docs/CORE295_BEER_LAMBERT_PERMANGANATE_SCOPE_AUDIT_1.md."
+    "2026-11-12: Beer-Lambert candidate scoped to direct aqueous permanganate at 525 nm in neutral phosphate buffer pH 7.1, 0.1 M; eps=334 m^2 mol^-1 after SI conversion of 3340 L mol^-1 cm^-1. Fixed missing dependent output role I; inputs I0,c,l. Method-specific LOQ 1.51 uM, max standard 63 uM; path length range remains unset. See docs/CORE295_BEER_LAMBERT_PERMANGANATE_SCOPE_AUDIT_1.md.",
+    "2026-11-12: Fick cardiac-output original 1870 one-page report recovered. Corrected missing output role Q; original prose supports oxygen uptake / arterial-venous oxygen-content difference as flow, while compact formula is modern notation. Direct method requires mixed venous sample and steady state. See docs/CORE295_FICK_CARDIAC_OUTPUT_PRIMARY_SOURCE_AUDIT_1.md."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
