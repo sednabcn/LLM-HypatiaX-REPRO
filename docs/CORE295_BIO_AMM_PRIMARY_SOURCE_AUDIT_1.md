@@ -813,3 +813,39 @@ Equation image: https://esj-journals.onlinelibrary.wiley.com/cms/asset/8da22c3f-
 ## 4.19 Utida (1957): experimental host–parasitoid cycles
 
 The Wiley publisher page confirms S. Utida, “Cyclic Fluctuations of Population Density Intrinsic to the Host-Parasite System,” *Ecology* 38(3) (July 1957), pp. 442–449, DOI 10.2307/1929888. The publisher-hosted first-page image (printed p.442) was retrieved and visually inspected. It identifies the experimental system as the azuki bean weevil *Callosobruchus chinensis* and its larval parasitoid *Heterospilus prosopidis*, and describes continuation of earlier experiments over multiple generations. The article is relevant to discrete host–parasitoid population cycles, but the complete PDF remains gated and the first page contains no governing recurrence. No equation or candidate entry is asserted. Compare its experimental mechanism with Nicholson–Bailey, Bailey's non-continuous model and DeBach–Smith before structural classification.
+
+
+## 7.5 Curve NG math implementations: pinned StableSwap, Twocrypto and Tricrypto comparison
+
+The official Curve repositories were inspected at exact commits, rather than relying only on the high-level docs.
+
+**StableSwap NG**
+- Repository: `curvefi/stableswap-ng`
+- Commit: `3332cd44656ec64b3c048885e1dd71955254b262`
+- Math file blob: `contracts/main/CurveStableSwapNGMath.vy`, `25acc73e8b5cf0a0652bf833d7a1d9cd22cf83c5`.
+- `get_D` solves the N-coin StableSwap invariant with a bounded integer iteration (maximum 255 iterations, convergence at a one-unit difference); `get_y` iteratively solves the reserve quadratic.
+- The invariant remains the 2019 StableSwap equation; NG changes implementation, supported asset handling, dynamic fees and oracles, not the underlying invariant family.
+- Official integration docs describe 2–8 coin pools, plain pools and metapools, plus quote methods `get_dy`, `get_dx` and underlying variants. The docs identify the factory and Views contract, but live deployment configuration still requires a specific pool address and block.
+
+**Twocrypto NG**
+- Repository: `curvefi/twocrypto-ng`
+- Commit: `89c8dfb6c9b3204647954018d2a0238b9c69349d`, commit message “restore production v2.1.0 (Vyper 0.3.10)”.
+- Math file blob: `contracts/main/CurveCryptoMathOptimized2.vy`, `3947686b080ed3e5c88141d8fc998f7ca5c27ba5`.
+- Two-coin A-gamma dynamic-peg CryptoSwap. `newton_D` iterates the invariant using (K_0), (gamma), and (ANN); `get_y` uses a specialized cubic solution; `get_p` calculates the marginal price ratio.
+
+**Tricrypto NG**
+- Repository: `curvefi/tricrypto-ng`
+- Commit: `ecaa8161c240f21dd7c3712eefc5637e1dac742b`.
+- Math file blob: `contracts/main/CurveCryptoMathOptimized3.vy`, `695c794cb8035e4b2848ad0354d0993dcfb9c7cb`.
+- Three-coin A-gamma dynamic-peg CryptoSwap. Its invariant solver initializes D using a geometric mean or K0-informed cube root, then performs bounded Newton iteration; `get_y` solves the selected reserve and `get_p` returns two marginal price ratios.
+
+**Structural conclusion:** Twocrypto and Tricrypto are two- and three-coin implementations of the same CryptoSwap dynamic-peg invariant family. Do not count N=2 and N=3 deployment arities as separate equations without a predeclared structural rule that explicitly treats state dimension/topology as a distinct model. StableSwap NG remains a different invariant family from CryptoSwap. Likewise, do not count Newton solvers, marginal-price calculations, fee calculations, EMA oracle updates or admin-fee accounting as independent governing equations when they are implementation components of the same pool model.
+
+Official docs describe StableSwap NG as a pegged/correlated asset AMM, supporting plain and metapools and multiple token types. The repository source snapshot is implementation provenance; it does not establish deployed pool addresses, live A/gamma/fee parameters or a specific block state.
+
+Sources:
+- StableSwap NG docs: https://docs.curve.finance/developer/amm/stableswap-ng/overview/
+- StableSwap NG integration: https://knowledge.curve.finance/developer/integration/stableswap-ng
+- StableSwap NG source: https://github.com/curvefi/stableswap-ng/tree/3332cd44656ec64b3c048885e1dd71955254b262
+- Twocrypto NG source: https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d
+- Tricrypto NG source: https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b
