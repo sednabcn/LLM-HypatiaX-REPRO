@@ -3209,6 +3209,74 @@ jobs:
 
 
 
+  exp1_four_way_matched_aggregate:
+    name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RESULT_SUBDIR: four_way_matched
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install aggregation dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install "pandas==2.2.3" "pysr==2.0.0a1" numpy scipy sympy "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn pmlb pint psutil torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Download all five worker artifacts
+        uses: actions/download-artifact@v4.3.6
+        with:
+          pattern: results-exp1_four_way_matched-shard*
+          path: ${{ github.workspace }}/four_way_artifacts
+
+      - name: Merge and validate Core-15 shards
+        env:
+          RESULTS_DIR: ${{ env.OUT_BASE }}
+          FOUR_WAY_ARTIFACTS_DIR: ${{ github.workspace }}/four_way_artifacts
+        run: |
+          set -euo pipefail
+          bash run_all.sh --step exp1_four_way_matched_aggregate 2>&1 | tee /tmp/core15_four_way_aggregate.log
+          for f in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json exp1_four_way_matched_summary.json; do
+            test -s "${RESULTS_DIR}/four_way_matched/${f}" || { echo "::error::missing aggregate artifact: ${f}"; exit 1; }
+          done
+
+      - name: Upload merged Core-15 results
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-exp1_four_way_matched-merged
+          path: ${{ env.OUT_BASE }}/four_way_matched/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit and push validated aggregate
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${OUT_BASE}/four_way_matched"
+          git add -f "${TARGET}/exp1_four_way_matched_results.json" "${TARGET}/exp1_four_way_matched_checkpoint.json" "${TARGET}/exp1_four_way_matched_manifest.json" "${TARGET}/exp1_four_way_matched_summary.json"
+          if git diff --cached --quiet; then
+            echo "Aggregate already committed."
+            exit 0
+          fi
+          git commit -m "ci: validated Core-15 four-way aggregate - run ${{ github.run_id }}"
+          git pull --rebase --autostash origin "${{ github.ref_name }}"
+          git push origin HEAD:"${{ github.ref_name }}"
+
   exp1_ablation_aggregate:
     name: "Aggregate - exp1_ablation (merge shards + LLM-CONTRIBUTION)"
     needs: [plan, worker]
