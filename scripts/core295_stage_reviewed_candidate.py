@@ -69,6 +69,8 @@ def main():
         fail(errors, "primary and second review UTC dates are required")
     for field in CATALOGUE_FIELDS:
         value = candidate.get(field)
+        if field == "assumptions" and not value:
+            value = (candidate.get("model_definition") or {}).get("assumptions")
         if value is None or value == "" or value == [] or value == {}:
             fail(errors, "candidate field missing/incomplete: " + field)
     if candidate.get("domain") not in ("Chemistry", "Biology", "Physics", "DeFi AMM", "DeFi Risk"):
@@ -85,7 +87,9 @@ def main():
         return 1
 
     # Copy only catalogue fields from candidate, then attach review traceability.
-    staged = {key: candidate[key] for key in CATALOGUE_FIELDS}
+    staged = {key: candidate.get(key) for key in CATALOGUE_FIELDS}
+    if not staged.get("assumptions"):
+        staged["assumptions"] = (candidate.get("model_definition") or {}).get("assumptions", [])
     staged["status"] = "structurally_reviewed"
     staged["reviewer"] = primary
     staged["reviewed_on"] = decision["primary_reviewed_on_utc"]
