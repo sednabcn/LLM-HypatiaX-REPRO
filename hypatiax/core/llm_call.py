@@ -15,10 +15,8 @@ _state = threading.local()
 
 
 def configured_temperature() -> float:
-    try:
-        return float(os.environ.get("LLM_TEMPERATURE") or 0.25)
-    except ValueError:
-        return 0.25
+    """Fixed benchmark sampling temperature shared by every LLM path."""
+    return 0.25
 
 
 def last_call_info() -> dict:
@@ -35,11 +33,10 @@ def _rejects_temperature(exc: Exception) -> bool:
 
 def create_message(client, **kwargs):
     """client.messages.create(**kwargs) with the configured temperature, one fallback."""
-    if "temperature" in kwargs:
-        req = kwargs["temperature"]
-    else:
-        req = configured_temperature()
-        kwargs = {**kwargs, "temperature": req}
+    # The benchmark protocol fixes this value; ignore caller/env overrides so
+    # legacy call sites cannot silently create unmatched LLM conditions.
+    req = configured_temperature()
+    kwargs = {**kwargs, "temperature": req}
     # Clear prior-call state so failed requests cannot inherit stale provenance.
     _state.info = {"temperature_requested": req, "temperature_sent": None}
     try:
