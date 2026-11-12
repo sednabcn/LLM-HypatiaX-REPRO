@@ -58,6 +58,7 @@ def _validate_generator(entry: dict, domain: str) -> None:
     if not isinstance(generator, dict) or generator.get("status") != "ready":
         raise ValueError("generator.status must be ready")
     expected = {
+        "model_class": "explicit_scalar",
         "method": METHOD,
         "seed_policy": SEED_POLICY,
         "parameter_sampling": PARAMETER_SAMPLING,
