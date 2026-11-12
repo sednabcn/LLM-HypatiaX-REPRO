@@ -101,3 +101,16 @@ The restricted scalar conversion path now separates independent inputs from fixe
 The shared adapter requires all input ranges to remain within explicit `input_validity_bounds` across the Core-15 training, medium, near and far generation regimes. Its only current constraint policy is `rectangular_input_bounds_v1`. Cross-variable inequalities, coupled domains, state-dependent constraints and protocol semantics remain unsupported and require specialized generation. A reviewer-provided `constraint_evidence` string is not an automatic proof.
 
 The existing 24 records have not been assigned numeric parameter values or validity intervals by this implementation pass. Those values must be grounded in primary-source/model review. Consequently, no candidate was promoted to generator-ready.
+
+
+## Source-grounded constant binding: Planck spectral exitance
+
+For `PHYS-PLANCK-SPECTRUM-001`, the catalogue now records the exact SI defining values:
+
+- `h = 6.62607015e-34 J s`
+- `c = 299792458 m s^-1`
+- `kB = 1.380649e-23 J K^-1`
+
+The provenance is the BIPM SI defining-constants reference (also tabulated in NIST SP 330 §2). These values are exact by SI definition and are fixed physical constants, not sampled parameters. The catalogue source register adds `PHYS-SI-2019-DEFINING-CONSTANTS`, and the candidate records this as constant-value provenance.
+
+This does not complete the Planck candidate's generator contract: positive wavelength and temperature are necessary but do not by themselves define defensible finite training/extrapolation ranges or a numerical validity envelope for the intended blackbody benchmark. Those remain unset. The candidate remains proposed, source verification remains open for the original Planck spectral convention, and generator status remains pending.
