@@ -1,0 +1,40 @@
+{
+  "_template_notice": "Approval attestation template. Complete only after reviewing the exact proposal JSON and diff. Names/dates are human attestations, not cryptographic signatures.",
+  "approval_record_version": "1.0",
+  "decision": "hold",
+  "proposal_path": "data/core295_proposals/core295_catalogue.proposed.json",
+  "proposal_sha256": null,
+  "diff_path": "data/core295_proposals/core295_catalogue.diff",
+  "diff_sha256": null,
+  "canonical_catalogue_path": "config/core295_catalogue.json",
+  "canonical_catalogue_sha256_before": null,
+  "approved_appended_equation_ids": [],
+  "audit_warnings_disposition": null,
+  "scientific_review_confirmation": {
+    "primary_source_pages_inspected": false,
+    "transcriptions_checked_against_source": false,
+    "structural_equivalence_review_checked": false,
+    "source_family_and_independence_units_checked": false,
+    "sampling_frame_implications_checked": false,
+    "all_findings_resolved_or_documented": false
+  },
+  "maintainer_approval": {
+    "name_or_account": null,
+    "role": null,
+    "approved_on": "YYYY-MM-DD",
+    "approval_statement": null
+  },
+  "second_maintainer_approval": {
+    "name_or_account": null,
+    "role": null,
+    "approved_on": "YYYY-MM-DD",
+    "approval_statement": null
+  },
+  "application_authorization": {
+    "authorized": false,
+    "authorized_by": null,
+    "authorized_on": null,
+    "exact_canonical_path": null
+  },
+  "notes": []
+}
