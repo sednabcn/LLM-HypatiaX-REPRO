@@ -77,3 +77,8 @@ The [review decision template](templates/core295_review_decision.template.json) 
 ## Catalogue-wide promotion audit
 
 Run `python scripts/core295_audit_staged_promotions.py` after staging candidates. This read-only report checks staged IDs and fingerprints against the catalogue, verifies source IDs against the embedded source register, flags source-ID reuse and domain/family mismatches, and checks statistical-unit/source-family consistency and human sign-off metadata. It does not edit the catalogue, certify scientific validity, or authorize acceptance. See the [audit procedure](CORE295_OPEN_ACCESS_RETRIEVAL.md#catalogue-wide-staged-promotion-audit).
+
+
+## Non-applying catalogue proposal
+
+After the read-only promotion audit is clear, [`core295_build_catalogue_proposal.py`](../scripts/core295_build_catalogue_proposal.py) can generate a proposed catalogue snapshot and unified diff. It reruns the audit, records input hashes and appends only `structurally_reviewed` entries. It leaves the canonical catalogue untouched and never accepts candidates. The diff still requires explicit maintainer inspection and separate approval before application.
