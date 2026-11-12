@@ -169,16 +169,16 @@
       ],
       "variables": {
         "p": {
-          "meaning": "Equilibrium gas pressure",
+          "meaning": "Equilibrium gas pressure; the original Langmuir derivation first writes coverage in terms of molecular impingement rate, related to pressure by kinetic theory",
           "unit": "pressure unit selected for the gas phase"
         },
         "u1": {
-          "meaning": "Ratio of adsorption to evaporation parameters; inverse pressure",
-          "unit": "inverse of the selected pressure unit"
+          "meaning": "Effective pressure-form adsorption coefficient after converting the original molecular-impingement-rate expression to pressure; depends on gas identity, surface and temperature",
+          "unit": "inverse of the selected pressure unit, only for the pressure-parameterized form"
         }
       },
       "validity": {
-        "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)",
+        "source_location": "Langmuir (1918), JACS 40(9), printed p. 1369, Eq. (7) for fractional coverage; Eq. (3) relates molecular impingement rate to gas pressure. Eq. (9) concerns amount adsorbed, not fractional coverage.",
         "regime": "Simple single-site monolayer adsorption equilibrium",
         "limitations": [
           "Equivalent sites",
@@ -211,9 +211,11 @@
       },
       "review_notes": [
         "Input ranges and deterministic generator remain unspecified",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Proposed only; not scientifically accepted or eligible for shard planning",
+        "Primary-source audit 1 (2026-11-12): full Langmuir (1918) scan inspected. Fractional coverage is Eq. (7), printed p. 1369; the original derivation uses molecular impingement rate, with pressure proportionality in Eq. (3). The catalogue's pressure-form coefficient is an effective reparameterization and must not be conflated with the original kinetic coefficient. Eq. (9) is amount adsorbed, not coverage. See docs/CORE295_LANGMUIR_SOURCE_AND_PARAMETER_AUDIT_1.md.",
+        "The 1918 paper treats distinct multiple-site, amorphous, atomic and multilayer cases separately; the present candidate is only the homogeneous single-site, one-molecule-per-site limiting model. No source-grounded universal coefficient or rectangular benchmark pressure range was identified; fixed_parameter_values, input_ranges and input_validity_bounds remain empty/null."
       ],
-      "source_location": "Langmuir (1918), JACS 40(9), pp. 1369-1370, Eqs. (8)-(9)",
+      "source_location": "Langmuir (1918), JACS 40(9), printed p. 1369, Eq. (7) for fractional coverage; Eq. (3) relates molecular impingement rate to gas pressure. Eq. (9) concerns amount adsorbed, not fractional coverage.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
