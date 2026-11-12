@@ -724,6 +724,7 @@ class HybridDiscoverySystem:
         _inv_injected = False
 
         for attempt in range(self.max_retries):
+            result = None
             try:
                 # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
                 # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
@@ -826,7 +827,14 @@ class HybridDiscoverySystem:
 
             except Exception as e:
                 _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
-                if _llm_engine is not None and getattr(_llm_engine, "last_call_attempted", False):
+                if (
+                    _llm_engine is not None
+                    and getattr(_llm_engine, "last_call_attempted", False)
+                    and not (
+                        isinstance(result, dict)
+                        and result.get("llm_mode") not in (None, "", "none")
+                    )
+                ):
                     if not hasattr(self, "_llm_attempt_modes"):
                         self._llm_attempt_modes = []
                     if not hasattr(self, "_llm_attempt_info"):
