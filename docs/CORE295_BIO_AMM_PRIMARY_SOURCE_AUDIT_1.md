@@ -665,3 +665,8 @@ Leslie immediately notes that all other entries are zero, (0<P_x<1), and (F_xge0
 **Disposition:** add one proposed discrete age-structured matrix operator. Do not separately count individual age-class recurrences, matrix powers, eigenvalue equations, stable age distributions or the derived asymptotic growth rate. Leslie's own paper treats those as consequences/properties of the same operator. Its discrete stage-transition topology differs from the continuous-time scalar growth and Lotka/Volterra systems, but the broader relationship to other age-structured renewal and matrix models still requires structural-family review. No benchmark ranges or generator have been set; no experiment or validator was run.
 
 Primary scan: https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.pdf
+
+ 
+## 4.8 False-positive rejection: Ricker (1954) stock–recruitment scan
+
+A search result labelled as W. E. Ricker's 1954 “Stock and Recruitment” PDF at the Fisheries and Oceans Canada DFO library resolver was opened and inspected. The PDF is actually the Pacific Fisheries Resource Conservation Council's 2000 *Sand and Gravel Management and Fish-Habitat Protection in British Columbia Salmon and Steelhead Streams* (Background Paper 2000/3), not Ricker's 1954 article. It is therefore rejected as a false-positive retrieval and is not used for equation transcription, source registration or candidate creation. The genuine Ricker bibliographic record is *Journal of the Fisheries Research Board of Canada* 11(5) (1954), pp. 559–623, DOI 10.1139/f54-039; its correct original scan remains to be located. This is a reminder that a search-result snippet or URL label is not sufficient provenance: inspect the actual document title page before transcribing.
