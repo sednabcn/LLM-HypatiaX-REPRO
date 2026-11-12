@@ -1531,7 +1531,7 @@
     },
     {
       "equation_id": "CHEM-RAOULT-VAPOR-001",
-      "name": "Raoult ideal-solution component vapor-pressure relation",
+      "name": "Raoult component vapor-pressure relation: ethanol in ideal ethanol-glycerin solution at 40 C",
       "domain": "Chemistry",
       "subdomain": "liquid-vapor equilibrium",
       "formula": "P_A = X_A * P_A_star",
@@ -1539,44 +1539,43 @@
       "formula_latex": "P_A=X_A P_A^*",
       "structural_fingerprint": "22caa0aa609c68a6dd84006499829b05d3c7648280fecb6bfa597b9fd1d64923",
       "source_ids": [
-        "CHEM-RAOULT-1887"
+        "CHEM-RAOULT-1887",
+        "CHEM-OPENSTAX-RAOULT-11-4-EXAMPLE-11-6"
       ],
       "source_family_id": "CHEM-IDEAL-SOLUTION-RAOULT-VAPOR-PRESSURE",
       "status": "proposed",
       "assumptions": [
-        "Ideal liquid solution with component activities approximated by mole fractions",
-        "Liquid-vapor equilibrium at fixed temperature",
-        "P_A_star is the saturation vapor pressure of pure component A at the same temperature",
-        "Component A is volatile; vapor-phase partial pressure is measured at equilibrium",
-        "No chemical reaction or association/dissociation that invalidates the ideal-solution activity model"
+        "Ideal liquid-solution behavior as assumed by OpenStax Chemistry 2e §11.4 Example 11.6.",
+        "Liquid-vapor equilibrium at fixed temperature 40 °C.",
+        "Component A is ethanol; glycerin is treated as essentially nonvolatile in the cited example.",
+        "Pure ethanol vapor pressure is fixed at 0.178 atm at 40 °C.",
+        "XA is the liquid-phase mole fraction of ethanol, with 0<=XA<=1."
       ],
       "variables": {
         "XA": {
-          "meaning": "Liquid-phase mole fraction of component A",
+          "meaning": "Liquid-phase mole fraction of ethanol in the ethanol-glycerin mixture",
           "unit": "dimensionless, 0 to 1"
         },
         "PAstar": {
-          "meaning": "Saturation vapor pressure of pure component A at the same temperature",
-          "unit": "Pa, kPa or atm, consistently"
+          "meaning": "Pure ethanol saturation vapor pressure at 40 °C, fixed from OpenStax Example 11.6",
+          "unit": "atm"
         }
       },
       "validity": {
-        "source_location": "OpenStax Chemistry 2e §11.4, Raoult law equation P_A=X_A P_A*; historical primary source Raoult (1887), Comptes Rendus 104, 1430-1433",
-        "regime": "Ideal-solution liquid-vapor equilibrium at fixed temperature",
+        "source_location": "OpenStax Chemistry 2e §11.4, Raoult component equation and Example 11.6 (ethanol/glycerin, 40 °C). Raoult (1887), Comptes Rendus 104, 1430-1433, is historical primary lineage; direct equation-page transcription remains outstanding.",
+        "regime": "Ideal-solution liquid-vapor equilibrium for ethanol as the volatile component at fixed 40 °C; glycerin treated as essentially nonvolatile.",
         "limitations": [
-          "Original 1887 empirical paper page-level equation transcription remains to be checked; OpenStax is the explicit modern equation source",
-          "Nonideal solutions require activity coefficients; do not apply this ideal relation without checking mixture behavior",
-          "Henry's law describes a different limiting regime for dilute solutes; do not merge or count algebraic limiting cases separately",
-          "Total vapor pressure obtained by summing component partial pressures is linked through Dalton's law, not an independent candidate here",
-          "Do not confuse this vapor-liquid equilibrium relation with the excluded Ideal Gas Law"
+          "OpenStax example is a textbook worked illustration, not a measured validation dataset.",
+          "The physical mole-fraction interval [0,1] is definitional and does not validate the ideal-solution approximation over the full composition interval for this real pair.",
+          "Nonideal mixtures require activity coefficients.",
+          "Do not vary temperature with fixed PAstar.",
+          "Total vapor pressure is a linked sum using Dalton's law, not a separate candidate.",
+          "Henry's dilute-solute limit and Raoult's ideal-solution relation require explicit E0-E5/source-family review before both are counted.",
+          "Original 1887 equation-page transcription remains outstanding."
         ]
       },
       "input_ranges": {
         "XA": {
-          "train": null,
-          "extrapolation": null
-        },
-        "PAstar": {
           "train": null,
           "extrapolation": null
         }
@@ -1594,47 +1593,63 @@
         "constraint_evidence": null
       },
       "review_notes": [
-        "Exact modern component equation is printed in OpenStax Chemistry 2e §11.4",
-        "Historical primary source is Raoult's 1887 Comptes Rendus paper, pp. 1430-1433; original page equation transcription remains outstanding",
-        "Freeze a named binary/ternary ideal-solution system and temperature-dependent pure-component vapor pressure before sampling",
-        "Proposed only; not scientifically accepted or eligible for shard planning"
+        "Source/scope audit 1 (2026-11-12): OpenStax Chemistry 2e §11.4 states PA=XA*PA* for any component of an ideal solution. Example 11.6 specifies ideal ethanol-glycerin at 40 °C, ethanol as volatile solvent, P_ethanol*=0.178 atm, X_ethanol=0.800 and P_solution=0.142 atm. See docs/CORE295_RAOUlt_SOURCE_AND_SCOPE_AUDIT_1.md.",
+        "Narrowed candidate to ethanol in the cited ideal ethanol-glycerin worked example at 40 °C; fixed PAstar=0.178 atm. XA in [0,1] is a mathematical mole-fraction domain only, not proof of full-interval ideality or a train/extrapolation design.",
+        "Original Raoult (1887) paper is bibliographically verified but exact page-level equation transcription remains outstanding; OpenStax is the explicit modern equation source.",
+        "Henry/Raoult pairwise E0-E5 and source-family review remains open; do not assume both count as structurally distinct calibration units.",
+        "Proposed only; generator pending; no empirical validation or benchmark acceptance."
       ],
-      "source_location": "OpenStax Chemistry 2e §11.4; Raoult (1887), Comptes Rendus 104, 1430-1433",
+      "source_location": "OpenStax Chemistry 2e §11.4, component law and Example 11.6; Raoult (1887), Comptes Rendus 104, 1430-1433, historical lineage only.",
       "model_definition": {
         "model_class": "explicit_scalar",
         "independent_variables": [
           "XA"
         ],
-        "dependent_variables": [],
+        "dependent_variables": [
+          "PA"
+        ],
         "state_variables": [],
         "fixed_parameters": [
           "PAstar"
         ],
         "physical_constants": [],
         "state_dimension": null,
-        "operator_structure": "Ideal-solution component partial vapor pressure.",
+        "operator_structure": "Ideal-solution component vapor pressure PA=XA*PAstar for ethanol at fixed 40 °C.",
         "constraints": [
-          "0<=XA<=1; PAstar>=0."
+          "0<=XA<=1 by mole-fraction definition.",
+          "PAstar=0.178 atm at 40 °C.",
+          "Ideal-solution assumption; full composition-domain validity for the real pair is not experimentally established by the cited worked example."
         ],
         "assumptions": [
-          "Ideal liquid solution with component activities approximated by mole fractions",
-          "Liquid-vapor equilibrium at fixed temperature",
-          "P_A_star is the saturation vapor pressure of pure component A at the same temperature",
-          "Component A is volatile; vapor-phase partial pressure is measured at equilibrium",
-          "No chemical reaction or association/dissociation that invalidates the ideal-solution activity model"
+          "Ideal liquid-solution behavior as assumed by OpenStax Chemistry 2e §11.4 Example 11.6.",
+          "Liquid-vapor equilibrium at fixed temperature 40 °C.",
+          "Component A is ethanol; glycerin is treated as essentially nonvolatile in the cited example.",
+          "Pure ethanol vapor pressure is fixed at 0.178 atm at 40 °C.",
+          "XA is the liquid-phase mole fraction of ethanol, with 0<=XA<=1."
         ],
-        "validity_regime": "Ideal-solution liquid-vapor equilibrium at fixed temperature",
+        "validity_regime": "Ideal-solution liquid-vapor equilibrium for ethanol as the volatile component at fixed 40 °C; glycerin treated as essentially nonvolatile.",
         "limitations": [
-          "Original 1887 empirical paper page-level equation transcription remains to be checked; OpenStax is the explicit modern equation source",
-          "Nonideal solutions require activity coefficients; do not apply this ideal relation without checking mixture behavior",
-          "Henry's law describes a different limiting regime for dilute solutes; do not merge or count algebraic limiting cases separately",
-          "Total vapor pressure obtained by summing component partial pressures is linked through Dalton's law, not an independent candidate here",
-          "Do not confuse this vapor-liquid equilibrium relation with the excluded Ideal Gas Law"
+          "OpenStax example is a textbook worked illustration, not a measured validation dataset.",
+          "The physical mole-fraction interval [0,1] is definitional and does not validate the ideal-solution approximation over the full composition interval for this real pair.",
+          "Nonideal mixtures require activity coefficients.",
+          "Do not vary temperature with fixed PAstar.",
+          "Total vapor pressure is a linked sum using Dalton's law, not a separate candidate.",
+          "Henry's dilute-solute limit and Raoult's ideal-solution relation require explicit E0-E5/source-family review before both are counted.",
+          "Original 1887 equation-page transcription remains outstanding."
         ]
       },
-      "fixed_parameter_values": {},
+      "fixed_parameter_values": {
+        "PAstar": 0.178
+      },
       "physical_constant_values": {},
-      "input_validity_bounds": {}
+      "input_validity_bounds": {
+        "XA": {
+          "min": 0,
+          "max": 1,
+          "closed": true,
+          "meaning": "Mole-fraction definition; not an empirically validated ideality interval."
+        }
+      }
     },
     {
       "equation_id": "BIO-FICK-CARDIAC-OUTPUT-001",
@@ -4809,6 +4824,14 @@
       "url": "https://srdata.nist.gov/solubility/sol_detail.aspx?sysID=62_26",
       "use": "NIST SRD 106 record for CO2-water at 298.15 K and 101.325 kPa; reports an independently defined Henry-constant convention, experimental procedure and source purity. Supporting context only; do not copy its differently dimensioned Henry constant into Hs_cp without conversion.",
       "status": "supporting_reference"
+    },
+    {
+      "source_id": "CHEM-OPENSTAX-RAOULT-11-4-EXAMPLE-11-6",
+      "domain": "Chemistry",
+      "title": "OpenStax Chemistry 2e §11.4, Raoult component relation and Example 11.6",
+      "url": "https://openstax.org/books/chemistry-2e/pages/11-4-colligative-properties",
+      "use": "Explicit modern component relation PA=XA*PAstar for any component of an ideal solution. Example 11.6 specifies ideal ethanol-glycerin at 40 °C, treats glycerin as essentially nonvolatile, gives pure ethanol vapor pressure 0.178 atm, XA=0.800 and calculated solution vapor pressure 0.142 atm. Worked illustration, not empirical validation or a sampling design.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
@@ -4850,7 +4873,8 @@
     "2026-11-12: Added pinned Fluid Vault shared T2/T3/T4 tick/branch liquidation and absorb engine. It is a structurally distinct batch/aggregate state model; T1 is separately implemented and not conflated. No deployed vault/type/config mapping; no accepted-equation count change.",
     "2026-11-12: Added pinned Notional V3 multi-route portfolio liquidation source. Captures cash/nToken/liquidity-token and local/cross-currency fCash unwind routes; liquidation benefit includes removal of risk haircuts and maturity-dependent discounting. Commit is a 2025 source snapshot; current router route-enable state and deployment not mapped. No accepted-equation count change.",
     "2026-11-12: Added bibliographically verified Russian parallel-publication lead for Frumkin 1925 (Chemical Institute of L. Ya. Karpov collection, issue 4, pp. 56–74). GPNTB PDF resolver located but not retrievable in this pass; no equation transcription or acceptance status changed.",
-    "2026-11-12: Henry candidate narrowed to molecular CO2(aq) in pure water at 298.15 K with solubility-form Hs_cp=3.4e-4 mol m^-3 Pa^-1 from Sander (2023) v5.0.0 CO2 compilation (Burkholder et al. 2019, literature-evaluation type L; Carroll et al. 1991 review also lists 3.4e-4). Pressure sampling range remains unset; candidate proposed and generator pending. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md."
+    "2026-11-12: Henry candidate narrowed to molecular CO2(aq) in pure water at 298.15 K with solubility-form Hs_cp=3.4e-4 mol m^-3 Pa^-1 from Sander (2023) v5.0.0 CO2 compilation (Burkholder et al. 2019, literature-evaluation type L; Carroll et al. 1991 review also lists 3.4e-4). Pressure sampling range remains unset; candidate proposed and generator pending. See docs/CORE295_HENRY_CO2_SOURCE_AND_PARAMETER_AUDIT_1.md.",
+    "2026-11-12: Raoult candidate narrowed to OpenStax Chemistry 2e §11.4 Example 11.6 (ethanol-glycerin ideal-solution illustration, 40 °C, pure ethanol vapor pressure 0.178 atm). Original 1887 source remains bibliographic lineage pending direct equation transcription. Mole-fraction [0,1] is definitional only; Henry/Raoult structural-family review remains open. See docs/CORE295_RAOUlt_SOURCE_AND_SCOPE_AUDIT_1.md."
   ],
   "fingerprint_scheme": {
     "version": "sympy-srepr-simplify-real-symbols-v1",
