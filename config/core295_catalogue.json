@@ -362,7 +362,9 @@
         "Proposed only; not scientifically accepted or eligible for shard planning",
         "Metadata audit 2026-11-11: input_ranges keys were stale from the superseded transition-state-prefactor draft; they now match the five variables in the corrected collision-frequency expression. Numerical train/extrapolation bounds remain unset.",
         "Audit 2 (2026-11-11): distinguish Marcus (1956) solution collision-number prefactor from the current IUPAC encounter-complex/intramolecular Eyring-prefactor Marcus equation; current hybrid formulation remains source-scope unresolved. See docs/CORE295_PROPOSED_RECORD_AUDIT_2.md.",
-        "Audit 3 (2026-11-11): prefactor scope remains unresolved; do not benchmark this hybrid record until it declares solution-bimolecular collision-number Z versus encounter-complex/intramolecular kappa_ET*kB*T/h convention. Neither prefactor is universally interchangeable. See docs/CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md."
+        "Audit 3 (2026-11-11): prefactor scope remains unresolved; do not benchmark this hybrid record until it declares solution-bimolecular collision-number Z versus encounter-complex/intramolecular kappa_ET*kB*T/h convention. Neither prefactor is universally interchangeable. See docs/CORE295_CHEM_ADSORPTION_AND_MARCUS_AUDIT_1.md.",
+        "Source-scope audit 2 (2026-11-12): do not benchmark/promote current hybrid expression. Marcus (1956) supports the solution-bimolecular collision-number form k_bi≈Z exp(-DeltaF*/kT) only under the stated slight-overlap and kinetic-regime conditions; IUPAC's quadratic DeltaG‡ form is paired with an encounter-complex/intramolecular Eyring prefactor kappa_ET*kB*T/h. No source-matched derivation currently establishes the catalogue's combination of Z with the quadratic barrier. See docs/CORE295_MARCUS_SOURCE_SCOPE_AUDIT_2.md.",
+        "Explicit Core-15 overlap blocker: activated exponential-rate structure must be compared against Arrhenius and generic Rate Law exclusions under E0-E5; a Marcus mechanism label does not establish structural distinctness. Keep proposed, generator pending, fixed values/ranges empty."
       ],
       "source_location": "IUPAC Gold Book M03702; Marcus (1956), DOI 10.1063/1.1742723",
       "model_definition": {
@@ -383,8 +385,10 @@
         "state_dimension": null,
         "operator_structure": "Activated outer-sphere electron-transfer rate with parabolic reorganization barrier.",
         "constraints": [
-          "T>0; lam>0; R is a physical constant.",
-          "Prefactor convention remains source-scope unresolved."
+          "T>0; lambda>0; R is a physical constant.",
+          "The current hybrid prefactor/barrier combination is source-scope unresolved and must not be benchmarked.",
+          "Choose and source-verify either the 1956 solution-bimolecular collision-number model or a specified encounter-complex/intramolecular model.",
+          "Resolve structural overlap with Core-15 Arrhenius and generic Rate Law exclusions before promotion."
         ],
         "assumptions": [
           "Outer-sphere electron transfer",
