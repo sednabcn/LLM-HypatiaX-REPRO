@@ -134,8 +134,20 @@ def validate_catalogue(catalogue: object) -> list[dict]:
         if not isinstance(ranges, dict) or set(ranges) != inputs:
             fail(f"{eid}: input_ranges must cover exactly independent_variables (not parameters/constants/states)")
         for variable, bounds in ranges.items():
-            if not isinstance(bounds, dict) or not bounds.get("train") or not bounds.get("extrapolation"):
-                fail(f"{eid}: train and extrapolation ranges are required for independent input {variable}")
+            if not isinstance(bounds, dict):
+                fail(f"{eid}: range record for {variable} must be an object")
+            for kind in ("train", "extrapolation"):
+                interval = bounds.get(kind)
+                if (not isinstance(interval, list) or len(interval) != 2
+                        or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(float(v)) for v in interval)
+                        or float(interval[0]) >= float(interval[1])):
+                    fail(f"{eid}: invalid {kind} interval for {variable}")
+            valid_lo, valid_hi = map(float, validity[variable])
+            train_hi = float(bounds["train"][1])
+            generated = [*map(float, bounds["train"]), *map(float, bounds["extrapolation"]),
+                         train_hi, train_hi * 1.5, train_hi * 4.0, train_hi * 6.0]
+            if min(generated) < valid_lo or max(generated) > valid_hi:
+                fail(f"{eid}: generated train/near/medium/far ranges exceed validity bounds for {variable}")
         if not isinstance(model.get("constraints"), list) or not model.get("operator_structure"):
             fail(f"{eid}: model constraints and operator_structure are required")
         if generator.get("constraints_enforced") is not True:
