@@ -68,3 +68,17 @@ python scripts/core295_extract_equation_leads.py
 It requires Poppler's `pdftotext` executable. It extracts layout-preserving text page by page, flags broad equation-like lines and nearby context, and appends records to `data/core295_equation_review_queue.jsonl`. Each lead includes the source PDF SHA-256, DOI metadata where available, PDF page index, text-line range, snippet and snippet hash. Re-running deduplicates the same source-page-snippet tuple.
 
 **Important:** PDF page index is not the printed page number. The patterns are recall-oriented cues, not mathematical parsing; tables, multi-line equations, scans and OCR-only content can be missed or fragmented. Every snippet is marked `unverified_extraction_lead`; a reviewer must inspect the PDF, verify printed pagination and equation transcription, and assess assumptions and structural distinctness. This helper never updates the canonical catalogue or accepts an equation.
+
+
+## Equation snippet extraction
+
+Once PDFs have been retrieved and their provenance reviewed, use [`scripts/core295_extract_equation_leads.py`](../scripts/core295_extract_equation_leads.py):
+
+```bash
+python scripts/core295_extract_equation_leads.py --dry-run
+python scripts/core295_extract_equation_leads.py
+```
+
+Requires Poppler `pdftotext`. It checks each PDF against the retrieval provenance SHA-256, extracts text page by page, and stores equation-like snippets with source DOI, PDF page index, text-line span and snippet hash in `data/core295_equation_review_queue.jsonl`. Repeated runs deduplicate by PDF hash, page index and snippet hash.
+
+The extraction is deliberately heuristic. Page index is not printed pagination; OCR is not performed; multi-line equations and scanned pages may be missed. All records remain `unverified_extraction_lead`, never accepted. A reviewer must compare each snippet against the original PDF and transcribe the complete governing equation, assumptions and printed page before structural review. No canonical catalogue is changed.
