@@ -2269,30 +2269,30 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
   set -euo pipefail
   cd '${REPO_ROOT}'
   _P30_TASKS=()
-  if [[ -n \"${TASK_IDS:-}\" ]]; then
-    for _tid in ${TASK_IDS}; do
-      [[ \"${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: ${_tid}\"; exit 1; }
-      _n=${BASH_REMATCH[1]}
-      _n=$((10#${_n}))
-      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: ${_tid}\"; exit 1; }
-      _P30_TASKS+=(\"${_n}\")
+  if [[ -n \"\$${TASK_IDS:-}\" ]]; then
+    for _tid in \$${TASK_IDS}; do
+      [[ \"\$${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \$${_tid}\"; exit 1; }
+      _n=\$${BASH_REMATCH[1]}
+      _n=\$((10#\$${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \$${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"\$${_n}\")
     done
-    [[ ${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
-    _uniq=$(printf '%s\\n' \"${_P30_TASKS[@]}\" | sort -n -u | wc -l)
-    [[ \"${_uniq}\" -eq \"${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard${SHARD:-0}'
+    [[ \$${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=\$(printf '%s\\n' \"\$${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"\$${_uniq}\" -eq \"\$${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\$${SHARD:-0}'
   else
     _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
   fi
-  mkdir -p \"${_P30_RANDOM_DIR}\"
+  mkdir -p \"\$${_P30_RANDOM_DIR}\"
   _P30_EQ_ARGS=()
-  [[ ${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"${_P30_TASKS[@]}\")
+  [[ \$${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\$${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
   METHOD_TIMEOUT=${METHOD_TIMEOUT} \
   PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
   PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
   JOB_DEADLINE=${JOB_DEADLINE} \
-  HYPATIAX_SHARD_ID=${SHARD:-} \
+  HYPATIAX_SHARD_ID=\$${SHARD:-} \
   SHARD_IDS='' \
     python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \
       --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
@@ -2300,10 +2300,10 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
       --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
       --use-transcendental-compositions --noiseless --threshold 0.999999 \
       --methods 1 2 3 4 5 6 --no-llm-cache --no-checkpoint \
-      --output-dir \"${_P30_RANDOM_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
-      2>&1 | tee -a \"${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
-  if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"${_P30_RANDOM_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+      --output-dir \"\$${_P30_RANDOM_DIR}\" \"\$${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"\$${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
+  if [[ \$${#_P30_TASKS[@]} -gt 0 ]]; then
+    SHARD_IDS='' python3 - \"\$${_P30_RANDOM_DIR}\" \"\$${SHARD:-0}\" \"\$${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
@@ -2329,23 +2329,23 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
   set -euo pipefail
   cd '${REPO_ROOT}'
   _P30_TASKS=()
-  if [[ -n \"${TASK_IDS:-}\" ]]; then
-    for _tid in ${TASK_IDS}; do
-      [[ \"${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: ${_tid}\"; exit 1; }
-      _n=${BASH_REMATCH[1]}; _n=$((10#${_n}))
-      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: ${_tid}\"; exit 1; }
-      _P30_TASKS+=(\"${_n}\")
+  if [[ -n \"\$${TASK_IDS:-}\" ]]; then
+    for _tid in \$${TASK_IDS}; do
+      [[ \"\$${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \$${_tid}\"; exit 1; }
+      _n=\$${BASH_REMATCH[1]}; _n=\$((10#\$${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \$${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"\$${_n}\")
     done
-    [[ ${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
-    _uniq=$(printf '%s\\n' \"${_P30_TASKS[@]}\" | sort -n -u | wc -l)
-    [[ \"${_uniq}\" -eq \"${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard${SHARD:-0}'
+    [[ \$${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=\$(printf '%s\\n' \"\$${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"\$${_uniq}\" -eq \"\$${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\$${SHARD:-0}'
   else
     _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
   fi
-  mkdir -p \"${_P30_PCA_DIR}\"
+  mkdir -p \"\$${_P30_PCA_DIR}\"
   _P30_EQ_ARGS=()
-  [[ ${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"${_P30_TASKS[@]}\")
+  [[ \$${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\$${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
   METHOD_TIMEOUT=${METHOD_TIMEOUT} \
   PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
@@ -2358,10 +2358,10 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
       --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
       --use-transcendental-compositions --noiseless --threshold 0.999999 \
       --methods 1 2 3 4 5 6 --no-llm-cache --force-fresh --no-checkpoint \
-      --output-dir \"${_P30_PCA_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
-      2>&1 | tee -a \"${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
-  if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"${_P30_PCA_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+      --output-dir \"\$${_P30_PCA_DIR}\" \"\$${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"\$${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
+  if [[ \$${#_P30_TASKS[@]} -gt 0 ]]; then
+    SHARD_IDS='' python3 - \"\$${_P30_PCA_DIR}\" \"\$${SHARD:-0}\" \"\$${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
@@ -2385,7 +2385,7 @@ PYMAN
 
 run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Protocol-30 random 80/20 shards" bash -c "
   set -euo pipefail
-  : \"${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  : \"\$${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
   python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
     --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
     --output-dir '${RESULTS_DIR}/comparison_results/protocol30/random-80-20' \
@@ -2394,7 +2394,7 @@ run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Pro
 
 run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protocol-30 PCA 40/60 shards" bash -c "
   set -euo pipefail
-  : \"${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  : \"\$${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
   python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
     --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
     --output-dir '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60' \
