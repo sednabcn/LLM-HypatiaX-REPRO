@@ -885,3 +885,14 @@ However, the opened serial-level record exposes no article-specific file or dire
 **Disposition:** retain Thompson (1924) as an archival retrieval lead, not a verified equation source. No catalogue candidate, equation transcription, or accepted count changes.
 
 Source checked: Université d'Aix-Marseille, Odyssée, *Annales de la Faculté des sciences de Marseille* serial-level digital-library record (public-domain PDF collection; 16,250 pages; contents coverage includes 1921–1937): https://odyssee.univ-amu.fr/items/show/18.
+
+
+## 4.23 DeBach–Smith (1941): publisher's original first page retrieved; model assumptions visible, governing equations still need continuation pages
+
+The Wiley/ESA article page exposes a publisher-hosted image of the original first page (printed p. 363). This is stronger primary evidence than the previously available metadata-only record. The first page explicitly states a simplified host–parasite population model: host population change is potential increase minus host destruction by the parasite; host destruction is assumed proportional to host–parasite encounters; parasite population change is the corresponding increase associated with hosts destroyed minus normal parasite deaths. It also identifies the symbols in prose as host population (H), parasite population (P), host potential growth rate (r), and an encounter coefficient (k), with parasite natural mortality indicated in the text.
+
+Crucially, the publisher's “Download PDF” link again redirects to the article abstract page. The first-page image ends while the assumptions are still being described; it does not expose a complete printed equation system or the remaining model analysis. It would be unsafe to reconstruct differential equations from prose and then attribute them to the authors as an exact transcription. No equation candidate is added from this partial page. The original first page does, however, establish that the paper contains a deliberately simplified mathematical host–parasite model and merits continued retrieval of pp. 364–369.
+
+**Disposition:** primary first-page model description retrieved; equation transcription remains blocked pending continuation pages. Treat this paper as a promising source lead, not an accepted entry. No catalogue count changes.
+
+Sources checked: Wiley/ESA publisher article page (https://esajournals.onlinelibrary.wiley.com/doi/10.2307/1930709), original first-page image (https://esajournals.onlinelibrary.wiley.com/cms/asset/7b97fe0c-72d3-4466-96ff-c9893a3d1135/1930709.fp.png), and publisher PDF endpoint (which redirects to the abstract page: https://esajournals.onlinelibrary.wiley.com/doi/pdf/10.2307/1930709).
