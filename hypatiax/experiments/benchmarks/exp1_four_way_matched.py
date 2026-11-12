@@ -533,7 +533,13 @@ def run():
         raise RuntimeError("ANTHROPIC_API_KEY is required for a genuine four-arm run; refusing silent Hybrid downgrade")
     run_fingerprint = _run_fingerprint()
     checkpoint = {}
-    if CHECKPOINT_PATH.exists():
+    if CHECKPOINT_PATH.exists() and os.environ.get("CLEAR_CHECKPOINT") == "1":
+        backup_dir = OUT_DIR / "checkpoint_backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_path = backup_dir / f"exp1_four_way_matched_checkpoint_{int(time.time())}.json"
+        backup_path.write_bytes(CHECKPOINT_PATH.read_bytes())
+        print(f"[four-way] clean rerun: archived prior checkpoint to {backup_path}")
+    if CHECKPOINT_PATH.exists() and os.environ.get("CLEAR_CHECKPOINT") != "1":
         with CHECKPOINT_PATH.open(encoding="utf-8") as handle:
             checkpoint = json.load(handle)
         if not isinstance(checkpoint, dict):
