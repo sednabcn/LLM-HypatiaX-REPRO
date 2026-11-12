@@ -315,8 +315,8 @@ def main() -> int:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with args.output.open("xb", encoding="utf-8") as stream:
-            stream.write(canonical(artifact).decode("utf-8"))
+        with args.output.open("xb") as stream:
+            stream.write(canonical(artifact))
     except FileExistsError:
         stop(f"refusing to overwrite existing shard result: {args.output}")
     print(json.dumps({"status": "SHARD_COMPLETED", "run_id": m["run_id"],
