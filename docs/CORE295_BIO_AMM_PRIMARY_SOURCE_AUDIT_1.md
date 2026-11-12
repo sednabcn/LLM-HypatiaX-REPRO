@@ -874,3 +874,14 @@ The publisher's “Download PDF” endpoint redirected back to the article abstr
 **Disposition:** stronger primary-source verification than a bibliographic record alone, but still insufficient for equation transcription or structural acceptance. Continue seeking the complete pp. 551–598 original through institutional/archive holdings. Do not substitute a later textbook or review equation for the primary text.
 
 Sources checked: Wiley/ZSL publisher record and article metadata (https://zslpublications.onlinelibrary.wiley.com/doi/10.1111/j.1096-3642.1935.tb01680.x); publisher-hosted original first-page image (https://zslpublications.onlinelibrary.wiley.com/cms/asset/4811f39e-9c29-47ae-8cfa-e1218e6dda75/j.1096-3642.1935.tb01680.x.fp.png); publisher PDF endpoint (https://zslpublications.onlinelibrary.wiley.com/doi/pdf/10.1111/j.1096-3642.1935.tb01680.x).
+
+
+## 4.22 Thompson (1924): Marseille university digital-library serial holding identified; article-level file not yet isolated
+
+A targeted French-language archive search identified the Université d'Aix-Marseille's Odyssée heritage-library record for *Annales de la Faculté des sciences de Marseille*. The institutional record describes the digitised serial as a public-domain PDF collection of 16,250 pages, with tables of contents explicitly covering 1921–1937, and gives the Marseille university library as provenance. This is a materially better archival lead for Thompson's 1924 article than secondary bibliography pages.
+
+However, the opened serial-level record exposes no article-specific file or direct page range for the 1924 volume in its file list. The record alone does not establish that the particular 1924 volume is present, nor does it supply Thompson's pp. 69–89. It therefore cannot yet be treated as retrieval of the article or its equation. Next retrieval step is to resolve the 1924 volume from the library's 1921–1937 contents/index or request the relevant physical/digital volume from BU Saint-Charles; only after the article pages are inspected should any formula be transcribed.
+
+**Disposition:** retain Thompson (1924) as an archival retrieval lead, not a verified equation source. No catalogue candidate, equation transcription, or accepted count changes.
+
+Source checked: Université d'Aix-Marseille, Odyssée, *Annales de la Faculté des sciences de Marseille* serial-level digital-library record (public-domain PDF collection; 16,250 pages; contents coverage includes 1921–1937): https://odyssee.univ-amu.fr/items/show/18.
