@@ -127,7 +127,12 @@ fi
 historical_results_fingerprint() {
   local historical_dir="$REPO_ROOT/hypatiax/data/results"
   if [[ -d "$historical_dir" ]]; then
-    find "$historical_dir" -type f -printf '%P\t%s\t%T@\n' | LC_ALL=C sort | sha256sum | awk '{print $1}'
+    # Hash file contents as well as relative paths; size/mtime alone can miss
+    # edits that preserve both metadata fields.
+    (
+      cd "$historical_dir"
+      find . -type f -print0 | LC_ALL=C sort -z | xargs -0 -r sha256sum
+    ) | sha256sum | awk '{print $1}'
   else
     printf 'absent\n'
   fi
