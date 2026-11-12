@@ -118,6 +118,31 @@ def test_error_row_is_not_counted_as_llm_call_even_in_legacy_mode(mod, monkeypat
     assert not any(s in b.client.prompts[0] for s in FORBIDDEN)
 
 
+
+def test_pre_api_failure_does_not_inherit_stale_temperature_provenance(mod, monkeypatch):
+    import hypatiax.core.llm_call as llm_call
+
+    # Simulate thread-local metadata left behind by a prior successful request.
+    monkeypatch.setattr(
+        llm_call, "last_call_info",
+        lambda: {"temperature_requested": 0.9, "temperature_sent": True},
+    )
+    monkeypatch.setattr(llm_call, "configured_temperature", lambda: 0.25)
+
+    def fail_diagnostics(_obj):
+        raise RuntimeError("diagnostic failed before API attempt")
+
+    monkeypatch.setattr(mod.inspect, "getsourcefile", fail_diagnostics)
+    baseline = mod.PureLLMBaseline()
+    row = baseline.generate_formula("Liquidation price", "defi", ["p", "l"], {})
+
+    assert row["llm_attempted"] is False
+    assert row["llm_called"] is False
+    assert row["temperature_sent"] is False
+    assert row["temperature_requested"] == 0.25
+    assert row["error"] == "diagnostic failed before API attempt"
+
+
 def test_clean_run_error_row_is_live(mod):
     b = mod.PureLLMBaseline(); b.client = _Boom()
     r = b.generate_formula("Liquidation price", "defi", ["p", "l"], {})
