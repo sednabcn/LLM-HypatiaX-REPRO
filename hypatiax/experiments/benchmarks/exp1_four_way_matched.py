@@ -458,6 +458,9 @@ def run():
             "hypatiax/experiments/benchmarks/exp1_ablation.py",
             "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
         ],
+        "summary_file": str(SUMMARY_PATH),
+        "results_file": str(RESULTS_PATH),
+        "checkpoint_file": str(CHECKPOINT_PATH),
         "execution_status": "not_run_by_source_implementation",
     }
     with MANIFEST_PATH.open("w", encoding="utf-8") as handle:
