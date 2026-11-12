@@ -121,8 +121,18 @@ def validate_inputs(manifest: Any, manifest_raw: bytes, catalogue: Any,
                 stop(f"{eid}: {var} requires train and extrapolation ranges")
         if not isinstance(model.get("constraints"), list) or not model.get("operator_structure"):
             stop(f"{eid}: model constraints and operator_structure are required")
-        if not isinstance(gen.get("constraints_enforced"), bool):
-            stop(f"{eid}: generator.constraints_enforced must be an explicit boolean")
+        if gen.get("constraints_enforced") is not True:
+            stop(f"{eid}: generator.constraints_enforced must be true before execution")
+        if not isinstance(gen.get("constraint_evidence"), str) or not gen["constraint_evidence"].strip():
+            stop(f"{eid}: generator.constraint_evidence is required")
+        for value_field, role in (("fixed_parameter_values", "fixed_parameters"),
+                                  ("physical_constant_values", "physical_constants")):
+            values = entry.get(value_field)
+            if not isinstance(values, dict) or set(values) != set(model[role]):
+                stop(f"{eid}: {value_field} must cover exactly model_definition.{role}")
+            if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not __import__("math").isfinite(float(v))
+                   for v in values.values()):
+                stop(f"{eid}: {value_field} must contain only finite numeric values")
         by_id[eid] = entry
     if any(counts[d] != 59 for d in DOMAINS):
         stop(f"domain counts must be exactly 59 each; found {counts}")
