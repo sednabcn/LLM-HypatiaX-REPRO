@@ -141,7 +141,7 @@ Arm definitions:
 1. `hybrid_llm_pysr`: existing Core-15 `run_condition('hypatia')` path, with strict live-LLM mode enforced.
 2. `llm_only`: `PureLLMBaselineMethod` generated formula, evaluated on outer-test and extrapolation inputs with the repository's restricted formula evaluator; no PySR refinement.
 3. `pysr_only`: existing raw PySR-only `run_condition`, scored on the same outer-test and extrapolation arrays.
-4. `nn_only`: `ImprovedNNMethod` trained on the shared training partition; its internal validation selection remains within training data, and the returned predictor is scored on the untouched outer test and shared extrapolation arrays.
+4. `nn_only`: `ImprovedNNMethod` trained on the shared training partition with log preprocessing retained and OLS/secondary-NN fallbacks disabled; its returned neural predictor is scored on the untouched outer test and shared extrapolation arrays.
 
 A common per-arm wall-clock cap is passed to all four arms. The PySR population/iteration settings come from the frozen fresh-rerun environment. The driver fails closed if no Anthropic API key is present and enforces `HYPATIAX_STRICT=1` before loading the experiment modules.
 
