@@ -118,7 +118,7 @@ def main() -> int:
                for row in provenance if row.get("local_file")}
     existing = set()
     for row in read_jsonl(args.output):
-        key = (row.get("source_sha256"), row.get("pdf_page"), row.get("snippet_sha256"))
+        key = (row.get("source_sha256"), row.get("pdf_page_index"), row.get("snippet_sha256"))
         existing.add(key)
 
     pdfs = sorted(args.pdf_dir.glob("*.pdf"))
@@ -127,8 +127,10 @@ def main() -> int:
     for pdf in pdfs:
         try:
             digest = sha256_file(pdf)
-            source = by_path.get(str(pdf.resolve()), {})
-            if source.get("sha256") and source["sha256"] != digest:
+            source = by_path.get(str(pdf.resolve()))
+            if not source or not source.get("sha256"):
+                raise RuntimeError("PDF has no matching retrieval provenance record")
+            if source["sha256"] != digest:
                 raise RuntimeError("PDF hash does not match retrieval provenance")
             pages = extract_pages(pdf, executable, args.timeout, args.max_chars_per_pdf)
             source_info = {
