@@ -98,3 +98,17 @@ The helper reads the extraction queue, the retrieval provenance file and the Cro
 Existing packets are skipped by default. Use `--overwrite` only when intentionally regenerating packets from updated evidence. Missing or malformed supporting records are reported; they are not inferred. Each packet explicitly remains proposed, unverified, E5/unresolved and unaccepted. The helper does not edit any input queue or the canonical catalogue, and does not establish source primacy, equation correctness, structural distinctness or statistical independence.
 
 The retrieval provenance writer uses actual JSONL record separators so these downstream readers can parse one provenance record per line.
+
+
+## Candidate evidence-readiness report
+
+After preparing packets, generate an operational gap report:
+
+```bash
+python scripts/core295_candidate_readiness_report.py
+python scripts/core295_candidate_readiness_report.py --stdout
+```
+
+The report matches extraction leads to retrieval provenance and discovery metadata, checks whether the referenced PDF is locally present, checks for a corresponding review packet, and summarizes missing evidence fields and accepted-equation shortfalls by domain. It writes `data/core295_candidate_readiness.md` by default.
+
+“Ready” means only that the packet has the expected evidence links for a human source-page review. It is not scientific readiness, source verification, equation acceptance, structural inequivalence or statistical independence. The report is read-only with respect to catalogue, queues and packets; it performs no OCR, symbolic validation, tests or experiments.
