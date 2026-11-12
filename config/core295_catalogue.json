@@ -1671,7 +1671,7 @@
       "domain": "DeFi Risk",
       "title": "Aave V3 overview",
       "url": "https://aave.dev/docs/aave-v3/overview",
-      "use": "Utilization-dependent interest rate model and reserve liquidation thresholds",
+      "use": "Official Aave V3 overview plus pinned aave-v3-origin commit 5c2eb37f39959dd491ba97fdc2af94bb4ee88f41: GenericLogic health-factor aggregation and LiquidationLogic close factor, collateral conversion/bonus, protocol fee, dust guard and bad-debt transition. Snapshot only; production market proxy/configuration still to pin.",
       "status": "candidate_reference"
     },
     {
