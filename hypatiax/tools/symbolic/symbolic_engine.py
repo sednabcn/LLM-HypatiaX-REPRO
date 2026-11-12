@@ -530,7 +530,7 @@ class LLMConfig:
     model: str = field(default_factory=lambda: os.environ.get("HYPATIAX_LLM_MODEL", "claude-sonnet-4-6"))
     max_tokens: int = 2000
     # Shared protocol setting; read at instance creation so environment overrides are honoured.
-    temperature: float = field(default_factory=lambda: float(os.environ.get("LLM_TEMPERATURE", "0.25")) )
+    temperature: float = 0.25
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
     api_key: str | None = None
