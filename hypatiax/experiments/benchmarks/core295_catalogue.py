@@ -228,14 +228,54 @@ def equations_from_manifest(
             expression = _safe_symbolic_expression(item["canonical_expression"], symbols)
         except (KeyError, TypeError, ValueError, SyntaxError) as exc:
             raise ValueError(f"{item['equation_id']}: invalid canonical_expression: {exc}") from exc
+
+        model = item.get("model_definition")
+        if not isinstance(model, dict) or model.get("model_class") != "explicit_scalar":
+            raise ValueError(f"{item['equation_id']}: scalar converter requires explicit_scalar model_definition")
+        independent = model.get("independent_variables")
+        fixed = model.get("fixed_parameters")
+        constants = model.get("physical_constants")
+        dependent = model.get("dependent_variables")
+        states = model.get("state_variables")
+        roles = (independent, fixed, constants, dependent, states)
+        if any(not isinstance(role, list) for role in roles):
+            raise ValueError(f"{item['equation_id']}: all variable-role fields must be lists")
+        flattened = [symbol for role in roles for symbol in role]
+        if len(flattened) != len(set(flattened)) or set(flattened) != set(names):
+            raise ValueError(f"{item['equation_id']}: variable roles must partition variables exactly")
+        if dependent or states:
+            raise ValueError(f"{item['equation_id']}: static scalar converter does not support dependent/state symbols")
+        if not independent:
+            raise ValueError(f"{item['equation_id']}: at least one independent input is required")
+
+        parameter_values = item.get("fixed_parameter_values")
+        constant_values = item.get("physical_constant_values")
+        if not isinstance(parameter_values, dict) or set(parameter_values) != set(fixed):
+            raise ValueError(f"{item['equation_id']}: fixed_parameter_values must provide every fixed parameter")
+        if not isinstance(constant_values, dict) or set(constant_values) != set(constants):
+            raise ValueError(f"{item['equation_id']}: physical_constant_values must provide every physical constant")
+        substitutions = {}
+        for label, values in (("fixed parameter", parameter_values), ("physical constant", constant_values)):
+            for name, value in values.items():
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                    raise ValueError(f"{item['equation_id']}: {label} {name} must have a finite numeric value")
+                substitutions[symbols[name]] = sp.Float(float(value))
+        expression = expression.subs(substitutions)
+        if expression.free_symbols != {symbols[name] for name in independent}:
+            extra = expression.free_symbols - {symbols[name] for name in independent}
+            missing = {symbols[name] for name in independent} - expression.free_symbols
+            if extra or missing:
+                raise ValueError(f"{item['equation_id']}: expression/input role mismatch; extra={sorted(map(str, extra))}, unused_inputs={sorted(map(str, missing))}")
+
         ranges = item.get("input_ranges")
-        if not isinstance(ranges, dict) or set(ranges) != set(names):
-            raise ValueError(f"{item['equation_id']}: input_ranges must match declared variables")
+        if not isinstance(ranges, dict) or set(ranges) != set(independent):
+            raise ValueError(f"{item['equation_id']}: input_ranges must match independent_variables only")
         train_range = []
         extrap_range = []
-        for name in names:
+        for name in independent:
             pair = ranges[name].get("train") if isinstance(ranges[name], dict) else None
             extra = ranges[name].get("extrapolation") if isinstance(ranges[name], dict) else None
+
             def valid_interval(interval):
                 if not isinstance(interval, list) or len(interval) != 2:
                     return False
@@ -251,7 +291,7 @@ def equations_from_manifest(
                 raise ValueError(f"{item['equation_id']}: invalid extrapolation range for {name}")
             train_range.append(tuple(float(v) for v in pair))
             extrap_range.append(tuple(float(v) for v in extra))
-        numeric_fn = sp.lambdify([symbols[name] for name in names], expression, modules="numpy")
+        numeric_fn = sp.lambdify([symbols[name] for name in independent], expression, modules="numpy")
 
         def fn(*args, _fn=numeric_fn):
             return np.asarray(_fn(*args), dtype=float)
@@ -261,7 +301,7 @@ def equations_from_manifest(
             "name": item["name"],
             "domain": item["domain"],
             "subdomain": item["subdomain"],
-            "vars": names,
+            "vars": list(independent),
             "train_range": train_range,
             "extrap_range": extrap_range,
             "fn": fn,
