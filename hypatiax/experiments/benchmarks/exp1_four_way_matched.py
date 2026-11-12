@@ -295,7 +295,7 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
             "formula_hash": result.formula_hash,
             "metadata": dict(result.metadata or {}),
             "extrapolation_errors": extrap_errors,
-            "definition": "Zero-shot PureLLMBaseline formula from task description/domain/variable names; training arrays are not used; no PySR refinement",
+            "definition": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement",
             "information_regime": "zero_shot_task_description_only",
             "training_arrays_used_by_model": False,
         },
@@ -623,7 +623,7 @@ def run():
         "arms": list(METHOD_KEYS),
         "arm_definitions": {
             "hybrid_llm_pysr": "Core-15 HybridDiscoverySystem with LLM enabled and PySR refinement",
-            "llm_only": "Zero-shot PureLLMBaseline formula from task description/domain/variable names; training arrays are not used; no PySR refinement; live API provenance required",
+            "llm_only": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement; live API provenance required",
             "pysr_only": "raw PySRRegressor with no LLM proposal",
             "nn_only": "ImprovedNN neural network with log preprocessing; OLS and secondary NN fallbacks disabled",
         },
