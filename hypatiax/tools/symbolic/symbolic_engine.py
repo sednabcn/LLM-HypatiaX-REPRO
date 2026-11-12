@@ -559,6 +559,8 @@ class IntegratedLLMEngine:
         self.config = config
         self.client = None
         self.last_call_attempted = False
+        self.last_response_received = False
+        self.last_response_replayed = False
         self.last_error = None
         self.last_call_info = {}
 
@@ -616,9 +618,11 @@ class IntegratedLLMEngine:
             caller_id=caller_id,
         )
 
-        self.last_call_attempted = True
+        self.last_call_attempted = False
+        self.last_response_received = False
         self.last_error = None
         self.last_response_replayed = False
+        self.last_call_info = {}
         # Opt-in replay (HYPATIAX_LLM_REPLAY_DIR): the response is keyed on the full prompt, which
         # embeds the data patterns, so each (equation, seed) gets ONE sample reused by every arm
         # and an ablation differs only by its gate. Unset = unchanged live behaviour.
@@ -634,11 +638,13 @@ class IntegratedLLMEngine:
                 with open(_replay_path, encoding="utf-8") as _fh:
                     response = json.load(_fh)["response"]
                 self.last_response_replayed = True
+                self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
+        self.last_call_attempted = True
         try:
             response = self._call_llm(prompt)
             from hypatiax.core.llm_call import last_call_info
@@ -755,7 +761,17 @@ JSON ARRAY:"""
             temperature=self.config.temperature,
             messages=[{"role": "user", "content": prompt}],
         )
-        return message.content[0].text
+        self.last_response_received = True
+        text_blocks = [
+            block for block in getattr(message, "content", [])
+            if getattr(block, "type", None) == "text"
+        ]
+        if not text_blocks:
+            raise ValueError(
+                "LLM response contained no text block; block types: "
+                f"{[getattr(block, 'type', type(block).__name__) for block in getattr(message, 'content', [])]}"
+            )
+        return text_blocks[0].text
 
     def _parse_response(self, response: str) -> list[EquationHypothesis]:
         """Parse LLM response into hypotheses."""
@@ -2286,9 +2302,16 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 auto_sanitize=auto_sanitize,
                 **kwargs,
             )
+            _call_info = getattr(self.llm_engine, "last_call_info", {}) or {}
+            _response_replayed = bool(getattr(self.llm_engine, "last_response_replayed", False))
+            _response_received = bool(getattr(self.llm_engine, "last_response_received", False))
             result["llm_mode"] = "hybrid_llm_failed"
             result["llm_time"] = llm_time
-            result["llm_called"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
+            result["llm_attempted"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
+            result["llm_called"] = _response_received and not _response_replayed
+            result["llm_response_replayed"] = _response_replayed
+            result["llm_temperature_requested"] = _call_info.get("temperature_requested")
+            result["llm_temperature_sent"] = _call_info.get("temperature_sent")
             result["llm_error"] = getattr(self.llm_engine, "last_error", None)
             return result
 
@@ -2309,6 +2332,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         _complexity_routing = bool(getattr(self, "_COMPLEXITY_ROUTING", True))
         _structural_guard = _structural_risk and _complexity_routing
         _llm_info = {
+            "llm_attempted": bool(getattr(self.llm_engine, "last_call_attempted", False)),
+            "llm_called": (
+                bool(getattr(self.llm_engine, "last_response_received", False))
+                and not bool(getattr(self.llm_engine, "last_response_replayed", False))
+            ),
+            "llm_response_replayed": bool(getattr(self.llm_engine, "last_response_replayed", False)),
             "llm_temperature_requested": getattr(self.llm_engine, "last_call_info", {}).get("temperature_requested"),
             "llm_temperature_sent": getattr(self.llm_engine, "last_call_info", {}).get("temperature_sent"),
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
