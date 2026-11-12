@@ -2308,7 +2308,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
     if [[ -f "\${_flat}" ]]; then cp -f "\${_flat}" "\${_P30_RANDOM_DIR}/"; fi
   done
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
+    SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}" "\${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
@@ -2328,7 +2328,6 @@ result_files = [p for p in Path(out).glob("protocol_core_*.json") if p.stat().st
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit("no detailed Protocol-30 result JSON created during this shard run")
-    raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
             "equation_identities":mapping,"result_file":result_files[-1].name,
@@ -2375,7 +2374,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
       --output-dir \"\${_P30_PCA_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"\${_P30_PCA_DIR}\" \"\${SHARD:-0}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
+    SHARD_IDS='' python3 - \"\${_P30_PCA_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}" "\${_P30_TASKS[@]}\" <<'PYMAN'
 import json, sys
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
@@ -2395,7 +2394,6 @@ result_files = [p for p in Path(out).glob("protocol_core_*.json") if p.stat().st
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit("no detailed Protocol-30 result JSON created during this shard run")
-    raise SystemExit("no detailed Protocol-30 result JSON found for this shard")
 manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
             "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
             "equation_identities":mapping,"result_file":result_files[-1].name,
