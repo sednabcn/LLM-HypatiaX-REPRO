@@ -61,9 +61,18 @@ class TestCore295ShardPlanner(unittest.TestCase):
             "formula": "a*exp(-k*t)",
             "canonical_expression": "a*exp(-k*t)",
             "variables": {"a": {"meaning": "initial amount"}, "k": {"meaning": "rate"}, "t": {"meaning": "time"}},
+            "model_definition": {
+                "model_class": "explicit_scalar",
+                "independent_variables": ["a", "t"],
+                "fixed_parameters": ["k"],
+                "physical_constants": [],
+                "dependent_variables": [],
+                "state_variables": [],
+            },
+            "fixed_parameter_values": {"k": 0.3},
+            "physical_constant_values": {},
             "input_ranges": {
                 "a": {"train": [1.0, 2.0], "extrapolation": [2.0, 3.0]},
-                "k": {"train": [0.1, 0.5], "extrapolation": [0.5, 1.0]},
                 "t": {"train": [0.0, 2.0], "extrapolation": [2.0, 4.0]},
             },
             "source_family_id": "chem-kinetics-test-family",
@@ -72,7 +81,7 @@ class TestCore295ShardPlanner(unittest.TestCase):
         }
         data = {"catalogue_id": "core295-option2", "entries": [record]}
         equations = equations_from_manifest(data, require_complete=False)
-        self.assertEqual(equations[0]["vars"], ["a", "k", "t"])
+        self.assertEqual(equations[0]["vars"], ["a", "t"])
         self.assertEqual(equations[0]["domain"], "Chemistry")
         smoke_check_equations(equations)
 
