@@ -64,3 +64,46 @@ The driver is not wired to `run_all.sh` or GitHub Actions. The three-stage aggre
 The driver has an explicit `--execute` gate, refuses output overwrite, performs no catalogue mutation, and writes only a complete shard envelope after every planned equation has returned all three arms. It does not accept equations or compute aggregate statistics.
 
 This file and driver were committed as source changes only. No Python code, tests, validators, models, APIs, experiments, or workflows were executed.
+
+
+## Initial domain adapter implementation
+
+Five domain-guarded entry points now share a deliberately narrow scalar-expression implementation:
+
+- `hypatiax.experiments.benchmarks.core295_adapters.chemistry:run_equation`
+- `hypatiax.experiments.benchmarks.core295_adapters.biology:run_equation`
+- `hypatiax.experiments.benchmarks.core295_adapters.physics:run_equation`
+- `hypatiax.experiments.benchmarks.core295_adapters.defi_amm:run_equation`
+- `hypatiax.experiments.benchmarks.core295_adapters.defi_risk:run_equation`
+
+All five delegate to `core295_adapters.common`. The shared adapter converts one accepted catalogue record using the existing restricted symbolic parser in `core295_catalogue.py`, then calls the existing Core-15 `generate_data`, `generate_extrap_data`, and `run_condition` functions. It does not modify the Core-15 implementation or reuse Core-15 equation indices. Core-15's 200-point, 5%-noise training generator, 80/20 split, 100-point near/medium/far extrapolation and native per-arm method defaults remain in force.
+
+This adapter supports only the explicit scalar contract below. It intentionally refuses other generator models rather than silently flattening them:
+
+```json
+{
+  "status": "ready",
+  "method": "catalogue_expression_v1",
+  "seed_policy": "sha256_run_equation_v1",
+  "parameter_sampling": "independent_uniform_over_declared_ranges",
+  "sampling_semantics": "all_declared_variables_are_independent_inputs"
+}
+```
+
+Every declared variable is sampled as an independent feature from its own train/extrapolation intervals. This is a substantive modeling assumption: if a symbol is a fixed physical parameter, a dependent state, a coupled-system variable, or a constrained protocol variable, this generic contract is inappropriate until an equation-specific generator is specified. Do not set this contract merely to make an entry pass readiness. The equation must also parse as one scalar explicit expression in the restricted grammar. Implicit systems, ODEs, piecewise/protocol simulators, stochastic processes, and equations requiring fixed constants or coupled constraints need separately reviewed generator implementations.
+
+The adapter hashes the full generated training arrays, the actual train/test split, and each extrapolation set into every arm payload. It derives the task seed from the driver's SHA-256 seed material. It refuses a name collision with Core-15's EQ_ID table. The live `hypatia` arm is marked skipped unless `--allow-live-services` is supplied; when authorized but the API key is absent, it is explicitly failed. The two non-live arms still run when the adapter is invoked. A skipped or failed arm is not scientific success.
+
+Example domain adapter arguments for a shard containing all five domains:
+
+```bash
+--adapter 'Chemistry=hypatiax.experiments.benchmarks.core295_adapters.chemistry:run_equation' \
+--adapter 'Biology=hypatiax.experiments.benchmarks.core295_adapters.biology:run_equation' \
+--adapter 'Physics=hypatiax.experiments.benchmarks.core295_adapters.physics:run_equation' \
+--adapter 'DeFi AMM=hypatiax.experiments.benchmarks.core295_adapters.defi_amm:run_equation' \
+--adapter 'DeFi Risk=hypatiax.experiments.benchmarks.core295_adapters.defi_risk:run_equation'
+```
+
+The task planner now also requires `generator.sampling_semantics`. This prevents a catalogue from appearing executable with only a method label and an underspecified sampling assumption.
+
+**Scope limit:** these are five domain-checked adapters for one shared scalar benchmark contract, not five scientifically bespoke simulators. More specialized equation classes require explicit implementations and review before acceptance. No adapter, model, generator, test, validator, API, experiment, or workflow was executed while adding these files.
