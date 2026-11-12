@@ -388,3 +388,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 208. Volterra, V. “Variazioni e fluttuazioni del numero d’individui in specie animali conviventi.” *Memorie della R. Accademia Nazionale dei Lincei*, series VI, vol. II (1926), pp. 31–113. Author-expanded reprint in *Memorie del R. Comitato talassografico italiano*, Mem. CXXXI (1927), scan: https://francesco-ferraro.com/lotka-volterra/volterra1927variazioni.pdf. The reprint's opening note specifies that Parts I–III rearrange and add to the 1926 Lincei memoir. Original 1926 bibliographic record: https://ndlsearch.ndl.go.jp/books/R100000136-I1574231874580495104.
+
+
+209. State Public Scientific-Technical Library (GPNTB), catalogue record for *Сборник работ по чистой и прикладной химии*, issue 4 (1 September 1925), 231, [4] pages; mirror record hosted by the Sverdlovsk Scientific Information Centre: https://lib.dm-centre.ru/lib/gpntb/. The record exposes a PDF filename for resource 6567, but the metadata/download endpoints were inaccessible during this retrieval attempt. Volume extent differs from the 233-page count in another catalogue record; unresolved pending scan inspection.
