@@ -51,8 +51,11 @@ def main():
     if not isinstance(source_register, list):
         p.error("catalogue source_register must be an array")
 
-    sources = {str(x.get("source_id")): x for x in source_register
-               if isinstance(x, dict) and x.get("source_id")}
+    source_rows = defaultdict(list)
+    for item in source_register:
+        if isinstance(item, dict) and item.get("source_id"):
+            source_rows[str(item["source_id"])].append(item)
+    sources = {sid: rows[0] for sid, rows in source_rows.items()}
     existing = catalogue["entries"]
     existing_ids = {str(x.get("equation_id")): x for x in existing if x.get("equation_id")}
     existing_fps = defaultdict(list)
@@ -79,7 +82,10 @@ def main():
     for path, msg in read_errors:
         add("ERROR", path, "INVALID_STAGING_JSON", msg)
 
-    staged_ids, staged_fps, staged_units = defaultdict(list), defaultdict(list), defaultdict(list)
+    staged_ids, staged_fps, staged_units, staged_sources = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
+    for sid, rows in source_rows.items():
+        if len(rows) > 1:
+            add("ERROR", a.catalogue, "DUPLICATE_SOURCE_REGISTER_ID", sid + " occurs " + str(len(rows)) + " times in source_register")
     for path, row in staged:
         eid = str(row.get("equation_id") or "")
         if not eid: add("ERROR", path, "MISSING_EQUATION_ID", "staged record has no equation_id")
@@ -119,6 +125,7 @@ def main():
             add("ERROR", path, "SOURCE_IDS_EMPTY", "at least one source_id is required")
         else:
             for sid in sids:
+                staged_sources[str(sid)].append((path, eid))
                 if str(sid) not in sources:
                     add("BLOCKER", path, "SOURCE_ID_NOT_IN_REGISTER", str(sid))
                 else:
@@ -149,6 +156,12 @@ def main():
             for path, eid in records:
                 add("BLOCKER", path, "DUPLICATE_STAGED_FINGERPRINT",
                     fp + " shared by " + ", ".join(x[1] for x in records))
+    for sid, records in staged_sources.items():
+        if len(records) > 1:
+            for path, eid in records:
+                add("WARNING", path, "SOURCE_ID_SHARED_BY_STAGED_CANDIDATES",
+                    sid + " is cited by staged candidates " + ", ".join(x[1] for x in records) +
+                    "; confirm this shared source is intentional and does not imply a common model family")
     for unit, records in staged_units.items():
         fams = {family for _, family in records}
         if len(fams) > 1:
