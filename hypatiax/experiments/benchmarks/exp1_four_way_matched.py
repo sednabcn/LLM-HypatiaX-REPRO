@@ -398,6 +398,7 @@ def _aggregate(checkpoint):
     return {
         "independent_unit": "equation (paired within equation; not individual generated samples)",
         "method_test_metrics": methods,
+        "paired_hybrid_comparisons": paired_test,
         "paired_hybrid_test_comparisons": paired_test,
         "method_extrapolation_metrics": method_extrapolation,
         "paired_hybrid_extrapolation_comparisons": paired_extrapolation,
