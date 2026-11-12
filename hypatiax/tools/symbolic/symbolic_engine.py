@@ -560,6 +560,7 @@ class IntegratedLLMEngine:
         self.client = None
         self.last_call_attempted = False
         self.last_error = None
+        self.last_call_info = {}
 
         if not config.enabled:
             return
@@ -640,6 +641,8 @@ class IntegratedLLMEngine:
                 return hypotheses
         try:
             response = self._call_llm(prompt)
+            from hypatiax.core.llm_call import last_call_info
+            self.last_call_info = last_call_info()
             self._note_llm_sample(response)
             if _replay_path:
                 _tmp = _replay_path + f".tmp{os.getpid()}"
@@ -647,6 +650,8 @@ class IntegratedLLMEngine:
                     json.dump({"response": response}, _fh)
                 os.replace(_tmp, _replay_path)
         except Exception as e:
+            from hypatiax.core.llm_call import last_call_info
+            self.last_call_info = last_call_info()
             # API / connection / timeout failure: never let it look like a
             # model that simply returned nothing.
             self.last_error = f"{type(e).__name__}: {e}"
@@ -2304,6 +2309,8 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         _complexity_routing = bool(getattr(self, "_COMPLEXITY_ROUTING", True))
         _structural_guard = _structural_risk and _complexity_routing
         _llm_info = {
+            "llm_temperature_requested": getattr(self.llm_engine, "last_call_info", {}).get("temperature_requested"),
+            "llm_temperature_sent": getattr(self.llm_engine, "last_call_info", {}).get("temperature_sent"),
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
             "llm_best_r2": best_hyp.r2_score,
             "llm_confidence": getattr(best_hyp, "confidence", None),
