@@ -419,3 +419,6 @@ These are additional official documentation pointers, not independent primary re
 219. Lotka, A. J. (1923). “Contribution to quantitative parasitology.” *Journal of the Washington Academy of Sciences* 13(8), pp. 152–158. Biodiversity Heritage Library volume record: https://www.biodiversitylibrary.org/bibliography/2087 (volume digitized; article-specific pages not yet inspected).
  
 220. Bodenheimer, F. S., and Schiffer, M. (1952). “Mathematical studies in animal populations. I. A mathematical study of insect parasitism.” *Acta Biotheoretica* 10, pp. 23–56. Bibliographic record corroborated by Schiffer's publication list and contemporary citations; primary full text not yet located.
+
+ 
+221. Aave Labs. (2026). *Aave V4* source repository, commit `8be3e0d59efc23cd1d4664a88743340533dd5a0c` (11 November 2026), including `BabylonLiquidationLogic.sol`, `BabylonSpoke.sol`, and shared `LiquidationLogic.sol`. https://github.com/aave/aave-v4/commit/8be3e0d59efc23cd1d4664a88743340533dd5a0c. Source snapshot for cap-bounded BabylonSpoke liquidation; deployment configuration not pinned.
