@@ -744,3 +744,13 @@ Two additional primary-source leads have been identified from the contemporary b
 - F. S. Bodenheimer and M. Schiffer, “Mathematical Studies in Animal Populations. I. A Mathematical Study of Insect Parasitism,” *Acta Biotheoretica* 10 (1952), pp. 23–56. Schiffer's publication list and independent citations corroborate the title, co-authors, volume and pages. The exact article landing page/DOI and original scan remain to be located; no equations are transcribed.
 
 These are promising because they may contain host-parasite formulations beyond the familiar Lotka–Volterra and Nicholson–Bailey examples. However, their relationship to Thompson, Bailey and each other cannot be classified from bibliography alone. They remain source leads and do not increase the equation count.
+
+
+## 6.7 Maker/Sky MIP45 status nuance: governance obsolescence versus implementation status
+
+The MIP45 portal labels “Liquidations 2.0 — Liquidation System Redesign” obsolete following MIP102c2-SP1. Do not interpret this status flag as proof that the Dog/Clipper Liquidation 2.0 mechanism itself has been removed or replaced. The current Sky Protocol developer page “Collateral Liquidation” (retrieved 12 November 2026) still documents the same LIQ2.0 mechanics: Dog transfers debt/collateral into Clipper auctions; global and per-ilk Hole/Dirt constrain active auctions; Clipper.take supports partial purchases bounded by auction tab and chost; initial price uses OSM price and buf; configurable Abacus functions include linear, stairstep exponential and continuous exponential; tail/cusp govern resets. The official docs therefore remain a current descriptive source for the mechanism, while MIP45's governance status is obsolete. Neither source alone pins deployed contracts or market-specific parameters. Preserve the pinned DSS commit as a historical implementation snapshot and seek a current commit/deployment/config mapping separately.
+
+Sources:
+- Current Sky Protocol docs: https://developers.skyeco.com/protocol/vaults/collateral-liquidation/
+- MIP45 governance status: https://mips.makerdao.com/mips/details/MIP45
+- MIP102c2-SP1 portal record: https://mips.makerdao.com/mips/details/MIP102c2SP1
