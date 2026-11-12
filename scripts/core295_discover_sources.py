@@ -140,7 +140,7 @@ def crossref_search(query: str, rows: int, cursor: str, timeout: int,
         "query.bibliographic": query,
         "rows": str(rows),
         "cursor": cursor,
-        "select": "DOI,title,author,published,issued,created,type,container-title,volume,issue,page,URL,abstract,subject",
+        "select": "DOI,title,author,published,issued,created,type,container-title,volume,issue,page,URL,abstract,subject,link,license,resource",
     }
     if mailto:
         params["mailto"] = mailto
@@ -180,6 +180,26 @@ def normalize(item: dict, domain: str, query: str) -> dict | None:
     raw_type = clean_text(item.get("type"))
     if raw_type and raw_type not in ALLOWED_TYPES:
         return None
+    fulltext_links = []
+    for link in item.get("link", []) or []:
+        if isinstance(link, dict) and link.get("URL"):
+            fulltext_links.append({
+                "url": clean_text(link.get("URL")),
+                "content_type": clean_text(link.get("content-type")),
+                "content_version": clean_text(link.get("content-version")),
+                "intended_application": clean_text(link.get("intended-application")),
+            })
+    license_metadata = []
+    for license_item in item.get("license", []) or []:
+        if isinstance(license_item, dict):
+            license_metadata.append({
+                "url": clean_text(license_item.get("URL")),
+                "start": clean_text(license_item.get("start", {}).get("date-time"))
+                        if isinstance(license_item.get("start"), dict) else "",
+                "delay_days": license_item.get("delay-in-days"),
+            })
+    resource = item.get("resource", {})
+    resource_url = clean_text(resource.get("primary", {}).get("URL")) if isinstance(resource, dict) else ""
     digest = hashlib.sha256((domain + "|" + doi).encode()).hexdigest()[:12]
     return {
         "record_id": f"DISC-{domain.upper().replace(' ', '-')}-{digest}",
@@ -193,6 +213,9 @@ def normalize(item: dict, domain: str, query: str) -> dict | None:
         "page": clean_text(item.get("page")),
         "doi": doi,
         "url": clean_text(item.get("URL")) or "https://doi.org/" + doi,
+        "crossref_fulltext_links": fulltext_links,
+        "crossref_license_metadata": license_metadata,
+        "crossref_resource_url": resource_url,
         "abstract_metadata": clean_text(item.get("abstract")),
         "crossref_type": raw_type,
         "crossref_score": item.get("score"),
