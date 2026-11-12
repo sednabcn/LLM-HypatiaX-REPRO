@@ -97,19 +97,50 @@ def validate_catalogue(catalogue: object) -> list[dict]:
         generator = entry.get("generator")
         if not isinstance(generator, dict) or generator.get("status") != "ready":
             fail(f"{eid}: generator.status must be ready before task planning")
-        for field in ("method", "seed_policy", "parameter_sampling", "sampling_semantics"):
+        for field in ("model_class", "method", "seed_policy", "parameter_sampling",
+                      "sampling_semantics", "parameter_sampling_scope"):
             if not generator.get(field):
                 fail(f"{eid}: generator.{field} is required")
-        ranges = entry.get("input_ranges")
+        allowed_model_classes = {
+            "explicit_scalar", "implicit_scalar", "coupled_algebraic_system",
+            "ode_ivp", "difference_system", "stochastic_process",
+            "protocol_simulation", "matrix_operator",
+        }
+        model = entry.get("model_definition")
+        if not isinstance(model, dict) or model.get("model_class") not in allowed_model_classes:
+            fail(f"{eid}: model_definition.model_class must be a supported declared class")
+        if generator.get("model_class") != model.get("model_class"):
+            fail(f"{eid}: generator.model_class must match model_definition.model_class")
+        role_fields = ("independent_variables", "dependent_variables", "state_variables",
+                       "fixed_parameters", "physical_constants")
+        roles = {}
+        for role in role_fields:
+            values = model.get(role)
+            if not isinstance(values, list) or any(not isinstance(x, str) or not x for x in values):
+                fail(f"{eid}: model_definition.{role} must be a list of symbol names")
+                values = []
+            for symbol in values:
+                if symbol in roles:
+                    fail(f"{eid}: symbol {symbol} is assigned to multiple variable roles")
+                roles[symbol] = role
         variables = entry.get("variables")
         if not isinstance(variables, dict) or not variables:
             fail(f"{eid}: variables must be a non-empty object")
-        if not isinstance(ranges, dict) or set(ranges) != set(variables):
-            fail(f"{eid}: input_ranges must cover exactly the declared variables")
+        if set(roles) != set(variables):
+            fail(f"{eid}: variable-role declarations must partition exactly the variables dictionary")
+        ranges = entry.get("input_ranges")
+        inputs = set(model.get("independent_variables", []))
+        if not isinstance(ranges, dict) or set(ranges) != inputs:
+            fail(f"{eid}: input_ranges must cover exactly independent_variables (not parameters/constants/states)")
         for variable, bounds in ranges.items():
             if not isinstance(bounds, dict) or not bounds.get("train") or not bounds.get("extrapolation"):
-                fail(f"{eid}: train and extrapolation ranges are required for {variable}")
+                fail(f"{eid}: train and extrapolation ranges are required for independent input {variable}")
+        if not isinstance(model.get("constraints"), list) or not model.get("operator_structure"):
+            fail(f"{eid}: model constraints and operator_structure are required")
+        if not isinstance(generator.get("constraints_enforced"), bool):
+            fail(f"{eid}: generator.constraints_enforced must be an explicit boolean")
         tasks.append({"equation_id": eid, "domain": domain, "fingerprint": fingerprint,
+                      "model_class": model["model_class"],
                       "source_family_id": entry["source_family_id"],
                       "independence_unit_id": entry["independence_unit_id"]})
     for domain in DOMAINS:
