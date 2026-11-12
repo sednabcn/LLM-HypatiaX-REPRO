@@ -323,3 +323,10 @@ These are additional official documentation pointers, not independent primary re
 
 
 183. Compound Finance. “Liquidation.” Official Compound III / Comet documentation. https://docs.compound.finance/liquidation/. Documents liquidation eligibility using the liquidation collateral factor, absorption of underwater accounts, protocol acquisition of collateral and storefront resale discount. Read alongside the pinned v2.5 SPEC and Solidity source: the documentation's user-facing explanation is not a substitute for release-specific implementation and market configuration.
+
+
+184. von Bertalanffy, L. (1938). “A Quantitative Theory of Organic Growth (Inquiries on Growth Laws II).” *Human Biology*, 10(2), 181–213. JSTOR issue contents and article record: https://www.jstor.org/stable/i40070616; https://www.jstor.org/stable/41447359. Issue-level bibliographic confirmation; article full text and exact equation/page remain access-restricted/unverified in this audit.
+
+185. Rosenbaum, B., et al. “The functional response: a primer on its mechanisms and models.” Open institutional repository copy: https://pure.knaw.nl/portal/files/6764896/6543_Rosenbaum_AM.pdf. Secondary equation-level discussion of the Real (1977) enzyme-kinetics generalized functional response, including the Hill-exponent form and equivalent parameterization; not a substitute for Real's original equation/page.
+
+186. Real, L. A. (1977). “The Kinetics of Functional Response.” *The American Naturalist*, 111(978), 289–300. Publisher issue contents: https://www.journals.uchicago.edu/toc/an/1977/111/978. Publisher abstract identifies an allosteric-enzyme analogy with parameters maximum feeding rate F, affinity G and encounter number n; full article remains access restricted and exact original equation/page is not yet transcribed.
