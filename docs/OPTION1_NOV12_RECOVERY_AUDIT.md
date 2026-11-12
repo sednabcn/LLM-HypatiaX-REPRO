@@ -165,3 +165,9 @@ Further inspection of `scripts/phase3_all.py` shows that the three wired leave-o
 ### 8.5 NN arm purity correction
 
 Inspection of `ImprovedNNMethod` revealed that its legacy wrapper can replace a weak NN with log-space OLS or a second linear-space NN. Those fallback paths would make the fourth arm a composite fallback system rather than NN-only. The matched driver now passes `disable_fallback=True`; the wrapper honors this flag and the result provenance records `fallbacks_disabled=True`. Log preprocessing and the primary neural architecture remain enabled. If the primary NN fails, the arm is recorded as failed rather than substituted with OLS or another model.
+
+### 8.6 NN training-row parity correction
+
+A final adapter review found that ImprovedNNMethod internally split the already-shared 160-row training partition a second time. With fallbacks disabled, that internal validation subset was not needed for model selection, so the NN was fitting on only 128 rows while the symbolic arms received all 160. The matched NN-only call now sets `use_all_training_data=True`: the primary NN fits on every row in the common 160-row training partition. The internal diagnostic aliases are explicitly not treated as a held-out validation set, and the wrapper records `r2_heldout/rmse_heldout=null` with `heldout_scope=not_applicable_all_supplied_training_rows_used`. The outer 40-row test partition remains outside the NN call and is scored only by the matched driver after fitting.
+
+This corrects the avoidable training-row imbalance; it does not make compute, hyperparameter search, or inductive bias identical across methods. Those method-specific differences and actual runtimes still need to be disclosed. This correction is source-only and has not been executed or validated.
