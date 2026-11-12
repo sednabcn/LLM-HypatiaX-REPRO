@@ -92,6 +92,11 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         methods = payload.get("methods")
         if not isinstance(protocol, dict) or not isinstance(methods, list):
             fail(f"shard {shard}: missing protocol/method metadata")
+        expected_mode = "noiseless" if variant == "random_8020" else "noiseless_pca"
+        if protocol.get("mode") != expected_mode or float(protocol.get("noise_level", -1)) != 0.0:
+            fail(f"shard {shard}: protocol mode/noise does not match {variant}")
+        if variant == "pca_4060" and protocol.get("noise_injected") is not False:
+            fail(f"shard {shard}: PCA runner must explicitly report noise_injected=false")
         if common_protocol is None:
             common_protocol, common_methods = protocol, methods
         elif protocol != common_protocol or methods != common_methods:
@@ -103,6 +108,8 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
             for method_name, method_result in results.items():
                 if not isinstance(method_result, dict) or "success" not in method_result:
                     fail(f"shard {shard}: {method_name!r} result is missing its explicit success status")
+            if variant == "pca_4060" and record.get("pca_split_protocol") != "pca_40_60":
+                fail(f"shard {shard}: PCA record is not stamped pca_40_60")
             domain = record.get("domain")
             description = record.get("description")
             matches = [
