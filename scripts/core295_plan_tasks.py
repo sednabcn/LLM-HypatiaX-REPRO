@@ -57,7 +57,7 @@ def validate_catalogue(catalogue: object) -> list[dict]:
     if len(sources) != len([x for x in source_rows if isinstance(x, dict) and x.get("source_id")]):
         fail("source_register contains duplicate source_id values")
 
-    seen_ids, seen_fingerprints = set(), set()
+    seen_ids, seen_fingerprints, seen_independence_units = set(), set(), set()
     counts = Counter()
     tasks = []
     for index, entry in enumerate(entries):
@@ -83,8 +83,15 @@ def validate_catalogue(catalogue: object) -> list[dict]:
         seen_fingerprints.add(fingerprint)
         if not entry.get("canonical_expression") or not entry.get("formula"):
             fail(f"{eid}: canonical_expression and formula are required")
-        if not entry.get("source_family_id") or not entry.get("independence_unit_id"):
-            fail(f"{eid}: source-family and independence-unit IDs are required")
+        family_id = entry.get("source_family_id")
+        unit_id = entry.get("independence_unit_id")
+        if not isinstance(family_id, str) or not family_id.strip():
+            fail(f"{eid}: source_family_id must be a non-empty string")
+        if not isinstance(unit_id, str) or not unit_id.strip():
+            fail(f"{eid}: independence_unit_id must be a non-empty string")
+        if unit_id in seen_independence_units:
+            fail(f"{eid}: duplicate independence_unit_id {unit_id!r}; statistical units must be unique")
+        seen_independence_units.add(unit_id)
         if not entry.get("reviewer") or not entry.get("reviewed_on"):
             fail(f"{eid}: reviewer and reviewed_on are required")
         review = entry.get("equivalence_review")
