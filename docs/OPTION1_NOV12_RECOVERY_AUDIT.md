@@ -79,3 +79,44 @@ The current fresh protocol records that only `llm_acceptance`, `complexity_routi
 - Scientific rerun: **not run**.
 
 **Bottom line:** Option 1 is recoverable without discarding the entire current branch, but the manuscript's revised Hybrid-versus-LLM/PySR/NN claim requires a fair matched comparator design. The 15 November target should be a frozen, auditable rerun protocol—not an unsupported promise of Hybrid superiority.
+
+## 7. Follow-up source trace — matched comparison correction (12 November)
+
+A deeper read of the actual method adapters confirms the four-way problem and makes the required correction more specific.
+
+### 7.1 The current five-system rows are the wrong four systems
+
+`exp1_five_system.py` selects `PureLLMBaselineMethod`, `ImprovedNNMethod`, `HybridAllDomainsMethod`, `SymbolicEngineMethod`, and `HybridSystemV50_2Method`. This is a five-row exploratory suite, not the requested four-way comparison. In particular:
+
+- `HybridSystemV50_2Method` delegates to the v50_2 PySR subprocess path; its module documentation explicitly says there is no LLM proposal step. It cannot stand in for the LLM+PySR Hybrid condition.
+- `HybridAllDomainsMethod` is a separate LLM+NN residual hybrid architecture, not the Core-15 HDS v50_2 LLM+PySR method.
+- `SymbolicEngineMethod` is a symbolic engine wrapper and must be checked for exact PySR-only semantics before it is labelled PySR-only.
+- The Core-15 Hybrid condition already exists in `exp1_ablation.py` as `run_condition(..., condition='hypatia')`; it invokes `HybridDiscoverySystem.discover()` with `use_llm=True` in strict live-API mode. The same function has a `hypatia_nollm` condition, but that is not an LLM-only baseline.
+
+### 7.2 The outer test split is generated and then discarded
+
+`exp1_five_system.run_method_on_equation()` calls `generate_data()` and receives `X_train, X_test, y_train, y_test`. It passes only `X_train, y_train` to each method and does not use `X_test, y_test` for headline scoring. The returned `train_r2/train_rmse` fields are simply copied from `result.r2/result.rmse`, even though those fields do not have a consistent evaluation scope across wrappers.
+
+For NN specifically, `ImprovedNNMethod.run()` makes an internal 80/20 split of the arrays passed to it, but its headline `r2/rmse` is computed on the full supplied `(X, y)` dataset (in-sample); a separate `r2_heldout/rmse_heldout` diagnostic is retained in metadata. Therefore the NN headline is not an untouched outer-test metric either.
+
+### 7.3 Correct four-arm definition
+
+The intended primary comparison should be:
+
+1. **Hybrid:** Core-15 `HybridDiscoverySystem` via the existing LLM-enabled `hypatia` path (LLM proposal + PySR/refinement).
+2. **LLM-only:** a clearly specified LLM proposal/prediction path with no PySR refinement. Verify that its predictions can be evaluated on the shared outer test set; do not silently substitute the separate all-domains hybrid.
+3. **PySR-only:** raw PySR fit with no LLM proposal, using the same training rows and an explicit test predictor.
+4. **NN-only:** NN trained on the same training rows, with model selection confined to training/validation data and final scoring on the shared untouched outer test rows.
+
+All four arms must receive the same per-equation/per-seed training dataset. The test set must not be passed into fitting, early stopping, model selection, routing-threshold choice, or formula selection. Store test R², RMSE and MAE from predictions on the same `X_test`; report near/medium/far extrapolation separately on common generated arrays. Keep symbolic equation/parameter recovery metrics separate from predictive metrics because they are not defined equivalently for NN.
+
+The LLM-only arm is a key unresolved implementation detail: `PureLLMBaselineMethod` exists, but its returned result/prediction contract must be verified before it can be scored on the shared test array. If no valid predictor can be extracted without adding an unvalidated method path, mark the four-way comparison **not ready** rather than fabricate an LLM-only result.
+
+### 7.4 Nov 15 safety decision
+
+Until the matched four-arm evaluator is implemented and reviewed, do not use `exp1_five` as evidence for the revised four-way claim. The current `exp1_five` stage may remain an explicitly exploratory legacy five-system output only if its labels and metric scopes are clearly disclosed; otherwise defer that stage from the Nov 15 campaign. Do not change the scientific method or dispatch workflows as part of this source audit.
+
+### 7.5 Tau and gate decisions retained
+
+- Keep `degradation_tau: null`; runner intentionally unsets the inherited tau environment variable. Record ensemble fallback and make no calibrated selective-routing claim.
+- Report only the three implemented Core-15 gates (`llm_acceptance`, `complexity_routing`, `pysr_prior`). The three missing gates remain unavailable, not zero-effect.
