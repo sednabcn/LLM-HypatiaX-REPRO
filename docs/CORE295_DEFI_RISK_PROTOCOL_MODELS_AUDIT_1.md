@@ -328,3 +328,67 @@ After the debt and collateral transfer, remaining debt may be socialized only if
 **Structural disposition:** a strong candidate for one coupled Euler V2 liquidation/state-transition family: multi-collateral liquidation-LTV health aggregation, health-shortfall-dependent capped discount, collateral-limited repay/yield sizing, internal debt transfer to the liquidator, EVC/cool-off safeguards and conditional residual-debt socialization. The weighted collateral/debt eligibility test is related to Aave and Compound risk aggregation, but the reverse-discount function and debt-transfer settlement are a distinct mechanism. Do not count the health ratio, discount cap, collateral cap, debt transfer and socialization branches as independent equations.
 
 **Version and deployment caveats.** Euler V2 uses modular EVault deployments and per-vault integrations/configuration. This snapshot does not identify a deployed EVault proxy, module set, collateral-vault list, oracle route, unit of account, LTV schedule, max discount, cool-off value, configuration flags or block state. The source's `BUSL-1.1` liquidation module and GPL-2.0-or-later shared utility files are also distinct license headers; preserve these provenance details. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
+
+
+## 11. Liquity V2: Stability Pool offset, collateral penalty and stake-weighted redistribution
+
+**Pinned implementation snapshot.** Official repository `liquity/bold`, commit `d262669ef3c4d37bf0544df3bb2624c07b8a5ee0` (2026-09-26):
+- `contracts/src/TroveManager.sol`, blob SHA `389586974a407e59bb31dcd588070927d0992452`
+- `contracts/src/StabilityPool.sol`, blob SHA `db0a24a56921e84c12d95f53f1841eff60f410a6`
+- `contracts/src/Dependencies/Constants.sol`, blob SHA `9e0231988039464b070dc5cd325f7e35d35f1e22`
+- `contracts/src/Dependencies/LiquityMath.sol`, blob SHA `d6d2474f370c27a630d92732de430b910e458ac5`
+
+Pinned commit: https://github.com/liquity/bold/commit/d262669ef3c4d37bf0544df3bb2624c07b8a5ee0. The repository describes Liquity V2's multi-branch system; the pinned commit is a source snapshot, not a deployment/branch configuration match.
+
+### Eligibility and liquidation input
+
+The Trove Manager obtains the branch price and computes the individual collateral ratio from the entire trove state, including accrued interest and pending redistribution gains:
+\[
+ICR=\left\lfloor\frac{coll\cdot price}{debt}\right\rfloor.
+\]
+The pinned batch liquidation path processes active or zombie troves only when (ICR<MCR). The MCR, critical collateral ratio and shutdown collateral ratio are branch-specific values loaded through the AddressesRegistry; source constants include 110%/150%/110% for WETH and 120%/160%/120% for staked-ETH branches. Do not treat those constants as proof of a current deployed branch's live parameters.
+
+### Priority Stability Pool offset
+
+The batch path reserves a minimum 1 BOLD in the Stability Pool when deposits are at least 1 BOLD, then uses the remaining available deposits for offsets. For a trove with entire debt (D), collateral (C), and available offset deposits (S):
+\[
+D_{off}=\min(D,S),
+\qquad
+C_{SP,portion}=\left\lfloor\frac{C\,D_{off}}{D}\right\rfloor.
+\]
+Collateral gas compensation is (min(\lfloor C_{SP,portion}/200\rfloor,2\;ETH)). After subtracting that compensation, the offset collateral is capped at debt value plus the configured Stability Pool liquidation penalty:
+\[
+C_{SP}=\min\!\left(
+C_{SP,portion}-G_C,
+\left\lfloor\frac{D_{off}(1+p_{SP})}{price}\right\rfloor
+\right).
+\]
+Any excess is recorded as borrower collateral surplus. The Stability Pool burns the offset BOLD, reduces each depositor's deposit proportionally, and receives the corresponding collateral. Its product-sum accounting updates the deposit product (P) and collateral gain sum (S), with scale changes when (P) becomes small.
+
+### Residual redistribution
+
+Debt not covered by the Stability Pool is redistributed to active troves in the same collateral branch:
+\[
+D_{red}=D-D_{off},
+\qquad
+C_{red,portion}=C-C_{SP,portion}.
+\]
+The collateral amount retained for redistribution is capped by (D_{red}(1+p_{red})/price); any remaining collateral is accounted as surplus. The redistribution penalty is branch-configured and is higher than the Stability Pool penalty in the source constants (10% for WETH and 20% for staked-ETH branches, versus 5% for both SP paths).
+
+The implementation distributes collateral and debt per unit of total stake, with carried-forward division errors:
+\[
+N_C=C_{red}\cdot 10^{18}+e_C,
+\quad
+r_C=\left\lfloor\frac{N_C}{totalStakes}\right\rfloor,
+\quad
+e_C'=N_C-r_C\cdot totalStakes,
+\]
+and analogously for debt. The cumulative (L_{coll}) and (L_{boldDebt}) reward-per-stake terms are incremented; trove reward snapshots determine each active trove's pending collateral and debt gains. DefaultPool holds the pending redistribution amounts until individual troves apply them.
+
+The liquidation sequence closes the trove, accounts for batch interest/management fees where applicable, offsets Stability Pool debt, redistributes residual debt/collateral, sends collateral surplus to the CollSurplusPool, updates system snapshots and pays ETH plus collateral gas compensation. The source also supports batches of troves and leaves at least 1 BOLD in the SP when possible.
+
+**Structural disposition:** a strong candidate for one coupled liquidation-and-loss-allocation family: individual ICR threshold, priority Stability Pool debt cancellation with product-sum depositor accounting, branch-specific collateral penalties/surplus, stake-weighted redistribution with error feedback, pending reward snapshots and gas compensation. This is structurally distinct from Maker/Sky Dutch auctions, Morpho direct repay/seize, Compound Comet absorption and Euler's debt-transfer liquidation. Do not count ICR, SP offset, P/S reward accounting, redistribution and gas compensation as separate candidate equations.
+
+**JIT terminology caveat.** Liquity's current user documentation describes a just-in-time (JIT) fallback when a Stability Pool is empty. The pinned TroveManager source path inspected here exposes the ordinary Stability Pool offset plus redistribution path; it does not expose a separately named `liquidateJIT` function. Treat JIT as an operational/composability mode to be mapped to the exact deployed transaction path before formalizing it as a distinct mechanism.
+
+**Version and deployment caveats.** The current repository is multi-branch and the TroveManager constructor loads MCR, SCR, CCR and penalty ratios from an AddressesRegistry. This audit does not map a deployed branch, registry, price feed, trove manager, pool balance, parameter set or block. No RPC, deployment lookup, contract execution, tests, simulation or experiment was performed.
