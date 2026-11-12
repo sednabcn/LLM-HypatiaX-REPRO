@@ -1435,6 +1435,7 @@ class PureLLMBaselineMethod(BaseMethod):
         if self._no_cache:
             self._clear_llm_cache()
 
+        result = None
         try:
             result = self._baseline.generate_formula(
                 description, metadata.get("domain", "unknown"), var_names, metadata,
