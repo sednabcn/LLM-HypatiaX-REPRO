@@ -2436,7 +2436,7 @@
       "domain": "DeFi Risk",
       "title": "Sky Protocol collateral liquidation documentation",
       "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/",
-      "use": "Official current documentation for Clipper/Abacus liquidation auction price functions and governance parameters; version contract code and price calculator",
+      "use": "Official current documentation for Clipper/Abacus liquidation auction price functions and governance parameters; version contract code and price calculator Rechecked 2026-11-12: current official developer documentation explicitly describes Dog/Clipper Liquidation 2.0, instant Dutch auction settlement, partial takes bounded by tab/chost, Hole/Dirt accounting, OSM-derived top price, and governance-configurable LinearDecrease, StairstepExponentialDecrease and ExponentialDecrease. Still needs exact current implementation commit and deployment/configuration pin; docs alone do not establish deployment state.",
       "status": "candidate_reference"
     },
     {
@@ -2444,7 +2444,7 @@
       "domain": "DeFi Risk",
       "title": "MIP45: Liquidations 2.0 — Liquidation System Redesign",
       "url": "https://mips.makerdao.com/mips/details/MIP45",
-      "use": "Historical primary design specification for Dutch liquidation auctions and linear/stepwise/continuous exponential Abacus price curves; explicitly superseded, not current normative behavior",
+      "use": "Historical primary design specification for Dutch liquidation auctions and linear/stepwise/continuous exponential Abacus price curves; explicitly superseded, not current normative behavior Status nuance checked against the current Sky Protocol Collateral Liquidation documentation (retrieved 2026-11-12): although the MIP portal labels MIP45 obsolete due to MIP102c2-SP1, current Sky developer docs still describe the Dog/Clipper Liquidation 2.0 mechanics, including global/per-ilk Hole/Dirt, partial collateral purchases, chost, OSM start price, configurable Abacus curves and reset logic. 'MIP obsolete' is a governance-document status, not evidence that the deployed LIQ2.0 implementation ceased to exist or was replaced. The current docs are descriptive, not a pinned deployed-contract/parameter proof.",
       "status": "candidate_reference"
     },
     {
