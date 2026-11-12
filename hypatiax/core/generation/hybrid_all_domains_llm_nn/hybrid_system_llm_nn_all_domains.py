@@ -275,7 +275,19 @@ class HybridSystemAllDomains:
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
-            content = response.content[0].text
+            # Anthropic extended-thinking responses may put a ThinkingBlock
+            # before the answer. Select the first text block rather than
+            # assuming response.content[0] has a .text attribute.
+            text_blocks = [
+                block for block in getattr(response, "content", [])
+                if getattr(block, "type", None) == "text"
+            ]
+            if not text_blocks:
+                raise ValueError(
+                    "LLM response contained no text block; block types: "
+                    f"{[getattr(block, 'type', type(block).__name__) for block in getattr(response, 'content', [])]}"
+                )
+            content = text_blocks[0].text
             parsed = self._parse_response(content)
 
             result = {
