@@ -161,3 +161,32 @@ The command reruns the read-only audit against the same catalogue and staging di
 The proposal appends only `structurally_reviewed` entries, preserves the canonical catalogue's draft status, records the canonical input SHA-256 and hashes of staged inputs, and emits a unified diff. It does not set accepted flags, edit the canonical catalogue, or run the catalogue validator. Outputs are new files and are never overwritten.
 
 A maintainer must inspect the complete diff, verify source-page evidence and all cross-candidate structural/sampling implications, resolve or explicitly disposition warnings, and separately authorize any application. The proposal is not a merge request, scientific acceptance, or permission to apply changes.
+
+
+## Explicit approval and guarded proposal application
+
+The proposal builder is non-applying. If a maintainer team later decides to apply a specific proposal, first calculate the exact file hashes:
+
+```bash
+sha256sum data/core295_proposals/core295_catalogue.proposed.json
+sha256sum data/core295_proposals/core295_catalogue.diff
+sha256sum config/core295_catalogue.json
+```
+
+Complete [`core295_catalogue_application_approval.template.json`](templates/core295_catalogue_application_approval.template.json) with the exact hashes, the exact appended equation IDs, explicit disposition of audit warnings, scientific-review confirmations, two distinct maintainer approvals, and a separate application authorization. The template records human attestations; it does not provide cryptographic signatures or independently prove the statements.
+
+Only after that authorization, the guarded applier can be invoked:
+
+```bash
+python scripts/core295_apply_approved_catalogue_proposal.py \
+  --proposal data/core295_proposals/core295_catalogue.proposed.json \
+  --diff data/core295_proposals/core295_catalogue.diff \
+  --approval data/core295_proposals/core295_catalogue.approval.json \
+  --catalogue config/core295_catalogue.json \
+  --backup data/core295_proposals/core295_catalogue.pre-apply.json \
+  --apply
+```
+
+The command refuses to proceed without the explicit `--apply` flag, exact proposal/diff/catalogue hashes, two distinct named approvers, all scientific-review confirmations, and separate application authorization. It checks that the proposal is append-only, does not modify existing catalogue entries or other canonical fields, keeps the catalogue in draft, and adds only `structurally_reviewed` non-accepted entries. It runs the structural catalogue validator on a temporary copy before writing, rechecks the canonical hash immediately before replacement, and creates an exclusive exact-byte backup before atomic replacement.
+
+This is a guarded file-application mechanism, not a scientific acceptance mechanism, cryptographic signature verifier, merge, experiment run, or guarantee that the reviewers' attestations are correct. Applying a proposal does not change any entry to `accepted`; acceptance and final readiness remain separate review gates.
