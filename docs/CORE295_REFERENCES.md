@@ -391,3 +391,6 @@ These are additional official documentation pointers, not independent primary re
 
 
 209. State Public Scientific-Technical Library (GPNTB), catalogue record for *Сборник работ по чистой и прикладной химии*, issue 4 (1 September 1925), 231, [4] pages; mirror record hosted by the Sverdlovsk Scientific Information Centre: https://lib.dm-centre.ru/lib/gpntb/. The record exposes a PDF filename for resource 6567, but the metadata/download endpoints were inaccessible during this retrieval attempt. Volume extent differs from the 233-page count in another catalogue record; unresolved pending scan inspection.
+
+
+210. Nicholson, A. J., and Bailey, V. A. “The Balance of Animal Populations.—Part I.” *Proceedings of the Zoological Society of London* 105(3) (September 1935), pp. 551–598. Primary publisher record: https://doi.org/10.1111/j.1096-3642.1935.tb01680.x. Publisher PDF/ePDF endpoints were inaccessible in this retrieval pass; equations remain untranscribed from the original.
