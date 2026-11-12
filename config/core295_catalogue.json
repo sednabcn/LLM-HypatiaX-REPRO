@@ -3406,6 +3406,14 @@
       "url": "https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.pdf",
       "use": "Original scan of P. H. Leslie, 'On the Use of Matrices in Certain Population Mathematics', Biometrika 33(3) (1945), pp.183–212. Printed pp.183–185 define age-specific survival P_x, daughters surviving to age 0–1 F_x, and the lower-Hessenberg Leslie projection matrix M with first-row fertility and subdiagonal survival; n_1=M n_0 and n_t=M^t n_0. Section 2 derives P_x from life-table survivorship and F_x from age-specific maternal frequency with within-interval survival. Proposed as one discrete age-structured population operator, not separate scalar equations for each age class or its eigenvalue/stable-age consequences.",
       "status": "candidate_primary"
+    },
+    {
+      "source_id": "BIO-HASSELL-VARLEY-1969-PARASITOID-INTERFERENCE",
+      "domain": "Biology",
+      "title": "Hassell & Varley (1969), New Inductive Population Model for Insect Parasites and its Bearing on Biological Control",
+      "url": "https://doi.org/10.1038/2231133a0",
+      "use": "Discrete-generation host–parasitoid model with parasitoid-density-dependent searching efficiency (mutual interference). The commonly reproduced form modifies the Nicholson–Bailey attack term using Q P^(1-m); exact original notation, equations and page location remain unverified because the primary full text is subscription-gated. Source lead only; not equation-ready and not counted as a candidate.",
+      "status": "candidate_reference"
     }
   ],
   "notes": [
