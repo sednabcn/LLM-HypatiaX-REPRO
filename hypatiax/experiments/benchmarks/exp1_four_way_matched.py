@@ -253,6 +253,8 @@ def _run_nn_only(method, eq, X_train, y_train, X_test, y_test, extrap):
                 "metadata": dict(result.metadata or {}),
                 "headline_training_metric_not_used": True,
                 "fallbacks_disabled": True,
+                "all_shared_training_rows_used": True,
+                "internal_heldout_metric": "not_applicable",
             },
         }
     except Exception as exc:
