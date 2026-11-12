@@ -825,7 +825,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # the sanitizer-restored best_expr_raw.
         from hypatiax.core.r2_canonical import r2_detail as _r2_detail
         extrap_r2_raw, extrap_r2_status = {}, {}
-        extrap_r2, extrap_rmse = {}, {}
+        extrap_r2, extrap_rmse, extrap_mae = {}, {}, {}
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
         _predict     = None
@@ -856,16 +856,19 @@ def run_condition(eq, condition, seed=42, niterations=None,
             if _predict is None:
                 extrap_r2[regime_name]   = None
                 extrap_rmse[regime_name] = None
+                extrap_mae[regime_name] = None
                 continue
             try:
                 y_pred = np.asarray(_predict(X_e), dtype=float)
                 extrap_r2[regime_name]   = _safe_r2(y_e, y_pred)
                 extrap_rmse[regime_name] = _safe_rmse(y_e, y_pred)
+                extrap_mae[regime_name] = _safe_mae(y_e, y_pred)
                 extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred)
             except Exception as ee:
                 dbg(f"extrap eval failed ({regime_name}): {ee}")
                 extrap_r2[regime_name]   = None
                 extrap_rmse[regime_name] = None
+                extrap_mae[regime_name] = None
 
         # Outer test rows were generated before any fitting and are never used
         # for fitting, routing, model selection, or threshold selection.
@@ -912,6 +915,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "extrap_rmse_near":      extrap_rmse.get("near"),
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
+            "extrap_mae_near":        extrap_mae.get("near"),
+            "extrap_mae_medium":      extrap_mae.get("medium"),
+            "extrap_mae_far":         extrap_mae.get("far"),
             "sr_time_s":             sr_time,
             "llm_time_s":            _llm_m["llm_time_s"],
             "total_time_s":          sr_time,  # discover() wall time includes LLM; llm_time_s is a subset.
@@ -981,11 +987,12 @@ def run_condition(eq, condition, seed=42, niterations=None,
 
         from hypatiax.core.r2_canonical import r2_detail as _r2_detail
         extrap_r2_raw, extrap_r2_status = {}, {}
-        extrap_r2, extrap_rmse = {}, {}
+        extrap_r2, extrap_rmse, extrap_mae = {}, {}, {}
         for regime_name, (X_e, y_e) in extrap_sets.items():
             y_pred_e                  = model.predict(X_e)
             extrap_r2[regime_name]    = _safe_r2(y_e, y_pred_e)
             extrap_rmse[regime_name]  = _safe_rmse(y_e, y_pred_e)
+            extrap_mae[regime_name]   = _safe_mae(y_e, y_pred_e)
             extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred_e)
 
         best_expr_raw = str(model.sympy())
@@ -1001,6 +1008,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
         extrap_r2   = {r: None for r, _ in EXTRAP_REGIMES}
         extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_rmse = {r: None for r, _ in EXTRAP_REGIMES}
+        extrap_mae = {r: None for r, _ in EXTRAP_REGIMES}
         best_expr   = "evaluation_error"
         complexity  = None
 
@@ -1031,6 +1039,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "extrap_rmse_near":      extrap_rmse.get("near"),
         "extrap_rmse_medium":    extrap_rmse.get("medium"),
         "extrap_rmse_far":       extrap_rmse.get("far"),
+        "extrap_mae_near":        extrap_mae.get("near"),
+        "extrap_mae_medium":      extrap_mae.get("medium"),
+        "extrap_mae_far":         extrap_mae.get("far"),
         "sr_time_s":             sr_time,
         "llm_time_s":            0.0,
         "total_time_s":          total_time,
