@@ -103,7 +103,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Input ranges and deterministic generator remain unspecified",
@@ -139,7 +141,10 @@
           "gas and solvent identities fixed",
           "do not confuse with Ideal Gas Law"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-LANGMUIR-001",
@@ -200,7 +205,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Input ranges and deterministic generator remain unspecified",
@@ -238,7 +245,10 @@
           "monolayer",
           "adsorption/desorption equilibrium"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-MARCUS-001",
@@ -323,7 +333,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Marcus (1956) Part I describes the rate as the solution collision number multiplied by exp(-DeltaF_dagger/(kT)); the proposed record uses Z for that collision-frequency prefactor.",
@@ -371,7 +383,10 @@
           "energy units must be consistent",
           "explicit Core-15 Arrhenius/Rate Law overlap review required"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-HILL-MUSCLE-001",
@@ -447,7 +462,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Primary source record and characteristic equation lineage identified",
@@ -488,7 +505,10 @@
           "Freeze force/velocity sign convention, muscle type, temperature and activation protocol before benchmarking",
           "No algebraic rearrangement or parameter rescaling is a separate equation"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "PHYS-POISEUILLE-001",
@@ -573,7 +593,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Exact equation and section location are visible in OpenStax §14.7, Eq. 14.19",
@@ -618,7 +640,10 @@
           "Not valid for turbulent flow, non-Newtonian fluids, significant entrance effects or compliant/noncylindrical conduits without model changes",
           "Check Reynolds number and physical geometry for every generated sample"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "PHYS-PLANCK-SPECTRUM-001",
@@ -704,7 +729,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Exact modern wavelength-intensity equation is visible as OpenStax Eq. 6.11",
@@ -747,7 +774,10 @@
           "Do not treat a real surface with wavelength-dependent emissivity as an ideal blackbody without adding emissivity",
           "The original Planck paper uses a different spectral convention; this record selects the OpenStax wavelength-intensity convention explicitly"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "PHYS-THIN-LENS-001",
@@ -807,7 +837,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Exact thin-lens equation is printed as OpenStax Eq. 2.19",
@@ -846,7 +878,10 @@
           "Do not count lens-maker equation, sign variants or algebraic rearrangements as independent units without separate derivation review",
           "Thick lenses, aberrations and non-paraxial rays require richer models"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "AMM-BALANCER-WEIGHTED-001",
@@ -940,7 +975,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Official documentation gives the invariant V=product(B_t^W_t) and states normalized weights sum to one",
@@ -986,7 +1023,10 @@
           "Do not treat weighted spot-price or swap-output rearrangements as separate independent candidates without a family-level design",
           "Pin the exact Balancer V2 code commit and pool version before source_verified or acceptance"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "RISK-MORPHO-LIF-001",
@@ -1040,7 +1080,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "The pinned Morpho Blue source confirms LIF=min(maxFactor,1/(1-cursor*(1-LLTV)))",
@@ -1080,7 +1122,10 @@
           "Do not substitute newer Morpho Midnight per-collateral cursor or post-maturity ramp mechanics",
           "Pin this exact commit; later contract versions may change constants or calculation"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "RISK-EULER-AUCTION-001",
@@ -1151,7 +1196,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Exact source implementation was fetched at the pinned EVK commit; discountFactor is calculated as collateralAdjustedValue/liabilityValue and floored at 1-maxDiscount",
@@ -1195,7 +1242,10 @@
           "Fixed-point CONFIG_SCALE and rounding must be preserved in an implementation-faithful benchmark",
           "Do not mix this EVK mechanism with Euler V1's distinct boosted discount formula"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "RISK-COMPOUND-BORROW-KINK-001",
@@ -1281,7 +1331,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Pinned Comet source confirms the low branch base+slopeLow*U and high branch base+slopeLow*kink+slopeHigh*(U-kink)",
@@ -1325,7 +1377,10 @@
           "Do not count Aave two-slope variants as independent merely because protocol parameters differ; they share the utilization-kink family",
           "Pin Comet implementation and market-specific parameter configuration before acceptance"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "AMM-DODO-PMM-BASE-SHORTAGE-001",
@@ -1404,7 +1459,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Official DODO docs state the base-shortage marginal price P=i(1-k+(B0/B)^2 k)",
@@ -1449,7 +1506,10 @@
           "Regression target updates and pool-specific DVM/DSP/DPP state transitions are not captured by this scalar branch",
           "Preserve DecimalMath fixed-point rounding and the pinned contract revision before implementation-level acceptance"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-RAOULT-VAPOR-001",
@@ -1511,7 +1571,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Exact modern component equation is printed in OpenStax Chemistry 2e §11.4",
@@ -1551,7 +1613,10 @@
           "Total vapor pressure obtained by summing component partial pressures is linked through Dalton's law, not an independent candidate here",
           "Do not confuse this vapor-liquid equilibrium relation with the excluded Ideal Gas Law"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-FICK-CARDIAC-OUTPUT-001",
@@ -1621,7 +1686,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Primary historical source metadata identifies Fick's 1870 paper and pages XVI-XVII",
@@ -1662,7 +1729,10 @@
           "This is an application of conservation of mass; do not count rearrangements or carbon-dioxide analogues as independent equations",
           "Ensure unit consistency: mL O2 min^-1 divided by mL O2 L^-1 gives L min^-1"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "RISK-UNISWAP-V3-GEOMETRIC-TWAP-001",
@@ -1716,7 +1786,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Pinned OracleLibrary source computes arithmeticMeanTick from cumulative tick delta divided by secondsAgo",
@@ -1756,7 +1828,10 @@
           "Preserve int56 cumulative tick subtraction, uint32 secondsAgo and int24 mean tick bounds",
           "Uniswap v2 arithmetic cumulative-price TWAP is a distinct averaging construction but shares the oracle-manipulation source family"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "RISK-UNISWAP-V2-ARITHMETIC-TWAP-001",
@@ -1818,7 +1893,9 @@
         "model_class": "protocol_simulation",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Pinned example implementation computes priceAverage=(priceCumulative-priceCumulativeLast)/timeElapsed",
@@ -1859,7 +1936,10 @@
           "Preserve uint32 timestamp wrap and uint256 cumulative subtraction semantics",
           "The formula is a manipulation-resistant oracle statistic only when observations are spaced and maintained according to the chosen security design"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-FICK-FLUX-001",
@@ -1921,7 +2001,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Primary Wiley scan confirms the local transfer relation on printed page 66",
@@ -1963,7 +2045,10 @@
           "Fick's second law follows from this flux relation plus mass conservation and is not an independent entry here",
           "Variable diffusivity, nonideal chemical-potential gradients, advection and anisotropic media require generalized transport equations"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-BEER-LAMBERT-001",
@@ -2042,7 +2127,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "IUPAC Gold Book gives the exact decadic spectral-power relation and the conditions on monochromatic radiation and homogeneous isotropic medium",
@@ -2085,7 +2172,10 @@
           "Do not mix decadic epsilon with a natural-log attenuation coefficient; conversion includes ln(10)",
           "The exponential form is physically distinct from Arrhenius kinetics, but an explicit Core-15 exclusion overlap review remains required"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-TUMOR-TURNOVER-001",
@@ -2182,7 +2272,9 @@
         "model_class": "ode_ivp",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Primary PDF Eq. 9 is directly visible on printed page 547",
@@ -2237,7 +2329,10 @@
           "The primary study cautions that the model cannot be generalized beyond the baseline tumor-size range represented in its population (2–20 cm); this is a study-specific evidence boundary, not a universal safe extrapolation interval.",
           "Concentration is an individual PK-derived time-varying input; independently sampling C at each equation row would break the dosing/PK dependence structure."
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-GOMPERTZ-1825-MORTALITY-001",
@@ -2312,7 +2407,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Direct equation-level transcription from the original 1825 paper, Article I, section 5, printed p. 518",
@@ -2356,7 +2453,10 @@
           "Human mortality/life-table modelling is demographic biology; retain proposed status until domain-scope and cross-domain structural-equivalence review is completed",
           "Do not conflate this mortality law with Gompertz growth curves used in tumor or organism growth; same surname does not imply same governing model"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-VOLTERRA-1926-N-SPECIES-CONSERVATIVE-001",
@@ -2445,7 +2545,9 @@
         "model_class": "ode_ivp",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Direct equation transcription from the author-expanded 1927 reprint of the 1926 Lincei memoir, Part II, §2, equations (B)",
@@ -2494,7 +2596,10 @@
           "The 1927 text is an author-expanded reprint: its preface states that Parts I–III rearrange and add to the 1926 Lincei memoir, while Part IV reprints 1927 notes",
           "No generator, input ranges, calibration or acceptance review has been completed"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-LESLIE-1945-AGE-STRUCTURED-MATRIX-001",
@@ -2578,7 +2683,9 @@
         "model_class": "matrix_operator",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Direct transcription of Leslie's original matrix equation M n_0=n_1 on printed p.184",
@@ -2626,7 +2733,10 @@
           "This discrete age-structured operator is not interchangeable with continuous-time Lotka renewal equations or scalar exponential/logistic growth laws",
           "No generator, benchmark input ranges or statistical independence review has been completed"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "BIO-FUJII-HOLLING-MACE-1986-GENERALIZED-ATTACK-001",
@@ -2715,7 +2825,9 @@
         "model_class": "explicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Primary publisher abstract equation image inspected; variable definitions transcribed from same abstract",
@@ -2761,7 +2873,10 @@
           "Do not create separate candidates for Type I, II, III and IV parameter regimes",
           "Structural distinctness from the Core-15/Holling Type II family requires explicit E0–E5 review"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     },
     {
       "equation_id": "CHEM-FRUMKIN-1967-INTERACTION-001",
@@ -2839,7 +2954,9 @@
         "model_class": "implicit_scalar",
         "parameter_sampling_scope": null,
         "sampling_semantics": null,
-        "constraints_enforced": null
+        "constraints_enforced": null,
+        "constraint_enforcement_method": null,
+        "constraint_evidence": null
       },
       "review_notes": [
         "Equation directly printed as Eq. (4), p.268 in accessible author-authored primary paper by Frumkin and Damaskin",
@@ -2884,7 +3001,10 @@
           "Full model includes related potential and differential-capacitance relations Eqs. (5)–(9), which must not be counted as separate rows without a structural review",
           "Compare with CHEM-LANGMUIR-001 and all adsorption source families under the E0–E5 policy before acceptance"
         ]
-      }
+      },
+      "fixed_parameter_values": {},
+      "physical_constant_values": {},
+      "input_validity_bounds": {}
     }
   ],
   "source_register": [
