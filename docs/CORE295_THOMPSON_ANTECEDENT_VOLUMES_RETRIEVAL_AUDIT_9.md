@@ -185,3 +185,12 @@ The Core-295 adapter previously supplied hashed arrays by temporarily replacing 
 - `hypatiax/experiments/benchmarks/core295_adapters/common.py`, commit `c6f6e1d6df7d8663205d0f1cb8e1730d2e2ef028`, blob `ad479b89b419313fb1be2f4b32c3ad3a8a4a6792`.
 
 Both file contents were re-fetched after commit. No tests or execution were performed; the change is source-inspected only.
+
+
+## Addendum 5 — volume-index cross-check and exact-page route failures
+
+The Wikisource table of contents for tome 153 (1911) lists Silvanus-P. Thompson's harmonic-analysis note at p.88, but not William-R. Thompson. A targeted search of that index finds no printed p.1401 entry. This is evidence that the volume-index OCR/index does not corroborate the 1922d citation; it does **not** prove that the cited article does not exist, because the index is subject-classified and may omit or mis-OCR entries (sources turn507550view0 and turn507550view3).
+
+The tome-164 (1917) contents similarly identify L. Bordas's Ichneumonid paper at p.235, while no W.R. Thompson entry appears in the indexed contents. The direct Wikisource page routes attempted for tome 153 p.1401, tome 156 p.1401, and tome 164 p.433 were inaccessible to the retrieval interface (sources turn565832view0, turn565832view1, turn565832view2). Do not infer article identity from these failed opens. BHL confirms a 1913 volume record for tome 156, but the p.1401 article remains unidentified (source turn322426search2).
+
+Conclusion unchanged: the 1922d footnote's three antecedent references are not yet verified at page-image level. No Thompson formula transcription, candidate promotion, or independence assignment is justified.
