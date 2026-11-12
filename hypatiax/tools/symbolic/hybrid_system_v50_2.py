@@ -731,6 +731,15 @@ class HybridDiscoverySystem:
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
 
+                _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
+                if _llm_engine is not None:
+                    _llm_engine.last_call_attempted = False
+                    _llm_engine.last_response_received = False
+                    _llm_engine.last_response_replayed = False
+                    _llm_engine.last_proposal_generated = False
+                    _llm_engine.last_call_info = {}
+                    _llm_engine.last_error = None
+
                 result = self.symbolic_engine.discover(
                     X, y, variable_names, equation_name=equation_name, random_state=seed,
                     # FIX-C: suppress non-determinism warning when running in
@@ -816,6 +825,26 @@ class HybridDiscoverySystem:
                     return best_result
 
             except Exception as e:
+                _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
+                if _llm_engine is not None and getattr(_llm_engine, "last_call_attempted", False):
+                    if not hasattr(self, "_llm_attempt_modes"):
+                        self._llm_attempt_modes = []
+                    if not hasattr(self, "_llm_attempt_info"):
+                        self._llm_attempt_info = []
+                    _response_replayed = bool(getattr(_llm_engine, "last_response_replayed", False))
+                    _response_received = bool(getattr(_llm_engine, "last_response_received", False))
+                    _call_info = getattr(_llm_engine, "last_call_info", {}) or {}
+                    self._llm_attempt_modes.append("hybrid_llm_failed")
+                    self._llm_attempt_info.append({
+                        "llm_mode": "hybrid_llm_failed",
+                        "llm_error": getattr(_llm_engine, "last_error", None) or f"{type(e).__name__}: {e}",
+                        "llm_attempted": True,
+                        "llm_called": _response_received and not _response_replayed,
+                        "llm_proposal_generated": bool(getattr(_llm_engine, "last_proposal_generated", False)),
+                        "llm_response_replayed": _response_replayed,
+                        "llm_temperature_requested": _call_info.get("temperature_requested"),
+                        "llm_temperature_sent": _call_info.get("temperature_sent"),
+                    })
                 last_attempt_error = e
                 logger.error(f"   [ERROR] Attempt {attempt + 1} failed: {e}")
                 logger.error(f"Attempt {attempt + 1} exception", exc_info=True)
