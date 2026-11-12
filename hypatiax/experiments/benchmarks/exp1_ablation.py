@@ -552,6 +552,13 @@ def _safe_rmse(y_true, y_pred):
         return None  # audit-M3: was float('inf')
     return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
+def _safe_mae(y_true, y_pred):
+    y_true = np.asarray(y_true, dtype=float).reshape(-1)
+    y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
+    if y_true.shape != y_pred.shape or not np.all(np.isfinite(y_pred)) or len(y_true) == 0:
+        return None
+    return float(np.mean(np.abs(y_true - y_pred)))
+
 # =============================================================================
 # §12 · PySR builder (pysr_only condition)
 # =============================================================================
@@ -860,6 +867,18 @@ def run_condition(eq, condition, seed=42, niterations=None,
                 extrap_r2[regime_name]   = None
                 extrap_rmse[regime_name] = None
 
+        # Outer test rows were generated before any fitting and are never used
+        # for fitting, routing, model selection, or threshold selection.
+        test_r2 = test_rmse = test_mae = None
+        if _predict is not None:
+            try:
+                _test_pred = np.asarray(_predict(X_test), dtype=float).reshape(-1)
+                test_r2 = _safe_r2(y_test, _test_pred)
+                test_rmse = _safe_rmse(y_test, _test_pred)
+                test_mae = _safe_mae(y_test, _test_pred)
+            except Exception as _test_exc:
+                dbg(f"outer test evaluation failed: {_test_exc}")
+
         def _f(v):
             if v is None: return "N/A"
             try: return f"{float(v):.4f}" if np.isfinite(float(v)) else "N/A"
@@ -881,6 +900,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "excluded_from_timing":  False,
             "train_r2":              train_r2,
             "train_rmse":            train_rmse,
+            "test_r2":               test_r2,
+            "test_rmse":             test_rmse,
+            "test_mae":              test_mae,
+            "test_scope":            "untouched_outer_test",
             "extrap_r2_near":        extrap_r2.get("near"),
             "extrap_r2_medium":      extrap_r2.get("medium"),
             "extrap_r2_far":         extrap_r2.get("far"),
@@ -950,6 +973,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
         y_pred_train = model.predict(X_train)
         train_r2     = _safe_r2(y_train, y_pred_train)
         train_rmse   = _safe_rmse(y_train, y_pred_train)
+        _test_pred   = np.asarray(model.predict(X_test), dtype=float).reshape(-1)
+        test_r2      = _safe_r2(y_test, _test_pred)
+        test_rmse    = _safe_rmse(y_test, _test_pred)
+        test_mae     = _safe_mae(y_test, _test_pred)
 
         from hypatiax.core.r2_canonical import r2_detail as _r2_detail
         extrap_r2_raw, extrap_r2_status = {}, {}
@@ -991,6 +1018,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "excluded_from_timing":  False,
         "train_r2":              train_r2,
         "train_rmse":            train_rmse,
+        "test_r2":               test_r2,
+        "test_rmse":             test_rmse,
+        "test_mae":              test_mae,
+        "test_scope":            "untouched_outer_test",
         "extrap_r2_near":        extrap_r2.get("near"),
         "extrap_r2_medium":      extrap_r2.get("medium"),
         "extrap_r2_far":         extrap_r2.get("far"),
