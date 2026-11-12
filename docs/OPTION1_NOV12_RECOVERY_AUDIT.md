@@ -196,3 +196,7 @@ The evaluator still intentionally rejects arbitrary SciPy APIs, imports other th
 ### 8.10 Strict target and metric validity in four-way scoring
 
 A further static review found that the four-way helper checked prediction finiteness but did not explicitly reject non-finite ground-truth values or undefined/non-finite metric outputs. The helper now validates both target and prediction arrays for matching non-empty shapes and finite values, then requires finite R², RMSE and MAE before emitting a score. This prevents invalid extrapolation targets or undefined metric results from being silently serialized as partial-looking scores. This is a source-only correction; it has not been runtime-tested.
+
+### 8.11 Complete outer-test metric requirement for symbolic arms
+
+The symbolic-arm adapter previously treated a non-null R² alone as sufficient for a successful result, even if RMSE or MAE was absent/non-finite. It now requires all three outer-test metrics (R², RMSE, MAE) to be present and finite before marking Hybrid or PySR-only successful. This aligns symbolic-arm success semantics with the stricter NN/LLM scoring helper. Missing/undefined metric sets remain failures rather than partial scores. Source-only; no runtime validation performed.
