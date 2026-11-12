@@ -115,3 +115,12 @@ The planner now validates the complete input-validity map and its finite, increa
 - Corrective commit: `e9b447639660ac4aa444427eb83b6809aa80fad0`
 - Re-fetched content SHA: `127ad7c4a17d370205312afcdb9cc8d88d87fae3`
 - Verified by re-fetch only; no planner invocation, tests, validators, or experiments.
+
+
+## Planner and adapter contract follow-through
+
+After correcting the planner's validity-bound ordering, the shared scalar adapter and all five domain wrappers were inspected at source level. The wrappers for Chemistry, Biology, Physics, DeFi AMM and DeFi Risk all delegate to the same explicit-scalar adapter; they are routing labels, not domain-specific scientific generators. That adapter rejects non-`explicit_scalar` model classes and dynamic states, so the wider model classes allowed by the planner/driver are not yet executable through these wrappers. This remains a deliberate fail-closed limitation, not evidence that the full 295-domain workload is ready.
+
+The adapter precomputes dataset hashes from the same deterministic Core-15 generator functions that `run_condition` calls again for each arm. The precomputed arrays are not passed into `run_condition`; identity depends on the generation routines remaining deterministic under the same seed and configuration. Before execution is authorized, a later implementation review should either pass the exact arrays into the run function or capture hashes from the arrays actually consumed, to make provenance direct rather than inferential.
+
+No adapter, planner, driver, tests, validators, workflows, or experiments were run during this inspection.
