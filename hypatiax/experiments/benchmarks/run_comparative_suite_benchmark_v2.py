@@ -2005,7 +2005,10 @@ class HybridDeFiMethod(BaseMethod):
             )
 
             if not result:
-                return self._unavailable("hybrid_predict returned None/empty")
+                return self._unavailable(
+                    "hybrid_predict returned None/empty",
+                    metadata=_provenance(result) if isinstance(result, dict) else {},
+                )
 
             # ── Locate the evaluation dict ────────────────────────────────
             # EnhancedHybridSystemDeFi uses different keys depending on which
@@ -2098,7 +2101,8 @@ class HybridDeFiMethod(BaseMethod):
                     rmse_val = self._safe_rmse(y, y_pred_arr)
                 else:
                     return self._unavailable(
-                        "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)"
+                        "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)",
+                        metadata=_provenance(result),
                     )
 
             # ── Build formula string ──────────────────────────────────────
@@ -2404,7 +2408,11 @@ class HybridAllDomainsMethod(BaseMethod):
                     fn = getattr(self._system, method_name)
                     break
             else:
-                return self._unavailable("No recognised run method on all-domains hybrid")
+                return self._unavailable(
+                    "No recognised run method on all-domains hybrid",
+                    metadata={"llm_called": False, "llm_attempted": False,
+                              "bypass_kind": "none", "llm_source": "none"},
+                )
 
             # FIX — domain routing guard (mirrors EnhancedHybridSystemDeFi.run()).
             # The hybrid router sometimes selects decision="nn" for Feynman physics
