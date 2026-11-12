@@ -988,6 +988,7 @@ class MethodResult:
             # (llm_called=False, bypass_kind="none"); LLM-involving methods
             # report what the wrapper recorded (None == unknown -> flagged).
             "llm_called":   self._prov("llm_called"),
+            "llm_attempted": self._prov("llm_attempted"),
             "bypass_kind":  self._prov("bypass_kind"),
             # delegate | local_fallback | frozen_cache_unknown_origin | ...
             # (None == unknown for LLM methods; "none" for non-LLM methods)
@@ -1001,7 +1002,7 @@ class MethodResult:
         n = (self.method or "").lower()
         if "llm" in n or "hybrid" in n or "ensemble" in n:
             return None
-        return False if key == "llm_called" else "none"
+        return False if key in ("llm_called", "llm_attempted") else "none"
 
 
 # ============================================================================
@@ -1340,7 +1341,11 @@ class PureLLMBaselineMethod(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._baseline is None:
-            return self._unavailable("PureLLMBaseline not available or import failed")
+            return self._unavailable(
+                "PureLLMBaseline not available or import failed",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Clear cache if --no-llm-cache was requested.
         # This is done per-call (not per-init) so that a single
@@ -1966,7 +1971,11 @@ class HybridDeFiMethod(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._system is None:
-            return self._unavailable("EnhancedHybridSystemDeFi not available")
+            return self._unavailable(
+                "EnhancedHybridSystemDeFi not available",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         if self._no_cache:
             self._clear_llm_cache()
@@ -1987,6 +1996,7 @@ class HybridDeFiMethod(BaseMethod):
             ):
                 metadata = {**metadata, "force_llm": True}
 
+            result = None
             result = self._system.hybrid_predict(
                 description,
                 metadata.get("domain", "unknown"),
@@ -2060,13 +2070,14 @@ class HybridDeFiMethod(BaseMethod):
                     f"(decision={decision!r}, keys={list(result.keys())})"
                 )
                 return self._unavailable(
-                    f"hybrid_predict returned no evaluation (decision={decision})"
+                    f"hybrid_predict returned no evaluation (decision={decision})",
+                    metadata=_provenance(result),
                 )
 
             # ── Extract r2 / rmse from the located eval dict ──────────────
             r2_val   = eval_.get("r2")
             if r2_val is None:
-                return self._unavailable("evaluation has no r2")
+                return self._unavailable("evaluation has no r2", metadata=_provenance(result))
             r2_val   = float(r2_val)
             rmse_val = eval_.get("rmse")
             if rmse_val is None or not np.isfinite(float(rmse_val)):
@@ -2146,7 +2157,10 @@ class HybridDeFiMethod(BaseMethod):
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(
+                str(exc)[:150],
+                metadata=_provenance(result) if isinstance(result, dict) else {},
+            )
 
 
 # ============================================================================
@@ -2373,12 +2387,17 @@ class HybridAllDomainsMethod(BaseMethod):
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._system is None:
             reason = self._init_error or "HybridSystemLLMNN (all-domains) not available"
-            return self._unavailable(reason)
+            return self._unavailable(
+                reason,
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Clear formula cache before each call when --no-llm-cache is active.
         if self._no_cache:
             self._clear_llm_cache()
 
+        result = None
         try:
             for method_name in ("hybrid_predict", "predict", "discover", "run"):
                 if hasattr(self._system, method_name):
@@ -2415,7 +2434,10 @@ class HybridAllDomainsMethod(BaseMethod):
             )
 
             if not (result and isinstance(result, dict)):
-                return self._unavailable("All-domains hybrid returned no usable result")
+                return self._unavailable(
+                    "All-domains hybrid returned no usable result",
+                    metadata=_provenance(result) if isinstance(result, dict) else {},
+                )
 
             eval_d = result.get("evaluation") or {}
             r2v  = eval_d.get("r2")   if eval_d.get("r2")   is not None else result.get("r2")
@@ -2639,7 +2661,10 @@ class HybridAllDomainsMethod(BaseMethod):
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(
+                str(exc)[:150],
+                metadata=_provenance(result) if isinstance(result, dict) else {},
+            )
 
 
 # ============================================================================
@@ -3106,8 +3131,17 @@ class SymbolicEngineMethod(BaseMethod):
             self._log("probe OK ✅ (subprocess mode)")
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
+        _no_llm_provenance = {
+            "llm_called": False, "llm_attempted": False,
+            "bypass_kind": "none", "llm_source": "none",
+            "temperature_requested": None, "temperature_sent": None,
+            "llm_mode": "none",
+        }
         if not SYM_ENGINE_AVAILABLE:
-            return self._unavailable("SymbolicEngineWithLLM not available")
+            return self._unavailable(
+                "SymbolicEngineWithLLM not available",
+                metadata=dict(_no_llm_provenance),
+            )
 
         safe_names, rename_map = _sanitise_var_names(var_names)
         if rename_map:
@@ -3190,13 +3224,16 @@ class SymbolicEngineMethod(BaseMethod):
             if _trace:
                 print(f"   [SE-TRACE] {' | '.join(str(t) for t in _trace[:20])}", flush=True)
             if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                return self._unavailable("AUDIT L36: success reported without an r2")
+                return self._unavailable(
+                    "AUDIT L36: success reported without an r2",
+                    metadata=dict(_no_llm_provenance),
+                )
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
                 rmse=float(result.get("rmse", float("nan"))),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
-                metadata={"iterations": _n_iter},
+                metadata={**_no_llm_provenance, "iterations": _n_iter},
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         # ── Surface subprocess trace on failure ──────────────────────────────
@@ -3209,7 +3246,7 @@ class SymbolicEngineMethod(BaseMethod):
             for _t in _trace:
                 print(f"      {_t}", flush=True)
         self._log(f"run error: {err}")
-        return self._unavailable(str(err)[:150])
+        return self._unavailable(str(err)[:150], metadata=dict(_no_llm_provenance))
 
 
 # ============================================================================
@@ -3354,7 +3391,10 @@ class HybridSystemV50_2Method(BaseMethod):
             raw_formula = result.get("final_formula", result.get("formula", "N/A"))
             formula = _restore_var_names(raw_formula, rename_map)
             if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                return self._unavailable("AUDIT L36: success reported without an r2")
+                return self._unavailable(
+                    "AUDIT L36: success reported without an r2",
+                    metadata=_provenance(result),
+                )
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
@@ -3368,7 +3408,10 @@ class HybridSystemV50_2Method(BaseMethod):
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         self._log(f"run error: {err}")
-        return self._unavailable(str(err)[:150])
+        return self._unavailable(
+            str(err)[:150],
+            metadata=_provenance(result) if isinstance(result, dict) else {},
+        )
 
 
 # ============================================================================
