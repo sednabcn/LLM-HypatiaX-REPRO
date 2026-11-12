@@ -1788,6 +1788,100 @@
         "Proposed pending cross-family review against other matrix population models and Core-15 exclusions"
       ],
       "source_location": "Leslie (1945), printed p.184"
+    },
+    {
+      "equation_id": "BIO-FUJII-HOLLING-MACE-1986-GENERALIZED-ATTACK-001",
+      "name": "Generalized exponential-facilitation attack response",
+      "domain": "Biology",
+      "subdomain": "predator/parasite functional response",
+      "formula": "A(N0) = Tt / (th + 1/(ap*N0*exp(c*N0)))",
+      "canonical_expression": "Tt/(th+1/(ap*N0*exp(c*N0)))",
+      "formula_latex": "A(N_0)=\\frac{T_t}{t_h+\\frac{1}{a' N_0\\exp(cN_0)}}",
+      "structural_fingerprint": "ebedb4fc8486580025e77f3efc3cbc9eed943caa3c5ba53edb2d56fa454f3b1c",
+      "source_ids": [
+        "BIO-FUJII-HOLLING-MACE-1986-GENERALIZED-ATTACK"
+      ],
+      "source_family_id": "BIO-FUJII-HOLLING-MACE-1986-EXPONENTIAL-FACILITATION-ATTACK",
+      "status": "proposed",
+      "assumptions": [
+        "Descriptive attack-rate model for a fixed exposure interval Tt",
+        "Prey density N0 is treated as the density governing attack over the exposure interval",
+        "Handling time th and successful-search rate a' are constant over the interval",
+        "Facilitation/interference coefficient c is constant for the modeled predator-prey/parasite interaction",
+        "Units are chosen so c*N0 is dimensionless and the denominator terms have units of time"
+      ],
+      "variables": {
+        "A": {
+          "meaning": "Number of attacks per predator during exposure interval",
+          "unit": "attacks per predator"
+        },
+        "N0": {
+          "meaning": "Prey density",
+          "unit": "density"
+        },
+        "Tt": {
+          "meaning": "Total time prey are exposed",
+          "unit": "time"
+        },
+        "th": {
+          "meaning": "Handling time per prey",
+          "unit": "time per prey"
+        },
+        "ap": {
+          "meaning": "Successful search rate (a-prime in the source)",
+          "unit": "density^-1 time^-1"
+        },
+        "c": {
+          "meaning": "Facilitation coefficient",
+          "unit": "density^-1"
+        }
+      },
+      "validity": {
+        "source_location": "Wiley primary publisher abstract equation image; article pages 141–156; equation is unnumbered in the abstract image",
+        "regime": "Generalized descriptive predator/parasite attack response; publisher abstract states c=0 gives Type II, c>a'th Type III, c<a'th Type IV and c=a'th pseudo Type I",
+        "limitations": [
+          "Full article text and printed equation location remain inaccessible",
+          "Special case c=0 reduces to the Holling Type II rational response; do not count that special case separately",
+          "Do not create separate candidates for Type I, II, III and IV parameter regimes",
+          "Structural distinctness from the Core-15/Holling Type II family requires explicit E0–E5 review"
+        ]
+      },
+      "input_ranges": {
+        "N0": {
+          "train": null,
+          "extrapolation": null
+        },
+        "Tt": {
+          "train": null,
+          "extrapolation": null
+        },
+        "th": {
+          "train": null,
+          "extrapolation": null
+        },
+        "ap": {
+          "train": null,
+          "extrapolation": null
+        },
+        "c": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Primary publisher abstract equation image inspected; variable definitions transcribed from same abstract",
+        "Only one generalized equation proposed; Type I–IV cases are parameter regimes, not separate equations",
+        "Potentially overlaps Holling Type II/Michaelis-Menten at c=0; generalized exponential facilitation operator may be structurally distinct when c is nonzero",
+        "Requires E0–E5 review, source-family comparison and benchmark-domain suitability review",
+        "Input ranges and deterministic generator remain unspecified; not eligible for shard planning"
+      ],
+      "source_location": "Wiley publisher abstract equation image (un-numbered); article pp.141–156"
     }
   ],
   "source_register": [
@@ -3493,6 +3587,14 @@
       "title": "DeBach & Smith (1947), Effects of Parasite Population Density on Rate of Change of Host and Parasite Populations",
       "url": "https://doi.org/10.2307/1930515",
       "use": "Primary Ecology article, 28(3) (July 1947), pp.290–298. Bibliographic metadata corroborated by multiple primary-source citations; equation-level transcription and exact mechanism not yet obtained. Potential host-parasitoid density-dependent population system; source lead only, not an accepted equation.",
+      "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-FUJII-HOLLING-MACE-1986-GENERALIZED-ATTACK",
+      "domain": "Biology",
+      "title": "Fujii, Holling & Mace (1986), A Simple Generalized Model of Attack by Predators and Parasites",
+      "url": "https://doi.org/10.1007/BF02347017",
+      "use": "Primary publisher-hosted abstract includes the original generalized attack equation as an equation image: A(N0)=Tt/(th+1/(a' N0 exp(c N0))). Abstract defines A as attacks per predator during exposure Tt, N0 prey density, Tt total exposure time, th handling time per prey, a' successful search rate, c facilitation coefficient. Authors state parameter cases encompass pseudo Type I, Type II (c=0), Type III and Type IV responses. Full article PDF remains access-gated; equation is directly transcribed from publisher's primary abstract image, but printed page/equation number not available from abstract.",
       "status": "candidate_reference"
     }
   ],
