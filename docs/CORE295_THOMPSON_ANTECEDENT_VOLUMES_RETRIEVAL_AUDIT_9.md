@@ -49,3 +49,25 @@ The printed p.1401 must be mapped to a scan frame and inspected. The Gallica end
 ## Evidence boundary
 
 This audit records primary volume access and retrieval constraints. No equation is transcribed from the antecedent volumes; no candidate or catalogue row is accepted. No experiment, script, validator, test, solver, workflow or live protocol was run.
+
+
+## Addendum — exact footnote checked against the volume OCR
+
+The volume-175 OCR was reopened at the exact printed location (Internet Archive full OCR, printed pp.65–66; source `turn692343view0`, lines 3415–3447). It confirms the three citations are literally rendered as:
+- tome 153 (1911), p.1401;
+- tome 156 (1913), p.1401;
+- tome 164 (1917), p.1433.
+
+This confirms that the earlier antecedent trail was not merely a line-offset or summary error. It does **not**, by itself, prove that those three cited pages are Thompson's own papers, nor that they contain the mathematical model. The 1911 volume's Wikisource table of contents search surfaced no W.-R. Thompson entry; BHL's searchable tome-153 item surfaced only several unrelated title entries, none at p.1401 in the current result. The correct interpretation is therefore: **three citations made by Thompson in 1922; authorship and subject of the cited pages remain unverified**. Do not label them as Thompson's 1911/1913/1917 communications until the actual page images are read.
+
+A separate bibliography source records W.R. Thompson's 1913 note “Sur la spécificité des parasites entomophages” in *Comptes Rendus des Séances de la Société de Biologie* 75, pp.510–521 (not the *Académie des Sciences* tome 156, p.1401). This is a distinct publication and must not be silently substituted for the footnote citation: `turn637739search2`.
+
+The 1922d paper's opening phrase “Dans une Communication précédente” remains a direct assertion that a previous communication derived the formula, but the three footnotes' exact page identities and their relation to that communication still need page-level resolution. The first three 1922 notes' lineage is unchanged.
+
+## Core-295 shard-driver code-inspection correction
+
+A separate code inspection found that `scripts/core295_run_shard.py` referenced `validity[var]` inside the input-range loop before assigning and validating `validity = entry.get("input_validity_bounds")`. The assignment and shape/finite-bound validation have been moved before the range loop. The duplicate later validation block was removed.
+
+- Corrective commit: `df5fe9b53d40748d9ed44457bfb30bb563ab48a2`
+- Re-fetched file blob SHA: `55180479ff63aaaefb3866bea6797889985c6a42`
+- This is a source-level correction verified by re-fetching the committed file. No driver execution, tests, validators, experiments, or workflows were run.
