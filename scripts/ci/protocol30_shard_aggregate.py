@@ -153,10 +153,19 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         ),
         "details": truncation_details,
     }
+    method_failure_counts = {
+        name: sum(1 for record in merged["tests"] if not record["results"][name]["success"])
+        for name in common_methods
+    }
+    method_success_counts = {name: 30 - count for name, count in method_failure_counts.items()}
+    all_methods_successful = all(count == 0 for count in method_failure_counts.values())
     merged["protocol30_aggregate"] = {
         "variant": variant,
         "shard_count": 5,
         "equation_count": 30,
+        "method_failure_counts": method_failure_counts,
+        "method_success_counts": method_success_counts,
+        "all_methods_successful": all_methods_successful,
         "method_failures_preserved": True,
         "aggregation_note": "Per-method failures remain explicit in source records; no scores are imputed.",
     }
@@ -172,6 +181,9 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         "methods": common_methods,
         "protocol": common_protocol,
         "all_method_records_retained": True,
+        "method_failure_counts": method_failure_counts,
+        "method_success_counts": method_success_counts,
+        "all_methods_successful": all_methods_successful,
         "effective_llm_temperature": 0.25,
         "result_file": result_path.name,
     }
