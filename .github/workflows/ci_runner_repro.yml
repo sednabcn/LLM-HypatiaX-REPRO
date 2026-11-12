@@ -22,6 +22,7 @@ on:
           - portfolio_pca_tail_error
 #         - exp1c
           - exp1_ablation
+          - exp1_four_way_matched
           - exp1_five
           - exp1_pca
           - exp1b_pca
@@ -203,7 +204,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -477,6 +478,13 @@ jobs:
               echo "ablation_seed=${ABL_SEED}" >> "$GITHUB_OUTPUT"
               ;;
 
+            exp1_four_way_matched)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_four_way_matched.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="four_way_matched"
+              DEFAULT_SEEDS="42"
+              ;;
+
             exp1_five)
               SCRIPT="hypatiax/experiments/benchmarks/exp1_five_system.py"
               NEEDS_JULIA=true
@@ -643,6 +651,7 @@ jobs:
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
               "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
+              "exp1_four_way_matched": 5, # Core-15 equation IDs partitioned into five isolated workers
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
               "exp2_feynman_pca":    1,  # mirrors exp2_feynman (same FEYNMAN_DOMAINS registry, single shard)
@@ -758,6 +767,7 @@ jobs:
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+              "exp1_four_way_matched": [str(i) for i in range(15)],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp2_feynman":       FEYNMAN_DOMAINS,
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
