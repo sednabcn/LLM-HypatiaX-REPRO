@@ -14,12 +14,14 @@ From the repository root, with Python 3.10+:
 python scripts/core295_discover_sources.py
 ```
 
-Optional deeper search using successive Crossref offsets:
+Each invocation processes one cursor page per query by default and saves a checkpoint in `data/core295_discovery_cursor.json`. Re-run the same command to continue from the saved cursor; increase the page budget for a deeper pass:
 
 ```bash
-python scripts/core295_discover_sources.py --offset 100
-python scripts/core295_discover_sources.py --offset 200
+python scripts/core295_discover_sources.py
+python scripts/core295_discover_sources.py --pages-per-query 5
 ```
+
+The cursor checkpoint is written only after the corresponding page's new leads are appended to the queue. If interrupted between those writes, the page may be fetched again, but DOI deduplication prevents duplicate queue entries. Use `--cursor-state` to choose a separate checkpoint file. A `--dry-run` does not persist cursor progress.
 
 Limit a pass to selected domains:
 
