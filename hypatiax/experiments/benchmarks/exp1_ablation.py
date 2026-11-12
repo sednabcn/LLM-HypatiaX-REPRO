@@ -778,6 +778,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # must not repeat identically.
         _reseed_for_task(eq_seed)
 
+        # HybridDiscoverySystem derives each PySR retry seed from this
+        # environment variable (base seed + attempt). Bind it to the same
+        # equation-specific seed used for the shared data and PySR-only arm.
+        _prior_engine_seed = os.environ.get("HYPATIAX_ENGINE_SEED")
+        os.environ["HYPATIAX_ENGINE_SEED"] = str(eq_seed)
         t0 = time.time()
         try:
             with _Timeout(wall_clock_limit):
@@ -806,6 +811,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
             print(f"  [hypatia] ❌ ERROR: {e}")
             traceback.print_exc()
             return _build_error_result(condition, str(e), sr_time)
+        finally:
+            if _prior_engine_seed is None:
+                os.environ.pop("HYPATIAX_ENGINE_SEED", None)
+            else:
+                os.environ["HYPATIAX_ENGINE_SEED"] = _prior_engine_seed
 
         # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
