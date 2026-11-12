@@ -729,3 +729,8 @@ Three distinct Bailey papers merit separate retrieval records and must not be co
 3. V. A. Bailey, “Non-continuous Interaction between Hosts and Parasites,” *Mathematical Proceedings of the Cambridge Philosophical Society* 29(4) (30 October 1933), pp. 487–491, DOI 10.1017/S0305004100011518. Cambridge's abstract says it follows the earlier two-species abundance problem and establishes fundamental equations. The full text is gated. It is a potentially distinct discrete/non-continuous formulation; do not assume it is merely a time discretization of a continuous model without reading the equations.
 
 These papers offer useful candidates for the Biology pool's continuous/discrete and multi-species coverage, but all remain source leads only. No equations have been transcribed and no Core-295 candidates are added. Relevant records: Oxford Academic 1931 article and issue contents; Cambridge 1933 article and issue contents; Royal Society archival reports RR/49/1–3.
+
+
+## 4.15 Watt DOI ownership and primary access check
+
+Cambridge's official landing page for Watt's 1959 paper confirms *The Canadian Entomologist* 91(3), March 1959, pp. 129–144 and DOI 10.4039/Ent91129-3. Its access section currently reports the article purchase option as temporarily unavailable. The DOI is Watt's, not Thompson's. Cambridge's own reference list on the Watt article separately cites Thompson's 1924 Marseille paper at vol. 2, pp. 69–89. This cross-check removes the earlier metadata ambiguity: retain Watt's DOI only on the Watt record; Thompson has no verified DOI in this audit. The Watt primary article remains not fully inspected, and all equation forms remain secondary transcriptions pending primary-page access.
