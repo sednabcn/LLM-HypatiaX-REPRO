@@ -164,7 +164,23 @@ def _run_fingerprint():
         os.environ.get("HYPATIAX_LLM_MODEL", "").strip() or "claude-sonnet-4-6"
     )
 
+    # Checkpoint compatibility must include the actual numerical/API runtime,
+    # not only source and protocol files: dependency upgrades can change fits,
+    # formula evaluation, and API-client behavior without changing either hash.
+    from importlib.metadata import version
+    import platform
+    runtime_versions = {
+        package: version(package)
+        for package in (
+            "numpy", "scipy", "sympy", "pandas", "scikit-learn",
+            "torch", "pysr", "anthropic", "PyYAML",
+        )
+    }
+
     settings = {
+        "python_version": platform.python_version(),
+        "platform": platform.platform(),
+        "runtime_dependency_versions": runtime_versions,
         "seed": SEED,
         "common_wall_clock_seconds": COMMON_WALL_CLOCK,
         "noise_level": NOISE_LEVEL,
