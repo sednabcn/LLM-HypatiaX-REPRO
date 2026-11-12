@@ -140,6 +140,25 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
             for method_name, method_result in results.items():
                 if not isinstance(method_result, dict) or "success" not in method_result:
                     fail(f"shard {shard}: {method_name!r} result is missing its explicit success status")
+                method_metadata = method_result.get("metadata") or {}
+                if not isinstance(method_metadata, dict):
+                    fail(f"shard {shard}: {method_name!r} metadata must be an object")
+                llm_attempted = method_metadata.get("llm_attempted")
+                llm_called = method_result.get("llm_called")
+                requested_temperature = method_metadata.get("temperature_requested")
+                temperature_accepted = method_metadata.get("temperature_sent")
+                if llm_attempted is True and requested_temperature != 0.25:
+                    fail(
+                        f"shard {shard}: {method_name!r} attempted an LLM call without "
+                        f"recording requested temperature 0.25 (got {requested_temperature!r})"
+                    )
+                if llm_called is True and (
+                    requested_temperature != 0.25 or temperature_accepted is not True
+                ):
+                    fail(
+                        f"shard {shard}: {method_name!r} returned a live LLM response without "
+                        "confirmed temperature 0.25 provenance"
+                    )
             if variant == "pca_4060" and record.get("pca_split_protocol") != "pca_40_60":
                 fail(f"shard {shard}: PCA record is not stamped pca_40_60")
             domain = record.get("domain")
