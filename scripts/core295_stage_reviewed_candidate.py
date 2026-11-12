@@ -44,6 +44,8 @@ def main():
         fail(errors, "decision_status must be ready_for_structural_review")
     if decision.get("final_disposition") != "ready_for_structural_review":
         fail(errors, "final_disposition must be ready_for_structural_review")
+    if decision.get("candidate_equation_id") != candidate.get("equation_id"):
+        fail(errors, "decision candidate_equation_id must exactly match candidate equation_id")
     for gate in REQUIRED_GATES:
         record = decision.get(gate) or {}
         if record.get("decision") != "pass":
