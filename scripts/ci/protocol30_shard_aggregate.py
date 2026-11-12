@@ -143,10 +143,20 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
                 method_metadata = method_result.get("metadata") or {}
                 if not isinstance(method_metadata, dict):
                     fail(f"shard {shard}: {method_name!r} metadata must be an object")
-                llm_attempted = method_metadata.get("llm_attempted")
+                llm_attempted = method_result.get("llm_attempted")
                 llm_called = method_result.get("llm_called")
                 requested_temperature = method_metadata.get("temperature_requested")
                 temperature_accepted = method_metadata.get("temperature_sent")
+                if not isinstance(llm_attempted, bool):
+                    fail(
+                        f"shard {shard}: {method_name!r} is missing an explicit "
+                        "llm_attempted provenance flag"
+                    )
+                if llm_called is True and llm_attempted is not True:
+                    fail(
+                        f"shard {shard}: {method_name!r} reports a live LLM response "
+                        "without recording an attempted request"
+                    )
                 if llm_attempted is True and requested_temperature != 0.25:
                     fail(
                         f"shard {shard}: {method_name!r} attempted an LLM call without "
