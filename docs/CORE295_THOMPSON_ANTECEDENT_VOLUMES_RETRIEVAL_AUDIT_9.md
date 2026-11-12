@@ -149,3 +149,15 @@ For tome 164 (January–June 1917), the volume's Gallica-derived DjVu record rep
 Tome 156 (1913) has a Gallica-derived 2,124-page DjVu scan, digital identifier `bpt6k3109m`; this is a concrete primary-volume retrieval route, not yet a page-level identification. Its scan record and metadata are documented at turn935836search0.
 
 No equation has been transcribed from any of these cited antecedent pages. No source-family attribution, candidate acceptance, or catalogue update follows from this bibliographic narrowing.
+
+
+## Correction to Addendum 3 — tome 153 does contain a W. R. Thompson paper, but not at p.1401
+
+A targeted reinspection of the full tome-153 alphabetical contents resolved an important ambiguity. The index lists **two different Thompsons**:
+
+- **William-R. Thompson**, “Sur une Tachinaire parasite à stade intracuticulaire,” p.83, under “Insectes.”
+- **Silvanus-P. Thompson**, “Nouvelle méthode d’analyse harmonique par la sommation algébrique d’ordonnées déterminées,” p.88, under “Analyse harmonique.”
+
+Thus the earlier statement that tome 153 had no W. R. Thompson entry was too broad and is corrected here. However, the 1922d footnote cites tome 153 **p.1401**, not p.83. The index therefore establishes a genuine W. R. Thompson communication in the 1911 volume, but does not establish that it is the item cited at p.1401 or that it contains the formula referred to in 1922d. The p.83 title is entomological and is a distinct source lead; inspect its page and compare its contents before deciding whether it is relevant to the cyclic-parasitism model. The p.88 Silvanus-P. Thompson paper remains a different author and subject. Evidence: tome-153 contents page and targeted search (`turn118683view0`, `turn497697view0`); the tome-153 index entry is also corroborated by the search result for a 1915 bibliography excerpt (`turn498798search1`), which itself cites the same title but appears to associate it with a later volume and is not used to override the primary tome-153 index.
+
+The tome-164 conclusion remains unchanged: its 1,070-page scan cannot contain printed p.1433, and its contents index has no Thompson entry. Tome 156 p.1401 remains to be identified at page level. No equation has yet been transcribed from the 1911 p.83 item or either cited p.1401 page; no candidate acceptance or source-family decision is made.
