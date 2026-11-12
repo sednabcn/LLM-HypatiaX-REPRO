@@ -437,7 +437,7 @@ def run():
         "extrapolation_regimes": ["near", "medium", "far"],
         "extrapolation_metrics": ["r2", "rmse", "mae"],
         "routing_tau": "null; ensemble fallback; no calibrated routing claim",
-        "ablation_scope": "three implemented Core-15 gates only",
+        "ablation_scope": "not run by this driver; three-gate leave-one-out remains deferred pending a fresh Phase 2 closure manifest and Phase 3 preflight; three other gates are unavailable in HDS v50_2",
         "source_paths": [
             "hypatiax/experiments/benchmarks/exp1_ablation.py",
             "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py",
