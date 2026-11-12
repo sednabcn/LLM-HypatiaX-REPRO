@@ -118,6 +118,14 @@ def _run_fingerprint():
         Path(__file__).resolve(),
         HERE / "exp1_ablation.py",
         HERE / "run_comparative_suite_benchmark_v2.py",
+        # Runtime algorithm/evaluation modules imported by the benchmark arms.
+        ROOT / "hypatiax" / "safe_formula.py",
+        ROOT / "hypatiax" / "core" / "r2_canonical.py",
+        ROOT / "hypatiax" / "core" / "base_pure_llm" / "baseline_pure_llm_defi_discovery.py",
+        ROOT / "hypatiax" / "core" / "training" / "baseline_neural_network_defi_improved.py",
+        ROOT / "hypatiax" / "tools" / "symbolic" / "symbolic_engine.py",
+        ROOT / "hypatiax" / "tools" / "symbolic" / "hybrid_system_v50_2.py",
+        ROOT / "hypatiax" / "core" / "enforce_flags.py",
     )
     source_hashes = {}
     for path in source_paths:
