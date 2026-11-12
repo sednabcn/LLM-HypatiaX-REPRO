@@ -135,6 +135,16 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
             "elapsed_s": elapsed, "test": None, "extrapolation": {},
             "diagnostics": row,
         }
+    # A configured API key / llm_enabled flag is not proof that an LLM call
+    # actually happened: the engine can continue with pure PySR after an LLM
+    # proposal failure. Do not score that fallback as the Hybrid treatment.
+    if condition == "hypatia" and row.get("llm_called") is not True:
+        return {
+            "method": "hybrid_llm_pysr", "success": False,
+            "error": "Hybrid discovery completed without a verified LLM proposal call",
+            "elapsed_s": elapsed, "test": None, "extrapolation": {},
+            "diagnostics": row,
+        }
     if not row.get("success"):
         return {
             "method": "hybrid_llm_pysr" if condition == "hypatia" else "pysr_only",
