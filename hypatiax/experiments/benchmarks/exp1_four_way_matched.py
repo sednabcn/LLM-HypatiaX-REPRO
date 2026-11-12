@@ -18,6 +18,7 @@ by the existing workflow and must be reviewed before any execution.
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import time
@@ -82,10 +83,19 @@ def _metrics(y_true, y_pred):
     if yt.shape != yp.shape or yt.size == 0 or not np.all(np.isfinite(yp)):
         raise ValueError("prediction shape mismatch or non-finite predictions")
     return {
-        "r2": float(abl._safe_r2(yt, yp)),
-        "rmse": float(abl._safe_rmse(yt, yp)),
-        "mae": float(abl._safe_mae(yt, yp)),
+        "r2": abl._safe_r2(yt, yp),
+        "rmse": abl._safe_rmse(yt, yp),
+        "mae": abl._safe_mae(yt, yp),
     }
+
+
+def _array_hash(*arrays):
+    digest = hashlib.sha256()
+    for array in arrays:
+        value = np.ascontiguousarray(np.asarray(array, dtype=np.float64))
+        digest.update(str(value.shape).encode("ascii"))
+        digest.update(value.tobytes())
+    return digest.hexdigest()
 
 
 def _failure(method, exc, elapsed):
@@ -273,10 +283,15 @@ def run():
 
         existing["split"] = {
             "generator": "exp1_ablation.generate_data",
+            "train_data_sha256": _array_hash(X_train, y_train),
+            "outer_test_sha256": _array_hash(X_test, y_test),
             "n_source_samples": N_TRAIN_SOURCE,
             "n_train": int(len(X_train)), "n_test": int(len(X_test)),
             "noise_level": NOISE_LEVEL, "equation_seed": eq_seed,
             "test_partition_used_for_fit_or_selection": False,
+            "extrapolation_sha256": {
+                regime: _array_hash(X_e, y_e) for regime, (X_e, y_e) in extrap.items()
+            },
         }
         existing["methods"] = arms
         checkpoint[key] = existing
