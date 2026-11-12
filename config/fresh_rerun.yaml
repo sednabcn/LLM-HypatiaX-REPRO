@@ -5,7 +5,7 @@
 run_id:       "fresh_rerun_2026_11"
 # This file defines run inputs only. Historical result values and success targets are intentionally omitted.
 # All outputs must go to a new empty RESULTS_DIR outside the repository; no historical checkpoints or caches may be reused.
-run_version:  "1.0"
+run_version:  "1.1"
 date:         "2026-11"
 
 paths:
