@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import re
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
@@ -49,9 +50,7 @@ def load_catalogue(path: Path) -> dict:
 
 
 def normalized_snippet(value: str) -> str:
-    value = SPACE.sub(" ", value.casefold()).strip()
-    return PUNCT.sub(" ", value).strip()
-
+    # Preserve mathematical operators and punctuation: +, -, /, =, etc.\n    # Only Unicode-normalize and collapse whitespace for conservative matching.\n    value = unicodedata.normalize("NFKC", value).casefold()\n    return SPACE.sub(" ", value).strip()\n
 
 def evidence_score(row: dict) -> tuple[int, list[str]]:
     # Equal-weight provenance/evidence fields; a score is not a scientific grade.
@@ -182,7 +181,7 @@ def main() -> int:
         lines.append("")
 
     lines += ["## Exact snippet-collision flags", "",
-              "These records share the same whitespace/punctuation-normalized extracted snippet. They may be duplicate downloads, repeated text, common definitions, or extraction artefacts. Inspect source pages before deciding whether to collapse anything.", ""]
+              "These records share the same Unicode-normalized, whitespace-collapsed extracted snippet. They may be duplicate downloads, repeated text, common definitions, or extraction artefacts. Inspect source pages before deciding whether to collapse anything.", ""]
     if not duplicates:
         lines.append("No exact normalized-snippet collisions detected.")
     else:
