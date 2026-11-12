@@ -1442,6 +1442,14 @@ class PureLLMBaselineMethod(BaseMethod):
                 description, metadata.get("domain", "unknown"), var_names, metadata,
                 X=X, y=y,
             )
+            # Keep API/provider errors distinct from incomplete completions.
+            # Otherwise an error-only result is misreported as a truncated formula.
+            if isinstance(result, dict) and result.get("error"):
+                self._log(f"generate_formula() failed: {result['error'][:150]}")
+                return self._unavailable(
+                    f"generate_formula_error: {result['error'][:200]}",
+                    metadata=_provenance(result),
+                )
             python_code = result.get("python_code", "") or result.get("formula_code", "") or ""
 
             # ── TRUNCATION GUARD (v2.0) ───────────────────────────────────
