@@ -1104,7 +1104,8 @@ def run_batch(verbose: bool = False, no_cache: bool = False):
     # Save results — must land under hybrid_pysr/defi/ so the CI
     # commit-verification step (RESULT_SUBDIR=hypatiax/data/results/hybrid_pysr/defi)
     # finds the files and the downstream SEP build can locate them.
-    out_dir = Path("hypatiax/data/results/hybrid_pysr/defi")
+    results_root = Path(os.environ.get("RESULTS_DIR", "hypatiax/data/results"))
+    out_dir = results_root / "hybrid_pysr" / "defi"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"hybrid_defi_{timestamp}.json"
 
