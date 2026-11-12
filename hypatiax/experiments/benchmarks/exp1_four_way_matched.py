@@ -356,19 +356,19 @@ def run():
         if existing.get("seed") != SEED:
             raise RuntimeError(f"Checkpoint seed mismatch for {eq['name']}; use a fresh output directory")
         arms = existing.setdefault("methods", {})
-        if "hybrid_llm_pysr" not in arms:
+        if not isinstance(arms.get("hybrid_llm_pysr"), dict) or not arms["hybrid_llm_pysr"].get("success"):
             arms["hybrid_llm_pysr"] = _run_symbolic_condition(
                 eq, "hypatia", eq_seed, train_tuple, extrap
             )
-        if "pysr_only" not in arms:
+        if not isinstance(arms.get("pysr_only"), dict) or not arms["pysr_only"].get("success"):
             arms["pysr_only"] = _run_symbolic_condition(
                 eq, "pysr_only", eq_seed, train_tuple, extrap
             )
-        if "llm_only" not in arms:
+        if not isinstance(arms.get("llm_only"), dict) or not arms["llm_only"].get("success"):
             arms["llm_only"] = _run_llm_only(
                 llm_method, eq, X_train, y_train, X_test, y_test, extrap
             )
-        if "nn_only" not in arms:
+        if not isinstance(arms.get("nn_only"), dict) or not arms["nn_only"].get("success"):
             arms["nn_only"] = _run_nn_only(
                 nn_method, eq, X_train, y_train, X_test, y_test, extrap
             )
