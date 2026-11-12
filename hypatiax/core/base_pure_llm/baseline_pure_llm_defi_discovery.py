@@ -449,30 +449,8 @@ class PureLLMBaseline:
         _response_received = False
 
         try:
-            # FIX-ISSUE2B-LLM-TEMPERATURE: this call previously had no
-            # `temperature` argument, so it silently used the Anthropic API
-            # default (non-zero). Callers of this class (e.g.
-            # EnhancedHybridSystemDeFi.generate_llm_formula, which delegates
-            # here as its *preferred* path) assumed temperature=0 behaviour
-            # -- see the comment at HybridDeFiMethod.run() in
-            # run_comparative_suite_benchmark_v2.py claiming "At
-            # temperature=0 this produces the same formula". That assumption
-            # was false for this call site, which is why a fresh live call
-            # per Phase-A run could return a structurally-equivalent but
-            # not-bit-identical formula, producing the ~1e-9 R² spread
-            # observed on Snell's Law in the Item 2b reproducibility check.
-            # temperature=0.0 narrows (does not fully guarantee, since
-            # provider-side serving batching can still vary) run-to-run
-            # sampling variance.
-            #
-            # FIX-ISSUE2B-LLM-TEMPERATURE (applied): the comment above
-            # described this mitigation but `temperature` was never
-            # actually passed to _create_message() below,
-            # so the API default (non-zero) was silently used the whole
-            # time. Confirmed via a live smoke test that this model
-            # (self.model, default "claude-sonnet-4-6") accepts
-            # temperature=0.0 rather than rejecting it, so it's now
-            # passed through for real.
+            # The shared wrapper always requests Core-15 temperature=0.25
+            # and fails closed rather than retrying with a provider default.
             _gen_t0 = time.perf_counter()
             print(
                 "GENERATE_ENTER "
@@ -483,18 +461,6 @@ class PureLLMBaseline:
                 f"api_helper_source={inspect.getsourcefile(_create_message)!r} "
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
-            # [FIX-SDK1.0-TEMPERATURE] Superseding FIX-ISSUE2B-LLM-TEMPERATURE
-            # above: that fix made this call start sending temperature=0.0
-            # right as anthropic SDK v1.0 (2026-08-20) removed temperature/
-            # top_p/top_k from Messages.create() outright -- it's a
-            # client-side TypeError now (no **kwargs passthrough), and
-            # current models also 400 on it server-side regardless of SDK
-            # version. So this goes back to not sending temperature, but
-            # for the opposite reason: it's no longer accepted at all, not
-            # "not yet wired up". The temperature=0 determinism control
-            # described in FIX-ISSUE2B-LLM-TEMPERATURE's comment above no
-            # longer exists as an option -- run-to-run sampling variance
-            # should be expected again.
             _llm_attempted = True
             response = _create_message(
                 self.client,
