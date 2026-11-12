@@ -427,3 +427,6 @@ These are additional official documentation pointers, not independent primary re
 222. DeBach, P., and Smith, H. S. (1941). “Are population oscillations inherent in the host-parasite relation?” *Ecology* 22(4), pp. 363–369. DOI: https://doi.org/10.2307/1930709. Publisher metadata; primary equation transcription pending.
  
 223. DeBach, P., and Smith, H. S. (1947). “Effects of parasite population density on rate of change of host and parasite populations.” *Ecology* 28(3), pp. 290–298. DOI: https://doi.org/10.2307/1930515. Bibliographic metadata corroborated; primary equation transcription pending.
+
+ 
+224. Fujii, K., Holling, C. S., and Mace, P. M. (1986). “A simple generalized model of attack by predators and parasites.” *Ecological Research* 1(2), pp. 141–156. DOI: https://doi.org/10.1007/BF02347017. The publisher-hosted abstract includes the original generalized equation as an equation image and defines all symbols; full article PDF remains access-gated.
