@@ -1450,7 +1450,8 @@ class ImprovedNNMethod(BaseMethod):
         # trial for run_multiseed()'s variance estimate to remain meaningful.
         if self._nn_seeds == 1:
             _seed = int(
-                hashlib.sha256(description.encode()).hexdigest(), 16
+                metadata.get("random_seed",
+                             int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31))
             ) % (2**31)
             if TORCH_AVAILABLE:
                 torch.manual_seed(_seed)
