@@ -99,3 +99,41 @@ This is a coupled protocol state transition involving multiple storage variables
 - Aave V3 pool contract liquidation interface: https://aave.com/docs/aave-v3/smart-contracts/pool?language=en
 
 No formal catalogue equation entry was added or accepted by this audit.
+
+
+## 6. Aave V3 Origin: pinned health-factor and liquidation implementation audit
+
+**Pinned source:** official Aave repository aave-v3-origin, commit 5c2eb37f39959dd491ba97fdc2af94bb4ee88f41 (2025-09-19). This is a reproducible source snapshot, not proof of the implementation deployed behind any particular market proxy.
+- LiquidationLogic.sol, blob SHA 1f45295207de0309b9adf6ab16da19e47e235297
+- GenericLogic.sol, blob SHA 4c923df4aab9eece6c68bfe0ffa4c05a30842733
+- Repository commit: https://github.com/aave/aave-v3-origin/commit/5c2eb37f39959dd491ba97fdc2af94bb4ee88f41
+- Liquidation implementation: https://github.com/aave/aave-v3-origin/blob/5c2eb37f39959dd491ba97fdc2af94bb4ee88f41/src/contracts/protocol/libraries/logic/LiquidationLogic.sol
+- Account aggregation: https://github.com/aave/aave-v3-origin/blob/5c2eb37f39959dd491ba97fdc2af94bb4ee88f41/src/contracts/protocol/libraries/logic/GenericLogic.sol
+
+### Health factor aggregation
+
+GenericLogic iterates the user's enabled collateral and borrowed reserves, values normalized aToken/debt balances using reserve prices and decimal units, and accumulates collateral and debt in the oracle base currency. It computes the collateral-value-weighted average liquidation threshold and then:
+\[
+HF =
+\begin{cases}
++\infty,&D=0,\\
+\displaystyle\frac{C\cdot \overline{LT}}{D},&D>0,
+\end{cases}
+\]
+where \(C\) is total collateral value, \(D\) is total debt value, and \(\overline{LT}\) is the collateral-value-weighted liquidation threshold. The implementation uses PercentageMath and WadRayMath fixed-point operations. In efficiency mode, reserve-specific category liquidation thresholds may replace ordinary reserve thresholds for eligible collateral. Thus HF is an aggregate state-dependent risk metric, not a standalone universal constant-parameter equation.
+
+### Liquidation execution and close factor
+
+LiquidationLogic recalculates the account HF and reserve-specific balances, validates the liquidation (including the price-oracle sentinel), selects the applicable liquidation bonus (efficiency-mode category or reserve config), and obtains both collateral and debt prices and decimal scales. In this pinned snapshot:
+- default close factor is 50%;
+- full liquidation is permitted when HF is at or below 0.95, or when the debt/collateral value is below the configured small-position threshold;
+- for positions above the small-position threshold and with HF above 0.95, the maximum repay may be capped at 50% of total account debt, translated into the selected debt reserve's units;
+- the implementation enforces a minimum residual debt and collateral value when neither side is fully cleared, to prevent dust positions.
+
+These constants are code-snapshot values and must not be generalized to all Aave markets or future versions.
+
+### Collateral conversion, protocol fee and bad debt
+
+The helper _calculateAvailableCollateralToLiquidate first converts debt-to-cover into base collateral using the two oracle prices and token decimal units, then applies the liquidation bonus. If the borrower's collateral balance is insufficient, it caps collateral at the user's balance and inversely computes the debt amount needed. The protocol fee is taken from the bonus portion, not from the base collateral amount. The liquidation path then burns debt tokens, updates reserve accounting, transfers or burns collateral aTokens according to the receiveAToken flag, transfers the protocol fee to treasury, and transfers the repaid debt asset to the reserve. If collateral is exhausted while debt remains, the implementation records a reserve deficit and burns the remaining bad debt according to its bad-debt path.
+
+**Structural disposition:** the weighted health-factor ratio, close-factor rule, collateral/debt price conversion, bonus, protocol-fee extraction, dust guard and bad-debt write-off form one coupled liquidation mechanism. Do not count HF, liquidation price, close-factor percentage, bonus conversion and fee formula as independent equation candidates. The scalar HF<1 eligibility boundary is structurally related to Compound Comet's weighted collateral/debt liquidation predicate; protocol-level state transitions differ, but neither deserves multiple rows from its subexpressions. Before a production claim or candidate benchmark, match chain, market proxy, implementation bytecode, reserve configuration, eMode category and oracle state at a specified block. No chain/RPC calls were made.
