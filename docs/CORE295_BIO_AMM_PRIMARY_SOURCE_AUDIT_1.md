@@ -849,3 +849,17 @@ Sources:
 - StableSwap NG source: https://github.com/curvefi/stableswap-ng/tree/3332cd44656ec64b3c048885e1dd71955254b262
 - Twocrypto NG source: https://github.com/curvefi/twocrypto-ng/tree/89c8dfb6c9b3204647954018d2a0238b9c69349d
 - Tricrypto NG source: https://github.com/curvefi/tricrypto-ng/tree/ecaa8161c240f21dd7c3712eefc5637e1dac742b
+
+
+## 4.20 Follow-up archive search: Thompson, DeBach–Smith and Ricker
+
+A further archive-oriented search was conducted for the original Thompson (1924) paper, both DeBach–Smith papers, and Ricker (1954). It did not recover a verified scan of any of these four primary articles. The following provenance distinctions are now explicit:
+
+- **Thompson (1924):** bibliographic records consistently identify the title and pages 69–89 in *Annales de la Faculté des Sciences de Marseille*, 2e série, vol. 2. A separate bibliography gives a conflicting expanded designation (“Tome 11, Fascicule 11”) and pages 68–89. The Cambridge reference list for Holling (1959), Royama (1971), and other independent citations support the shorter vol. 2, pp. 69–89 form. Treat the expanded series/fascicle citation as an unresolved catalogue discrepancy, not a second publication or a basis for changing the canonical reference. No DOI has been verified and no equation is transcribed from the original.
+- **DeBach–Smith (1941):** Wiley's official record confirms the exact title, authors, *Ecology* 22(4), pp. 363–369, publication date 1 October 1941 and DOI 10.2307/1930709. The search located publisher metadata but no open full-text scan. Do not infer equations from title, abstract, later teaching exercises or citations.
+- **DeBach–Smith (1947):** the additional search located contemporary citations and bibliographic metadata, but no primary full-text scan. The 1941 publisher result must not be mistaken for the 1947 article.
+- **Ricker (1954):** bibliographic records confirm the journal article “Stock and Recruitment,” *Journal of the Fisheries Research Board of Canada* 11(5), pp. 559–623, DOI 10.1139/f54-039. Google Books separately describes a 65-page Fisheries Research Board of Canada item with the same title. This may be a separately issued report/reprint or catalogue representation; do not conflate the 65-page item with the 65-page journal pagination span, and do not claim either is a verified scan of the journal article. An NOAA-hosted later historical chapter discusses the Ricker stock–recruitment curve but is secondary evidence, not the 1954 primary article.
+
+**Disposition:** these remain source-retrieval leads, not equation candidates. Royama's Thompson and Watt equations remain secondary transcriptions until the original articles are inspected. No catalogue equation status or accepted count changes.
+
+Sources checked: Wiley DeBach–Smith 1941 publisher record (https://esajournals.onlinelibrary.wiley.com/doi/10.2307/1930709); Thompson bibliography (https://faculty.ucr.edu/~legneref/bcbiblio/pooled.t.htm) and Cambridge reference list (https://doi.org/10.4039/Ent91385-7); independent Thompson citation (https://www.cambridge.org/core/journals/bulletin-of-entomological-research/article/abs/superparasitism-by-collyria-calcitrator-grav/FEF677FB9E0230874BD290FEA3FEE99A); Ricker DOI metadata (https://cir.nii.ac.jp/crid/1360011143975688576), Google Books record (https://books.google.com/books/about/Stock_and_Recruitment.html?id=d6pqPwAACAAJ), and NOAA historical discussion (https://repository.library.noaa.gov/view/noaa/12085/noaa_12085_DS1.pdf).
