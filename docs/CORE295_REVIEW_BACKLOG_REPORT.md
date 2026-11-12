@@ -40,7 +40,7 @@ python scripts/core295_build_review_report.py \
 - Number of valid and malformed JSONL records.
 - Per-domain extraction queue size and current catalogue accepted shortfall against the configured target.
 - A nine-field provenance/evidence completeness checklist: DOI, title, domain, source record ID, source URL, source PDF SHA-256, PDF page index, snippet and snippet SHA-256.
-- Exact collisions after whitespace and punctuation normalization, grouped for manual inspection.
+- Exact collisions after Unicode normalization and whitespace collapsing, grouped for manual inspection.
 - A prioritized list per domain, with more complete provenance fields shown first.
 
 The completeness score is not a quality or confidence score. Exact text collisions may be duplicate downloads, common boilerplate, repeated equations, or extraction artefacts. The report deliberately does not perform fuzzy matching because broad text similarity can hide materially different equations or create misleading matches.
