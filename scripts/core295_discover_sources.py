@@ -26,6 +26,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "config" / "core295_catalogue.json"
 DEFAULT_QUEUE = ROOT / "data" / "core295_discovery_queue.jsonl"
+DEFAULT_CURSOR_STATE = ROOT / "data" / "core295_discovery_cursor.json"
 API = "https://api.crossref.org/works"
 DOMAINS = {
     "Chemistry": [
@@ -133,12 +134,12 @@ def load_queue(path: Path) -> tuple[set[str], int]:
     return keys, count
 
 
-def crossref_search(query: str, rows: int, offset: int, timeout: int,
-                    mailto: str | None) -> list[dict]:
+def crossref_search(query: str, rows: int, cursor: str, timeout: int,
+                    mailto: str | None) -> tuple[list[dict], str | None]:
     params = {
         "query.bibliographic": query,
         "rows": str(rows),
-        "offset": str(offset),
+        "cursor": cursor,
         "select": "DOI,title,author,published,issued,created,type,container-title,volume,issue,page,URL,abstract,subject",
     }
     if mailto:
@@ -150,7 +151,8 @@ def crossref_search(query: str, rows: int, offset: int, timeout: int,
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         payload = json.loads(response.read().decode("utf-8"))
-    return payload.get("message", {}).get("items", [])
+    message = payload.get("message", {})
+    return message.get("items", []), message.get("next-cursor")
 
 
 def publication_year(item: dict) -> int | None:
@@ -209,8 +211,10 @@ def main() -> int:
     parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
     parser.add_argument("--max-results-per-query", type=int, default=100,
                         help="Crossref results per query (1–1000)")
-    parser.add_argument("--offset", type=int, default=0,
-                        help="Result offset; use successive offsets for deeper passes")
+    parser.add_argument("--pages-per-query", type=int, default=1,
+                        help="Maximum cursor pages per query in this run; repeat to resume")
+    parser.add_argument("--cursor-state", type=Path, default=DEFAULT_CURSOR_STATE,
+                        help="Persistent Crossref cursor checkpoint file")
     parser.add_argument("--sleep", type=float, default=1.0,
                         help="Delay between Crossref requests in seconds")
     parser.add_argument("--timeout", type=int, default=30)
@@ -224,8 +228,8 @@ def main() -> int:
 
     if not 1 <= args.max_results_per_query <= 1000:
         parser.error("--max-results-per-query must be between 1 and 1000")
-    if args.offset < 0 or args.sleep < 0 or args.timeout < 1:
-        parser.error("offset/sleep/timeout must be non-negative (timeout > 0)")
+    if args.pages_per_query < 1 or args.sleep < 0 or args.timeout < 1:
+        parser.error("pages-per-query must be >= 1; sleep >= 0; timeout > 0")
     if not args.manifest.is_file():
         print(f"ERROR: manifest not found: {args.manifest}", file=sys.stderr)
         return 2
@@ -238,6 +242,13 @@ def main() -> int:
 
     queued, old_queue_count = load_queue(args.queue)
     seen = known | queued
+    try:
+        cursor_state = json.loads(args.cursor_state.read_text(encoding="utf-8")) if args.cursor_state.exists() else {}
+        if not isinstance(cursor_state, dict):
+            raise ValueError("cursor state must be a JSON object")
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"ERROR: cannot read cursor state: {exc}", file=sys.stderr)
+        return 2
     domains = args.domains or list(DOMAINS)
     new_records: list[dict] = []
     request_count = 0
@@ -251,35 +262,70 @@ def main() -> int:
 
     for domain in sorted(domains, key=lambda x: accepted_counts[x]):
         for query in DOMAINS[domain]:
-            try:
-                items = crossref_search(
-                    query, args.max_results_per_query, args.offset,
-                    args.timeout, args.mailto
-                )
-                request_count += 1
-                added = 0
-                for raw in items:
-                    record = normalize(raw, domain, query)
-                    if not record:
-                        continue
-                    key = doi_key(record["doi"])
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    new_records.append(record)
-                    added += 1
-                print(f"[{domain}] {query}: {len(items)} results, {added} new DOI leads")
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-                errors.append(f"{domain} / {query}: {exc}")
-                print(f"WARNING: {errors[-1]}", file=sys.stderr)
+            state_key = domain + "||" + query
+            state = cursor_state.get(state_key, {})
+            if state.get("exhausted"):
+                print(f"[{domain}] {query}: already exhausted; skipping")
+                continue
+            cursor = state.get("cursor") or "*"
+            query_added = 0
+            for page_number in range(args.pages_per_query):
+                try:
+                    items, next_cursor = crossref_search(
+                        query, args.max_results_per_query, cursor,
+                        args.timeout, args.mailto
+                    )
+                    request_count += 1
+                    page_records = []
+                    for raw in items:
+                        record = normalize(raw, domain, query)
+                        if not record:
+                            continue
+                        key = doi_key(record["doi"])
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        page_records.append(record)
+                    new_records.extend(page_records)
+                    query_added += len(page_records)
+
+                    exhausted = len(items) < args.max_results_per_query
+                    if not exhausted and not next_cursor:
+                        raise RuntimeError("Crossref returned a full page without next-cursor")
+                    cursor_state[state_key] = {
+                        "cursor": next_cursor if not exhausted else None,
+                        "exhausted": exhausted,
+                        "pages_completed": int(state.get("pages_completed", 0)) + page_number + 1,
+                        "last_page_items": len(items),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    # Persist queue before advancing its cursor: a crash can cause
+                    # a harmless duplicate page, but cannot silently skip leads.
+                    if page_records and not args.dry_run:
+                        args.queue.parent.mkdir(parents=True, exist_ok=True)
+                        with args.queue.open("a", encoding="utf-8") as handle:
+                            for record in page_records:
+                                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    if not args.dry_run:
+                        args.cursor_state.parent.mkdir(parents=True, exist_ok=True)
+                        args.cursor_state.write_text(
+                            json.dumps(cursor_state, indent=2, sort_keys=True) + "\n",
+                            encoding="utf-8"
+                        )
+                    print(f"[{domain}] page {page_number+1}: {len(items)} results, "
+                          f"{len(page_records)} new DOI leads")
+                    if exhausted:
+                        break
+                    cursor = next_cursor
+                    state = cursor_state[state_key]
+                except (urllib.error.URLError, TimeoutError, json.JSONDecodeError,
+                        RuntimeError) as exc:
+                    errors.append(f"{domain} / {query}: {exc}")
+                    print(f"WARNING: {errors[-1]}", file=sys.stderr)
+                    break
+            print(f"[{domain}] {query}: {query_added} new leads this run")
             if args.sleep:
                 time.sleep(args.sleep)
-
-    if new_records and not args.dry_run:
-        args.queue.parent.mkdir(parents=True, exist_ok=True)
-        with args.queue.open("a", encoding="utf-8") as handle:
-            for record in new_records:
-                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     print(f"Requests: {request_count}; new leads: {len(new_records)}; "
           f"existing queue records: {old_queue_count}")
@@ -287,6 +333,7 @@ def main() -> int:
         print("Dry run: queue was not changed.")
     else:
         print(f"Queue: {args.queue}")
+        print(f"Cursor checkpoint: {args.cursor_state}")
     print("SAFETY: records are bibliographic leads only; no equations were "
           "extracted, verified, accepted, or added to the canonical catalogue.")
     if errors:
