@@ -190,3 +190,22 @@ python scripts/core295_apply_approved_catalogue_proposal.py \
 The command refuses to proceed without the explicit `--apply` flag, exact proposal/diff/catalogue hashes, two distinct named approvers, all scientific-review confirmations, and separate application authorization. It checks that the proposal is append-only, does not modify existing catalogue entries or other canonical fields, keeps the catalogue in draft, and adds only `structurally_reviewed` non-accepted entries. It runs the structural catalogue validator on a temporary copy before writing, rechecks the canonical hash immediately before replacement, and creates an exclusive exact-byte backup before atomic replacement.
 
 This is a guarded file-application mechanism, not a scientific acceptance mechanism, cryptographic signature verifier, merge, experiment run, or guarantee that the reviewers' attestations are correct. Applying a proposal does not change any entry to `accepted`; acceptance and final readiness remain separate review gates.
+
+
+## Post-application reconciliation
+
+After an authorized application, independently reconcile the current catalogue against the exact proposal, approval record, diff and pre-application backup:
+
+```bash
+python scripts/core295_reconcile_applied_catalogue.py \
+  --catalogue config/core295_catalogue.json \
+  --proposal data/core295_proposals/core295_catalogue.proposed.json \
+  --diff data/core295_proposals/core295_catalogue.diff \
+  --approval data/core295_proposals/core295_catalogue.approval.json \
+  --backup data/core295_proposals/core295_catalogue.pre-apply.json \
+  --report data/core295_proposals/core295_post_application_reconciliation.md
+```
+
+The report checks proposal/diff/backup hashes against the approval and proposal provenance, exact current-catalogue equality with the approved proposal, original-entry preservation, append-only count and ID order, two distinct maintainer identities, draft status, and non-accepted staged review states. It is read-only and refuses to overwrite an existing report.
+
+A PASS means the applied bytes and recorded approval/proposal chain reconcile under these checks. It does not prove the scientific attestations, validate the legal authority of approvers, or establish structural inequivalence/statistical independence. It is not a substitute for the source-page and domain review.
