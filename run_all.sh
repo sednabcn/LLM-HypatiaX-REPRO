@@ -936,7 +936,7 @@ run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-on
   METHOD_TIMEOUT='${METHOD_TIMEOUT}' \\
   JOB_DEADLINE='${JOB_DEADLINE}' \\
     python3 '${EXPERIMENTS_DIR}/exp1_four_way_matched.py' 2>&1 | tee \"\${_FOUR_DIR}/exp1_four_way_matched_run.log\"
-  for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json; do
+  for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json exp1_four_way_matched_summary.json; do
     [[ -s \"\${_FOUR_DIR}/\${artifact}\" ]] || { echo \"::error::missing four-way artifact: \${artifact}\"; exit 1; }
   done
   echo '=== matched four-way comparison artifacts verified ==='
