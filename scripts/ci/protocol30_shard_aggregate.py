@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +45,25 @@ def load_json(path: Path):
 
 def fail(message: str) -> None:
     raise SystemExit(f"Protocol-30 aggregate validation failed: {message}")
+
+
+def json_safe(value):
+    """Replace non-finite JSON numbers with null without changing status fields.
+
+    Runner records use +/-inf and NaN as internal score sentinels for failed
+    methods. Strict JSON (allow_nan=False) rejects those values, so normalize
+    recursively only at the aggregate serialization boundary. r2_status,
+    rmse_status, success, and error remain the authoritative audit fields.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [json_safe(item) for item in value]
+    return value
 
 
 def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
@@ -239,6 +259,10 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
         "aggregation_note": "Per-method failures remain explicit in source records; no scores are imputed.",
     }
     result_path = output_dir / f"protocol30_{variant}_aggregate.json"
+    # Strict JSON cannot encode runner failure sentinels (NaN / +/-inf).
+    # Preserve method status/provenance and serialize only those numeric
+    # sentinels as null in the aggregate artifact.
+    merged = json_safe(merged)
     result_path.write_text(json.dumps(merged, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
     manifest = {
