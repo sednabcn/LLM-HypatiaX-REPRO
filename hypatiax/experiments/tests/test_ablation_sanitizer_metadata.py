@@ -73,8 +73,14 @@ def test_single_temperature_setting_is_wired():
     assert 'cfg.get("llm_temperature", 0.25)' in sh
     assert 'cfg.get("llm_model", "claude-sonnet-4-6")' in sh
     assert "--temperature 0.25" not in sh
-    for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
-        assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
+    # Runtime call sites must consume the same fixed protocol source;
+    # environment overrides are intentionally ignored by the shared wrapper.
+    wrapper = (root / "hypatiax/core/llm_call.py").read_text(encoding="utf-8", errors="replace")
+    assert "def configured_temperature() -> float:" in wrapper
+    assert "return 0.25" in wrapper
+    assert 'kwargs = {**kwargs, "temperature": req}' in wrapper
+    assert "client.messages.create(**kwargs)" in wrapper
+    assert "os.environ.get(\"LLM_TEMPERATURE\"" not in wrapper
 
 
 def test_no_silent_zero_r2_defaults():
