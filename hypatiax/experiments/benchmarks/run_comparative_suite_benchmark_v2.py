@@ -3271,7 +3271,11 @@ class HybridSystemV50_2Method(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if not HYBRID_V50_2_AVAILABLE:
-            return self._unavailable("HybridDiscoverySystem v50_2 not available")
+            return self._unavailable(
+                "HybridDiscoverySystem v50_2 not available",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Rename any Julia-reserved variable names before calling PySR.
         safe_names, rename_map = _sanitise_var_names(var_names)
