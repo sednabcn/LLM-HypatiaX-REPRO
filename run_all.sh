@@ -925,10 +925,13 @@ run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIB
 run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-only comparison" bash -c "
   set -euo pipefail
   cd '${REPO_ROOT}'
-  _FOUR_DIR='${RESULTS_DIR}/four_way_matched'
+  _FOUR_DIR='${RESULTS_DIR}/four_way_matched/shard${SHARD:-0}'
   mkdir -p \"\${_FOUR_DIR}\"
   PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \\
   RESULTS_DIR='${RESULTS_DIR}' \\
+  FOUR_WAY_OUTPUT_DIR="\${_FOUR_DIR}" \\
+  SHARD_INDEX='${SHARD:-0}' \\
+  TASK_IDS="\${TASK_IDS:-}" \\
   NO_LLM_CACHE=1 \\
   PYSR_SEED='${PYSR_SEED}' \\
   PYSR_POPULATIONS='${PYSR_POPULATIONS}' \\
@@ -939,7 +942,7 @@ run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-on
   for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json exp1_four_way_matched_summary.json; do
     [[ -s \"\${_FOUR_DIR}/\${artifact}\" ]] || { echo \"::error::missing four-way artifact: \${artifact}\"; exit 1; }
   done
-  echo '=== matched four-way comparison artifacts verified ==='
+  echo "=== Core-15 shard \${SHARD:-0} artifacts verified ==="
 "
 
 run exp1_four_way_matched_aggregate "Strict aggregation of the five isolated Core-15 four-way shards" bash -c "
