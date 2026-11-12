@@ -119,10 +119,10 @@ def _json_safe(o):
 def _create_message(client, **kwargs):
     """Make one direct Anthropic API call (single attempt, no retry/cache).
 
-    NOTE: despite the legacy alias name `_create_message_deterministic`, this is
-    NOT deterministic: the Anthropic SDK >= 1.0 no longer accepts `temperature`,
-    so no sampling control is sent. Results carry `temperature_sent: False`;
-    use llm_k_runs (repro.yaml) to quantify run-to-run variance.
+    NOTE: the shared create_message wrapper requests the fixed benchmark
+    temperature (0.25) and retries once without it only when the SDK/model
+    explicitly rejects the parameter. The returned provenance records whether
+    the parameter was accepted by the client call.
 
 
     Diagnostic/JMLR reproducibility mode: pass through whatever kwargs the
@@ -574,8 +574,8 @@ class PureLLMBaseline:
             }
         except Exception as e:
             _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
-            _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
-            _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
+            _prov["temperature_sent"] = bool(_temperature_info.get("temperature_sent", False))
+            _prov["temperature_requested"] = _temperature_info.get("temperature_requested", 0.25)
             print(
                 f"\n❌ ERROR: {type(e).__name__}: {str(e)}"
             )
