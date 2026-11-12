@@ -366,6 +366,21 @@ def run():
 
         if existing.get("seed") != SEED:
             raise RuntimeError(f"Checkpoint seed mismatch for {eq['name']}; use a fresh output directory")
+        expected_split = {
+            "train_data_sha256": _array_hash(X_train, y_train),
+            "outer_test_sha256": _array_hash(X_test, y_test),
+            "extrapolation_sha256": {
+                regime: _array_hash(X_e, y_e) for regime, (X_e, y_e) in extrap.items()
+            },
+        }
+        prior_split = existing.get("split")
+        if isinstance(prior_split, dict):
+            for field, expected in expected_split.items():
+                if prior_split.get(field) != expected:
+                    raise RuntimeError(
+                        f"Checkpoint {field} mismatch for {eq['name']}; "
+                        "do not mix results from different generated datasets"
+                    )
         arms = existing.setdefault("methods", {})
         if not isinstance(arms.get("hybrid_llm_pysr"), dict) or not arms["hybrid_llm_pysr"].get("success"):
             arms["hybrid_llm_pysr"] = _run_symbolic_condition(
