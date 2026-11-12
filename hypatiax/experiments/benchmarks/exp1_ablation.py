@@ -943,7 +943,10 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "structural_risk_tokens": list(res.get("structural_risk_tokens", [])),
             "complexity_routing_enabled": bool(res.get("complexity_routing_enabled", True)),
             "routing_reason":        res.get("routing_reason"),
-            "llm_called":            bool(res.get("llm_called", False)),   # B2
+            "llm_attempted":         bool(res.get("llm_attempted", False)),
+            "llm_called":            bool(res.get("llm_called", False)),   # verified live response
+            "llm_proposal_generated": bool(res.get("llm_proposal_generated", False)),
+            "llm_response_replayed": bool(res.get("llm_response_replayed", False)),
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
             # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
             # "live" only when the LLM was called and the engine reported no bypass.
