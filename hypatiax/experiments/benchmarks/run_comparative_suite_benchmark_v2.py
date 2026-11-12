@@ -923,18 +923,35 @@ HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_sys
 # ============================================================================
 
 def _provenance(d) -> dict:
-    """B2: pull llm_called / bypass_kind from a method's raw result dict
-    (top level, then nested llm_result / provenance). None == unknown, which
-    verify_blockers treats as missing -- never silently assumed live."""
-    out = {"llm_called": None, "bypass_kind": None, "llm_source": None}
+    """Preserve live-LLM provenance, including the requested/accepted temperature.
+
+    Temperature aliases cover the symbolic-engine result schema
+    (llm_temperature_*) and the shared-wrapper schema (temperature_*).
+    None remains unknown; it is never silently treated as a confirmed call.
+    """
+    out = {
+        "llm_called": None,
+        "llm_attempted": None,
+        "bypass_kind": None,
+        "llm_source": None,
+        "temperature_requested": None,
+        "temperature_sent": None,
+    }
     if not isinstance(d, dict):
         return out
+    aliases = {
+        "temperature_requested": "llm_temperature_requested",
+        "temperature_sent": "llm_temperature_sent",
+    }
     for src in (d, d.get("llm_result"), d.get("evaluation"),
                 d.get("provenance"), d.get("discovery")):
         if isinstance(src, dict):
-            for k in out:
-                if out[k] is None and src.get(k) is not None:
-                    out[k] = src[k]
+            for key in out:
+                value = src.get(key)
+                if value is None and key in aliases:
+                    value = src.get(aliases[key])
+                if out[key] is None and value is not None:
+                    out[key] = value
     return out
 
 
