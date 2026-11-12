@@ -476,3 +476,12 @@ Retrieval and corroboration links:
 - Real (1977) publisher article record/PDF endpoint: https://www.journals.uchicago.edu/doi/10.1086/283161
 - Real (1977) publisher issue contents: https://www.journals.uchicago.edu/toc/an/1977/111/978
 - Rosenbaum et al. open secondary equation-level discussion: https://pure.knaw.nl/portal/files/6764896/6543_Rosenbaum_AM.pdf
+
+
+### 5.2.1 Russian parallel publication identified; equation transcription still open
+
+A second primary-publication route is now identified: Frumkin's Russian-language paper “К вопросу о строении поверхностного слоя. Ч. III. Капиллярные кривые высших жирных кислот и управление состояния поверхностного слоя,” listed in *Сборник работ по чистой и прикладной химии*, Chemical Institute of L. Ya. Karpov, issue 4 (1925), pp. 56–74. The Russian Academy of Sciences / State Public Scientific-Technical Library catalogue identifies the complete 1925 volume as 233 pages and provides a PDF resolver URL. The MSU electrochemistry bibliography independently gives the title and page range. This is a potentially more accessible contemporaneous Russian publication of the same research programme, but its identity as a word-for-word parallel of the German journal article has not been established.
+
+The MSU selected-papers page lists the German article (Z. Phys. Chem. 116, 466–484) but its PDF link currently resolves to a login/reprint-request screen. The De Gruyter DOI record confirms the German article's bibliographic identity and pagination but does not expose its text in the retrieved record. The GPNTB PDF endpoint was identified but could not be opened by the web retrieval service in this pass. No equation, sign convention or page-level definition has therefore been transcribed from the Russian volume yet.
+
+**Disposition:** retain the Russian volume as a high-priority primary-source retrieval lead. Inspect printed pp. 56–74 (not PDF page indices) and compare its symbols, derivation and sign convention against the German pp. 466–484 before using it to resolve the Frumkin equation. Do not yet promote the familiar modern form (bc=\theta/(1-\theta)\exp(-2a\theta)) as an exact primary transcription.
