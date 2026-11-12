@@ -234,8 +234,8 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
-_DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
 while [[ $# -gt 0 ]]; do
@@ -2266,58 +2266,133 @@ PYEOF
 
 
 run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
-  _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
-  mkdir -p "\${_P30_RANDOM_DIR}"
+  _P30_TASKS=()
+  if [[ -n \"${TASK_IDS:-}\" ]]; then
+    for _tid in ${TASK_IDS}; do
+      [[ \"${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: ${_tid}\"; exit 1; }
+      _n=${BASH_REMATCH[1]}
+      _n=$((10#${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: ${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"${_n}\")
+    done
+    [[ ${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=$(printf '%s\\n' \"${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"${_uniq}\" -eq \"${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard${SHARD:-0}'
+  else
+    _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
+  fi
+  mkdir -p \"${_P30_RANDOM_DIR}\"
+  _P30_EQ_ARGS=()
+  [[ ${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
   METHOD_TIMEOUT=${METHOD_TIMEOUT} \
   PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
   PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
   JOB_DEADLINE=${JOB_DEADLINE} \
+  HYPATIAX_SHARD_ID=${SHARD:-} \
+  SHARD_IDS='' \
     python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \
-      --protocol protocol30 \
-      --domain all_domains \
-      --samples ${FEYNMAN_SAMPLES} \
-      --pysr-timeout ${FEYNMAN_TIMEOUT} \
-      --method-timeout ${METHOD_TIMEOUT} \
-      --populations ${PYSR_POPULATIONS} \
-      --parsimony 0.01 \
-      --use-transcendental-compositions \
-      --noiseless \
-      --threshold 0.999999 \
-      --methods 1 2 3 4 5 6 \
-      --no-llm-cache \
-      --no-checkpoint \
-      --output-dir "\${_P30_RANDOM_DIR}" \
-      2>&1 | tee -a "\${_P30_RANDOM_DIR}/protocol30_random_8020_run.log"
+      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
+      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
+      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
+      --use-transcendental-compositions --noiseless --threshold 0.999999 \
+      --methods 1 2 3 4 5 6 --no-llm-cache --no-checkpoint \
+      --output-dir \"${_P30_RANDOM_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
+  if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
+    python3 - \"${_P30_RANDOM_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+import json, sys
+from pathlib import Path
+from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+out, shard, *indices = sys.argv[1:]
+protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
+rows = []
+for domain in protocol.get_all_domains():
+    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
+        rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
+mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
+manifest = {"experiment":"random_8020","shard_index":int(shard),"n_shards":5,
+            "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
+            "equation_identities":mapping}
+Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
+PYMAN
+  fi
 "
 
 run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, PCA 40/60, six methods" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
-  _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
-  mkdir -p "\${_P30_PCA_DIR}"
+  _P30_TASKS=()
+  if [[ -n \"${TASK_IDS:-}\" ]]; then
+    for _tid in ${TASK_IDS}; do
+      [[ \"${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: ${_tid}\"; exit 1; }
+      _n=${BASH_REMATCH[1]}; _n=$((10#${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: ${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"${_n}\")
+    done
+    [[ ${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=$(printf '%s\\n' \"${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"${_uniq}\" -eq \"${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard${SHARD:-0}'
+  else
+    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
+  fi
+  mkdir -p \"${_P30_PCA_DIR}\"
+  _P30_EQ_ARGS=()
+  [[ ${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"${_P30_TASKS[@]}\")
   FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
   METHOD_TIMEOUT=${METHOD_TIMEOUT} \
   PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
   PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
   JOB_DEADLINE=${JOB_DEADLINE} \
+  SHARD_IDS='' \
     python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
-      --protocol protocol30 \
-      --domain all_domains \
-      --samples ${FEYNMAN_SAMPLES} \
-      --pysr-timeout ${FEYNMAN_TIMEOUT} \
-      --method-timeout ${METHOD_TIMEOUT} \
-      --populations ${PYSR_POPULATIONS} \
-      --parsimony 0.01 \
-      --use-transcendental-compositions \
-      --noiseless \
-      --threshold 0.999999 \
-      --methods 1 2 3 4 5 6 \
-      --no-llm-cache \
-      --force-fresh \
-      --no-checkpoint \
-      --output-dir "\${_P30_PCA_DIR}" \
-      2>&1 | tee -a "\${_P30_PCA_DIR}/protocol30_pca_4060_run.log"
+      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
+      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
+      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
+      --use-transcendental-compositions --noiseless --threshold 0.999999 \
+      --methods 1 2 3 4 5 6 --no-llm-cache --force-fresh --no-checkpoint \
+      --output-dir \"${_P30_PCA_DIR}\" \"${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
+  if [[ ${#_P30_TASKS[@]} -gt 0 ]]; then
+    python3 - \"${_P30_PCA_DIR}\" \"${SHARD:-0}\" \"${_P30_TASKS[@]}\" <<'PYMAN'
+import json, sys
+from pathlib import Path
+from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+out, shard, *indices = sys.argv[1:]
+protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
+rows = []
+for domain in protocol.get_all_domains():
+    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
+        rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
+mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
+manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
+            "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
+            "equation_identities":mapping}
+Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\\n")
+PYMAN
+  fi
+"
+
+run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Protocol-30 random 80/20 shards" bash -c "
+  set -euo pipefail
+  : \"${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
+    --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --output-dir '${RESULTS_DIR}/comparison_results/protocol30/random-80-20' \
+    --variant random_8020
+"
+
+run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protocol-30 PCA 40/60 shards" bash -c "
+  set -euo pipefail
+  : \"${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
+    --artifacts-dir \"${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --output-dir '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60' \
+    --variant pca_4060
 "
 run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
   cd '${REPO_ROOT}'
