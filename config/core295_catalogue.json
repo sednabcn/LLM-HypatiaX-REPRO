@@ -1699,6 +1699,95 @@
         "Proposed, not accepted; compare against Lotka 1920, the two-species Volterra feeding model, and other multi-species interaction families before counting"
       ],
       "source_location": "Volterra (1927 author-expanded reprint of 1926 memoir), Part II, §2, printed pp.38–39"
+    },
+    {
+      "equation_id": "BIO-LESLIE-1945-AGE-STRUCTURED-MATRIX-001",
+      "name": "Leslie age-structured population projection matrix",
+      "domain": "Biology",
+      "subdomain": "age-structured demography",
+      "formula": "n[t+1] = M*n[t], where M[0,x]=F_x, M[x+1,x]=P_x, and all other entries are zero",
+      "canonical_expression": "n_next=M*n; M[0,x]=F_x for x=0..m; M[x+1,x]=P_x for x=0..m-1; M[i,j]=0 otherwise",
+      "formula_latex": "\\mathbf n_{t+1}=M\\mathbf n_t,\\qquad M=\\begin{bmatrix}F_0&F_1&\\cdots&F_m\\\\P_0&0&\\cdots&0\\\\0&P_1&\\ddots&\\vdots\\\\\\vdots&\\ddots&\\ddots&0\\\\0&\\cdots&P_{m-1}&0\\end{bmatrix}",
+      "structural_fingerprint": "2d1ec59e11f16db2c92f29b47d7d8f3e48b5e92b0ec70a95f1d3c2f19f0e8d4a",
+      "source_ids": [
+        "BIO-LESLIE-1945-AGE-STRUCTURED-MATRIX"
+      ],
+      "source_family_id": "BIO-LESLIE-DISCRETE-AGE-STRUCTURED-PROJECTION",
+      "status": "proposed",
+      "assumptions": [
+        "Population is represented by female individuals, as in Leslie's original formulation",
+        "Age classes are consecutive equal-width intervals and the time step equals one age interval",
+        "Age-specific survival and fertility rates remain constant over the projection period",
+        "F_x is the number of daughters born in the interval and surviving into age class 0–1 at the next census per female in age class x at the current census",
+        "P_x is the probability of surviving from age class x to age class x+1 over one time step",
+        "The final age class is terminal and contributes no next age class beyond the modelled life table"
+      ],
+      "variables": {
+        "n_t": {
+          "meaning": "Column vector of female population counts by age class at census t",
+          "unit": "individuals"
+        },
+        "M": {
+          "meaning": "Age projection matrix with fertility in the first row and survival on the subdiagonal",
+          "unit": "transition coefficients"
+        },
+        "F_x": {
+          "meaning": "Daughters alive in age class 0–1 at t+1 per female in age class x at t",
+          "unit": "daughters per female per time step"
+        },
+        "P_x": {
+          "meaning": "Probability of survival from age class x to x+1 over one time step",
+          "unit": "dimensionless"
+        },
+        "x": {
+          "meaning": "Age-class index",
+          "unit": "integer"
+        },
+        "m": {
+          "meaning": "Index of final age class in the life-table distribution",
+          "unit": "integer"
+        }
+      },
+      "validity": {
+        "source_location": "Leslie (1945), Biometrika 33(3), pp.183–185; matrix relation on printed p.184, derivation of P_x and F_x on printed pp.184–185",
+        "regime": "Discrete census projection of a female population with fixed age-specific fertility and survival schedules",
+        "limitations": [
+          "The source's F_x coefficients include survival of daughters to the next census, not merely births during the interval",
+          "Leslie notes the fertility coefficients require an approximation based on within-interval mortality and maternal-frequency curves",
+          "The matrix depends on the age-class width and the chosen time step; coarse grouping introduces approximation error",
+          "The paper derives eigenvalues, stable age distribution and asymptotic growth from this same operator; these are not separate candidates",
+          "This discrete age-structured operator is not interchangeable with continuous-time Lotka renewal equations or scalar exponential/logistic growth laws",
+          "No generator, benchmark input ranges or statistical independence review has been completed"
+        ]
+      },
+      "input_ranges": {
+        "n_t": {
+          "train": null,
+          "extrapolation": null
+        },
+        "F_x": {
+          "train": null,
+          "extrapolation": null
+        },
+        "P_x": {
+          "train": null,
+          "extrapolation": null
+        }
+      },
+      "generator": {
+        "status": "pending_benchmark_contract",
+        "method": null,
+        "seed_policy": null,
+        "parameter_sampling": null
+      },
+      "review_notes": [
+        "Direct transcription of Leslie's original matrix equation M n_0=n_1 on printed p.184",
+        "The matrix is lower-Hessenberg with fertility in row zero and survival probabilities on the subdiagonal",
+        "Section 2 explicitly derives fertility coefficients using midpoint exposure and within-interval daughter survival",
+        "One coupled age-structured operator; do not split age classes, stable vectors, eigenvalues or powers M^t into separate equation records",
+        "Proposed pending cross-family review against other matrix population models and Core-15 exclusions"
+      ],
+      "source_location": "Leslie (1945), printed p.184"
     }
   ],
   "source_register": [
@@ -3309,6 +3398,14 @@
       "url": "https://doi.org/10.1111/j.1096-3642.1935.tb01680.x",
       "use": "Primary publisher record for Nicholson & Bailey, 'The Balance of Animal Populations.—Part I', Proceedings of the Zoological Society of London 105(3) (1935), pp.551–598. The publisher abstract covers random searching, parasite-host interactions, steady states and discontinuous interaction. The PDF and ePDF endpoints are not accessible in this retrieval pass. The familiar discrete-generation pair H_(t+1)=lambda H_t exp(-a P_t), P_(t+1)=H_t[1-exp(-a P_t)] is widely reproduced in later sources but is not transcribed here as a verbatim primary equation until the original paper is inspected. Candidate retrieval lead only; continuous-time Lotka/Volterra systems are not interchangeable with this discrete-generation encounter model. Follow-up retrieval: Wiley/ZSL article landing page exposes bibliographic metadata and first-page image; its Download PDF endpoint returns HTTP 403 to the retrieval service, and direct epdf route is inaccessible. No full-text equations/page transcription obtained. Publisher record remains the primary metadata source.",
       "status": "candidate_reference"
+    },
+    {
+      "source_id": "BIO-LESLIE-1945-AGE-STRUCTURED-MATRIX",
+      "domain": "Biology",
+      "title": "Leslie 1945 age-structured population projection matrix",
+      "url": "https://www.math.utah.edu/~keener/classes/math5110/papers/leslie.pdf",
+      "use": "Original scan of P. H. Leslie, 'On the Use of Matrices in Certain Population Mathematics', Biometrika 33(3) (1945), pp.183–212. Printed pp.183–185 define age-specific survival P_x, daughters surviving to age 0–1 F_x, and the lower-Hessenberg Leslie projection matrix M with first-row fertility and subdiagonal survival; n_1=M n_0 and n_t=M^t n_0. Section 2 derives P_x from life-table survivorship and F_x from age-specific maternal frequency with within-interval survival. Proposed as one discrete age-structured population operator, not separate scalar equations for each age class or its eigenvalue/stable-age consequences.",
+      "status": "candidate_primary"
     }
   ],
   "notes": [
