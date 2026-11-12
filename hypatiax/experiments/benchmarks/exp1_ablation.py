@@ -947,6 +947,7 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_called":            bool(res.get("llm_called", False)),   # verified live response
             "llm_proposal_generated": bool(res.get("llm_proposal_generated", False)),
             "llm_response_replayed": bool(res.get("llm_response_replayed", False)),
+            "llm_attempt_info": list(res.get("llm_attempt_info") or []),
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
             # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
             # "live" only when the LLM was called and the engine reported no bypass.
