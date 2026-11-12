@@ -2847,7 +2847,7 @@
       "domain": "DeFi Risk",
       "title": "Compound Comet Specification",
       "url": "https://github.com/compound-finance/comet/blob/f766f51583c23acc33b2a7824654ef2029a96804/SPEC.md",
-      "use": "Pinned development snapshot at commit f766f51583c23acc33b2a7824654ef2029a96804 (2026-06-23), SPEC.md blob 0a9fb98d505b57494ce2d6ec437c21ae90360091; paired CometWithExtendedAssetList.sol blob 3490e984d133789aa1afe2e8f7e37a11d2512396. SPEC describes signed-principal absorption, collateral credit to protocol, liquidation-penalty valuation, debt clamp and aggregate base supply/borrow updates. Paired Solidity uses liquidationFactor and different collateral/total-supply accounting; reconcile exact deployment/config before candidate use. Development snapshot only, not a deployed market pin.",
+      "use": "Pinned development snapshot at commit f766f51583c23acc33b2a7824654ef2029a96804 (2026-06-23), SPEC.md blob 0a9fb98d505b57494ce2d6ec437c21ae90360091; paired CometWithExtendedAssetList.sol blob 3490e984d133789aa1afe2e8f7e37a11d2512396. Cross-check: AssetInfo separates borrowCollateralFactor, liquidateCollateralFactor and liquidationFactor; eligibility uses liquidateCollateralFactor, absorb settlement uses liquidationFactor, and buyCollateral discount combines storeFrontPriceFactor with the complement of liquidationFactor. Specification prose and Solidity accounting differ in collateral credit and absorption bookkeeping. Development snapshot only; no deployed market/proxy/config pin.",
       "status": "candidate_reference"
     },
     {
