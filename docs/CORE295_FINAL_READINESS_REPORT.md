@@ -37,3 +37,8 @@ The structural-equivalence policy remains a draft with open design decisions. It
 ## Task planning foundation
 
 Once the catalogue meets the accepted/frozen contract, create a deterministic task manifest with [core295_plan_tasks.py](../scripts/core295_plan_tasks.py). The planner requires exactly 295 accepted entries (59 per domain), unique IDs/fingerprints and independence units, E4 review evidence, registered source records, complete variable ranges and ready generator contracts. It writes a new manifest with catalogue/task/shard hashes and exact-once domain-balanced shard assignments. It does not run experiments or accept equations. See [CORE295_TASK_PLANNER.md](CORE295_TASK_PLANNER.md).
+
+
+## Same-run shard artifact contract
+
+The Core-295 shard result envelope and strict exact-coverage verifier are documented in [CORE295_SHARD_RESULT_CONTRACT.md](CORE295_SHARD_RESULT_CONTRACT.md), with implementation in [core295_verify_shard_results.py](../scripts/core295_verify_shard_results.py). This is a verification-only prerequisite; no Core-295 runner, native payload aggregator, or workflow dispatch has been implemented.
