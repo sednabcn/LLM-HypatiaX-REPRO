@@ -1580,8 +1580,14 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
     --format png pdf \
     2>&1 | tee '${RESULTS_DIR}'/instability_run.log
 
-  _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) 2>/dev/null | wc -l)
-  find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
+  _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \
+    \( -name 'fig_paper_*.pdf' -o -name 'fig_paper_*.png' \
+       -o -name 'hypatiax_instability_*.pdf' -o -name 'hypatiax_instability_*.png' \) \
+    2>/dev/null | wc -l)
+  find '${RESULTS_DIR}/figures' -maxdepth 1 \
+    \( -name 'fig_paper_*.pdf' -o -name 'fig_paper_*.png' \
+       -o -name 'hypatiax_instability_*.pdf' -o -name 'hypatiax_instability_*.png' \) \
+    -delete 2>/dev/null || true
   echo \"[instability] removed \${_NFIG} figure byproduct(s) — figure generation disabled\"
 
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
