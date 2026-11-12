@@ -402,3 +402,17 @@ The pool's `_fee` computes a state-dependent convex combination of mid-fee and o
 ### Structural disposition
 
 CryptoSwap/Tricrypto NG is the implementation lineage for the 2021 CryptoSwap dynamic-peg model, distinct from the StableSwap near-parity invariant. Treat the coupled invariant, \(A,\gamma\), price-scale/oracle state, dynamic fee and re-pegging/profit logic as one governing protocol model. Do not split Newton solvers, fee reduction coefficient, EMA, virtual-price or rebalancing equations into separate equation counts. This is a three-coin optimized implementation snapshot; it must not be generalized automatically to two-coin CryptoSwap, older Tricrypto deployments, or every factory blueprint. Runtime values require a specific pool, factory/blueprint, chain and block-state pin. No chain/RPC calls, simulations or tests were performed.
+
+
+## Frumkin (1925): primary-source archive cross-check and access boundary
+
+The Moscow State University Electrochemistry Department's selected-papers archive lists the two relevant German-language records separately: Frumkin, *Die Kapillarkurve der höheren Fettsäuren und die Zustandsgleichung der Oberflächenschicht*, Z. Phys. Chem. 116 (1925), 466–484; and *Einige Bemerkungen zur Theorie der Adsorption und Verteilung*, Z. Phys. Chem. 116 (1925), 501–503 (the English-language archive labels the latter *On the Theory of Adsorption and Distribution*, 501–504). The archive exposes distinct PDF links for both records, but opening the higher-fatty-acid paper's PDF route returns an authorization-required login page rather than the scan.
+
+The same department's 1914–1930 bibliography separately lists Frumkin's Russian collected-work version, *К вопросу о строении поверхностного слоя. Ч. III. Капиллярные кривые высших жирных кислот и управление состояния поверхностного слоя*, in *Сборник работ по чистой и прикладной химии* (1925), pp. 56–74. This is a plausible parallel primary-text retrieval route, but the bibliographic listing alone does not establish that its text is currently accessible or that it contains the exact same equation layout as the German article.
+
+**Equation status unchanged:** the commonly reproduced Frumkin isotherm form remains secondary equation-level evidence. Neither the MSU bibliographic index nor the access-denied PDF route verifies the exact non-ideal interaction equation, notation, or printed page in the 1925 primary paper. Do not mark the candidate as directly transcribed or equation-ready until a readable original scan/translation is inspected. This cross-check strengthens the source identity and retrieval trail only.
+
+Archive records:
+- MSU selected Frumkin papers (entries for both 1925 articles): https://www.elch.chem.msu.ru/wp3/index.php/ru/articles/frumkinarticles/
+- MSU 1914–1930 bibliography (Russian collected-work entry): https://www.elch.chem.msu.ru/wp3/index.php/ru/1914-1930/
+- Direct MSU PDF route for the 466–484 article (currently authorization-gated): https://www.elch.chem.msu.ru/cgi-bin/getpdf.cgi?pdf=zpc1925.pdf
