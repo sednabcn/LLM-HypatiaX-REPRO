@@ -3531,6 +3531,9 @@ class ProtocolBenchmarkSuite:
         verbose: bool = True,
         X_far: Optional[np.ndarray] = None,
         y_far: Optional[np.ndarray] = None,
+        X_external_holdout: Optional[np.ndarray] = None,
+        y_external_holdout: Optional[np.ndarray] = None,
+        external_holdout_scope: Optional[str] = None,
     ) -> Dict:
         """Run all active methods on one protocol test case."""
 
@@ -3918,10 +3921,71 @@ class ProtocolBenchmarkSuite:
                     extrap_rmse_far[_mn]  = None
                     extrap_error_pct[_mn] = None
 
+        # Protocol-30 external holdout is independent of the extrapolation path.
+        # Score each method from its retained predictor or complete formula; never
+        # substitute training metrics or extrapolation scores.
+        _external_scores = {}
+        _do_external = (
+            X_external_holdout is not None
+            and y_external_holdout is not None
+            and len(X_external_holdout) > 1
+            and len(y_external_holdout) == len(X_external_holdout)
+            and external_holdout_scope == "random_80_20"
+        )
+        if _do_external:
+            for _name, _res in results.items():
+                _pred = None
+                _reason = None
+                try:
+                    _predict_fn = getattr(_res, "_predict_fn", None)
+                    if callable(_predict_fn):
+                        _pred = np.asarray(_predict_fn(X_external_holdout), dtype=float).reshape(-1)
+                    else:
+                        _formula = getattr(_res, "formula_full", "") or getattr(_res, "formula", "")
+                        if _formula and not re.search(r"\\b(?:ratio|gm)_\\w+\\b", _formula):
+                            _pred = self._runner_eval_formula(_formula, X_external_holdout, var_names)
+                        elif _formula:
+                            _reason = "formula requires engineered features not exposed by the method result"
+                        else:
+                            _reason = "method did not expose a reusable predictor or formula"
+                    if _pred is None:
+                        _reason = _reason or "method predictor could not evaluate the external holdout"
+                    elif _pred.shape != (len(y_external_holdout),) or not np.all(np.isfinite(_pred)):
+                        _pred = None
+                        _reason = "predictor returned non-finite values or an incompatible shape"
+                except Exception as _external_exc:
+                    _pred = None
+                    _reason = f"{type(_external_exc).__name__}: {_external_exc}"
+                if _pred is not None:
+                    from hypatiax.core.r2_canonical import r2_checked as _r2c_external
+                    _r2_external = _r2c_external(y_external_holdout, _pred)[0]
+                    _rmse_external = float(np.sqrt(np.mean((np.asarray(y_external_holdout, dtype=float) - _pred) ** 2)))
+                    if np.isfinite(_r2_external) and np.isfinite(_rmse_external):
+                        _external_scores[_name] = {
+                            "external_holdout_scope": "random_80_20",
+                            "external_holdout_status": "success",
+                            "r2_external_holdout": float(_r2_external),
+                            "rmse_external_holdout": _rmse_external,
+                            "external_holdout_error": None,
+                        }
+                    else:
+                        _reason = "external metrics were non-finite or target variance was degenerate"
+                if _name not in _external_scores:
+                    _external_scores[_name] = {
+                        "external_holdout_scope": "random_80_20",
+                        "external_holdout_status": "unavailable",
+                        "r2_external_holdout": None,
+                        "rmse_external_holdout": None,
+                        "external_holdout_error": _reason or "external scoring unavailable",
+                    }
+
         record = {
             "description":   description,
             "domain":        domain,
-            "results":       {name: res.to_dict() for name, res in results.items()},
+            "results":       {
+                name: {**res.to_dict(), **_external_scores.get(name, {})}
+                for name, res in results.items()
+            },
             "comparison":    comparison,
             "winner":        comparison["winner"],
             "timestamp":     datetime.now().isoformat(),
@@ -5277,9 +5341,38 @@ Examples
               f"Each uses {int(_efrac*100)}% of samples for training.\n")
 
     else:
-        # Non-extrap path: pad every tuple with (None, None) so the main loop
-        # can always unpack 8 elements regardless of mode.
-        all_tests = [(*t, None, None) for t in all_tests]
+        # Protocol-30 random 80/20 holdout is removed before any method sees data.
+        # It is kept separate from X_far/y_far, which remain exclusive to --extrap.
+        if getattr(args, "protocol", None) == "protocol30":
+            from sklearn.model_selection import train_test_split as _protocol30_split
+            _random_holdout_tests = []
+            for _desc, _X, _y, _vnames, _meta, _dom in all_tests:
+                try:
+                    _X_train, _X_holdout, _y_train, _y_holdout = _protocol30_split(
+                        _X, _y, test_size=0.2, random_state=42, shuffle=True
+                    )
+                    _meta_random = {
+                        **_meta,
+                        "split_protocol": "random_80_20",
+                        "n_train": int(len(_X_train)),
+                        "n_test": int(len(_X_holdout)),
+                    }
+                    _random_holdout_tests.append((
+                        _desc, _X_train, _y_train, _vnames, _meta_random, _dom,
+                        None, None, _X_holdout, _y_holdout,
+                    ))
+                except Exception as _random_split_exc:
+                    print(f"  ERROR: random 80/20 split failed for '{_desc[:50]}': {_random_split_exc}")
+                    # Keep an explicit empty holdout so every method is recorded
+                    # as unavailable rather than silently reverting to in-sample scoring.
+                    _random_holdout_tests.append((
+                        _desc, _X, _y, _vnames,
+                        {**_meta, "split_protocol": "random_80_20", "external_holdout_split_error": str(_random_split_exc)},
+                        _dom, None, None, None, None,
+                    ))
+            all_tests = _random_holdout_tests
+        else:
+            all_tests = [(*t, None, None, None, None) for t in all_tests]
 
 
     global _CHECKPOINT_NAME
@@ -5363,7 +5456,7 @@ Examples
 
     # ── Main loop ───────────────────────────────────────────────────────────
     global_done = len(completed_keys)   # tests already done before this run
-    for i, (description, X, y, var_names, metadata, domain, X_far, y_far) in enumerate(all_tests, 1):
+    for i, (description, X, y, var_names, metadata, domain, X_far, y_far, X_external_holdout, y_external_holdout) in enumerate(all_tests, 1):
         eq_key = _eq_key(metadata, domain)
 
         # Skip if already completed (resume mode)
@@ -5402,6 +5495,9 @@ Examples
             verbose=not args.quiet,
             X_far=X_far,
             y_far=y_far,
+            X_external_holdout=X_external_holdout,
+            y_external_holdout=y_external_holdout,
+            external_holdout_scope=metadata.get("split_protocol"),
         )
 
         # Record timing
