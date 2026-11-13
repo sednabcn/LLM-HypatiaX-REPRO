@@ -2542,9 +2542,7 @@ class HybridAllDomainsMethod(BaseMethod):
                 # Strategy 2: re-evaluate the formula string.
                 formula_str = (
                     result.get("python_code")
-                    or result.get("formula")
-                    or result.get("best_formula")
-                    or ""
+                    or _extract_formula(result)
                 )
                 if formula_str:
                     y_pred_llm = self._runner_eval_formula(formula_str, X, var_names)
@@ -2686,7 +2684,7 @@ class HybridAllDomainsMethod(BaseMethod):
                             f"{r2v:.4f} to {r2_hybrid:.4f})"
                         )
 
-            _fstr_2534 = str(result.get("formula", result.get("best_formula", "N/A")))
+            _fstr_2534 = _extract_formula(result)
             return MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
@@ -3791,6 +3789,12 @@ class ProtocolBenchmarkSuite:
                         _ypred = np.asarray(_predict_fn(X_far), dtype=float).reshape(-1)
                     except Exception as _pca_predict_exc:
                         _reason = f"{type(_pca_predict_exc).__name__}: {_pca_predict_exc}"
+                elif (getattr(_mres, "metadata", {}) or {}).get("nn_applied"):
+                    _reason = (
+                        "NN residual correction contributed to the reported hybrid result, "
+                        "but its fitted inference pipeline was not retained; formula-only "
+                        "evaluation would not reproduce the reported method"
+                    )
                 else:
                     if isinstance(_mres, MethodResult):
                         _formula = getattr(_mres, "formula_full", "") or _mres.formula
