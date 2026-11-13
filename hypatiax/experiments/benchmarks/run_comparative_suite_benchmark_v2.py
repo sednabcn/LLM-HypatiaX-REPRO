@@ -1148,79 +1148,63 @@ class BaseMethod:
         y: np.ndarray,
         y_pred_llm: np.ndarray,
         description: str = "",
-    ) -> Optional[np.ndarray]:
-        """Train a shallow MLP on the LLM formula residuals and return
-        corrected predictions.
+    ) -> Optional[tuple]:
+        """Fit residual correction and retain its complete inference transform.
 
-        FIX (Newton's gravity / tiny-scale equations):
-        When y spans many decades (power-law equations like F=Gm₁m₂/r²),
-        the NN is trained in log-space on log|y| so that the relative
-        structure of the residuals is preserved.  The result is
-        inverse-transformed back to linear space before returning.
-
-        Two strategies are attempted:
-          1. Log-space NN: train on log(y) vs log(y_pred_llm) residuals
-             when y is strictly positive and spans > 5 decades.
-          2. Linear-space NN: standard residual correction in original units.
-        The strategy producing the higher R² is returned.
-
-        Returns corrected y array, or None if torch is unavailable / fails.
+        Returns (corrected_training_predictions, predictor). The predictor
+        accepts (X_new, base_predictions_new) and applies the exact selected
+        residual correction, including log transforms and fitted scaling.
         """
         if not TORCH_AVAILABLE:
             return None
         try:
-            # FIX-ISSUE2-UNSEEDED-NN (follow-up): this helper was training
-            # completely unseeded, same root cause as Strategies 3a/3b above
-            # -- seed deterministically from the equation description via
-            # sha256 (not hash(), which is per-process-randomized).
             _seed = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
             torch.manual_seed(_seed)
             from sklearn.preprocessing import StandardScaler as _SS
 
-            # ── Detect whether log-space training is appropriate ─────────────
-            # Newton's gravity, Coulomb, etc: y > 0 and spans many decades.
-            _y_pos    = np.all(y > 0)
-            _yp_pos   = np.all(y_pred_llm > 0)
-            _y_std    = float(np.std(y))
-            _y_abs    = np.abs(y)
-            _y_ratio  = float(np.max(_y_abs) / (np.min(_y_abs) + 1e-300))
-            _use_log  = _y_pos and _yp_pos and _y_ratio > 5.0
+            X = np.asarray(X, dtype=float)
+            y = np.asarray(y, dtype=float).reshape(-1)
+            y_pred_llm = np.asarray(y_pred_llm, dtype=float).reshape(-1)
+            if (
+                X.ndim != 2 or len(X) != len(y) or len(y) != len(y_pred_llm)
+                or not np.all(np.isfinite(X))
+                or not np.all(np.isfinite(y))
+                or not np.all(np.isfinite(y_pred_llm))
+            ):
+                raise ValueError("non-finite or incompatible residual-fit inputs")
 
-            # ── Log-space X features ─────────────────────────────────────────
-            _log_X_cols = []
-            for col in range(X.shape[1]):
-                col_data = X[:, col]
-                if np.all(col_data > 0):
-                    col_ratio = float(np.max(col_data) / (np.min(col_data) + 1e-300))
-                    if _use_log or col_ratio > 10:
-                        _log_X_cols.append(col)
+            _y_pos = np.all(y > 0) and np.all(y_pred_llm > 0)
+            _y_ratio = float(np.max(np.abs(y)) / (np.min(np.abs(y)) + 1e-300))
+            _use_log = _y_pos and _y_ratio > 5.0
 
-            def _transform_X(Xin):
-                Xout = Xin.copy().astype(float)
-                for col in _log_X_cols:
-                    Xout[:, col] = np.log(np.clip(Xout[:, col], 1e-300, None))
-                return Xout
+            _log_cols = []
+            for _c in range(X.shape[1]):
+                if np.all(X[:, _c] > 0):
+                    _cr = float(np.max(X[:, _c]) / (np.min(X[:, _c]) + 1e-300))
+                    if _use_log or _cr > 10.0:
+                        _log_cols.append(_c)
 
-            X_feat = _transform_X(X)
-            scaler_X = _SS().fit(X_feat)
-            X_s = scaler_X.transform(X_feat)
-            X_t = torch.FloatTensor(X_s)
+            Xf = X.copy()
+            for _c in _log_cols:
+                Xf[:, _c] = np.log(np.clip(Xf[:, _c], 1e-300, None))
+            scaler_X = _SS().fit(Xf)
+            X_s = scaler_X.transform(Xf)
+            X_t = torch.as_tensor(X_s, dtype=torch.float32)
             n_in = X_s.shape[1]
 
-            def _train_net(target_vec):
-                """Train a shallow MLP on target_vec; return predictions."""
+            def _build_and_train(target_vec):
                 t_mean = float(np.mean(target_vec))
-                t_std  = float(np.std(target_vec))
-                if t_std < 1e-30 or (_y_std > 0 and t_std / _y_std < 1e-9):
-                    return None   # target is flat — no information to learn
+                t_std = float(np.std(target_vec))
+                if t_std < 1e-30:
+                    return None
                 t_s = ((target_vec - t_mean) / t_std).reshape(-1, 1)
-                r_t = torch.FloatTensor(t_s)
+                r_t = torch.as_tensor(t_s, dtype=torch.float32)
                 net = nn.Sequential(
                     nn.Linear(n_in, 64), nn.Tanh(),
-                    nn.Linear(64, 32),   nn.Tanh(),
+                    nn.Linear(64, 32), nn.Tanh(),
                     nn.Linear(32, 1),
                 )
-                opt     = torch.optim.Adam(net.parameters(), lr=3e-3, weight_decay=1e-4)
+                opt = torch.optim.Adam(net.parameters(), lr=3e-3, weight_decay=1e-4)
                 loss_fn = nn.MSELoss()
                 best_loss, best_w, patience = float("inf"), None, 0
                 for _ in range(300):
@@ -1229,145 +1213,89 @@ class BaseMethod:
                     loss.backward()
                     opt.step()
                     if loss.item() < best_loss - 1e-7:
-                        best_loss, patience = loss.item(), 0
-                        best_w = {k: v.clone() for k, v in net.state_dict().items()}
+                        best_loss = loss.item()
+                        best_w = {k: v.detach().clone() for k, v in net.state_dict().items()}
+                        patience = 0
                     else:
                         patience += 1
                         if patience >= 30:
                             break
-                if best_w is not None:
-                    net.load_state_dict(best_w)
+                if best_w is None:
+                    return None
+                net.load_state_dict(best_w)
+                net.eval()
+
+                def _predict_residual(X_new):
+                    X_new = np.asarray(X_new, dtype=float)
+                    if X_new.ndim != 2 or X_new.shape[1] != len(_log_cols) + (X.shape[1] - len(_log_cols)):
+                        raise ValueError("residual predictor received incompatible feature shape")
+                    X_new_f = X_new.copy()
+                    for _idx in _log_cols:
+                        if np.any(X_new_f[:, _idx] <= 0):
+                            raise ValueError(f"log-transformed feature column {_idx} must be positive")
+                        X_new_f[:, _idx] = np.log(X_new_f[:, _idx])
+                    X_new_s = scaler_X.transform(X_new_f)
+                    with torch.no_grad():
+                        pred_s = net(torch.as_tensor(X_new_s, dtype=torch.float32)).cpu().numpy().reshape(-1)
+                    return pred_s * t_std + t_mean
+
                 with torch.no_grad():
-                    pred_s = net(X_t).numpy().flatten()
-                return pred_s * t_std + t_mean
+                    train_pred_s = net(X_t).cpu().numpy().reshape(-1)
+                return train_pred_s * t_std + t_mean, _predict_residual
 
-            best_y_hybrid: Optional[np.ndarray] = None
+            best_result = None
+            best_predictor = None
             best_r2 = float("-inf")
+            from hypatiax.core.r2_canonical import r2_checked as _r2_checked
 
-            # ── Strategy A: log-space NN (for power-law / tiny-scale eqs) ───
             if _use_log:
                 try:
-                    log_y      = np.log(y)
-                    log_y_pred = np.log(y_pred_llm)
-                    log_resid  = log_y - log_y_pred
-                    log_corr   = _train_net(log_resid)
-                    if log_corr is not None:
-                        log_y_hybrid = log_y_pred + log_corr
-                        y_hybrid_log = np.exp(np.clip(log_y_hybrid, -500, 500))
-                        if np.all(np.isfinite(y_hybrid_log)):
-                            r2_log = float(1.0 - np.sum((y - y_hybrid_log)**2) /
-                                           max(np.sum((y - np.mean(y))**2), 1e-300))
-                            if r2_log > best_r2:
-                                best_r2, best_y_hybrid = r2_log, y_hybrid_log
+                    log_resid = np.log(y) - np.log(y_pred_llm)
+                    built = _build_and_train(log_resid)
+                    if built is not None:
+                        log_corr, corr_fn = built
+                        y_log_corrected = np.exp(np.clip(np.log(y_pred_llm) + log_corr, -500, 500))
+                        if np.all(np.isfinite(y_log_corrected)):
+                            r2_log = _r2_checked(y, y_log_corrected)[0]
+                            if np.isfinite(r2_log) and r2_log > best_r2:
+                                best_r2, best_result = r2_log, y_log_corrected
+                                def _log_predictor(X_new, base_new, _corr=corr_fn):
+                                    base_new = np.asarray(base_new, dtype=float).reshape(-1)
+                                    if np.any(base_new <= 0):
+                                        raise ValueError("log residual correction requires positive base predictions")
+                                    corr = _corr(X_new)
+                                    return np.exp(np.clip(np.log(base_new) + corr, -500, 500))
+                                best_predictor = _log_predictor
                 except Exception as _e:
                     import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    _lg.getLogger(__name__).warning("swallowed: %r", _e)
+                    if _os.environ.get("HYPATIAX_STRICT") == "1":
+                        raise
 
-            # ── Strategy B: linear-space NN (standard residual correction) ──
-            resid_lin  = y - y_pred_llm
-            lin_corr   = _train_net(resid_lin)
-            if lin_corr is not None:
-                y_hybrid_lin = y_pred_llm + lin_corr
-                if np.all(np.isfinite(y_hybrid_lin)):
-                    r2_lin = float(1.0 - np.sum((y - y_hybrid_lin)**2) /
-                                   max(np.sum((y - np.mean(y))**2), 1e-300))
-                    if r2_lin > best_r2:
-                        best_r2, best_y_hybrid = r2_lin, y_hybrid_lin
+            try:
+                lin_resid = y - y_pred_llm
+                built = _build_and_train(lin_resid)
+                if built is not None:
+                    lin_corr, corr_fn = built
+                    y_lin_corrected = y_pred_llm + lin_corr
+                    if np.all(np.isfinite(y_lin_corrected)):
+                        r2_lin = _r2_checked(y, y_lin_corrected)[0]
+                        if np.isfinite(r2_lin) and r2_lin > best_r2:
+                            best_r2, best_result = r2_lin, y_lin_corrected
+                            def _linear_predictor(X_new, base_new, _corr=corr_fn):
+                                base_new = np.asarray(base_new, dtype=float).reshape(-1)
+                                return base_new + _corr(X_new)
+                            best_predictor = _linear_predictor
 
-            return best_y_hybrid
+            except Exception as _e:
+                import logging as _lg, os as _os
+                _lg.getLogger(__name__).warning("swallowed: %r", _e)
+                if _os.environ.get("HYPATIAX_STRICT") == "1":
+                    raise
+
+            return (best_result, best_predictor) if best_result is not None else None
         except Exception as e:
             return _m5_record_failure("_nn_residual_fit", e)
-
-
-# ============================================================================
-# ── Pure LLM truncation guard ─────────────────────────────────────────────────
-# A formula is "truncated" if it has no `return <value>` line — meaning
-# it cannot have been executed, and any R² recorded for it is invalid.
-# This was the root cause of the 100% recovery artefact in the March 2026 run:
-# 11/30 PureLLM formulas ended mid-line yet all scored R² ≈ 0.9976 because the
-# harness fell back to a cached value instead of reporting a failure.
-
-def _is_truncated_formula(code: str) -> bool:
-    """Return True if code has no valid `return <something>` statement."""
-    if not code or not code.strip():
-        return True
-    for line in code.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            continue
-        if stripped.startswith("return"):
-            rest = stripped[len("return"):].strip()
-            if rest:          # return <something> — complete
-                return False
-    return True               # no valid return found
-
-
-# METHOD 1 — PureLLMBaseline
-# core/base_pure_llm/baseline_pure_llm_defi_discovery.py
-# ============================================================================
-
-class PureLLMBaselineMethod(BaseMethod):
-    """
-    Wraps hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery.PureLLMBaseline.
-    This is the same class used in test_enhanced_defi_extrapolation.py.
-    """
-
-    def __init__(self, verbose=False, no_cache=False):
-        super().__init__("PureLLM Baseline (core)", verbose)
-        self._baseline = None
-        self._no_cache = no_cache          # set True via --no-llm-cache flag
-        if not PURE_LLM_AVAILABLE:
-            return
-        try:
-            from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
-            self._baseline = PureLLMBaseline()
-            self._log("initialised ✅")
-        except Exception as exc:
-            self._log(f"init failed: {exc}")
-
-    def _clear_llm_cache(self):
-        """Best-effort cache clear for PureLLMBaseline internal cache.
-
-        PureLLMBaseline stores results in a dict so that identical equation
-        descriptions return instantly on repeated calls.  Clearing it forces
-        a fresh API call for every test, which is what Phase 2 requires.
-
-        We try several common attribute names because the cache attribute may
-        differ between versions.  Silently ignores unknown structures.
-        """
-        if self._baseline is None:
-            return
-        for attr in ("_cache", "_formula_cache", "_result_cache", "_memo", "cache"):
-            cache = getattr(self._baseline, attr, None)
-            if isinstance(cache, dict):
-                n = len(cache)
-                cache.clear()
-                self._log(f"cleared {n} entries from {self._baseline.__class__.__name__}.{attr}")
-                return
-        # If no dict-typed cache attribute found, re-instantiate the baseline.
-        # This is heavier but guaranteed to produce a clean state.
-        try:
-            from hypatiax.core.base_pure_llm.baseline_pure_llm_defi_discovery import PureLLMBaseline
-            self._baseline = PureLLMBaseline()
-            self._log("re-instantiated PureLLMBaseline (no cache attribute found)")
-        except Exception as exc:
-            self._log(f"re-instantiation failed: {exc}")
-
-    # ------------------------------------------------------------------
-    # Runner-side formula evaluator — used as a fallback when the
-    # PureLLM class's own test_formula_accuracy() fails (e.g. Gaussian
-    # where the LLM uses scipy.stats / math.sqrt not in the class's
-    # safe-globals).  We build a richer safe namespace here.
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _runner_eval_formula(
-        python_code: str,
-        X: np.ndarray,
-        var_names: List[str],
-    ) -> Optional[np.ndarray]:
-        """Delegate to the shared restricted AST evaluator."""
-        return _runner_eval_formula(python_code, X, var_names)
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._baseline is None:
