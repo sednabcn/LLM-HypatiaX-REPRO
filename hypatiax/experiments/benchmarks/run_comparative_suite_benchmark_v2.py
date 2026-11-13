@@ -3250,7 +3250,7 @@ class SymbolicEngineMethod(BaseMethod):
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
-                rmse=float(result.get("rmse", float("nan"))),
+                rmse=float(result["rmse"]) if result.get("rmse") is not None else float("nan"),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={**_no_llm_provenance, "iterations": _n_iter},
             )
@@ -3421,7 +3421,7 @@ class HybridSystemV50_2Method(BaseMethod):
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
-                rmse=float(result.get("rmse", float("nan"))),
+                rmse=float(result["rmse"]) if result.get("rmse") is not None else float("nan"),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={
                     **_provenance(result),
