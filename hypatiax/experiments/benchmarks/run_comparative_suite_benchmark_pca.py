@@ -3610,6 +3610,18 @@ class ProtocolBenchmarkSuite:
                 # wait=False alone is safe: the thread is a daemon and will not
                 # prevent process exit even if it runs to completion.
                 _pool.shutdown(wait=False)
+            if result is None:
+                # A method adapter must return MethodResult. Preserve the failed
+                # equation/method record instead of crashing the entire suite
+                # while assigning timing metadata.
+                result = MethodResult(
+                    method=method.name, success=False,
+                    r2=float("-inf"), rmse=float("inf"), formula="N/A",
+                    error="method.run returned None (no MethodResult was produced)",
+                    metadata={"invalid_method_return": True},
+                )
+                if verbose:
+                    print("✗ method returned None; recorded as unavailable", flush=True)
             result.time = time.time() - t0
             results[method.name] = result
 
