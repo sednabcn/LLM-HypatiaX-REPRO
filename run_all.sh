@@ -2280,7 +2280,11 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
     [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
     _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
     [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_RANDOM_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\${SHARD:-0}\"
+    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
+      _P30_RANDOM_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
+    else
+      _P30_RANDOM_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\${SHARD:-0}\"
+    fi
   else
     _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
   fi
@@ -2328,10 +2332,14 @@ result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-manifest = {\"experiment\":\"random_8020\",\"shard_index\":int(shard),\"n_shards\":5,
-            \"expected_equation_count\":30,\"assigned_equation_indices\":[int(i) for i in indices],
+_is_smoke = bool(__import__(\"os\").environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+manifest = {\"experiment\":\"random_8020_smoke\" if _is_smoke else \"random_8020\",
+            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
+            \"expected_equation_count\":len(indices) if _is_smoke else 30,
+            \"assigned_equation_indices\":[int(i) for i in indices],
             \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
-            \"effective_llm_temperature\":effective_temperature}
+            \"effective_llm_temperature\":effective_temperature,
+            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
 Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
 PYMAN
   fi
@@ -2351,7 +2359,11 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
     [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
     _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
     [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
+    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
+      _P30_PCA_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
+    else
+      _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
+    fi
   else
     _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
   fi
@@ -2394,10 +2406,14 @@ result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-manifest = {\"experiment\":\"pca_4060\",\"shard_index\":int(shard),\"n_shards\":5,
-            \"expected_equation_count\":30,\"assigned_equation_indices\":[int(i) for i in indices],
+_is_smoke = bool(__import__(\"os\").environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+manifest = {\"experiment\":\"pca_4060_smoke\" if _is_smoke else \"pca_4060\",
+            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
+            \"expected_equation_count\":len(indices) if _is_smoke else 30,
+            \"assigned_equation_indices\":[int(i) for i in indices],
             \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
-            \"effective_llm_temperature\":effective_temperature}
+            \"effective_llm_temperature\":effective_temperature,
+            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
 Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
 PYMAN
   fi
