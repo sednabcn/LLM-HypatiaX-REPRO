@@ -2735,7 +2735,7 @@ class HybridAllDomainsMethod(BaseMethod):
                         )
 
             _fstr_2534 = _extract_formula(result)
-            return MethodResult(
+            _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
                 rmse=rmse,
