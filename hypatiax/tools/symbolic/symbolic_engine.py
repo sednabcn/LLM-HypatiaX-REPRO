@@ -2812,10 +2812,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             if not np.isfinite(r2) or not np.isfinite(rmse):
                 raise ValueError("symbolic discovery produced non-finite training metrics")
 
+            _validation = result.get("validation") or {}
             return {
                 # Success means a valid formula and finite evaluation, not
                 # that the model crossed an arbitrary positive-R² threshold.
-                "success": bool(result.get("validation", {}).get("valid", True)),
+                "success": bool(_validation.get("valid", True)),
                 "r2": r2,
                 "rmse": rmse,
                 "formula": _expression,
