@@ -3750,17 +3750,23 @@ class ProtocolBenchmarkSuite:
             for _mname, _mres in results.items():
                 _formula = None
                 _reason = None
-                if isinstance(_mres, MethodResult):
-                    _formula = getattr(_mres, "formula_full", "") or _mres.formula
-                    if _formula and any(kw in str(_formula) for kw in ("layers=", "hidden=", "NN:", "neural", "ImprovedNN(")):
-                        _reason = "PCA ImprovedNN does not expose a refitted outer-training predictor"
-                        _formula = None
                 _ypred = None
-                if _formula:
+                _predict_fn = getattr(_mres, "_predict_fn", None)
+                if callable(_predict_fn):
                     try:
-                        _ypred = _runner_eval_formula(_formula, X_far, var_names)
-                    except Exception as _pca_eval_exc:
-                        _reason = f"{type(_pca_eval_exc).__name__}: {_pca_eval_exc}"
+                        _ypred = np.asarray(_predict_fn(X_far), dtype=float).reshape(-1)
+                    except Exception as _pca_predict_exc:
+                        _reason = f"{type(_pca_predict_exc).__name__}: {_pca_predict_exc}"
+                else:
+                    if isinstance(_mres, MethodResult):
+                        _formula = getattr(_mres, "formula_full", "") or _mres.formula
+                    if _formula:
+                        try:
+                            _ypred = _runner_eval_formula(_formula, X_far, var_names)
+                        except Exception as _pca_eval_exc:
+                            _reason = f"{type(_pca_eval_exc).__name__}: {_pca_eval_exc}"
+                    else:
+                        _reason = "method did not expose a reusable predictor or formula"
                 if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
                     from hypatiax.core.r2_canonical import r2_checked as _r2c
                     _v = _r2c(y_far, _ypred)[0]
