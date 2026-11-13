@@ -1544,13 +1544,14 @@ class ImprovedNN(BaseMethod):
             return self._unavailable("ImprovedNN not available")
 
         try:
-            # FIX-C3: pca_directed_split is the sole protocol split inside run().
-            # Gate B requires pca_directed_split to be called here directly.
-            # Replaces the legacy random 80/20 sklearn split entirely.
-            X_train, X_test, y_train, y_test = pca_directed_split(
-                X, y, test_size=0.6, random_state=42
+            # FIX-C3-DISCLOSURE: the outer PCA 40/60 split is performed once
+            # by the protocol data loop before run_test(). This inner 80/20
+            # random split is validation-only and is confined to outer training;
+            # it must never be confused with or replace the PCA external holdout.
+            from sklearn.model_selection import train_test_split as _tts_internal
+            X_train, X_test, y_train, y_test = _tts_internal(
+                X, y, test_size=0.2, random_state=42, shuffle=True
             )
-            from sklearn.model_selection import train_test_split as _tts_internal  # noqa: kept for any subclass callers
 
             # ── Log-space detection ──────────────────────────────────────────
             # Equations like Coulomb (1/r²), Newton (G*m1*m2/r²), Ideal Gas
