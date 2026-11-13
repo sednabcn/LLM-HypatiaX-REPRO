@@ -373,6 +373,8 @@ def _runner_eval_formula(
             or len(set(var_names)) != len(var_names)
             or not np.isfinite(X).all()
         ):
+            if diagnostics is not None:
+                diagnostics.append("invalid holdout feature matrix or feature-name schema")
             return None
 
         code = python_code.strip()
@@ -380,6 +382,8 @@ def _runner_eval_formula(
         code = code.replace("^", "**")
 
         if not code:
+            if diagnostics is not None:
+                diagnostics.append("formula string is empty")
             return None
 
         if code.startswith("def "):
@@ -449,8 +453,14 @@ def _runner_eval_formula(
         if arr.ndim == 0:
             arr = np.full(X.shape[0], float(arr))
         if arr.ndim != 1 or arr.shape != (X.shape[0],):
+            if diagnostics is not None:
+                diagnostics.append(
+                    f"formula returned shape {arr.shape}; expected ({X.shape[0]},)"
+                )
             return None
         if not np.isfinite(arr).all():
+            if diagnostics is not None:
+                diagnostics.append("formula produced non-finite predictions")
             return None
         return arr
 
