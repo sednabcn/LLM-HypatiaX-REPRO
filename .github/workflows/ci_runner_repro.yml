@@ -997,6 +997,9 @@ jobs:
             pmlb \
             pint \
             psutil
+          # Install this checkout as an editable package so imports work for
+          # every Python entry point, regardless of the script's directory.
+          pip install --no-deps -e .
 
       - name: Install Julia / SymbolicRegression (if needed)
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
