@@ -3964,7 +3964,11 @@ class ProtocolBenchmarkSuite:
                     from hypatiax.core.r2_canonical import r2_checked as _r2c_external
                     _r2_external = _r2c_external(y_external_holdout, _pred)[0]
                     _rmse_external = float(np.sqrt(np.mean((np.asarray(y_external_holdout, dtype=float) - _pred) ** 2)))
-                    if np.isfinite(_r2_external) and np.isfinite(_rmse_external):
+                    if (
+                        isinstance(_r2_external, (int, float, np.number))
+                        and np.isfinite(_r2_external)
+                        and np.isfinite(_rmse_external)
+                    ):
                         _external_scores[_name] = {
                             "external_holdout_scope": "random_80_20",
                             "external_holdout_status": "success",
