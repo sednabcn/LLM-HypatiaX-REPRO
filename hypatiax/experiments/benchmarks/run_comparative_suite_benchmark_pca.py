@@ -12,7 +12,8 @@ extrapolation split as the DeFi benchmark (§6.4), ensuring results
 are directly comparable.
 
 Changes vs v2:
-  - sklearn random-split replaced with pca_directed_split(test_size=0.6)  # FIX-C3/DISCLOSURE: pca_directed_split is now the sole protocol split
+  - outer protocol split uses pca_directed_split(test_size=0.6); ImprovedNN uses
+    a separate inner 80/20 validation split only within the outer training set
   - pca_split_utils imported from hypatiax.tools.utils
   - Script name / checkpoint default updated to reflect the PCA variant
   - _CHECKPOINT_NAME default: "protocol_core_pca_checkpoint"
