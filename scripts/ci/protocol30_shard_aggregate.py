@@ -194,6 +194,47 @@ def aggregate(artifacts_dir: Path, output_dir: Path, variant: str) -> None:
                         f"shard {shard}: {method_name!r} returned a live LLM response without "
                         "confirmed temperature 0.25 provenance"
                     )
+
+                # Protocol-30 headline comparisons are only publishable when
+                # every method has an explicit score on the same untouched
+                # outer holdout. Legacy r2/rmse and PCA's formula-only
+                # pca_test_r2 are not substitutes for this contract.
+                expected_scope = "random_80_20" if variant == "random_8020" else "pca_40_60"
+                scope = method_result.get("external_holdout_scope")
+                status = method_result.get("external_holdout_status")
+                external_r2 = method_result.get("r2_external_holdout")
+                external_rmse = method_result.get("rmse_external_holdout")
+                if scope != expected_scope:
+                    fail(
+                        f"shard {shard}: {method_name!r} external holdout scope "
+                        f"must be {expected_scope!r}, got {scope!r}"
+                    )
+                if status not in ("success", "unavailable", "error"):
+                    fail(
+                        f"shard {shard}: {method_name!r} has invalid/missing "
+                        f"external_holdout_status {status!r}"
+                    )
+                if status == "success":
+                    if (
+                        not isinstance(external_r2, (int, float))
+                        or not math.isfinite(float(external_r2))
+                        or not isinstance(external_rmse, (int, float))
+                        or not math.isfinite(float(external_rmse))
+                    ):
+                        fail(
+                            f"shard {shard}: {method_name!r} claims external scoring "
+                            "success without finite held-out R2 and RMSE"
+                        )
+                elif (
+                    external_r2 is not None
+                    or external_rmse is not None
+                    or not isinstance(method_result.get("external_holdout_error"), str)
+                    or not method_result.get("external_holdout_error", "").strip()
+                ):
+                    fail(
+                        f"shard {shard}: {method_name!r} may omit external scores only "
+                        "with null metrics and a non-empty external_holdout_error"
+                    )
             if variant == "pca_4060" and record.get("pca_split_protocol") != "pca_40_60":
                 fail(f"shard {shard}: PCA record is not stamped pca_40_60")
             domain = record.get("domain")
