@@ -386,6 +386,24 @@ def _runner_eval_formula(
             )
 
         code = str(python_code).strip()
+        _xscale_note = re.match(r"^\s*\[X-normalised:\s*([^\]]+)\]\s*", code)
+        if _xscale_note:
+            for _scale_item in _xscale_note.group(1).split(","):
+                _scale_match = re.fullmatch(
+                    r"\s*([A-Za-z_]\w*)\s*÷\s*([0-9.eE+-]+)\s*",
+                    _scale_item,
+                )
+                if _scale_match is None:
+                    raise ValueError(f"unparseable X-normalised annotation item: {_scale_item!r}")
+                _scale_name, _scale_text = _scale_match.groups()
+                _scale_value = float(_scale_text)
+                if not np.isfinite(_scale_value) or _scale_value <= 0:
+                    raise ValueError(f"invalid X scale for {_scale_name!r}: {_scale_text!r}")
+                if _scale_name not in var_names:
+                    raise ValueError(f"X-normalised feature {_scale_name!r} is absent from holdout schema")
+                X = X.copy()
+                X[:, var_names.index(_scale_name)] /= _scale_value
+            code = code[_xscale_note.end():]
         code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
         code = code.replace("^", "**")
         if not code:
