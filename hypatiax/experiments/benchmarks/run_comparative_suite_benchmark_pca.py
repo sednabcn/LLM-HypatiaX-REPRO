@@ -2330,6 +2330,8 @@ class HybridAllDomainsMethod(BaseMethod):
         if not TORCH_AVAILABLE:
             return None
         try:
+            _seed = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+            torch.manual_seed(_seed)
             from sklearn.preprocessing import StandardScaler as _SS
             X = np.asarray(X, dtype=float)
             y = np.asarray(y, dtype=float).reshape(-1)
@@ -2560,6 +2562,8 @@ class HybridAllDomainsMethod(BaseMethod):
 
                 if _use_direct:
                     try:
+                        _seed3 = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+                        torch.manual_seed(_seed3)
                         from sklearn.preprocessing import StandardScaler as _SS3
                         # Log-transform strictly-positive, wide-range X columns
                         _lc3 = [c for c in range(X.shape[1])
@@ -2672,7 +2676,7 @@ class HybridAllDomainsMethod(BaseMethod):
                 and np.isfinite(r2v)
                 and r2v > -1.0
             ):
-                _residual_fit = self._nn_residual_fit(X, y, y_pred_llm)
+                _residual_fit = self._nn_residual_fit(X, y, y_pred_llm, description)
                 if _residual_fit is not None:
                     y_hybrid, _residual_predictor = _residual_fit
                 else:
