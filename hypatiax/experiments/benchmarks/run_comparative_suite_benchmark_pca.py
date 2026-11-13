@@ -1859,6 +1859,35 @@ class ImprovedNN(BaseMethod):
                 rmse=rmse_final,
                 formula=f"ImprovedNN({X.shape[1]}→{'→'.join(str(h) for h in hidden)}→1,{space_tag})",
             )
+
+            # Retain the fitted transform/scaler/model pipeline so the outer
+            # PCA holdout is predicted by the selected training-only model.
+            if space_tag == "log-OLS" and _ols_coeffs is not None:
+                def _predict_external(X_new):
+                    X_new_t = _transform_X(np.asarray(X_new, dtype=float))
+                    A_new = np.column_stack([X_new_t, np.ones(len(X_new_t))])
+                    return _y_sign * np.exp(np.clip(A_new @ _ols_coeffs, -500, 500))
+            elif space_tag == "lin-fallback" and _lin_model is not None:
+                def _predict_external(X_new):
+                    X_new = np.asarray(X_new, dtype=float)
+                    X_new_s = _lin_scaler_X.transform(X_new)
+                    _lin_model.eval()
+                    with torch.no_grad():
+                        _scaled = _lin_model(torch.FloatTensor(X_new_s)).numpy().reshape(-1, 1)
+                    return _lin_scaler_y.inverse_transform(_scaled).flatten()
+            else:
+                def _predict_external(X_new):
+                    X_new_t = _transform_X(np.asarray(X_new, dtype=float))
+                    X_new_s = scaler_X.transform(X_new_t)
+                    model.eval()
+                    with torch.no_grad():
+                        _scaled = model(torch.FloatTensor(X_new_s)).numpy().reshape(-1, 1)
+                    _target = scaler_y.inverse_transform(_scaled).flatten()
+                    return (
+                        _y_sign * np.exp(np.clip(_target, -500, 500))
+                        if _use_log_y else _target
+                    )
+            single_result._predict_fn = _predict_external
             return single_result
 
         except Exception as exc:
@@ -1866,14 +1895,13 @@ class ImprovedNN(BaseMethod):
             return self._unavailable(str(exc)[:150])
 
     def _run_single_seed(self, seed, description, X, y, var_names, metadata):
-        """Run one training trial with a fixed random seed.  Returns (r2, rmse, formula_str)."""
+        """Run one fixed-seed training trial and retain its fitted predictor."""
         if TORCH_AVAILABLE:
             import torch as _torch
             _torch.manual_seed(seed)
         import numpy as _np_seed
         _np_seed.random.seed(seed)
-        result = self.run(description, X, y, var_names, metadata)
-        return result.r2, result.rmse, result.formula
+        return self.run(description, X, y, var_names, metadata)
 
     def run_multiseed(self, description, X, y, var_names, metadata):
         """Run self._nn_seeds independent training trials; return median-R² MethodResult.
@@ -1885,39 +1913,37 @@ class ImprovedNN(BaseMethod):
         if self._nn_seeds == 1:
             return self.run(description, X, y, var_names, metadata)
 
-        r2s, rmses, formulas = [], [], []
+        trials = []
         for seed in range(self._nn_seeds):
-            r2, rmse, formula = self._run_single_seed(seed, description, X, y, var_names, metadata)
-            r2s.append(r2)
-            rmses.append(rmse)
-            formulas.append(formula)
-            self._log(f"seed {seed}: R²={r2:.4f}")
+            trial = self._run_single_seed(seed, description, X, y, var_names, metadata)
+            trials.append(trial)
+            self._log(f"seed {seed}: R²={trial.r2:.4f}")
 
-        median_r2   = float(np.nanmedian(r2s))
-        # nanstd: ignore non-finite seeds (failed trials) in variance estimate
+        r2s = [trial.r2 for trial in trials]
+        rmses = [trial.rmse for trial in trials]
+        median_r2 = float(np.nanmedian(r2s))
         _r2s_finite = [r for r in r2s if np.isfinite(r)]
-        std_r2      = float(np.std(_r2s_finite, ddof=1)) if len(_r2s_finite) > 1 else 0.0
+        std_r2 = float(np.std(_r2s_finite, ddof=1)) if len(_r2s_finite) > 1 else 0.0
         median_rmse = float(np.nanmedian(rmses))
-
-        # Pick the formula from the trial whose R² is closest to the median.
         best_idx = int(np.argmin([abs(r - median_r2) for r in r2s]))
+        selected = trials[best_idx]
 
         self._log(
             f"multi-seed ({self._nn_seeds}): "
             f"median R²={median_r2:.4f}  std={std_r2:.4f}  "
             f"min={min(r2s):.4f}  max={max(r2s):.4f}"
         )
-        return MethodResult(
-            method=self.name, success=True,
-            r2=median_r2, rmse=median_rmse,
-            formula=formulas[best_idx].replace("→1,", f"→1,{self._nn_seeds}seeds,"),
-            metadata={
-                "nn_seeds":    self._nn_seeds,
-                "r2_per_seed": r2s,
-                "r2_std":      std_r2,
-                "r2_median":   median_r2,
-            },
-        )
+        selected.r2 = median_r2
+        selected.rmse = median_rmse
+        selected.formula = selected.formula.replace("→1,", f"→1,{self._nn_seeds}seeds,")
+        selected.metadata = {
+            **(selected.metadata or {}),
+            "nn_seeds": self._nn_seeds,
+            "r2_per_seed": r2s,
+            "r2_std": std_r2,
+            "r2_median": median_r2,
+        }
+        return selected
 
 
 # Backward-compatible alias — external references to ImprovedNNMethod still work.
