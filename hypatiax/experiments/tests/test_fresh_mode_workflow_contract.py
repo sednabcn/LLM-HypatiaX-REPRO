@@ -53,12 +53,31 @@ class FreshModeWorkflowContract(unittest.TestCase):
         self.assertTrue(any("fresh_mode == 'true'" in line and "'false'" in line for line in resume_lines))
 
     def test_result_commits_and_repo_verification_are_skipped(self):
-        expected = [
-            "Commit and push shard results to repo\n        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}",
-            "Verify results committed to repo\n        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}",
-        ]
-        for step in expected:
-            self.assertIn(step, self.text)
+        lines = self.text.splitlines()
+        step_names = (
+            "Commit and push shard results to repo",
+            "Verify results committed to repo",
+        )
+        smoke_exclusions = (
+            "needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020'",
+            "needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060'",
+        )
+
+        for step_name in step_names:
+            start = next(
+                (i for i, line in enumerate(lines) if line.strip() == f"- name: {step_name}"),
+                None,
+            )
+            self.assertIsNotNone(start, f"Missing workflow step: {step_name}")
+            end = next(
+                (i for i in range(start + 1, len(lines)) if lines[i].startswith("      - name: ")),
+                len(lines),
+            )
+            step_block = "\\n".join(lines[start:end])
+            self.assertIn("github.event.inputs.fresh_mode != 'true'", step_block)
+            for exclusion in smoke_exclusions:
+                self.assertIn(exclusion, step_block)
+
         baseline = self.text.split("Commit and push corrected baseline", 1)[1]
         self.assertIn("github.event.inputs.fresh_mode != 'true'", baseline)
 
