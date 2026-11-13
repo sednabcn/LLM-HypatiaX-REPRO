@@ -2779,22 +2779,46 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 auto_sanitize=True,
             )
 
-            r2 = float(result.get("r2_score", 0.0))
-            y_pred = result.get("predictions", np.zeros_like(y))
+            _expression = str(result.get("expression", "DISCOVERY_FAILED"))
+            if _expression in (
+                "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
+            ):
+                raise ValueError(
+                    f"symbolic discovery returned {_expression}; "
+                    f"trace={result.get('trace', [])[-5:]}"
+                )
 
-            # Compute RMSE from predictions if available
-            try:
-                rmse = float(np.sqrt(np.mean((y - y_pred) ** 2)))
-            except Exception:
-                rmse = None  # audit-M3: was float('inf')
+            _pred_raw = result.get("predictions")
+            if _pred_raw is None:
+                raise ValueError("symbolic discovery returned no training predictions")
+            y_pred = np.asarray(_pred_raw, dtype=float).reshape(-1)
+            y_true = np.asarray(y, dtype=float).reshape(-1)
+            if y_pred.shape != y_true.shape:
+                raise ValueError(
+                    f"symbolic prediction shape={y_pred.shape}; expected {y_true.shape}"
+                )
+            if not np.all(np.isfinite(y_pred)):
+                _bad_pred = int((~np.isfinite(y_pred)).sum())
+                raise ValueError(
+                    f"symbolic discovery returned {_bad_pred} non-finite prediction(s)"
+                )
+            if not np.all(np.isfinite(y_true)):
+                raise ValueError("symbolic adapter received non-finite target values")
+
+            # Derive both metrics from the same real prediction vector. Never
+            # synthesize zero predictions when the engine omitted its output.
+            r2 = float(r2_score(y_true, y_pred))
+            rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+            if not np.isfinite(r2) or not np.isfinite(rmse):
+                raise ValueError("symbolic discovery produced non-finite training metrics")
 
             return {
-                "success": r2 > 0.0 and result.get("expression", "DISCOVERY_FAILED") not in (
-                    "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
-                ),
+                # Success means a valid formula and finite evaluation, not
+                # that the model crossed an arbitrary positive-R² threshold.
+                "success": bool(result.get("validation", {}).get("valid", True)),
                 "r2": r2,
                 "rmse": rmse,
-                "formula": result.get("expression", "N/A"),
+                "formula": _expression,
                 "iterations": max_iterations,
                 "llm_mode": result.get("llm_mode", self.llm_mode),
                 "variable_mapping": result.get("variable_name_mapping", {}),
