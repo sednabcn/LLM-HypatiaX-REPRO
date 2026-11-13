@@ -364,8 +364,12 @@ def _runner_eval_formula(
     python_code: str,
     X: np.ndarray,
     var_names: List[str],
+    diagnostics: Optional[List[str]] = None,
 ) -> Optional[np.ndarray]:
-    """Evaluate generated formulas through restricted AST interpreters."""
+    """Evaluate generated formulas through restricted AST interpreters.
+
+    When diagnostics is supplied, retain why a formula could not be evaluated.
+    """
     from hypatiax.safe_formula import parse_formula, evaluate_expression
 
     try:
@@ -376,13 +380,16 @@ def _runner_eval_formula(
             or len(set(var_names)) != len(var_names)
             or not np.all(np.isfinite(X))
         ):
-            return None
+            raise ValueError(
+                f"invalid feature matrix/schema: shape={X.shape}, "
+                f"n_var_names={len(var_names)}, finite={bool(np.all(np.isfinite(X)))}"
+            )
 
         code = str(python_code).strip()
         code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
         code = code.replace("^", "**")
         if not code:
-            return None
+            raise ValueError("empty formula")
 
         if code.startswith("def "):
             func = parse_formula(code)
@@ -425,12 +432,17 @@ def _runner_eval_formula(
         if arr.ndim == 0:
             arr = np.full(X.shape[0], float(arr))
         if arr.ndim != 1 or arr.shape != (X.shape[0],):
-            return None
-        return arr if np.all(np.isfinite(arr)) else None
+            raise ValueError(
+                f"prediction shape {arr.shape} does not match expected ({X.shape[0]},)"
+            )
+        if not np.all(np.isfinite(arr)):
+            raise ValueError("formula produced non-finite predictions")
+        return arr
 
-    except Exception:
+    except Exception as exc:
+        if diagnostics is not None:
+            diagnostics.append(f"{type(exc).__name__}: {exc}")
         return None
-
 
 
 def _finite(x) -> bool:
@@ -3947,7 +3959,13 @@ class ProtocolBenchmarkSuite:
                     else:
                         _formula = getattr(_res, "formula_full", "") or getattr(_res, "formula", "")
                         if _formula and not re.search(r"\b(?:ratio|gm)_\w+\b", _formula):
-                            _pred = BaseMethod._runner_eval_formula(_formula, X_external_holdout, var_names)
+                            _formula_diagnostics = []
+                            _pred = _runner_eval_formula(
+                                _formula, X_external_holdout, var_names,
+                                diagnostics=_formula_diagnostics,
+                            )
+                            if _pred is None and _formula_diagnostics:
+                                _reason = "formula evaluation failed: " + "; ".join(_formula_diagnostics)
                         elif _formula:
                             _reason = "formula requires engineered features not exposed by the method result"
                         else:
@@ -3960,6 +3978,11 @@ class ProtocolBenchmarkSuite:
                 except Exception as _external_exc:
                     _pred = None
                     _reason = f"{type(_external_exc).__name__}: {_external_exc}"
+                if _pred is not None:
+                    _y_external = np.asarray(y_external_holdout, dtype=float).reshape(-1)
+                    if not np.all(np.isfinite(_y_external)):
+                        _pred = None
+                        _reason = "external holdout target contains non-finite values"
                 if _pred is not None:
                     from hypatiax.core.r2_canonical import r2_checked as _r2c_external
                     _r2_external = _r2c_external(y_external_holdout, _pred)[0]
