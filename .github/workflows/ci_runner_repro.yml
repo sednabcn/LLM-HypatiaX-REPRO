@@ -79,7 +79,7 @@ on:
       pysr_generations:
         description: "PySR generations (PYSR_GENERATIONS)"
         required: false
-        default: "10000"
+        default: "1000"
 
       pysr_populations:
         description: "PySR parallel populations (PYSR_POPULATIONS) — repro.yaml uses 30"
@@ -146,9 +146,9 @@ env:
   HYPATIAX_HOLDOUT: "1"   # L06: held-out llm/nn/blend R2 (extra NN fit per case)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
-  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
+  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '1000' }}"
   PCA_PORTFOLIO_SWEEP: "${{ github.event.inputs.pca_portfolio_sweep || 'false' }}"
-  PYSR_POPULATION:     "100"
+  PYSR_POPULATION:     "33"
   PYSR_TOURNAMENT_SIZE: "3"
   PYSR_CROSSOVER:      "0.9"
   PYSR_MUTATION:       "0.1"
