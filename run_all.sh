@@ -2280,7 +2280,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
     [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
     _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
     [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_RANDOM_DIR="${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\${SHARD:-0}"
+    _P30_RANDOM_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\${SHARD:-0}\"
   else
     _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
   fi
@@ -2351,7 +2351,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
     [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
     _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
     [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    _P30_PCA_DIR="${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}"
+    _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
   else
     _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
   fi
@@ -2383,22 +2383,22 @@ out, shard, started_ns, *indices = sys.argv[1:]
 run_started_ns = int(started_ns)
 effective_temperature = configured_temperature()
 if effective_temperature != 0.25:
-    raise SystemExit(f"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}")
+    raise SystemExit(f\"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}\")
 protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
 rows = []
 for domain in protocol.get_all_domains():
     for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
-        rows.append({"description": desc, "domain": domain, "equation_name": meta["equation_name"]})
-mapping = [{"index": int(i), **rows[int(i)-1]} for i in indices]
-result_files = [p for p in Path(out).glob("protocol_core_*.json") if p.stat().st_mtime_ns >= run_started_ns]
+        rows.append({\"description\": desc, \"domain\": domain, \"equation_name\": meta[\"equation_name\"]})
+mapping = [{\"index\": int(i), **rows[int(i)-1]} for i in indices]
+result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().st_mtime_ns >= run_started_ns]
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
-    raise SystemExit("no detailed Protocol-30 result JSON created during this shard run")
-manifest = {"experiment":"pca_4060","shard_index":int(shard),"n_shards":5,
-            "expected_equation_count":30,"assigned_equation_indices":[int(i) for i in indices],
-            "equation_identities":mapping,"result_file":result_files[-1].name,
-            "effective_llm_temperature":effective_temperature}
-Path(out, "protocol30_shard_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
+    raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
+manifest = {\"experiment\":\"pca_4060\",\"shard_index\":int(shard),\"n_shards\":5,
+            \"expected_equation_count\":30,\"assigned_equation_indices\":[int(i) for i in indices],
+            \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
+            \"effective_llm_temperature\":effective_temperature}
+Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
 PYMAN
   fi
 "
