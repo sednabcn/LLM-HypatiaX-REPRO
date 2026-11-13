@@ -1,0 +1,148 @@
+name: Protocol-30 configuration preflight
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ci_runner_repro.yml"
+      - ".github/workflows/protocol30_preflight.yml"
+      - "config/repro.yaml"
+      - "run_all.sh"
+      - "scripts/ci/protocol30_shard_aggregate.py"
+  push:
+    branches:
+      - "promotion/rerun-code-review"
+    paths:
+      - ".github/workflows/ci_runner_repro.yml"
+      - ".github/workflows/protocol30_preflight.yml"
+      - "config/repro.yaml"
+      - "run_all.sh"
+      - "scripts/ci/protocol30_shard_aggregate.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protocol30-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  protocol30-preflight:
+    name: Protocol-30 config and dry-run checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install config parser only
+        run: python -m pip install --disable-pip-version-check PyYAML
+
+      - name: Check workflow defaults against repro.yaml
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          import yaml
+
+          workflow = Path(".github/workflows/ci_runner_repro.yml").read_text()
+          config = yaml.safe_load(Path("config/repro.yaml").read_text())
+          pysr = config["pysr"]
+
+          def input_default(input_name):
+              lines = workflow.splitlines()
+              marker = f"      {input_name}:"
+              try:
+                  start = lines.index(marker)
+              except ValueError:
+                  raise SystemExit(f"Missing workflow input: {input_name}")
+              for line in lines[start + 1:]:
+                  if line.startswith("      ") and not line.startswith("        "):
+                      break
+                  match = re.match(r'\s+default:\s*["\']?([^"\']+)["\']?\s*$', line)
+                  if match:
+                      return match.group(1)
+              raise SystemExit(f"Missing default for workflow input: {input_name}")
+
+          def env_fallback(name):
+              match = re.search(
+                  rf"(?m)^\s*{re.escape(name)}:\s*.*\|\|\s*'([^']+)'",
+                  workflow,
+              )
+              if not match:
+                  raise SystemExit(f"Missing workflow fallback for {name}")
+              return match.group(1)
+
+          def env_literal(name):
+              match = re.search(
+                  rf'(?m)^\s*{re.escape(name)}:\s*["\']?([0-9]+)["\']?\s*(?:#.*)?$',
+                  workflow,
+              )
+              if not match:
+                  raise SystemExit(f"Missing workflow value for {name}")
+              return match.group(1)
+
+          expected = {
+              "pysr_generations": str(pysr["niterations"]),
+              "pysr_populations": str(pysr["populations"]),
+          }
+          for input_name, config_value in expected.items():
+              actual = input_default(input_name)
+              if actual != config_value:
+                  raise SystemExit(
+                      f"{input_name} default {actual} != repro.yaml {config_value}"
+                  )
+              env_name = "PYSR_" + input_name.removeprefix("pysr_").upper()
+              fallback = env_fallback(env_name)
+              if fallback != config_value:
+                  raise SystemExit(
+                      f"{env_name} fallback {fallback} != repro.yaml {config_value}"
+                  )
+
+          population = str(pysr["population_size"])
+          actual_population = env_literal("PYSR_POPULATION")
+          if actual_population != population:
+              raise SystemExit(
+                  f"PYSR_POPULATION {actual_population} != repro.yaml {population}"
+              )
+
+          for experiment in (
+              "exp2_protocol30_random_8020",
+              "exp2_protocol30_pca_4060",
+          ):
+              if experiment not in workflow:
+                  raise SystemExit(f"{experiment} missing from runner workflow")
+              if experiment not in Path("run_all.sh").read_text():
+                  raise SystemExit(f"{experiment} missing from run_all.sh")
+
+          print("Protocol-30 workflow defaults match config/repro.yaml.")
+          print(f"PySR generations={pysr['niterations']}, "
+                f"population_size={pysr['population_size']}, "
+                f"populations={pysr['populations']}")
+          print("Both Protocol-30 experiment IDs are registered.")
+          PY
+
+      - name: Check shell syntax
+        run: bash -n run_all.sh
+
+      - name: Dry-run random 80/20 Protocol-30 orchestration
+        env:
+          REPRO_CFG: ${{ github.workspace }}/config/repro.yaml
+          PYSR_GENERATIONS: "1000"
+          PYSR_POPULATION: "33"
+          PYSR_POPULATIONS: "30"
+        run: ./run_all.sh --step exp2_protocol30_random_8020 --dry-run
+
+      - name: Dry-run PCA 40/60 Protocol-30 orchestration
+        env:
+          REPRO_CFG: ${{ github.workspace }}/config/repro.yaml
+          PYSR_GENERATIONS: "1000"
+          PYSR_POPULATION: "33"
+          PYSR_POPULATIONS: "30"
+        run: ./run_all.sh --step exp2_protocol30_pca_4060 --dry-run
