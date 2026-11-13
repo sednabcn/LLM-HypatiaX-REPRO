@@ -3555,7 +3555,8 @@ class ProtocolBenchmarkSuite:
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
         _do_extrap = (
-            X_far is not None
+            metadata.get("split_protocol") != "pca_40_60"
+            and X_far is not None
             and y_far is not None
             and len(X_far) > 1
             and len(y_far) > 1
