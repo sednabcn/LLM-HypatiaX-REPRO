@@ -137,7 +137,7 @@ jobs:
           PYSR_GENERATIONS: "1000"
           PYSR_POPULATION: "33"
           PYSR_POPULATIONS: "30"
-        run: ./run_all.sh --step exp2_protocol30_random_8020 --dry-run
+        run: bash run_all.sh --step exp2_protocol30_random_8020 --dry-run
 
       - name: Dry-run PCA 40/60 Protocol-30 orchestration
         env:
@@ -145,4 +145,4 @@ jobs:
           PYSR_GENERATIONS: "1000"
           PYSR_POPULATION: "33"
           PYSR_POPULATIONS: "30"
-        run: ./run_all.sh --step exp2_protocol30_pca_4060 --dry-run
+        run: bash run_all.sh --step exp2_protocol30_pca_4060 --dry-run
