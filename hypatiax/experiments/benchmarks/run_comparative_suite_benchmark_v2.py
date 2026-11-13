@@ -2201,6 +2201,7 @@ class HybridDeFiMethod(BaseMethod):
                 formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
                 metadata={**_provenance(result), "decision": decision, "nn_applied": _nn_applied_defi},
             )
+            return _method_result
 
         except Exception as exc:
             self._log(f"run error: {exc}")
