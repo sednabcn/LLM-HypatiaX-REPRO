@@ -5345,7 +5345,9 @@ Examples
                 print(f"  ⚠️  extrap split failed for '{_desc[:50]}': {_esplit_exc} — using full data")
                 _extrap_tests.append((_desc, _X, _y, _vnames, {**_meta, "extrap": False}, _dom,
                                       None, None))
-        all_tests = _extrap_tests
+        # Keep the main-loop tuple shape stable; extrapolation never shares
+        # the independent Protocol-30 random holdout fields.
+        all_tests = [(*_test, None, None) for _test in _extrap_tests]
         print(f"   Applied extrap split to {len(all_tests)} test(s). "
               f"Each uses {int(_efrac*100)}% of samples for training.\n")
 
