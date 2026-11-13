@@ -2983,19 +2983,28 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
+          SHARD:         ${{ matrix.shard }}
         run: |
-          UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}"
+          # Match the exact directory passed to upload-artifact below. Protocol-30
+          # and Core-15 workers upload only their own isolated shard directory;
+          # counting the parent directory can otherwise be satisfied by stale or
+          # sibling-shard files and conceal a missing current-shard output.
+          if [[ "${EXP}" == "exp1_four_way_matched" || "${EXP}" == "exp2_protocol30_random_8020" || "${EXP}" == "exp2_protocol30_pca_4060" ]]; then
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}/shard${SHARD}"
+          else
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}"
+          fi
           COUNT=$(find "${UPLOAD_DIR}" -type f 2>/dev/null | wc -l || echo 0)
           echo "=== Artifact upload check: ${UPLOAD_DIR} ==="
           echo "  Files found: ${COUNT}"
           find "${UPLOAD_DIR}" -type f 2>/dev/null | sort || true
           if [[ "${COUNT}" -eq 0 ]]; then
-            echo "::error::Shard ${{ matrix.shard }} (${EXP}): upload directory '${UPLOAD_DIR}' is EMPTY."
+            echo "::error::Shard ${SHARD} (${EXP}): upload directory '${UPLOAD_DIR}' is EMPTY."
             echo "  Possible causes:"
             echo "    1. Experiment script wrote output files with an unexpected filename prefix"
             echo "    2. Experiment script exited non-zero before writing any files"
-            echo "    3. 'Move results to RESULTS_DIR' step has a glob mismatch for ${EXP}"
-            echo "  Check 'Run experiment tasks' and 'Move results to RESULTS_DIR' step logs above."
+            echo "    3. The runner wrote results outside this shard's isolated output directory"
+            echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
           fi
 
       - name: Upload shard results artifact
