@@ -2086,7 +2086,7 @@ class HybridDeFiMethod(BaseMethod):
                         self._log(f"NN residual correction applied R²={r2_val:.4f}")
 
             _fdisp, _fhash, _ffull = BaseMethod._make_formula_result(str(_formula))
-            return MethodResult(
+            _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2_val, rmse=rmse_val,
                 formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
@@ -2407,6 +2407,8 @@ class HybridAllDomainsMethod(BaseMethod):
             #     the structural duplicate with PureLLM Baseline (32 events/run).
             y_pred_llm = eval_d.get("y_pred") or result.get("y_pred")
             _ypred_source = None
+            _base_predict_fn = None
+            _predict_fn = None
             if y_pred_llm is not None:
                 y_pred_llm = np.asarray(y_pred_llm, dtype=float).flatten()
                 if not np.all(np.isfinite(y_pred_llm)):
@@ -2423,6 +2425,7 @@ class HybridAllDomainsMethod(BaseMethod):
                 if formula_str:
                     y_pred_llm = self._runner_eval_formula(formula_str, X, var_names)
                     if y_pred_llm is not None:
+                        _base_predict_fn = lambda X_new, _code=formula_str: self._runner_eval_formula(_code, X_new, var_names)
                         y_pred_llm = y_pred_llm.flatten()
                         if not np.all(np.isfinite(y_pred_llm)):
                             y_pred_llm = None
@@ -2454,7 +2457,8 @@ class HybridAllDomainsMethod(BaseMethod):
                         Xf3 = X.copy().astype(float)
                         for c in _lc3:
                             Xf3[:, c] = np.log(Xf3[:, c])
-                        Xf3 = _SS3().fit_transform(Xf3)
+                        scaler3 = _SS3()
+                        Xf3 = scaler3.fit_transform(Xf3)
                         # Target: normalised log(y)
                         log_y3   = np.log(y)
                         ly3_mean = float(np.mean(log_y3))
@@ -2490,11 +2494,28 @@ class HybridAllDomainsMethod(BaseMethod):
                                 lp3 = net3(Xt3).numpy().flatten()
                             y_pred_s3 = np.exp(
                                 np.clip(lp3 * ly3_std + ly3_mean, -500, 500))
+                            net3.eval()
+                            def _direct_nn_predictor(X_new, _net=net3, _scaler=scaler3,
+                                                     _log_cols=tuple(_lc3), _mean=ly3_mean,
+                                                     _std=ly3_std):
+                                X_new = np.asarray(X_new, dtype=float)
+                                if X_new.ndim != 2 or X_new.shape[1] != X.shape[1]:
+                                    raise ValueError("direct NN predictor received incompatible feature shape")
+                                X_new_f = X_new.copy()
+                                for _idx in _log_cols:
+                                    if np.any(X_new_f[:, _idx] <= 0):
+                                        raise ValueError(f"log-transformed feature column {_idx} must be positive")
+                                    X_new_f[:, _idx] = np.log(X_new_f[:, _idx])
+                                X_new_s = _scaler.transform(X_new_f)
+                                with torch.no_grad():
+                                    _lp = _net(torch.as_tensor(X_new_s, dtype=torch.float32)).cpu().numpy().reshape(-1)
+                                return np.exp(np.clip(_lp * _std + _mean, -500, 500))
                             if np.all(np.isfinite(y_pred_s3)):
                                 r2_s3 = self._safe_r2(y, y_pred_s3)
                                 if np.isfinite(r2_s3) and r2_s3 > r2v:
                                     y_pred_llm    = y_pred_s3
                                     _ypred_source = "direct_nn_log_fit"
+                                    _base_predict_fn = _direct_nn_predictor
                                     r2v  = r2_s3
                                     rmse = self._safe_rmse(y, y_pred_llm)
                                     self._log(
@@ -2540,7 +2561,11 @@ class HybridAllDomainsMethod(BaseMethod):
                 and np.isfinite(r2v)
                 and r2v > -1.0
             ):
-                y_hybrid = self._nn_residual_fit(X, y, y_pred_llm)
+                _residual_fit = self._nn_residual_fit(X, y, y_pred_llm)
+                if _residual_fit is not None:
+                    y_hybrid, _residual_predictor = _residual_fit
+                else:
+                    y_hybrid, _residual_predictor = None, None
                 if y_hybrid is not None and np.all(np.isfinite(y_hybrid)):
                     r2_hybrid   = self._safe_r2(y, y_hybrid)
                     rmse_hybrid = self._safe_rmse(y, y_hybrid)
@@ -2550,6 +2575,13 @@ class HybridAllDomainsMethod(BaseMethod):
                         r2v  = r2_hybrid
                         rmse = rmse_hybrid
                         nn_applied = True
+                        if callable(_base_predict_fn) and callable(_residual_predictor):
+                            def _hybrid_predictor(X_new, _base=_base_predict_fn, _residual=_residual_predictor):
+                                _base_pred = _base(X_new)
+                                if _base_pred is None:
+                                    raise ValueError("base hybrid predictor could not evaluate holdout features")
+                                return _residual(X_new, _base_pred)
+                            _predict_fn = _hybrid_predictor
                         self._log(
                             f"NN residual correction applied  "
                             f"R²={r2v:.4f}  RMSE={rmse:.4e}"
@@ -2572,6 +2604,11 @@ class HybridAllDomainsMethod(BaseMethod):
                     "nn_applied": nn_applied,
                 },
             )
+            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
+                _predict_fn = _base_predict_fn
+            if callable(_predict_fn):
+                _method_result._predict_fn = _predict_fn
+            return _method_result
 
         except Exception as exc:
             self._log(f"run error: {exc}")
