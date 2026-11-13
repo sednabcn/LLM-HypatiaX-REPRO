@@ -2725,7 +2725,21 @@ class HybridAllDomainsMethod(BaseMethod):
                                 _base_pred = _base(X_new)
                                 if _base_pred is None:
                                     raise ValueError("base hybrid predictor could not evaluate holdout features")
-                                return _residual(X_new, _base_pred)
+                                _X_new = np.asarray(X_new, dtype=float)
+                                _base_pred = np.asarray(_base_pred, dtype=float).reshape(-1)
+                                if _X_new.ndim != 2 or _base_pred.shape != (_X_new.shape[0],):
+                                    raise ValueError(
+                                        f"base hybrid prediction shape={_base_pred.shape}; "
+                                        f"expected ({_X_new.shape[0]},)"
+                                    )
+                                if not np.all(np.isfinite(_base_pred)):
+                                    raise ValueError("base hybrid predictor returned non-finite values")
+                                _corrected = np.asarray(
+                                    _residual(_X_new, _base_pred), dtype=float
+                                ).reshape(-1)
+                                if _corrected.shape != _base_pred.shape or not np.all(np.isfinite(_corrected)):
+                                    raise ValueError("hybrid residual predictor returned invalid values")
+                                return _corrected
                             _predict_fn = _hybrid_predictor
                         self._log(
                             f"NN residual correction applied  "
