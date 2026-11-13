@@ -3994,6 +3994,11 @@ class ProtocolBenchmarkSuite:
             "winner":        comparison["winner"],
             "timestamp":     datetime.now().isoformat(),
         }
+        if external_holdout_scope == "random_80_20":
+            record["random_split_protocol"] = "random_80_20"
+            record["random_n_train"] = metadata.get("n_train")
+            record["random_n_test"] = metadata.get("n_test")
+            record["random_holdout_split_error"] = metadata.get("external_holdout_split_error")
         if _do_extrap:
             record["extrap_r2_far"]    = extrap_r2_far
             record["extrap_rmse_far"]  = extrap_rmse_far
