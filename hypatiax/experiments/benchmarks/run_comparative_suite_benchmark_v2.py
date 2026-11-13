@@ -3947,7 +3947,7 @@ class ProtocolBenchmarkSuite:
                     else:
                         _formula = getattr(_res, "formula_full", "") or getattr(_res, "formula", "")
                         if _formula and not re.search(r"\b(?:ratio|gm)_\w+\b", _formula):
-                            _pred = self._runner_eval_formula(_formula, X_external_holdout, var_names)
+                            _pred = BaseMethod._runner_eval_formula(_formula, X_external_holdout, var_names)
                         elif _formula:
                             _reason = "formula requires engineered features not exposed by the method result"
                         else:
