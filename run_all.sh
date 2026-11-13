@@ -2313,7 +2313,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
   done
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
     SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
-import json, sys
+import json, sys, os
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
 from hypatiax.core.llm_call import configured_temperature
@@ -2332,7 +2332,7 @@ result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-_is_smoke = bool(__import__(\"os\").environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
 manifest = {\"experiment\":\"random_8020_smoke\" if _is_smoke else \"random_8020\",
             \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
             \"expected_equation_count\":len(indices) if _is_smoke else 30,
@@ -2387,7 +2387,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
       2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
     SHARD_IDS='' python3 - \"\${_P30_PCA_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
-import json, sys
+import json, sys, os
 from pathlib import Path
 from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
 from hypatiax.core.llm_call import configured_temperature
@@ -2406,7 +2406,7 @@ result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().
 result_files.sort(key=lambda p: p.stat().st_mtime_ns)
 if not result_files:
     raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-_is_smoke = bool(__import__(\"os\").environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
 manifest = {\"experiment\":\"pca_4060_smoke\" if _is_smoke else \"pca_4060\",
             \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
             \"expected_equation_count\":len(indices) if _is_smoke else 30,
