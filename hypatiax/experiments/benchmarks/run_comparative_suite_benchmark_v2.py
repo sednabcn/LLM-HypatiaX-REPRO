@@ -2484,7 +2484,9 @@ class HybridAllDomainsMethod(BaseMethod):
             # Strategy 3: algebraic reconstruction from r2/rmse (last resort)
             #   — guarantees NN residual correction always fires, eliminating
             #     the structural duplicate with PureLLM Baseline (32 events/run).
-            y_pred_llm = eval_d.get("y_pred") or result.get("y_pred")
+            y_pred_llm = eval_d.get("y_pred")
+            if y_pred_llm is None:
+                y_pred_llm = result.get("y_pred")
             _ypred_source = None
             _base_predict_fn = None
             _predict_fn = None
