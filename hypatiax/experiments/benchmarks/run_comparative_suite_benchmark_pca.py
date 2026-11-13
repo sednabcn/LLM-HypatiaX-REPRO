@@ -79,6 +79,7 @@ import inspect
 import json
 import os
 import random
+import hashlib
 import re
 import sys
 import time
