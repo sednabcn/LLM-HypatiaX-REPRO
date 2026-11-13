@@ -1859,6 +1859,10 @@ class ImprovedNNMethod(BaseMethod):
         _np_seed.random.seed(seed)
         result = self.run(description, X, y, var_names, metadata)
         self._last_heldout = (result.metadata or {}).get("r2_heldout")   # [AUDIT-NN-HELDOUT]
+        # Preserve the fitted predictor from this exact seed.  External
+        # holdout scoring must use the same trial selected for the reported
+        # median-R² formula, never an unrelated or re-trained seed.
+        self._last_predict_fn = getattr(result, "_predict_fn", None)
         return result.r2, result.rmse, result.formula
 
     def run_multiseed(self, description, X, y, var_names, metadata):
@@ -1873,12 +1877,14 @@ class ImprovedNNMethod(BaseMethod):
 
         r2s, rmses, formulas = [], [], []
         ho_per_seed = []   # [AUDIT-NN-HELDOUT]
+        predict_fns = []
         for seed in range(self._nn_seeds):
             r2, rmse, formula = self._run_single_seed(seed, description, X, y, var_names, metadata)
             r2s.append(r2)
             rmses.append(rmse)
             formulas.append(formula)
             ho_per_seed.append(getattr(self, "_last_heldout", None))
+            predict_fns.append(getattr(self, "_last_predict_fn", None))
             self._log(f"seed {seed}: R²={r2:.4f}")
 
         median_r2   = float(np.nanmedian(r2s))
@@ -1897,7 +1903,7 @@ class ImprovedNNMethod(BaseMethod):
             f"median R²={median_r2:.4f}  std={std_r2:.4f}  "
             f"min={min(r2s):.4f}  max={max(r2s):.4f}"
         )
-        return MethodResult(
+        selected_result = MethodResult(
             method=self.name, success=True,
             r2=median_r2, rmse=median_rmse,
             formula=formulas[best_idx].replace("→1,", f"→1,{self._nn_seeds}seeds,"),
@@ -1909,8 +1915,13 @@ class ImprovedNNMethod(BaseMethod):
                 "r2_heldout":          median_ho,
                 "r2_heldout_per_seed": ho_per_seed,
                 "headline_r2_scope":   "full_data_in_sample",
+                "selected_predictor_seed": best_idx,
+                "selected_predictor_available": predict_fns[best_idx] is not None,
             },
         )
+        if predict_fns[best_idx] is not None:
+            selected_result._predict_fn = predict_fns[best_idx]
+        return selected_result
 
 
 # ============================================================================
