@@ -3774,7 +3774,11 @@ class ProtocolBenchmarkSuite:
                     _v = _r2c(y_far, _ypred)[0]
                     _rmse = float(np.sqrt(np.mean((np.asarray(y_far, dtype=float) - _ypred) ** 2)))
                     _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
-                    if np.isfinite(_v) and np.isfinite(_rmse):
+                    if (
+                        isinstance(_v, (int, float, np.number))
+                        and np.isfinite(_v)
+                        and np.isfinite(_rmse)
+                    ):
                         _pca_external[_mname] = {
                             "external_holdout_scope": "pca_40_60",
                             "external_holdout_status": "success",
