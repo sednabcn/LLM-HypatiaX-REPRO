@@ -3720,31 +3720,53 @@ class ProtocolBenchmarkSuite:
         # pca_test_r2 in the record for downstream analysis.
         if metadata.get("split_protocol") == "pca_40_60" and X_far is not None and y_far is not None and len(y_far) > 1:
             _pca_r2: Dict[str, Optional[float]] = {}
+            _pca_external: Dict[str, Dict[str, Any]] = {}
             for _mname, _mres in results.items():
                 _formula = None
+                _reason = None
                 if isinstance(_mres, MethodResult):
-                    _formula = _mres.formula
-                    # NN methods return architecture tags, not evaluable formulas
-                    if _formula and any(kw in str(_formula) for kw in ("layers=", "hidden=", "NN:", "neural")):
-                        _pca_r2[_mname] = None
-                        continue
+                    _formula = getattr(_mres, "formula_full", "") or _mres.formula
+                    if _formula and any(kw in str(_formula) for kw in ("layers=", "hidden=", "NN:", "neural", "ImprovedNN(")):
+                        _reason = "PCA ImprovedNN does not expose a refitted outer-training predictor"
+                        _formula = None
+                _ypred = None
                 if _formula:
                     try:
-                        # FIX Bug 6: _RUNNER_EVAL_FORMULA was undefined (NameError),
-                        # silently caught by except → pca_test_r2 always None.
-                        # Use the module-level _runner_eval_formula and compute R² inline.
                         _ypred = _runner_eval_formula(_formula, X_far, var_names)
-                        if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
-                            # PHASE1-FIX-P11: canonical R^2; degenerate target -> None (unscored), as before
-                            from hypatiax.core.r2_canonical import r2_checked as _r2c
-                            _v = _r2c(y_far, _ypred)[0]
-                            _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
-                        else:
-                            _pca_r2[_mname] = None
-                    except Exception:
-                        _pca_r2[_mname] = None
+                    except Exception as _pca_eval_exc:
+                        _reason = f"{type(_pca_eval_exc).__name__}: {_pca_eval_exc}"
+                if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
+                    from hypatiax.core.r2_canonical import r2_checked as _r2c
+                    _v = _r2c(y_far, _ypred)[0]
+                    _rmse = float(np.sqrt(np.mean((np.asarray(y_far, dtype=float) - _ypred) ** 2)))
+                    _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
+                    if np.isfinite(_v) and np.isfinite(_rmse):
+                        _pca_external[_mname] = {
+                            "external_holdout_scope": "pca_40_60",
+                            "external_holdout_status": "success",
+                            "r2_external_holdout": float(_v),
+                            "rmse_external_holdout": _rmse,
+                            "external_holdout_error": None,
+                        }
+                    else:
+                        _reason = "PCA external metrics were non-finite or target variance was degenerate"
                 else:
                     _pca_r2[_mname] = None
+                    _reason = _reason or "method did not expose an evaluable formula for the PCA holdout"
+                if _mname not in _pca_external:
+                    _pca_external[_mname] = {
+                        "external_holdout_scope": "pca_40_60",
+                        "external_holdout_status": "unavailable",
+                        "r2_external_holdout": None,
+                        "rmse_external_holdout": None,
+                        "external_holdout_error": _reason,
+                    }
+                _mres.metadata = dict(_mres.metadata or {})
+                _mres.metadata.update(_pca_external[_mname])
+            record["results"] = {
+                _name: {**_result, **_pca_external.get(_name, {})}
+                for _name, _result in record["results"].items()
+            }
             record["pca_test_r2"]       = _pca_r2
             record["pca_split_protocol"] = "pca_40_60"
             record["pca_n_train"]        = metadata.get("n_train")
