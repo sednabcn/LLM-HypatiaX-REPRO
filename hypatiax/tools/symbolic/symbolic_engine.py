@@ -2780,12 +2780,20 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             )
 
             _expression = str(result.get("expression", "DISCOVERY_FAILED"))
-            if _expression in (
-                "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
+            if _expression.strip().upper() in (
+                "", "N/A", "NONE", "DISCOVERY_FAILED",
+                "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
             ):
                 raise ValueError(
-                    f"symbolic discovery returned {_expression}; "
+                    f"symbolic discovery returned {_expression!r}; "
                     f"trace={result.get('trace', [])[-5:]}"
+                )
+            _validation = result.get("validation") or {}
+            if not bool(_validation.get("valid", False)):
+                _validation_errors = _validation.get("errors", [])
+                raise ValueError(
+                    "symbolic discovery formula failed validation: "
+                    f"{_validation_errors[:3]}"
                 )
 
             _pred_raw = result.get("predictions")
@@ -2812,11 +2820,10 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             if not np.isfinite(r2) or not np.isfinite(rmse):
                 raise ValueError("symbolic discovery produced non-finite training metrics")
 
-            _validation = result.get("validation") or {}
             return {
                 # Success means a valid formula and finite evaluation, not
                 # that the model crossed an arbitrary positive-R² threshold.
-                "success": bool(_validation.get("valid", True)),
+                "success": True,
                 "r2": r2,
                 "rmse": rmse,
                 "formula": _expression,
