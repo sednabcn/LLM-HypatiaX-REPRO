@@ -2180,7 +2180,9 @@ class HybridDeFiMethod(BaseMethod):
             # At temperature=0 this produces the same formula → same RMSE as
             # PureLLM Baseline → flagged as duplicate.  Train a shallow MLP on
             # the real residuals so this method is always data-independent.
-            _y_pred_defi = eval_.get("y_pred") or result.get("y_pred")
+            _y_pred_defi = eval_.get("y_pred")
+            if _y_pred_defi is None:
+                _y_pred_defi = result.get("y_pred")
             _nn_applied_defi = False
             if _y_pred_defi is None and _llm_code:
                 _y_pred_defi = self._runner_eval_formula(_llm_code, X, var_names)
