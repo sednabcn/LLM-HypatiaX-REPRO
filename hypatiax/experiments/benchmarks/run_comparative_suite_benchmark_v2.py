@@ -2518,6 +2518,32 @@ class HybridAllDomainsMethod(BaseMethod):
                             r2v  = self._safe_r2(y, y_pred_llm)
                             rmse = self._safe_rmse(y, y_pred_llm)
 
+            # If the backend supplied training predictions directly, only reuse
+            # its formula as a holdout predictor when re-evaluation reproduces
+            # those exact training predictions to tight numerical tolerance.
+            if y_pred_llm is not None and _base_predict_fn is None:
+                _lr_candidate = result.get("llm_result") if isinstance(result.get("llm_result"), dict) else {}
+                _candidate_formula = (
+                    result.get("python_code")
+                    or _lr_candidate.get("python_code")
+                    or _extract_formula(result)
+                )
+                if _candidate_formula and _candidate_formula != "N/A":
+                    _candidate_train_pred = self._runner_eval_formula(
+                        _candidate_formula, X, var_names
+                    )
+                    if (
+                        _candidate_train_pred is not None
+                        and np.asarray(_candidate_train_pred).shape == np.asarray(y_pred_llm).shape
+                        and np.allclose(
+                            _candidate_train_pred, y_pred_llm,
+                            rtol=1e-7, atol=1e-15,
+                        )
+                    ):
+                        _base_predict_fn = lambda X_new, _code=_candidate_formula: self._runner_eval_formula(
+                            _code, X_new, var_names
+                        )
+
             if y_pred_llm is None and _finite(r2v) and r2v > 0 and _finite(rmse):
                 # Strategy 3a — Direct NN fit (X→y) for power-law / tiny-scale equations.
                 # Root cause of Newton's gravity failure: algebraic reconstruction
