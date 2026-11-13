@@ -21,7 +21,16 @@ Exit codes:
 import os
 import sys
 import time
+from pathlib import Path
+
 import anthropic
+
+# This script is executed by path (config/check_key_status.py), which makes
+# config/ rather than the repository root sys.path[0]. Add the checkout root
+# explicitly so `hypatiax` imports work in CI and from any local working dir.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 # --- retry config ---
 MAX_RETRIES = 5
