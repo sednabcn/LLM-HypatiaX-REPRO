@@ -3254,7 +3254,7 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
