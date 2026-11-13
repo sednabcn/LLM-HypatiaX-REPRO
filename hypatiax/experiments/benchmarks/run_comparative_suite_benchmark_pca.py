@@ -358,6 +358,7 @@ def _runner_eval_formula(
     python_code: str,
     X: np.ndarray,
     var_names: List[str],
+    diagnostics: Optional[List[str]] = None,
 ) -> Optional[np.ndarray]:
     """Evaluate a formula through the restricted AST interpreters."""
     from hypatiax.safe_formula import parse_formula, evaluate_expression
@@ -375,7 +376,7 @@ def _runner_eval_formula(
             return None
 
         code = python_code.strip()
-        code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+        code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
         code = code.replace("^", "**")
 
         if not code:
@@ -388,7 +389,7 @@ def _runner_eval_formula(
         else:
             # Permit only a single simple assignment; never execute a block.
             assignment = re.fullmatch(
-                r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)\s*",
                 code,
                 flags=re.DOTALL,
             )
@@ -453,7 +454,9 @@ def _runner_eval_formula(
             return None
         return arr
 
-    except Exception:
+    except Exception as exc:
+        if diagnostics is not None:
+            diagnostics.append(f"{type(exc).__name__}: {exc}")
         return None
 
 
@@ -3765,15 +3768,24 @@ class ProtocolBenchmarkSuite:
                         _formula = getattr(_mres, "formula_full", "") or _mres.formula
                     if _formula:
                         try:
-                            _ypred = _runner_eval_formula(_formula, X_far, var_names)
+                            _formula_diagnostics: List[str] = []
+                            _ypred = _runner_eval_formula(
+                                _formula, X_far, var_names,
+                                diagnostics=_formula_diagnostics,
+                            )
+                            if _ypred is None and _formula_diagnostics:
+                                _reason = "formula evaluation failed: " + _formula_diagnostics[-1]
                         except Exception as _pca_eval_exc:
                             _reason = f"{type(_pca_eval_exc).__name__}: {_pca_eval_exc}"
                     else:
                         _reason = "method did not expose a reusable predictor or formula"
-                if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
+                _y_far_checked = np.asarray(y_far, dtype=float).reshape(-1)
+                if not np.all(np.isfinite(_y_far_checked)):
+                    _reason = "PCA external holdout target contains non-finite values"
+                elif _ypred is not None and len(_ypred) == len(_y_far_checked) and np.all(np.isfinite(_ypred)):
                     from hypatiax.core.r2_canonical import r2_checked as _r2c
-                    _v = _r2c(y_far, _ypred)[0]
-                    _rmse = float(np.sqrt(np.mean((np.asarray(y_far, dtype=float) - _ypred) ** 2)))
+                    _v = _r2c(_y_far_checked, _ypred)[0]
+                    _rmse = float(np.sqrt(np.mean((_y_far_checked - _ypred) ** 2)))
                     _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
                     if (
                         isinstance(_v, (int, float, np.number))
