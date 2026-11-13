@@ -89,7 +89,7 @@ on:
         default: "30"
 
       task_ids_override:
-        description: "Space-separated task IDs to run (blank = full experiment set)"
+        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants require 3-5 unique IDs, e.g. M.13 M.14 M.15 M.16 M.17; official Protocol-30 variants require all M.01-M.30."
         required: false
         default: ""
 
