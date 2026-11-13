@@ -3925,24 +3925,28 @@ class ProtocolBenchmarkSuite:
         # Score each method from its retained predictor or complete formula; never
         # substitute training metrics or extrapolation scores.
         _external_scores = {}
-        _do_external = (
-            X_external_holdout is not None
-            and y_external_holdout is not None
-            and len(X_external_holdout) > 1
-            and len(y_external_holdout) == len(X_external_holdout)
-            and external_holdout_scope == "random_80_20"
-        )
+        _do_external = external_holdout_scope == "random_80_20"
         if _do_external:
             for _name, _res in results.items():
                 _pred = None
                 _reason = None
                 try:
+                    if (
+                        X_external_holdout is None
+                        or y_external_holdout is None
+                        or len(X_external_holdout) <= 1
+                        or len(y_external_holdout) != len(X_external_holdout)
+                    ):
+                        raise ValueError(
+                            metadata.get("external_holdout_split_error")
+                            or "random 80/20 holdout was not available"
+                        )
                     _predict_fn = getattr(_res, "_predict_fn", None)
                     if callable(_predict_fn):
                         _pred = np.asarray(_predict_fn(X_external_holdout), dtype=float).reshape(-1)
                     else:
                         _formula = getattr(_res, "formula_full", "") or getattr(_res, "formula", "")
-                        if _formula and not re.search(r"\\b(?:ratio|gm)_\\w+\\b", _formula):
+                        if _formula and not re.search(r"\b(?:ratio|gm)_\w+\b", _formula):
                             _pred = self._runner_eval_formula(_formula, X_external_holdout, var_names)
                         elif _formula:
                             _reason = "formula requires engineered features not exposed by the method result"
