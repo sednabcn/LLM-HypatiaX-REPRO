@@ -3039,6 +3039,27 @@ jobs:
             echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
           fi
 
+          if [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            python3 - "${UPLOAD_DIR}/protocol30_shard_manifest.json" "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          manifest_path, output_dir = Path(sys.argv[1]), Path(sys.argv[2])
+          if not manifest_path.is_file():
+              raise SystemExit(f"missing smoke manifest: {manifest_path}")
+          manifest = json.loads(manifest_path.read_text())
+          indices = manifest.get("assigned_equation_indices", [])
+          count = manifest.get("expected_equation_count")
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("smoke manifest is not explicitly marked artifact-only")
+          if not isinstance(count, int) or not 3 <= count <= 5 or count != len(indices):
+              raise SystemExit(f"invalid smoke equation count: expected={count}, assigned={len(indices)}")
+          result_file = manifest.get("result_file")
+          if not result_file or not (output_dir / result_file).is_file():
+              raise SystemExit(f"manifest result file is missing: {result_file}")
+          print(f"Validated artifact-only smoke manifest: {count} equations; result={result_file}")
+          PY
+          fi
+
       - name: Upload shard results artifact
         if: always()
         uses: actions/upload-artifact@v4.3.6
