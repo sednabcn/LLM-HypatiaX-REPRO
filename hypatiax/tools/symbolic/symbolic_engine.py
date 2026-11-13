@@ -1021,6 +1021,31 @@ class SymbolicEngine:
         ]
 
         try:
+            # Reject invalid source data before sklearn heuristics or feature
+            # engineering can obscure the origin of a NaN/inf failure.
+            X = np.asarray(X, dtype=float)
+            y = np.asarray(y, dtype=float)
+            if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+                raise ValueError(f"invalid input feature matrix shape={X.shape}")
+            if y.ndim != 1 or y.shape[0] != X.shape[0]:
+                raise ValueError(
+                    f"invalid target shape={y.shape}; expected ({X.shape[0]},)"
+                )
+            if len(variable_names) != X.shape[1]:
+                raise ValueError(
+                    f"feature-name count={len(variable_names)} does not match "
+                    f"feature count={X.shape[1]}"
+                )
+            _bad_x = int((~np.isfinite(X)).sum())
+            _bad_y = int((~np.isfinite(y)).sum())
+            _trace.append(f"input_nonfinite_X={_bad_x}")
+            _trace.append(f"input_nonfinite_y={_bad_y}")
+            if _bad_x or _bad_y:
+                raise ValueError(
+                    f"non-finite source data: X has {_bad_x} NaN/inf value(s), "
+                    f"y has {_bad_y} NaN/inf value(s)"
+                )
+
             # Lazy import: keeps juliacall out of the module-level import chain
             # so that setting PYTHON_JULIACALL_HANDLE_SIGNALS above always wins.
             from pysr import PySRRegressor  # noqa: PLC0415
@@ -1821,6 +1846,18 @@ class SymbolicEngine:
             # Storing the actual final _X_fit/safe_names here — taken AFTER all
             # augmentation (geometric-mean, ratio) and BEFORE fit() mutates anything
             # further — closes the loop so RMSE can be computed correctly.
+            # Engineered GM/ratio columns can overflow even when source X is
+            # finite. Diagnose this boundary before passing data to PySR/sklearn.
+            _bad_x_fit = int((~np.isfinite(_X_fit)).sum())
+            _bad_y_fit = int((~np.isfinite(_y_fit)).sum())
+            _trace.append(f"fit_nonfinite_X={_bad_x_fit}")
+            _trace.append(f"fit_nonfinite_y={_bad_y_fit}")
+            if _bad_x_fit or _bad_y_fit:
+                raise ValueError(
+                    f"non-finite prepared PySR data: X_fit has {_bad_x_fit} "
+                    f"NaN/inf value(s), y_fit has {_bad_y_fit} NaN/inf value(s)"
+                )
+
             self._last_X_aug = _X_fit
             self._last_aug_names = list(safe_names)
 
