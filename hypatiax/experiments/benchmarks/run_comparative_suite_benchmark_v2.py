@@ -3974,6 +3974,12 @@ class ProtocolBenchmarkSuite:
                     _predict_fn = getattr(_res, "_predict_fn", None)
                     if callable(_predict_fn):
                         _pred = np.asarray(_predict_fn(X_external_holdout), dtype=float).reshape(-1)
+                    elif (getattr(_res, "metadata", {}) or {}).get("nn_applied"):
+                        _reason = (
+                            "NN residual correction contributed to the reported hybrid result, "
+                            "but its fitted inference pipeline was not retained; formula-only "
+                            "evaluation would not reproduce the reported method"
+                        )
                     else:
                         _formula = getattr(_res, "formula_full", "") or getattr(_res, "formula", "")
                         if _formula and not re.search(r"\b(?:ratio|gm)_\w+\b", _formula):
