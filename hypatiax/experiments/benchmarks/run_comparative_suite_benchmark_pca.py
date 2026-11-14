@@ -3289,7 +3289,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Always a single subprocess run — Julia startup (~90s) paid once.
         import math as _math
 
-        _MAX_RETRIES_V50_2_OUTER = 3   # kept in sync with _MAX_RETRIES_V50_2 below
+        _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
         _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
         _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
         # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
@@ -3329,8 +3329,8 @@ class HybridSystemV50_2Method(BaseMethod):
 
         # ── Per-attempt PySR timeout ─────────────────────────────────────────
         # Two constraints must both be satisfied:
-        #   A) Budget constraint: 3 retries must fit inside method_timeout
-        #      = (_METHOD_TIMEOUT_SECS - 150s overhead) / 3 retries
+        #   A) Budget constraint: 2 attempts must fit inside method_timeout
+        #      = (_METHOD_TIMEOUT_SECS - reserved overhead) / 2 attempts
         #   B) User constraint: respect --pysr-timeout CLI flag
         # We take the minimum so neither is violated.
         # Two bounded attempts leave time for Julia startup, result
@@ -3338,7 +3338,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Three full searches could consume the entire outer budget before
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
-        _reserved_overhead = 300
+        _reserved_overhead = 400
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
         # Respect the caller's PySR timeout while ensuring the retry budget
@@ -3377,7 +3377,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # gracefully killed) before the parent thread is force-killed.
         # Old value (_PYSR_TIMEOUT + 500 = 1100s) EXCEEDED the 900s method
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
-        _subprocess_timeout = max(60, _METHOD_TIMEOUT_SECS - 100)
+        _subprocess_timeout = min(\n            max(60, _METHOD_TIMEOUT_SECS - 100),\n            (2 * _per_attempt_to) + 280,\n        )
         result = _run_pysr_in_subprocess(
             method="hybrid_v50_2",
             X=X, y=y,
@@ -4623,7 +4623,7 @@ Examples
         ),
     )
     parser.add_argument(
-        "--pysr-timeout", type=int, default=1100, dest="pysr_timeout",
+        "--pysr-timeout", type=int, default=None, dest="pysr_timeout",
         metavar="SECS",
         help=(
             "Seconds before a PySR subprocess is killed "
@@ -4633,7 +4633,7 @@ Examples
         ),
     )
     parser.add_argument(
-        "--method-timeout", type=int, default=900, dest="method_timeout",
+        "--method-timeout", type=int, default=None, dest="method_timeout",
         metavar="SECS",
         help=(
             "Hard timeout in seconds for each individual method call "
@@ -4801,28 +4801,32 @@ Examples
 
     args = parser.parse_args()
 
-    # ── BUG 6 FIX: Read CI environment overrides before applying CLI args ──
-    # CI sets FEYNMAN_TIMEOUT and JOB_DEADLINE in the environment but the script
-    # previously never read them, silently using 90s method timeout and 600s PySR
-    # timeout instead of the paper-quality 1100s values.
-    # CLI args take precedence when they differ from their defaults.
-    _env_feynman_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
-    _env_job_dl     = int(os.environ.get("JOB_DEADLINE",    "0")) or None
+    # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
+    # is a PySR-fit setting only; applying it to the method deadline can silently
+    # stretch the outer deadline beyond the benchmark's 900s method budget.
+    _DEFAULT_PYSR_TIMEOUT = 1100
+    _DEFAULT_METHOD_TIMEOUT = 900
+    _env_method_to = int(os.environ.get("FEYNMAN_METHOD_TIMEOUT", "0")) or None
+    _env_pysr_to = int(os.environ.get("FEYNMAN_PYSR_TIMEOUT", "0")) or None
+    _env_legacy_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
+    _env_job_dl = int(os.environ.get("JOB_DEADLINE", "0")) or None
 
-    # Apply env overrides only when the CLI arg is still at its default value
-    # (i.e. the user did not explicitly pass --method-timeout or --pysr-timeout).
-    # Defaults updated to paper quality: method_timeout=900, pysr_timeout=1100.
-    if _env_feynman_to and args.method_timeout == 900:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --method-timeout "
-              f"(CLI default was 900s)")
-        args.method_timeout = _env_feynman_to
-    if _env_feynman_to and args.pysr_timeout == 1100:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --pysr-timeout "
-              f"(CLI default was 1100s)")
-        args.pysr_timeout = _env_feynman_to
+    if args.method_timeout is None:
+        args.method_timeout = _env_method_to or _DEFAULT_METHOD_TIMEOUT
+    if args.pysr_timeout is None:
+        args.pysr_timeout = _env_pysr_to or _env_legacy_to or _DEFAULT_PYSR_TIMEOUT
+    if _env_legacy_to and not _env_pysr_to:
+        print(
+            f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s used only for --pysr-timeout; "
+            "method timeout remains independently configured.",
+            flush=True,
+        )
     if _env_job_dl:
-        print(f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
-              f"not currently used as a hard cutoff)")
+        print(
+            f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
+            "not currently used as a hard cutoff)",
+            flush=True,
+        )
 
     # Propagate --pysr-timeout to the module-level used by _run_pysr_in_subprocess.
     global _PYSR_TIMEOUT
