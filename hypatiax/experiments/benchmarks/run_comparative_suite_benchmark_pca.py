@@ -1032,6 +1032,20 @@ class MethodResult:
 # BASE METHOD
 # ============================================================================
 
+def _extract_formula(result) -> str:
+    """Return a formula from a hybrid result, including nested LLM payloads."""
+    if not isinstance(result, dict):
+        return "N/A"
+    candidates = [result.get("formula"), result.get("best_formula")]
+    llm_result = result.get("llm_result")
+    if isinstance(llm_result, dict):
+        candidates.extend([llm_result.get("formula"), llm_result.get("best_formula")])
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip() and candidate.strip().upper() != "N/A":
+            return candidate.strip()
+    return "N/A"
+
+
 class BaseMethod:
     """Shared helpers for all wrapper methods."""
 
