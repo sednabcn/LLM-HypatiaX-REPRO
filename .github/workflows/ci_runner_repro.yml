@@ -844,8 +844,11 @@ jobs:
               print(f"ERROR: {EXP} requires the complete Protocol-30 task set M.01..M.30; partial task_ids_override is not aggregatable.", file=sys.stderr)
               sys.exit(1)
           if EXP in ("exp2_protocol30_smoke_random_8020", "exp2_protocol30_smoke_pca_4060"):
-              if not 3 <= len(all_ids) <= 5 or len(set(all_ids)) != len(all_ids) or any(t not in MULTI30 for t in all_ids):
-                  print("ERROR: Protocol-30 smoke runs require 3-5 unique IDs from M.01..M.30 in task_ids_override.", file=sys.stderr)
+              # Allow true targeted smoke reruns of a single previously failing
+              # equation.  This remains smoke-only and never enters the official
+              # 30-equation aggregate; keep the upper bound to five IDs.
+              if not 1 <= len(all_ids) <= 5 or len(set(all_ids)) != len(all_ids) or any(t not in MULTI30 for t in all_ids):
+                  print("ERROR: Protocol-30 smoke runs require 1-5 unique IDs from M.01..M.30 in task_ids_override.", file=sys.stderr)
                   sys.exit(1)
           if not all_ids:
               if EXP in ("exp1_pca", "exp1b_pca"):
