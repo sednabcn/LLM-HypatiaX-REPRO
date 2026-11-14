@@ -2938,6 +2938,13 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             }
 
         except Exception as exc:
+            # Preserve the originating stack in the runner trace. The worker
+            # previously retained only the exception message, which hid
+            # whether NaN was raised by PySR fitting, candidate prediction,
+            # formula validation, or the adapter's metric calculation.
+            import traceback as _tb
+            _exception_tb = _tb.format_exc()
+            _exception_tb_lines = _exception_tb.strip().splitlines()[-24:]
             return {
                 "success": False,
                 "r2": None,  # PHASE1-FIX: failure, not a score
@@ -2947,6 +2954,9 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "error": str(exc)[:200],
                 "trace": [
                     f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}",
+                    "exception_traceback_begin",
+                    *_exception_tb_lines,
+                    "exception_traceback_end",
                     *getattr(self, "_last_trace", [])[-12:],
                 ],
                 "reason": "fit_or_metric_failed",
