@@ -1999,18 +1999,53 @@ class SymbolicEngine:
                 # round of Julia predict() calls (previously called model.predict
                 # twice per equation — once in this loop, once in _pareto_r2s).
                 _cached_r2: dict[int, float] = {}
+                _cached_predictions: dict[int, np.ndarray] = {}
+                _target_for_r2 = np.asarray(y, dtype=np.float64).reshape(-1)
                 for idx in range(len(eqs)):
                     try:
-                        y_pred_i = self.model.predict(_X_fit, index=idx) * _y_std
-                        r2_i = r2_score(y, y_pred_i)
+                        # A finite training matrix does not guarantee every evolved
+                        # PySR expression is finite over that matrix (e.g. sqrt of a
+                        # negative subtree or an overflowing intermediate). Reject
+                        # that candidate, not the entire discovery run.
+                        y_pred_i = np.asarray(
+                            self.model.predict(_X_fit, index=idx), dtype=np.float64
+                        ).reshape(-1) * _y_std
+                        if y_pred_i.shape != _target_for_r2.shape:
+                            _trace.append(
+                                f"pareto_candidate_skipped_shape_mismatch=index:{idx},"
+                                f"pred:{y_pred_i.shape},target:{_target_for_r2.shape}"
+                            )
+                            continue
+                        _finite_pred = np.isfinite(y_pred_i)
+                        if not np.all(_finite_pred):
+                            _trace.append(
+                                f"pareto_candidate_skipped_nonfinite=index:{idx},"
+                                f"count:{int((~_finite_pred).sum())}"
+                            )
+                            continue
+                        r2_i = float(r2_score(_target_for_r2, y_pred_i))
+                        if not np.isfinite(r2_i):
+                            _trace.append(
+                                f"pareto_candidate_skipped_nonfinite_r2=index:{idx}"
+                            )
+                            continue
                         _cached_r2[idx] = r2_i
+                        _cached_predictions[idx] = y_pred_i
                         if r2_i > best_r2:
                             best_r2 = r2_i
                             best_idx = idx
                     except Exception as _e:
                         import logging as _lg, os as _os
-                        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                        _lg.getLogger(__name__).warning(
+                            "PySR Pareto candidate %s evaluation failed: %r", idx, _e
+                        )
                         if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+
+                if not _cached_r2:
+                    raise ValueError(
+                        "PySR returned no Pareto candidates with finite predictions "
+                        "on the training matrix"
+                    )
 
                 # FIX (indentation bug): these three lines were erroneously
                 # INSIDE the for-loop above, causing best_eq_raw / best_eq /
@@ -2107,7 +2142,9 @@ class SymbolicEngine:
                         expression = f"[X-normalised: {_xscale_note}] {expression}"
 
                     # Make predictions with the best-R² equation (rescaled to original y)
-                    y_pred = self.model.predict(_X_fit, index=best_idx) * _y_std
+                    # Reuse the exact finite prediction vector used to score
+                    # this candidate; do not invoke Julia prediction a second time.
+                    y_pred = _cached_predictions[best_idx]
                     r2 = best_r2
 
                     print(f"   ✅ Found: {expression}")
