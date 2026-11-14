@@ -2888,6 +2888,12 @@ def _run_pysr_in_subprocess(
     env = os.environ.copy()
     env["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
 
+    # The hybrid adapter supplies a tighter per-attempt budget than the
+    # workflow-wide PYSR_TIMEOUT. symbolic_engine.py reads the environment
+    # first, so make the adapter value authoritative for this worker.
+    if method == "hybrid_v50_2" and (extra_kwargs or {}).get("pysr_timeout") is not None:
+        env["PYSR_TIMEOUT"] = str(int(extra_kwargs["pysr_timeout"]))
+
     proc = None
     try:
         # FIX-ISSUE10B-ORPHANED-JULIA: start the worker in its own process
