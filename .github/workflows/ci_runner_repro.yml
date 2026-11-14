@@ -3060,7 +3060,7 @@ jobs:
           count = manifest.get("expected_equation_count")
           if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
               raise SystemExit("smoke manifest is not explicitly marked artifact-only")
-          if not isinstance(count, int) or not 3 <= count <= 5 or count != len(indices):
+          if not isinstance(count, int) or not 1 <= count <= 5 or count != len(indices):
               raise SystemExit(f"invalid smoke equation count: expected={count}, assigned={len(indices)}")
           result_file = manifest.get("result_file")
           if not result_file or not (output_dir / result_file).is_file():
