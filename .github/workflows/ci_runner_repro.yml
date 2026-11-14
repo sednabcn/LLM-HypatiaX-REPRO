@@ -1614,7 +1614,7 @@ jobs:
             DOMAIN_FILTER="${TASK_IDS}" \
             NUMERICAL_ONLY="true" \
             PROTOCOL30_SMOKE_DIR="$([[ "${EXP}" == exp2_protocol30_smoke_random_8020 || "${EXP}" == exp2_protocol30_smoke_pca_4060 ]] && printf '%s' "${RESULTS_DIR}/${RESULT_SUBDIR}" || true)" \
-            PROTOCOL30_METHODS_OVERRIDE="${METHODS_OVERRIDE}" \
+            PROTOCOL30_METHODS_OVERRIDE="${{ github.event.inputs.methods_override }}" \
               bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
           fi
 
