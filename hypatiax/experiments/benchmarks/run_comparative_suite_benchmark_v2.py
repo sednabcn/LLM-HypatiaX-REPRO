@@ -2844,6 +2844,48 @@ description = kwargs["description"]
 metadata    = kwargs.get("metadata", {})
 
 try:
+    # Guard the Random runner's subprocess boundary as well as the engine
+    # itself.  This catches complex values before any sklearn/PySR helper can
+    # emit the opaque "Complex data not supported" exception.
+    _x_raw = np.asarray(X)
+    _y_raw = np.asarray(y)
+    if np.iscomplexobj(_x_raw):
+        _x_imag = np.abs(np.imag(_x_raw)) > 0
+        if np.any(_x_imag):
+            _bad = [
+                f"{var_names[col] if col < len(var_names) else 'feature_'+str(col)}@row{row}"
+                for row, col in np.argwhere(_x_imag)[:10]
+            ]
+            raise ValueError(
+                "complex input features rejected before symbolic discovery; "
+                f"first locations: {_bad}"
+            )
+        _x_raw = np.real(_x_raw)
+    if np.iscomplexobj(_y_raw):
+        _y_imag = np.abs(np.imag(_y_raw)) > 0
+        if np.any(_y_imag):
+            _bad_rows = [int(i) for i in np.flatnonzero(_y_imag)[:10]]
+            raise ValueError(
+                "complex input targets rejected before symbolic discovery; "
+                f"first rows: {_bad_rows}"
+            )
+        _y_raw = np.real(_y_raw)
+    try:
+        X = np.asarray(_x_raw, dtype=float)
+        y = np.asarray(_y_raw, dtype=float)
+    except (TypeError, ValueError) as _cast_exc:
+        raise ValueError(
+            "symbolic subprocess inputs must be real numeric arrays; "
+            f"X_dtype={_x_raw.dtype}, y_dtype={_y_raw.dtype}: {_cast_exc}"
+        ) from _cast_exc
+    if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
+        _bad_x = np.argwhere(~np.isfinite(X))[:10].tolist()
+        _bad_y = np.flatnonzero(~np.isfinite(y))[:10].tolist()
+        raise ValueError(
+            "non-finite symbolic subprocess inputs; "
+            f"X_locations={_bad_x}, y_rows={_bad_y}"
+        )
+
     if method == "symbolic_engine":
         from hypatiax.tools.symbolic.symbolic_engine import (
             SymbolicEngineWithLLM,
