@@ -1,6 +1,5 @@
 """Offline static checks for canonical rerun settings and safety ordering."""
 from pathlib import Path
-import re
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config" / "repro.yaml"
@@ -10,14 +9,16 @@ PORTFOLIO = ROOT / "hypatiax" / "experiments" / "benchmarks" / "portfolio_varian
 
 
 def test_canonical_llm_and_pysr_values_are_aligned():
-    cfg, run, ablation = (p.read_text(encoding="utf-8") for p in (CONFIG, RUN_ALL, ABLATION))
-    assert re.search(r'^llm_model:\\s*"claude-sonnet-4-6"\\s*$', cfg, re.M)
-    assert re.search(r'^llm_temperature:\\s*0\\.25\\s*$', cfg, re.M)
+    cfg = CONFIG.read_text(encoding="utf-8")
+    run = RUN_ALL.read_text(encoding="utf-8")
+    ablation = ABLATION.read_text(encoding="utf-8")
+    assert 'llm_model:     "claude-sonnet-4-6"' in cfg
+    assert "llm_temperature: 0.25" in cfg
     assert 'LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in run
     assert 'LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"' in run
     assert 'os.environ.get("LLM_TEMPERATURE", "0.25")' in ablation
-    assert re.search(r'population_size\\s*=\\s*33\\s*,', ablation)
-    assert re.search(r'^\\s*population_size:\\s*33\\s*$', cfg, re.M)
+    assert "population_size= 33," in ablation
+    assert "population_size: 33" in cfg
 
 
 def test_portfolio_seed_zero_and_early_guard():
