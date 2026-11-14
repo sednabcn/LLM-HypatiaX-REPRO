@@ -856,6 +856,17 @@ class HybridDiscoverySystem:
                 last_attempt_error = e
                 logger.error(f"   [ERROR] Attempt {attempt + 1} failed: {e}")
                 logger.error(f"Attempt {attempt + 1} exception", exc_info=True)
+                # A hard timeout is a resource-budget boundary, not a signal
+                # to launch another equivalent full search. Preserve any
+                # earlier best result and return through the normal fallback
+                # path rather than multiplying the timeout cost.
+                _error_text = str(e).lower()
+                if isinstance(e, TimeoutError) or "timed out" in _error_text or "timeout" in _error_text:
+                    logger.warning(
+                        "[SYMBOLIC] Stopping retries after timeout; "
+                        "not repeating the same expensive search."
+                    )
+                    break
 
         if best_result and best_r2 >= 0.97:
             logger.info(f"\n[SUCCESS] SymbolicEngine succeeded (R2={best_r2:.4f})")
