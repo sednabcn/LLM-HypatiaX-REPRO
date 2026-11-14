@@ -3010,7 +3010,7 @@ def _run_pysr_in_subprocess(
     # The hybrid adapter computes a per-attempt PySR budget from the remaining
     # method deadline and passes it in extra_kwargs.  symbolic_engine.py reads
     # PYSR_TIMEOUT before DiscoveryConfig.pysr_timeout, so inheriting the
-    # workflow-wide value (e.g. 750s) silently overrides the tighter hybrid
+    # workflow-wide value (e.g. 1100s) silently overrides the tighter hybrid
     # budget (e.g. 250s) and lets the child hit its larger outer timeout first.
     # Make the adapter's explicit budget authoritative inside this isolated
     # worker.  Keep the SymbolicEngineWithLLM path's existing workflow budget.
