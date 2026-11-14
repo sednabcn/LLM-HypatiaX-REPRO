@@ -2,11 +2,11 @@
 from pathlib import Path
 import re
 
-ROOT = Path(__file__).resolve().parents[2]
-CONFIG = ROOT.parent / "config" / "repro.yaml"
-RUN_ALL = ROOT.parent / "run_all.sh"
-ABLATION = ROOT / "experiments" / "benchmarks" / "exp1_ablation.py"
-PORTFOLIO = ROOT / "experiments" / "benchmarks" / "portfolio_variance_v3c2.py"
+ROOT = Path(__file__).resolve().parents[3]
+CONFIG = ROOT / "config" / "repro.yaml"
+RUN_ALL = ROOT / "run_all.sh"
+ABLATION = ROOT / "hypatiax" / "experiments" / "benchmarks" / "exp1_ablation.py"
+PORTFOLIO = ROOT / "hypatiax" / "experiments" / "benchmarks" / "portfolio_variance_v3c2.py"
 
 
 def test_canonical_llm_and_pysr_values_are_aligned():
