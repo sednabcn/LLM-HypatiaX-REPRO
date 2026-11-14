@@ -1036,14 +1036,26 @@ class SymbolicEngine:
                     f"feature-name count={len(variable_names)} does not match "
                     f"feature count={X.shape[1]}"
                 )
-            _bad_x = int((~np.isfinite(X)).sum())
-            _bad_y = int((~np.isfinite(y)).sum())
+            _bad_x_mask = ~np.isfinite(X)
+            _bad_y_mask = ~np.isfinite(y)
+            _bad_x = int(_bad_x_mask.sum())
+            _bad_y = int(_bad_y_mask.sum())
+            _bad_x_locations = [
+                f"{safe_names[col]}@row{row}"
+                for row, col in np.argwhere(_bad_x_mask)[:10]
+            ]
+            _bad_y_locations = [
+                int(row) for row in np.flatnonzero(_bad_y_mask)[:10]
+            ]
             _trace.append(f"input_nonfinite_X={_bad_x}")
             _trace.append(f"input_nonfinite_y={_bad_y}")
+            _trace.append(f"input_nonfinite_X_locations={_bad_x_locations}")
+            _trace.append(f"input_nonfinite_y_rows={_bad_y_locations}")
             if _bad_x or _bad_y:
                 raise ValueError(
-                    f"non-finite source data: X has {_bad_x} NaN/inf value(s), "
-                    f"y has {_bad_y} NaN/inf value(s)"
+                    f"non-finite source data: X has {_bad_x} NaN/inf value(s) "
+                    f"at {_bad_x_locations}; y has {_bad_y} at rows "
+                    f"{_bad_y_locations}"
                 )
 
             # Lazy import: keeps juliacall out of the module-level import chain
@@ -1848,14 +1860,26 @@ class SymbolicEngine:
             # further — closes the loop so RMSE can be computed correctly.
             # Engineered GM/ratio columns can overflow even when source X is
             # finite. Diagnose this boundary before passing data to PySR/sklearn.
-            _bad_x_fit = int((~np.isfinite(_X_fit)).sum())
-            _bad_y_fit = int((~np.isfinite(_y_fit)).sum())
+            _bad_x_fit_mask = ~np.isfinite(_X_fit)
+            _bad_y_fit_mask = ~np.isfinite(_y_fit)
+            _bad_x_fit = int(_bad_x_fit_mask.sum())
+            _bad_y_fit = int(_bad_y_fit_mask.sum())
+            _bad_x_fit_locations = [
+                f"{safe_names[col]}@row{row}"
+                for row, col in np.argwhere(_bad_x_fit_mask)[:10]
+            ]
+            _bad_y_fit_locations = [
+                int(row) for row in np.flatnonzero(_bad_y_fit_mask)[:10]
+            ]
             _trace.append(f"fit_nonfinite_X={_bad_x_fit}")
             _trace.append(f"fit_nonfinite_y={_bad_y_fit}")
+            _trace.append(f"fit_nonfinite_X_locations={_bad_x_fit_locations}")
+            _trace.append(f"fit_nonfinite_y_rows={_bad_y_fit_locations}")
             if _bad_x_fit or _bad_y_fit:
                 raise ValueError(
                     f"non-finite prepared PySR data: X_fit has {_bad_x_fit} "
-                    f"NaN/inf value(s), y_fit has {_bad_y_fit} NaN/inf value(s)"
+                    f"NaN/inf value(s) at {_bad_x_fit_locations}; y_fit has "
+                    f"{_bad_y_fit} at rows {_bad_y_fit_locations}"
                 )
 
             self._last_X_aug = _X_fit
