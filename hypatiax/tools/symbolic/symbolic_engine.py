@@ -1277,23 +1277,47 @@ class SymbolicEngine:
                     _y_fit_pos = np.all(y > 0)
                     if _y_fit_pos:
                         from sklearn.linear_model import LinearRegression as _LR
-                        _Xs = X - X.mean(axis=0)
-                        _r2_lin = r2_score(y, _LR().fit(_Xs, y).predict(_Xs))
-                        _logy   = np.log(y)
-                        _r2_log = r2_score(_logy,
-                                           _LR().fit(_Xs, _logy).predict(_Xs))
-                        if _r2_log - _r2_lin > 0.05:
-                            _data_needs_exp = True
-                            print(
-                                f"   [AUTO-EXP] data heuristic: "
-                                f"R²(log y ~ X)={_r2_log:.3f} >> R²(y ~ X)={_r2_lin:.3f} "
-                                f"— injecting exp/log (exponential relationship detected)",
-                                flush=True,
-                            )
+                        # Scale each feature and both regression targets before
+                        # fitting this optional heuristic.  Finite but extreme
+                        # SI-unit magnitudes can otherwise overflow centering,
+                        # OLS predictions or sklearn's R² validation and raise
+                        # "Input contains NaN" even though the source arrays are
+                        # finite and the heuristic is not required for discovery.
+                        _x_scale = np.maximum(
+                            np.max(np.abs(X), axis=0),
+                            np.finfo(float).tiny,
+                        )
+                        _Xs = X / _x_scale
+                        _Xs = _Xs - np.mean(_Xs, axis=0)
+                        _y_scale = max(float(np.max(np.abs(y))), np.finfo(float).tiny)
+                        _y_lin = y / _y_scale
+                        _logy = np.log(y)
+                        _log_scale = max(
+                            float(np.max(np.abs(_logy))),
+                            np.finfo(float).tiny,
+                        )
+                        _logy_scaled = _logy / _log_scale
+                        _lin_pred = _LR().fit(_Xs, _y_lin).predict(_Xs)
+                        _log_pred = _LR().fit(_Xs, _logy_scaled).predict(_Xs)
+                        if np.all(np.isfinite(_lin_pred)) and np.all(np.isfinite(_log_pred)):
+                            _r2_lin = r2_score(_y_lin, _lin_pred)
+                            _r2_log = r2_score(_logy_scaled, _log_pred)
+                            if _r2_log - _r2_lin > 0.05:
+                                _data_needs_exp = True
+                                print(
+                                    f"   [AUTO-EXP] data heuristic: "
+                                    f"R²(log y ~ X)={_r2_log:.3f} >> R²(y ~ X)={_r2_lin:.3f} "
+                                    f"— injecting exp/log (exponential relationship detected)",
+                                    flush=True,
+                                )
+                        else:
+                            _trace.append("auto_exp_heuristic=skipped_nonfinite_predictions")
                 except Exception as _e:
-                    import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    # This is a best-effort operator-selection hint, not part
+                    # of model fitting.  It must never abort a valid PySR run.
+                    _trace.append(
+                        f"auto_exp_heuristic=skipped_{type(_e).__name__}:{str(_e)[:100]}"
+                    )
 
             _needs_exp_log = (
                 (self.domain in _EXP_DOMAINS or _data_needs_exp)
