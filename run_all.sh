@@ -84,6 +84,34 @@ export FEYNMAN_NOISELESS_THRESHOLD=0.999999
 
 export PYTHON_JULIACALL_HANDLE_SIGNALS=yes
 
+# Optional method filtering is smoke-only; official Protocol-30 runs must keep
+# all six methods so their aggregate contract remains unchanged.
+if [[ -n "${PROTOCOL30_METHODS_OVERRIDE:-}" ]]; then
+  if [[ -z "${PROTOCOL30_SMOKE_DIR:-}" ]]; then
+    echo "::error::PROTOCOL30_METHODS_OVERRIDE is allowed only for Protocol-30 smoke runs." >&2
+    exit 2
+  fi
+  read -r -a _P30_METHODS_ARRAY <<< "${PROTOCOL30_METHODS_OVERRIDE}"
+  if [[ ${#_P30_METHODS_ARRAY[@]} -lt 1 ]]; then
+    echo "::error::PROTOCOL30_METHODS_OVERRIDE must contain method IDs 1-6." >&2
+    exit 2
+  fi
+  for _method_id in "${_P30_METHODS_ARRAY[@]}"; do
+    if [[ ! "${_method_id}" =~ ^[1-6]$ ]]; then
+      echo "::error::invalid Protocol-30 method ID: ${_method_id} (expected 1-6)." >&2
+      exit 2
+    fi
+  done
+  _P30_METHOD_UNIQUE=$(printf '%s\\n' "${_P30_METHODS_ARRAY[@]}" | sort -n -u | wc -l)
+  if [[ "${_P30_METHOD_UNIQUE}" -ne "${#_P30_METHODS_ARRAY[@]}" ]]; then
+    echo "::error::duplicate Protocol-30 method IDs." >&2
+    exit 2
+  fi
+  export PROTOCOL30_METHODS_ARGS="${PROTOCOL30_METHODS_OVERRIDE}"
+else
+  export PROTOCOL30_METHODS_ARGS="1 2 3 4 5 6"
+fi
+
 export JULIA_NUM_THREADS="${JULIA_NUM_THREADS:-4}"
 export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
@@ -2304,7 +2332,7 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
       --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
       --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
       --use-transcendental-compositions --noiseless --threshold 0.999999 \
-      --methods 1 2 3 4 5 6 --no-llm-cache --no-checkpoint \
+      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --no-checkpoint \
       --output-dir \"\${_P30_RANDOM_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"\${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
   # Capture the v2 runner's flat exports (written outside --output-dir) with this shard.
@@ -2382,7 +2410,7 @@ run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 
       --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
       --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
       --use-transcendental-compositions --noiseless --threshold 0.999999 \
-      --methods 1 2 3 4 5 6 --no-llm-cache --force-fresh --no-checkpoint \
+      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --force-fresh --no-checkpoint \
       --output-dir \"\${_P30_PCA_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
       2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
