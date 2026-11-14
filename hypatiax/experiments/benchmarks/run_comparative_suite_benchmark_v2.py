@@ -3452,12 +3452,17 @@ class HybridSystemV50_2Method(BaseMethod):
         #      = (_METHOD_TIMEOUT_SECS - 150s overhead) / 3 retries
         #   B) User constraint: respect --pysr-timeout CLI flag
         # We take the minimum so neither is violated.
-        _MAX_RETRIES_V50_2 = 3
-        _t_available     = max(60, _METHOD_TIMEOUT_SECS - 150)
+        # Two bounded attempts leave time for Julia startup, result
+        # serialisation and cleanup inside the method/subprocess deadlines.
+        # Three full searches could consume the entire outer budget before
+        # the worker has a chance to return its best result.
+        _MAX_RETRIES_V50_2 = 2
+        _reserved_overhead = 300
+        _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
-        # _PYSR_TIMEOUT is the user's --pysr-timeout flag (default 600).
-        # Use it as a ceiling — never exceed what the user asked for.
-        _per_attempt_to  = min(_budget_per_attempt, _PYSR_TIMEOUT)
+        # Respect the caller's PySR timeout while ensuring the retry budget
+        # fits inside the outer per-method deadline.
+        _per_attempt_to = min(_budget_per_attempt, _PYSR_TIMEOUT)
 
         _tc_kwargs = {
             "max_iterations": _n_iter_adaptive,
