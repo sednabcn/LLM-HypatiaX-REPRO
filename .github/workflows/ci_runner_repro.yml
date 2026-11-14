@@ -89,7 +89,12 @@ on:
         default: "30"
 
       task_ids_override:
-        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants require 3-5 unique IDs, e.g. M.13 M.14 M.15 M.16 M.17; official Protocol-30 variants require all M.01-M.30."
+        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; official Protocol-30 variants require all M.01-M.30."
+        required: false
+        default: ""
+
+      methods_override:
+        description: "Protocol-30 smoke only: optional space-separated method IDs 1-6 (e.g. 6 to rerun HybridDiscoverySystem only). Blank runs all six methods."
         required: false
         default: ""
 
@@ -198,6 +203,7 @@ jobs:
           PYSR_GENERATIONS:   ${{ github.event.inputs.pysr_generations }}
           PYSR_POPULATIONS:   ${{ github.event.inputs.pysr_populations }}
           TASK_IDS_OVERRIDE:  ${{ github.event.inputs.task_ids_override }}
+          METHODS_OVERRIDE:   ${{ github.event.inputs.methods_override }}
           RESUME:             ${{ github.event.inputs.resume }}
           DRY_RUN:            ${{ github.event.inputs.dry_run }}
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
@@ -1608,6 +1614,7 @@ jobs:
             DOMAIN_FILTER="${TASK_IDS}" \
             NUMERICAL_ONLY="true" \
             PROTOCOL30_SMOKE_DIR="$([[ "${EXP}" == exp2_protocol30_smoke_random_8020 || "${EXP}" == exp2_protocol30_smoke_pca_4060 ]] && printf '%s' "${RESULTS_DIR}/${RESULT_SUBDIR}" || true)" \
+            PROTOCOL30_METHODS_OVERRIDE="${METHODS_OVERRIDE}" \
               bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
           fi
 
