@@ -89,6 +89,11 @@ PROJECT_ROOT = Path.cwd()
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Enforce clean-run policy before benchmark work and any early-exit branch.
+if __name__ == "__main__":
+    from hypatiax.core.enforce_flags import enforce
+    enforce()
+
 # ── Output directory ──────────────────────────────────────────────────────────
 # Portable: write outputs next to this script (or set HYPATIAX_RESULTS_DIR env var)
 _DEFAULT_OUT = PROJECT_ROOT / 'hypatiax' / 'data' / 'results' / 'portfolio_variance_audit'
@@ -141,7 +146,8 @@ def _resolve_seed():
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Constants ─────────────────────────────────────────────────────────────────
-BENCHMARK_SEED = _resolve_seed() or 42
+_resolved_seed = _resolve_seed()
+BENCHMARK_SEED = 42 if _resolved_seed is None else _resolved_seed
 # DEFI_SEEDS env-var: comma-separated seed list set by CI worker (exp1b sharding).
 # Falls back to the canonical 5-seed paper set when unset (local / Colab runs).
 _seeds_env = os.environ.get("DEFI_SEEDS", "").strip()
@@ -1136,6 +1142,3 @@ for fname in _cases:
 
 print('\n🎉 Done!')
 
-if __name__ == "__main__":
-    from hypatiax.core.enforce_flags import enforce; enforce()  # fail-closed flag guard
-    pass  # TODO: add entry point
