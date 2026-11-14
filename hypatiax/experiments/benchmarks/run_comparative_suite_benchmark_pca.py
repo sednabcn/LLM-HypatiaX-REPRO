@@ -3007,6 +3007,15 @@ def _run_pysr_in_subprocess(
 
     env = os.environ.copy()
     env["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
+    # The hybrid adapter computes a per-attempt PySR budget from the remaining
+    # method deadline and passes it in extra_kwargs.  symbolic_engine.py reads
+    # PYSR_TIMEOUT before DiscoveryConfig.pysr_timeout, so inheriting the
+    # workflow-wide value (e.g. 750s) silently overrides the tighter hybrid
+    # budget (e.g. 250s) and lets the child hit its larger outer timeout first.
+    # Make the adapter's explicit budget authoritative inside this isolated
+    # worker.  Keep the SymbolicEngineWithLLM path's existing workflow budget.
+    if method == "hybrid_v50_2" and (extra_kwargs or {}).get("pysr_timeout") is not None:
+        env["PYSR_TIMEOUT"] = str(int(extra_kwargs["pysr_timeout"]))
 
     proc = None
     try:
