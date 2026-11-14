@@ -1019,12 +1019,42 @@ class SymbolicEngine:
             f"parsimony_cfg={self.config.parsimony}",
             f"use_tc={self.config.use_transcendental_compositions}",
         ]
+        self._last_trace = _trace
 
         try:
             # Reject invalid source data before sklearn heuristics or feature
             # engineering can obscure the origin of a NaN/inf failure.
-            X = np.asarray(X, dtype=float)
-            y = np.asarray(y, dtype=float)
+            X_raw = np.asarray(X)
+            y_raw = np.asarray(y)
+            # Reject genuinely complex values explicitly.  Casting complex
+            # arrays directly to float can discard imaginary components or
+            # defer the failure to sklearn as the unhelpful "Complex data not
+            # supported" message.
+            if np.iscomplexobj(X_raw):
+                _complex_x = np.abs(np.imag(X_raw)) > 0
+                _complex_locations = [
+                    f"{safe_names[col]}@row{row}"
+                    for row, col in np.argwhere(_complex_x)[:10]
+                ]
+                if np.any(_complex_x):
+                    _trace.append(f"input_complex_X_locations={_complex_locations}")
+                    raise ValueError(
+                        f"complex source features at {_complex_locations}; "
+                        "SymbolicEngine requires real-valued X"
+                    )
+                X_raw = np.real(X_raw)
+            if np.iscomplexobj(y_raw):
+                _complex_y = np.abs(np.imag(y_raw)) > 0
+                _complex_y_rows = [int(i) for i in np.flatnonzero(_complex_y)[:10]]
+                if np.any(_complex_y):
+                    _trace.append(f"input_complex_y_rows={_complex_y_rows}")
+                    raise ValueError(
+                        f"complex source targets at rows {_complex_y_rows}; "
+                        "SymbolicEngine requires real-valued y"
+                    )
+                y_raw = np.real(y_raw)
+            X = np.asarray(X_raw, dtype=float)
+            y = np.asarray(y_raw, dtype=float)
             if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
                 raise ValueError(f"invalid input feature matrix shape={X.shape}")
             if y.ndim != 1 or y.shape[0] != X.shape[0]:
@@ -1860,6 +1890,31 @@ class SymbolicEngine:
             # further — closes the loop so RMSE can be computed correctly.
             # Engineered GM/ratio columns can overflow even when source X is
             # finite. Diagnose this boundary before passing data to PySR/sklearn.
+            if np.iscomplexobj(_X_fit):
+                _complex_fit = np.abs(np.imag(_X_fit)) > 0
+                _complex_fit_locations = [
+                    f"{safe_names[col]}@row{row}"
+                    for row, col in np.argwhere(_complex_fit)[:10]
+                ]
+                if np.any(_complex_fit):
+                    _trace.append(f"fit_complex_X_locations={_complex_fit_locations}")
+                    raise ValueError(
+                        f"complex engineered features at {_complex_fit_locations}; "
+                        "PySR requires real-valued features"
+                    )
+                _X_fit = np.real(_X_fit)
+            if np.iscomplexobj(_y_fit):
+                _complex_fit_y = np.abs(np.imag(_y_fit)) > 0
+                _complex_fit_y_rows = [
+                    int(i) for i in np.flatnonzero(_complex_fit_y)[:10]
+                ]
+                if np.any(_complex_fit_y):
+                    _trace.append(f"fit_complex_y_rows={_complex_fit_y_rows}")
+                    raise ValueError(
+                        f"complex prepared targets at rows {_complex_fit_y_rows}; "
+                        "PySR requires real-valued targets"
+                    )
+                _y_fit = np.real(_y_fit)
             _bad_x_fit_mask = ~np.isfinite(_X_fit)
             _bad_y_fit_mask = ~np.isfinite(_y_fit)
             _bad_x_fit = int(_bad_x_fit_mask.sum())
@@ -2866,7 +2921,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "formula": "N/A",
                 "iterations": max_iterations,
                 "error": str(exc)[:200],
-                "trace": [f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}"], "reason": "fit_or_metric_failed",
+                "trace": [
+                    f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}",
+                    *getattr(self, "_last_trace", [])[-12:],
+                ],
+                "reason": "fit_or_metric_failed",
             }
 
     def _extract_operators_from_equation(self, equation: str) -> dict:
