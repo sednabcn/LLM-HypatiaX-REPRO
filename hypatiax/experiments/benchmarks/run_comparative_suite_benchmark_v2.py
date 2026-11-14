@@ -3408,7 +3408,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Always a single subprocess run — Julia startup (~90s) paid once.
         import math as _math
 
-        _MAX_RETRIES_V50_2_OUTER = 3   # kept in sync with _MAX_RETRIES_V50_2 below
+        _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
         _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
         _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
         # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
@@ -3448,8 +3448,8 @@ class HybridSystemV50_2Method(BaseMethod):
 
         # ── Per-attempt PySR timeout ─────────────────────────────────────────
         # Two constraints must both be satisfied:
-        #   A) Budget constraint: 3 retries must fit inside method_timeout
-        #      = (_METHOD_TIMEOUT_SECS - 150s overhead) / 3 retries
+        #   A) Budget constraint: 2 attempts must fit inside method_timeout
+        #      = (_METHOD_TIMEOUT_SECS - reserved overhead) / 2 attempts
         #   B) User constraint: respect --pysr-timeout CLI flag
         # We take the minimum so neither is violated.
         # Two bounded attempts leave time for Julia startup, result
@@ -3457,7 +3457,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Three full searches could consume the entire outer budget before
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
-        _reserved_overhead = 300
+        _reserved_overhead = 400
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
         # Respect the caller's PySR timeout while ensuring the retry budget
@@ -3496,7 +3496,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # gracefully killed) before the parent thread is force-killed.
         # Old value (_PYSR_TIMEOUT + 500 = 1100s) EXCEEDED the 900s method
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
-        _subprocess_timeout = max(60, _METHOD_TIMEOUT_SECS - 100)
+        _subprocess_timeout = min(\n            max(60, _METHOD_TIMEOUT_SECS - 100),\n            (2 * _per_attempt_to) + 280,\n        )
         # FIX-ISSUE10B-OUTER-TIMEOUT: see matching comment in
         # SymbolicEngineMethod.run — same handoff pattern.
         self._proc_box = _ProcBox()
@@ -5036,82 +5036,32 @@ Examples
 
     args = parser.parse_args()
 
-    # ── BUG 6 FIX: Read CI environment overrides before applying CLI args ──
-    # CI sets timeout overrides in the environment but the script previously
-    # never read them, silently using 90s method timeout and 600s PySR
-    # timeout instead of the paper-quality 900s/1100s values.
-    # An explicit CLI flag always wins over any environment variable.
-    #
-    # FIX-ISSUE10A-CONFIG-BLEED: this used to read a single FEYNMAN_TIMEOUT
-    # env var and apply that ONE value to BOTH args.method_timeout (900) and
-    # args.pysr_timeout (1100). Those two knobs are intentionally different
-    # (repro.yaml timeouts.method_seconds=900 vs .feynman_pysr_seconds=1100 —
-    # PySR needs extra budget on top of the method budget for Julia startup),
-    # so whichever single number CI happened to export for FEYNMAN_TIMEOUT
-    # silently collapsed both to the same value. Split into two independent
-    # env vars so each config can be overridden on its own; the old
-    # FEYNMAN_TIMEOUT name is kept as a legacy fallback that only fires when
-    # neither of the new, more specific vars is set.
-    #
-    # FIX-ISSUE10A-SENTINEL-DEFAULT (this pass): the precedence check used
-    # to be `if args.pysr_timeout == 1100:` -- true both when the flag was
-    # never passed AND when someone explicitly passed `--pysr-timeout 1100`.
-    # A CI job that (a) explicitly passes --method-timeout 900 on the
-    # command line *and* (b) still has the legacy FEYNMAN_TIMEOUT env var
-    # set in its environment (e.g. for a different, unrelated purpose, or
-    # left over from before this job was updated) would have that explicit
-    # 900 silently overwritten back to whatever FEYNMAN_TIMEOUT held --
-    # exactly reproducing the original bleed via a different path, and
-    # invisibly, since nothing about passing an explicit flag looked any
-    # different from omitting it. Now that argparse's default is None
-    # (see above), "was this flag passed" is a real distinction: an
-    # explicit CLI value is honoured unconditionally and no environment
-    # variable is even consulted for that flag.
-    _DEFAULT_PYSR_TIMEOUT   = 1100
+    # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
+    # is a PySR-fit setting only; applying it to the method deadline can silently
+    # stretch the outer deadline beyond the benchmark's 900s method budget.
+    _DEFAULT_PYSR_TIMEOUT = 1100
     _DEFAULT_METHOD_TIMEOUT = 900
+    _env_method_to = int(os.environ.get("FEYNMAN_METHOD_TIMEOUT", "0")) or None
+    _env_pysr_to = int(os.environ.get("FEYNMAN_PYSR_TIMEOUT", "0")) or None
+    _env_legacy_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
+    _env_job_dl = int(os.environ.get("JOB_DEADLINE", "0")) or None
 
-    _env_method_to  = int(os.environ.get("FEYNMAN_METHOD_TIMEOUT", "0")) or None
-    _env_pysr_to    = int(os.environ.get("FEYNMAN_PYSR_TIMEOUT",   "0")) or None
-    _env_legacy_to  = int(os.environ.get("FEYNMAN_TIMEOUT",        "0")) or None
-    _env_job_dl     = int(os.environ.get("JOB_DEADLINE",           "0")) or None
-
-    if _env_legacy_to and (_env_method_to or _env_pysr_to):
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s is set but ignored because "
-              f"FEYNMAN_METHOD_TIMEOUT/FEYNMAN_PYSR_TIMEOUT are also set — "
-              f"the specific vars win.")
-
-    if args.method_timeout is not None:
-        # Explicit CLI flag: honour it as-is, no env var can override it.
-        print(f"ℹ️  --method-timeout {args.method_timeout}s passed explicitly "
-              f"on the CLI — environment timeout variables ignored for this flag.")
-    elif _env_method_to:
-        print(f"ℹ️  FEYNMAN_METHOD_TIMEOUT={_env_method_to}s applied to "
-              f"--method-timeout (no CLI flag passed)")
-        args.method_timeout = _env_method_to
-    elif _env_legacy_to:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s (legacy) applied to "
-              f"--method-timeout (no CLI flag passed)")
-        args.method_timeout = _env_legacy_to
-    else:
-        args.method_timeout = _DEFAULT_METHOD_TIMEOUT
-
-    if args.pysr_timeout is not None:
-        print(f"ℹ️  --pysr-timeout {args.pysr_timeout}s passed explicitly "
-              f"on the CLI — environment timeout variables ignored for this flag.")
-    elif _env_pysr_to:
-        print(f"ℹ️  FEYNMAN_PYSR_TIMEOUT={_env_pysr_to}s applied to "
-              f"--pysr-timeout (no CLI flag passed)")
-        args.pysr_timeout = _env_pysr_to
-    elif _env_legacy_to:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s (legacy) applied to "
-              f"--pysr-timeout (no CLI flag passed)")
-        args.pysr_timeout = _env_legacy_to
-    else:
-        args.pysr_timeout = _DEFAULT_PYSR_TIMEOUT
-
+    if args.method_timeout is None:
+        args.method_timeout = _env_method_to or _DEFAULT_METHOD_TIMEOUT
+    if args.pysr_timeout is None:
+        args.pysr_timeout = _env_pysr_to or _env_legacy_to or _DEFAULT_PYSR_TIMEOUT
+    if _env_legacy_to and not _env_pysr_to:
+        print(
+            f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s used only for --pysr-timeout; "
+            "method timeout remains independently configured.",
+            flush=True,
+        )
     if _env_job_dl:
-        print(f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
-              f"not currently used as a hard cutoff)")
+        print(
+            f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
+            "not currently used as a hard cutoff)",
+            flush=True,
+        )
 
     # Propagate --pysr-timeout to the module-level used by _run_pysr_in_subprocess.
     global _PYSR_TIMEOUT
