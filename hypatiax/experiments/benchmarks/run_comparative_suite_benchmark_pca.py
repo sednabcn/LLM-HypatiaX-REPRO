@@ -2789,7 +2789,7 @@ def _run_pysr_in_subprocess(
     -------
     Result dict (always contains at least {"success": bool}).
     """
-    import pickle, base64, subprocess
+    import pickle, base64, subprocess, signal
 
     if timeout is None:
         timeout = _PYSR_TIMEOUT
@@ -2814,6 +2814,12 @@ def _run_pysr_in_subprocess(
     env = os.environ.copy()
     env["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
 
+    # The hybrid adapter supplies a tighter per-attempt budget than the
+    # workflow-wide PYSR_TIMEOUT. symbolic_engine.py reads the environment
+    # first, so make the adapter value authoritative for this worker.
+    if method == "hybrid_v50_2" and (extra_kwargs or {}).get("pysr_timeout") is not None:
+        env["PYSR_TIMEOUT"] = str(int(extra_kwargs["pysr_timeout"]))
+
     proc = None
     try:
         proc = subprocess.Popen(
@@ -2822,11 +2828,19 @@ def _run_pysr_in_subprocess(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
+            start_new_session=True,
         )
         try:
             stdout_bytes, stderr_bytes = proc.communicate(input=encoded, timeout=timeout)
         except subprocess.TimeoutExpired:
-            proc.kill()
+            # Terminate the worker and any Julia descendants as one process group.
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, AttributeError, OSError):
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
             _, stderr_bytes = proc.communicate()
             stderr_tail = (
                 stderr_bytes.decode(errors="replace")[-300:] if stderr_bytes else ""
