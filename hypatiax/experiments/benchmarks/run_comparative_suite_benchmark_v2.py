@@ -3496,7 +3496,10 @@ class HybridSystemV50_2Method(BaseMethod):
         # gracefully killed) before the parent thread is force-killed.
         # Old value (_PYSR_TIMEOUT + 500 = 1100s) EXCEEDED the 900s method
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
-        _subprocess_timeout = min(\n            max(60, _METHOD_TIMEOUT_SECS - 100),\n            (2 * _per_attempt_to) + 280,\n        )
+        _subprocess_timeout = min(
+            max(60, _METHOD_TIMEOUT_SECS - 100),
+            (2 * _per_attempt_to) + 280,
+        )
         # FIX-ISSUE10B-OUTER-TIMEOUT: see matching comment in
         # SymbolicEngineMethod.run — same handoff pattern.
         self._proc_box = _ProcBox()
