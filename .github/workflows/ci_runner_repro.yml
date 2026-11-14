@@ -203,7 +203,6 @@ jobs:
           PYSR_GENERATIONS:   ${{ github.event.inputs.pysr_generations }}
           PYSR_POPULATIONS:   ${{ github.event.inputs.pysr_populations }}
           TASK_IDS_OVERRIDE:  ${{ github.event.inputs.task_ids_override }}
-          METHODS_OVERRIDE:   ${{ github.event.inputs.methods_override }}
           RESUME:             ${{ github.event.inputs.resume }}
           DRY_RUN:            ${{ github.event.inputs.dry_run }}
           FORCE_RERUN:        ${{ github.event.inputs.force_rerun }}
