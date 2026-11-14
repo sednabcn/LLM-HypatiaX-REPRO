@@ -2842,7 +2842,11 @@ def _run_pysr_in_subprocess(
                     proc.kill()
                 except Exception:
                     pass
-            _, stderr_bytes = proc.communicate()
+            try:
+                _, stderr_bytes = proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                # Do not let cleanup itself hang if a descendant still holds a pipe.
+                stderr_bytes = b""
             stderr_tail = (
                 stderr_bytes.decode(errors="replace")[-300:] if stderr_bytes else ""
             )
