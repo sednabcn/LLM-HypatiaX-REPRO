@@ -102,7 +102,7 @@ if [[ -n "${PROTOCOL30_METHODS_OVERRIDE:-}" ]]; then
       exit 2
     fi
   done
-  _P30_METHOD_UNIQUE=$(printf '%s\\n' "${_P30_METHODS_ARRAY[@]}" | sort -n -u | wc -l)
+  _P30_METHOD_UNIQUE=$(printf '%s\n' "${_P30_METHODS_ARRAY[@]}" | sort -n -u | wc -l)
   if [[ "${_P30_METHOD_UNIQUE}" -ne "${#_P30_METHODS_ARRAY[@]}" ]]; then
     echo "::error::duplicate Protocol-30 method IDs." >&2
     exit 2
