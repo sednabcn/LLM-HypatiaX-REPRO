@@ -98,3 +98,82 @@ routine.
 The current evidence is one Allometric case and one seed. It does not support
 claims about the relative performance of these proposed strategies across
 Core-15. Those claims require the matched comparison.
+
+
+## Pilot results: Allometric Scaling (run 43771391296)
+
+The isolated pilot completed successfully on 2026-11-15. The GitHub Actions
+run is
+[43771391296](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/43771391296).
+Its uploaded artifact is
+`data-informed-llm-only-pilot-run-43771391296` (artifact ID
+`14184053313`). The run used case 3 (Allometric Scaling), seed 42, noise
+level 0.05, 160 training rows, 40 outer-test rows, Claude Sonnet 4.6, and
+temperature 0.25. All four variants completed; total API requests: five.
+
+### Observed formulas and outer-test metrics
+
+| Variant | Calls | Generated formula | Test R² | Test RMSE | Test MAE |
+|---|---:|---|---:|---:|---:|
+| `llm_only_zero_shot` | 1 | `3.4 * M**0.75` | Catastrophic | — | — |
+| `llm_only_fewshot_train` | 1 | `0.0761 * M**0.81` | 0.989224 | 0.087284 | 0.078221 |
+| `llm_only_train_summary` | 1 | `0.1 * M**0.75` | **0.997216** | **0.044361** | **0.035063** |
+| `llm_only_train_feedback` | 2 | `0.080 * M**0.815` | 0.981576 | 0.114129 | 0.084273 |
+
+The zero-shot row failed under the unchanged canonical scoring policy. The
+generated expression had finite predictions, but the raw test R² was
+-5913.024852 (catastrophic, below the -100 threshold); RMSE was 64.661014
+and MAE was 58.414972. This is consistent with the earlier diagnostic:
+the model recovered the exponent but not the hidden coefficient.
+
+### Extrapolation metrics
+
+| Variant | Near R² | Medium R² | Far R² |
+|---|---:|---:|---:|
+| Few-shot training examples | 0.963510 | 0.935457 | -0.255205 |
+| Training summary statistics | 1.000000 | 1.000000 | 1.000000 |
+| Training feedback + revision | -0.028447 | 0.724218 | -3.483860 |
+
+The training-summary variant returned the exact generating expression
+`0.1 * M**0.75` and therefore scored exactly on the generated
+extrapolation partitions. This is an observed single-run result, not
+evidence that summary statistics will generally identify hidden equations
+or coefficients. The perfect extrapolation scores should be treated as a
+pilot observation and tested across the matched benchmark, not generalized.
+
+The feedback arm's first formula was `0.082 * M**0.81`; it received
+training-only feedback (training R² 0.975786, RMSE 0.129766, MAE 0.102007)
+and revised to `0.080 * M**0.815`. The revision did not improve the
+outer-test result relative to few-shot or summary statistics.
+
+### Interpretation and next step
+
+For this one case and seed, training-summary statistics ranked first on
+outer-test and extrapolation metrics, few-shot examples ranked second on
+outer-test metrics, and one-step feedback ranked third. The unchanged
+zero-shot control remained unsuccessful. The pilot used five LLM requests
+in total (one each for zero-shot, few-shot, and summary; two for feedback).
+
+This is a strategy-selection pilot only. It does not establish Core-15
+performance, statistical significance, robustness across seeds, or
+generalization to other equation families. Keep all four variants as
+separate method keys and retain the zero-shot control. The next evidentiary
+step is the pre-specified matched Core-15 comparison with the same
+information-regime boundaries, common scoring, full assigned-case
+denominators, paired coverage, and provenance reporting. Do not promote
+the summary strategy as a general winner until that comparison is complete.
+
+### Artifact provenance
+
+- Workflow run: `43771391296`
+- Artifact: `data-informed-llm-only-pilot-run-43771391296`
+- Artifact ID: `14184053313`
+- Training data SHA-256:
+  `a21c3a23dad5d49d8936028a22ecc45e3cb557e048adb4d508416f664a3f5d58`
+- Outer-test SHA-256:
+  `698323421595e225fb92981e04acae72cf6d2d3321e2273593e1991549032cf9`
+- Extrapolation split hashes are recorded in the pilot manifest and results
+  JSON; prompt, response, and formula hashes are recorded per strategy.
+- The artifact records that test and extrapolation data were not sent to
+  the LLM, no external fitting or symbolic regression was used, and the
+  ground-truth formula was not supplied.
