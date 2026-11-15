@@ -3056,6 +3056,7 @@ jobs:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
           SHARD:         ${{ matrix.shard }}
+          FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke == 'true' && '1' || '' }}
         run: |
           # Match the exact directory passed to upload-artifact below. Protocol-30
           # and Core-15 workers upload only their own isolated shard directory;
@@ -3079,7 +3080,40 @@ jobs:
             echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
           fi
 
-          if [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+          if [[ "${EXP}" == "exp1_four_way_matched" && "${FOUR_WAY_SMOKE:-}" == "1" ]]; then
+            python3 - "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          output_dir = Path(sys.argv[1])
+          required = (
+              "exp1_four_way_matched_results.json",
+              "exp1_four_way_matched_checkpoint.json",
+              "exp1_four_way_matched_manifest.json",
+              "exp1_four_way_matched_summary.json",
+          )
+          missing = [name for name in required if not (output_dir / name).is_file()]
+          if missing:
+              raise SystemExit(f"missing Core-15 smoke outputs: {missing}")
+          manifest = json.loads((output_dir / required[2]).read_text())
+          summary = json.loads((output_dir / required[3]).read_text())
+          results = json.loads((output_dir / required[0]).read_text())
+          equation_rows = {
+              key: row for key, row in results.items()
+              if key != "__run_metadata__" and isinstance(row, dict) and isinstance(row.get("methods"), dict)
+          }
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 output is not marked artifact-only smoke")
+          if len(manifest.get("assigned_equation_ids", [])) != 1 or len(equation_rows) != 1:
+              raise SystemExit(f"expected exactly one equation row; manifest={manifest.get('assigned_equation_ids')} rows={list(equation_rows)}")
+          methods = next(iter(equation_rows.values()))["methods"]
+          expected = {"hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"}
+          if set(methods) != expected:
+              raise SystemExit(f"four-arm records missing/extra: expected={sorted(expected)} actual={sorted(methods)}")
+          if summary.get("smoke_test") is not True or summary.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 smoke summary is not marked artifact-only")
+          print("Validated Core-15 one-equation smoke artifact: all four arm records present; not eligible for official aggregation.")
+          PY
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
             python3 - "${UPLOAD_DIR}/protocol30_shard_manifest.json" "${UPLOAD_DIR}" <<'PY'
           import json, sys
           from pathlib import Path
