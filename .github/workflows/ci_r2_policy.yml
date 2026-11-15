@@ -125,7 +125,7 @@ jobs:
       - name: Run LLM provenance and temperature contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_hypatia_llm_provenance.py hypatiax/experiments/tests/test_llm_call_protocol.py
       - name: Run non-finite routing and failure-gate regressions
-        run: python scripts/audit_checks/test_nonfinite_paths.py
+        run: PYTHONPATH=. python scripts/audit_checks/test_nonfinite_paths.py
       - name: Run Core-295 catalogue and shard-planner safeguards
         run: >-
           python -m pytest -q
