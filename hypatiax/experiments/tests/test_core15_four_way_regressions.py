@@ -97,3 +97,48 @@ def test_aggregate_marks_failed_arm_and_paired_coverage_as_partial():
     assert summary["paired_hybrid_test_comparisons"]["pysr_only"]["r2"]["n_paired_equations"] == 0
     assert summary["paired_hybrid_test_comparisons"]["pysr_only"]["r2"]["comparison_status"] == "partial"
     assert summary["paired_hybrid_test_comparisons"]["llm_only"]["r2"]["paired_coverage_fraction"] == 1.0
+
+
+
+def _signature_validator():
+    tree = ast.parse(BASELINE.read_text(encoding="utf-8"))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "PureLLMBaseline")
+    method = next(
+        n for n in cls.body
+        if isinstance(n, ast.FunctionDef) and n.name == "validate_formula_signature"
+    )
+    method.decorator_list = []
+    namespace = {
+        "inspect": inspect,
+        "parse_formula": lambda _code: (lambda M, a, b: M + a + b),
+    }
+    exec(compile(ast.Module(body=[method], type_ignores=[]), str(BASELINE), "exec"), namespace)
+    return namespace["validate_formula_signature"]
+
+
+def test_llm_only_rejects_allometric_extra_coefficient_parameters():
+    validate = _signature_validator()
+    with pytest.raises(
+        ValueError,
+        match=r"expected parameters \['M'\], got \['M', 'a', 'b'\]",
+    ):
+        validate("def formula(M, a, b): return a * M**b", ["M"])
+
+
+def test_llm_prompt_requires_exact_declared_signature_and_numeric_coefficients():
+    tree = ast.parse(BASELINE.read_text(encoding="utf-8"))
+    cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "PureLLMBaseline")
+    method = next(
+        n for n in cls.body
+        if isinstance(n, ast.FunctionDef) and n.name == "_generate_standard_prompt"
+    )
+    namespace = {}
+    exec(compile(ast.Module(body=[method], type_ignores=[]), str(BASELINE), "exec"), namespace)
+    prompt = namespace["_generate_standard_prompt"](
+        object(), "Allometric Scaling", "biology", ["M"], {}
+    )
+    assert "def formula(M):" in prompt
+    assert "match the declared input variables EXACTLY" in prompt
+    assert "numeric literals" in prompt
+    assert "Do not estimate or fit coefficients from X or y" in prompt
+    assert "def formula(param1, param2, ...)" not in prompt
