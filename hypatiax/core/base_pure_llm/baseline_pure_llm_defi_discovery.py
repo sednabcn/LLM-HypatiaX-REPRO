@@ -191,7 +191,11 @@ class PureLLMBaseline:
     @staticmethod
     def evaluate_function(func, X, var_names=None):
         """
-        Evaluate LLM-generated formula safely with comprehensive fallback strategies.
+        Evaluate a parsed formula using ordered, fail-closed binding strategies.
+
+        A failed vectorized attempt must not prevent scalar or named binding
+        fallbacks. HYPATIAX_STRICT controls formula provenance, not whether a
+        safe evaluator may try its remaining deterministic binding strategies.
         """
         X = np.asarray(X)
         n_samples, n_features = X.shape
@@ -214,7 +218,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row
@@ -225,7 +228,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 2: Single dict parameter
@@ -241,7 +243,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row dict
@@ -253,7 +254,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 3: Named parameters matching var_names
@@ -269,7 +269,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
             try:
                 # Try row-by-row with **kwargs
@@ -281,7 +280,6 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
         # ============================================================
         # STRATEGY 4: Try to match param names to var_names
@@ -309,78 +307,11 @@ class PureLLMBaseline:
             except Exception as _e:
                 import logging as _lg, os as _os
                 _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
 
-        # ============================================================
-        # STRATEGY 5: Match param names to var_names, allowing extra
-        # unmatched (placeholder) parameters
-        # ============================================================
-        # FIX-SIGNATURE-MATCHING: Strategy 4 requires *every* function
-        # parameter to be matched to a variable (len(param_to_idx) ==
-        # n_params). This fails whenever the LLM's generated signature
-        # includes an extra parameter that has no corresponding data
-        # column — most commonly an implicit "t" for time in an ODE rate
-        # law, e.g. def formula(N, t) when var_names=["N"] (see the
-        # documented logistic-growth workaround above, which currently
-        # sidesteps this by hardcoding the formula instead of fixing
-        # evaluation). That extra parameter isn't actually used to look up
-        # data we have, so instead of giving up, this strategy matches
-        # whatever parameters DO correspond to real variables (fuzzy match,
-        # same rule as Strategy 4) and supplies a 0.0 placeholder for any
-        # leftover parameters — succeeding as long as every real variable
-        # was matched to some parameter (len(set(param_to_idx.values())) ==
-        # n_features), even if the reverse isn't true.
-        if var_names is not None and param_names and len(var_names) == n_features:
-            param_to_idx = {}
-            for param_name in param_names:
-                for idx, var_name in enumerate(var_names):
-                    if (
-                        param_name.lower() in var_name.lower()
-                        or var_name.lower() in param_name.lower()
-                    ):
-                        param_to_idx[param_name] = idx
-                        break
-
-            if param_to_idx and len(set(param_to_idx.values())) == n_features:
-                try:
-                    # Vectorized: matched params get their data column,
-                    # any unmatched (extra) params get a 0.0 placeholder.
-                    kwargs = {
-                        param: (
-                            X[:, param_to_idx[param]]
-                            if param in param_to_idx
-                            else np.zeros(n_samples)
-                        )
-                        for param in param_names
-                    }
-                    y = func(**kwargs)
-                    y = np.asarray(y)
-                    if y.shape[0] == n_samples:
-                        return y.flatten()
-                except Exception as _e:
-                    import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-                try:
-                    # Row-by-row fallback with the same matching/placeholder
-                    # scheme.
-                    y = np.empty(n_samples, dtype=float)
-                    for i in range(n_samples):
-                        kwargs = {
-                            param: (
-                                float(X[i, param_to_idx[param]])
-                                if param in param_to_idx
-                                else 0.0
-                            )
-                            for param in param_names
-                        }
-                        y[i] = func(**kwargs)
-                    return y
-                except Exception as _e:
-                    import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+        # Do not invent values for required parameters that have no matching
+        # input column. Such a zero-placeholder can turn an under-specified
+        # generated function into a plausible but scientifically different
+        # equation. If no complete variable binding is possible, fail closed.
 
         # ============================================================
         # All strategies failed
