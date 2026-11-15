@@ -55,6 +55,9 @@ rcsb = _load("run_comparative_suite_benchmark_v2.py", "matched_four_way_rcsb")
 
 SEED = int(os.environ.get("PYSR_SEED", os.environ.get("NN_SEED", "42")))
 COMMON_WALL_CLOCK = int(os.environ.get("FOUR_WAY_METHOD_TIMEOUT", os.environ.get("METHOD_TIMEOUT", "900")))
+# Reserve 60 seconds inside the arm budget for PySR shutdown and result finalization.
+# PySR's own timeout must fire before the outer SIGALRM wall-clock guard.
+PYSR_ONLY_FIT_TIMEOUT = max(1, COMMON_WALL_CLOCK - 60)
 NOISE_LEVEL = float(os.environ.get("FOUR_WAY_NOISE_LEVEL", "0.05"))
 N_TRAIN_SOURCE = int(os.environ.get("FOUR_WAY_N_SAMPLES", "200"))
 N_EXTRAP = int(os.environ.get("FOUR_WAY_N_EXTRAP", "100"))
@@ -198,7 +201,8 @@ def _run_fingerprint():
         "llm_temperature_effective": 0.25,
         "pysr_niterations_effective": abl.NITERATIONS,
         "pysr_populations_effective": abl.POPULATIONS,
-        "pysr_timeout_seconds_effective": abl.PYSR_TIMEOUT_SECS,
+        "hybrid_pysr_timeout_seconds_effective": abl.PYSR_TIMEOUT_SECS,
+        "pysr_only_fit_timeout_seconds_effective": PYSR_ONLY_FIT_TIMEOUT,
         "hybrid_max_retries_effective": abl._HYPATIA_MAX_RETRIES,
         "llm_cache_disabled": os.environ.get("NO_LLM_CACHE", "1") == "1",
     }
@@ -228,6 +232,10 @@ def _run_symbolic_condition(eq, condition, eq_seed, train_tuple, extrap):
         row = abl.run_condition(
             eq, condition, seed=SEED, dataset_override=override,
             wall_clock_limit=COMMON_WALL_CLOCK,
+            # The raw PySR baseline used to inherit 1,100s internally while
+            # the four-way arm was killed at 900s. Align its Julia-side timeout
+            # with the arm budget; leave the Hybrid retry profile untouched.
+            timeout_secs=(PYSR_ONLY_FIT_TIMEOUT if condition == "pysr_only" else None),
         )
     except Exception as exc:
         return _failure(
@@ -424,10 +432,22 @@ def _aggregate(checkpoint):
     methods = {key: {} for key in METHOD_KEYS}
     method_extrapolation = {key: {} for key in METHOD_KEYS}
     for key in METHOD_KEYS:
-        rows = [
-            entry.get("methods", {}).get(key, {})
-            for entry in checkpoint.values() if isinstance(entry, dict)
+        equation_rows = [
+            entry for entry in checkpoint.values()
+            if isinstance(entry, dict) and isinstance(entry.get("methods"), dict)
         ]
+        rows = [entry.get("methods", {}).get(key, {}) for entry in equation_rows]
+        failures = {}
+        for row in rows:
+            if row.get("success") is not True:
+                reason = str(row.get("error") or "unspecified failure")
+                failures[reason] = failures.get(reason, 0) + 1
+        methods[key]["_coverage"] = {
+            "n_assigned_equations": len(equation_rows),
+            "n_successful_equations": sum(row.get("success") is True for row in rows),
+            "n_failed_equations": sum(row.get("success") is not True for row in rows),
+            "failure_reasons": failures,
+        }
         for metric in ("r2", "rmse", "mae"):
             vals = [
                 value for row in rows
@@ -489,8 +509,15 @@ def _aggregate(checkpoint):
             except Exception:
                 ci = None
         tol = 1e-12
+        total_equations = sum(
+            isinstance(entry, dict) and isinstance(entry.get("methods"), dict)
+            for entry in checkpoint.values()
+        )
         return {
+            "comparison_status": "complete" if n == total_equations else "partial",
+            "n_total_equations": total_equations,
             "n_paired_equations": n,
+            "paired_coverage_fraction": (n / total_equations) if total_equations else None,
             "mean_paired_difference_favoring_hybrid": mean,
             "sd_paired_difference": sd,
             "descriptive_95pct_t_interval": ci,
@@ -514,7 +541,18 @@ def _aggregate(checkpoint):
             }
             for regime in ("near", "medium", "far")
         }
+    total_equations = sum(
+        isinstance(entry, dict) and isinstance(entry.get("methods"), dict)
+        for entry in checkpoint.values()
+    )
+    all_arms_complete = all(
+        methods[key]["_coverage"]["n_successful_equations"] == total_equations
+        for key in METHOD_KEYS
+    )
     return {
+        "comparison_status": "complete" if all_arms_complete else "partial",
+        "all_arms_successful": all_arms_complete,
+        "n_total_equations": total_equations,
         "independent_unit": "equation (paired within equation; not individual generated samples)",
         "method_test_metrics": methods,
         "paired_hybrid_comparisons": paired_test,
@@ -701,7 +739,10 @@ def run():
         },
         "primary_metrics": ["test.r2", "test.rmse", "test.mae"],
         "test_policy": "same untouched outer test rows per equation and seed",
-        "budget_policy": "same nominal main-stage timeout; not equal total compute budgets; PySR population/iteration and internal timeout settings are method-specific",
+        "budget_policy": "same nominal arm wall-clock; raw PySR internal fit timeout is capped at arm wall-clock minus 60s so Julia exits before the outer guard; Hybrid retry profile is unchanged",
+        "pysr_only_fit_timeout_seconds": PYSR_ONLY_FIT_TIMEOUT,
+        "pysr_only_niterations": abl.NITERATIONS,
+        "pysr_only_populations": abl.POPULATIONS,
         "timeout_scope": "main generation/training stage only; prediction/scoring is outside timeout context; this is not a strict end-to-end wall-clock cap",
         "elapsed_time_scope": "elapsed_s covers the complete arm call through outer-test and all extrapolation prediction/scoring, including partial-regime failures; it is observational and does not enforce a timeout",
         "success_semantics": "success means the primary untouched outer-test prediction and all three primary metrics are valid; extrapolation metrics are independently nullable and summarized with per-regime available-equation denominators",
