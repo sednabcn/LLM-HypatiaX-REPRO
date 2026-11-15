@@ -1,0 +1,1110 @@
+{
+  "independent_unit": "equation (paired within equation; not individual generated samples)",
+  "method_test_metrics": {
+    "hybrid_llm_pysr": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9977222462213744,
+        "median": 0.9978868879816896
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 0.3717673313056093,
+        "median": 0.07968861540204702
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 0.2814574076283371,
+        "median": 0.06021721796004829
+      }
+    },
+    "llm_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9977822804837587,
+        "median": 0.9978147575151498
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 0.3767139194487544,
+        "median": 0.07989317948582811
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 0.28407788849959853,
+        "median": 0.06132032277808017
+      }
+    }
+  },
+  "paired_hybrid_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -6.003426238432308e-05,
+        "sd_paired_difference": 0.00017780970226025916,
+        "descriptive_95pct_t_interval": [
+          -0.0005017380492841308,
+          0.0003816695245154846
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0002621888633209668
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 9.955609628242712e-06
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 7.213046653975486e-05
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.004946588143145081,
+        "sd_paired_difference": 0.010311564072039618,
+        "descriptive_95pct_t_interval": [
+          -0.020668757035338332,
+          0.030561933321628494
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.002140901795089828
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0002045640837810836
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.016776102140743987
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0026204808712614464,
+        "sd_paired_difference": 0.005090862506785713,
+        "descriptive_95pct_t_interval": [
+          -0.010025922667180763,
+          0.015266884409703656
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0015391700999776853
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0011031048180318859
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.008297507895730138
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "paired_hybrid_test_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -6.003426238432308e-05,
+        "sd_paired_difference": 0.00017780970226025916,
+        "descriptive_95pct_t_interval": [
+          -0.0005017380492841308,
+          0.0003816695245154846
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0002621888633209668
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 9.955609628242712e-06
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 7.213046653975486e-05
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.004946588143145081,
+        "sd_paired_difference": 0.010311564072039618,
+        "descriptive_95pct_t_interval": [
+          -0.020668757035338332,
+          0.030561933321628494
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.002140901795089828
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0002045640837810836
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.016776102140743987
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0026204808712614464,
+        "sd_paired_difference": 0.005090862506785713,
+        "descriptive_95pct_t_interval": [
+          -0.010025922667180763,
+          0.015266884409703656
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0015391700999776853
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0011031048180318859
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.008297507895730138
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "method_extrapolation_metrics": {
+    "hybrid_llm_pysr": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9934393524325195,
+          "median": 0.9998326036244419
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.03228831117922538,
+          "median": 0.028867368997115186
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.026960447933413748,
+          "median": 0.028548896886699867
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9964367015013359,
+          "median": 0.9998921718791185
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.0895650959728782,
+          "median": 0.05039900415336274
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.07084501227334916,
+          "median": 0.04901270789764807
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.7275571614556192,
+          "median": 0.9997165936344296
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 1.9013223523485825,
+          "median": 0.07032479850475966
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 1.8395645162008518,
+          "median": 0.07029067926326453
+        }
+      }
+    },
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.010163122389336143,
+          "median": 0.9511815010490549
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 3.0151218228621413,
+          "median": 0.04793168209386796
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 2.3350302242310974,
+          "median": 0.04538636807595215
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.03595136743670032,
+          "median": 0.32814711487932935
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 11.040348075494217,
+          "median": 1.8450026737344656
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 8.125769002092598,
+          "median": 1.3305912468327787
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -12.384514772808748,
+          "median": -12.078251920959994
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 404.77911727852387,
+          "median": 3.8711477153013014
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 389.0820939502728,
+          "median": 3.785535199819604
+        }
+      }
+    }
+  },
+  "paired_hybrid_extrapolation_comparisons": {
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.9832762300431833,
+          "sd_paired_difference": 1.6608331232076785,
+          "descriptive_95pct_t_interval": [
+            -3.1424619642410936,
+            5.1090144243274604
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.019491972894819187
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.02930395262406138
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 2.9010327646106693
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 2.982833511682916,
+          "sd_paired_difference": 5.1103914448109835,
+          "descriptive_95pct_t_interval": [
+            -9.712082598178304,
+            15.677749621544136
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.04793168209386796
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.016790978055142472
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 8.883777874899737
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 2.3080697762976836,
+          "sd_paired_difference": 3.94971718603825,
+          "descriptive_95pct_t_interval": [
+            -7.503571636288328,
+            12.119711188883695
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.03857879397215484
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.016837471189252284
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 6.868793063731644
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.9604853340646357,
+          "sd_paired_difference": 1.1279261078013871,
+          "descriptive_95pct_t_interval": [
+            -1.8414384463925586,
+            3.76240911452183
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.6718528851206707
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.004921662037712271
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 2.204681455035524
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 10.95078297952134,
+          "sd_paired_difference": 17.38452190526117,
+          "descriptive_95pct_t_interval": [
+            -32.23476348608764,
+            54.13632944513032
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1.8450026737344656
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.010604500230786823
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 30.996741764598767
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 8.054923989819248,
+          "sd_paired_difference": 12.81500235462279,
+          "descriptive_95pct_t_interval": [
+            -23.7793066354685,
+            39.889154615106996
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1.3305912468327787
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.001671086481281954
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 22.832509636143683
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 13.112071934264366,
+          "sd_paired_difference": 2.7638173367106744,
+          "descriptive_95pct_t_interval": [
+            6.24636905975202,
+            19.97777480877671
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 15.892783172383819
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 10.365464115814857
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 13.077968514594424
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 402.8777949261753,
+          "sd_paired_difference": 694.2903280204426,
+          "descriptive_95pct_t_interval": [
+            -1321.8349918129131,
+            2127.590581665264
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 3.8711477153013014
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.18984394031877289
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1204.5723931229059
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 387.2425294340719,
+          "sd_paired_difference": 667.2901781545643,
+          "descriptive_95pct_t_interval": [
+            -1270.3981668002775,
+            2044.8832256684213
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 3.785535199819604
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.18200450501709908
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1157.760048597379
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    }
+  },
+  "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Each metric/regime reports its own available-equation denominator; missing or failed extrapolation predictions are excluded from that metric's denominator."
+}

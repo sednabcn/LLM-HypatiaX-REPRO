@@ -1,0 +1,702 @@
+{
+  "__run_metadata__": {
+    "sha256": "5959a54d431ba8b06253b2e4d024de71f4d0341fc17b4ea868dce777659e86db",
+    "schema": 1,
+    "source_sha256": {
+      "hypatiax/experiments/benchmarks/exp1_four_way_matched.py": "4e83ca18ce5c61b4bbfc8eb3973754d125e21bda1429145dc8763537da21bddc",
+      "hypatiax/experiments/benchmarks/exp1_ablation.py": "e57e829f14eed09f5aea2869a300361b47da748273ba1bb64d9c542569582a26",
+      "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py": "2ee000410c7f0739e273813151e07da7a686f75de037ca871f0c10038b7c9428",
+      "hypatiax/safe_formula.py": "4dfbbc2e4c9b400d928e68dc7660f704cc50ec5735998d3ee335fe2acb493145",
+      "hypatiax/core/r2_canonical.py": "994ed7a4a08b1ad73dd6121a946c2c0e1cf3548fadd22455dc25ac549f8e2a01",
+      "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py": "f6bdd15d96164bd637afe0ddf3141e5b3b7114a52ffb9ba04a6d1bbcc6447adf",
+      "hypatiax/core/llm_call.py": "3d37c1414c4f7ac1fcd1d0c9a345fe030ffea5ca0463fb7858de244ddb811b2d",
+      "hypatiax/core/training/baseline_neural_network_defi_improved.py": "9276b7769a96410134e7574dba0f70bc6115c20c4e09b15bf226a37e08e71cc2",
+      "hypatiax/tools/symbolic/symbolic_engine.py": "f92c47ee6d4f4308d2dd946ed8d089181b75bfaa46cb8e64099255423a343bc8",
+      "hypatiax/tools/symbolic/hybrid_system_v50_2.py": "cfda0d024209d4f61faf4492d4dccef7e3a6f681ecf41899558af35661dbe9d8",
+      "hypatiax/core/enforce_flags.py": "ff49c115894821f444f0feb365e7a7f2bf5ac531465bbabf14548119fede4f07"
+    },
+    "protocol_sha256": "14aebc1d3db8c6e48648add321653bd79f8c483cf758beb742f59a54f14492cb",
+    "settings": {
+      "python_version": "3.12.16",
+      "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+      "runtime_dependency_versions": {
+        "numpy": "2.5.4",
+        "scipy": "1.18.1",
+        "sympy": "1.14.0",
+        "pandas": "2.2.3",
+        "scikit-learn": "1.9.1",
+        "torch": "2.15.0+cpu",
+        "pysr": "2.0.0a1",
+        "anthropic": "0.73.0",
+        "PyYAML": "6.0.3"
+      },
+      "seed": 42,
+      "common_wall_clock_seconds": 900,
+      "noise_level": 0.05,
+      "n_train_source": 200,
+      "n_extrapolation": 100,
+      "pure_llm_model_effective": "claude-sonnet-4-6",
+      "pure_llm_model_source": "env:HYPATIAX_LLM_MODEL",
+      "hybrid_llm_model_effective": "claude-sonnet-4-6",
+      "ablation_llm_model_metadata": "claude-sonnet-4-6",
+      "llm_temperature_effective": 0.25,
+      "pysr_niterations_effective": 1000,
+      "pysr_populations_effective": 30,
+      "pysr_timeout_seconds_effective": 1100,
+      "hybrid_max_retries_effective": 3,
+      "llm_cache_disabled": true
+    }
+  },
+  "3": {
+    "name": "Allometric Scaling",
+    "domain": "Biology",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 4.485527461999993,
+        "test": {
+          "r2": 0.9972164852991815,
+          "rmse": 0.044360629225541244,
+          "mae": 0.03506314038866511,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "medium": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "far": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.997735561587159,
+          "train_rmse": 0.039683154152126414,
+          "test_r2": 0.9972164852991815,
+          "test_rmse": 0.044360629225541244,
+          "test_mae": 0.03506314038866511,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 1.0,
+          "extrap_r2_medium": 1.0,
+          "extrap_r2_far": 1.0,
+          "extrap_r2_raw": {
+            "near": 1.0,
+            "medium": 1.0,
+            "far": 1.0
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 0.0,
+          "extrap_rmse_medium": 0.0,
+          "extrap_rmse_far": 0.0,
+          "extrap_mae_near": 0.0,
+          "extrap_mae_medium": 0.0,
+          "extrap_mae_far": 0.0,
+          "sr_time_s": 4.134629726409912,
+          "llm_time_s": 3.8378822803497314,
+          "total_time_s": 4.134629726409912,
+          "best_expression": "0.1 * M ** 0.75",
+          "complexity": 15,
+          "llm_expression": "0.1 * M ** 0.75",
+          "llm_confidence": 0.65,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 0.039683154152126414,
+          "llm_mode_used": "hybrid_llm_only",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_llm_only",
+              "llm_time": 3.8378822803497314,
+              "llm_best_expression": "0.1 * M ** 0.75",
+              "llm_best_r2": 0.997735561587159,
+              "llm_confidence": 0.65,
+              "llm_hypotheses_raw": [
+                "0.1 * M ** 0.75",
+                "0.12 * M ** 0.72",
+                "0.08 * M ** 0.67"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 100.0,
+          "ood_predictor_note": null,
+          "sanitized_vars": {}
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1115.748373533,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1115.747817993164,
+          "llm_time_s": 0.0,
+          "total_time_s": 1115.747817993164,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": false,
+        "error": "RuntimeError: Evaluation failed: missing a required argument: 'a'",
+        "elapsed_s": 9.726142109999955,
+        "test": null,
+        "extrapolation": {}
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.5383188329999484,
+        "test": {
+          "r2": 0.9974786741625025,
+          "rmse": 0.042219727430451416,
+          "mae": 0.03352397028868742
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9805080271051808,
+            "rmse": 0.04793168209386796,
+            "mae": 0.03857879397215484
+          },
+          "medium": {
+            "r2": 0.32814711487932935,
+            "rmse": 1.8450026737344656,
+            "mae": 1.3305912468327787
+          },
+          "far": {
+            "r2": -14.892783172383819,
+            "rmse": 3.8711477153013014,
+            "mae": 3.785535199819604
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(1\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "a21c3a23dad5d49d8936028a22ecc45e3cb557e048adb4d508416f664a3f5d58",
+      "outer_test_sha256": "698323421595e225fb92981e04acae72cf6d2d3321e2273593e1991549032cf9",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 63,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "5feb3c6dc6b197d087bad0d0ebcf7a071148b1221145c657293d819a5d30e96a",
+        "medium": "ccba21d712cd1b262f744da037861c585f06253d5059ac77c2c371fdf603c62a",
+        "far": "fb71ae7114f58e1e1289340a5007e9c47ff4c22d7053b04ca2d5483ea1a3a404"
+      }
+    }
+  },
+  "4": {
+    "name": "Michaelis-Menten",
+    "domain": "Biology",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 388.68784119099996,
+        "test": {
+          "r2": 0.9980633653832521,
+          "rmse": 0.07968861540204702,
+          "mae": 0.06021721796004829,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9804854536731162,
+            "rmse": 0.028867368997115186,
+            "mae": 0.028548896886699867
+          },
+          "medium": {
+            "r2": 0.9894179326248892,
+            "rmse": 0.05039900415336274,
+            "mae": 0.04901270789764807
+          },
+          "far": {
+            "r2": 0.18295489073242832,
+            "rmse": 0.07032479850475966,
+            "mae": 0.07029067926326453
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.9975408355380702,
+          "train_rmse": 0.08973426956080466,
+          "test_r2": 0.9980633653832521,
+          "test_rmse": 0.07968861540204702,
+          "test_mae": 0.06021721796004829,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 0.9804854536731162,
+          "extrap_r2_medium": 0.9894179326248892,
+          "extrap_r2_far": 0.18295489073242832,
+          "extrap_r2_raw": {
+            "near": 0.9804854536731162,
+            "medium": 0.9894179326248892,
+            "far": 0.18295489073242832
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 0.028867368997115186,
+          "extrap_rmse_medium": 0.05039900415336274,
+          "extrap_rmse_far": 0.07032479850475966,
+          "extrap_mae_near": 0.028548896886699867,
+          "extrap_mae_medium": 0.04901270789764807,
+          "extrap_mae_far": 0.07029067926326453,
+          "sr_time_s": 388.4866807460785,
+          "llm_time_s": 4.852076768875122,
+          "total_time_s": 388.4866807460785,
+          "best_expression": "(-9.907028 / (-1.9552809 - S)) * S",
+          "complexity": 34,
+          "llm_expression": "2.5 * (var_S ** 0.5)",
+          "llm_confidence": 0.45,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 0.08973426956080466,
+          "llm_mode_used": "hybrid_pysr_better",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_pysr_better",
+              "llm_time": 4.852076768875122,
+              "llm_best_expression": "2.5 * (var_S ** 0.5)",
+              "llm_best_r2": 0.4221225653277012,
+              "llm_confidence": 0.45,
+              "llm_hypotheses_raw": [
+                "2.5 * (var_S ** 0.5)",
+                "0.8 * var_S + 0.5",
+                "1.2 * (var_S ** 0.75)"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 84.3,
+          "ood_predictor_note": null,
+          "sanitized_vars": {
+            "S": "var_S"
+          }
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1101.3451363099998,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1101.3448605537415,
+          "llm_time_s": 0.0,
+          "total_time_s": 1101.3448605537415,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": false,
+        "error": "RuntimeError: Evaluation failed: missing a required argument: 'V_max'",
+        "elapsed_s": 8.490972659999898,
+        "test": null,
+        "extrapolation": {}
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.5426789709999866,
+        "test": {
+          "r2": 0.9980534097736239,
+          "rmse": 0.07989317948582811,
+          "mae": 0.06132032277808017
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9511815010490549,
+            "rmse": 0.04565834705225766,
+            "mae": 0.04538636807595215
+          },
+          "medium": {
+            "r2": 0.9844962705871769,
+            "rmse": 0.061003504384149566,
+            "mae": 0.050683794378930024
+          },
+          "far": {
+            "r2": -10.182509225082429,
+            "rmse": 0.26016873882353253,
+            "mae": 0.2522951842803636
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(1\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "4e3a7b81ae83853d962fe6a0972a09daf989b184f89ac85532c7a307b260c782",
+      "outer_test_sha256": "be780ff698972f98d2082a8c20a445bf3fefd62b3a25d8b86d8106db0b02909a",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 70,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "79122163d343f70e9b68e76aa18b012e54ca5f531fbc4597d28c7fee55e68f35",
+        "medium": "38134a0f92540b33430bae8dd1996cf3ac92502785abba185ac5948ccce8d090",
+        "far": "5b331aa820f82a119a2fd0d820be2304eafc023f37d756b289a092bca0839d65"
+      }
+    }
+  },
+  "5": {
+    "name": "Logistic Growth",
+    "domain": "Biology",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 462.83400342899995,
+        "test": {
+          "r2": 0.9978868879816896,
+          "rmse": 0.9912527492892396,
+          "mae": 0.7490918645362978,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9998326036244419,
+            "rmse": 0.06799756454056095,
+            "mae": 0.05233244691354137
+          },
+          "medium": {
+            "r2": 0.9998921718791185,
+            "rmse": 0.21829628376527185,
+            "mae": 0.16352232892239943
+          },
+          "far": {
+            "r2": 0.9997165936344296,
+            "rmse": 5.633642258540988,
+            "mae": 5.448402869339291
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.9974717984289437,
+          "train_rmse": 1.070720008075799,
+          "test_r2": 0.9978868879816896,
+          "test_rmse": 0.9912527492892396,
+          "test_mae": 0.7490918645362978,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 0.9998326036244419,
+          "extrap_r2_medium": 0.9998921718791185,
+          "extrap_r2_far": 0.9997165936344296,
+          "extrap_r2_raw": {
+            "near": 0.9998326036244419,
+            "medium": 0.9998921718791185,
+            "far": 0.9997165936344296
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 0.06799756454056095,
+          "extrap_rmse_medium": 0.21829628376527185,
+          "extrap_rmse_far": 5.633642258540988,
+          "extrap_mae_near": 0.05233244691354137,
+          "extrap_mae_medium": 0.16352232892239943,
+          "extrap_mae_far": 5.448402869339291,
+          "sr_time_s": 462.63198232650757,
+          "llm_time_s": 5.004361629486084,
+          "total_time_s": 462.63198232650757,
+          "best_expression": "((N * -0.0002988421) - -0.2993457) * N",
+          "complexity": 38,
+          "llm_expression": "10 * var_N ** 0.5",
+          "llm_confidence": 0.45,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 1.070720008075799,
+          "llm_mode_used": "hybrid_pysr_better",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_pysr_better",
+              "llm_time": 5.004361629486084,
+              "llm_best_expression": "10 * var_N ** 0.5",
+              "llm_best_r2": -23.363854169359612,
+              "llm_confidence": 0.45,
+              "llm_hypotheses_raw": [
+                "10 * var_N ** 0.5",
+                "5 * var_N ** 0.75",
+                "2.5 * var_N + 5"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 100.0,
+          "ood_predictor_note": null,
+          "sanitized_vars": {
+            "N": "var_N"
+          }
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1101.7773312589998,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1101.7771050930023,
+          "llm_time_s": 0.0,
+          "total_time_s": 1101.7771050930023,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": false,
+        "error": "RuntimeError: Evaluation failed: missing a required argument: 'N0'",
+        "elapsed_s": 9.288780359000157,
+        "test": null,
+        "extrapolation": {}
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.5283278110000538,
+        "test": {
+          "r2": 0.9978147575151498,
+          "rmse": 1.0080288514299836,
+          "mae": 0.757389372432028
+        },
+        "extrapolation": {
+          "near": {
+            "r2": -1.9012001609862272,
+            "rmse": 8.951775439440297,
+            "mae": 6.921125510645186
+          },
+          "medium": {
+            "r2": -1.2047892831564053,
+            "rmse": 31.21503804836404,
+            "mae": 22.996031965066084
+          },
+          "far": {
+            "r2": -12.078251920959994,
+            "rmse": 1210.2060353814468,
+            "mae": 1163.2084514667183
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(1\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "48698c71bfc2642334ee81230fed64d5ef42e5a0acca77277078df128c7f7efb",
+      "outer_test_sha256": "6b47c0bf8a1f99675405b540adf21df454990cb1571605e7fb3a5931e43383f4",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 77,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "048795a9efa729d1655211b7799e7251581343a8f2fa3cfcb28e47c70bffcdd0",
+        "medium": "7916a5d13f96186efb65c5515c0128fe7d3feacf48669e821484938c0f1c068f",
+        "far": "ad654f07ba59c2f0aa0131ca1b2ce8bf6a3018ef83162385794db33099b70d4f"
+      }
+    }
+  }
+}
