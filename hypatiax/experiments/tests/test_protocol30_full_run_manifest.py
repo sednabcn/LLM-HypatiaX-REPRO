@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from scripts.ci.write_protocol30_manifest import build_manifest
+from scripts.ci.write_protocol30_manifest import (
+    build_manifest,
+    load_protocol30_registry_rows,
+)
 
 
 def _registry_rows():
@@ -89,3 +92,27 @@ def test_manifest_rejects_wrong_temperature_and_missing_outputs(tmp_path: Path):
             registry_rows=_registry_rows(),
             effective_temperature=0.25,
         )
+
+
+def test_registry_enumeration_ignores_and_restores_worker_equation_ids(monkeypatch):
+    worker_ids = "M.01 M.02 M.03"
+    monkeypatch.setenv("SHARD_IDS", worker_ids)
+
+    rows = load_protocol30_registry_rows()
+
+    assert len(rows) == 30
+    assert len({row["equation_name"] for row in rows}) == 30
+    assert {row["domain"] for row in rows} == {
+        "biology",
+        "chemistry",
+        "electrochemistry",
+        "electromagnetism",
+        "electrostatics",
+        "magnetism",
+        "mechanics",
+        "optics",
+        "probability",
+        "quantum",
+        "thermodynamics",
+    }
+    assert __import__("os").environ["SHARD_IDS"] == worker_ids
