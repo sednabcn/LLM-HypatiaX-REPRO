@@ -1,0 +1,1289 @@
+{
+  "independent_unit": "equation (paired within equation; not individual generated samples)",
+  "method_test_metrics": {
+    "hybrid_llm_pysr": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9841954656203455,
+        "median": 0.9972199293828533
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 1223.8296196842236,
+        "median": 16.28505000058424
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 1011.8548913500508,
+        "median": 13.635549292878864
+      }
+    },
+    "llm_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9835527503932565,
+        "median": 0.9972216810067587
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 1223.4459001443936,
+        "median": 16.28505000058424
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 1011.5780971327863,
+        "median": 13.635549292878864
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9703146547338063,
+        "median": 0.9848937606008256
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 2845.339295695821,
+        "median": 15.605270329698227
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 1622.1522377673782,
+        "median": 12.710997735975678
+      }
+    }
+  },
+  "paired_hybrid_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0006427152270889932,
+        "sd_paired_difference": 0.001114732722965828,
+        "descriptive_95pct_t_interval": [
+          -0.0021264343685525535,
+          0.00341186482273054
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0019298973051723456
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.7516239053660954e-06
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.3837195398298792,
+        "sd_paired_difference": 0.6650743344233832,
+        "descriptive_95pct_t_interval": [
+          -2.035855775088256,
+          1.2684166954284977
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005225530999956006
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.1516811725896332
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.2767942172645168,
+        "sd_paired_difference": 0.47988419981518404,
+        "descriptive_95pct_t_interval": [
+          -1.4688926552985464,
+          0.9153042207695128
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005340235816419757
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.8309166753751924
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.013880810886539289,
+        "sd_paired_difference": 0.014855483285618254,
+        "descriptive_95pct_t_interval": [
+          -0.023022255369541715,
+          0.05078387714262029
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.0001362149408222768
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.029452478818412398
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.012326168782027747
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1621.5096760115975,
+        "sd_paired_difference": 2809.119794440044,
+        "descriptive_95pct_t_interval": [
+          -5356.730742181251,
+          8599.750094204446
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.6797796708860115
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.007016918596955503
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 4865.201790787081
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 610.2973464173276,
+        "sd_paired_difference": 1057.8623384153889,
+        "descriptive_95pct_t_interval": [
+          -2017.5783822807296,
+          3238.1730751153846
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.9245515569031859
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.005150625881106478
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 1831.8114401830048
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "paired_hybrid_test_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0006427152270889932,
+        "sd_paired_difference": 0.001114732722965828,
+        "descriptive_95pct_t_interval": [
+          -0.0021264343685525535,
+          0.00341186482273054
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0019298973051723456
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.7516239053660954e-06
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.3837195398298792,
+        "sd_paired_difference": 0.6650743344233832,
+        "descriptive_95pct_t_interval": [
+          -2.035855775088256,
+          1.2684166954284977
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005225530999956006
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.1516811725896332
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.2767942172645168,
+        "sd_paired_difference": 0.47988419981518404,
+        "descriptive_95pct_t_interval": [
+          -1.4688926552985464,
+          0.9153042207695128
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005340235816419757
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.8309166753751924
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.013880810886539289,
+        "sd_paired_difference": 0.014855483285618254,
+        "descriptive_95pct_t_interval": [
+          -0.023022255369541715,
+          0.05078387714262029
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.0001362149408222768
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.029452478818412398
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.012326168782027747
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1621.5096760115975,
+        "sd_paired_difference": 2809.119794440044,
+        "descriptive_95pct_t_interval": [
+          -5356.730742181251,
+          8599.750094204446
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.6797796708860115
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.007016918596955503
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 4865.201790787081
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 610.2973464173276,
+        "sd_paired_difference": 1057.8623384153889,
+        "descriptive_95pct_t_interval": [
+          -2017.5783822807296,
+          3238.1730751153846
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.9245515569031859
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.005150625881106478
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 1831.8114401830048
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "method_extrapolation_metrics": {
+    "hybrid_llm_pysr": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -0.48830199820022785,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.0014695493377955395,
+          "median": 2.5980365275401163e-12
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.0014322581305387452,
+          "median": 1.3460521586239338e-12
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 2,
+          "mean": 1.0,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 134657.04292022684,
+          "median": 3.5224578334304324e-12
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 13481.234418817347,
+          "median": 1.6189005691558123e-12
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -1.8138151171562484,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.0020206282419215557,
+          "median": 1.0392146110160465e-11
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.0019532379473903403,
+          "median": 5.384208634495735e-12
+        }
+      }
+    },
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9999999601642058,
+          "median": 0.9999999758118907
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.5234696693296975,
+          "median": 3.2448918570451285e-07
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.514897782832233,
+          "median": 3.106405760869204e-07
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9999999953149424,
+          "median": 0.9999999979052278
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 0.7880709426548084,
+          "median": 6.908663583530342e-05
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 0.6784268361899138,
+          "median": 1.3004264375628638e-05
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9999999601642058,
+          "median": 0.9999999758118907
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 2.0938783528296043,
+          "median": 3.2448918570451285e-07
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 2.059590820688356,
+          "median": 3.106405760869204e-07
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_equations": 1,
+          "mean": -2.673113016503368,
+          "median": -2.673113016503368
+        },
+        "rmse": {
+          "n_equations": 1,
+          "mean": 2031.7396311826876,
+          "median": 2031.7396311826876
+        },
+        "mae": {
+          "n_equations": 1,
+          "mean": 1780.0073039061565,
+          "median": 1780.0073039061565
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 2,
+          "mean": -0.672078992925478,
+          "median": -0.672078992925478
+        },
+        "rmse": {
+          "n_equations": 2,
+          "mean": 38199.24754742133,
+          "median": 38199.24754742133
+        },
+        "mae": {
+          "n_equations": 2,
+          "mean": 28632.778229074633,
+          "median": 28632.778229074633
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 1,
+          "mean": -13.267623041116114,
+          "median": -13.267623041116114
+        },
+        "rmse": {
+          "n_equations": 1,
+          "mean": 256275.26642846034,
+          "median": 256275.26642846034
+        },
+        "mae": {
+          "n_equations": 1,
+          "mean": 247144.88947391976,
+          "median": 247144.88947391976
+        }
+      }
+    }
+  },
+  "paired_hybrid_extrapolation_comparisons": {
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -1.4883019583644337,
+          "sd_paired_difference": 2.5778146914403717,
+          "descriptive_95pct_t_interval": [
+            -7.891948647275502,
+            4.915344730546634
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -4.464905970412574
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 9.531927347428137e-08
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.5220001199919019,
+          "sd_paired_difference": 0.9079511249801228,
+          "descriptive_95pct_t_interval": [
+            -1.733475509997358,
+            2.777475749981162
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.004408323521602878
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.5704086834973086
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.5134655247016943,
+          "sd_paired_difference": 0.8930718071986745,
+          "descriptive_95pct_t_interval": [
+            -1.7050478308615533,
+            2.7319788802649416
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.004296463749694097
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.5446930378547767
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 2,
+          "mean_paired_difference_favoring_hybrid": 5.980200168398397e-09,
+          "sd_paired_difference": 8.45728018385488e-09,
+          "descriptive_95pct_t_interval": [
+            -7.000544753457801e-08,
+            8.19658478713748e-08
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.1960400336796795e-08
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -134656.2548492842,
+          "sd_paired_difference": 233233.5223674369,
+          "descriptive_95pct_t_interval": [
+            -714040.4434065983,
+            444727.9337080299
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -403971.1286915939
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.3641437413250674
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -13480.555991981159,
+          "sd_paired_difference": 23350.770507925055,
+          "descriptive_95pct_t_interval": [
+            -71487.0856091452,
+            44525.97362518289
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -40443.70324344778
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.0352675043037474
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -2.813815077320454,
+          "sd_paired_difference": 4.873670759571288,
+          "descriptive_95pct_t_interval": [
+            -14.920684405826366,
+            9.293054251185458
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -8.441445327280636
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 9.531927347428137e-08
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 2.0918577245876824,
+          "sd_paired_difference": 3.628454592110869,
+          "descriptive_95pct_t_interval": [
+            -6.921723163048589,
+            11.105438612223953
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.006061560226186816
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 6.281634733989234
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 2.0576375827409654,
+          "sd_paired_difference": 3.5690084313457335,
+          "descriptive_95pct_t_interval": [
+            -6.8082708551198605,
+            10.92354602060179
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.005859403196210726
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 6.178772151419107
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 3.673113016503368,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 3.673113016503368
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 2031.7396311826876,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2031.7396311826876
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 1780.0073039061565,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1780.0073039061565
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 2.265754656805187,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.265754656805187
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 2,
+          "mean_paired_difference_favoring_hybrid": -163786.3168329189,
+          "sd_paired_difference": 339670.4016800946,
+          "descriptive_95pct_t_interval": [
+            -3215603.794331668,
+            2888031.1606658297
+          ],
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 76396.92756343447
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -403969.5612292723
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 2,
+          "mean_paired_difference_favoring_hybrid": 8410.926600848612,
+          "sd_paired_difference": 69089.02092305638,
+          "descriptive_95pct_t_interval": [
+            -612329.2983741799,
+            629151.151575877
+          ],
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 57264.24180108105
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -40442.38859938383
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 14.267623041116114,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 14.267623041116114
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 256275.26642846034,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 256275.26642846034
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 1,
+          "mean_paired_difference_favoring_hybrid": 247144.88947391976,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 1,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 247144.88947391976
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    }
+  },
+  "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Each metric/regime reports its own available-equation denominator; missing or failed extrapolation predictions are excluded from that metric's denominator."
+}
