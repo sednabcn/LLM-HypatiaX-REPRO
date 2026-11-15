@@ -1426,6 +1426,27 @@ class PureLLMBaselineMethod(BaseMethod):
                               "formula_preview": python_code[:120]},
                 )
 
+            # Enforce the exact input-signature contract before either
+            # evaluator path. This prevents the richer runner fallback from
+            # bypassing the zero-shot formula contract after the baseline
+            # evaluator correctly rejects undeclared coefficients.
+            try:
+                self._baseline.validate_formula_signature(python_code, var_names)
+            except Exception as signature_exc:
+                return MethodResult(
+                    method=self.name, success=False,
+                    r2=float("nan"), rmse=float("inf"),
+                    formula=python_code[:500],
+                    formula_hash=BaseMethod._make_formula_result(python_code)[1],
+                    formula_full=python_code,
+                    error=f"formula_signature_mismatch: {signature_exc}",
+                    metadata={
+                        **_provenance(result),
+                        "formula_signature_valid": False,
+                        "declared_input_variables": list(var_names or []),
+                    },
+                )
+
             metrics = self._baseline.test_formula_accuracy(
                 result, X, y, var_names, verbose=False
             )
