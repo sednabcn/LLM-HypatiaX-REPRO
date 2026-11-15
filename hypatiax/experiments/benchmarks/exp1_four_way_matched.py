@@ -720,10 +720,18 @@ def run():
     with RESULTS_PATH.open("w", encoding="utf-8") as handle:
         json.dump(_json_safe(checkpoint), handle, indent=2, allow_nan=False)
     summary = _aggregate(checkpoint)
+    smoke_test = os.environ.get("FOUR_WAY_SMOKE") == "1"
+    summary["smoke_test"] = smoke_test
+    summary["official_aggregate_eligible"] = not smoke_test
+    if smoke_test:
+        summary["smoke_scope"] = "single equation; worker-path validation only; not a Core-15 aggregate"
     with SUMMARY_PATH.open("w", encoding="utf-8") as handle:
         json.dump(_json_safe(summary), handle, indent=2, allow_nan=False)
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
+        "smoke_test": smoke_test,
+        "official_aggregate_eligible": not smoke_test,
+        "smoke_scope": "single equation; worker-path validation only; not a Core-15 aggregate" if smoke_test else None,
         "run_fingerprint": run_fingerprint,
         "seed": SEED, "noise_level": NOISE_LEVEL,
         "common_method_wall_clock_seconds": COMMON_WALL_CLOCK,
