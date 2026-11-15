@@ -1,4 +1,11 @@
 import os
+import sys
+from pathlib import Path
+
+# Direct script execution places scripts/audit_checks on sys.path, not repo root.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 import numpy as np
 from hypatiax.core.generation.hybrid_all_domains_llm_nn.hybrid_system_llm_nn_all_domains import HybridSystemAllDomains
 
