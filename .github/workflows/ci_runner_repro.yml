@@ -89,9 +89,18 @@ on:
         default: "30"
 
       task_ids_override:
-        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; official Protocol-30 variants require all M.01-M.30."
+        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; Core-15 smoke accepts exactly one ID 0-14; official protocols require their full registry."
         required: false
         default: ""
+
+      four_way_smoke:
+        description: "Core-15 only: run exactly one selected equation on one worker, upload artifact only, skip official aggregation and repository commits."
+        required: false
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
 
       methods_override:
         description: "Protocol-30 smoke only: optional space-separated method IDs 1-6 (e.g. 6 to rerun HybridDiscoverySystem only). Blank runs all six methods."
@@ -639,6 +648,15 @@ jobs:
               echo "ERROR: unknown experiment '$EXP'"; exit 1 ;;
           esac
 
+          if [[ "${{ github.event.inputs.four_way_smoke }}" == "true" ]]; then
+            if [[ "$EXP" != "exp1_four_way_matched" || "${{ github.event.inputs.experiments }}" != "" ]]; then
+              echo "::error::four_way_smoke=true is supported only for a single exp1_four_way_matched dispatch."
+              exit 1
+            fi
+            RESULT_SUBDIR="four_way_matched_smoke/run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+            echo "::notice::Core-15 one-equation smoke: artifact-only output in ${RESULT_SUBDIR}; no aggregate or repository commit."
+          fi
+
           # exp3/exp3b only: fallback (script default) keeps the normal folders; off/always are
           # isolated. RESULT_SUBDIR drives checkpoint seeding, store, verify, commit and upload.
           if [[ "$EXP" == "exp3" || "$EXP" == "exp3b" ]]; then
@@ -677,12 +695,17 @@ jobs:
           EFFECTIVE_SEEDS: ${{ steps.meta.outputs.effective_seeds }}
           EXP:            ${{ steps.meta.outputs.exp_id }}
           ORIG_EXP:       ${{ github.event.inputs.experiment }}
+          FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke || 'false' }}
         run: |
           python3 - <<'PYEOF'
           import json, os, sys
 
           EXP          = os.environ["EXP"]
           N_SHARDS_RAW = int(os.environ["N_SHARDS"])
+          FOUR_WAY_SMOKE = os.environ.get("FOUR_WAY_SMOKE", "false").lower() == "true"
+          if FOUR_WAY_SMOKE and EXP != "exp1_four_way_matched":
+              print("ERROR: four_way_smoke is valid only for exp1_four_way_matched.", file=sys.stderr)
+              sys.exit(1)
 
           EXP_SHARD_TABLE = {
               "exp1":               1,
@@ -715,7 +738,7 @@ jobs:
               "hybrid_all_domains": 1,
               "extrap":             1,
           }
-          N_SHARDS_DEFAULT = EXP_SHARD_TABLE.get(EXP, 1)
+          N_SHARDS_DEFAULT = 1 if FOUR_WAY_SMOKE else EXP_SHARD_TABLE.get(EXP, 1)
           if N_SHARDS_DEFAULT == 1:
               N_SHARDS = 1
               if N_SHARDS_RAW not in (1,):
@@ -842,9 +865,15 @@ jobs:
           }
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
-          if EXP == "exp1_four_way_matched" and all_ids != [str(i) for i in range(15)]:
-              print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
-              sys.exit(1)
+          if EXP == "exp1_four_way_matched":
+              if FOUR_WAY_SMOKE:
+                  valid_core15_ids = {str(i) for i in range(15)}
+                  if len(all_ids) != 1 or all_ids[0] not in valid_core15_ids:
+                      print("ERROR: Core-15 smoke requires exactly one task_ids_override ID from 0..14.", file=sys.stderr)
+                      sys.exit(1)
+              elif all_ids != [str(i) for i in range(15)]:
+                  print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
+                  sys.exit(1)
           if EXP in ("exp2_protocol30_random_8020", "exp2_protocol30_pca_4060") and all_ids != MULTI30:
               print(f"ERROR: {EXP} requires the complete Protocol-30 task set M.01..M.30; partial task_ids_override is not aggregatable.", file=sys.stderr)
               sys.exit(1)
@@ -1410,6 +1439,8 @@ jobs:
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
           SPARSE_SEED_INPUT: ${{ github.event.inputs.sparse_seed || 'fallback' }}
+          FOUR_WAY_SMOKE:   ${{ github.event.inputs.four_way_smoke == 'true' && '1' || '' }}
+          FOUR_WAY_SMOKE_OUTPUT_DIR: ${{ github.event.inputs.four_way_smoke == 'true' && format('{0}/{1}/shard{2}', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || '' }}
         run: |
           set -euo pipefail
 
@@ -3079,7 +3110,7 @@ jobs:
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3406,7 +3437,7 @@ jobs:
   exp1_four_way_matched_aggregate:
     name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
     needs: [plan, worker]
-    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
