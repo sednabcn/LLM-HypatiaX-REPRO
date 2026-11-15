@@ -906,7 +906,7 @@ jobs:
               if FOUR_WAY_SMOKE:
                   valid_core15_ids = {str(i) for i in range(15)}
                   if len(all_ids) != 1 or all_ids[0] not in valid_core15_ids:
-                      print("ERROR: Core-15 smoke requires exactly one task_ids_override ID from 0..14.", file=sys.stderr)
+                      print("ERROR: Core-15 smoke requires exactly one four_way_smoke_case ID from 0..14.", file=sys.stderr)
                       sys.exit(1)
               elif all_ids != [str(i) for i in range(15)]:
                   print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
