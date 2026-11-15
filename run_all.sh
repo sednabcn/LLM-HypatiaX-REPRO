@@ -2343,112 +2343,12 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
   for _flat in "\${RESULTS_DIR}/comparison_results/"*"_shrd\${SHARD:-0}.json"; do
     if [[ -f "\${_flat}" ]]; then cp -f "\${_flat}" "\${_P30_RANDOM_DIR}/"; fi
   done
+  _P30_MANIFEST_ARGS=(--output-dir "\${_P30_RANDOM_DIR}" --shard "\${SHARD:-0}" --started-ns "\${_P30_RUN_START_NS}" --variant random_8020)
+  _P30_MANIFEST_ARGS=(--output-dir "\${_P30_PCA_DIR}" --shard "\${SHARD:-0}" --started-ns "\${_P30_RUN_START_NS}" --variant pca_4060)
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
-import json, sys, os
-from pathlib import Path
-from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
-from hypatiax.core.llm_call import configured_temperature
-out, shard, started_ns, *indices = sys.argv[1:]
-run_started_ns = int(started_ns)
-effective_temperature = configured_temperature()
-if effective_temperature != 0.25:
-    raise SystemExit(f\"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}\")
-protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
-rows = []
-for domain in protocol.get_all_domains():
-    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
-        rows.append({\"description\": desc, \"domain\": domain, \"equation_name\": meta[\"equation_name\"]})
-mapping = [{\"index\": int(i), **rows[int(i)-1]} for i in indices]
-result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().st_mtime_ns >= run_started_ns]
-result_files.sort(key=lambda p: p.stat().st_mtime_ns)
-if not result_files:
-    raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
-manifest = {\"experiment\":\"random_8020_smoke\" if _is_smoke else \"random_8020\",
-            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
-            \"expected_equation_count\":len(indices) if _is_smoke else 30,
-            \"assigned_equation_indices\":[int(i) for i in indices],
-            \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
-            \"effective_llm_temperature\":effective_temperature,
-            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
-Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
-PYMAN
+    _P30_MANIFEST_ARGS+=(--indices "\${_P30_TASKS[@]}")
   fi
-"
-
-run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, PCA 40/60, six methods" bash -c "
-  set -euo pipefail
-  cd '${REPO_ROOT}'
-  _P30_TASKS=()
-  if [[ -n \"\${TASK_IDS:-}\" ]]; then
-    for _tid in \${TASK_IDS}; do
-      [[ \"\${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \${_tid}\"; exit 1; }
-      _n=\${BASH_REMATCH[1]}; _n=\$((10#\${_n}))
-      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \${_tid}\"; exit 1; }
-      _P30_TASKS+=(\"\${_n}\")
-    done
-    [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
-    _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
-    [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
-    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
-      _P30_PCA_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
-    else
-      _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
-    fi
-  else
-    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
-  fi
-  mkdir -p \"\${_P30_PCA_DIR}\"
-  _P30_RUN_START_NS=\$(date +%s%N)
-  _P30_EQ_ARGS=()
-  [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
-  FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
-  METHOD_TIMEOUT=${METHOD_TIMEOUT} \
-  PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
-  PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
-  JOB_DEADLINE=${JOB_DEADLINE} \
-  SHARD_IDS='' \
-    python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
-      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
-      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
-      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
-      --use-transcendental-compositions --noiseless --threshold 0.999999 \
-      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --force-fresh --no-checkpoint \
-      --output-dir \"\${_P30_PCA_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
-      2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
-  if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
-    SHARD_IDS='' python3 - \"\${_P30_PCA_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
-import json, sys, os
-from pathlib import Path
-from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
-from hypatiax.core.llm_call import configured_temperature
-out, shard, started_ns, *indices = sys.argv[1:]
-run_started_ns = int(started_ns)
-effective_temperature = configured_temperature()
-if effective_temperature != 0.25:
-    raise SystemExit(f\"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}\")
-protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
-rows = []
-for domain in protocol.get_all_domains():
-    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
-        rows.append({\"description\": desc, \"domain\": domain, \"equation_name\": meta[\"equation_name\"]})
-mapping = [{\"index\": int(i), **rows[int(i)-1]} for i in indices]
-result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().st_mtime_ns >= run_started_ns]
-result_files.sort(key=lambda p: p.stat().st_mtime_ns)
-if not result_files:
-    raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
-_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
-manifest = {\"experiment\":\"pca_4060_smoke\" if _is_smoke else \"pca_4060\",
-            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
-            \"expected_equation_count\":len(indices) if _is_smoke else 30,
-            \"assigned_equation_indices\":[int(i) for i in indices],
-            \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
-            \"effective_llm_temperature\":effective_temperature,
-            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
-Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
-PYMAN
-  fi
+  python3 '${REPO_ROOT}/scripts/ci/write_protocol30_manifest.py' "\${_P30_MANIFEST_ARGS[@]}"
 "
 
 run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Protocol-30 random 80/20 shards" bash -c "
