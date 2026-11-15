@@ -15,15 +15,20 @@ for _root in (_here.parent, *_here.parents):
 @pytest.fixture()
 def mod(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "x")
-    monkeypatch.delenv("HYPATIAX_LLM_MODEL", raising=False)
     for k in ("HYPATIAX_DISABLE_HARDCODED", "HYPATIAX_DISABLE_PROMPT_HINTS", "HYPATIAX_ALLOW_LEGACY"):
         monkeypatch.delenv(k, raising=False)
     stub = types.ModuleType("hypatiax.protocols.experiment_protocol_defi")
     stub.DeFiExperimentProtocol = object
     for n in ("hypatiax", "hypatiax.protocols"):
         sys.modules.setdefault(n, types.ModuleType(n))
-    sys.modules["hypatiax.protocols.experiment_protocol_defi"] = stub
-    sys.modules.pop("baseline_pure_llm_defi_discovery", None)
+    # This fixture deliberately stubs the protocol only while importing the baseline module.
+    # Restore the real protocol module after each fixture. This prevents cross-test state leaks.
+    # sys.modules assignment leaks this stub into later tests in the same
+    # pytest process and can make unrelated protocol imports resolve to object.
+    monkeypatch.setitem(
+        sys.modules, "hypatiax.protocols.experiment_protocol_defi", stub
+    )
+    monkeypatch.delitem(sys.modules, "baseline_pure_llm_defi_discovery", raising=False)
     return importlib.import_module("baseline_pure_llm_defi_discovery")
 
 def test_flags_fail_closed(mod):
@@ -108,8 +113,34 @@ def test_error_row_is_not_counted_as_llm_call_even_in_legacy_mode(mod, monkeypat
     assert r["error_stage"] == "api_request"
     assert r["bypass_kind"] == "live"
     assert r["prompt_sha256"] and r["temperature_sent"] is False
+    assert r["temperature_requested"] == 0.25
     assert b.client.prompts, "prompt was never built"
     assert not any(s in b.client.prompts[0] for s in FORBIDDEN)
+
+
+
+def test_pre_api_failure_does_not_inherit_stale_temperature_provenance(mod, monkeypatch):
+    import hypatiax.core.llm_call as llm_call
+
+    # Simulate thread-local metadata left behind by a prior successful request.
+    monkeypatch.setattr(
+        llm_call, "last_call_info",
+        lambda: {"temperature_requested": 0.9, "temperature_sent": True},
+    )
+    monkeypatch.setattr(llm_call, "configured_temperature", lambda: 0.25)
+
+    def fail_diagnostics(_obj):
+        raise RuntimeError("diagnostic failed before API attempt")
+
+    monkeypatch.setattr(mod.inspect, "getsourcefile", fail_diagnostics)
+    baseline = mod.PureLLMBaseline()
+    row = baseline.generate_formula("Liquidation price", "defi", ["p", "l"], {})
+
+    assert row["llm_attempted"] is False
+    assert row["llm_called"] is False
+    assert row["temperature_sent"] is False
+    assert row["temperature_requested"] == 0.25
+    assert row["error"] == "diagnostic failed before API attempt"
 
 
 def test_clean_run_error_row_is_live(mod):

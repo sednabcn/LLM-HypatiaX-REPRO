@@ -23,7 +23,7 @@ Usage (repo root):
       --a-name pure_llm --r2-field extrap_r2_far
 Exit code: 0 all checks pass, 1 a check failed, 2 input problem.
 """
-import argparse, collections, contextlib, glob, json, math, re, subprocess, sys, tempfile
+import argparse, collections, contextlib, hashlib, glob, json, math, re, subprocess, sys, tempfile
 from pathlib import Path
 
 CAT = -10.0
@@ -62,6 +62,31 @@ def classify(v):
     if v == math.inf:
         return "missing"      # +inf is not a valid R2; flag as missing
     return "catastrophic" if v < CAT else "ok"
+
+
+PIPELINE_MAP = {"model_id": "model_id_returned", "code_version": "git_commit",
+                "config_hash": "config_sha256"}
+
+
+def verify_evaluator(P, H, path):
+    """P and HDS used the same evaluator iff P's recorded sha256 equals the sha256 of the
+    scorer file as committed at the commit named in HDS's evaluator_version label."""
+    labels = {r.get("evaluator_version") for r in H}
+    if len(labels) != 1:
+        return False, f"HDS rows carry {len(labels)} evaluator labels", None
+    label = next(iter(labels))
+    m = re.match(r"^(.+)@([0-9a-f]{7,40})$", str(label))
+    if not m:
+        return False, f"cannot parse HDS evaluator label {label!r}", None
+    shas = {r.get("evaluator_sha256") for r in P}
+    if len(shas) != 1 or None in shas:
+        return False, f"P rows carry evaluator_sha256 values {sorted(map(str, shas))[:3]}", None
+    g = subprocess.run(["git", "show", f"{m.group(2)}:{path}"], capture_output=True)
+    if g.returncode:
+        return False, f"git show {m.group(2)}:{path} failed: {g.stderr.decode()[:80]}", None
+    h = hashlib.sha256(g.stdout).hexdigest()
+    ok = h in shas
+    return ok, f"P sha {next(iter(shas))[:8]} vs {path}@{m.group(2)} sha {h[:8]}", label
 
 
 def selected_formula(r):
@@ -193,6 +218,11 @@ def main():
     ap.add_argument("--out-dir", default=None, metavar="DIR",
                     help="keep the closure output (manifest, marker file) and the adapted P rows "
                          "in DIR instead of a temp dir that is deleted")
+    ap.add_argument("--pipeline", action="store_true",
+                    help="standard Phase 2 mapping, no other flags needed: model_id, code_version, "
+                         "config_hash from the P runner's own fields; bypass_kind 'live' = no bypass "
+                         "(baseline sets it by construction); evaluator_version verified from git")
+    ap.add_argument("--evaluator-file", default="hypatiax/core/r2_canonical.py")
     ap.add_argument("--bypass-off", default="", metavar="V1,V2",
                     help="bypass_kind values that mean the bypass was NOT used (e.g. live); "
                          "confirm in the baseline code before passing")
@@ -276,6 +306,21 @@ def main():
             pure_paths = sorted(glob.glob(a.pure_llm))
             if not a.no_adapt:
                 ctext = cp.read_text()
+                if a.pipeline:
+                    for k, v in PIPELINE_MAP.items():
+                        extra_map.setdefault(k, v)
+                    BYPASS_OFF.add("live")
+                    ok, detail, label = verify_evaluator(P, H, a.evaluator_file)
+                    check("same evaluator in both arms (P hash == committed file at HDS commit)",
+                          ok, detail)
+                    if not ok:
+                        print("\nRESULT: FAILED: ", fails)
+                        sys.exit(1)
+                    consts.setdefault("evaluator_version", label)
+                    dirty = sorted({str(r.get("git_commit")) for r in P
+                                    if str(r.get("git_commit", "")).endswith("+dirty")})
+                    if dirty:
+                        print(f"WARNING: P rows ran on a dirty tree {dirty}; record the diff in A4")
                 adapted, rep, unresolved, ignored = adapt(P, H, extra_map, ctext, consts)
                 print("\nadapter: fields HDS rows have, P rows lack, and the closure names")
                 if ignored:

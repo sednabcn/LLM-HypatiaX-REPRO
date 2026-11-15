@@ -129,7 +129,7 @@ def test_tiny_scale_target_is_scored(baseline):
 
 def test_nonfinite_prediction_is_failure(baseline):
     x = np.linspace(1, 2, 20)
-    r = _score(baseline, "def formula(x):\n    return np.log(-x)", x, x)
+    r = _score(baseline, "def formula(x):\n    return log(x - 10)", x, x)
     assert r["success"] is False and r["r2"] is None and r["r2_status"] == "nonfinite_pred"
 
 

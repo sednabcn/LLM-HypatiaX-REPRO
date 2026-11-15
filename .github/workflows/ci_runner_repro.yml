@@ -14,6 +14,7 @@ on:
           - exp1
           - exp1b
           - exp1b_seeds
+          - exp1-provenance
           - portfolio
           - portfolio_random_holdout
           - portfolio_bootstrap_pca
@@ -21,6 +22,11 @@ on:
           - portfolio_pca_tail_error
 #         - exp1c
           - exp1_ablation
+          - exp1_four_way_matched
+          - exp2_protocol30_random_8020
+          - exp2_protocol30_pca_4060
+          - exp2_protocol30_smoke_random_8020
+          - exp2_protocol30_smoke_pca_4060
           - exp1_five
           - exp1_pca
           - exp1b_pca
@@ -47,7 +53,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp1_four_way_matched and both manuscript Protocol-30 variants: forced to 5 isolated equation shards with strict aggregation. exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -58,7 +64,7 @@ on:
         default: false
 
       seeds:
-        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default"
+        description: "Comma-separated seed list (e.g. 42,99,123,777,2024) - overrides per-experiment default; exp1-provenance requires exactly 42,99,123,777,2024"
         required: false
         default: ""
 
@@ -75,7 +81,7 @@ on:
       pysr_generations:
         description: "PySR generations (PYSR_GENERATIONS)"
         required: false
-        default: "10000"
+        default: "1000"
 
       pysr_populations:
         description: "PySR parallel populations (PYSR_POPULATIONS) — repro.yaml uses 30"
@@ -83,7 +89,12 @@ on:
         default: "30"
 
       task_ids_override:
-        description: "Space-separated task IDs to run (blank = full experiment set)"
+        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; official Protocol-30 variants require all M.01-M.30."
+        required: false
+        default: ""
+
+      methods_override:
+        description: "Protocol-30 smoke only: optional space-separated method IDs 1-6 (e.g. 6 to rerun HybridDiscoverySystem only). Blank runs all six methods."
         required: false
         default: ""
 
@@ -105,6 +116,15 @@ on:
       clean_llm_rerun:
         description: "Clean live-LLM rerun (true/false). Use after the PureLLMBaseline hardcoded-answer / prompt-hint bypass fix. Skips the plan/shard checkpoint cache restore, does NOT seed checkpoints from committed results, forces resume off, deletes stale *checkpoint* files for the experiment's results dirs in the runner, sets CLEAR_CHECKPOINT=1 for run_all.sh, and fails the job unless scripts/bypass_audit.py reports 0 bypassed. Combine with 'experiments' to fan out every affected step, e.g. 'exp2_feynman exp2 exp2_five exp2_feynman_pca exp2_feynman_extrap hybrid_all_domains suppB_sc extrap'."
         required: false
+        default: "false"
+
+      fresh_mode:
+        description: "Artifact-only fresh mode, currently restricted to exp1-provenance. Uses run/attempt-isolated results, disables checkpoint reuse/resume and skips all result commits."
+        required: false
+        type: choice
+        options:
+          - "false"
+          - "true"
         default: "false"
 
       sparse_seed:
@@ -130,11 +150,12 @@ env:
   HYPATIAX_STRICT: "1"
   # exp1_ablation: run the third (no-LLM) arm. Ignored by every other experiment.
   HYPATIAX_NOLLM_ARM: "1"
+  HYPATIAX_HOLDOUT: "1"   # L06: held-out llm/nn/blend R2 (extra NN fit per case)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   JOB_DEADLINE:        "19800"
-  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '10000' }}"
+  PYSR_GENERATIONS:    "${{ github.event.inputs.pysr_generations || '1000' }}"
   PCA_PORTFOLIO_SWEEP: "${{ github.event.inputs.pca_portfolio_sweep || 'false' }}"
-  PYSR_POPULATION:     "100"
+  PYSR_POPULATION:     "33"
   PYSR_TOURNAMENT_SIZE: "3"
   PYSR_CROSSOVER:      "0.9"
   PYSR_MUTATION:       "0.1"
@@ -147,8 +168,11 @@ env:
   LLM_METHOD_TIMEOUT:  "120"   # tight timeout for LLM/NN-only runs (methods 1-4, no PySR)
   PYSR_FIT_WALL_TIMEOUT: "1200" # repro.yaml timeouts.fit_wall_timeout → DiscoveryConfig
   PYSR_FIT_GRACE_SECS: "120"   # repro.yaml timeouts.fit_grace_secs → DiscoveryConfig
+  # exp1_ablation per-case wall clock = HYPATIA_MAX_RETRIES x PYSR_TIMEOUT(=FEYNMAN_TIMEOUT) + post-proc; recorded in provenance_generation_shard<N>.json
+  HYPATIA_MAX_RETRIES: "3"
+  PYSR_POST_PROC_BUDGET: "300"
   FEYNMAN_NOISELESS_THRESHOLD: "0.999999"  # matches run_noise_sweep_benchmark.py --threshold-noiseless default
-  OUT_BASE:            "hypatiax/data/results"
+  OUT_BASE:            ${{ github.event.inputs.fresh_mode == 'true' && format('{0}/../hypatiax-fresh-{1}-attempt-{2}', github.workspace, github.run_id, github.run_attempt) || 'hypatiax/data/results' }}
   REPRO_CFG:           "${{ github.workspace }}/config/repro.yaml"
   PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
   # Clean live-LLM run: read by PureLLMBaseline. Local shell exports do NOT reach CI.
@@ -185,14 +209,24 @@ jobs:
           CLEAN_RERUN:        ${{ github.event.inputs.clean_llm_rerun }}
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
           PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
+          FRESH_MODE:         ${{ github.event.inputs.fresh_mode || 'false' }}
         run: |
           set -euo pipefail
 
-          VALID_IDS="exp1 exp1b exp1b_seeds portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
-            exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2 exp2_five \
+          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+            exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
           IDS=$(echo "$EXPERIMENTS" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//;s/ *$//')
+
+          if [[ "$FRESH_MODE" == "true" ]]; then
+            for ID in $IDS; do
+              if [[ "$ID" != "exp1-provenance" ]]; then
+                echo "::error::fresh_mode currently supports only exp1-provenance; refusing unsupported experiment $ID."
+                exit 1
+              fi
+            done
+          fi
 
           if [[ -z "$IDS" ]]; then
             echo "::error::'experiments' was non-empty but contained no parseable IDs after splitting on ',' and ' '."
@@ -208,6 +242,22 @@ jobs:
           done
           if [[ -n "$UNKNOWN" ]]; then
             echo "::error::Unknown experiment ID(s) in 'experiments':$UNKNOWN — must be one of: $VALID_IDS"
+            exit 1
+          fi
+
+          # exp1-provenance is the complete five-seed DeFi benchmark (42,99,123,777,2024).
+          # Running it alongside exp1 (seed 42) or exp1b_seeds (the four non-42 seeds)
+          # repeats benchmark work already covered by the provenance run.
+          HAS_PROVENANCE=false
+          HAS_EXP1=false
+          HAS_EXP1B_SEEDS=false
+          for ID in $IDS; do
+            [[ "$ID" == "exp1-provenance" ]] && HAS_PROVENANCE=true
+            [[ "$ID" == "exp1" ]] && HAS_EXP1=true
+            [[ "$ID" == "exp1b_seeds" ]] && HAS_EXP1B_SEEDS=true
+          done
+          if [[ "$HAS_PROVENANCE" == true && ( "$HAS_EXP1" == true || "$HAS_EXP1B_SEEDS" == true ) ]]; then
+            echo "::error::Duplicate DeFi benchmark dispatch: exp1-provenance already runs seeds 42,99,123,777,2024. Do not combine it with exp1 or exp1b_seeds; choose the provenance run OR the split exp1 + exp1b_seeds route."
             exit 1
           fi
 
@@ -230,7 +280,8 @@ jobs:
               -f force_rerun="$FORCE_RERUN" \
               -f clean_llm_rerun="${CLEAN_RERUN:-false}" \
               -f sparse_seed="${SPARSE_SEED_IN:-fallback}" \
-              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}"
+              -f pca_portfolio_sweep="${PCA_PORTFOLIO_SWEEP_IN:-false}" \
+              -f fresh_mode="${FRESH_MODE:-false}"
           done
 
   pca_runner:
@@ -286,9 +337,21 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Validate fresh mode
+        if: ${{ github.event.inputs.fresh_mode == 'true' }}
+        env:
+          EXP: ${{ github.event.inputs.experiment }}
+        run: |
+          set -euo pipefail
+          if [[ "$EXP" != "exp1-provenance" ]]; then
+            echo "::error::fresh_mode currently supports only exp1-provenance; got $EXP."
+            exit 1
+          fi
+          echo "Fresh mode: planner and five seed-sharded workers retained; outputs are artifact-only."
+
       - name: Restore shared checkpoint (plan)
         id: restore_plan
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -298,9 +361,18 @@ jobs:
 
       - name: Emit experiment metadata
         id: meta
+        env:
+          N_SAMPLES: ${{ github.event.inputs.n_samples || '200' }}
         run: |
           EXP="${{ github.event.inputs.experiment }}"
           SEEDS_IN="${{ github.event.inputs.seeds }}"
+
+          if [[ "$EXP" == "exp2_protocol30_random_8020" || "$EXP" == "exp2_protocol30_pca_4060" || "$EXP" == "exp2_protocol30_smoke_random_8020" || "$EXP" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            if [[ "$N_SAMPLES" != "200" ]]; then
+              echo "::error::Manuscript Protocol-30 is fixed at 200 samples per equation; n_samples=$N_SAMPLES is not supported."
+              exit 1
+            fi
+          fi
 
           case "$EXP" in
 
@@ -309,6 +381,15 @@ jobs:
               NEEDS_JULIA=false
               RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi"
               DEFAULT_SEEDS="42"
+              ;;
+
+            exp1-provenance)
+              # Independent five-seed DeFi experiment; one seed per worker, all 74 cases.
+              # Run-ID isolation prevents checkpoint/result reuse across dispatches.
+              SCRIPT="hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+              NEEDS_JULIA=false
+              RESULT_SUBDIR="comparison_results/noise-noiseless/noiseless/defi/exp1-provenance/run-${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+              DEFAULT_SEEDS="${SEEDS_IN:-42,99,123,777,2024}"
               ;;
 
             exp1b)
@@ -413,6 +494,41 @@ jobs:
               if [[ "${ABL_SEED}" != "42" ]]; then RESULT_SUBDIR="ablation/exp1_ablation_seed${ABL_SEED}"; fi
               DEFAULT_SEEDS="${ABL_SEED}"
               echo "ablation_seed=${ABL_SEED}" >> "$GITHUB_OUTPUT"
+              ;;
+
+            exp1_four_way_matched)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_four_way_matched.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="four_way_matched"
+              DEFAULT_SEEDS="42"
+              ;;
+
+            exp2_protocol30_random_8020)
+              SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="comparison_results/protocol30/random-80-20"
+              DEFAULT_SEEDS="42"
+              ;;
+
+            exp2_protocol30_pca_4060)
+              SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="comparison_results/protocol30/pca-40-60"
+              DEFAULT_SEEDS="42"
+              ;;
+
+            exp2_protocol30_smoke_random_8020)
+              SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="comparison_results/protocol30/smoke/random-80-20"
+              DEFAULT_SEEDS="42"
+              ;;
+
+            exp2_protocol30_smoke_pca_4060)
+              SCRIPT="hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="comparison_results/protocol30/smoke/pca-40-60"
+              DEFAULT_SEEDS="42"
               ;;
 
             exp1_five)
@@ -570,6 +686,7 @@ jobs:
 
           EXP_SHARD_TABLE = {
               "exp1":               1,
+              "exp1-provenance":    5,   # fixed five-seed protocol: one seed per worker
               "exp1b":              5,
               "portfolio":          5,   # one shard per seed, same rule as exp1b
               "portfolio_random_holdout": 1, # five partitions are evaluated inside one validation runner
@@ -580,6 +697,11 @@ jobs:
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
               "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
+              "exp1_four_way_matched": 5, # Core-15 equation IDs partitioned into five isolated workers
+              "exp2_protocol30_random_8020": 5, # 30 manuscript equations, five isolated workers
+              "exp2_protocol30_pca_4060": 5, # same registry, separate PCA split and aggregate
+              "exp2_protocol30_smoke_random_8020": 1, # bounded 3-5 equation smoke run, artifact-only
+              "exp2_protocol30_smoke_pca_4060": 1, # bounded 3-5 equation smoke run, artifact-only
               "exp2_feynman":        1,
               "exp2_feynman_extrap": 1,
               "exp2_feynman_pca":    1,  # mirrors exp2_feynman (same FEYNMAN_DOMAINS registry, single shard)
@@ -617,7 +739,13 @@ jobs:
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
-          if EXP in ("exp1b_seeds", "exp1_pca_seeds"):
+          if EXP == "exp1-provenance":
+              required_seeds = ["42", "99", "123", "777", "2024"]
+              if SEEDS != required_seeds:
+                  print(f"ERROR: exp1-provenance requires the fixed seed set {required_seeds}; got {SEEDS}", file=sys.stderr)
+                  sys.exit(1)
+              N_SHARDS = 5
+          elif EXP in ("exp1b_seeds", "exp1_pca_seeds"):
               # One shard == one runner == one seed (each runs all 74 tasks for that seed).
               # Anything else means several seeds share one 330-min job.
               _is_pca = EXP == "exp1_pca_seeds"
@@ -676,6 +804,8 @@ jobs:
 
           registry = {
               "exp1":              DEFI_TASKS,
+              # Seed-major order gives exactly 10 domain tasks (all 74 cases) to each seed shard.
+              "exp1-provenance":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1b":             [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio":         [f"portfolio_seed{s}" for s in SEEDS],
               "portfolio_random_holdout": ["validation"],
@@ -687,6 +817,11 @@ jobs:
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+              "exp1_four_way_matched": [str(i) for i in range(15)],
+              "exp2_protocol30_random_8020": MULTI30,
+              "exp2_protocol30_pca_4060": MULTI30,
+              "exp2_protocol30_smoke_random_8020": [],
+              "exp2_protocol30_smoke_pca_4060": [],
               "exp1_five":         ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
               "exp2_feynman":       FEYNMAN_DOMAINS,
               "exp2_feynman_extrap": FEYNMAN_DOMAINS,
@@ -707,6 +842,19 @@ jobs:
           }
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
+          if EXP == "exp1_four_way_matched" and all_ids != [str(i) for i in range(15)]:
+              print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
+              sys.exit(1)
+          if EXP in ("exp2_protocol30_random_8020", "exp2_protocol30_pca_4060") and all_ids != MULTI30:
+              print(f"ERROR: {EXP} requires the complete Protocol-30 task set M.01..M.30; partial task_ids_override is not aggregatable.", file=sys.stderr)
+              sys.exit(1)
+          if EXP in ("exp2_protocol30_smoke_random_8020", "exp2_protocol30_smoke_pca_4060"):
+              # Allow true targeted smoke reruns of a single previously failing
+              # equation.  This remains smoke-only and never enters the official
+              # 30-equation aggregate; keep the upper bound to five IDs.
+              if not 1 <= len(all_ids) <= 5 or len(set(all_ids)) != len(all_ids) or any(t not in MULTI30 for t in all_ids):
+                  print("ERROR: Protocol-30 smoke runs require 1-5 unique IDs from M.01..M.30 in task_ids_override.", file=sys.stderr)
+                  sys.exit(1)
           if not all_ids:
               if EXP in ("exp1_pca", "exp1b_pca"):
                   print(f"ERROR: no task IDs for experiment '{EXP}' — this experiment's "
@@ -728,6 +876,13 @@ jobs:
               except Exception as e:
                   print(f"Warning: could not read checkpoint: {e}")
 
+          # Core-15 has its own per-equation resumable checkpoints in isolated shard
+          # directories. The planner checkpoint is not authoritative for this protocol;
+          # dispatch all 15 equation IDs so the aggregate can prove full coverage.
+          if EXP in ("exp1_four_way_matched", "exp2_protocol30_random_8020", "exp2_protocol30_pca_4060", "exp2_protocol30_smoke_random_8020", "exp2_protocol30_smoke_pca_4060"):
+              # These protocols have no resumable per-equation checkpoint contract in this
+              # workflow. Every dispatch must execute the full assigned registry exactly.
+              done = set()
           pending = [t for t in all_ids if t not in done]
           print(f"Total={len(all_ids)}  Done={len(done)}  Pending={len(pending)}")
 
@@ -784,7 +939,7 @@ jobs:
           PYEOF
 
       - name: Save plan checkpoint cache
-        if: always()
+        if: ${{ always() && github.event.inputs.fresh_mode != 'true' }}
         uses: actions/cache/save@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -826,6 +981,17 @@ jobs:
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1
+
+      - name: Assert fresh output root is unused
+        if: ${{ github.event.inputs.fresh_mode == 'true' }}
+        run: |
+          set -euo pipefail
+          if [[ -e "${OUT_BASE}" ]]; then
+            echo "::error::Fresh output root already exists: ${OUT_BASE}"
+            exit 1
+          fi
+          mkdir -p "${OUT_BASE}"
+          echo "Created isolated fresh output root: ${OUT_BASE}"
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5.3.0
@@ -909,7 +1075,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
-        if: ${{ github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -986,7 +1152,7 @@ jobs:
             "${{ github.workspace }}/logs"
 
       - name: Seed shard checkpoint from committed results (cache miss only)
-        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' }}
+        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.fresh_mode != 'true' }}
         env:
           SHARD_IDS_JSON: ${{ matrix.ids }}
           RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
@@ -1027,7 +1193,18 @@ jobs:
           for d in "${DIRS[@]}"; do
             [[ -d "$d" ]] || continue
             echo "[clean_llm_rerun] stale checkpoints under $d:"
-            find "$d" -type f -name '*checkpoint*' -print -delete
+            if [[ "${EXP}" == "exp1_ablation" || "$d" == */exp1_ablation || "$d" == */exp1_ablation_seed* ]]; then
+              echo "[clean_llm_rerun] SCOPED delete, shard ${{ matrix.shard }}"
+              # shard-scoped: never touch other shards' checkpoints or stale_* dirs
+              find "$d" -type f -name "exp1_ablation_checkpoint*_shard${{ matrix.shard }}.json" \
+                   -not -path '*/stale_*' \
+                   -not -path '*/checkpoint_backups/*' -print -delete
+            else
+              echo "[clean_llm_rerun] UNSCOPED delete"
+              find "$d" -type f -name '*checkpoint*' \
+                   -not -path '*/stale_*' \
+                   -not -path '*/checkpoint_backups/*' -print -delete
+            fi
           done
 
       - name: Clean live-LLM rerun - bypass audit gate
@@ -1226,9 +1403,9 @@ jobs:
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
           PENDING_IDS:       ${{ steps.resolve_ids.outputs.pending_ids }}
           SHARD_CKPT:        checkpoint_worker_shard${{ matrix.shard }}.json
-          RESULTS_DIR:       ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:       ${{ env.OUT_BASE }}
           REPRO_CFG:         ${{ env.REPRO_CFG }}
-          RESUME:            ${{ github.event.inputs.clean_llm_rerun == 'true' && 'false' || github.event.inputs.resume || 'true' }}
+          RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}
           CLEAR_CHECKPOINT:  ${{ github.event.inputs.clean_llm_rerun == 'true' && '1' || '' }}
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
@@ -1243,6 +1420,11 @@ jobs:
             export ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
             [[ -n "${ANTHROPIC_API_KEY}" ]] || { echo "ERROR: ANTHROPIC_API_KEY secret is empty"; exit 1; }
             echo "ANTHROPIC_API_KEY: enforced (${#ANTHROPIC_API_KEY} chars)"
+          fi
+
+          # resume=false must mean a clean run: run_all.sh resumes from any committed checkpoint unless CLEAR_CHECKPOINT is non-empty
+          if [[ "${RESUME}" == "false" ]]; then
+            export CLEAR_CHECKPOINT=1
           fi
 
           if [[ "${DRY_RUN}" == "true" ]]; then
@@ -1278,7 +1460,7 @@ jobs:
             # exp3/exp3b only: no other experiment ever sees SPARSE_SEED from CI.
             export SPARSE_SEED="${SPARSE_SEED_INPUT:-fallback}"
             echo "  [exp3/exp3b] SPARSE_SEED=${SPARSE_SEED}"
-          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" ]]; then
+          elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" || "${EXP}" == "exp1-provenance" ]]; then
             # pending IDs are "<domain>_seed<N>"; exp1's benchmark filters on the bare domain keys.
             TASK_IDS="$(sed -E 's/_seed[0-9]+$//' /tmp/pending_ids.txt | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="$(sed -nE 's/.*_seed([0-9]+)$/\1/p' /tmp/pending_ids.txt | sort -un | paste -sd, -)"
@@ -1294,6 +1476,15 @@ jobs:
           else
             TASK_IDS="$(cat /tmp/pending_ids.txt | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
             SHARD_SEEDS="${PYSR_SEED}"
+          fi
+          if [[ "${EXP}" == "exp2_protocol30_random_8020" || "${EXP}" == "exp2_protocol30_pca_4060" ]]; then
+            echo "  [Protocol-30] full-run task IDs map to 1-based equation indices; clearing domain filter."
+            _RUN_SHARD_IDS=""
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            echo "  [Protocol-30 smoke] retaining selected equation IDs: ${TASK_IDS}"
+            _RUN_SHARD_IDS="${TASK_IDS}"
+          else
+            _RUN_SHARD_IDS="${TASK_IDS}"
           fi
           echo "TASK_IDS=${TASK_IDS}"
 
@@ -1320,18 +1511,23 @@ jobs:
           if [[ "${EXP}" == "exp1b_seeds" ]]; then
             DEFI_SEEDS_RUN="${SHARD_SEEDS}"
             RUN_STEP="exp1"
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" ]]; then
+            RUN_STEP="exp2_protocol30_random_8020"
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            RUN_STEP="exp2_protocol30_pca_4060"
           fi
 
-          if [[ "${EXP}" == "exp1b_seeds" ]]; then
-            # FIX: run_all.sh's exp1 step hard-codes seed 42 and --output-dir .../defi
-            # (log: "🎲 SEED=42", "Output dir overridden ... /noiseless/defi"), so the seed
-            # env vars were ignored and nothing landed in multi-seeds/. Call the patched
-            # DeFi script directly with this shard's seed and the multi-seeds output dir.
-            # It tags outputs *_seed<N>.json and stamps every record with the seed.
+          if [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1-provenance" ]]; then
+            # exp1-provenance is a standalone five-seed run; call the benchmark directly
+            # so the seed and run-isolated output directory are explicit and auditable.
+            # run_all.sh's exp1 step hard-codes seed 42 and the canonical exp1 output path.
+            # These one-seed-per-worker experiments call the benchmark directly so the shard
+            # seed and its isolated RESULT_SUBDIR are explicit; non-42 outputs are seed-tagged
+            # and every case record carries its seed.
             _EXTRA=()
             [[ "${RESUME}" == "true" ]] && _EXTRA+=(--resume)
             TASK_IDS="${TASK_IDS}" \
-            SHARD_IDS="${TASK_IDS}" \
+            SHARD_IDS="${_RUN_SHARD_IDS}" \
             SHARD="${SHARD_INDEX}" \
             RESULTS_DIR="${RESULTS_DIR}" \
             OUT_BASE="${RESULTS_DIR}" \
@@ -1405,7 +1601,7 @@ jobs:
             fi
           else
             TASK_IDS="${TASK_IDS}" \
-            SHARD_IDS="${TASK_IDS}" \
+            SHARD_IDS="${_RUN_SHARD_IDS}" \
             SHARD="${SHARD_INDEX}" \
             RESULTS_DIR="${RESULTS_DIR}" \
             OUT_BASE="${RESULTS_DIR}" \
@@ -1416,6 +1612,8 @@ jobs:
             EXPERIMENT_SEED="${SHARD_SEEDS}" \
             DOMAIN_FILTER="${TASK_IDS}" \
             NUMERICAL_ONLY="true" \
+            PROTOCOL30_SMOKE_DIR="$([[ "${EXP}" == exp2_protocol30_smoke_random_8020 || "${EXP}" == exp2_protocol30_smoke_pca_4060 ]] && printf '%s' "${RESULTS_DIR}/${RESULT_SUBDIR}" || true)" \
+            PROTOCOL30_METHODS_OVERRIDE="${{ github.event.inputs.methods_override }}" \
               bash run_all.sh --step "${RUN_STEP}" 2>&1 | tee /tmp/run_all_step.log
           fi
 
@@ -1472,11 +1670,11 @@ jobs:
           echo "=== OUT_BASE ===" && echo "${OUT_BASE}"
           echo "=== OUT_BASE resolved ===" && realpath "${OUT_BASE}" 2>/dev/null || true
           echo "=== RESULTS_DIR env (from Run experiment tasks step) ==="
-          echo "  RESULTS_DIR in env: ${{ github.workspace }}/${OUT_BASE}"
+          echo "  RESULTS_DIR in env: ${OUT_BASE}"
           echo "=== OUT_BASE vs RESULTS_DIR equivalence check ==="
-          WS_OUT="${GITHUB_WORKSPACE}/${OUT_BASE}"
+          WS_OUT="$(realpath -m "${OUT_BASE}")"
           echo "  Expected RESULTS_DIR: ${WS_OUT}"
-          echo "  Same? $([ "${WS_OUT}" = "${{ github.workspace }}/${{ env.OUT_BASE }}" ] && echo YES || echo NO)"
+          echo "  Same? $([ "${WS_OUT}" = "${{ env.OUT_BASE }}" ] && echo YES || echo NO)"
           echo "=== ALL *.json files anywhere under GITHUB_WORKSPACE (first 60) ==="
           find "${GITHUB_WORKSPACE}" -maxdepth 12 \
             -name "*.json" \
@@ -1517,7 +1715,7 @@ jobs:
 
               rescued = 0
               EXP = os.environ.get("EXP", "")
-              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
+              COMBINED_OUTPUT_EXPS = {"exp1", "exp1b", "portfolio", "exp1b_seeds", "exp1-provenance", "exp1_pca_seeds", "exp1c", "suppB", "suppB_sc"}
               shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
 
               if EXP in COMBINED_OUTPUT_EXPS:
@@ -1599,7 +1797,7 @@ jobs:
                               f"*defi_pca_v4_*seed{s}.json",
                               f"*defi_pca_v4_*seed{s}_*.json",
                           ]
-                  elif EXP == "exp1b_seeds":
+                  elif EXP in ("exp1b_seeds", "exp1-provenance"):
                       # a shard may only ever rescue ITS OWN seed's files: no seed-less and no
                       # recursive globs (those would drag seed-42 / other seeds' files in here)
                       shard_ids_local = json.loads(os.environ.get("SHARD_IDS") or "[]")
@@ -1666,7 +1864,7 @@ jobs:
       - name: Store results in canonical RESULT_SUBDIR
         if: always()
         env:
-          RESULTS_DIR:   ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:   ${{ env.OUT_BASE }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
         run: |
@@ -1806,7 +2004,7 @@ jobs:
         if: ${{ (needs.plan.outputs.exp_id == 'portfolio_feature_ranking' || needs.plan.outputs.exp_id == 'portfolio_pca_tail_error') && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           EXP: ${{ needs.plan.outputs.exp_id }}
-          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+          TARGET: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
@@ -1955,7 +2153,7 @@ jobs:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2011,13 +2209,94 @@ jobs:
           print(f"  OK exp1b_seeds seed {seed} verified.")
           PYEOF
 
+
+      - name: Verify exp1-provenance shard and write provenance manifest
+        if: ${{ needs.plan.outputs.exp_id == 'exp1-provenance' && steps.resolve_ids.outputs.has_work == 'true' }}
+        env:
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SCRIPT_PATH: ${{ needs.plan.outputs.script_path }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import hashlib, importlib.metadata, json, os, platform
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          target = Path(os.environ["OUT_BASE"]) / os.environ["RESULT_SUBDIR"]
+          shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
+          seeds = sorted({int(t.rsplit("_seed", 1)[1]) for t in shard_ids if "_seed" in t})
+          domains = sorted({t.rsplit("_seed", 1)[0] for t in shard_ids if "_seed" in t})
+          expected_seeds = [42, 99, 123, 777, 2024]
+          shard_index = int(os.environ["SHARD_INDEX"])
+          if seeds != [expected_seeds[shard_index]]:
+              raise SystemExit(f"::error::exp1-provenance shard {shard_index} has unexpected seed assignment: {seeds}")
+          if len(domains) != 10:
+              raise SystemExit(f"::error::exp1-provenance requires all 10 domain tasks; got {domains}")
+          seed = seeds[0]
+          suffix = "" if seed == 42 else f"_seed{seed}"
+          result_path = target / f"hypatiax_defi_benchmark_v3_results{suffix}.json"
+          if not result_path.is_file() or result_path.stat().st_size == 0:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing result file {result_path}")
+          data = json.loads(result_path.read_text(encoding="utf-8"))
+          records = data if isinstance(data, list) else data.get("results", [])
+          if len(records) != 74:
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: expected 74 case records, got {len(records)}")
+          stamped = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+          if len(stamped) != 74 or any(str(v) != str(seed) for v in stamped):
+              raise SystemExit(f"::error::exp1-provenance seed {seed}: missing or inconsistent seed stamps: {sorted(set(map(str, stamped)))}")
+
+          script = Path(os.environ["SCRIPT_PATH"])
+          protocol = Path("config/exp1_provenance.yaml")
+          config = Path("config/repro.yaml")
+          def sha256(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          manifest = {
+              "experiment_id": "exp1-provenance",
+              "status": "passed",
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "commit_sha": os.environ["GITHUB_SHA"],
+              "git_ref": os.environ["GITHUB_REF"],
+              "seed": seed,
+              "shard_index": shard_index,
+              "shard_id": int(os.environ["SHARD_ID"]),
+              "n_shards": int(os.environ["N_SHARDS"]),
+              "assigned_task_ids": shard_ids,
+              "assigned_domains": domains,
+              "expected_case_count": 74,
+              "observed_case_count": len(records),
+              "result_file": result_path.name,
+              "result_sha256": sha256(result_path),
+              "script_path": str(script),
+              "script_sha256": sha256(script),
+              "protocol_config_sha256": sha256(protocol),
+              "repro_config_sha256": sha256(config),
+              "python_version": platform.python_version(),
+              "platform": platform.platform(),
+              "runtime_package_versions": {
+                  name: importlib.metadata.version(name)
+                  for name in ("numpy", "torch", "pysr", "anthropic", "scipy", "scikit-learn")
+              },
+              "clean_run_flags": {
+                  "HYPATIAX_DISABLE_HARDCODED": os.environ.get("HYPATIAX_DISABLE_HARDCODED"),
+                  "HYPATIAX_DISABLE_PROMPT_HINTS": os.environ.get("HYPATIAX_DISABLE_PROMPT_HINTS"),
+                  "HYPATIAX_STRICT": os.environ.get("HYPATIAX_STRICT"),
+                  "HYPATIAX_R2_SIGN_FLIP": os.environ.get("HYPATIAX_R2_SIGN_FLIP"),
+              },
+              "created_at_utc": datetime.now(timezone.utc).isoformat(),
+          }
+          manifest_path = target / f"exp1-provenance_seed{seed}_manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(f"Verified exp1-provenance seed {seed}: 74/74 records; manifest={manifest_path}")
+          PYEOF
+
       - name: Verify exp1_pca_seeds output (this shard's seed file exists, is stamped with that seed)
         if: ${{ needs.plan.outputs.exp_id == 'exp1_pca_seeds' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2180,7 +2459,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "exp1_five_results*.json" 2>/dev/null | wc -l)
           echo "=== exp1_five output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2198,7 +2477,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_feynman output verification ==="
           echo "  Target dir       : ${TARGET}"
@@ -2216,7 +2495,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2 output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2233,7 +2512,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "protocol_core_*.json" -o -name "benchmark_results.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_five output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2250,7 +2529,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_PROTO=$(find "${TARGET}" -name "protocol_core_extrap_*.json" 2>/dev/null | wc -l)
           COUNT_BENCH=$(find "${TARGET}" \( -name "benchmark_results_extrap_shard*.json" -o -name "benchmark_results_extrap.json" \) 2>/dev/null | wc -l)
           echo "=== exp2_feynman_extrap output verification ==="
@@ -2278,7 +2557,7 @@ jobs:
         if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
           EXP="${{ needs.plan.outputs.exp_id }}"
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
           echo "=== ${EXP} output verification ==="
           echo "  Target dir  : ${TARGET}"
@@ -2301,7 +2580,7 @@ jobs:
       - name: Verify exp3 trajectories are populated
         if: ${{ (needs.plan.outputs.exp_id == 'exp3' || needs.plan.outputs.exp_id == 'exp3b') && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
-          TARGET: ${{ github.workspace }}/${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
+          TARGET: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
@@ -2360,7 +2639,7 @@ jobs:
       - name: Verify suppA output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "*.json" 2>/dev/null | wc -l)
           echo "=== suppA output verification ==="
           echo "  Target dir: ${TARGET}  JSON files: ${COUNT}"
@@ -2374,7 +2653,7 @@ jobs:
       - name: Verify suppA wiring regression test result
         if: ${{ needs.plan.outputs.exp_id == 'suppA' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          RESULT_JSON="${{ github.workspace }}/${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
+          RESULT_JSON="${OUT_BASE}/regression_tests/proc_box_wiring_result.json"
           echo "=== suppA proc_box wiring regression test (item 10b) ==="
           if [[ ! -f "${RESULT_JSON}" ]]; then
             echo "::warning::${RESULT_JSON} not found — test_proc_box_wiring.py was likely absent from hypatiax/experiments/tests/, so run_all.sh skipped the wiring check (see suppA's 'Run experiment tasks' log for the skip warning). Not fatal, but the item 10b regression gate did not run."
@@ -2407,7 +2686,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" -name "hybrid_llm_nn_all_domains_*.json" 2>/dev/null | wc -l)
           echo "=== hybrid_all_domains output verification ==="
           echo "  Target dir: ${TARGET}"
@@ -2425,7 +2704,7 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_CSV=$(find "${TARGET}" -name "instability_analysis.csv" 2>/dev/null | wc -l)
           echo "=== instability output verification ==="
           echo "  Target dir               : ${TARGET}"
@@ -2461,7 +2740,7 @@ jobs:
       - name: Verify extrap output files exist
         if: ${{ needs.plan.outputs.exp_id == 'extrap' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT=$(find "${TARGET}" \( -name "all_domains_extrap_v4_*.json" -o -name "protocol_core_*.json" \) 2>/dev/null | wc -l)
           echo "=== extrap output verification ==="
           echo "  Target dir   : ${TARGET}"
@@ -2504,7 +2783,7 @@ jobs:
       - name: Verify suppB output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppB' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
+          TARGET="${OUT_BASE}/${{ needs.plan.outputs.result_subdir }}"
           COUNT=$(find "${TARGET}" \( -name "noise_sweep_*.json" -o -name "noise_sweep_*.csv" \) 2>/dev/null | wc -l)
           echo "=== suppB output verification ==="
           echo "  Target dir : ${TARGET}"
@@ -2520,7 +2799,7 @@ jobs:
       - name: Verify suppB_sc output files exist
         if: ${{ needs.plan.outputs.exp_id == 'suppB_sc' && steps.resolve_ids.outputs.has_work == 'true' }}
         run: |
-          TARGET="${{ github.workspace }}/${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
+          TARGET="${OUT_BASE}/comparison_results/feynman-tests/sample-complexity"
           COUNT=$(find "${TARGET}" \( -name "sample_complexity_*.json" -o -name "sample_complexity_*.csv" \) 2>/dev/null | wc -l)
           echo "=== suppB_sc output verification ==="
           echo "  Target dir : ${TARGET}"
@@ -2719,7 +2998,7 @@ jobs:
           PYEOF
 
       - name: Persist shard checkpoint to cache
-        if: always()
+        if: ${{ always() && github.event.inputs.fresh_mode != 'true' }}
         uses: actions/cache/save@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -2745,19 +3024,49 @@ jobs:
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
+          SHARD:         ${{ matrix.shard }}
         run: |
-          UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}"
+          # Match the exact directory passed to upload-artifact below. Protocol-30
+          # and Core-15 workers upload only their own isolated shard directory;
+          # counting the parent directory can otherwise be satisfied by stale or
+          # sibling-shard files and conceal a missing current-shard output.
+          if [[ "${EXP}" == "exp1_four_way_matched" || "${EXP}" == "exp2_protocol30_random_8020" || "${EXP}" == "exp2_protocol30_pca_4060" ]]; then
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}/shard${SHARD}"
+          else
+            UPLOAD_DIR="${OUT_BASE}/${RESULT_SUBDIR}"
+          fi
           COUNT=$(find "${UPLOAD_DIR}" -type f 2>/dev/null | wc -l || echo 0)
           echo "=== Artifact upload check: ${UPLOAD_DIR} ==="
           echo "  Files found: ${COUNT}"
           find "${UPLOAD_DIR}" -type f 2>/dev/null | sort || true
           if [[ "${COUNT}" -eq 0 ]]; then
-            echo "::error::Shard ${{ matrix.shard }} (${EXP}): upload directory '${UPLOAD_DIR}' is EMPTY."
+            echo "::error::Shard ${SHARD} (${EXP}): upload directory '${UPLOAD_DIR}' is EMPTY."
             echo "  Possible causes:"
             echo "    1. Experiment script wrote output files with an unexpected filename prefix"
             echo "    2. Experiment script exited non-zero before writing any files"
-            echo "    3. 'Move results to RESULTS_DIR' step has a glob mismatch for ${EXP}"
-            echo "  Check 'Run experiment tasks' and 'Move results to RESULTS_DIR' step logs above."
+            echo "    3. The runner wrote results outside this shard's isolated output directory"
+            echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
+          fi
+
+          if [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+            python3 - "${UPLOAD_DIR}/protocol30_shard_manifest.json" "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          manifest_path, output_dir = Path(sys.argv[1]), Path(sys.argv[2])
+          if not manifest_path.is_file():
+              raise SystemExit(f"missing smoke manifest: {manifest_path}")
+          manifest = json.loads(manifest_path.read_text())
+          indices = manifest.get("assigned_equation_indices", [])
+          count = manifest.get("expected_equation_count")
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("smoke manifest is not explicitly marked artifact-only")
+          if not isinstance(count, int) or not 1 <= count <= 5 or count != len(indices):
+              raise SystemExit(f"invalid smoke equation count: expected={count}, assigned={len(indices)}")
+          result_file = manifest.get("result_file")
+          if not result_file or not (output_dir / result_file).is_file():
+              raise SystemExit(f"manifest result file is missing: {result_file}")
+          print(f"Validated artifact-only smoke manifest: {count} equations; result={result_file}")
+          PY
           fi
 
       - name: Upload shard results artifact
@@ -2765,12 +3074,12 @@ jobs:
         uses: actions/upload-artifact@v4.3.6
         with:
           name: results-${{ github.event.inputs.experiment }}-shard${{ matrix.shard }}
-          path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
+          path: ${{ (needs.plan.outputs.exp_id == 'exp1_four_way_matched' || needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && format('{0}/{1}/shard{2}/', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || format('{0}/{1}/', env.OUT_BASE, needs.plan.outputs.result_subdir) }}
           if-no-files-found: error
-          retention-days: 30
+          retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -2781,7 +3090,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           FILE_COUNT=$(find "${TARGET}" -type f 2>/dev/null | wc -l || echo 0)
           echo "Files in ${TARGET}: ${FILE_COUNT}"
           if [[ "${FILE_COUNT}" -eq 0 ]]; then
@@ -2892,6 +3201,9 @@ jobs:
             # Shards may publish additions and modifications only. A file absent from
             # this runner is not an instruction to delete its committed counterpart.
             git add -f --ignore-removal "${TARGET}"
+            # CLEAR_CHECKPOINT moves old checkpoints into stale_*/ or checkpoint_backups/ inside TARGET;
+            # git add -f overrides .gitignore, so unstage them explicitly (never ship stale-run artifacts).
+            git reset -q -- "${TARGET%/}"/stale_* "${TARGET%/}"/checkpoint_backups 2>/dev/null || true
 
             echo "--- git status after add ---"
             git status --short || true
@@ -2972,14 +3284,14 @@ jobs:
           done
 
       - name: Verify results committed to repo
-        if: ${{ success() }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           SHARD:         ${{ matrix.shard }}
         run: |
           set -euo pipefail
-          TARGET="${{ github.workspace }}/${OUT_BASE}/${RESULT_SUBDIR}"
+          TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
 
           REL_TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           TRACKED=$(git ls-files --full-name "${REL_TARGET}" 2>/dev/null | wc -l || echo 0)
@@ -3015,6 +3327,150 @@ jobs:
 
 
 
+
+  protocol30_aggregate:
+    name: "Aggregate - manuscript Protocol-30 (five shards, registry identity gate)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && (needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' || needs.plan.outputs.exp_id == 'exp2_protocol30_pca_4060') && needs.worker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RESULTS_DIR: ${{ github.workspace }}/hypatiax/data/results
+      OUT_BASE: ${{ github.workspace }}/hypatiax/data/results
+      PROTOCOL30_ARTIFACTS_DIR: ${{ github.workspace }}/protocol30_artifacts
+      P30_VARIANT: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'random_8020' || 'pca_4060' }}
+      P30_RESULT_SUBDIR: ${{ needs.plan.outputs.exp_id == 'exp2_protocol30_random_8020' && 'comparison_results/protocol30/random-80-20' || 'comparison_results/protocol30/pca-40-60' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install run_all configuration parser
+        run: python -m pip install "pyyaml" "numpy"
+
+      - name: Download all five Protocol-30 worker artifacts
+        uses: actions/download-artifact@v4.3.6
+        with:
+          pattern: results-exp2_protocol30_*-shard*
+          path: ${{ github.workspace }}/protocol30_artifacts
+
+      - name: Validate registry-bound equation coverage and aggregate
+        run: |
+          set -euo pipefail
+          mkdir -p "${RESULTS_DIR}/${P30_RESULT_SUBDIR}"
+          if [[ "${P30_VARIANT}" == "random_8020" ]]; then
+            bash run_all.sh --step exp2_protocol30_random_8020_aggregate
+            RESULT="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_random_8020_aggregate.json"
+            MANIFEST="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_random_8020_aggregate_manifest.json"
+          else
+            bash run_all.sh --step exp2_protocol30_pca_4060_aggregate
+            RESULT="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_pca_4060_aggregate.json"
+            MANIFEST="${RESULTS_DIR}/${P30_RESULT_SUBDIR}/protocol30_pca_4060_aggregate_manifest.json"
+          fi
+          test -s "${RESULT}" || { echo "::error::missing Protocol-30 aggregate result"; exit 1; }
+          test -s "${MANIFEST}" || { echo "::error::missing Protocol-30 aggregate manifest"; exit 1; }
+
+      - name: Upload validated Protocol-30 aggregate
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-${{ needs.plan.outputs.exp_id }}-merged
+          path: ${{ env.OUT_BASE }}/${{ needs.plan.outputs.result_subdir }}/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit and push validated Protocol-30 aggregate
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${RESULTS_DIR}/${P30_RESULT_SUBDIR}"
+          git add -f "${TARGET}/protocol30_${P30_VARIANT}_aggregate.json" "${TARGET}/protocol30_${P30_VARIANT}_aggregate_manifest.json"
+          if git diff --cached --quiet; then
+            echo "Protocol-30 aggregate already committed."
+            exit 0
+          fi
+          git commit -m "ci: validated Protocol-30 ${P30_VARIANT} aggregate - run ${{ github.run_id }}"
+          git pull --rebase --autostash origin "${{ github.ref_name }}"
+          git push origin HEAD:"${{ github.ref_name }}"
+
+  exp1_four_way_matched_aggregate:
+    name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
+    needs: [plan, worker]
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      RESULT_SUBDIR: four_way_matched
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Install aggregation dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3" "pysr==2.0.0a1" numpy scipy sympy "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn pmlb pint psutil
+
+      - name: Download all five worker artifacts
+        uses: actions/download-artifact@v4.3.6
+        with:
+          pattern: results-exp1_four_way_matched-shard*
+          path: ${{ github.workspace }}/four_way_artifacts
+
+      - name: Merge and validate Core-15 shards
+        env:
+          RESULTS_DIR: ${{ env.OUT_BASE }}
+          FOUR_WAY_ARTIFACTS_DIR: ${{ github.workspace }}/four_way_artifacts
+        run: |
+          set -euo pipefail
+          bash run_all.sh --step exp1_four_way_matched_aggregate 2>&1 | tee /tmp/core15_four_way_aggregate.log
+          for f in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json exp1_four_way_matched_summary.json; do
+            test -s "${RESULTS_DIR}/four_way_matched/${f}" || { echo "::error::missing aggregate artifact: ${f}"; exit 1; }
+          done
+
+      - name: Upload merged Core-15 results
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: results-exp1_four_way_matched-merged
+          path: ${{ env.OUT_BASE }}/four_way_matched/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Commit and push validated aggregate
+        if: success()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TARGET="${OUT_BASE}/four_way_matched"
+          git add -f "${TARGET}/exp1_four_way_matched_results.json" "${TARGET}/exp1_four_way_matched_checkpoint.json" "${TARGET}/exp1_four_way_matched_manifest.json" "${TARGET}/exp1_four_way_matched_summary.json"
+          if git diff --cached --quiet; then
+            echo "Aggregate already committed."
+            exit 0
+          fi
+          git commit -m "ci: validated Core-15 four-way aggregate - run ${{ github.run_id }}"
+          git pull --rebase --autostash origin "${{ github.ref_name }}"
+          git push origin HEAD:"${{ github.ref_name }}"
 
   exp1_ablation_aggregate:
     name: "Aggregate - exp1_ablation (merge shards + LLM-CONTRIBUTION)"
@@ -3058,7 +3514,7 @@ jobs:
             psutil
 
       - name: Download shard artifacts
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4.3.6
         with:
           pattern: results-exp1_ablation-shard*
           path: ${{ github.workspace }}/ablation_artifacts
@@ -3070,7 +3526,7 @@ jobs:
         # replacement, never mixing arms from different runs) and fails with a clear list
         # if anything is still missing. A full run is left untouched.
         env:
-          RESULTS_DIR:            ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:            ${{ env.OUT_BASE }}
           ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
         run: |
           set -euo pipefail
@@ -3082,7 +3538,7 @@ jobs:
       - name: Merge shards and run analysis
         env:
           ANTHROPIC_API_KEY:     ${{ secrets.ANTHROPIC_API_KEY }}
-          RESULTS_DIR:           ${{ github.workspace }}/${{ env.OUT_BASE }}
+          RESULTS_DIR:           ${{ env.OUT_BASE }}
           ABLATION_ARTIFACTS_DIR: ${{ github.workspace }}/ablation_artifacts
           # strict merge (this run's shards only) unless this is a deliberate partial re-run
           ABLATION_ALLOW_MASTER_FILL: ${{ github.event.inputs.task_ids_override != '' && '1' || '' }}
@@ -3121,6 +3577,176 @@ jobs:
           done
           echo "::error::Failed to push merged exp1_ablation results after 5 attempts."
           exit 1
+
+  exp1_provenance_aggregate:
+    name: "Aggregate and gate exp1-provenance five-seed run"
+    needs: [plan, worker]
+    if: ${{ always() && needs.plan.outputs.exp_id == 'exp1-provenance' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download all seed-shard artifacts
+        id: download_seeds
+        if: always()
+        continue-on-error: true
+        uses: actions/download-artifact@v4.3.6
+        with:
+          pattern: results-exp1-provenance-shard*
+          path: provenance-shards
+          merge-multiple: true
+
+      - name: Validate complete five-seed experiment and write aggregate manifest
+        if: always()
+        env:
+          EXPECTED_COMMIT: ${{ github.sha }}
+          EXPECTED_RUN_ID: ${{ github.run_id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.run_attempt }}
+          WORKER_RESULT: ${{ needs.worker.result }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import glob, hashlib, json, os, sys
+          from pathlib import Path
+
+          root = Path("provenance-shards")
+          expected = [42, 99, 123, 777, 2024]
+          expected_domains = {"amm", "risk_var", "liquidity", "expected_shortfall", "liquidation", "risk", "lending", "staking", "trading", "derivatives"}
+          manifests = sorted(root.glob("exp1-provenance_seed*_manifest.json"))
+          errors = []
+          if len(manifests) != 5:
+              errors.append(f"expected 5 per-seed manifests, found {len(manifests)}")
+
+          by_seed = {}
+          common_commit = None
+          for path in manifests:
+              try:
+                  m = json.loads(path.read_text(encoding="utf-8"))
+              except Exception as exc:
+                  errors.append(f"{path.name}: invalid manifest: {exc}")
+                  continue
+              try:
+                  seed = int(m.get("seed"))
+              except (TypeError, ValueError):
+                  errors.append(f"{path.name}: missing or invalid seed value")
+                  continue
+              if seed not in expected:
+                  errors.append(f"{path.name}: unexpected seed {seed}")
+                  continue
+              if seed in by_seed:
+                  errors.append(f"duplicate manifest for seed {seed}")
+                  continue
+              by_seed[seed] = m
+              if m.get("experiment_id") != "exp1-provenance" or m.get("status") != "passed":
+                  errors.append(f"{path.name}: wrong experiment identity or status")
+              if m.get("workflow_run_id") != os.environ["EXPECTED_RUN_ID"]:
+                  errors.append(f"{path.name}: run ID mismatch")
+              if str(m.get("workflow_run_attempt")) != os.environ["EXPECTED_RUN_ATTEMPT"]:
+                  errors.append(f"{path.name}: run attempt mismatch")
+              if m.get("commit_sha") != os.environ["EXPECTED_COMMIT"]:
+                  errors.append(f"{path.name}: commit SHA mismatch")
+              if common_commit is None:
+                  common_commit = m.get("commit_sha")
+              elif m.get("commit_sha") != common_commit:
+                  errors.append(f"{path.name}: shards came from different commits")
+              if m.get("n_shards") != 5:
+                  errors.append(f"{path.name}: expected NSHARDS=5, got " + repr(m.get("n_shards")))
+              if m.get("expected_case_count") != 74 or m.get("observed_case_count") != 74:
+                  errors.append(f"{path.name}: incomplete 74-case shard")
+              expected_tasks = {f"{domain}_seed{seed}" for domain in expected_domains}
+              if set(m.get("assigned_domains", [])) != expected_domains or set(m.get("assigned_task_ids", [])) != expected_tasks:
+                  errors.append(f"{path.name}: shard did not receive the exact 10-domain task set for seed {seed}")
+              if m.get("shard_index") != expected.index(seed) or m.get("shard_id") != expected.index(seed) + 1:
+                  errors.append(f"{path.name}: seed {seed} is assigned to the wrong shard index/id")
+              flags = m.get("clean_run_flags", {})
+              required_flags = {"HYPATIAX_DISABLE_HARDCODED": "1", "HYPATIAX_DISABLE_PROMPT_HINTS": "1", "HYPATIAX_STRICT": "1", "HYPATIAX_R2_SIGN_FLIP": "0"}
+              if flags != required_flags:
+                  errors.append(f"{path.name}: clean-run flags do not match required policy: {flags}")
+              for field in ("script_sha256", "protocol_config_sha256", "repro_config_sha256"):
+                  if not m.get(field):
+                      errors.append(f"{path.name}: missing {field}")
+              if not m.get("runtime_package_versions"):
+                  errors.append(f"{path.name}: missing runtime package versions")
+              result = root / str(m.get("result_file", ""))
+              if not result.is_file():
+                  errors.append(f"{path.name}: missing result file {result.name}")
+                  continue
+              digest = hashlib.sha256(result.read_bytes()).hexdigest()
+              if digest != m.get("result_sha256"):
+                  errors.append(f"{path.name}: result SHA-256 mismatch")
+                  continue
+              try:
+                  data = json.loads(result.read_text(encoding="utf-8"))
+                  records = data if isinstance(data, list) else data.get("results", [])
+              except Exception as exc:
+                  errors.append(f"{result.name}: invalid result JSON: {exc}")
+                  continue
+              stamps = [r.get("seed") for r in records if isinstance(r, dict) and "seed" in r]
+              case_ids = [r.get("equation_id") for r in records if isinstance(r, dict)]
+              if len(records) != 74 or len(stamps) != 74 or any(str(x) != str(seed) for x in stamps):
+                  errors.append(f"{result.name}: records/count/seed stamps do not validate for seed {seed}")
+              if len(case_ids) != 74 or len(set(case_ids)) != 74:
+                  errors.append(f"{result.name}: expected 74 unique equation IDs, found {len(set(case_ids))}")
+
+          if sorted(int(s) for s in by_seed) != expected:
+              errors.append(f"expected seeds {expected}, found {sorted(by_seed)}")
+          if len({m.get("protocol_config_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different exp1-provenance protocol configuration hashes")
+          if len({m.get("repro_config_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different repro.yaml configuration hashes")
+          if len({m.get("script_sha256") for m in by_seed.values()}) > 1:
+              errors.append("shards used different benchmark script hashes")
+          if len({json.dumps(m.get("runtime_package_versions", {}), sort_keys=True) for m in by_seed.values()}) > 1:
+              errors.append("shards used different runtime package versions")
+          if len({m.get("python_version") for m in by_seed.values()}) > 1:
+              errors.append("shards used different Python versions")
+          total_records = sum(int(m.get("observed_case_count", 0)) for m in by_seed.values())
+          if total_records != 370:
+              errors.append(f"expected 370 total case records, found {total_records}")
+          if len({m.get("result_file") for m in by_seed.values()}) != len(by_seed):
+              errors.append("two seed shards claim the same result filename")
+          if os.environ.get("WORKER_RESULT") != "success":
+              errors.append(f"worker matrix result is {os.environ.get('WORKER_RESULT')!r}, not success")
+
+          aggregate = {
+              "experiment_id": "exp1-provenance",
+              "status": "passed" if not errors else "incomplete_or_failed",
+              "workflow_run_id": os.environ["EXPECTED_RUN_ID"],
+              "workflow_run_attempt": os.environ["EXPECTED_RUN_ATTEMPT"],
+              "commit_sha": os.environ["EXPECTED_COMMIT"],
+              "expected_seeds": expected,
+              "validated_seeds": sorted(int(s) for s in by_seed),
+              "expected_nshards": 5,
+              "expected_cases_per_seed": 74,
+              "expected_total_case_records": 370,
+              "validated_total_case_records": sum(int(m.get("observed_case_count", 0)) for m in by_seed.values()),
+              "protocol_config_sha256": next(iter({m.get("protocol_config_sha256") for m in by_seed.values()}), None),
+              "repro_config_sha256": next(iter({m.get("repro_config_sha256") for m in by_seed.values()}), None),
+              "validated_shard_count": len(by_seed),
+              "worker_matrix_result": os.environ.get("WORKER_RESULT"),
+              "errors": errors,
+              "shards": [by_seed[s] for s in sorted(by_seed)],
+          }
+          out = Path("exp1-provenance_aggregate_manifest.json")
+          out.write_text(json.dumps(aggregate, indent=2) + "\n", encoding="utf-8")
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              print("exp1-provenance aggregate gate FAILED; no complete five-seed result is declared.")
+              sys.exit(1)
+          print("PASS: exp1-provenance has all five seeds, each with 74/74 seed-stamped records.")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("## exp1-provenance aggregate gate\n\n")
+              summary.write("- Seeds: 42, 99, 123, 777, 2024\n- Shards: 5/5\n- Cases: 74 per seed (370 total)\n- Result: **PASS**\n")
+          PYEOF
+
+      - name: Upload aggregate provenance manifest
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: exp1-provenance-aggregate-run${{ github.run_id }}
+          path: exp1-provenance_aggregate_manifest.json
+          if-no-files-found: warn
+          retention-days: 90
 
   pca_run_exp2_feynman:
     name: "C5c-0 · Run exp2_feynman_pca (Feynman PCA 40/60)"
@@ -4258,6 +4884,7 @@ jobs:
       - name: Commit and push corrected baseline
         if: |
           success() &&
+          github.event.inputs.fresh_mode != 'true' &&
           github.event.inputs.dry_run != 'true'
         env:
           OUT_BASE: ${{ github.event.inputs.results_dir || 'hypatiax/data/results' }}

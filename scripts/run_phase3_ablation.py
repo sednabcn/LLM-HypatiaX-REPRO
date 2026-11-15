@@ -176,7 +176,7 @@ def _fake_engine(equation, seed, disabled, timeout_s):
             "train_data_sha256": hashlib.sha256(f"tr|{equation}|{seed}".encode()).hexdigest(),
             "far_data_sha256": hashlib.sha256(f"far|{equation}|{seed}".encode()).hexdigest()}
     if equation == "Michaelis-Menten" and "probe" not in disabled and seed == 99:
-        return {**base, "status": "failed", "r2_raw": float("-inf"), "r2": float("-inf"), "formula": None,
+        return {**base, "status": "failed", "r2_raw": None, "r2": None, "formula": None,
                 "error_stage": "no_calls", "r2_status": "failed:no_calls",
                 "candidate_r2_status": ["nonfinite_pred"] * 3}
     hit = equation != "Kinetic Energy" or "pysr_prior" not in disabled

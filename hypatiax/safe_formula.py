@@ -32,6 +32,8 @@ _FUNCTIONS = {
     "sinh": np.sinh, "cosh": np.cosh,
     "norm_cdf": lambda x: 0.5 * (1.0 + np.vectorize(math.erf)(np.clip(np.asarray(x, dtype=float), -37.0, 37.0) / np.sqrt(2.0))),
     "norm_pdf": lambda x: np.exp(-0.5 * np.asarray(x, dtype=float) ** 2) / np.sqrt(2.0 * np.pi),
+    "erf": lambda x: np.vectorize(math.erf)(np.asarray(x, dtype=float)),
+    "erfc": lambda x: np.vectorize(math.erfc)(np.asarray(x, dtype=float)),
     "moneyness": lambda S, K: np.log(np.where(np.asarray(K, dtype=float) > 0, np.asarray(S, dtype=float) / np.asarray(K, dtype=float), np.nan)),
 }
 

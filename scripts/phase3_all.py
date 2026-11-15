@@ -2,10 +2,10 @@
 """
 phase3_all.py - ONE command for Option 3 / Phase 3 (leave-one-gate-out ablation).
 
-    python scripts/phase3_all.py                 # preflight -> run -> close
-    python scripts/phase3_all.py --stage preflight   # only the checks (no API spend)
-    python scripts/phase3_all.py --stage run         # resume the runs
-    python scripts/phase3_all.py --stage close       # only the closure gate
+    python scripts/phase3_all.py --phase2-manifest fresh/phase2_closure.json --p-rows-glob 'fresh/pure_llm_seed*.jsonl'
+    python scripts/phase3_all.py --stage preflight --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage run --phase2-manifest ... --p-rows-glob ...
+    python scripts/phase3_all.py --stage close --phase2-manifest ... --p-rows-glob ...
 
 Put it in scripts/ next to phase3_engine_adapter.py, run_phase3_ablation.py, phase3_close.py.
 Run from the repo root. It needs no edits to those three files: it patches the adapter
@@ -13,21 +13,22 @@ IN MEMORY so rows carry the P-arm hash scheme, a real model_id and a real prompt
 
 PREFLIGHT (blocking unless marked warn) - everything that would otherwise invalidate hours of runs:
   P1  repo root, evaluator sha256 starts with 7d5395ed (the Phase 2 pin)
-  P2  engine gates exist (_LLM_ACCEPT_R2, _LLM_PRIOR_SEED); --apply-engine-patch adds them
+  P2  engine gates exist (_LLM_ACCEPT_R2, _LLM_PRIOR_SEED, _COMPLEXITY_ROUTING); --apply-engine-patch adds them
   P3  clean-run flags: HYPATIAX_DISABLE_PROMPT_HINTS=1, HYPATIAX_DISABLE_HARDCODED=1 are forced,
       HYPATIAX_LLM_MODEL is unset, an API key is present
   P4  git tree clean (or --allow-dirty, recorded as a caveat)
-  P5  P rows + Phase 2 manifest exist; equations come from the P rows
+  P5  explicit fresh P rows + Phase 2 manifest exist; historical p2/ and phase2_out/ defaults are forbidden
   P6  G1 dry check: regenerate train/far data for every (equation, seed) in the P rows with
       the P-arm hash scheme and require equality with the P rows' hashes. This is what
       decides whether G1 can pass; it costs seconds, not hours.
-RUN    leave-one-out for llm_acceptance and pysr_prior (the only gates wired in v50_2),
-       full config first per (seed, equation); resumable.
+RUN    leave-one-out for llm_acceptance, complexity_routing and pysr_prior (the three
+       gates wired in Core-15 HDS v50_2), full config first per (seed, equation).
 CLOSE  phase3_close.py with: P-arm G1 rows, Phase 2 manifest (required), pinned evaluator,
        and --omit reasons for the four gates that have no switch in the v50_2 path.
 
 Exit codes: 0 closed, 1 not closed / preflight failed, 2 bad usage.
 """
+import glob
 import os
 import sys
 
@@ -59,10 +60,9 @@ sys.path.insert(0, os.getcwd())
 EVAL_PREFIX = "7d5395ed"
 EVAL_PATH = "hypatiax/core/r2_canonical.py"
 ENGINE_PATH = "hypatiax/tools/symbolic/symbolic_engine.py"
-WIRED = ["llm_acceptance", "pysr_prior"]
+WIRED = ["llm_acceptance", "complexity_routing", "pysr_prior"]
 OMIT = {
     'probe': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
-    'complexity_routing': 'only complexity gate is `if False and ...` in symbolic_engine.py, off in the full config, so ablating it is identical by construction',
     'nn_augmentation': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
     'blend_weight': 'not part of the v50_2 / Core-15 path; this gate lives in the v3c DeFi pipeline (hypatiax_defi_benchmark_v3c.py), so it is untested here, not shown to have no effect',
 }
@@ -103,21 +103,30 @@ class Pre:
 
 def apply_engine_patch(path):
     s = Path(path).read_text(encoding="utf-8")
-    if "_LLM_ACCEPT_R2" in s and "_LLM_PRIOR_SEED" in s:
+    if all(name in s for name in ("_LLM_ACCEPT_R2", "_LLM_PRIOR_SEED", "_COMPLEXITY_ROUTING")):
         return "already patched"
-    a_old = "if best_hyp.r2_score and best_hyp.r2_score > 0.95:"
-    b_old = "if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:"
-    if s.count(a_old) != 1 or s.count(b_old) != 1:
-        raise RuntimeError(f"anchors not unique (accept x{s.count(a_old)}, prior x{s.count(b_old)}); patch by hand")
-    s = s.replace(a_old, "if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:")
-    s = s.replace(b_old, "if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:")
-    m = re.search(r"^class SymbolicEngineWithLLM\b[^\n]*:\n", s, re.M)
-    if not m:
-        raise RuntimeError("class SymbolicEngineWithLLM not found")
-    s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\n    _LLM_PRIOR_SEED = True\n" + s[m.end():]
+    if "_LLM_ACCEPT_R2" not in s or "_LLM_PRIOR_SEED" not in s:
+        a_old = "if best_hyp.r2_score and best_hyp.r2_score > 0.95:"
+        b_old = "if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:"
+        if s.count(a_old) != 1 or s.count(b_old) != 1:
+            raise RuntimeError(
+                f"anchors not unique (accept x{s.count(a_old)}, prior x{s.count(b_old)}); patch by hand"
+            )
+        s = s.replace(a_old, "if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:")
+        s = s.replace(b_old, "if (not self._LLM_PRIOR_SEED) or best_hyp.r2_score is None or best_hyp.r2_score < 0.5:")
+        m = re.search(r"^class SymbolicEngineWithLLM\b[^\n]*:\n", s, re.M)
+        if not m:
+            raise RuntimeError("class SymbolicEngineWithLLM not found")
+        s = s[:m.end()] + "    _LLM_ACCEPT_R2 = 0.95\n    _LLM_PRIOR_SEED = True\n" + s[m.end():]
+    if "_COMPLEXITY_ROUTING" not in s:
+        prior = re.search(r"^    _LLM_PRIOR_SEED\s*=.*$", s, re.M)
+        if prior:
+            pos = prior.end()
+            s = s[:pos] + "\n    _COMPLEXITY_ROUTING = True" + s[pos:]
+        else:
+            raise RuntimeError("cannot locate class-level _LLM_PRIOR_SEED for complexity gate")
     Path(path).write_text(s, encoding="utf-8")
     return "patched (commit it before the run, or the tree is dirty)"
-
 
 def force_clean_env():
     os.environ["HYPATIAX_DISABLE_PROMPT_HINTS"] = "1"
@@ -163,7 +172,7 @@ def preflight(a):
         except RuntimeError as e:
             p.add("P2 engine patch applied", False, str(e))
     txt = Path(ENGINE_PATH).read_text(encoding="utf-8")
-    p.add("P2 engine gates exist", "_LLM_ACCEPT_R2" in txt and "_LLM_PRIOR_SEED" in txt,
+    p.add("P2 engine gates exist", "_LLM_ACCEPT_R2" in txt and "_LLM_PRIOR_SEED" in txt and "_COMPLEXITY_ROUTING" in txt,
           "run with --apply-engine-patch if missing")
     force_clean_env()
     p.add("P3 clean-run flags forced", True, "PROMPT_HINTS=1, HARDCODED=1, LLM_MODEL unset (in this process)")
@@ -292,7 +301,7 @@ def selftest():
                  "        if best_hyp.r2_score and best_hyp.r2_score > 0.95:\n            pass\n"
                  "        if best_hyp.r2_score is None or best_hyp.r2_score < 0.5:\n            pass\n")
     print(apply_engine_patch(d)); assert apply_engine_patch(d) == "already patched"
-    s = d.read_text(); assert "self._LLM_ACCEPT_R2" in s and "not self._LLM_PRIOR_SEED" in s
+    s = d.read_text(); assert "self._LLM_ACCEPT_R2" in s and "not self._LLM_PRIOR_SEED" in s and "_COMPLEXITY_ROUTING" in s
     compile(s, "e", "exec")
     print("selftest OK")
 
@@ -305,8 +314,8 @@ def main(argv=None):
     ap.add_argument("--seeds", default="42,99,123")
     ap.add_argument("--timeout-s", type=float, default=3600.0)
     ap.add_argument("--model-id", default="claude-sonnet-4-6", help="from your smoke log; written to every row")
-    ap.add_argument("--p-rows-glob", default="p2/pure_llm_seed*.jsonl")
-    ap.add_argument("--phase2-manifest", default="phase2_out/phase2_closure.json")
+    ap.add_argument("--p-rows-glob", default=None, help="glob for fresh Pure-LLM rows from this rerun; historical p2/ defaults are forbidden")
+    ap.add_argument("--phase2-manifest", default=None, help="fresh Phase 2 closure manifest from this rerun; historical phase2_out/ defaults are forbidden")
     ap.add_argument("--apply-engine-patch", action="store_true")
     ap.add_argument("--allow-dirty", action="store_true")
     ap.add_argument("--retry-errors", action="store_true")
@@ -316,6 +325,21 @@ def main(argv=None):
     if a.selftest:
         selftest()
         return 0
+    if not a.phase2_manifest or not Path(a.phase2_manifest).is_file():
+        print("ERROR: provide an existing fresh --phase2-manifest; historical phase2_out defaults are forbidden.")
+        return 2
+    if not a.p_rows_glob or not glob.glob(a.p_rows_glob):
+        print("ERROR: provide --p-rows-glob matching fresh Pure-LLM rows; historical p2/ defaults are forbidden.")
+        return 2
+    repo_root = Path(__file__).resolve().parents[1]
+    manifest_path = Path(a.phase2_manifest).resolve()
+    rows_prefix = a.p_rows_glob.split("*", 1)[0].rstrip("/") or "."
+    rows_root = Path(rows_prefix).resolve()
+    historical_manifest_root = (repo_root / "phase2_out").resolve()
+    historical_rows_root = (repo_root / "p2").resolve()
+    if manifest_path.is_relative_to(historical_manifest_root) or rows_root.is_relative_to(historical_rows_root):
+        print("ERROR: historical phase2_out/ manifests and p2/ rows are forbidden for fresh Phase 3 runs.")
+        return 2
     a.seeds = [int(s) for s in a.seeds.split(",") if s.strip()]
 
     git = None

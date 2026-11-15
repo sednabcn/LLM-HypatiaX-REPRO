@@ -2,8 +2,6 @@
 and record llm provenance. Static + behavioural, no engine/API needed."""
 import ast, pathlib, re
 
-import pytest
-
 SRC = pathlib.Path(__file__).resolve().parents[1] / "benchmarks" / "exp1_ablation.py"
 
 
@@ -57,21 +55,32 @@ def test_extract_eval_is_decision_aware():
 
 
 def test_single_temperature_setting_is_wired():
-    """Audit C1: 0.25 is set once per entry point and read from LLM_TEMPERATURE."""
+    """Audit C1: model/temperature have one protocol source, exported by run_all."""
     root = SRC.parents[3]
-    workflow = root / ".github/workflows/ci_runner_repro.yml"
-    run_all = root / "run_all.sh"
-    repro_config = root / "config/repro.yaml"
-    if not all(path.is_file() for path in (workflow, run_all, repro_config)):
-        pytest.skip("reproduction workflow, run_all.sh, and config are not included in this source archive")
-    wf = workflow.read_text(encoding="utf-8", errors="replace")
-    assert 'LLM_TEMPERATURE:  "0.25"' in wf and 'LLM_MODEL:        "claude-sonnet-4-6"' in wf
-    sh = run_all.read_text(encoding="utf-8", errors="replace")
-    assert 'export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in sh
-    assert "--temperature 0.25" not in sh and sh.count("LLM_TEMPERATURE:-0.25") >= 3
-    assert re.search(r"^llm_temperature:\s*0\.25", repro_config.read_text(encoding="utf-8"), re.M)
-    for rel in ("hypatiax/tools/symbolic/symbolic_engine.py", "hypatiax/tools/symbolic/hybrid_system_v50_2.py"):
-        assert 'os.environ.get("LLM_TEMPERATURE"' in (root / rel).read_text(encoding="utf-8", errors="replace")
+    cfg = (root / "config/repro.yaml").read_text(encoding="utf-8", errors="replace")
+    assert re.search(r'^llm_model:\s*"claude-sonnet-4-6"\s*$', cfg, re.M)
+    assert re.search(r"^llm_temperature:\s*0\.25\s*$", cfg, re.M)
+
+    wf = (root / ".github/workflows/ci_runner_repro.yml").read_text(encoding="utf-8", errors="replace")
+    # The workflow must not shadow the protocol values; run_all owns the export.
+    assert not re.search(r"^\s*(?:LLM_TEMPERATURE|LLM_MODEL):", wf, re.M)
+
+    sh = (root / "run_all.sh").read_text(encoding="utf-8", errors="replace")
+    assert 'check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"' in sh
+    assert 'check_protocol_override LLM_MODEL "$_CFG_LLM_MODEL"' in sh
+    assert 'export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"' in sh
+    assert 'export LLM_MODEL="$_CFG_LLM_MODEL"' in sh
+    assert 'cfg.get("llm_temperature", 0.25)' in sh
+    assert 'cfg.get("llm_model", "claude-sonnet-4-6")' in sh
+    assert "--temperature 0.25" not in sh
+    # Runtime call sites must consume the same fixed protocol source;
+    # environment overrides are intentionally ignored by the shared wrapper.
+    wrapper = (root / "hypatiax/core/llm_call.py").read_text(encoding="utf-8", errors="replace")
+    assert "def configured_temperature() -> float:" in wrapper
+    assert "return 0.25" in wrapper
+    assert 'kwargs = {**kwargs, "temperature": req}' in wrapper
+    assert "client.messages.create(**kwargs)" in wrapper
+    assert "os.environ.get(\"LLM_TEMPERATURE\"" not in wrapper
 
 
 def test_no_silent_zero_r2_defaults():
@@ -82,3 +91,26 @@ def test_no_silent_zero_r2_defaults():
         assert not re.search(r'get\("r2",\s*0\.0\)', t), name
         assert "AUDIT L36" in t or 'evaluation has no r2' in t
     assert 'res.get("rmse", float("inf"))' not in _text()
+
+
+
+def test_rows_record_raw_extrapolation_and_real_llm_metadata():
+    t = _text()
+    assert 'from hypatiax.core.r2_canonical import r2_detail as _r2_detail' in t
+    assert '"extrap_r2_raw":' in t and '"extrap_r2_status":' in t
+    assert 'from hypatiax.core.llm_meta import llm_meta' in t
+    assert '"llm_time_s":            _llm_m["llm_time_s"]' in t
+    assert '"llm_expression":        _llm_m["llm_expression"]' in t
+    assert '"llm_confidence":        _llm_m["llm_confidence"]' in t
+
+
+def test_total_time_is_wall_clock_and_llm_time_is_a_subset():
+    t = _text()
+    assert '"total_time_s":          sr_time,  # discover() wall time includes LLM; llm_time_s is a subset.' in t
+
+
+def test_provenance_detects_untracked_source_and_config_files():
+    t = _text()
+    assert '"--untracked-files=all"' in t
+    assert '":(exclude)hypatiax/data/results"' in t
+    assert '"tracked_and_untracked_worktree_excl_data_results"' in t

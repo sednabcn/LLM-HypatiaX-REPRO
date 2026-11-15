@@ -40,6 +40,15 @@ import csv
 import importlib.util as _ilu
 import inspect
 import json
+try:
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
+except ImportError:  # run as a bare script, package not on sys.path
+    import pathlib as _pl, sys as _sys
+    for _up in _pl.Path(__file__).resolve().parents:
+        if (_up / "hypatiax" / "core" / "json_strict.py").is_file():
+            _sys.path.insert(0, str(_up))
+            break
+    from hypatiax.core.json_strict import strict_json as json  # strict JSON: non-finite floats -> null
 import os
 import hashlib
 import subprocess
@@ -125,8 +134,8 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
-# Canonical protocol temperature is 0.25; explicit overrides are recorded per result row.
-LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
+# Core-15 protocol: all LLM arms use a fixed sampling temperature.
+LLM_TEMPERATURE    = 0.25
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
@@ -542,6 +551,13 @@ def _safe_rmse(y_true, y_pred):
         return None  # audit-M3: was float('inf')
     return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
+def _safe_mae(y_true, y_pred):
+    y_true = np.asarray(y_true, dtype=float).reshape(-1)
+    y_pred = np.asarray(y_pred, dtype=float).reshape(-1)
+    if y_true.shape != y_pred.shape or not np.all(np.isfinite(y_pred)) or len(y_true) == 0:
+        return None
+    return float(np.mean(np.abs(y_true - y_pred)))
+
 # =============================================================================
 # §12 · PySR builder (pysr_only condition)
 # =============================================================================
@@ -565,7 +581,7 @@ def make_pysr(warm_start_expr=None, seed=42, niterations=None,
     kwargs = dict(
         niterations    = _niter,
         populations    = _pops,
-        population_size= 33,
+        population_size= 50,
         maxsize        = 15,
         parsimony      = 0.02,
         binary_operators = ["+", "-", "*", "/"],
@@ -664,7 +680,8 @@ def _reseed_for_task(task_seed):
 
 
 def run_condition(eq, condition, seed=42, niterations=None,
-                  timeout_secs=None, populations=None, wall_clock_limit=None):
+                  timeout_secs=None, populations=None, wall_clock_limit=None,
+                  dataset_override=None):
     """
     condition='pysr_only' : raw PySRRegressor (clean baseline).
     condition='hypatia'   : HybridDiscoverySystem v5.1 (FIX-A…FIX-POW all active).
@@ -687,13 +704,34 @@ def run_condition(eq, condition, seed=42, niterations=None,
         f"seed={eq_seed}  wall_clock={wall_clock_limit}s")
 
     # ── Data ─────────────────────────────────────────────────────────────────
-    X_train, X_test, y_train, y_test, _, _ = generate_data(
-        eq, N=200, noise_level=0.05, seed=eq_seed
-    )
-    extrap_sets = {}
-    for regime_name, _ in EXTRAP_REGIMES:
-        X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
-        extrap_sets[regime_name] = (X_e, y_e)
+    if dataset_override is None:
+        X_train, X_test, y_train, y_test, _, _ = generate_data(
+            eq, N=200, noise_level=0.05, seed=eq_seed
+        )
+        extrap_sets = {}
+        for regime_name, _ in EXTRAP_REGIMES:
+            X_e, y_e = generate_extrap_data(eq, regime=regime_name, N=100, seed=eq_seed)
+            extrap_sets[regime_name] = (X_e, y_e)
+    else:
+        # Core-295 supplies the exact pre-generated arrays whose hashes are recorded.
+        # Copies isolate an arm from accidental mutation; the default Core-15 path above
+        # remains byte-for-byte unchanged when no override is provided.
+        if not isinstance(dataset_override, dict) or set(dataset_override) != {"train", "extrapolation"}:
+            raise ValueError("dataset_override must contain exactly train and extrapolation")
+        train_data = dataset_override["train"]
+        if not isinstance(train_data, (tuple, list)) or len(train_data) != 6:
+            raise ValueError("dataset_override.train must contain the six generate_data arrays")
+        train_data = tuple(np.array(value, copy=True) for value in train_data)
+        X_train, X_test, y_train, y_test, _, _ = train_data
+        extrap_data = dataset_override["extrapolation"]
+        if not isinstance(extrap_data, dict) or set(extrap_data) != {name for name, _ in EXTRAP_REGIMES}:
+            raise ValueError("dataset_override.extrapolation must cover the configured regimes exactly")
+        extrap_sets = {
+            name: tuple(np.array(value, copy=True) for value in arrays)
+            for name, arrays in extrap_data.items()
+        }
+        if any(len(arrays) != 2 for arrays in extrap_sets.values()):
+            raise ValueError("each extrapolation regime must contain exactly X and y arrays")
 
     # ── Variable sanitisation ─────────────────────────────────────────────────
     sanitizer = VariableNameSanitizer()
@@ -739,6 +777,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # must not repeat identically.
         _reseed_for_task(eq_seed)
 
+        # HybridDiscoverySystem derives each PySR retry seed from this
+        # environment variable (base seed + attempt). Bind it to the same
+        # equation-specific seed used for the shared data and PySR-only arm.
+        _prior_engine_seed = os.environ.get("HYPATIAX_ENGINE_SEED")
+        os.environ["HYPATIAX_ENGINE_SEED"] = str(eq_seed)
         t0 = time.time()
         try:
             with _Timeout(wall_clock_limit):
@@ -767,6 +810,11 @@ def run_condition(eq, condition, seed=42, niterations=None,
             print(f"  [hypatia] ❌ ERROR: {e}")
             traceback.print_exc()
             return _build_error_result(condition, str(e), sr_time)
+        finally:
+            if _prior_engine_seed is None:
+                os.environ.pop("HYPATIAX_ENGINE_SEED", None)
+            else:
+                os.environ["HYPATIAX_ENGINE_SEED"] = _prior_engine_seed
 
         # FIX-B: resolve key aliases from v5.1 discover() result
         best_expr_raw = sanitizer.restore(res.get("formula", "N/A"))
@@ -784,7 +832,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
         # with discover()'s thresholds and never inverted a log-scaled y).
         # The formula is in *safe* variable names, so use res["formula"], not
         # the sanitizer-restored best_expr_raw.
-        extrap_r2, extrap_rmse = {}, {}
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
+        extrap_r2, extrap_rmse, extrap_mae = {}, {}, {}
         _x_log_flags = res.get("x_log_flags") or [False] * len(safe_var_names)
         _y_log       = bool(res.get("y_log", False))
         _predict     = None
@@ -815,15 +865,31 @@ def run_condition(eq, condition, seed=42, niterations=None,
             if _predict is None:
                 extrap_r2[regime_name]   = None
                 extrap_rmse[regime_name] = None
+                extrap_mae[regime_name] = None
                 continue
             try:
                 y_pred = np.asarray(_predict(X_e), dtype=float)
                 extrap_r2[regime_name]   = _safe_r2(y_e, y_pred)
                 extrap_rmse[regime_name] = _safe_rmse(y_e, y_pred)
+                extrap_mae[regime_name] = _safe_mae(y_e, y_pred)
+                extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred)
             except Exception as ee:
                 dbg(f"extrap eval failed ({regime_name}): {ee}")
                 extrap_r2[regime_name]   = None
                 extrap_rmse[regime_name] = None
+                extrap_mae[regime_name] = None
+
+        # Outer test rows were generated before any fitting and are never used
+        # for fitting, routing, model selection, or threshold selection.
+        test_r2 = test_rmse = test_mae = None
+        if _predict is not None:
+            try:
+                _test_pred = np.asarray(_predict(X_test), dtype=float).reshape(-1)
+                test_r2 = _safe_r2(y_test, _test_pred)
+                test_rmse = _safe_rmse(y_test, _test_pred)
+                test_mae = _safe_mae(y_test, _test_pred)
+            except Exception as _test_exc:
+                dbg(f"outer test evaluation failed: {_test_exc}")
 
         def _f(v):
             if v is None: return "N/A"
@@ -837,6 +903,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             f"far={_f(extrap_r2.get('far'))})  {sr_time:.1f}s"
             f"  scale_log={scale_log}  llm={res.get('llm_mode','none')}"
         )
+        from hypatiax.core.llm_meta import llm_meta
+        _llm_m = llm_meta(res)   # real LLM time/expression/confidence from the engine
         return {
             "condition":             condition,
             "success":               res.get("success", False),
@@ -844,25 +912,42 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "excluded_from_timing":  False,
             "train_r2":              train_r2,
             "train_rmse":            train_rmse,
+            "test_r2":               test_r2,
+            "test_rmse":             test_rmse,
+            "test_mae":              test_mae,
+            "test_scope":            "untouched_outer_test",
             "extrap_r2_near":        extrap_r2.get("near"),
             "extrap_r2_medium":      extrap_r2.get("medium"),
             "extrap_r2_far":         extrap_r2.get("far"),
+            "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+            "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
             "extrap_rmse_near":      extrap_rmse.get("near"),
             "extrap_rmse_medium":    extrap_rmse.get("medium"),
             "extrap_rmse_far":       extrap_rmse.get("far"),
+            "extrap_mae_near":        extrap_mae.get("near"),
+            "extrap_mae_medium":      extrap_mae.get("medium"),
+            "extrap_mae_far":         extrap_mae.get("far"),
             "sr_time_s":             sr_time,
-            "llm_time_s":            0.0,
-            "total_time_s":          sr_time,
+            "llm_time_s":            _llm_m["llm_time_s"],
+            "total_time_s":          sr_time,  # discover() wall time includes LLM; llm_time_s is a subset.
             "best_expression":       best_expr_raw,
             "complexity":            complexity,
-            "llm_expression":        None,
-            "llm_confidence":        None,
+            "llm_expression":        _llm_m["llm_expression"],
+            "llm_confidence":        _llm_m["llm_confidence"],
             # v5.4 provenance extras
             "engine_version":        HybridDiscoverySystem.VERSION,
             "scale_log":             scale_log,
             "rmse_original_units":   train_rmse,
             "llm_mode_used":         res.get("llm_mode", "none"),
-            "llm_called":            bool(res.get("llm_called", False)),   # B2
+            "structural_risk_flag":  bool(res.get("structural_risk_flag", False)),
+            "structural_risk_tokens": list(res.get("structural_risk_tokens", [])),
+            "complexity_routing_enabled": bool(res.get("complexity_routing_enabled", True)),
+            "routing_reason":        res.get("routing_reason"),
+            "llm_attempted":         bool(res.get("llm_attempted", False)),
+            "llm_called":            bool(res.get("llm_called", False)),   # verified live response
+            "llm_proposal_generated": bool(res.get("llm_proposal_generated", False)),
+            "llm_response_replayed": bool(res.get("llm_response_replayed", False)),
+            "llm_attempt_info": list(res.get("llm_attempt_info") or []),
             "bypass_kind":           res.get("bypass_kind", "none"),       # B2
             # AUDIT L52: provenance the gate (01_provenance_gate.py) needs. Conservative:
             # "live" only when the LLM was called and the engine reported no bypass.
@@ -872,6 +957,8 @@ def run_condition(eq, condition, seed=42, niterations=None,
             "llm_enabled":           bool(_use_llm),
             "llm_model":             MODEL_STRING,
             "llm_temperature":       LLM_TEMPERATURE,
+            "llm_temperature_requested": res.get("llm_temperature_requested"),
+            "llm_temperature_sent":      res.get("llm_temperature_sent"),
             "wall_clock_budget_s":   wall_clock_limit,        # AUDIT C1: unequal arms are disclosed per row
             "pysr_attempts_allowed": _HYPATIA_MAX_RETRIES,
             "validation_score":      res.get("validation_score"),
@@ -903,16 +990,25 @@ def run_condition(eq, condition, seed=42, niterations=None,
         print(f"  [pysr_only] ❌ ERROR: {e}")
         return _build_error_result("pysr_only", str(e), sr_time)
 
+    test_r2 = test_rmse = test_mae = None
     try:
         y_pred_train = model.predict(X_train)
         train_r2     = _safe_r2(y_train, y_pred_train)
         train_rmse   = _safe_rmse(y_train, y_pred_train)
+        _test_pred   = np.asarray(model.predict(X_test), dtype=float).reshape(-1)
+        test_r2      = _safe_r2(y_test, _test_pred)
+        test_rmse    = _safe_rmse(y_test, _test_pred)
+        test_mae     = _safe_mae(y_test, _test_pred)
 
-        extrap_r2, extrap_rmse = {}, {}
+        from hypatiax.core.r2_canonical import r2_detail as _r2_detail
+        extrap_r2_raw, extrap_r2_status = {}, {}
+        extrap_r2, extrap_rmse, extrap_mae = {}, {}, {}
         for regime_name, (X_e, y_e) in extrap_sets.items():
             y_pred_e                  = model.predict(X_e)
             extrap_r2[regime_name]    = _safe_r2(y_e, y_pred_e)
             extrap_rmse[regime_name]  = _safe_rmse(y_e, y_pred_e)
+            extrap_mae[regime_name]   = _safe_mae(y_e, y_pred_e)
+            extrap_r2_raw[regime_name], extrap_r2_status[regime_name] = _r2_detail(y_e, y_pred_e)
 
         best_expr_raw = str(model.sympy())
         best_expr     = sanitizer.restore(best_expr_raw)
@@ -925,7 +1021,9 @@ def run_condition(eq, condition, seed=42, niterations=None,
         traceback.print_exc()
         train_r2 = train_rmse = None
         extrap_r2   = {r: None for r, _ in EXTRAP_REGIMES}
+        extrap_r2_raw, extrap_r2_status = {}, {}
         extrap_rmse = {r: None for r, _ in EXTRAP_REGIMES}
+        extrap_mae = {r: None for r, _ in EXTRAP_REGIMES}
         best_expr   = "evaluation_error"
         complexity  = None
 
@@ -944,12 +1042,21 @@ def run_condition(eq, condition, seed=42, niterations=None,
         "excluded_from_timing":  False,
         "train_r2":              train_r2,
         "train_rmse":            train_rmse,
+        "test_r2":               test_r2,
+        "test_rmse":             test_rmse,
+        "test_mae":              test_mae,
+        "test_scope":            "untouched_outer_test",
         "extrap_r2_near":        extrap_r2.get("near"),
         "extrap_r2_medium":      extrap_r2.get("medium"),
         "extrap_r2_far":         extrap_r2.get("far"),
+        "extrap_r2_raw":         {r: extrap_r2_raw.get(r) for r in ("near", "medium", "far")},
+        "extrap_r2_status":      {r: extrap_r2_status.get(r) for r in ("near", "medium", "far")},
         "extrap_rmse_near":      extrap_rmse.get("near"),
         "extrap_rmse_medium":    extrap_rmse.get("medium"),
         "extrap_rmse_far":       extrap_rmse.get("far"),
+        "extrap_mae_near":        extrap_mae.get("near"),
+        "extrap_mae_medium":      extrap_mae.get("medium"),
+        "extrap_mae_far":         extrap_mae.get("far"),
         "sr_time_s":             sr_time,
         "llm_time_s":            0.0,
         "total_time_s":          total_time,
@@ -1823,6 +1930,7 @@ def write_provenance(all_results: dict) -> None:
     _script_hash = hashlib.sha256(_script_file.read_bytes()).hexdigest()
     _source_revision = None
     _git_dirty = None
+    _git_dirty_files = None
     _script_tracked = False
     _git_dirty_scope = "unavailable"
     try:
@@ -1834,16 +1942,21 @@ def write_provenance(all_results: dict) -> None:
             ["git", "rev-parse", "HEAD"], cwd=_git_root,
             check=True, capture_output=True, text=True
         ).stdout.strip()
-        _git_dirty = bool(subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=no"],
+        # Result files are outputs the run itself rewrites; only code/config
+        # changes make a run non-reproducible from source_revision.
+        _status_out = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all",
+             "--", ".", ":(exclude)hypatiax/data/results"],
             cwd=_git_root, check=True, capture_output=True, text=True
-        ).stdout.strip())
+        ).stdout.strip()
+        _git_dirty = bool(_status_out)
+        _git_dirty_files = _status_out.splitlines()[:20]
         _script_rel = _script_file.relative_to(_git_root).as_posix()
         _script_tracked = subprocess.run(
             ["git", "ls-files", "--error-unmatch", _script_rel],
             cwd=_git_root, capture_output=True, text=True
         ).returncode == 0
-        _git_dirty_scope = "tracked_worktree_only"
+        _git_dirty_scope = "tracked_and_untracked_worktree_excl_data_results"
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
     _source_meta = {
@@ -1853,6 +1966,7 @@ def write_provenance(all_results: dict) -> None:
         "benchmark_script_tracked": _script_tracked,
         "git_dirty": _git_dirty,
         "git_dirty_scope": _git_dirty_scope,
+        "git_dirty_files": _git_dirty_files,
     }
     provenance = {
         "family":                "ablation_exp1",

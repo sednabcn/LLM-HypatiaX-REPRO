@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Fresh rerun stage scope is enforced by ci_runner/run_fresh_experiments.sh.
 
 set -euo pipefail
 
@@ -13,17 +14,16 @@ CORE_DIR="${CORE_DIR:-${REPO_ROOT}/hypatiax/core}"
 ANALYSIS_DIR="${ANALYSIS_DIR:-${REPO_ROOT}/hypatiax/analysis}"
 SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 
-export PYSR_GENERATIONS=10000
+# env_check runs in a child bash process and reads these paths directly.
+# Export them so it cannot silently resolve repository-relative paths as "/...".
+export REPO_ROOT EXPERIMENTS_DIR GENERATION_DIR CORE_DIR ANALYSIS_DIR SCRIPTS_DIR
+
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
 export PYSR_PARETO_PRESSURE=0.001
 export PYSR_SEED="${PYSR_SEED:-42}"
 export PYSR_POPULATIONS="${PYSR_POPULATIONS:-30}"
-
-# Canonical live-LLM defaults; explicit overrides are recorded in result provenance.
-export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
-export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
 
 export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 
@@ -55,7 +55,11 @@ else
   export HYPATIAX_DISABLE_PROMPT_HINTS=1
 fi
 # Swallowed exceptions raise instead of logging (see fix_swallow.py).
-export HYPATIAX_STRICT="${HYPATIAX_STRICT:-1}"
+if [[ "${HYPATIAX_STRICT:-1}" != "1" ]]; then
+  echo "::error::HYPATIAX_STRICT must be 1; refusing a non-strict benchmark run." >&2
+  exit 2
+fi
+export HYPATIAX_STRICT=1
 
 # R2 sign-flip scoring is legacy-only. Allowed solely in a deliberate legacy run
 # (HYPATIAX_ALLOW_LEGACY=1); otherwise any truthy value aborts and the flag is forced to 0.
@@ -65,8 +69,8 @@ case "${HYPATIAX_R2_SIGN_FLIP:-0},${HYPATIAX_ALLOW_LEGACY:-0}" in
   *) echo "ABORT: HYPATIAX_R2_SIGN_FLIP=${HYPATIAX_R2_SIGN_FLIP} needs HYPATIAX_ALLOW_LEGACY=1" >&2; exit 1 ;;
 esac
 
-# Set CLEAR_CHECKPOINT=1 to delete exp2_feynman per-domain checkpoints before
-# running, so --resume cannot skip tasks recorded by a stale (hardcoded) run.
+# Set CLEAR_CHECKPOINT=1 to archive exp1_ablation and exp2_feynman checkpoints
+# before a deliberate rerun; old files are preserved under checkpoint_backups/.
 export CLEAR_CHECKPOINT="${CLEAR_CHECKPOINT:-}"
 
 export METHOD_TIMEOUT="${METHOD_TIMEOUT:-900}"
@@ -80,10 +84,173 @@ export FEYNMAN_NOISELESS_THRESHOLD=0.999999
 
 export PYTHON_JULIACALL_HANDLE_SIGNALS=yes
 
+# Optional method filtering is smoke-only; official Protocol-30 runs must keep
+# all six methods so their aggregate contract remains unchanged.
+if [[ -n "${PROTOCOL30_METHODS_OVERRIDE:-}" ]]; then
+  if [[ -z "${PROTOCOL30_SMOKE_DIR:-}" ]]; then
+    echo "::error::PROTOCOL30_METHODS_OVERRIDE is allowed only for Protocol-30 smoke runs." >&2
+    exit 2
+  fi
+  read -r -a _P30_METHODS_ARRAY <<< "${PROTOCOL30_METHODS_OVERRIDE}"
+  if [[ ${#_P30_METHODS_ARRAY[@]} -lt 1 ]]; then
+    echo "::error::PROTOCOL30_METHODS_OVERRIDE must contain method IDs 1-6." >&2
+    exit 2
+  fi
+  for _method_id in "${_P30_METHODS_ARRAY[@]}"; do
+    if [[ ! "${_method_id}" =~ ^[1-6]$ ]]; then
+      echo "::error::invalid Protocol-30 method ID: ${_method_id} (expected 1-6)." >&2
+      exit 2
+    fi
+  done
+  _P30_METHOD_UNIQUE=$(printf '%s\n' "${_P30_METHODS_ARRAY[@]}" | sort -n -u | wc -l)
+  if [[ "${_P30_METHOD_UNIQUE}" -ne "${#_P30_METHODS_ARRAY[@]}" ]]; then
+    echo "::error::duplicate Protocol-30 method IDs." >&2
+    exit 2
+  fi
+  export PROTOCOL30_METHODS_ARGS="${PROTOCOL30_METHODS_OVERRIDE}"
+else
+  export PROTOCOL30_METHODS_ARGS="1 2 3 4 5 6"
+fi
+
 export JULIA_NUM_THREADS="${JULIA_NUM_THREADS:-4}"
 export JULIA_EXCLUSIVE="${JULIA_EXCLUSIVE:-0}"
 
 export REPRO_CFG="${REPRO_CFG:-${REPO_ROOT}/config/repro.yaml}"
+
+# The protocol file is the single source of truth for LLM and PySR runtime settings.
+# Conflicting caller overrides fail closed instead of silently creating mixed protocols.
+if [[ -f "${REPRO_CFG}" ]]; then
+  mapfile -t _RUN_PROTOCOL_VALUES < <(python3 - "${REPRO_CFG}" <<'PY'
+import sys, yaml
+with open(sys.argv[1], encoding="utf-8") as stream:
+    cfg = yaml.safe_load(stream) or {}
+pysr = cfg.get("pysr") or {}
+seeds = cfg.get("seeds") or {}
+timeouts = cfg.get("timeouts") or {}
+ci = cfg.get("ci_env") or {}
+values = [
+    cfg.get("llm_temperature", 0.25),
+    cfg.get("llm_model", "claude-sonnet-4-6"),
+    pysr.get("niterations", 1000),
+    pysr.get("populations", 30),
+    pysr.get("population_size", 33),
+    seeds.get("pysr_seed", 42),
+    timeouts.get("method_seconds", 900),
+    timeouts.get("pysr_attempt_seconds", 1100),
+    timeouts.get("fit_wall_timeout", 1200),
+    timeouts.get("fit_grace_secs", 120),
+    timeouts.get("feynman_pysr_seconds", 1100),
+    ci.get("FEYNMAN_SAMPLES", 200),
+    ci.get("JOB_DEADLINE", 19800),
+    ci.get("JULIA_NUM_THREADS", 4),
+    ci.get("JULIA_EXCLUSIVE", 0),
+    ci.get("PYTHON_JULIACALL_HANDLE_SIGNALS", "yes"),
+    ci.get("LLM_METHOD_TIMEOUT", 120),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_NOLLM_ARM", ci.get("HYPATIAX_NOLLM_ARM", 1)),
+    (cfg.get("fresh_run_controls") or {}).get("HYPATIAX_HOLDOUT", ""),
+    (cfg.get("fresh_run_controls") or {}).get("SPARSE_SEED", (cfg.get("ci_env_set_by_workflow") or {}).get("SPARSE_SEED", "fallback")),
+]
+if "PYSR_GENERATIONS" in ci and int(ci["PYSR_GENERATIONS"]) != int(values[2]):
+    raise SystemExit("ci_env.PYSR_GENERATIONS must equal pysr.niterations")
+if "PYSR_POPULATION" in ci and int(ci["PYSR_POPULATION"]) != int(values[4]):
+    raise SystemExit("ci_env.PYSR_POPULATION must equal pysr.population_size")
+if "PYSR_POPULATIONS" in ci and int(ci["PYSR_POPULATIONS"]) != int(values[3]):
+    raise SystemExit("ci_env.PYSR_POPULATIONS must equal pysr.populations")
+for value in values:
+    print(value)
+PY
+  )
+  if [[ "${#_RUN_PROTOCOL_VALUES[@]}" -lt 20 ]]; then
+    echo "ERROR: could not read runtime settings from ${REPRO_CFG}; PyYAML must be installed" >&2
+    exit 1
+  fi
+else
+  echo "ERROR: runtime protocol file not found: ${REPRO_CFG}" >&2
+  exit 1
+fi
+
+_CFG_LLM_TEMPERATURE="${_RUN_PROTOCOL_VALUES[0]}"
+_CFG_LLM_MODEL="${_RUN_PROTOCOL_VALUES[1]}"
+_CFG_N_ITERATIONS="${_RUN_PROTOCOL_VALUES[2]}"
+_CFG_POPULATIONS="${_RUN_PROTOCOL_VALUES[3]}"
+_CFG_POPULATION_SIZE="${_RUN_PROTOCOL_VALUES[4]}"
+_CFG_PYSR_SEED="${_RUN_PROTOCOL_VALUES[5]}"
+_CFG_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[6]}"
+_CFG_PYSR_TIMEOUT="${_RUN_PROTOCOL_VALUES[7]}"
+_CFG_FIT_WALL_TIMEOUT="${_RUN_PROTOCOL_VALUES[8]}"
+_CFG_FIT_GRACE_SECS="${_RUN_PROTOCOL_VALUES[9]}"
+_CFG_FEYNMAN_TIMEOUT="${_RUN_PROTOCOL_VALUES[10]}"
+_CFG_FEYNMAN_SAMPLES="${_RUN_PROTOCOL_VALUES[11]}"
+_CFG_JOB_DEADLINE="${_RUN_PROTOCOL_VALUES[12]}"
+_CFG_JULIA_THREADS="${_RUN_PROTOCOL_VALUES[13]}"
+_CFG_JULIA_EXCLUSIVE="${_RUN_PROTOCOL_VALUES[14]}"
+_CFG_JULIACALL_SIGNALS="${_RUN_PROTOCOL_VALUES[15]}"
+_CFG_LLM_METHOD_TIMEOUT="${_RUN_PROTOCOL_VALUES[16]}"
+_CFG_NOLLM_ARM="${_RUN_PROTOCOL_VALUES[17]}"
+_CFG_HOLDOUT="${_RUN_PROTOCOL_VALUES[18]}"
+_CFG_SPARSE_SEED="${_RUN_PROTOCOL_VALUES[19]}"
+
+check_protocol_override() {
+  local name="$1" expected="$2" current="${!1:-}"
+  if [[ -n "$current" && "$current" != "$expected" ]]; then
+    echo "ABORT: ${name}=${current} conflicts with ${REPRO_CFG} value ${expected}" >&2
+    exit 1
+  fi
+}
+check_protocol_override LLM_TEMPERATURE "$_CFG_LLM_TEMPERATURE"
+check_protocol_override LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override HYPATIAX_LLM_MODEL "$_CFG_LLM_MODEL"
+check_protocol_override N_ITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_NITERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override PYSR_GENERATIONS "$_CFG_N_ITERATIONS"
+check_protocol_override POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATIONS "$_CFG_POPULATIONS"
+check_protocol_override PYSR_POPULATION "$_CFG_POPULATION_SIZE"
+check_protocol_override PYSR_POPULATION_SIZE "$_CFG_POPULATION_SIZE"
+check_protocol_override PYSR_SEED "$_CFG_PYSR_SEED"
+check_protocol_override HYPATIAX_ENGINE_SEED "$_CFG_PYSR_SEED"
+check_protocol_override METHOD_TIMEOUT "$_CFG_METHOD_TIMEOUT"
+check_protocol_override PYSR_TIMEOUT "$_CFG_PYSR_TIMEOUT"
+check_protocol_override PYSR_FIT_WALL_TIMEOUT "$_CFG_FIT_WALL_TIMEOUT"
+check_protocol_override PYSR_FIT_GRACE_SECS "$_CFG_FIT_GRACE_SECS"
+check_protocol_override FEYNMAN_TIMEOUT "$_CFG_FEYNMAN_TIMEOUT"
+check_protocol_override FEYNMAN_SAMPLES "$_CFG_FEYNMAN_SAMPLES"
+check_protocol_override JOB_DEADLINE "$_CFG_JOB_DEADLINE"
+check_protocol_override JULIA_NUM_THREADS "$_CFG_JULIA_THREADS"
+check_protocol_override JULIA_EXCLUSIVE "$_CFG_JULIA_EXCLUSIVE"
+check_protocol_override PYTHON_JULIACALL_HANDLE_SIGNALS "$_CFG_JULIACALL_SIGNALS"
+check_protocol_override LLM_METHOD_TIMEOUT "$_CFG_LLM_METHOD_TIMEOUT"
+check_protocol_override HYPATIAX_NOLLM_ARM "$_CFG_NOLLM_ARM"
+if [[ -n "$_CFG_HOLDOUT" ]]; then check_protocol_override HYPATIAX_HOLDOUT "$_CFG_HOLDOUT"; fi
+check_protocol_override SPARSE_SEED "$_CFG_SPARSE_SEED"
+
+export LLM_TEMPERATURE="$_CFG_LLM_TEMPERATURE"
+export LLM_MODEL="$_CFG_LLM_MODEL"
+export HYPATIAX_LLM_MODEL="$_CFG_LLM_MODEL"
+export N_ITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_NITERATIONS="$_CFG_N_ITERATIONS"
+export PYSR_GENERATIONS="$_CFG_N_ITERATIONS"
+export POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATIONS="$_CFG_POPULATIONS"
+export PYSR_POPULATION="$_CFG_POPULATION_SIZE"
+export PYSR_POPULATION_SIZE="$_CFG_POPULATION_SIZE"
+export PYSR_SEED="$_CFG_PYSR_SEED"
+export HYPATIAX_ENGINE_SEED="$_CFG_PYSR_SEED"
+export METHOD_TIMEOUT="$_CFG_METHOD_TIMEOUT"
+export PYSR_TIMEOUT="$_CFG_PYSR_TIMEOUT"
+export PYSR_FIT_WALL_TIMEOUT="$_CFG_FIT_WALL_TIMEOUT"
+export PYSR_FIT_GRACE_SECS="$_CFG_FIT_GRACE_SECS"
+export FEYNMAN_TIMEOUT="$_CFG_FEYNMAN_TIMEOUT"
+export FEYNMAN_SAMPLES="$_CFG_FEYNMAN_SAMPLES"
+export JOB_DEADLINE="$_CFG_JOB_DEADLINE"
+export JULIA_NUM_THREADS="$_CFG_JULIA_THREADS"
+export JULIA_EXCLUSIVE="$_CFG_JULIA_EXCLUSIVE"
+export PYTHON_JULIACALL_HANDLE_SIGNALS="$_CFG_JULIACALL_SIGNALS"
+export LLM_METHOD_TIMEOUT="$_CFG_LLM_METHOD_TIMEOUT"
+export HYPATIAX_NOLLM_ARM="$_CFG_NOLLM_ARM"
+if [[ -n "$_CFG_HOLDOUT" ]]; then export HYPATIAX_HOLDOUT="$_CFG_HOLDOUT"; fi
+export SPARSE_SEED="$_CFG_SPARSE_SEED"
+unset _RUN_PROTOCOL_VALUES _CFG_LLM_TEMPERATURE _CFG_LLM_MODEL _CFG_N_ITERATIONS _CFG_POPULATIONS _CFG_POPULATION_SIZE _CFG_PYSR_SEED _CFG_METHOD_TIMEOUT _CFG_PYSR_TIMEOUT _CFG_FIT_WALL_TIMEOUT _CFG_FIT_GRACE_SECS _CFG_FEYNMAN_TIMEOUT _CFG_FEYNMAN_SAMPLES _CFG_JOB_DEADLINE _CFG_JULIA_THREADS _CFG_JULIA_EXCLUSIVE _CFG_JULIACALL_SIGNALS _CFG_LLM_METHOD_TIMEOUT _CFG_NOLLM_ARM _CFG_HOLDOUT _CFG_SPARSE_SEED
 
 export JOB_DEADLINE="${JOB_DEADLINE:-19800}"
 
@@ -95,7 +262,9 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate"
+RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -124,6 +293,10 @@ die()  { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 run() {
   local step="$1" desc="$2"; shift 2
   [[ -n "$ONLY_STEP" && "$ONLY_STEP" != "$step" ]] && return 0
+  if [[ -z "$ONLY_STEP" && "$RUN_DEFERRED" != "1" && " $_DEFERRED_STEPS " == *" $step "* ]]; then
+    log "Skipping deferred step '$step' in full runs; set RUN_DEFERRED=1 or invoke --step '$step' explicitly."
+    return 0
+  fi
   if [[ -n "$FROM_STEP" ]]; then
     local skip=true
     for s in $_STEP_ORDER; do
@@ -185,6 +358,19 @@ SDKCHECK
     [[ "${HYPATIAX_ALLOW_LEGACY:-0}" == "1" ]] || exit 1
   fi
   echo "REPRO_CFG: ${REPRO_CFG}"
+  echo "LLM model: ${HYPATIAX_LLM_MODEL}"
+  echo "LLM temperature: ${LLM_TEMPERATURE}"
+  echo "HYPATIAX_NOLLM_ARM: ${HYPATIAX_NOLLM_ARM}"
+  echo "HYPATIAX_HOLDOUT: ${HYPATIAX_HOLDOUT}"
+  echo "SPARSE_SEED: ${SPARSE_SEED}"
+  echo "LLM_MODEL: ${LLM_MODEL}"
+  echo "N_ITERATIONS: ${N_ITERATIONS}"
+  echo "POPULATIONS: ${POPULATIONS}"
+  echo "PYSR_GENERATIONS: ${PYSR_GENERATIONS}"
+  echo "PYSR_POPULATION: ${PYSR_POPULATION}"
+  echo "PYSR_TIMEOUT: ${PYSR_TIMEOUT}"
+  echo "PYSR_FIT_WALL_TIMEOUT: ${PYSR_FIT_WALL_TIMEOUT}"
+  echo "PYSR_FIT_GRACE_SECS: ${PYSR_FIT_GRACE_SECS}"
   if [ -f "${REPRO_CFG}" ]; then
     echo "repro.yaml found -- printing key values:"
     python3 -c "
@@ -221,7 +407,7 @@ for k, v in (cfg or {}).items(): print(f\"  {k}: {v}\")
       echo "       Place extrap_r2_far.py in ${EXPERIMENTS_DIR}/ before running exp2_feynman_extrap."
     fi
   fi
-  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,exp2_multi,noise-sweep,sample-complexity},noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
+  mkdir -p '"${RESULTS_DIR}"'/{comparison_results/{feynman-tests/{exp2,exp2_pca_4060,exp2_extrap,noise-sweep,sample-complexity},all-domains-random-80-20,all-domains-pca-4060,protocol30/{random-80-20,pca-40-60},noise-noiseless/{noiseless/defi,defi,15,15_pca},extrapolation},extrapolation/multi_seed,hybrid_llm_nn/{all_domains,defi},hybrid_pysr/{all_domains,defi},llm_guided/{all_domains,defi},standalone_llm_nn,figures,tables}
   mkdir -p '"${RESULTS_DIR}"'/extrapolation
   echo "Directory structure: ok"
 '
@@ -254,7 +440,7 @@ run gt_leak_guard "Regression guard: ground-truth leak in hybrid LLM prompts" ba
     _FAIL=1
   fi
 
-  _T3=\$(find \"${REPO_ROOT}\" -maxdepth 4 -name 'hybrid_system_nn_defi_domain.py' 2>/dev/null | head -1)
+  _T3='${REPO_ROOT}/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py'
   if [[ -n \"\${_T3}\" && -f \"\${_T3}\" ]]; then
     if grep -n 'prompt = self\._specialized_prompt' \"\${_T3}\" | grep -v '^[0-9]*:# ' ; then
       echo '::error::_specialized_prompt call site reintroduced in hybrid_system_nn_defi_domain.py.'
@@ -284,12 +470,20 @@ run exp1 "Core extrapolation benchmark (Tab 9, 10, 15 - Fig 9, 10)" bash -c "
     --output-dir \"\${_DEFI_TARGET}\" \
     2>&1 | tee '${RESULTS_DIR}/exp1_run.log'
 
-  python3 -c 'import seaborn' 2>/dev/null || \
-    python3 -m pip install --quiet seaborn || \
-    { echo 'ERROR: seaborn install failed — statistical_analysis.py will crash'; exit 1; }
-  cd '${ANALYSIS_DIR}'
-  python3 statistical_analysis.py \
-    2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log' \
+  # The historical analysis directory/script is not present in this checkout.
+  # Keep it optional: the benchmark's raw JSON and built-in statistical report
+  # are the primary outputs, and this absent post-processing script must not
+  # turn a completed experiment stage into a path-related failure.
+  _ANALYSIS_SCRIPT="\${ANALYSIS_DIR}/statistical_analysis.py"
+  if [[ -f "\${_ANALYSIS_SCRIPT}" ]]; then
+    python3 -c 'import seaborn' 2>/dev/null || \
+      python3 -m pip install --quiet seaborn || \
+      { echo 'ERROR: seaborn install failed — optional statistical analysis cannot run'; exit 1; }
+    python3 "\${_ANALYSIS_SCRIPT}" \
+      2>&1 | tee -a '${RESULTS_DIR}/exp1_run.log'
+  else
+    echo 'INFO: optional statistical_analysis.py not found; using benchmark JSON/report.'
+  fi
 
 
   echo '=== exp1 verification ==='
@@ -309,7 +503,7 @@ run exp1b "DeFi seed sweep + portfolio variance (Tab 11-13 - Fig 11-13)" bash -c
   cd '${REPO_ROOT}'
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
     _SHARD_SEEDS='42,99,123,777,2024'
@@ -481,7 +675,7 @@ run portfolio "Portfolio Variance seed sweep + tables (Tab 5 + Fig G) -- portfol
   # shard. Run Strategy A sweep-only for THAT seed and fail loudly if no file appears. Tables and
   # paper numbers need all seeds at once, so they are built afterwards by generate_tables.py.
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -n \"\${_SHARD_SEEDS}\" ]]; then
     _PV_TAG=\$(echo \"\${_SHARD_SEEDS}\" | tr ',' '_')
     _PV_FILE=\"\${_PVA_DIR}/portfolio_variance_defi_seed_sweep_seed\${_PV_TAG}.json\"
@@ -550,6 +744,18 @@ _exp1_ablation_step() {
   local logf="${abl_dir}/exp1_ablation_run${sfx}.log"
   mkdir -p "${abl_dir}"
 
+  if [[ "${CLEAR_CHECKPOINT:-0}" == "1" ]]; then
+    local backup_dir="${abl_dir}/checkpoint_backups/$(date -u +%Y%m%dT%H%M%SZ)"
+    mkdir -p "${backup_dir}"
+    shopt -s nullglob
+    local _f
+    for _f in "${abl_dir}"/exp1_ablation_checkpoint*.json; do
+      mv "${_f}" "${backup_dir}"/
+    done
+    shopt -u nullglob
+    log "exp1_ablation: checkpoint files moved to ${backup_dir}"
+  fi
+
   export HYPATIAX_NOLLM_ARM="${HYPATIAX_NOLLM_ARM:-1}"
   export HYPATIAX_STRICT=1
 
@@ -598,6 +804,7 @@ _exp1_ablation_step() {
   echo '=== end exp1_ablation ==='
 }
 
+# PYPROV: exp1_ablation checkpoint policy is complete.
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
 
 # ---------------------------------------------------------------------------
@@ -740,6 +947,46 @@ PYMERGE
 
 run exp1_ablation_aggregate "Merge exp1_ablation shard checkpoints + LLM-CONTRIBUTION analysis" _exp1_ablation_aggregate
 
+# Primary matched Core-15 comparison. The legacy five-system stage remains
+# manually selectable for historical/exploratory continuity, but is excluded
+# from the fresh rerun campaign in ci_runner/run_fresh_experiments.sh.
+run exp1_four_way_matched "Matched Core-15 Hybrid / LLM-only / PySR-only / NN-only comparison" bash -c "
+  set -euo pipefail
+  cd '${REPO_ROOT}'
+  if [[ -n "\${TASK_IDS:-}" ]]; then
+    _FOUR_DIR='${RESULTS_DIR}/four_way_matched/shard${SHARD:-0}'
+  else
+    _FOUR_DIR='${RESULTS_DIR}/four_way_matched'
+  fi
+  mkdir -p \"\${_FOUR_DIR}\"
+  PYTHONPATH='${REPO_ROOT}'\"${PYTHONPATH:+:${PYTHONPATH}}\" \\
+  RESULTS_DIR='${RESULTS_DIR}' \\
+  FOUR_WAY_OUTPUT_DIR="\${_FOUR_DIR}" \\
+  SHARD_INDEX='${SHARD:-0}' \\
+  TASK_IDS="\${TASK_IDS:-}" \\
+  NO_LLM_CACHE=1 \\
+  PYSR_SEED='${PYSR_SEED}' \\
+  PYSR_POPULATIONS='${PYSR_POPULATIONS}' \\
+  PYSR_TIMEOUT='${PYSR_TIMEOUT}' \\
+  METHOD_TIMEOUT='${METHOD_TIMEOUT}' \\
+  JOB_DEADLINE='${JOB_DEADLINE}' \\
+    python3 '${EXPERIMENTS_DIR}/exp1_four_way_matched.py' 2>&1 | tee \"\${_FOUR_DIR}/exp1_four_way_matched_run.log\"
+  for artifact in exp1_four_way_matched_results.json exp1_four_way_matched_checkpoint.json exp1_four_way_matched_manifest.json exp1_four_way_matched_summary.json; do
+    [[ -s \"\${_FOUR_DIR}/\${artifact}\" ]] || { echo \"::error::missing four-way artifact: \${artifact}\"; exit 1; }
+  done
+  echo "=== Core-15 shard \${SHARD:-0} artifacts verified ==="
+"
+
+run exp1_four_way_matched_aggregate "Strict aggregation of the five isolated Core-15 four-way shards" bash -c "
+  set -euo pipefail
+  cd '${REPO_ROOT}'
+  _FOUR_ARTIFACTS="\${FOUR_WAY_ARTIFACTS_DIR:-}"
+  [[ -n "\${_FOUR_ARTIFACTS}" && -d "\${_FOUR_ARTIFACTS}" ]] || { echo '::error::FOUR_WAY_ARTIFACTS_DIR must point to downloaded worker artifacts'; exit 1; }
+  python3 '${REPO_ROOT}/scripts/ci/aggregate_exp1_four_way_matched.py' \
+    --artifacts-dir "\${_FOUR_ARTIFACTS}" \
+    --output-dir '${RESULTS_DIR}/four_way_matched' \
+    --repo-root '${REPO_ROOT}'
+"
 run exp1_five "Five-System Comparison: extrapolation error vs. interpolation R² (Tab 1, §10.1)" bash -c "
   set -euo pipefail
   cd '${REPO_ROOT}'
@@ -1024,7 +1271,7 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
   mkdir -p \"\${_PCA15_DIR}\"
 
   _SHARD_TASKS='${SHARD_IDS:-${TASK_IDS:-}}'
-  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | grep -oE '^portfolio_seed[0-9]+$' | sed 's/^portfolio_seed//' | paste -sd, -)
+  _SHARD_SEEDS=\$(echo \"\${_SHARD_TASKS}\" | tr ' ' '\n' | sed -nE 's/^portfolio_seed([0-9]+)$/\\1/p' | sed 's/^portfolio_seed//' | paste -sd, -)
   if [[ -z \"\${_SHARD_SEEDS}\" ]]; then
     echo '  [exp1b_pca] No portfolio_seedNN task IDs found in SHARD_IDS/TASK_IDS — running full default seed list (local/standalone run).'
     _SHARD_SEEDS='42,99,123,777,2024'
@@ -1066,7 +1313,8 @@ run exp1b_pca "FIX-C3 DeFi seed sweep with PCA 40/60 split (mirrors exp1b with P
 
   _SHARD=\${SHARD_INDEX:-0}
   _SEED_TAG=\$(echo \"\${_SHARD_SEEDS:-42}\" | tr ',' '_')
-  for _search_root in '${EXPERIMENTS_DIR}' '${RESULTS_DIR}'; do
+  # Only collect from this run's results tree; never move source-tree artifacts.
+  for _search_root in '${RESULTS_DIR}'; do
     find \"\${_search_root}\" -maxdepth 1 \\
     \\( \\
         -name 'defi_pca_v4_*.json' \\
@@ -1332,7 +1580,7 @@ PYEOF
   python3 hybrid_system_llm_nn_all_domains.py \
     --samples '${FEYNMAN_SAMPLES}' \
     2>&1 | tee '${RESULTS_DIR}'/hybrid_all_domains_run.log
-  _HYBRID_OUT_SRC='hypatiax/data/results'
+  _HYBRID_OUT_SRC='${RESULTS_DIR}'
   if [[ -d \"\${_HYBRID_OUT_SRC}\" ]]; then
     find \"\${_HYBRID_OUT_SRC}\" -maxdepth 1 -name 'hybrid_llm_nn_all_domains_*.json' \
       -exec mv -f {} '${RESULTS_DIR}/hybrid_llm_nn/all_domains/' \;
@@ -1377,25 +1625,22 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
     --format png pdf \
     2>&1 | tee '${RESULTS_DIR}'/instability_run.log
 
-  _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) 2>/dev/null | wc -l)
-  find '${RESULTS_DIR}/figures' -maxdepth 1 \( -name '*.png' -o -name '*.pdf' \) -delete 2>/dev/null || true
+  _NFIG=\$(find '${RESULTS_DIR}/figures' -maxdepth 1 \
+    \( -name 'fig_paper_*.pdf' -o -name 'fig_paper_*.png' \
+       -o -name 'hypatiax_instability_*.pdf' -o -name 'hypatiax_instability_*.png' \) \
+    2>/dev/null | wc -l)
+  find '${RESULTS_DIR}/figures' -maxdepth 1 \
+    \( -name 'fig_paper_*.pdf' -o -name 'fig_paper_*.png' \
+       -o -name 'hypatiax_instability_*.pdf' -o -name 'hypatiax_instability_*.png' \) \
+    -delete 2>/dev/null || true
   echo \"[instability] removed \${_NFIG} figure byproduct(s) — figure generation disabled\"
 
   _CANON_CSV='${RESULTS_DIR}/figures/instability_analysis.csv'
   if [[ ! -s \"\${_CANON_CSV}\" ]]; then
     echo \"::error::[instability] \${_CANON_CSV} missing or empty after run_instability_suite.py exited 0.\"
-    _STRAY_CSV=\$(find '${REPO_ROOT}' -maxdepth 6 -name 'instability_analysis.csv' \
-                   -not -path \"\${_CANON_CSV}\" 2>/dev/null | xargs -r ls -t 2>/dev/null | head -1 || true)
-    if [[ -n \"\${_STRAY_CSV}\" && -s \"\${_STRAY_CSV}\" ]]; then
-      echo \"[instability] Found stray CSV at \${_STRAY_CSV} -- copying into canonical location.\"
-      mkdir -p '${RESULTS_DIR}/figures'
-      cp \"\${_STRAY_CSV}\" \"\${_CANON_CSV}\"
-    else
-      echo '[instability] No stray instability_analysis.csv found anywhere under REPO_ROOT either.'
-      echo '              run_instability_suite.py likely failed internally before writing the CSV'
-      exit 1
-      echo '              (e.g. \"Loaded 0 cases\") -- check instability_run.log above for the real cause.'
-    fi
+    echo '[instability] run_instability_suite.py exited without producing the required canonical CSV.'
+    echo '              Refusing to substitute a possibly stale CSV from elsewhere in the repository.'
+    exit 1
   fi
 "
 
@@ -1406,7 +1651,11 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
     echo '=== exp2_feynman: domain='\${DOMAIN_ID}' ==='
     if [ -n '${CLEAR_CHECKPOINT}' ]; then
-      find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print -delete
+      _BACKUP_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2/checkpoint_backups/'\$(date -u +%Y%m%dT%H%M%SZ)
+      mkdir -p \"\${_BACKUP_DIR}\"
+      while IFS= read -r -d '' _f; do
+        mv \"\${_f}\" \"\${_BACKUP_DIR}/\"
+      done < <(find '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' -maxdepth 1 -type f -name \"feynman_exp2_checkpoint_\${DOMAIN_ID}*\" -print0)
     fi
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2044,10 +2293,182 @@ PYEOF
 )
 
 
-run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c "
+run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
-  mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi'
-  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  _P30_TASKS=()
+  if [[ -n \"\${TASK_IDS:-}\" ]]; then
+    for _tid in \${TASK_IDS}; do
+      [[ \"\${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \${_tid}\"; exit 1; }
+      _n=\${BASH_REMATCH[1]}
+      _n=\$((10#\${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"\${_n}\")
+    done
+    [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
+      _P30_RANDOM_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
+    else
+      _P30_RANDOM_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/random-80-20/shard\${SHARD:-0}\"
+    fi
+  else
+    _P30_RANDOM_DIR='${RESULTS_DIR}/comparison_results/protocol30/random-80-20'
+  fi
+  mkdir -p \"\${_P30_RANDOM_DIR}\"
+  _P30_RUN_START_NS=\$(date +%s%N)
+  _P30_EQ_ARGS=()
+  [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
+  FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+  METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+  PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+  PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+  JOB_DEADLINE=${JOB_DEADLINE} \
+  HYPATIAX_SHARD_ID=\${SHARD:-} \
+  SHARD_IDS='' \
+    python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_v2.py' \
+      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
+      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
+      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
+      --use-transcendental-compositions --noiseless --threshold 0.999999 \
+      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --no-checkpoint \
+      --output-dir \"\${_P30_RANDOM_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"\${_P30_RANDOM_DIR}/protocol30_random_8020_run.log\"
+  # Capture the v2 runner's flat exports (written outside --output-dir) with this shard.
+  for _flat in "\${RESULTS_DIR}/comparison_results/"*"_shrd\${SHARD:-0}.json"; do
+    if [[ -f "\${_flat}" ]]; then cp -f "\${_flat}" "\${_P30_RANDOM_DIR}/"; fi
+  done
+  if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
+    SHARD_IDS='' python3 - \"\${_P30_RANDOM_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
+import json, sys, os
+from pathlib import Path
+from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+from hypatiax.core.llm_call import configured_temperature
+out, shard, started_ns, *indices = sys.argv[1:]
+run_started_ns = int(started_ns)
+effective_temperature = configured_temperature()
+if effective_temperature != 0.25:
+    raise SystemExit(f\"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}\")
+protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
+rows = []
+for domain in protocol.get_all_domains():
+    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
+        rows.append({\"description\": desc, \"domain\": domain, \"equation_name\": meta[\"equation_name\"]})
+mapping = [{\"index\": int(i), **rows[int(i)-1]} for i in indices]
+result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().st_mtime_ns >= run_started_ns]
+result_files.sort(key=lambda p: p.stat().st_mtime_ns)
+if not result_files:
+    raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
+_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+manifest = {\"experiment\":\"random_8020_smoke\" if _is_smoke else \"random_8020\",
+            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
+            \"expected_equation_count\":len(indices) if _is_smoke else 30,
+            \"assigned_equation_indices\":[int(i) for i in indices],
+            \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
+            \"effective_llm_temperature\":effective_temperature,
+            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
+Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
+PYMAN
+  fi
+"
+
+run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, PCA 40/60, six methods" bash -c "
+  set -euo pipefail
+  cd '${REPO_ROOT}'
+  _P30_TASKS=()
+  if [[ -n \"\${TASK_IDS:-}\" ]]; then
+    for _tid in \${TASK_IDS}; do
+      [[ \"\${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \${_tid}\"; exit 1; }
+      _n=\${BASH_REMATCH[1]}; _n=\$((10#\${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"\${_n}\")
+    done
+    [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
+      _P30_PCA_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
+    else
+      _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
+    fi
+  else
+    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
+  fi
+  mkdir -p \"\${_P30_PCA_DIR}\"
+  _P30_RUN_START_NS=\$(date +%s%N)
+  _P30_EQ_ARGS=()
+  [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
+  FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+  METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+  PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+  PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+  JOB_DEADLINE=${JOB_DEADLINE} \
+  SHARD_IDS='' \
+    python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
+      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
+      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
+      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
+      --use-transcendental-compositions --noiseless --threshold 0.999999 \
+      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --force-fresh --no-checkpoint \
+      --output-dir \"\${_P30_PCA_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
+  if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
+    SHARD_IDS='' python3 - \"\${_P30_PCA_DIR}\" \"\${SHARD:-0}\" \"\${_P30_RUN_START_NS}\" \"\${_P30_TASKS[@]}\" <<'PYMAN'
+import json, sys, os
+from pathlib import Path
+from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+from hypatiax.core.llm_call import configured_temperature
+out, shard, started_ns, *indices = sys.argv[1:]
+run_started_ns = int(started_ns)
+effective_temperature = configured_temperature()
+if effective_temperature != 0.25:
+    raise SystemExit(f\"Protocol-30 requires effective LLM temperature 0.25, got {effective_temperature}\")
+protocol = Protocol30(num_samples=200, seed=42, noiseless=True)
+rows = []
+for domain in protocol.get_all_domains():
+    for desc, _x, _y, _vars, meta in protocol.load_test_data(domain, num_samples=200):
+        rows.append({\"description\": desc, \"domain\": domain, \"equation_name\": meta[\"equation_name\"]})
+mapping = [{\"index\": int(i), **rows[int(i)-1]} for i in indices]
+result_files = [p for p in Path(out).glob(\"protocol_core_*.json\") if p.stat().st_mtime_ns >= run_started_ns]
+result_files.sort(key=lambda p: p.stat().st_mtime_ns)
+if not result_files:
+    raise SystemExit(\"no detailed Protocol-30 result JSON created during this shard run\")
+_is_smoke = bool(os.environ.get(\"PROTOCOL30_SMOKE_DIR\"))
+manifest = {\"experiment\":\"pca_4060_smoke\" if _is_smoke else \"pca_4060\",
+            \"shard_index\":int(shard),\"n_shards\":1 if _is_smoke else 5,
+            \"expected_equation_count\":len(indices) if _is_smoke else 30,
+            \"assigned_equation_indices\":[int(i) for i in indices],
+            \"equation_identities\":mapping,\"result_file\":result_files[-1].name,
+            \"effective_llm_temperature\":effective_temperature,
+            \"smoke_test\":_is_smoke,\"official_aggregate_eligible\":not _is_smoke}
+Path(out, \"protocol30_shard_manifest.json\").write_text(json.dumps(manifest,indent=2)+\"\n\")
+PYMAN
+  fi
+"
+
+run exp2_protocol30_random_8020_aggregate "Validate and aggregate manuscript Protocol-30 random 80/20 shards" bash -c "
+  set -euo pipefail
+  : \"\${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
+    --artifacts-dir \"\${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --output-dir '${RESULTS_DIR}/comparison_results/protocol30/random-80-20' \
+    --variant random_8020
+"
+
+run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protocol-30 PCA 40/60 shards" bash -c "
+  set -euo pipefail
+  : \"\${PROTOCOL30_ARTIFACTS_DIR:?PROTOCOL30_ARTIFACTS_DIR is required}\"
+  python3 '${REPO_ROOT}/scripts/ci/protocol30_shard_aggregate.py' \
+    --artifacts-dir \"\${PROTOCOL30_ARTIFACTS_DIR}\" \
+    --output-dir '${RESULTS_DIR}/comparison_results/protocol30/pca-40-60' \
+    --variant pca_4060
+"
+run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
+  cd '${REPO_ROOT}'
+  mkdir -p '${RESULTS_DIR}/comparison_results/all-domains-random-80-20'
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2067,18 +2488,80 @@ run exp2 "Combined five-system comparison -- all Methods (Tab 19 full)" bash -c 
         --noiseless \
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"exp2_checkpoint_\${DOMAIN_ID}\" \
-        --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi' \
+        --output-dir '${RESULTS_DIR}/comparison_results/all-domains-random-80-20' \
         --resume \
-        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_multi/exp2_run.log' \
+        2>&1 | tee -a '${RESULTS_DIR}/comparison_results/all-domains-random-80-20/exp2_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
 "
 
 
+run exp2_all_domains_pca_4060 "All-domains 30-equation registry proxy -- PCA-directed 40/60 (not manuscript Protocol-30)" bash -c "
+  cd '${REPO_ROOT}'
+  _ALLDOM_PCA_DIR='${RESULTS_DIR}/comparison_results/all-domains-pca-4060'
+  mkdir -p "\${_ALLDOM_PCA_DIR}"
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
+  for DOMAIN_ID in \${EXP2_DOMAINS}; do
+    echo '=== Protocol-30 PCA 40/60: domain='\${DOMAIN_ID}' ==='
+    FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+    METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+    PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+    PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+    JOB_DEADLINE=${JOB_DEADLINE} \
+      python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
+        --protocol all_domains \
+        --domain "\${DOMAIN_ID}" \
+        --samples ${FEYNMAN_SAMPLES} \
+        --pysr-timeout ${FEYNMAN_TIMEOUT} \
+        --method-timeout ${METHOD_TIMEOUT} \
+        --populations ${PYSR_POPULATIONS} \
+        --parsimony 0.01 \
+        --use-transcendental-compositions \
+        --noiseless \
+        --threshold 0.999999 \
+        --checkpoint-name "all_domains_pca4060_checkpoint_\${DOMAIN_ID}" \
+        --output-dir "\${_ALLDOM_PCA_DIR}" \
+        --force-fresh \
+        2>&1 | tee -a "\${_ALLDOM_PCA_DIR}/all_domains_pca4060_run.log" \
+      || { echo '::error::all-domains PCA proxy domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
+  done
+  python3 - "\${_ALLDOM_PCA_DIR}" "\${EXP2_DOMAINS}" <<'PYEOF'
+import json, sys
+from pathlib import Path
+out = Path(sys.argv[1])
+registry_domains = len(sys.argv[2].split())
+files = sorted(out.glob('protocol_core_noiseless_pca_*.json'))
+rows = 0
+for path in files:
+    try:
+        data = json.loads(path.read_text())
+        rows += len(data) if isinstance(data, list) else len(data.get('results', [])) if isinstance(data, dict) else 0
+    except Exception:
+        pass
+summary = {
+    'campaign': 'all_domains_registry_proxy',
+    'protocol': 'pca_40_60',
+    'registry': 'hypatiax.protocols.experiment_protocol_all_30.ExperimentProtocolAll',
+    'registry_domains': registry_domains,
+    'expected_equations': 30,
+    'result_files': [p.name for p in files],
+    'record_count': rows,
+    'status': ('incomplete' if not files else ('outputs_present_with_domain_mismatch' if registry_domains != 11 else 'outputs_present')),
+    'note': 'This 10-domain registry differs from the manuscript-defined custom 11-domain Protocol-30 equation set; do not use these results as Protocol-30.'
+}
+(out / 'all_domains_pca4060_summary.json').write_text(json.dumps(summary, indent=2))
+print('[All-domains PCA proxy] files=' + str(len(files)) + ' records=' + str(rows) + ' summary=' + str(out / 'all_domains_pca4060_summary.json'))
+if not files:
+    raise SystemExit('all-domains PCA proxy produced no result files')
+PYEOF
+"
+ 
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
-  EXP2_DOMAINS='mechanics thermodynamics electromagnetism fluid_dynamics optics quantum chemistry biology mathematics economics'
+  EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
+  [[ -n "\${EXP2_DOMAINS}" ]] || { echo '::error::all-domains proxy registry returned no domains'; exit 1; }
   for DOMAIN_ID in \${EXP2_DOMAINS}; do
     echo '=== exp2_five: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
@@ -2115,7 +2598,7 @@ run exp3 "Nguyen-12 benchmark -- SEED=42 (tab:nguyen12 - SS10.8)" bash -c '
   RESULTS_DIR='${RESULTS_DIR}' \
     python3 '"${EXPERIMENTS_DIR}"'/exp3_nguyen12_consolidated.py \
     --seed 42 \
-    --temperature 0.25 \
+    --temperature "$LLM_TEMPERATURE" \
     2>&1 | tee '"${RESULTS_DIR}"'/exp3_run.log \
   || _EXP3_RC=$?
   if [ "$_EXP3_RC" -ne 0 ]; then
@@ -2196,7 +2679,7 @@ run exp3b "Nguyen-12 stability seeds 99/123/777/2024 (tab:nguyen12 extended)" ba
     RESULTS_DIR='${RESULTS_DIR}' \
       python3 '${EXPERIMENTS_DIR}/exp3_nguyen12_consolidated.py' \
       --seed \$seed \
-      --temperature 0.25 \
+      --temperature ${LLM_TEMPERATURE} \
       2>&1 | tee -a '${RESULTS_DIR}'/exp3b_run.log \
       || { echo \"ERROR: exp3b seed=\$seed python failed\"; _FAIL_SEEDS=\"\${_FAIL_SEEDS} \$seed\"; }
   done
@@ -2696,7 +3179,10 @@ EXPERIMENTS = {
     "instability":            RESULTS / "figures",
     "exp2_feynman":           RESULTS / "comparison_results/feynman-tests/exp2",
     "exp2_feynman_pca_4060":  RESULTS / "comparison_results/feynman-tests/exp2_pca_4060",
-    "exp2":                   RESULTS / "comparison_results/feynman-tests/exp2_multi",
+    "exp2":                   RESULTS / "comparison_results/all-domains-random-80-20",
+    "exp2_all_domains_pca_4060": RESULTS / "comparison_results/all-domains-pca-4060",
+    "exp2_protocol30_random_8020": RESULTS / "comparison_results/protocol30/random-80-20",
+    "exp2_protocol30_pca_4060": RESULTS / "comparison_results/protocol30/pca-40-60",
     "exp3":                   RESULTS / "extrapolation",
     "exp3b":                  RESULTS / "extrapolation/multi_seed",
     "suppA":                  RESULTS / "hybrid_pysr/defi",

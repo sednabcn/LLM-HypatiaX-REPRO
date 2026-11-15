@@ -16,10 +16,10 @@ What changed in v2.0
 ─────────────────────
 Fix 0   Reserve Ratio / Spot Price: independent log-uniform sampling
 Fix 0b  IL Breakeven flagged extrapolation_intractable
-Fix 1   Extrapolation-probe routing (NN edge-degradation → LLM)
-Fix 2   Formula-complexity routing (transcendental tokens → LLM)
+Fix 1   Training-only NN edge-degradation probe (Delta = R2_train - R2_edge)
+Fix 2   Exact structural-risk detection; flagged functions force ensemble
 Fix 3   LLM predictions as NN input feature (residual learning)
-Fix 4   Distance-gated blend weights (shift toward LLM out-of-range)
+Fix 4   Training-fitted KDE OOD scores and per-query manuscript blend weights
 Fix 5   UNIFIED formula evaluator — single code path for ALL LLM evaluation
 Fix 5b  Routing-override guard — only trust LLM override when
         LLM formula actually fitted training data (R² > 0)
@@ -36,12 +36,12 @@ Issue 3 fix  Hybrid timing now includes full NN re-run cost on fallback
              NN result.  nn_rerun_time_s is tracked separately and added
              to the wall-clock time recorded for the hybrid method.
 
-Issue 4 fix  Hybrid selector bug fixed.  When LLM achieves train_r2 ≥ 0.95
-             the decision is locked to "llm" before the routing-override
-             block runs, so overrides cannot silently flip it to NN.
-             Additionally, the LLM→NN fallback path only activates on a
-             genuine evaluation failure (NaN/exception), not on a valid
-             but negative test_r2.
+Routing policy update  The old high-fit lock and post-hoc overrides are removed.
+             Pure LLM now requires trust-gate pass, no structural-risk flag,
+             train R2 >= 0.95, and a valid training-only degradation probe
+             with Delta <= the pre-calibrated tau. Structural risk takes
+             precedence and forces ensemble. Missing tau fails closed to
+             ensemble; held-out labels never select routes or weights.
 
 Issue 5 fix  NaN-safe wrappers for log, sqrt, norm.cdf, norm.pdf, and
              norm_pdf/norm_cdf name aliases added to _EXEC_GLOBALS.
@@ -146,6 +146,11 @@ from sklearn.preprocessing import StandardScaler
 # ── project root ──────────────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT))
+
+from hypatiax.core.routing import (
+    kde_ood_probability, route_decision_from_diagnostics, structural_risk_tokens,
+    training_edge_split_indices,
+)
 
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
@@ -352,49 +357,28 @@ _NN_MAX_TIME_S = 120  # Wall-clock cap per NN training run (Issue 2 fix).
                       # PySR timeout_in_seconds used in Experiments 1–3.
 
 
-def _augment_features(
-    X: np.ndarray,
-    feature_schema: dict | None = None,
-    return_schema: bool = False,
-):
+def _augment_features(X: np.ndarray) -> np.ndarray:
     """
-    Physics-informed feature augmentation with a reusable train-derived schema.
-
-    When no schema is supplied, transformation eligibility is determined from
-    X (normally the training partition). Pass that schema when augmenting the
-    test partition so both matrices have identical columns without inspecting
-    test values to choose transformations.
+    Physics-informed feature augmentation for NN extrapolation (v3c2-fix4).
+    Adds log, sqrt, and ratio features — common in DeFi formula families
+    (exponential compounding, AMM sqrt, rational collateral ratios).
+    This gives the MLP structural hooks beyond raw linear inputs.
     """
-    X = np.asarray(X, dtype=float)
-    if feature_schema is None:
-        log_columns = [bool(np.all(X[:, i] > 0)) for i in range(X.shape[1])]
-        sqrt_columns = [bool(np.all(X[:, i] >= 0)) for i in range(X.shape[1])]
-        feature_schema = {
-            "n_input_features": int(X.shape[1]),
-            "log_columns": log_columns,
-            "sqrt_columns": sqrt_columns,
-            "pairwise_ratios": bool(X.shape[1] == 2),
-        }
-    elif int(feature_schema["n_input_features"]) != X.shape[1]:
-        raise ValueError(
-            "Feature schema input dimension mismatch: "
-            f"expected {feature_schema['n_input_features']}, got {X.shape[1]}"
-        )
-
     cols = [X]
     eps = 1e-8
     for i in range(X.shape[1]):
-        if feature_schema["log_columns"][i]:
-            cols.append(np.log(np.clip(X[:, i], eps, None) + eps).reshape(-1, 1))
-        if feature_schema["sqrt_columns"][i]:
-            # Clip tiny negative test values to zero only for the engineered
-            # sqrt feature; the original raw feature remains unchanged.
-            cols.append(np.sqrt(np.clip(X[:, i], 0.0, None) + eps).reshape(-1, 1))
-    if feature_schema["pairwise_ratios"]:
+        xi = X[:, i]
+        # log-transform for positive columns (rates, prices, liquidity)
+        if np.all(xi > 0):
+            cols.append(np.log(xi + eps).reshape(-1, 1))
+        # sqrt for non-negative columns
+        if np.all(xi >= 0):
+            cols.append(np.sqrt(xi + eps).reshape(-1, 1))
+    # Pairwise ratios for 2-column inputs (common: collateral/borrowed, S/K)
+    if X.shape[1] == 2:
         cols.append((X[:, 0] / (X[:, 1] + eps)).reshape(-1, 1))
         cols.append((X[:, 1] / (X[:, 0] + eps)).reshape(-1, 1))
-    augmented = np.hstack(cols)
-    return (augmented, feature_schema) if return_schema else augmented
+    return np.hstack(cols)
 
 
 def _train_and_eval_nn(
@@ -420,10 +404,8 @@ def _train_and_eval_nn(
 
     # v3c2-fix4: augment features BEFORE scaling
     if augment:
-        # Derive transformation eligibility from training data only, then
-        # reuse the same feature schema for the held-out test partition.
-        X_train, feature_schema = _augment_features(X_train, return_schema=True)
-        X_test = _augment_features(X_test, feature_schema=feature_schema)
+        X_train = _augment_features(X_train)
+        X_test  = _augment_features(X_test)
 
     sx, sy = StandardScaler(), StandardScaler()
     Xtr = sx.fit_transform(X_train)
@@ -595,75 +577,79 @@ def _eval_formula_r2(
 # SECTION 3 — Routing helpers (Fixes 1, 2, 4)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TRANSCENDENTAL_TOKENS = [
-    "math.exp", "np.exp", "exp(",
-    "math.log", "np.log", "log(",
-    "math.sqrt", "np.sqrt", "sqrt(",
-    "norm.cdf", "norm.pdf", "scipy.stats",
-    "np.maximum", "np.minimum", "max(", "min(",
-    "math.sin", "np.sin", "math.cos", "np.cos",
-    "**0.",
-]
+def _extrapolation_probe(
+    X_train: np.ndarray, y_train: np.ndarray, probe_frac: float | None = None
+) -> dict:
+    """Train on the central training region and probe both training-set tails.
 
-
-def _formula_has_transcendental(code: str) -> bool:
-    """Fix 2 — True if code contains ops that are structurally bad for NN extrapolation."""
-    low = code.lower()
-    return any(t.lower() in low for t in _TRANSCENDENTAL_TOKENS)
-
-
-def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
+    The PCA axis, split, NN fit and both R² scores use only the outer training
+    partition. probe_frac is the total fraction assigned to the two edge tails.
+    No held-out/query covariates or labels are accepted.
     """
-    FIX 8: Sort samples along the first principal component rather than
-    a single feature axis.  This gives a correct extrapolation split for
-    multivariate inputs where the primary direction of variation is not
-    aligned with any single feature.
-    """
-    Xc = X - X.mean(axis=0)
-    _, _, vh = np.linalg.svd(Xc, full_matrices=False)
-    principal = vh[0]
-    scores = Xc @ principal
-    return np.argsort(scores)
-
-
-def _extrapolation_probe(X_train: np.ndarray, y_train: np.ndarray,
-                          probe_frac: float = 0.15) -> float:
-    """
-    Fix 1 — measure how much an MLP degrades at the edge of training data.
-    Returns degradation = (in-distribution R²) - (probe R²).  Large → route to LLM.
-    """
-    n      = len(X_train)
-    split  = int(n * (1 - probe_frac))
-    # FIX 8: use principal direction for ordering instead of X[:, 0]
-    order  = _sort_by_principal_direction(X_train)
-    Xs, ys = X_train[order], y_train[order]
-    Xf, yf = Xs[:split], ys[:split]
-    Xp, yp = Xs[split:], ys[split:]
-
-    if len(Xp) < 5 or len(Xf) < 10:
-        return 0.0
-
+    X_train = np.asarray(X_train, dtype=float)
+    y_train = np.asarray(y_train, dtype=float).reshape(-1)
+    n = len(X_train)
+    if X_train.ndim != 2 or X_train.shape[0] != y_train.size:
+        raise ValueError("X_train and y_train have incompatible shapes")
+    if probe_frac is None:
+        _raw_fraction = os.environ.get("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15").strip()
+        try:
+            probe_frac = float(_raw_fraction)
+        except ValueError:
+            probe_frac = None
+    if probe_frac is None or not np.isfinite(float(probe_frac)):
+        return {"status": "invalid_probe_fraction", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    if not 0.05 <= float(probe_frac) <= 0.4:
+        raise ValueError("probe_frac must be between 0.05 and 0.4")
+    if n < 20 or not np.isfinite(X_train).all() or not np.isfinite(y_train).all():
+        return {"status": "insufficient_or_nonfinite_training_data", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    try:
+        core_idx, edge_idx = training_edge_split_indices(X_train, probe_frac)
+    except ValueError:
+        return {"status": "insufficient_core_rows", "delta": None,
+                "r2_train": None, "r2_edge": None, "n_fit": 0, "n_edge": 0}
+    if len(core_idx) < 10 or len(edge_idx) < 5:
+        return {"status": "insufficient_core_rows", "delta": None,
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(core_idx)), "n_edge": int(len(edge_idx))}
+    Xf, yf = X_train[core_idx], y_train[core_idx]
+    Xp, yp = X_train[edge_idx], y_train[edge_idx]
     try:
         probe_result = _train_and_eval_nn(
             Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
         )
-        return max(0.0, probe_result["train_r2"] - probe_result["test_r2"])
-    except Exception as e:
-        return _m5_record_failure("_extrapolation_probe", e)
+        r2_train = float(probe_result["train_r2"])
+        r2_edge = float(probe_result["test_r2"])
+        if not (np.isfinite(r2_train) and np.isfinite(r2_edge)):
+            return {"status": "nonfinite_probe_scores", "delta": None,
+                    "r2_train": r2_train, "r2_edge": r2_edge,
+                    "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
+        return {
+            "status": "ok", "r2_train": r2_train, "r2_edge": r2_edge,
+            "delta": float(r2_train - r2_edge),
+            "n_fit": int(len(Xf)), "n_edge": int(len(Xp)),
+            "probe_fraction": float(probe_frac),
+            "edge_sides": 2,
+        }
+    except Exception as exc:
+        _m5_record_failure("_extrapolation_probe", exc)
+        return {"status": "error", "delta": None,
+                "r2_train": None, "r2_edge": None,
+                "n_fit": int(len(Xf)), "n_edge": int(len(Xp))}
 
 
-# B4-reviewed: input-range only (no y_test); see docstring note below.
-def _distance_llm_weight(X_test: np.ndarray, X_train: np.ndarray,
-                          base_weight: float = 0.3) -> float:
-    """
-    Fix 4 — LLM blend weight: increases as test points move outside training range.
-    Returns scalar in [base_weight, 1.0].
-    """
-    # B4-reviewed: uses only the INPUT range of X_test (no y_test, no labels) --
-    # deployable at inference time. Document as an input-dependent blend weight.
-    lo, hi  = X_train.min(axis=0), X_train.max(axis=0)
-    outside = np.mean(np.any((X_test < lo) | (X_test > hi), axis=1))
-    return float(base_weight + (1.0 - base_weight) * outside)
+def _routing_delta_tau() -> float | None:
+    """Read only a pre-calibrated training-only tau; absent/invalid means fail closed."""
+    raw = os.environ.get("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if np.isfinite(value) and value >= 0.0 else None
 
 
 def _ensemble_llm_nn(
@@ -674,11 +660,38 @@ def _ensemble_llm_nn(
     y_train: np.ndarray,
     llm_r2: float = None,
     nn_r2: float = None,
+    blend_weights: dict | None = None,
 ) -> np.ndarray:
     """
-    Uncertainty-weighted ensemble of LLM and NN predictions.
-    FIX 7: uncertainty is estimated from TRAINING residuals only — no test leakage.
+    Ensemble LLM and NN predictions. If manuscript blend weights are supplied,
+    apply them per query; otherwise retain the legacy training-residual blend.
     """
+    if blend_weights is not None:
+        llm_pred_test = np.asarray(llm_pred_test, dtype=float).reshape(-1)
+        nn_pred_test = np.asarray(nn_pred_test, dtype=float).reshape(-1)
+        llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
+        nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
+        n_query = len(llm_pred_test)
+        if (
+            len(nn_pred_test) != n_query
+            or not np.isfinite(llm_pred_test).all()
+            or not np.isfinite(nn_pred_test).all()
+        ):
+            raise ValueError("LLM/NN query predictions must be shape-aligned and finite")
+        if llm_w.size == 1:
+            llm_w = np.full(n_query, llm_w.item())
+        if nn_w.size == 1:
+            nn_w = np.full(n_query, nn_w.item())
+        if (
+            llm_w.size != n_query or nn_w.size != n_query
+            or not np.isfinite(llm_w).all() or not np.isfinite(nn_w).all()
+            or np.any((llm_w < 0.0) | (llm_w > 1.0))
+            or np.any((nn_w < 0.0) | (nn_w > 1.0))
+            or not np.allclose(llm_w + nn_w, 1.0)
+        ):
+            raise ValueError("Invalid per-query manuscript blend weights")
+        return llm_w * llm_pred_test + nn_w * nn_pred_test
+
     eps = 1e-8
     # FIX 7: use train residuals, not test residuals, to estimate uncertainty
     llm_unc = float(np.std(llm_pred_train - y_train))
@@ -739,13 +752,11 @@ def formula({var_list}):
     return <expression>
 """
     try:
-        resp = client.messages.create(
+        from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
+        resp = create_message(
+        client,
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            # AUDIT-PATCH C2: direct messages.create(temperature=0.0). PureLLMBaseline and the shared
-            # wrapper do NOT send temperature on SDK>=1.0 (model default applies); the engine/CI
-            # env default is LLM_TEMPERATURE=0.25. These are different settings: report as such.
-            temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
         )
         code = resp.content[0].text.strip()
@@ -798,13 +809,13 @@ def _hybrid_predict_and_eval(
     Full hybrid pipeline for one test case.
     Returns dict: train_r2, test_r2, decision, success.
 
-    Routing priority (in order):
-      Fix 2  → transcendental token detection → LLM  (if formula trustworthy)
-      Fix 1  → extrapolation probe degradation → LLM  (if formula trustworthy)
-      Fix 3  → LLM-feature augmentation for NN path   (if formula trustworthy)
-      Fix 4  → distance-gated blend for ensemble path
-      Fix 5  → unified evaluator for ALL LLM formula calls
-      Fix 5b → routing guard: only override if LLM train R² > 0
+    Routing priority:
+      1. Trust gate failure -> NN fallback.
+      2. Structural-risk function call -> LLM+NN ensemble (always takes precedence).
+      3. Training-only NN edge degradation; pure LLM only if train R² >= 0.95
+         and Delta <= the pre-calibrated tau. Missing tau -> ensemble.
+      4. KDE fitted on training covariates; per-query w_LLM=0.3+0.7*p_OOD.
+      5. Held-out labels are used only for final metrics, never routing/blending.
     """
 
     # Step 1: Generate LLM formula
@@ -828,44 +839,51 @@ def _hybrid_predict_and_eval(
     llm_trustworthy = (
         has_formula
         and llm_train_ok
-        and llm_train_r2 > 0.5
+        and llm_train_r2 >= 0.5
         and not _formula_has_pathological_behavior(llm_code)
     )
 
-    # Step 3: Initial routing decision based on training LLM R²
-    # Issue 4 fix: if LLM achieved near-perfect training fit, prefer it
-    # immediately — do NOT allow the cascade below to accidentally flip to NN.
-    # Previous code only checked train_r2 > 0.95 which was correct in principle,
-    # but the routing-override block (Step 4) could later change "llm" back to
-    # "ensemble" or "nn" even when train_r2 == 1.0.  We lock the decision here
-    # so the Step 4 overrides only apply when the initial decision is NOT "llm".
-    if llm_train_ok and llm_train_r2 >= 0.95:
-        decision = "llm"          # locked — Step 4 overrides will be skipped
-    elif llm_train_ok and llm_train_r2 > 0.50:
-        decision = "ensemble"
-    else:
-        decision = "nn"
+    # Stages 2–4: structural risk, training-only NN edge probe, query-only KDE.
+    structural_tokens = structural_risk_tokens(llm_code)
+    structural_risk_flag = bool(structural_tokens)
+    degradation_probe = (
+        _extrapolation_probe(X_train, y_train)
+        if llm_trustworthy else
+        {"status": "trust_gate_failed", "delta": None,
+         "r2_train": None, "r2_edge": None}
+    )
+    degradation_tau = _routing_delta_tau()
+    try:
+        ood_diagnostic = kde_ood_probability(X_train, X_test)
+    except Exception as _ood_exc:
+        _m5_record_failure("kde_ood_probability", _ood_exc)
+        ood_diagnostic = {"status": "error", "p_ood": None, "p_ood_per_query": []}
 
-    # Step 4: Routing overrides (only when formula is trustworthy — Fix 5b)
-    # IMPORTANT: do NOT override a locked "llm" decision (Issue 4 fix).
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 2: transcendental tokens → LLM wins
-        if _formula_has_transcendental(llm_code):
-            decision = "llm"
+    # Per-query manuscript weights: w_LLM = 0.3 + 0.7*p_OOD.
+    _p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
+    if (
+        _p_query.size != len(X_test)
+        or not np.isfinite(_p_query).all()
+        or np.any((_p_query < 0.0) | (_p_query > 1.0))
+    ):
+        _p_query = np.zeros(len(X_test), dtype=float)  # fail to in-distribution alpha floor
+    _llm_w = 0.3 + 0.7 * _p_query
+    _nn_w = 1.0 - _llm_w
+    query_blend_weights = {
+        "llm": _llm_w.astype(float).tolist(),
+        "nn": _nn_w.astype(float).tolist(),
+    }
 
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 1: NN edge-degradation probe → LLM wins
-        try:
-            degradation = _extrapolation_probe(X_train, y_train)
-            if degradation >= 0.15:
-                decision = "llm"
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+    _policy = route_decision_from_diagnostics(
+        bool(llm_trustworthy), llm_train_r2, structural_tokens,
+        degradation_probe.get("delta"), degradation_tau,
+    )
+    decision = "llm" if _policy["decision"] == "fitted_llm" else _policy["decision"]
+    route_reason = _policy["route_reason"]
 
     # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
     nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
+    route_execution_status = "selected_route_executed"
 
     if decision == "llm":
         test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
@@ -873,8 +891,10 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
-            test_r2 = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+            route_reason = "pure_llm_evaluation_failed_nn_fallback" if decision == "nn_fallback" else "pure_llm_evaluation_and_nn_fallback_failed"
+            route_execution_status = decision
 
     elif decision == "ensemble" and has_formula:
         # Fix 5: LLM test predictions via unified evaluator
@@ -886,30 +906,39 @@ def _hybrid_predict_and_eval(
         if llm_test_preds is not None:
             # FIX 7: also get LLM train predictions for uncertainty estimation
             llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-            if llm_train_preds is None:
-                test_r2  = nn_m["test_r2"]
-                decision = "nn_fallback"
+            if (
+                llm_train_preds is None
+                or nn_m.get("y_pred_test") is None
+                or nn_m.get("y_pred_train") is None
+                or not nn_m.get("success", False)
+            ):
+                test_r2 = float(nn_m.get("test_r2", float("nan")))
+                decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+                route_reason = "ensemble_inputs_unavailable_nn_fallback" if decision == "nn_fallback" else "ensemble_and_nn_fallback_failed"
+                route_execution_status = decision
             else:
-                # AUDIT-PATCH B4 DISCLOSURE: blend weight is computed from X_test INPUTS (no labels), so the
-                # manuscript statement 'routing uses training data only' must be amended to say that the
-                # final ensemble weight is input-dependent at test time.
-                # B4-reviewed: weight depends on X_test inputs only, never y_test.
-                llm_w         = _distance_llm_weight(X_test, X_train, base_weight=0.3)
-                nn_w          = 1.0 - llm_w
+                # Per-query KDE weights use X_test covariates only; y_test is not consulted.
                 ensemble_pred = _ensemble_llm_nn(
                     llm_pred_test=llm_test_preds,
                     nn_pred_test=nn_m["y_pred_test"],
                     llm_pred_train=llm_train_preds,
                     nn_pred_train=nn_m["y_pred_train"],
                     y_train=y_train,
-                    llm_r2=llm_train_r2 * llm_w,
-                    nn_r2=nn_m["train_r2"] * nn_w,
+                    llm_r2=llm_train_r2,
+                    nn_r2=nn_m["train_r2"],
+                    blend_weights=query_blend_weights,
                 )
                 m = _compute_metrics(y_test, ensemble_pred)
-                test_r2 = m["r2"]
+                test_r2 = float(m.get("r2", float("nan")))
+                if not np.isfinite(test_r2):
+                    route_execution_status = "ensemble_metrics_undefined"
+                else:
+                    route_execution_status = "ensemble_executed"
         else:
-            test_r2  = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = "nn_fallback" if np.isfinite(test_r2) else "nn_unavailable"
+            route_reason = "llm_test_prediction_unavailable_nn_fallback" if decision == "nn_fallback" else "llm_and_nn_predictions_unavailable"
+            route_execution_status = decision
 
     else:
         # decision == "nn"
@@ -936,7 +965,8 @@ def _hybrid_predict_and_eval(
             _t_nn0 = time.time()
             nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
-        test_r2 = nn_m["test_r2"]
+        test_r2 = float(nn_m.get("test_r2", float("nan")))
+        route_execution_status = "nn_fallback_executed" if np.isfinite(test_r2) else "nn_fallback_failed"
 
     return {
         "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
@@ -944,6 +974,14 @@ def _hybrid_predict_and_eval(
         "decision":       decision,
         "llm_code":       llm_code if has_formula else None,
         "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
+        "route_reason":   route_reason,
+        "route_execution_status": route_execution_status,
+        "structural_risk_flag": structural_risk_flag,
+        "structural_risk_tokens": structural_tokens,
+        "degradation_probe": degradation_probe,
+        "degradation_tau": degradation_tau,
+        "ood_diagnostic": ood_diagnostic,
+        "blend_weights": query_blend_weights,
         "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
         "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
         "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
@@ -1470,12 +1508,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
-                # Issue 3 fix: when hybrid fell back to NN, the time already
-                # recorded for the standalone NN run CANNOT be reused — the
-                # hybrid must pay the full NN training cost itself.
-                # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
-                # fallback cases so the reported hybrid time is self-contained.
-                hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
+                # _hyb_wall already includes any NN rerun performed inside
+                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
+                # diagnostic; adding it again would double-count wall time.
+                hyb_time = _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
@@ -1485,6 +1521,14 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
                     "decision":        hy_m["decision"],
+                    "route_reason":    hy_m.get("route_reason"),
+                    "route_execution_status": hy_m.get("route_execution_status"),
+                    "structural_risk_flag": hy_m.get("structural_risk_flag"),
+                    "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "degradation_probe": hy_m.get("degradation_probe"),
+                    "degradation_tau": hy_m.get("degradation_tau"),
+                    "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
                     "llm_source":      hy_m.get("llm_source"),
@@ -1500,15 +1544,26 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 }
 
             # ── Augment with extrapolation gap and stability score ────────────
+            # Failed arms deliberately store None for unavailable metrics.  Do
+            # not pass None (or other non-numeric values) to np.isnan: doing so
+            # raises TypeError outside the arm-level handlers and drops the
+            # entire equation from the saved benchmark denominator.
+            def _finite_metric(value):
+                try:
+                    number = float(value)
+                except (TypeError, ValueError, OverflowError):
+                    return None
+                return number if _math.isfinite(number) else None
+
             for method, res in case_results.items():
-                tr_ = res.get("train_r2", float("nan"))
-                te_ = res.get("test_r2",  float("nan"))
+                tr_ = _finite_metric(res.get("train_r2"))
+                te_ = _finite_metric(res.get("test_r2"))
                 res["extrapolation_gap"] = (
-                    float(tr_ - te_) if not (np.isnan(tr_) or np.isnan(te_)) else float("nan")
+                    float(tr_ - te_) if tr_ is not None and te_ is not None else float("nan")
                 )
                 res["stability_score"] = (
                     float(te_ / tr_)
-                    if (not np.isnan(tr_) and not np.isnan(te_) and abs(tr_) > 1e-6)
+                    if tr_ is not None and te_ is not None and abs(tr_) > 1e-6
                     else float("nan")
                 )
 

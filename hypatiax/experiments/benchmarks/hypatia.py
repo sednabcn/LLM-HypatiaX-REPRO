@@ -442,6 +442,7 @@ def _parse_response(raw: str, var_names: list[str]) -> list[str]:
     candidates.sort(key=lambda c: float(c.get("confidence", 0)), reverse=True)
 
     valid_exprs: list[str] = []
+    import re
     from hypatiax.safe_formula import evaluate_expression
 
     safe_functions = {

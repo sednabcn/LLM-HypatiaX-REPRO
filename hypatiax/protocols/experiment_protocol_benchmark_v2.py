@@ -12,13 +12,15 @@ regression benchmarks independent of the Core 15 suite.
 
 This module provides:
 
-  1. FEYNMAN SR BENCHMARK  (primary — 30-equation physics subset)
-     Source : Udrescu & Tegmark (2020), "AI Feynman: A Physics-Inspired
-              Method for Symbolic Regression"
-     URL    : https://space.mit.edu/home/tegmark/aifeynman.html
-     Data   : pip install pmlb   (or clone lacava/pmlb)
-     Rationale: Same physics domain as Core 15; already cited in related
-                work; 100 ground-truth equations; standard in the field.
+  1. LEGACY 30-EQUATION REGISTRY / MANUSCRIPT PROTOCOL-30
+     Source : Analytic registry in _build_feynman_equations().
+     Content: 30 closed-form equations across 11 domains. It includes
+              Feynman-derived entries and custom crossover equations; it is
+              NOT a strict subset of the AI Feynman benchmark.
+     Adapter: Protocol30 exposes the manuscript identity and domain labels.
+     Note   : Legacy FeynmanEquation class/ID names are retained for
+              compatibility; Protocol30 metadata overrides the benchmark
+              and source labels for paper-facing results.
 
   2. SRBENCH SUBSET  (secondary — 20 real-world datasets)
      Source : La Cava et al. (2021), "Contemporary Symbolic Regression Methods
@@ -476,8 +478,9 @@ class FeynmanEquation:
 
 
 # ---------------------------------------------------------------------------
-# Feynman equation definitions — 30-equation subset selected to match
-# Core 15 operator complexity (depth 2-4, ≤4 variables).
+# Legacy Feynman-labelled equation definitions used by the manuscript's
+# custom Protocol-30 registry. This is not a strict AI Feynman subset:
+# it includes custom crossover equations to match Core-15 operator complexity.
 #
 # Selection criteria:
 #   - Operator depth 2-4 (comparable to Core 15 equations)
@@ -487,7 +490,9 @@ class FeynmanEquation:
 #     so cross-benchmark consistency can be checked
 #   - 8 equations flagged as extrapolation tests (same ratio as Core 15)
 #
-# Reference: Table 1 in Udrescu & Tegmark (2020), Science Advances.
+# Feynman-derived entries reference Udrescu & Tegmark (2020); crossover
+# entries are custom. Protocol30 below gives the complete registry its
+# explicit manuscript identity and non-Feynman provenance.
 # ---------------------------------------------------------------------------
 
 def _build_feynman_equations() -> list[FeynmanEquation]:
@@ -1565,6 +1570,95 @@ class BenchmarkProtocol:
 
         print("\n\n  COMPETITOR METHODS")
         BenchmarkProtocol.print_competitor_table()
+
+
+class Protocol30(BenchmarkProtocol):
+    """Manuscript Protocol-30: the custom 30-equation, 11-domain registry.
+
+    The equations are the analytic entries in FEYNMAN_EQUATIONS, including the
+    crossover equations. This adapter gives them an explicit Protocol-30
+    identity so they cannot be confused with the 10-domain ExperimentProtocolAll
+    registry or described as an AI Feynman benchmark subset.
+    """
+
+    protocol_id = "protocol30_custom_30_equations_11_domains"
+    registry_source = "hypatiax/protocols/experiment_protocol_benchmark_v2.py::_build_feynman_equations"
+
+    def __init__(
+        self,
+        num_samples: int = 200,
+        noise_level: float = 0.0,
+        seed: int = 42,
+        noiseless: bool = True,
+    ):
+        super().__init__(
+            benchmark="feynman",
+            num_samples=num_samples,
+            noise_level=noise_level,
+            seed=seed,
+            feynman_series=None,
+            crossover_only=False,
+            noiseless=noiseless,
+        )
+        if len(self._feynman_eqs) != 30:
+            raise ValueError(
+                f"Protocol-30 registry must contain exactly 30 equations; got {len(self._feynman_eqs)}"
+            )
+        domains = {eq.domain for eq in self._feynman_eqs}
+        if len(domains) != 11:
+            raise ValueError(
+                f"Protocol-30 registry must span exactly 11 domains; got {len(domains)}"
+            )
+
+    def get_all_domains(self) -> list[str]:
+        """Return the 11 manuscript domain names without legacy Feynman prefixes."""
+        import os
+        domains = sorted({eq.domain for eq in self._feynman_eqs})
+        raw = os.environ.get("SHARD_IDS", "").replace(",", " ").split()
+        if not raw:
+            return domains
+        allowed = set(raw)
+        selected = [
+            domain for domain in domains
+            if domain in allowed
+            or f"protocol30_{domain}" in allowed
+            or f"{self._FEYNMAN_PREFIX}{domain}" in allowed
+        ]
+        if not selected:
+            raise ValueError(
+                f"SHARD_IDS={raw!r} did not match any Protocol-30 domain: {domains}"
+            )
+        return selected
+
+    def load_test_data(
+        self,
+        domain: str,
+        num_samples: int | None = None,
+        noise_level: float | None = None,
+        seed: int | None = None,
+    ) -> list[tuple[str, np.ndarray, np.ndarray, list[str], dict]]:
+        if domain not in self.get_all_domains():
+            raise KeyError(
+                f"Unknown Protocol-30 domain {domain!r}; available: {self.get_all_domains()}"
+            )
+        rows = super().load_test_data(
+            f"{self._FEYNMAN_PREFIX}{domain}",
+            num_samples=num_samples,
+            noise_level=noise_level,
+            seed=seed,
+        )
+        output = []
+        for description, X, y, variable_names, metadata in rows:
+            protocol_meta = dict(metadata)
+            protocol_meta.update({
+                "domain": domain,
+                "benchmark": "protocol30",
+                "protocol_id": self.protocol_id,
+                "registry_source": self.registry_source,
+                "source": self.registry_source,
+            })
+            output.append((description, X, y, variable_names, protocol_meta))
+        return output
 
 
 # ============================================================================
