@@ -55,3 +55,45 @@ def test_core15_pysr_budget_and_failure_denominators_are_explicit():
     assert '"n_failed_equations"' in source
     assert '"paired_coverage_fraction"' in source
     assert '"comparison_status": "complete" if all_arms_complete else "partial"' in source
+
+
+
+def _aggregate_function():
+    tree = ast.parse(FOUR_WAY.read_text(encoding="utf-8"))
+    node = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_aggregate")
+    namespace = {
+        "np": np,
+        "METHOD_KEYS": ("hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"),
+    }
+    exec(compile(ast.Module(body=[node], type_ignores=[]), str(FOUR_WAY), "exec"), namespace)
+    return namespace["_aggregate"]
+
+
+def test_aggregate_marks_failed_arm_and_paired_coverage_as_partial():
+    aggregate = _aggregate_function()
+    successful = {
+        "success": True,
+        "test": {"r2": 0.8, "rmse": 0.2, "mae": 0.1},
+        "extrapolation": {
+            regime: {"r2": 0.7, "rmse": 0.3, "mae": 0.2}
+            for regime in ("near", "medium", "far")
+        },
+    }
+    checkpoint = {
+        "0": {
+            "name": "toy equation",
+            "domain": "test",
+            "methods": {
+                "hybrid_llm_pysr": dict(successful),
+                "llm_only": dict(successful),
+                "pysr_only": {"success": False, "error": "PySR fit timed out"},
+                "nn_only": dict(successful),
+            },
+        }
+    }
+    summary = aggregate(checkpoint)
+    assert summary["comparison_status"] == "partial"
+    assert summary["method_test_metrics"]["pysr_only"]["_coverage"]["n_failed_equations"] == 1
+    assert summary["paired_hybrid_test_comparisons"]["pysr_only"]["r2"]["n_paired_equations"] == 0
+    assert summary["paired_hybrid_test_comparisons"]["pysr_only"]["r2"]["comparison_status"] == "partial"
+    assert summary["paired_hybrid_test_comparisons"]["llm_only"]["r2"]["paired_coverage_fraction"] == 1.0
