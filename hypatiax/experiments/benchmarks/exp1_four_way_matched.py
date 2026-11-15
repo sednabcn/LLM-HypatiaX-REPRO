@@ -106,6 +106,36 @@ def _metrics(y_true, y_pred):
     return {key: float(value) for key, value in values.items()}
 
 
+def _llm_metric_diagnostics(y_true, y_pred):
+    """Explain why an otherwise evaluable LLM formula failed primary scoring."""
+    yt = np.asarray(y_true, dtype=float).reshape(-1)
+    yp = np.asarray(y_pred, dtype=float).reshape(-1)
+    details = {
+        "target_shape": list(yt.shape),
+        "prediction_shape": list(yp.shape),
+        "target_finite_count": int(np.isfinite(yt).sum()),
+        "prediction_finite_count": int(np.isfinite(yp).sum()),
+        "prediction_total_count": int(yp.size),
+    }
+    if yp.size and np.isfinite(yp).any():
+        finite = yp[np.isfinite(yp)]
+        details["prediction_min"] = float(np.min(finite))
+        details["prediction_max"] = float(np.max(finite))
+    if yt.shape == yp.shape and yt.size and np.isfinite(yt).all() and np.isfinite(yp).all():
+        from hypatiax.core.r2_canonical import r2_scored
+        scored, status = r2_scored(yt, yp)
+        raw, raw_status = r2_scored(yt, yp, floor=None)
+        details.update({
+            "canonical_r2": float(scored) if np.isfinite(scored) else None,
+            "canonical_r2_status": status,
+            "unfloored_r2": float(raw) if np.isfinite(raw) else None,
+            "unfloored_r2_status": raw_status,
+            "rmse": float(np.sqrt(np.mean((yt - yp) ** 2))),
+            "mae": float(np.mean(np.abs(yt - yp))),
+        })
+    return details
+
+
 def _array_hash(*arrays):
     digest = hashlib.sha256()
     for array in arrays:
@@ -335,6 +365,7 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
     if provenance.get("is_hardcoded") is True:
         return _failure("llm_only", RuntimeError("hardcoded formula is forbidden in LLM-only arm"), elapsed)
     code = result.formula_full or result.formula
+    y_pred = None
     try:
         y_pred = rcsb._runner_eval_formula(code, X_test, eq["vars"])
         if y_pred is None:
@@ -351,7 +382,19 @@ def _run_llm_only(method, eq, X_train, y_train, X_test, y_test, extrap):
                 extrap_errors[regime] = f"{type(regime_exc).__name__}: {regime_exc}"
         test_metrics = _metrics(y_test, y_pred)
     except Exception as exc:
-        return _failure("llm_only", exc, time.monotonic() - started)
+        failure = _failure("llm_only", exc, time.monotonic() - started)
+        failure["diagnostics"] = {
+            "formula": code,
+            "formula_hash": result.formula_hash,
+            "metadata": dict(result.metadata or {}),
+            "failure_stage": "outer_test_formula_evaluation_or_metrics",
+            "outer_test_metric_diagnostics": (
+                _llm_metric_diagnostics(y_test, y_pred) if y_pred is not None else None
+            ),
+            "extrapolation_errors": locals().get("extrap_errors", {}),
+            "scoring_policy": "canonical R2; catastrophic R2 below -100 remains a failure",
+        }
+        return failure
     return {
         "method": "llm_only", "success": True, "error": None,
         "elapsed_s": time.monotonic() - started, "test": test_metrics,
