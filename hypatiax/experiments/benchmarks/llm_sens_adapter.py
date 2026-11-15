@@ -150,6 +150,10 @@ def _evaluate_candidate_expression(source, namespace):
 def _pure_llm(eq, Xtr, ytr, Xte, yte):
     import hypatia   # attribute patched by ablation_conditions (cache_salt, blind)
     exprs = hypatia.get_llm_prior(eq, Xtr, ytr, n_candidates=5, verbose=False)
+    provenance = hypatia.last_call_info() if hasattr(hypatia, "last_call_info") else {
+        "call_status": "unknown", "candidate_status": "not_reported"
+    }
+    call_status = provenance.get("call_status", "unknown")
     best = None
     for ex in exprs or []:
         try:
@@ -160,7 +164,15 @@ def _pure_llm(eq, Xtr, ytr, Xte, yte):
                 best = (tr, ex)
         except Exception:
             continue
-    out = {"condition": "pure_llm", "llm_called": True, "n_candidates": len(exprs or [])}
+    out = {
+        "condition": "pure_llm",
+        "llm_called": call_status == "live_api_success",
+        "llm_source": call_status,
+        "llm_candidate_status": provenance.get("candidate_status"),
+        "llm_temperature_requested": provenance.get("temperature_requested"),
+        "llm_temperature_sent": provenance.get("temperature_sent", False),
+        "n_candidates": len(exprs or []),
+    }
     if best is None:
         return dict(out, error="no valid candidate expression", train_r2=None, extrap_r2=None)
     ns = dict(_NS, **{v: Xte[:, i] for i, v in enumerate(eq["vars"])})
