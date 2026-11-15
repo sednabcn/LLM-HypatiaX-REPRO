@@ -12,7 +12,8 @@ extrapolation split as the DeFi benchmark (§6.4), ensuring results
 are directly comparable.
 
 Changes vs v2:
-  - sklearn random-split replaced with pca_directed_split(test_size=0.6)  # FIX-C3/DISCLOSURE: pca_directed_split is now the sole protocol split
+  - outer protocol split uses pca_directed_split(test_size=0.6); ImprovedNN uses
+    a separate inner 80/20 validation split only within the outer training set
   - pca_split_utils imported from hypatiax.tools.utils
   - Script name / checkpoint default updated to reflect the PCA variant
   - _CHECKPOINT_NAME default: "protocol_core_pca_checkpoint"
@@ -78,6 +79,7 @@ import inspect
 import json
 import os
 import random
+import hashlib
 import re
 import sys
 import time
@@ -357,6 +359,7 @@ def _runner_eval_formula(
     python_code: str,
     X: np.ndarray,
     var_names: List[str],
+    diagnostics: Optional[List[str]] = None,
 ) -> Optional[np.ndarray]:
     """Evaluate a formula through the restricted AST interpreters."""
     from hypatiax.safe_formula import parse_formula, evaluate_expression
@@ -371,13 +374,35 @@ def _runner_eval_formula(
             or len(set(var_names)) != len(var_names)
             or not np.isfinite(X).all()
         ):
+            if diagnostics is not None:
+                diagnostics.append("invalid holdout feature matrix or feature-name schema")
             return None
 
         code = python_code.strip()
-        code = re.sub(r"^\\s*\\[[^\\]]*\\]\\s*", "", code)
+        _xscale_note = re.match(r"^\s*\[X-normalised:\s*([^\]]+)\]\s*", code)
+        if _xscale_note:
+            for _scale_item in _xscale_note.group(1).split(","):
+                _scale_match = re.fullmatch(
+                    r"\s*([A-Za-z_]\w*)\s*÷\s*([0-9.eE+-]+)\s*",
+                    _scale_item,
+                )
+                if _scale_match is None:
+                    raise ValueError(f"unparseable X-normalised annotation item: {_scale_item!r}")
+                _scale_name, _scale_text = _scale_match.groups()
+                _scale_value = float(_scale_text)
+                if not np.isfinite(_scale_value) or _scale_value <= 0:
+                    raise ValueError(f"invalid X scale for {_scale_name!r}: {_scale_text!r}")
+                if _scale_name not in var_names:
+                    raise ValueError(f"X-normalised feature {_scale_name!r} is absent from holdout schema")
+                X = X.copy()
+                X[:, var_names.index(_scale_name)] /= _scale_value
+            code = code[_xscale_note.end():]
+        code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
         code = code.replace("^", "**")
 
         if not code:
+            if diagnostics is not None:
+                diagnostics.append("formula string is empty")
             return None
 
         if code.startswith("def "):
@@ -387,7 +412,7 @@ def _runner_eval_formula(
         else:
             # Permit only a single simple assignment; never execute a block.
             assignment = re.fullmatch(
-                r"\\s*(?:y|result|output|pred|f)\\s*=\\s*(.+)\\s*",
+                r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)\s*",
                 code,
                 flags=re.DOTALL,
             )
@@ -447,12 +472,20 @@ def _runner_eval_formula(
         if arr.ndim == 0:
             arr = np.full(X.shape[0], float(arr))
         if arr.ndim != 1 or arr.shape != (X.shape[0],):
+            if diagnostics is not None:
+                diagnostics.append(
+                    f"formula returned shape {arr.shape}; expected ({X.shape[0]},)"
+                )
             return None
         if not np.isfinite(arr).all():
+            if diagnostics is not None:
+                diagnostics.append("formula produced non-finite predictions")
             return None
         return arr
 
-    except Exception:
+    except Exception as exc:
+        if diagnostics is not None:
+            diagnostics.append(f"{type(exc).__name__}: {exc}")
         return None
 
 
@@ -924,17 +957,27 @@ HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_sys
 # ============================================================================
 
 def _provenance(d) -> dict:
-    """B2: pull llm_called / bypass_kind from a method's raw result dict
-    (top level, then nested llm_result / provenance). None == unknown, which
-    verify_blockers treats as missing -- never silently assumed live."""
-    out = {"llm_called": None, "bypass_kind": None}
+    """Preserve live-LLM provenance, including requested/accepted temperature."""
+    out = {
+        "llm_called": None, "llm_attempted": None, "bypass_kind": None,
+        "llm_source": None, "temperature_requested": None,
+        "temperature_sent": None,
+    }
     if not isinstance(d, dict):
         return out
-    for src in (d, d.get("llm_result"), d.get("provenance"), d.get("discovery")):
+    aliases = {
+        "temperature_requested": "llm_temperature_requested",
+        "temperature_sent": "llm_temperature_sent",
+    }
+    for src in (d, d.get("llm_result"), d.get("evaluation"),
+                d.get("provenance"), d.get("discovery")):
         if isinstance(src, dict):
-            for k in out:
-                if out[k] is None and src.get(k) is not None:
-                    out[k] = src[k]
+            for key in out:
+                value = src.get(key)
+                if value is None and key in aliases:
+                    value = src.get(aliases[key])
+                if out[key] is None and value is not None:
+                    out[key] = value
     return out
 
 
@@ -971,6 +1014,7 @@ class MethodResult:
             # (llm_called=False, bypass_kind="none"); LLM-involving methods
             # report what the wrapper recorded (None == unknown -> flagged).
             "llm_called":   self._prov("llm_called"),
+            "llm_attempted": self._prov("llm_attempted"),
             "bypass_kind":  self._prov("bypass_kind"),
         }
 
@@ -981,12 +1025,26 @@ class MethodResult:
         n = (self.method or "").lower()
         if "llm" in n or "hybrid" in n or "ensemble" in n:
             return None
-        return False if key == "llm_called" else "none"
+        return False if key in ("llm_called", "llm_attempted") else "none"
 
 
 # ============================================================================
 # BASE METHOD
 # ============================================================================
+
+def _extract_formula(result) -> str:
+    """Return a formula from a hybrid result, including nested LLM payloads."""
+    if not isinstance(result, dict):
+        return "N/A"
+    candidates = [result.get("formula"), result.get("best_formula")]
+    llm_result = result.get("llm_result")
+    if isinstance(llm_result, dict):
+        candidates.extend([llm_result.get("formula"), llm_result.get("best_formula")])
+    for candidate in candidates:
+        if isinstance(candidate, str) and candidate.strip() and candidate.strip().upper() != "N/A":
+            return candidate.strip()
+    return "N/A"
+
 
 class BaseMethod:
     """Shared helpers for all wrapper methods."""
@@ -1021,10 +1079,11 @@ class BaseMethod:
             return None  # audit-M3: was float('inf')
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
-    def _unavailable(self, reason: str) -> MethodResult:
+    def _unavailable(self, reason: str, metadata: Optional[Dict[str, Any]] = None) -> MethodResult:
         return MethodResult(
             method=self.name, success=False,
             r2=float("-inf"), rmse=float("inf"), formula="N/A", error=reason,  # PHASE1-FIX: failure, not a score
+            metadata=metadata or {},
         )
 
     @staticmethod
@@ -1412,7 +1471,11 @@ class PureLLMBaselineMethod(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._baseline is None:
-            return self._unavailable("PureLLMBaseline not available or import failed")
+            return self._unavailable(
+                "PureLLMBaseline not available or import failed",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Clear cache if --no-llm-cache was requested.
         # This is done per-call (not per-init) so that a single
@@ -1420,11 +1483,20 @@ class PureLLMBaselineMethod(BaseMethod):
         if self._no_cache:
             self._clear_llm_cache()
 
+        result = None
         try:
             result = self._baseline.generate_formula(
                 description, metadata.get("domain", "unknown"), var_names, metadata,
                 X=X, y=y,
             )
+            # Keep API/provider errors distinct from incomplete completions.
+            # Otherwise an error-only result is misreported as a truncated formula.
+            if isinstance(result, dict) and result.get("error"):
+                self._log(f"generate_formula() failed: {result['error'][:150]}")
+                return self._unavailable(
+                    f"generate_formula_error: {result['error'][:200]}",
+                    metadata=_provenance(result),
+                )
             python_code = result.get("python_code", "") or result.get("formula_code", "") or ""
 
             # ── TRUNCATION GUARD (v2.0) ───────────────────────────────────
@@ -1454,7 +1526,7 @@ class PureLLMBaselineMethod(BaseMethod):
             if metrics.get("success"):
                 _is_hardcoded = result.get("method") == "pure_llm_hardcoded"
                 if metrics.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                    return self._unavailable("AUDIT L36: success reported without an r2")
+                    return self._unavailable("AUDIT L36: success reported without an r2", metadata=_provenance(result))
                 return MethodResult(
                     method=self.name, success=True,
                     r2=float(metrics["r2"]),
@@ -1484,11 +1556,11 @@ class PureLLMBaselineMethod(BaseMethod):
                                       "truncated_formula": False},
                         )
 
-            return self._unavailable(metrics.get("error", "Formula evaluation failed"))
+            return self._unavailable(metrics.get("error", "Formula evaluation failed"), metadata=_provenance(result))
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(str(exc)[:150], metadata=_provenance(result) if isinstance(result, dict) else {})
 
 # ============================================================================
 # METHOD 2 — ImprovedNN
@@ -1519,13 +1591,14 @@ class ImprovedNN(BaseMethod):
             return self._unavailable("ImprovedNN not available")
 
         try:
-            # FIX-C3: pca_directed_split is the sole protocol split inside run().
-            # Gate B requires pca_directed_split to be called here directly.
-            # Replaces the legacy random 80/20 sklearn split entirely.
-            X_train, X_test, y_train, y_test = pca_directed_split(
-                X, y, test_size=0.6, random_state=42
+            # FIX-C3-DISCLOSURE: the outer PCA 40/60 split is performed once
+            # by the protocol data loop before run_test(). This inner 80/20
+            # random split is validation-only and is confined to outer training;
+            # it must never be confused with or replace the PCA external holdout.
+            from sklearn.model_selection import train_test_split as _tts_internal
+            X_train, X_test, y_train, y_test = _tts_internal(
+                X, y, test_size=0.2, random_state=42, shuffle=True
             )
-            from sklearn.model_selection import train_test_split as _tts_internal  # noqa
 
             # ── Log-space detection ──────────────────────────────────────────
             # Equations like Coulomb (1/r²), Newton (G*m1*m2/r²), Ideal Gas
@@ -1834,6 +1907,35 @@ class ImprovedNN(BaseMethod):
                 rmse=rmse_final,
                 formula=f"ImprovedNN({X.shape[1]}→{'→'.join(str(h) for h in hidden)}→1,{space_tag})",
             )
+
+            # Retain the fitted transform/scaler/model pipeline so the outer
+            # PCA holdout is predicted by the selected training-only model.
+            if space_tag == "log-OLS" and _ols_coeffs is not None:
+                def _predict_external(X_new):
+                    X_new_t = _transform_X(np.asarray(X_new, dtype=float))
+                    A_new = np.column_stack([X_new_t, np.ones(len(X_new_t))])
+                    return _y_sign * np.exp(np.clip(A_new @ _ols_coeffs, -500, 500))
+            elif space_tag == "lin-fallback" and _lin_model is not None:
+                def _predict_external(X_new):
+                    X_new = np.asarray(X_new, dtype=float)
+                    X_new_s = _lin_scaler_X.transform(X_new)
+                    _lin_model.eval()
+                    with torch.no_grad():
+                        _scaled = _lin_model(torch.FloatTensor(X_new_s)).numpy().reshape(-1, 1)
+                    return _lin_scaler_y.inverse_transform(_scaled).flatten()
+            else:
+                def _predict_external(X_new):
+                    X_new_t = _transform_X(np.asarray(X_new, dtype=float))
+                    X_new_s = scaler_X.transform(X_new_t)
+                    model.eval()
+                    with torch.no_grad():
+                        _scaled = model(torch.FloatTensor(X_new_s)).numpy().reshape(-1, 1)
+                    _target = scaler_y.inverse_transform(_scaled).flatten()
+                    return (
+                        _y_sign * np.exp(np.clip(_target, -500, 500))
+                        if _use_log_y else _target
+                    )
+            single_result._predict_fn = _predict_external
             return single_result
 
         except Exception as exc:
@@ -1841,14 +1943,13 @@ class ImprovedNN(BaseMethod):
             return self._unavailable(str(exc)[:150])
 
     def _run_single_seed(self, seed, description, X, y, var_names, metadata):
-        """Run one training trial with a fixed random seed.  Returns (r2, rmse, formula_str)."""
+        """Run one fixed-seed training trial and retain its fitted predictor."""
         if TORCH_AVAILABLE:
             import torch as _torch
             _torch.manual_seed(seed)
         import numpy as _np_seed
         _np_seed.random.seed(seed)
-        result = self.run(description, X, y, var_names, metadata)
-        return result.r2, result.rmse, result.formula
+        return self.run(description, X, y, var_names, metadata)
 
     def run_multiseed(self, description, X, y, var_names, metadata):
         """Run self._nn_seeds independent training trials; return median-R² MethodResult.
@@ -1860,39 +1961,37 @@ class ImprovedNN(BaseMethod):
         if self._nn_seeds == 1:
             return self.run(description, X, y, var_names, metadata)
 
-        r2s, rmses, formulas = [], [], []
+        trials = []
         for seed in range(self._nn_seeds):
-            r2, rmse, formula = self._run_single_seed(seed, description, X, y, var_names, metadata)
-            r2s.append(r2)
-            rmses.append(rmse)
-            formulas.append(formula)
-            self._log(f"seed {seed}: R²={r2:.4f}")
+            trial = self._run_single_seed(seed, description, X, y, var_names, metadata)
+            trials.append(trial)
+            self._log(f"seed {seed}: R²={trial.r2:.4f}")
 
-        median_r2   = float(np.nanmedian(r2s))
-        # nanstd: ignore non-finite seeds (failed trials) in variance estimate
+        r2s = [trial.r2 for trial in trials]
+        rmses = [trial.rmse for trial in trials]
+        median_r2 = float(np.nanmedian(r2s))
         _r2s_finite = [r for r in r2s if np.isfinite(r)]
-        std_r2      = float(np.std(_r2s_finite, ddof=1)) if len(_r2s_finite) > 1 else 0.0
+        std_r2 = float(np.std(_r2s_finite, ddof=1)) if len(_r2s_finite) > 1 else 0.0
         median_rmse = float(np.nanmedian(rmses))
-
-        # Pick the formula from the trial whose R² is closest to the median.
         best_idx = int(np.argmin([abs(r - median_r2) for r in r2s]))
+        selected = trials[best_idx]
 
         self._log(
             f"multi-seed ({self._nn_seeds}): "
             f"median R²={median_r2:.4f}  std={std_r2:.4f}  "
             f"min={min(r2s):.4f}  max={max(r2s):.4f}"
         )
-        return MethodResult(
-            method=self.name, success=True,
-            r2=median_r2, rmse=median_rmse,
-            formula=formulas[best_idx].replace("→1,", f"→1,{self._nn_seeds}seeds,"),
-            metadata={
-                "nn_seeds":    self._nn_seeds,
-                "r2_per_seed": r2s,
-                "r2_std":      std_r2,
-                "r2_median":   median_r2,
-            },
-        )
+        selected.r2 = median_r2
+        selected.rmse = median_rmse
+        selected.formula = selected.formula.replace("→1,", f"→1,{self._nn_seeds}seeds,")
+        selected.metadata = {
+            **(selected.metadata or {}),
+            "nn_seeds": self._nn_seeds,
+            "r2_per_seed": r2s,
+            "r2_std": std_r2,
+            "r2_median": median_r2,
+        }
+        return selected
 
 
 # Backward-compatible alias — external references to ImprovedNNMethod still work.
@@ -1956,7 +2055,11 @@ class HybridDeFiMethod(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._system is None:
-            return self._unavailable("EnhancedHybridSystemDeFi not available")
+            return self._unavailable(
+                "EnhancedHybridSystemDeFi not available",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         if self._no_cache:
             self._clear_llm_cache()
@@ -1977,6 +2080,7 @@ class HybridDeFiMethod(BaseMethod):
             ):
                 metadata = {**metadata, "force_llm": True}
 
+            result = None
             result = self._system.hybrid_predict(
                 description,
                 metadata.get("domain", "unknown"),
@@ -2050,13 +2154,14 @@ class HybridDeFiMethod(BaseMethod):
                     f"(decision={decision!r}, keys={list(result.keys())})"
                 )
                 return self._unavailable(
-                    f"hybrid_predict returned no evaluation (decision={decision})"
+                    f"hybrid_predict returned no evaluation (decision={decision})",
+                    metadata=_provenance(result),
                 )
 
             # ── Extract r2 / rmse from the located eval dict ──────────────
             _r2_raw = eval_.get("r2")  # AUDIT L36: no silent 0.0 score
             if _r2_raw is None:
-                return self._unavailable("evaluation has no r2")
+                return self._unavailable("evaluation has no r2", metadata=_provenance(result))
             r2_val   = float(_r2_raw)
             rmse_val = eval_.get("rmse")
             if rmse_val is None or not np.isfinite(float(rmse_val)):
@@ -2089,7 +2194,9 @@ class HybridDeFiMethod(BaseMethod):
             # At temperature=0 this produces the same formula → same RMSE as
             # PureLLM Baseline → flagged as duplicate.  Train a shallow MLP on
             # the real residuals so this method is always data-independent.
-            _y_pred_defi = eval_.get("y_pred") or result.get("y_pred")
+            _y_pred_defi = eval_.get("y_pred")
+            if _y_pred_defi is None:
+                _y_pred_defi = result.get("y_pred")
             _nn_applied_defi = False
             if _y_pred_defi is None and _llm_code:
                 _y_pred_defi = self._runner_eval_formula(_llm_code, X, var_names)
@@ -2120,16 +2227,20 @@ class HybridDeFiMethod(BaseMethod):
                         self._log(f"NN residual correction applied R²={r2_val:.4f}")
 
             _fdisp, _fhash, _ffull = BaseMethod._make_formula_result(str(_formula))
-            return MethodResult(
+            _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2_val, rmse=rmse_val,
                 formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
                 metadata={**_provenance(result), "decision": decision, "nn_applied": _nn_applied_defi},
             )
+            return _method_result
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(
+                str(exc)[:150],
+                metadata=_provenance(result) if isinstance(result, dict) else {},
+            )
 
 
 # ============================================================================
@@ -2231,139 +2342,137 @@ class HybridAllDomainsMethod(BaseMethod):
         X: np.ndarray,
         y: np.ndarray,
         y_pred_llm: np.ndarray,
-    ) -> Optional[np.ndarray]:
-        """Train a shallow MLP on the LLM formula's residuals and return
-        corrected predictions: y_hybrid = y_pred_llm + NN(X).
-
-        This is the step that makes HybridAllDomainsMethod genuinely
-        independent from PureLLMBaseline even at temperature=0: the LLM
-        formula is identical, but the NN sees real data residuals and adds a
-        meaningful data-driven correction.
-
-        Returns corrected y array, or None if torch is unavailable / fails.
-        """
+        description: str = "",
+    ) -> Optional[tuple]:
+        """Fit residual correction and retain its complete inference transform."""
         if not TORCH_AVAILABLE:
             return None
         try:
+            _seed = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+            torch.manual_seed(_seed)
             from sklearn.preprocessing import StandardScaler as _SS
-
-            # Detect wide-range positive targets (power-law equations like Newton's
-            # gravity, Coulomb, etc.). For these, linear residuals span many decades
-            # and a linear-space NN learns nothing useful. Use log-space correction
-            # instead: train on log(y) - log(y_pred_llm) residuals, then exponentiate.
-            _y_pos   = np.all(y > 0) and np.all(y_pred_llm > 0)
+            X = np.asarray(X, dtype=float)
+            y = np.asarray(y, dtype=float).reshape(-1)
+            y_pred_llm = np.asarray(y_pred_llm, dtype=float).reshape(-1)
+            if (X.ndim != 2 or len(X) != len(y) or len(y) != len(y_pred_llm)
+                    or not np.all(np.isfinite(X)) or not np.all(np.isfinite(y))
+                    or not np.all(np.isfinite(y_pred_llm))):
+                raise ValueError("non-finite or incompatible residual-fit inputs")
+            _y_pos = np.all(y > 0) and np.all(y_pred_llm > 0)
             _y_ratio = float(np.max(np.abs(y)) / (np.min(np.abs(y)) + 1e-300))
             _use_log = _y_pos and _y_ratio > 5.0
-
-            # Log-transform wide-range positive X features as well
             _log_cols = []
             for _c in range(X.shape[1]):
                 if np.all(X[:, _c] > 0):
                     _cr = float(np.max(X[:, _c]) / (np.min(X[:, _c]) + 1e-300))
                     if _use_log or _cr > 10.0:
                         _log_cols.append(_c)
-
-            Xf = X.copy().astype(float)
+            Xf = X.copy()
             for _c in _log_cols:
                 Xf[:, _c] = np.log(np.clip(Xf[:, _c], 1e-300, None))
-
             scaler_X = _SS().fit(Xf)
-            X_s      = scaler_X.transform(Xf)
-            X_t      = torch.FloatTensor(X_s)
-            n_in     = X_s.shape[1]
-
+            X_s = scaler_X.transform(Xf)
+            X_t = torch.as_tensor(X_s, dtype=torch.float32)
+            n_in = X_s.shape[1]
             def _build_and_train(target_vec):
-                """Shared MLP trainer. Returns predictions in target space."""
-                t_mean = float(np.mean(target_vec))
-                t_std  = float(np.std(target_vec))
-                if t_std < 1e-30:
-                    return None   # flat target — nothing to learn
-                t_s = ((target_vec - t_mean) / t_std).reshape(-1, 1)
-                r_t = torch.FloatTensor(t_s)
-                net = nn.Sequential(
-                    nn.Linear(n_in, 64), nn.Tanh(),
-                    nn.Linear(64, 32),   nn.Tanh(),
-                    nn.Linear(32, 1),
-                )
-                opt     = torch.optim.Adam(net.parameters(), lr=3e-3, weight_decay=1e-4)
+                t_mean, t_std = float(np.mean(target_vec)), float(np.std(target_vec))
+                if t_std < 1e-30: return None
+                r_t = torch.as_tensor(((target_vec - t_mean) / t_std).reshape(-1, 1), dtype=torch.float32)
+                net = nn.Sequential(nn.Linear(n_in, 64), nn.Tanh(), nn.Linear(64, 32), nn.Tanh(), nn.Linear(32, 1))
+                opt = torch.optim.Adam(net.parameters(), lr=3e-3, weight_decay=1e-4)
                 loss_fn = nn.MSELoss()
                 best_loss, best_w, patience = float("inf"), None, 0
                 for _ in range(300):
-                    opt.zero_grad()
-                    loss = loss_fn(net(X_t), r_t)
-                    loss.backward()
-                    opt.step()
+                    opt.zero_grad(); loss = loss_fn(net(X_t), r_t); loss.backward(); opt.step()
                     if loss.item() < best_loss - 1e-7:
                         best_loss = loss.item()
-                        best_w    = {k: v.clone() for k, v in net.state_dict().items()}
-                        patience  = 0
+                        best_w = {k: v.detach().clone() for k, v in net.state_dict().items()}
+                        patience = 0
                     else:
                         patience += 1
-                        if patience >= 30:
-                            break
-                if best_w is not None:
-                    net.load_state_dict(best_w)
+                        if patience >= 30: break
+                if best_w is None: return None
+                net.load_state_dict(best_w); net.eval()
+                def _predict_residual(X_new):
+                    X_new = np.asarray(X_new, dtype=float)
+                    if X_new.ndim != 2 or X_new.shape[1] != X.shape[1] or not np.all(np.isfinite(X_new)):
+                        raise ValueError("residual predictor received invalid feature matrix")
+                    X_new_f = X_new.copy()
+                    for _idx in _log_cols:
+                        if np.any(X_new_f[:, _idx] <= 0):
+                            raise ValueError(f"log-transformed feature column {_idx} must be positive")
+                        X_new_f[:, _idx] = np.log(X_new_f[:, _idx])
+                    X_new_s = scaler_X.transform(X_new_f)
+                    with torch.no_grad():
+                        pred_s = net(torch.as_tensor(X_new_s, dtype=torch.float32)).cpu().numpy().reshape(-1)
+                    return pred_s * t_std + t_mean
                 with torch.no_grad():
-                    pred_s = net(X_t).numpy().flatten()
-                return pred_s * t_std + t_mean
-
-            best_result = None
-            best_r2     = float("-inf")
-            # PHASE1-FIX-P10b: canonical R^2 (no private ss_tot / 1e-300 guard)
+                    train_pred = net(X_t).cpu().numpy().reshape(-1) * t_std + t_mean
+                return train_pred, _predict_residual
+            best_result, best_predictor, best_r2 = None, None, float("-inf")
             from hypatiax.core.r2_canonical import r2_checked as _r2_checked
-
-            # Strategy A — log-space correction (for power-law / tiny-scale eqs)
             if _use_log:
                 try:
-                    log_resid = np.log(y) - np.log(y_pred_llm)
-                    log_corr  = _build_and_train(log_resid)
-                    if log_corr is not None:
-                        y_log_corrected = np.exp(
-                            np.clip(np.log(y_pred_llm) + log_corr, -500, 500))
-                        if np.all(np.isfinite(y_log_corrected)):
-                            r2_log = _r2_checked(y, y_log_corrected)[0]  # PHASE1-FIX-P10b
-                            if np.isfinite(r2_log) and r2_log > best_r2:
-                                best_r2, best_result = r2_log, y_log_corrected
+                    built = _build_and_train(np.log(y) - np.log(y_pred_llm))
+                    if built is not None:
+                        corr, corr_fn = built
+                        candidate = np.exp(np.clip(np.log(y_pred_llm) + corr, -500, 500))
+                        score = _r2_checked(y, candidate)[0]
+                        if np.all(np.isfinite(candidate)) and np.isfinite(score) and score > best_r2:
+                            best_result, best_r2 = candidate, score
+                            def _log_predictor(X_new, base_new, _corr=corr_fn):
+                                base_new = np.asarray(base_new, dtype=float).reshape(-1)
+                                if np.any(base_new <= 0): raise ValueError("log residual correction requires positive base predictions")
+                                return np.exp(np.clip(np.log(base_new) + _corr(X_new), -500, 500))
+                            best_predictor = _log_predictor
                 except Exception as _e:
                     import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-            # Strategy B — linear-space correction (standard residuals)
+                    _lg.getLogger(__name__).warning("swallowed: %r", _e)
+                    if _os.environ.get("HYPATIAX_STRICT") == "1": raise
             try:
-                lin_resid = y - y_pred_llm
-                lin_corr  = _build_and_train(lin_resid)
-                if lin_corr is not None:
-                    y_lin_corrected = y_pred_llm + lin_corr
-                    if np.all(np.isfinite(y_lin_corrected)):
-                        r2_lin = _r2_checked(y, y_lin_corrected)[0]  # PHASE1-FIX-P10b
-                        if np.isfinite(r2_lin) and r2_lin > best_r2:
-                            best_r2, best_result = r2_lin, y_lin_corrected
+                built = _build_and_train(y - y_pred_llm)
+                if built is not None:
+                    corr, corr_fn = built
+                    candidate = y_pred_llm + corr
+                    score = _r2_checked(y, candidate)[0]
+                    if np.all(np.isfinite(candidate)) and np.isfinite(score) and score > best_r2:
+                        best_result, best_r2 = candidate, score
+                        def _linear_predictor(X_new, base_new, _corr=corr_fn):
+                            return np.asarray(base_new, dtype=float).reshape(-1) + _corr(X_new)
+                        best_predictor = _linear_predictor
             except Exception as _e:
                 import logging as _lg, os as _os
-                _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-            return best_result
+                _lg.getLogger(__name__).warning("swallowed: %r", _e)
+                if _os.environ.get("HYPATIAX_STRICT") == "1": raise
+            return (best_result, best_predictor) if best_result is not None else None
         except Exception as e:
             return _m5_record_failure("_nn_residual_fit", e)
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if self._system is None:
             reason = self._init_error or "HybridSystemLLMNN (all-domains) not available"
-            return self._unavailable(reason)
+            return self._unavailable(
+                reason,
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Clear formula cache before each call when --no-llm-cache is active.
         if self._no_cache:
             self._clear_llm_cache()
 
+        result = None
         try:
             for method_name in ("hybrid_predict", "predict", "discover", "run"):
                 if hasattr(self._system, method_name):
                     fn = getattr(self._system, method_name)
                     break
             else:
-                return self._unavailable("No recognised run method on all-domains hybrid")
+                return self._unavailable(
+                    "No recognised run method on all-domains hybrid",
+                    metadata={"llm_called": False, "llm_attempted": False,
+                              "bypass_kind": "none", "llm_source": "none"},
+                )
 
             # FIX — domain routing guard (mirrors EnhancedHybridSystemDeFi.run()).
             # The hybrid router sometimes selects decision="nn" for Feynman physics
@@ -2392,7 +2501,10 @@ class HybridAllDomainsMethod(BaseMethod):
             )
 
             if not (result and isinstance(result, dict)):
-                return self._unavailable("All-domains hybrid returned no usable result")
+                return self._unavailable(
+                    "All-domains hybrid returned no usable result",
+                    metadata=_provenance(result) if isinstance(result, dict) else {},
+                )
 
             eval_d = result.get("evaluation") or {}
             r2v  = eval_d.get("r2")   if eval_d.get("r2")   is not None else result.get("r2")
@@ -2424,8 +2536,12 @@ class HybridAllDomainsMethod(BaseMethod):
             # Strategy 3: algebraic reconstruction from r2/rmse (last resort)
             #   — guarantees NN residual correction always fires, eliminating
             #     the structural duplicate with PureLLM Baseline (32 events/run).
-            y_pred_llm = eval_d.get("y_pred") or result.get("y_pred")
+            y_pred_llm = eval_d.get("y_pred")
+            if y_pred_llm is None:
+                y_pred_llm = result.get("y_pred")
             _ypred_source = None
+            _base_predict_fn = None
+            _predict_fn = None
             if y_pred_llm is not None:
                 y_pred_llm = np.asarray(y_pred_llm, dtype=float).flatten()
                 if not np.all(np.isfinite(y_pred_llm)):
@@ -2437,13 +2553,12 @@ class HybridAllDomainsMethod(BaseMethod):
                 # Strategy 2: re-evaluate the formula string.
                 formula_str = (
                     result.get("python_code")
-                    or result.get("formula")
-                    or result.get("best_formula")
-                    or ""
+                    or _extract_formula(result)
                 )
                 if formula_str:
                     y_pred_llm = self._runner_eval_formula(formula_str, X, var_names)
                     if y_pred_llm is not None:
+                        _base_predict_fn = lambda X_new, _code=formula_str: self._runner_eval_formula(_code, X_new, var_names)
                         y_pred_llm = y_pred_llm.flatten()
                         if not np.all(np.isfinite(y_pred_llm)):
                             y_pred_llm = None
@@ -2451,6 +2566,32 @@ class HybridAllDomainsMethod(BaseMethod):
                             _ypred_source = "formula_eval"
                             r2v  = self._safe_r2(y, y_pred_llm)
                             rmse = self._safe_rmse(y, y_pred_llm)
+
+            # If the backend supplied training predictions directly, only reuse
+            # its formula as a holdout predictor when re-evaluation reproduces
+            # those exact training predictions to tight numerical tolerance.
+            if y_pred_llm is not None and _base_predict_fn is None:
+                _lr_candidate = result.get("llm_result") if isinstance(result.get("llm_result"), dict) else {}
+                _candidate_formula = (
+                    result.get("python_code")
+                    or _lr_candidate.get("python_code")
+                    or _extract_formula(result)
+                )
+                if _candidate_formula and _candidate_formula != "N/A":
+                    _candidate_train_pred = self._runner_eval_formula(
+                        _candidate_formula, X, var_names
+                    )
+                    if (
+                        _candidate_train_pred is not None
+                        and np.asarray(_candidate_train_pred).shape == np.asarray(y_pred_llm).shape
+                        and np.allclose(
+                            _candidate_train_pred, y_pred_llm,
+                            rtol=1e-7, atol=1e-15,
+                        )
+                    ):
+                        _base_predict_fn = lambda X_new, _code=_candidate_formula: self._runner_eval_formula(
+                            _code, X_new, var_names
+                        )
 
             if y_pred_llm is None and _finite(r2v) and r2v > 0 and _finite(rmse):
                 # Strategy 3a — Direct NN fit (X→y) for power-law / tiny-scale equations.
@@ -2467,6 +2608,8 @@ class HybridAllDomainsMethod(BaseMethod):
 
                 if _use_direct:
                     try:
+                        _seed3 = int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31)
+                        torch.manual_seed(_seed3)
                         from sklearn.preprocessing import StandardScaler as _SS3
                         # Log-transform strictly-positive, wide-range X columns
                         _lc3 = [c for c in range(X.shape[1])
@@ -2475,7 +2618,8 @@ class HybridAllDomainsMethod(BaseMethod):
                         Xf3 = X.copy().astype(float)
                         for c in _lc3:
                             Xf3[:, c] = np.log(Xf3[:, c])
-                        Xf3 = _SS3().fit_transform(Xf3)
+                        scaler3 = _SS3()
+                        Xf3 = scaler3.fit_transform(Xf3)
                         # Target: normalised log(y)
                         log_y3   = np.log(y)
                         ly3_mean = float(np.mean(log_y3))
@@ -2511,11 +2655,28 @@ class HybridAllDomainsMethod(BaseMethod):
                                 lp3 = net3(Xt3).numpy().flatten()
                             y_pred_s3 = np.exp(
                                 np.clip(lp3 * ly3_std + ly3_mean, -500, 500))
+                            net3.eval()
+                            def _direct_nn_predictor(X_new, _net=net3, _scaler=scaler3,
+                                                     _log_cols=tuple(_lc3), _mean=ly3_mean,
+                                                     _std=ly3_std):
+                                X_new = np.asarray(X_new, dtype=float)
+                                if X_new.ndim != 2 or X_new.shape[1] != X.shape[1]:
+                                    raise ValueError("direct NN predictor received incompatible feature shape")
+                                X_new_f = X_new.copy()
+                                for _idx in _log_cols:
+                                    if np.any(X_new_f[:, _idx] <= 0):
+                                        raise ValueError(f"log-transformed feature column {_idx} must be positive")
+                                    X_new_f[:, _idx] = np.log(X_new_f[:, _idx])
+                                X_new_s = _scaler.transform(X_new_f)
+                                with torch.no_grad():
+                                    _lp = _net(torch.as_tensor(X_new_s, dtype=torch.float32)).cpu().numpy().reshape(-1)
+                                return np.exp(np.clip(_lp * _std + _mean, -500, 500))
                             if np.all(np.isfinite(y_pred_s3)):
                                 r2_s3 = self._safe_r2(y, y_pred_s3)
                                 if np.isfinite(r2_s3) and r2_s3 > r2v:
                                     y_pred_llm    = y_pred_s3
                                     _ypred_source = "direct_nn_log_fit"
+                                    _base_predict_fn = _direct_nn_predictor
                                     r2v  = r2_s3
                                     rmse = self._safe_rmse(y, y_pred_llm)
                                     self._log(
@@ -2561,7 +2722,11 @@ class HybridAllDomainsMethod(BaseMethod):
                 and np.isfinite(r2v)
                 and r2v > -1.0
             ):
-                y_hybrid = self._nn_residual_fit(X, y, y_pred_llm)
+                _residual_fit = self._nn_residual_fit(X, y, y_pred_llm, description)
+                if _residual_fit is not None:
+                    y_hybrid, _residual_predictor = _residual_fit
+                else:
+                    y_hybrid, _residual_predictor = None, None
                 if y_hybrid is not None and np.all(np.isfinite(y_hybrid)):
                     r2_hybrid   = self._safe_r2(y, y_hybrid)
                     rmse_hybrid = self._safe_rmse(y, y_hybrid)
@@ -2571,6 +2736,27 @@ class HybridAllDomainsMethod(BaseMethod):
                         r2v  = r2_hybrid
                         rmse = rmse_hybrid
                         nn_applied = True
+                        if callable(_base_predict_fn) and callable(_residual_predictor):
+                            def _hybrid_predictor(X_new, _base=_base_predict_fn, _residual=_residual_predictor):
+                                _base_pred = _base(X_new)
+                                if _base_pred is None:
+                                    raise ValueError("base hybrid predictor could not evaluate holdout features")
+                                _X_new = np.asarray(X_new, dtype=float)
+                                _base_pred = np.asarray(_base_pred, dtype=float).reshape(-1)
+                                if _X_new.ndim != 2 or _base_pred.shape != (_X_new.shape[0],):
+                                    raise ValueError(
+                                        f"base hybrid prediction shape={_base_pred.shape}; "
+                                        f"expected ({_X_new.shape[0]},)"
+                                    )
+                                if not np.all(np.isfinite(_base_pred)):
+                                    raise ValueError("base hybrid predictor returned non-finite values")
+                                _corrected = np.asarray(
+                                    _residual(_X_new, _base_pred), dtype=float
+                                ).reshape(-1)
+                                if _corrected.shape != _base_pred.shape or not np.all(np.isfinite(_corrected)):
+                                    raise ValueError("hybrid residual predictor returned invalid values")
+                                return _corrected
+                            _predict_fn = _hybrid_predictor
                         self._log(
                             f"NN residual correction applied  "
                             f"R²={r2v:.4f}  RMSE={rmse:.4e}"
@@ -2581,8 +2767,8 @@ class HybridAllDomainsMethod(BaseMethod):
                             f"{r2v:.4f} to {r2_hybrid:.4f})"
                         )
 
-            _fstr_2534 = str(result.get("formula", result.get("best_formula", "N/A")))
-            return MethodResult(
+            _fstr_2534 = _extract_formula(result)
+            _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
                 rmse=rmse,
@@ -2593,10 +2779,18 @@ class HybridAllDomainsMethod(BaseMethod):
                     "nn_applied": nn_applied,
                 },
             )
+            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
+                _predict_fn = _base_predict_fn
+            if callable(_predict_fn):
+                _method_result._predict_fn = _predict_fn
+            return _method_result
 
         except Exception as exc:
             self._log(f"run error: {exc}")
-            return self._unavailable(str(exc)[:150])
+            return self._unavailable(
+                str(exc)[:150],
+                metadata=_provenance(result) if isinstance(result, dict) else {},
+            )
 
 
 # ============================================================================
@@ -2789,7 +2983,7 @@ def _run_pysr_in_subprocess(
     -------
     Result dict (always contains at least {"success": bool}).
     """
-    import pickle, base64, subprocess
+    import pickle, base64, subprocess, signal
 
     if timeout is None:
         timeout = _PYSR_TIMEOUT
@@ -2813,6 +3007,15 @@ def _run_pysr_in_subprocess(
 
     env = os.environ.copy()
     env["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
+    # The hybrid adapter computes a per-attempt PySR budget from the remaining
+    # method deadline and passes it in extra_kwargs.  symbolic_engine.py reads
+    # PYSR_TIMEOUT before DiscoveryConfig.pysr_timeout, so inheriting the
+    # workflow-wide value (e.g. 1100s) silently overrides the tighter hybrid
+    # budget (e.g. 250s) and lets the child hit its larger outer timeout first.
+    # Make the adapter's explicit budget authoritative inside this isolated
+    # worker.  Keep the SymbolicEngineWithLLM path's existing workflow budget.
+    if method == "hybrid_v50_2" and (extra_kwargs or {}).get("pysr_timeout") is not None:
+        env["PYSR_TIMEOUT"] = str(int(extra_kwargs["pysr_timeout"]))
 
     proc = None
     try:
@@ -2822,11 +3025,20 @@ def _run_pysr_in_subprocess(
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
+            start_new_session=True,
         )
         try:
             stdout_bytes, stderr_bytes = proc.communicate(input=encoded, timeout=timeout)
         except subprocess.TimeoutExpired:
-            proc.kill()
+            # Kill the worker and its Julia descendants as one process group;
+            # killing only the Python wrapper can leave an orphaned Julia fit.
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, AttributeError, OSError):
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
             _, stderr_bytes = proc.communicate()
             stderr_tail = (
                 stderr_bytes.decode(errors="replace")[-300:] if stderr_bytes else ""
@@ -2940,8 +3152,17 @@ class SymbolicEngineMethod(BaseMethod):
             self._log("probe OK ✅ (subprocess mode)")
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
+        _no_llm_provenance = {
+            "llm_called": False, "llm_attempted": False,
+            "bypass_kind": "none", "llm_source": "none",
+            "temperature_requested": None, "temperature_sent": None,
+            "llm_mode": "none",
+        }
         if not SYM_ENGINE_AVAILABLE:
-            return self._unavailable("SymbolicEngineWithLLM not available")
+            return self._unavailable(
+                "SymbolicEngineWithLLM not available",
+                metadata=dict(_no_llm_provenance),
+            )
 
         safe_names, rename_map = _sanitise_var_names(var_names)
         if rename_map:
@@ -3017,13 +3238,16 @@ class SymbolicEngineMethod(BaseMethod):
             if _trace:
                 print(f"   [SE-TRACE] {' | '.join(str(t) for t in _trace[:20])}", flush=True)
             if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                return self._unavailable("AUDIT L36: success reported without an r2")
+                return self._unavailable(
+                    "AUDIT L36: success reported without an r2",
+                    metadata=dict(_no_llm_provenance),
+                )
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
-                rmse=float(result.get("rmse", float("nan"))),
+                rmse=float(result["rmse"]) if result.get("rmse") is not None else float("nan"),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
-                metadata={"iterations": _n_iter},
+                metadata={**_no_llm_provenance, "iterations": _n_iter},
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         # ── Surface subprocess trace on failure ──────────────────────────────
@@ -3036,7 +3260,7 @@ class SymbolicEngineMethod(BaseMethod):
             for _t in _trace:
                 print(f"      {_t}", flush=True)
         self._log(f"run error: {err}")
-        return self._unavailable(str(err)[:150])
+        return self._unavailable(str(err)[:150], metadata=dict(_no_llm_provenance))
 
 
 # ============================================================================
@@ -3061,7 +3285,11 @@ class HybridSystemV50_2Method(BaseMethod):
 
     def run(self, description, X, y, var_names, metadata, verbose=False) -> MethodResult:
         if not HYBRID_V50_2_AVAILABLE:
-            return self._unavailable("HybridDiscoverySystem v50_2 not available")
+            return self._unavailable(
+                "HybridDiscoverySystem v50_2 not available",
+                metadata={"llm_called": False, "llm_attempted": False,
+                          "bypass_kind": "none", "llm_source": "none"},
+            )
 
         # Rename any Julia-reserved variable names before calling PySR.
         safe_names, rename_map = _sanitise_var_names(var_names)
@@ -3079,7 +3307,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Always a single subprocess run — Julia startup (~90s) paid once.
         import math as _math
 
-        _MAX_RETRIES_V50_2_OUTER = 3   # kept in sync with _MAX_RETRIES_V50_2 below
+        _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
         _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
         _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
         # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
@@ -3119,16 +3347,21 @@ class HybridSystemV50_2Method(BaseMethod):
 
         # ── Per-attempt PySR timeout ─────────────────────────────────────────
         # Two constraints must both be satisfied:
-        #   A) Budget constraint: 3 retries must fit inside method_timeout
-        #      = (_METHOD_TIMEOUT_SECS - 150s overhead) / 3 retries
+        #   A) Budget constraint: 2 attempts must fit inside method_timeout
+        #      = (_METHOD_TIMEOUT_SECS - reserved overhead) / 2 attempts
         #   B) User constraint: respect --pysr-timeout CLI flag
         # We take the minimum so neither is violated.
-        _MAX_RETRIES_V50_2 = 3
-        _t_available     = max(60, _METHOD_TIMEOUT_SECS - 150)
+        # Two bounded attempts leave time for Julia startup, result
+        # serialisation and cleanup inside the method/subprocess deadlines.
+        # Three full searches could consume the entire outer budget before
+        # the worker has a chance to return its best result.
+        _MAX_RETRIES_V50_2 = 2
+        _reserved_overhead = 400
+        _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
-        # _PYSR_TIMEOUT is the user's --pysr-timeout flag (default 600).
-        # Use it as a ceiling — never exceed what the user asked for.
-        _per_attempt_to  = min(_budget_per_attempt, _PYSR_TIMEOUT)
+        # Respect the caller's PySR timeout while ensuring the retry budget
+        # fits inside the outer per-method deadline.
+        _per_attempt_to = min(_budget_per_attempt, _PYSR_TIMEOUT)
 
         _tc_kwargs = {
             "max_iterations": _n_iter_adaptive,
@@ -3162,7 +3395,10 @@ class HybridSystemV50_2Method(BaseMethod):
         # gracefully killed) before the parent thread is force-killed.
         # Old value (_PYSR_TIMEOUT + 500 = 1100s) EXCEEDED the 900s method
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
-        _subprocess_timeout = max(60, _METHOD_TIMEOUT_SECS - 100)
+        _subprocess_timeout = min(
+            max(60, _METHOD_TIMEOUT_SECS - 100),
+            (2 * _per_attempt_to) + 280,
+        )
         result = _run_pysr_in_subprocess(
             method="hybrid_v50_2",
             X=X, y=y,
@@ -3177,11 +3413,14 @@ class HybridSystemV50_2Method(BaseMethod):
             raw_formula = result.get("final_formula", result.get("formula", "N/A"))
             formula = _restore_var_names(raw_formula, rename_map)
             if result.get("r2") is None:  # AUDIT L36: no silent 0.0 score
-                return self._unavailable("AUDIT L36: success reported without an r2")
+                return self._unavailable(
+                    "AUDIT L36: success reported without an r2",
+                    metadata=_provenance(result),
+                )
             return MethodResult(
                 method=self.name, success=True,
                 r2=float(result["r2"]),
-                rmse=float(result.get("rmse", float("nan"))),
+                rmse=float(result["rmse"]) if result.get("rmse") is not None else float("nan"),
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={
                     **_provenance(result),
@@ -3191,7 +3430,10 @@ class HybridSystemV50_2Method(BaseMethod):
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         self._log(f"run error: {err}")
-        return self._unavailable(str(err)[:150])
+        return self._unavailable(
+            str(err)[:150],
+            metadata=_provenance(result) if isinstance(result, dict) else {},
+        )
 
 
 # ============================================================================
@@ -3409,6 +3651,18 @@ class ProtocolBenchmarkSuite:
                 # wait=False alone is safe: the thread is a daemon and will not
                 # prevent process exit even if it runs to completion.
                 _pool.shutdown(wait=False)
+            if result is None:
+                # A method adapter must return MethodResult. Preserve the failed
+                # equation/method record instead of crashing the entire suite
+                # while assigning timing metadata.
+                result = MethodResult(
+                    method=method.name, success=False,
+                    r2=float("-inf"), rmse=float("inf"), formula="N/A",
+                    error="method.run returned None (no MethodResult was produced)",
+                    metadata={"invalid_method_return": True},
+                )
+                if verbose:
+                    print("✗ method returned None; recorded as unavailable", flush=True)
             result.time = time.time() - t0
             results[method.name] = result
 
@@ -3457,7 +3711,8 @@ class ProtocolBenchmarkSuite:
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
         _do_extrap = (
-            X_far is not None
+            metadata.get("split_protocol") != "pca_40_60"
+            and X_far is not None
             and y_far is not None
             and len(X_far) > 1
             and len(y_far) > 1
@@ -3649,31 +3904,78 @@ class ProtocolBenchmarkSuite:
         # pca_test_r2 in the record for downstream analysis.
         if metadata.get("split_protocol") == "pca_40_60" and X_far is not None and y_far is not None and len(y_far) > 1:
             _pca_r2: Dict[str, Optional[float]] = {}
+            _pca_external: Dict[str, Dict[str, Any]] = {}
             for _mname, _mres in results.items():
                 _formula = None
-                if isinstance(_mres, MethodResult):
-                    _formula = _mres.formula
-                    # NN methods return architecture tags, not evaluable formulas
-                    if _formula and any(kw in str(_formula) for kw in ("layers=", "hidden=", "NN:", "neural")):
-                        _pca_r2[_mname] = None
-                        continue
-                if _formula:
+                _reason = None
+                _ypred = None
+                _predict_fn = getattr(_mres, "_predict_fn", None)
+                if callable(_predict_fn):
                     try:
-                        # FIX Bug 6: _RUNNER_EVAL_FORMULA was undefined (NameError),
-                        # silently caught by except → pca_test_r2 always None.
-                        # Use the module-level _runner_eval_formula and compute R² inline.
-                        _ypred = _runner_eval_formula(_formula, X_far, var_names)
-                        if _ypred is not None and len(_ypred) == len(y_far) and np.all(np.isfinite(_ypred)):
-                            # PHASE1-FIX-P11: canonical R^2; degenerate target -> None (unscored), as before
-                            from hypatiax.core.r2_canonical import r2_checked as _r2c
-                            _v = _r2c(y_far, _ypred)[0]
-                            _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
-                        else:
-                            _pca_r2[_mname] = None
-                    except Exception:
-                        _pca_r2[_mname] = None
+                        _ypred = np.asarray(_predict_fn(X_far), dtype=float).reshape(-1)
+                    except Exception as _pca_predict_exc:
+                        _reason = f"{type(_pca_predict_exc).__name__}: {_pca_predict_exc}"
+                elif (getattr(_mres, "metadata", {}) or {}).get("nn_applied"):
+                    _reason = (
+                        "NN residual correction contributed to the reported hybrid result, "
+                        "but its fitted inference pipeline was not retained; formula-only "
+                        "evaluation would not reproduce the reported method"
+                    )
+                else:
+                    if isinstance(_mres, MethodResult):
+                        _formula = getattr(_mres, "formula_full", "") or _mres.formula
+                    if _formula:
+                        try:
+                            _formula_diagnostics: List[str] = []
+                            _ypred = _runner_eval_formula(
+                                _formula, X_far, var_names,
+                                diagnostics=_formula_diagnostics,
+                            )
+                            if _ypred is None and _formula_diagnostics:
+                                _reason = "formula evaluation failed: " + _formula_diagnostics[-1]
+                        except Exception as _pca_eval_exc:
+                            _reason = f"{type(_pca_eval_exc).__name__}: {_pca_eval_exc}"
+                    else:
+                        _reason = "method did not expose a reusable predictor or formula"
+                _y_far_checked = np.asarray(y_far, dtype=float).reshape(-1)
+                if not np.all(np.isfinite(_y_far_checked)):
+                    _reason = "PCA external holdout target contains non-finite values"
+                elif _ypred is not None and len(_ypred) == len(_y_far_checked) and np.all(np.isfinite(_ypred)):
+                    from hypatiax.core.r2_canonical import r2_checked as _r2c
+                    _v = _r2c(_y_far_checked, _ypred)[0]
+                    _rmse = float(np.sqrt(np.mean((_y_far_checked - _ypred) ** 2)))
+                    _pca_r2[_mname] = float(_v) if np.isfinite(_v) else None
+                    if (
+                        isinstance(_v, (int, float, np.number))
+                        and np.isfinite(_v)
+                        and np.isfinite(_rmse)
+                    ):
+                        _pca_external[_mname] = {
+                            "external_holdout_scope": "pca_40_60",
+                            "external_holdout_status": "success",
+                            "r2_external_holdout": float(_v),
+                            "rmse_external_holdout": _rmse,
+                            "external_holdout_error": None,
+                        }
+                    else:
+                        _reason = "PCA external metrics were non-finite or target variance was degenerate"
                 else:
                     _pca_r2[_mname] = None
+                    _reason = _reason or "method did not expose an evaluable formula for the PCA holdout"
+                if _mname not in _pca_external:
+                    _pca_external[_mname] = {
+                        "external_holdout_scope": "pca_40_60",
+                        "external_holdout_status": "unavailable",
+                        "r2_external_holdout": None,
+                        "rmse_external_holdout": None,
+                        "external_holdout_error": _reason,
+                    }
+                _mres.metadata = dict(_mres.metadata or {})
+                _mres.metadata.update(_pca_external[_mname])
+            record["results"] = {
+                _name: {**_result, **_pca_external.get(_name, {})}
+                for _name, _result in record["results"].items()
+            }
             record["pca_test_r2"]       = _pca_r2
             record["pca_split_protocol"] = "pca_40_60"
             record["pca_n_train"]        = metadata.get("n_train")
@@ -4279,6 +4581,12 @@ Examples
         help="Which published SR benchmark to use (default: feynman)",
     )
     parser.add_argument(
+        "--protocol",
+        choices=["benchmark", "all_domains", "protocol30"],
+        default="benchmark",
+        help="Protocol registry: benchmark=Feynman/SRBench; all_domains=custom 30-equation, 10-domain registry.",
+    )
+    parser.add_argument(
         "--domain", type=str, default="all_domains",
         help="Domain filter — short name ('mechanics') or full key ('feynman_mechanics')",
     )
@@ -4336,7 +4644,7 @@ Examples
         ),
     )
     parser.add_argument(
-        "--pysr-timeout", type=int, default=1100, dest="pysr_timeout",
+        "--pysr-timeout", type=int, default=None, dest="pysr_timeout",
         metavar="SECS",
         help=(
             "Seconds before a PySR subprocess is killed "
@@ -4346,7 +4654,7 @@ Examples
         ),
     )
     parser.add_argument(
-        "--method-timeout", type=int, default=900, dest="method_timeout",
+        "--method-timeout", type=int, default=None, dest="method_timeout",
         metavar="SECS",
         help=(
             "Hard timeout in seconds for each individual method call "
@@ -4514,28 +4822,32 @@ Examples
 
     args = parser.parse_args()
 
-    # ── BUG 6 FIX: Read CI environment overrides before applying CLI args ──
-    # CI sets FEYNMAN_TIMEOUT and JOB_DEADLINE in the environment but the script
-    # previously never read them, silently using 90s method timeout and 600s PySR
-    # timeout instead of the paper-quality 1100s values.
-    # CLI args take precedence when they differ from their defaults.
-    _env_feynman_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
-    _env_job_dl     = int(os.environ.get("JOB_DEADLINE",    "0")) or None
+    # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
+    # is a PySR-fit setting only; applying it to the method deadline can silently
+    # stretch the outer deadline beyond the benchmark's 900s method budget.
+    _DEFAULT_PYSR_TIMEOUT = 1100
+    _DEFAULT_METHOD_TIMEOUT = 900
+    _env_method_to = int(os.environ.get("FEYNMAN_METHOD_TIMEOUT", "0")) or None
+    _env_pysr_to = int(os.environ.get("FEYNMAN_PYSR_TIMEOUT", "0")) or None
+    _env_legacy_to = int(os.environ.get("FEYNMAN_TIMEOUT", "0")) or None
+    _env_job_dl = int(os.environ.get("JOB_DEADLINE", "0")) or None
 
-    # Apply env overrides only when the CLI arg is still at its default value
-    # (i.e. the user did not explicitly pass --method-timeout or --pysr-timeout).
-    # Defaults updated to paper quality: method_timeout=900, pysr_timeout=1100.
-    if _env_feynman_to and args.method_timeout == 900:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --method-timeout "
-              f"(CLI default was 900s)")
-        args.method_timeout = _env_feynman_to
-    if _env_feynman_to and args.pysr_timeout == 1100:
-        print(f"ℹ️  FEYNMAN_TIMEOUT={_env_feynman_to}s applied to --pysr-timeout "
-              f"(CLI default was 1100s)")
-        args.pysr_timeout = _env_feynman_to
+    if args.method_timeout is None:
+        args.method_timeout = _env_method_to or _DEFAULT_METHOD_TIMEOUT
+    if args.pysr_timeout is None:
+        args.pysr_timeout = _env_pysr_to or _env_legacy_to or _DEFAULT_PYSR_TIMEOUT
+    if _env_legacy_to and not _env_pysr_to:
+        print(
+            f"ℹ️  FEYNMAN_TIMEOUT={_env_legacy_to}s used only for --pysr-timeout; "
+            "method timeout remains independently configured.",
+            flush=True,
+        )
     if _env_job_dl:
-        print(f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
-              f"not currently used as a hard cutoff)")
+        print(
+            f"ℹ️  JOB_DEADLINE={_env_job_dl}s detected (informational — "
+            "not currently used as a hard cutoff)",
+            flush=True,
+        )
 
     # Propagate --pysr-timeout to the module-level used by _run_pysr_in_subprocess.
     global _PYSR_TIMEOUT
@@ -4545,48 +4857,64 @@ Examples
     global _METHOD_TIMEOUT_SECS
     _METHOD_TIMEOUT_SECS = args.method_timeout
 
-    # ── Load BenchmarkProtocol ──────────────────────────────────────────────
-    try:
-        from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
-        _noiseless = getattr(args, "noiseless", False)
-        _threshold = getattr(args, "threshold", None)
-        if _threshold is None:
-            _threshold = 0.999999 if _noiseless else 0.99
+    # ── Load the requested protocol registry ─────────────────────────────────
+    _noiseless = getattr(args, "noiseless", False)
+    _threshold = getattr(args, "threshold", None)
+    if _threshold is None:
+        _threshold = 0.999999 if _noiseless else 0.99
 
-        protocol = BenchmarkProtocol(
-            benchmark=args.benchmark,
-            num_samples=args.samples,
-            seed=42,
-            feynman_series=args.series,
-            noiseless=_noiseless,
+    if args.protocol == "protocol30":
+        if not _noiseless or float(_threshold) != 0.999999:
+            raise SystemExit("Protocol-30 requires --noiseless and --threshold 0.999999")
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import Protocol30
+            protocol = Protocol30(num_samples=args.samples, seed=42, noiseless=True)
+        except (ImportError, ValueError) as exc:
+            raise SystemExit(f"Could not load manuscript Protocol-30 registry: {exc}") from exc
+        print(
+            f"✅ Manuscript Protocol-30 loaded "
+            f"({len(protocol._feynman_eqs)} equations, {len(protocol.get_all_domains())} domains)"
         )
-        print(f"✅ BenchmarkProtocol loaded  (benchmark={args.benchmark})")
-        print()
-        if getattr(args, "extrap", False):
-            print("=" * 70)
-            print("  EXTRAP MODE  —  train on first 80% of range, test beyond it")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
-            print("=" * 70)
-        elif _noiseless:
-            print("=" * 70)
-            print("  NOISELESS MODE  —  noise_level = 0.0")
-            print(f"  R² threshold    :  {_threshold}")
-            print("  Comparable to   :  NeSymReS (59.4%)  AI Feynman (79.3%)")
-            print("                     TPSR (56.0%)       DSR (32.0%)")
-            print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
-            print("=" * 70)
-        else:
-            print("=" * 70)
-            print("  NON-NOISELESS MODE  —  NOTE: this PCA runner injects NO noise (clean targets)")
-            print(f"  R² threshold    :  {_threshold}  (practical)")
-            print("  Use --noiseless --threshold 0.999999 for literature comparison.")
-            print("=" * 70)
-        print()
-    except ImportError:
-        print("❌  experiment_protocol_benchmark_v2.py not found.")
-        print("    Expected at: hypatiax/protocols/experiment_protocol_benchmark_v2.py")
-        sys.exit(1)
+    elif args.protocol == "all_domains":
+        try:
+            from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll
+            protocol = ExperimentProtocolAll()
+        except ImportError as exc:
+            print(f"❌  experiment_protocol_all_30.py not found: {exc}")
+            sys.exit(1)
+        _registry_domains = protocol.get_all_domains()
+        print(
+            f"✅ ExperimentProtocolAll loaded (30-equation registry; "
+            f"{len(_registry_domains)} domains: {', '.join(_registry_domains)})"
+        )
+    else:
+        try:
+            from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
+            protocol = BenchmarkProtocol(
+                benchmark=args.benchmark,
+                num_samples=args.samples,
+                seed=42,
+                feynman_series=args.series,
+                noiseless=_noiseless,
+            )
+        except ImportError:
+            print("❌  experiment_protocol_benchmark_v2.py not found.")
+            sys.exit(1)
+        print(f"✅ BenchmarkProtocol loaded (benchmark={args.benchmark})")
+
+    if getattr(args, "extrap", False):
+        print("=" * 70)
+        print("  EXTRAP MODE  — train on first 80% of range, test beyond it")
+        print(f"  R² threshold    :  {_threshold}")
+        print("  Output file     :  protocol_core_extrap_TIMESTAMP.json")
+        print("=" * 70)
+    elif _noiseless:
+        print("=" * 70)
+        print("  NOISELESS MODE  — noise_level = 0.0")
+        print(f"  R² threshold    :  {_threshold}")
+        print("  Output file     :  protocol_core_noiseless_TIMESTAMP.json")
+        print("=" * 70)
+    print()
 
     # ── Build suite ─────────────────────────────────────────────────────────
     # --skip-pysr: exclude methods 5 (SymbolicEngine) and 6 (HybridV50_2).

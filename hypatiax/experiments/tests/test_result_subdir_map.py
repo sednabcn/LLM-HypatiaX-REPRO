@@ -12,6 +12,44 @@ mod = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mod)
 
 
+
+def test_exp1_provenance_has_an_isolated_result_directory():
+    assert mod.resolve_result_subdir("exp1-provenance") == (
+        "comparison_results/noise-noiseless/noiseless/defi/exp1-provenance"
+    )
+
+
+def test_exp1_provenance_is_one_fixed_five_seed_experiment():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "- exp1-provenance" in workflow
+    assert '"exp1-provenance":    5' in workflow
+    assert 'required_seeds = ["42", "99", "123", "777", "2024"]' in workflow
+    assert '"exp1-provenance":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS]' in workflow
+    assert 'if [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1-provenance" ]]' in workflow
+    assert 'exp1-provenance shard and write provenance manifest' in workflow
+    assert 'Aggregate and gate exp1-provenance five-seed run' in workflow
+    assert 'validated_shard_count' in workflow
+    assert 'expected_cases_per_seed' in workflow
+    assert "run-${{ github.run_id }}-attempt-${{ github.run_attempt }}" in workflow
+    assert workflow.count("github.event.inputs.experiment != 'exp1-provenance'") == 2
+    assert "RESUME:            ${{ (github.event.inputs.fresh_mode == 'true' || github.event.inputs.experiment == 'exp1-provenance' || github.event.inputs.clean_llm_rerun == 'true') && 'false' || github.event.inputs.resume || 'true' }}" in workflow
+    assert 'expected_domains = {"amm"' in workflow
+    assert "result_sha256" in workflow and "protocol_config_sha256" in workflow
+    assert '"expected_nshards": 5' in workflow
+    assert "runtime_package_versions" in workflow
+    assert "expected_tasks = {f\"{domain}_seed{seed}\" for domain in expected_domains}" in workflow
+    assert "shards used different runtime package versions" in workflow
+    protocol = (ROOT / "config/exp1_provenance.yaml").read_text()
+    assert "id: exp1-provenance" in protocol
+    assert "ordered: [42, 99, 123, 777, 2024]" in protocol
+    assert "nshards: 5" in protocol
+    assert "case_count_per_seed: 74" in protocol
+    assert "total_expected_case_records: 370" in protocol
+    assert "append_workflow_run_id_and_attempt: true" in protocol
+    assert "artifact_retention_days: 90" in protocol
+    assert "retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}" in workflow
+
+
 def test_exp1b_uses_the_canonical_deFi_benchmark_directory():
     assert mod.resolve_result_subdir("exp1b") == (
         "comparison_results/noise-noiseless/15"
@@ -141,6 +179,8 @@ def test_contract_gate_triggers_for_runner_changes_on_push_and_pull_request():
         for path in (
             '"run_all.sh"',
             '".github/workflows/ci_runner_repro.yml"',
+            '"config/exp1_provenance.yaml"',
+            '".github/scripts/result_subdir_map.py"',
             '".github/workflows/ci_pipeline_check.yml"',
             '".github/workflows/ci_pipeline_validate.yml"',
         ):
@@ -173,6 +213,15 @@ def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
     assert "_FAIL=1" in block
 
 
+def test_ground_truth_leak_guard_resolves_deep_defi_source_by_explicit_repo_path():
+    runner = (ROOT / "run_all.sh").read_text()
+    start = runner.index('run gt_leak_guard "')
+    end = runner.find("\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert "_T3='${REPO_ROOT}/hypatiax/core/generation/hybrid_defi_system/hybrid_system_nn_defi_domain.py'" in block
+    assert "-maxdepth 4" not in block
+
+
 def test_exp1b_artifact_rescue_moves_do_not_suppress_failures():
     runner = (ROOT / "run_all.sh").read_text()
     for step in ("exp1b", "exp1b_pca"):
@@ -180,3 +229,77 @@ def test_exp1b_artifact_rescue_moves_do_not_suppress_failures():
         end = runner.find("\nrun ", start + 1)
         block = runner[start: end if end >= 0 else len(runner)]
         assert 'mv -v \\"\\$src\\" \\"\\$dst\\" || true' not in block
+
+
+
+def test_defi_metric_guard_handles_none_invalid_and_nonfinite_scores():
+    import ast
+    import math
+
+    source_path = (
+        ROOT / "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+    )
+    tree = ast.parse(source_path.read_text(encoding="utf-8"))
+    helper = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_finite_metric"
+    )
+    isolated = ast.Module(body=[helper], type_ignores=[])
+    namespace = {"_math": math}
+    exec(compile(isolated, str(source_path), "exec"), namespace)
+    finite_metric = namespace["_finite_metric"]
+
+    assert finite_metric(None) is None
+    assert finite_metric("not-a-score") is None
+    assert finite_metric(float("nan")) is None
+    assert finite_metric(float("inf")) is None
+    assert finite_metric("-inf") is None
+    assert finite_metric("0.875") == 0.875
+    assert finite_metric(-0.25) == -0.25
+
+
+def test_defi_case_metrics_use_safe_conversion_and_preserve_failed_arms():
+    source = (
+        ROOT / "hypatiax/experiments/benchmarks/hypatiax_defi_benchmark_v3c.py"
+    ).read_text(encoding="utf-8")
+    start = source.index("# ── Augment with extrapolation gap and stability score")
+    end = source.index("# ── Print per-case summary", start)
+    block = source[start:end]
+
+    assert "tr_ = _finite_metric(res.get(\"train_r2\"))" in block
+    assert "te_ = _finite_metric(res.get(\"test_r2\"))" in block
+    assert "np.isnan(tr_)" not in block
+    assert "np.isnan(te_)" not in block
+    assert 'res["extrapolation_gap"]' in block
+    assert 'res["stability_score"]' in block
+
+
+def test_exp1_optional_analysis_script_does_not_fail_when_absent():
+    runner = (ROOT / "run_all.sh").read_text(encoding="utf-8")
+    start = runner.index('run exp1 "')
+    end = runner.find("\nrun ", start + 1)
+    block = runner[start : end if end >= 0 else len(runner)]
+
+    # The exp1 body is embedded in an outer double-quoted bash -c string.
+    # Escaping each dollar is required so expansion happens in the inner shell,
+    # where ANALYSIS_DIR and _ANALYSIS_SCRIPT are defined.
+    assert '_ANALYSIS_SCRIPT="\\${ANALYSIS_DIR}/statistical_analysis.py"' in block
+    assert 'if [[ -f "\\${_ANALYSIS_SCRIPT}" ]]' in block
+    assert "optional statistical_analysis.py not found" in block
+    # Keep the fallback echo single-quoted so the outer bash -c string
+    # does not reinterpret words or expand variables from the message.
+    assert "echo 'INFO: optional statistical_analysis.py not found; using benchmark JSON/report.'" in block
+    assert 'cd "${ANALYSIS_DIR}"' not in block
+
+
+def test_all_portfolio_seed_parsers_allow_empty_unsharded_task_ids():
+    runner = (ROOT / "run_all.sh").read_text()
+    safe_parser = "sed -nE 's/^portfolio_seed([0-9]+)$/\\\\1/p'"
+    assert runner.count(safe_parser) == 3
+    exp1b_start = runner.index('run exp1b "')
+    exp1b_end = runner.index('run portfolio "', exp1b_start)
+    exp1b = runner[exp1b_start:exp1b_end]
+    assert "running full default seed list" in exp1b
+    assert "_SHARD_SEEDS='42,99,123,777,2024'" in exp1b

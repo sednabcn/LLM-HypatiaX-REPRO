@@ -37,6 +37,10 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from hypatiax.core.r2_canonical import r2_checked
+from hypatiax.core.routing import (
+    kde_ood_probability, select_hypatiax_route, structural_risk_tokens,
+    training_edge_split_indices,
+)
 from hypatiax.protocols.experiment_protocol_defi import DeFiExperimentProtocol
 
 env_path = Path(__file__).parent.parent.parent.parent / ".env"
@@ -166,6 +170,47 @@ def nn_predict(model, scaler_X, scaler_y, X: np.ndarray) -> np.ndarray:
         return scaler_y.inverse_transform(ys.reshape(-1, 1)).flatten()
 
 
+def _training_only_nn_edge_probe(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    seed: int | None,
+    edge_fraction: float | None = None,
+) -> dict:
+    """Fit a fresh NN on the central training region and score both training tails."""
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float).reshape(-1)
+    if edge_fraction is None:
+        try:
+            edge_fraction = float(os.getenv("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15"))
+        except ValueError:
+            return {"status": "invalid_probe_fraction", "delta": None}
+    try:
+        core_idx, edge_idx = training_edge_split_indices(X, edge_fraction)
+        probe_model, probe_sx, probe_sy = train_nn_model(X[core_idx], y[core_idx], seed=seed)
+        pred_core = nn_predict(probe_model, probe_sx, probe_sy, X[core_idx])
+        pred_edge = nn_predict(probe_model, probe_sx, probe_sy, X[edge_idx])
+        r2_core, core_status = r2_score_checked(y[core_idx], pred_core)
+        r2_edge, edge_status = r2_score_checked(y[edge_idx], pred_edge)
+        if core_status != "ok" or edge_status != "ok":
+            return {
+                "status": "undefined_probe_r2", "delta": None,
+                "r2_core": float(r2_core) if np.isfinite(r2_core) else None,
+                "r2_edge": float(r2_edge) if np.isfinite(r2_edge) else None,
+                "core_status": core_status, "edge_status": edge_status,
+            }
+        return {
+            "status": "ok", "r2_train": float(r2_core),
+            "r2_core": float(r2_core), "r2_edge": float(r2_edge),
+            "delta": float(r2_core - r2_edge),
+            "edge_fraction": float(edge_fraction),
+            "n_core": int(len(core_idx)), "n_edge": int(len(edge_idx)),
+            "edge_sides": 2,
+        }
+    except Exception as exc:
+        return {"status": "error", "delta": None,
+                "error": f"{type(exc).__name__}: {exc}"}
+
+
 def r2_score_checked(y_true: np.ndarray, y_pred: np.ndarray) -> tuple[float, str]:
     """Canonical R2 and its status (hypatiax/core/r2_canonical.py).
 
@@ -193,7 +238,7 @@ def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 # ---------------------------------------------------------------------------
 # Formula evaluation helpers
-# -----------------------------
+# ---------------------------------------------------------------------------
 def _safe_exec_formula(python_code: str, X: np.ndarray, var_names: list[str]) -> np.ndarray | None:
     """Safely evaluate a restricted LLM formula against a feature matrix."""
     try:
@@ -368,9 +413,9 @@ def fit_formula_params(
 # ---------------------------------------------------------------------------
 
 def _create_message_deterministic(client, **kwargs):
-    """Call client.messages.create(), preferring temperature=0.0 for
-    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE), but tolerate newer
-    models that no longer accept the parameter at all.
+    """Call the shared wrapper with Core-15 temperature=0.25.
+    The wrapper fails closed if the request is rejected; it does not retry
+    without temperature.
 
     FIX-ISSUE2B-LLM-TEMPERATURE-DEPRECATED: duplicated from the identical
     helper in hybrid_system_llm_nn_all_domains.py (HSL) / baseline_pure_llm_
@@ -378,23 +423,16 @@ def _create_message_deterministic(client, **kwargs):
     per-file copies rather than cross-module imports for this helper.
     Without this, EnhancedHybridSystemDeFi's local fallback (both the
     initial call and its max_tokens/malformed-response retry) called
-    client.messages.create(temperature=0.0, ...) directly -- which raises
+    client.messages.create with a hard-coded temperature directly -- which raises
     on any model that has deprecated the temperature/top_p/top_k sampling
     parameters (Claude Sonnet 4.6+, Opus 4.7+), and that exception was
     swallowed by generate_llm_formula's bare except into an N/A/error
-    result rather than retried, unlike HSL's equivalent fallback. Tries
-    temperature=0.0 first and retries once without it only on that
-    specific deprecation error, so determinism is preserved wherever the
-    model still supports it, and the fallback degrades the same way HSL's
-    does instead of going silently dark.
+    result rather than retried, unlike HSL's equivalent fallback. The shared wrapper makes exactly one request with temperature=0.25 and
+    fails closed on rejection. No untempered fallback request is made.
     """
-    try:
-        return client.messages.create(temperature=0.0, **kwargs)
-    except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
-        raise
+    # UNIFIED-TEMPERATURE: shared wrapper enforces 0.25 and fails closed.
+    from hypatiax.core.llm_call import create_message
+    return create_message(client, **kwargs)
 
 
 class EnhancedHybridSystemDeFi:
@@ -756,6 +794,8 @@ EXPLANATION:
             variable_names: list[str],
             metadata: dict,
             verbose: bool = False,
+            X_query: np.ndarray | None = None,
+            degradation_tau: float | None = None,
     ) -> dict:
         """
         Hybrid symbolic + neural system.
@@ -846,33 +886,54 @@ EXPLANATION:
 
 
         # =====================================================
-        # 4️⃣  DECISION LOGIC
+        # 4️⃣  DECISION LOGIC — trust gate + structural-risk precedence
         # =====================================================
         decision_margin = fitted_train_r2 - nn_train_r2
-
-        # Fitted symbolic formula clearly dominates
-        if fitted_train_r2 >= 0.85 and decision_margin > 0.05:
-            decision   = "fitted_llm"
-            best_preds = fitted_preds_train
-
-        # Both competitive — adaptive ensemble weighted by R²
-        elif (
-            fitted_train_r2 >= 0.5
-            and nn_train_r2 >= 0.5
-            and abs(decision_margin) <= 0.15
-            and fitted_preds_train is not None
-            and nn_preds_train is not None
-        ):
-            decision = "ensemble"
-            total = fitted_train_r2 + nn_train_r2
-            w = fitted_train_r2 / total if total > 0 else 0.6
-            best_preds = w * fitted_preds_train + (1.0 - w) * nn_preds_train
-
-        # NN fallback
-        else:
-            decision   = "nn"
-            best_preds = nn_preds_train
-
+        _structural_tokens = structural_risk_tokens(
+            llm_result.get("formula"), fitted_code
+        )
+        _edge_probe = _training_only_nn_edge_probe(
+            X_train, y_train, seed=_nn_seed
+        ) if nn_preds_train is not None else {
+            "status": "no_nn_training_predictions",
+            "r2_core": None, "r2_edge": None, "delta": None,
+        }
+        # tau is explicit: absent calibration must not silently create a
+        # pure-LLM route. Callers may pass it or set the documented env.
+        if degradation_tau is None:
+            _tau_env = os.getenv("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+            if _tau_env:
+                try:
+                    degradation_tau = float(_tau_env)
+                except ValueError as _tau_err:
+                    raise ValueError("HYPATIAX_ROUTING_DELTA_TAU must be numeric") from _tau_err
+        _ood = (
+            kde_ood_probability(X_train, X_query)
+            if X_query is not None else
+            {"status": "query_covariates_not_supplied", "p_ood": None}
+        )
+        _route = select_hypatiax_route(
+            fitted_train_r2=fitted_train_r2,
+            nn_train_r2=nn_train_r2,
+            fitted_preds_train=fitted_preds_train,
+            nn_preds_train=nn_preds_train,
+            structural_tokens=_structural_tokens,
+            trust_threshold=0.5,
+            degradation_delta=_edge_probe.get("delta"),
+            degradation_tau=degradation_tau,
+            p_ood=_ood.get("p_ood"),
+            p_ood_per_query=_ood.get("p_ood_per_query"),
+            alpha=0.3,
+        )
+        decision = _route["decision"]
+        best_preds = _route["predictions"]
+        route_reason = _route["route_reason"]
+        if verbose:
+            print(
+                f"[ROUTE] decision={decision} reason={route_reason} "
+                f"trust_passed={_route['trust_gate_passed']} "
+                f"structural_risk={_route['structural_risk_tokens']}"
+            )
 
         # =====================================================
         # 4️⃣  FINAL TRAIN METRICS
@@ -893,14 +954,17 @@ EXPLANATION:
             residuals = y_train - best_preds
             with np.errstate(over="ignore", invalid="ignore"):
                 mse = float(np.mean(residuals ** 2))
-            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else 0.0
+            # L54: a non-finite MSE is a failure, never a perfect (0.0) RMSE
+            rmse = float(np.sqrt(mse)) if np.isfinite(mse) else None
             mae  = float(np.mean(np.abs(residuals)))
         else:
-            final_r2 = 0.0
+            # L54: no predictions is a failure, not a score. None + status, never 0.0
+            # (0.0 R2 / 0.0 RMSE is indistinguishable from a genuine mean-predictor fit).
+            final_r2 = None
             final_r2_status = "no_predictions"
-            mse  = 0.0
-            rmse = 0.0
-            mae  = 0.0
+            mse  = None
+            rmse = None
+            mae  = None
 
 
         # =====================================================
@@ -915,6 +979,15 @@ EXPLANATION:
             "nn_train_r2":     float(nn_train_r2),
             "decision_margin": float(decision_margin),
             "decision":        decision,
+            "route_reason":    route_reason,
+            "trust_gate_passed": bool(_route["trust_gate_passed"]),
+            "structural_risk_flag": bool(_route["structural_risk_flag"]),
+            "structural_risk_tokens": list(_route["structural_risk_tokens"]),
+            "blend_weights":   _route["blend_weights"],
+            "query_blend_weights": _route["query_blend_weights"],
+            "degradation_probe": _edge_probe,
+            "ood_diagnostic": _ood,
+            "routing_alpha": 0.3,
 
             # Always keep NN artefacts regardless of decision.  The extrapolation
             # test (test_enhanced_defi_extrapolation.py) checks for a non-None
@@ -926,7 +999,7 @@ EXPLANATION:
 
             "evaluation": {
                 "llm_source": llm_result.get("llm_source", "unknown"),
-                "r2":   float(final_r2),
+                "r2":   (float(final_r2) if final_r2 is not None else None),
                 "r2_status": final_r2_status,   # ok | degenerate_target | nonfinite_pred | ...
                 "rmse": rmse,
                 "mse":  mse,
@@ -1031,7 +1104,8 @@ def run_batch(verbose: bool = False, no_cache: bool = False):
     # Save results — must land under hybrid_pysr/defi/ so the CI
     # commit-verification step (RESULT_SUBDIR=hypatiax/data/results/hybrid_pysr/defi)
     # finds the files and the downstream SEP build can locate them.
-    out_dir = Path("hypatiax/data/results/hybrid_pysr/defi")
+    results_root = Path(os.environ.get("RESULTS_DIR", "hypatiax/data/results"))
+    out_dir = results_root / "hybrid_pysr" / "defi"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"hybrid_defi_{timestamp}.json"
 

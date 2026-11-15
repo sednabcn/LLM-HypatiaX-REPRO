@@ -97,6 +97,19 @@ class _CacheHit(Exception):
     """Internal control-flow marker: raw completion came from the cache."""
 
 
+_LAST_CALL_INFO: dict[str, Any] = {
+    "call_status": "not_called",
+    "candidate_status": "not_evaluated",
+    "temperature_requested": 0.25,
+    "temperature_sent": False,
+}
+
+
+def last_call_info() -> dict[str, Any]:
+    """Return provenance for the most recent get_llm_prior call."""
+    return dict(_LAST_CALL_INFO)
+
+
 def get_llm_prior(
     eq: dict[str, Any],
     X_train: np.ndarray,
@@ -135,25 +148,18 @@ def get_llm_prior(
     timeout:
         Seconds to wait for the API call before raising.
     temperature:
-        Deprecated/no-op as of [FIX-SDK1.0-TEMPERATURE]. Anthropic SDK v1.0+
-        removed `temperature` from Messages.create() entirely, and current
-        models reject it server-side (400) regardless of SDK version. This
-        argument is accepted for backward-compatible call signatures but is
-        NOT sent to the API; the model's own default sampling always
-        applies. Kept so existing callers (e.g. exp3's --temperature flag)
-        don't need to change their call sites, but the FIX-N3-ii
-        determinism-via-temperature=0 control this used to provide no
-        longer exists — see caller-side notes if exact-reproducibility is
-        required.
+        Backward-compatible argument. Live requests use the shared
+        protocol-fixed temperature (0.25) wrapper and fail closed if the
+        SDK/provider rejects it. last_call_info() records requested/sent
+        status; provider-default sampling is never silently substituted.
     verbose:
         Print progress to stdout.
     cache_dir:
-        [AUDIT-X3] Directory for the on-disk LLM response cache. Defaults to
-        ``$HYPATIAX_LLM_CACHE_DIR`` or ``./llm_cache``. Since temperature can no
-        longer be pinned, the cache is the only reproducibility control: the raw
-        completion is stored per (model, prompt, max_tokens, cache_salt) and
-        replayed on reruns. Failed calls are never cached. Pass
-        ``cache_salt=f"seed{seed}"`` to get one cached draw per seed.
+        Directory for the on-disk response cache. Defaults to
+        ``$HYPATIAX_LLM_CACHE_DIR`` or ``./llm_cache``. Cache replay is
+        explicitly recorded as such and is distinct from a live API response.
+        Failed calls are never cached. Pass ``cache_salt=f"seed{seed}"``
+        to isolate cached draws by seed.
     cache_salt:
         Extra string mixed into the cache key (e.g. the seed).
     blind:
@@ -172,11 +178,38 @@ def get_llm_prior(
         passing into ``guesses=`` or any other PySR seeding mechanism.
         Empty list on any error (caller falls back to cold PySR).
     """
+    global _LAST_CALL_INFO
+    _LAST_CALL_INFO = {
+        "call_status": "not_called",
+        "candidate_status": "not_evaluated",
+        "temperature_requested": 0.25,
+        "temperature_sent": False,
+    }
     resolved_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
     if not resolved_key:
+        _LAST_CALL_INFO["call_status"] = "missing_credentials"
         warnings.warn(
             "ANTHROPIC_API_KEY not set — LLM warm-start disabled for "
             f"{eq['id']}. Set the variable or pass api_key=.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return []
+
+    # Reject non-finite training inputs before prompt construction or an API call.
+    # They must not be hidden by nanmin/nanmax or converted into a plausible prior.
+    try:
+        _x = np.asarray(X_train, dtype=float)
+        _y = np.asarray(y_train, dtype=float)
+    except (TypeError, ValueError, OverflowError):
+        _LAST_CALL_INFO["call_status"] = "input_invalid"
+        _LAST_CALL_INFO["candidate_status"] = "not_evaluated"
+        return []
+    if not np.all(np.isfinite(_x)) or not np.all(np.isfinite(_y)):
+        _LAST_CALL_INFO["call_status"] = "input_invalid"
+        _LAST_CALL_INFO["candidate_status"] = "not_evaluated"
+        warnings.warn(
+            f"Non-finite training inputs; refusing LLM prior for {eq['id']}.",
             RuntimeWarning,
             stacklevel=2,
         )
@@ -219,27 +252,25 @@ def get_llm_prior(
             raise _CacheHit
         anthropic = _get_anthropic()
         client = anthropic.Anthropic(api_key=resolved_key)
-        # [FIX-SDK1.0-TEMPERATURE] anthropic SDK v1.0 (2026-08-20) removed
-        # temperature/top_p/top_k from Messages.create() with no **kwargs
-        # passthrough (TypeError, not a network call), and current models
-        # reject the parameter server-side anyway (400: "temperature is
-        # deprecated for this model"). There is no version of the SDK that
-        # both installs cleanly today and accepts this argument, so it is
-        # no longer sent. This removes the temperature=0 determinism
-        # control the `temperature` parameter used to provide — see the
-        # docstring note below.
         if temperature != 0.25 and verbose:
             print(
-                f"  [LLM] note: temperature={temperature} was requested but "
-                "is no longer sent (unsupported by current models/SDK); "
-                "the model's own default sampling applies."
+                f"  [LLM] note: caller temperature={temperature} is ignored; "
+                "the shared protocol temperature 0.25 is enforced."
             )
-        message = client.messages.create(
+        # Share the protocol-fixed temperature with every other experiment path.
+        # Provider/SDK rejection is a hard failure; never retry at its default.
+        from hypatiax.core.llm_call import create_message, last_call_info
+        message = create_message(
+            client,
             model=model,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
             timeout=timeout,
         )
+        _LAST_CALL_INFO.update({
+            "call_status": "live_api_success",
+            **last_call_info(),
+        })
         # [FIX-THINKING-BLOCK] message.content[0] is not reliably the text
         # block — some models (or requests with extended thinking enabled)
         # return a ThinkingBlock first, followed by the TextBlock with the
@@ -267,8 +298,10 @@ def get_llm_prior(
         except OSError as _werr:
             warnings.warn(f"  [LLM] could not write cache: {_werr}", RuntimeWarning, stacklevel=2)
     except _CacheHit:
-        pass
+        _LAST_CALL_INFO["call_status"] = "cache_replay"
+        _LAST_CALL_INFO["temperature_sent"] = False
     except Exception as exc:
+        _LAST_CALL_INFO["call_status"] = "provider_failure"
         warnings.warn(
             f"  [LLM] API call failed for {eq['id']}: {exc}",
             RuntimeWarning,
@@ -282,6 +315,10 @@ def get_llm_prior(
     # 4. Parse & validate expressions
     # ------------------------------------------------------------------
     candidates = _parse_response(raw, eq["vars"])
+    _LAST_CALL_INFO["candidate_status"] = (
+        "valid_candidates" if candidates else "empty_or_invalid_candidates"
+    )
+    _LAST_CALL_INFO["candidate_count"] = len(candidates)
 
     if verbose:
         print(f"  [LLM] {len(candidates)} valid expression(s) in {elapsed:.1f}s")
@@ -442,6 +479,7 @@ def _parse_response(raw: str, var_names: list[str]) -> list[str]:
     candidates.sort(key=lambda c: float(c.get("confidence", 0)), reverse=True)
 
     valid_exprs: list[str] = []
+    import re
     from hypatiax.safe_formula import evaluate_expression
 
     safe_functions = {

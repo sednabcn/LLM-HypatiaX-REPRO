@@ -117,29 +117,10 @@ def _json_safe(o):
 
 
 def _create_message(client, **kwargs):
-    """Make one direct Anthropic API call (single attempt, no retry/cache).
+    """Make exactly one shared-wrapper API attempt using Core-15 temperature=0.25.
 
-    NOTE: despite the legacy alias name `_create_message_deterministic`, this is
-    NOT deterministic: the Anthropic SDK >= 1.0 no longer accepts `temperature`,
-    so no sampling control is sent. Results carry `temperature_sent: False`;
-    use llm_k_runs (repro.yaml) to quantify run-to-run variance.
-
-
-    Diagnostic/JMLR reproducibility mode: pass through whatever kwargs the
-    caller supplies (including ``temperature`` when the caller sets it —
-    see FIX-ISSUE2B-LLM-TEMPERATURE at the generate_formula() call site)
-    with no retry-on-error logic, so a failure can't be obscured by a
-    silent retry.
-
-    CORRECTED (previously claimed "Claude 4.6 models reject
-    `temperature`" and said this function deliberately omitted it — a
-    live smoke test against model="claude-sonnet-4-6" confirmed
-    `temperature=0.0` is accepted, so that claim was wrong and the
-    generate_formula() call site now sends it).
-
-    The function deliberately has no cache, memoization, retry, or fallback.
-    Every invocation reaches ``client.messages.create`` exactly once unless
-    the client raises before returning.
+    The wrapper inserts the protocol-fixed temperature and fails closed if the
+    client rejects it. No retry may silently fall back to a provider default.
     """
     t0 = time.perf_counter()
     print(
@@ -149,7 +130,8 @@ def _create_message(client, **kwargs):
         f"messages={len(kwargs.get('messages', []))}"
     )
     try:
-        response = client.messages.create(**kwargs)
+        from hypatiax.core.llm_call import create_message
+        response = create_message(client, **kwargs)
     except Exception as e:
         dt = time.perf_counter() - t0
         print(
@@ -457,37 +439,18 @@ class PureLLMBaseline:
             # constants are sent verbatim ("task spec"); record exactly which
             "prompt_constants": dict(metadata.get("constants") or {}),
             "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+            # These are intended defaults until this call updates them;
+            # never inherit provenance from a previous thread-local API call.
             "temperature_sent": False,
+            "temperature_requested": __import__("hypatiax.core.llm_call", fromlist=["x"]).configured_temperature(),
             "model_source": self.model_source,
         }
         _llm_attempted = False
         _response_received = False
 
         try:
-            # FIX-ISSUE2B-LLM-TEMPERATURE: this call previously had no
-            # `temperature` argument, so it silently used the Anthropic API
-            # default (non-zero). Callers of this class (e.g.
-            # EnhancedHybridSystemDeFi.generate_llm_formula, which delegates
-            # here as its *preferred* path) assumed temperature=0 behaviour
-            # -- see the comment at HybridDeFiMethod.run() in
-            # run_comparative_suite_benchmark_v2.py claiming "At
-            # temperature=0 this produces the same formula". That assumption
-            # was false for this call site, which is why a fresh live call
-            # per Phase-A run could return a structurally-equivalent but
-            # not-bit-identical formula, producing the ~1e-9 R² spread
-            # observed on Snell's Law in the Item 2b reproducibility check.
-            # temperature=0.0 narrows (does not fully guarantee, since
-            # provider-side serving batching can still vary) run-to-run
-            # sampling variance.
-            #
-            # FIX-ISSUE2B-LLM-TEMPERATURE (applied): the comment above
-            # described this mitigation but `temperature` was never
-            # actually passed to _create_message() below,
-            # so the API default (non-zero) was silently used the whole
-            # time. Confirmed via a live smoke test that this model
-            # (self.model, default "claude-sonnet-4-6") accepts
-            # temperature=0.0 rather than rejecting it, so it's now
-            # passed through for real.
+            # The shared wrapper always requests Core-15 temperature=0.25
+            # and fails closed rather than retrying with a provider default.
             _gen_t0 = time.perf_counter()
             print(
                 "GENERATE_ENTER "
@@ -498,18 +461,6 @@ class PureLLMBaseline:
                 f"api_helper_source={inspect.getsourcefile(_create_message)!r} "
                 f"client_type={type(self.client).__module__}.{type(self.client).__name__}"
             )
-            # [FIX-SDK1.0-TEMPERATURE] Superseding FIX-ISSUE2B-LLM-TEMPERATURE
-            # above: that fix made this call start sending temperature=0.0
-            # right as anthropic SDK v1.0 (2026-08-20) removed temperature/
-            # top_p/top_k from Messages.create() outright -- it's a
-            # client-side TypeError now (no **kwargs passthrough), and
-            # current models also 400 on it server-side regardless of SDK
-            # version. So this goes back to not sending temperature, but
-            # for the opposite reason: it's no longer accepted at all, not
-            # "not yet wired up". The temperature=0 determinism control
-            # described in FIX-ISSUE2B-LLM-TEMPERATURE's comment above no
-            # longer exists as an option -- run-to-run sampling variance
-            # should be expected again.
             _llm_attempted = True
             response = _create_message(
                 self.client,
@@ -517,6 +468,9 @@ class PureLLMBaseline:
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
+            _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
+            _prov["temperature_sent"] = _temperature_info.get("temperature_sent")
+            _prov["temperature_requested"] = _temperature_info.get("temperature_requested")
             _response_received = True
             print(
                 "GENERATE_API_RETURN "
@@ -568,6 +522,13 @@ class PureLLMBaseline:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
+            # Only read thread-local wrapper metadata after this invocation
+            # actually entered the API wrapper. Otherwise it may describe a
+            # previous call on the same thread.
+            if _llm_attempted:
+                _temperature_info = __import__("hypatiax.core.llm_call", fromlist=["x"]).last_call_info()
+                _prov["temperature_sent"] = bool(_temperature_info.get("temperature_sent", False))
+                _prov["temperature_requested"] = _temperature_info.get("temperature_requested", 0.25)
             print(
                 f"\n❌ ERROR: {type(e).__name__}: {str(e)}"
             )

@@ -84,6 +84,7 @@ from typing import ClassVar
 
 import numpy as np
 from hypatiax.safe_formula import evaluate_expression
+from hypatiax.core.routing import structural_risk_tokens
 import psutil
 import sympy as sp
 
@@ -526,10 +527,10 @@ class DiscoveryConfig:
 class LLMConfig:
     """Configuration for LLM hypothesis generation."""
 
-    model: str = "claude-sonnet-4-6"
+    model: str = field(default_factory=lambda: os.environ.get("HYPATIAX_LLM_MODEL", "claude-sonnet-4-6"))
     max_tokens: int = 2000
-    # AUDIT C1: shared setting. CI/run_all.sh export LLM_TEMPERATURE=0.25; default unchanged outside CI.
-    temperature: float = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
+    # Core-15 protocol default. The shared API wrapper enforces 0.25 even if a caller supplies another value.
+    temperature: float = 0.25
     n_candidates: int = 3  # Number of hypotheses to generate
     enabled: bool = False
     api_key: str | None = None
@@ -558,7 +559,11 @@ class IntegratedLLMEngine:
         self.config = config
         self.client = None
         self.last_call_attempted = False
+        self.last_response_received = False
+        self.last_response_replayed = False
+        self.last_proposal_generated = False
         self.last_error = None
+        self.last_call_info = {}
 
         if not config.enabled:
             return
@@ -604,6 +609,15 @@ class IntegratedLLMEngine:
                   "CACHE / DUPLICATE RESULT DETECTED: RMSE=X shared by MethodA, MethodB"
         """
 
+        # Reset per-invocation state before any early return or prompt
+        # construction so previous-call provenance can never leak forward.
+        self.last_call_attempted = False
+        self.last_response_received = False
+        self.last_error = None
+        self.last_response_replayed = False
+        self.last_proposal_generated = False
+        self.last_call_info = {}
+
         if not self.config.enabled or not self.client:
             return []
 
@@ -613,10 +627,6 @@ class IntegratedLLMEngine:
             domain, variables, description, data_patterns, n_candidates,
             caller_id=caller_id,
         )
-
-        self.last_call_attempted = True
-        self.last_error = None
-        self.last_response_replayed = False
         # Opt-in replay (HYPATIAX_LLM_REPLAY_DIR): the response is keyed on the full prompt, which
         # embeds the data patterns, so each (equation, seed) gets ONE sample reused by every arm
         # and an ablation differs only by its gate. Unset = unchanged live behaviour.
@@ -625,20 +635,28 @@ class IntegratedLLMEngine:
         if _replay_dir:
             import hashlib as _hl
             os.makedirs(_replay_dir, exist_ok=True)
+            # Cache identity must use the effective API temperature, not a
+            # legacy caller/config value that create_message() will override.
+            from hypatiax.core.llm_call import configured_temperature
             _key = _hl.sha256(
-                f"{self.config.model}|{self.config.temperature}|{prompt}".encode()).hexdigest()
+                f"{self.config.model}|{configured_temperature()}|{prompt}".encode()).hexdigest()
             _replay_path = os.path.join(_replay_dir, _key + ".json")
             if os.path.isfile(_replay_path):
                 with open(_replay_path, encoding="utf-8") as _fh:
                     response = json.load(_fh)["response"]
                 self.last_response_replayed = True
+                self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
+                self.last_proposal_generated = bool(hypotheses)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
+        self.last_call_attempted = True
         try:
             response = self._call_llm(prompt)
+            from hypatiax.core.llm_call import last_call_info
+            self.last_call_info = last_call_info()
             self._note_llm_sample(response)
             if _replay_path:
                 _tmp = _replay_path + f".tmp{os.getpid()}"
@@ -646,6 +664,8 @@ class IntegratedLLMEngine:
                     json.dump({"response": response}, _fh)
                 os.replace(_tmp, _replay_path)
         except Exception as e:
+            from hypatiax.core.llm_call import last_call_info
+            self.last_call_info = last_call_info()
             # API / connection / timeout failure: never let it look like a
             # model that simply returned nothing.
             self.last_error = f"{type(e).__name__}: {e}"
@@ -654,6 +674,7 @@ class IntegratedLLMEngine:
                 raise
             return []
         hypotheses = self._parse_response(response)
+        self.last_proposal_generated = bool(hypotheses)
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
         return hypotheses
@@ -740,13 +761,26 @@ JSON ARRAY:"""
 
     def _call_llm(self, prompt: str) -> str:
         """Call Anthropic API."""
-        message = self.client.messages.create(
+        from hypatiax.core.llm_call import create_message
+
+        message = create_message(
+            self.client,
             model=self.config.model,
             max_tokens=self.config.max_tokens,
             temperature=self.config.temperature,
             messages=[{"role": "user", "content": prompt}],
         )
-        return message.content[0].text
+        self.last_response_received = True
+        text_blocks = [
+            block for block in getattr(message, "content", [])
+            if getattr(block, "type", None) == "text"
+        ]
+        if not text_blocks:
+            raise ValueError(
+                "LLM response contained no text block; block types: "
+                f"{[getattr(block, 'type', type(block).__name__) for block in getattr(message, 'content', [])]}"
+            )
+        return text_blocks[0].text
 
     def _parse_response(self, response: str) -> list[EquationHypothesis]:
         """Parse LLM response into hypotheses."""
@@ -985,8 +1019,75 @@ class SymbolicEngine:
             f"parsimony_cfg={self.config.parsimony}",
             f"use_tc={self.config.use_transcendental_compositions}",
         ]
+        self._last_trace = _trace
 
         try:
+            # Reject invalid source data before sklearn heuristics or feature
+            # engineering can obscure the origin of a NaN/inf failure.
+            X_raw = np.asarray(X)
+            y_raw = np.asarray(y)
+            # Reject genuinely complex values explicitly.  Casting complex
+            # arrays directly to float can discard imaginary components or
+            # defer the failure to sklearn as the unhelpful "Complex data not
+            # supported" message.
+            if np.iscomplexobj(X_raw):
+                _complex_x = np.abs(np.imag(X_raw)) > 0
+                _complex_locations = [
+                    f"{safe_names[col]}@row{row}"
+                    for row, col in np.argwhere(_complex_x)[:10]
+                ]
+                if np.any(_complex_x):
+                    _trace.append(f"input_complex_X_locations={_complex_locations}")
+                    raise ValueError(
+                        f"complex source features at {_complex_locations}; "
+                        "SymbolicEngine requires real-valued X"
+                    )
+                X_raw = np.real(X_raw)
+            if np.iscomplexobj(y_raw):
+                _complex_y = np.abs(np.imag(y_raw)) > 0
+                _complex_y_rows = [int(i) for i in np.flatnonzero(_complex_y)[:10]]
+                if np.any(_complex_y):
+                    _trace.append(f"input_complex_y_rows={_complex_y_rows}")
+                    raise ValueError(
+                        f"complex source targets at rows {_complex_y_rows}; "
+                        "SymbolicEngine requires real-valued y"
+                    )
+                y_raw = np.real(y_raw)
+            X = np.asarray(X_raw, dtype=float)
+            y = np.asarray(y_raw, dtype=float)
+            if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+                raise ValueError(f"invalid input feature matrix shape={X.shape}")
+            if y.ndim != 1 or y.shape[0] != X.shape[0]:
+                raise ValueError(
+                    f"invalid target shape={y.shape}; expected ({X.shape[0]},)"
+                )
+            if len(variable_names) != X.shape[1]:
+                raise ValueError(
+                    f"feature-name count={len(variable_names)} does not match "
+                    f"feature count={X.shape[1]}"
+                )
+            _bad_x_mask = ~np.isfinite(X)
+            _bad_y_mask = ~np.isfinite(y)
+            _bad_x = int(_bad_x_mask.sum())
+            _bad_y = int(_bad_y_mask.sum())
+            _bad_x_locations = [
+                f"{safe_names[col]}@row{row}"
+                for row, col in np.argwhere(_bad_x_mask)[:10]
+            ]
+            _bad_y_locations = [
+                int(row) for row in np.flatnonzero(_bad_y_mask)[:10]
+            ]
+            _trace.append(f"input_nonfinite_X={_bad_x}")
+            _trace.append(f"input_nonfinite_y={_bad_y}")
+            _trace.append(f"input_nonfinite_X_locations={_bad_x_locations}")
+            _trace.append(f"input_nonfinite_y_rows={_bad_y_locations}")
+            if _bad_x or _bad_y:
+                raise ValueError(
+                    f"non-finite source data: X has {_bad_x} NaN/inf value(s) "
+                    f"at {_bad_x_locations}; y has {_bad_y} at rows "
+                    f"{_bad_y_locations}"
+                )
+
             # Lazy import: keeps juliacall out of the module-level import chain
             # so that setting PYTHON_JULIACALL_HANDLE_SIGNALS above always wins.
             from pysr import PySRRegressor  # noqa: PLC0415
@@ -1176,23 +1277,47 @@ class SymbolicEngine:
                     _y_fit_pos = np.all(y > 0)
                     if _y_fit_pos:
                         from sklearn.linear_model import LinearRegression as _LR
-                        _Xs = X - X.mean(axis=0)
-                        _r2_lin = r2_score(y, _LR().fit(_Xs, y).predict(_Xs))
-                        _logy   = np.log(y)
-                        _r2_log = r2_score(_logy,
-                                           _LR().fit(_Xs, _logy).predict(_Xs))
-                        if _r2_log - _r2_lin > 0.05:
-                            _data_needs_exp = True
-                            print(
-                                f"   [AUTO-EXP] data heuristic: "
-                                f"R²(log y ~ X)={_r2_log:.3f} >> R²(y ~ X)={_r2_lin:.3f} "
-                                f"— injecting exp/log (exponential relationship detected)",
-                                flush=True,
-                            )
+                        # Scale each feature and both regression targets before
+                        # fitting this optional heuristic.  Finite but extreme
+                        # SI-unit magnitudes can otherwise overflow centering,
+                        # OLS predictions or sklearn's R² validation and raise
+                        # "Input contains NaN" even though the source arrays are
+                        # finite and the heuristic is not required for discovery.
+                        _x_scale = np.maximum(
+                            np.max(np.abs(X), axis=0),
+                            np.finfo(float).tiny,
+                        )
+                        _Xs = X / _x_scale
+                        _Xs = _Xs - np.mean(_Xs, axis=0)
+                        _y_scale = max(float(np.max(np.abs(y))), np.finfo(float).tiny)
+                        _y_lin = y / _y_scale
+                        _logy = np.log(y)
+                        _log_scale = max(
+                            float(np.max(np.abs(_logy))),
+                            np.finfo(float).tiny,
+                        )
+                        _logy_scaled = _logy / _log_scale
+                        _lin_pred = _LR().fit(_Xs, _y_lin).predict(_Xs)
+                        _log_pred = _LR().fit(_Xs, _logy_scaled).predict(_Xs)
+                        if np.all(np.isfinite(_lin_pred)) and np.all(np.isfinite(_log_pred)):
+                            _r2_lin = r2_score(_y_lin, _lin_pred)
+                            _r2_log = r2_score(_logy_scaled, _log_pred)
+                            if _r2_log - _r2_lin > 0.05:
+                                _data_needs_exp = True
+                                print(
+                                    f"   [AUTO-EXP] data heuristic: "
+                                    f"R²(log y ~ X)={_r2_log:.3f} >> R²(y ~ X)={_r2_lin:.3f} "
+                                    f"— injecting exp/log (exponential relationship detected)",
+                                    flush=True,
+                                )
+                        else:
+                            _trace.append("auto_exp_heuristic=skipped_nonfinite_predictions")
                 except Exception as _e:
-                    import logging as _lg, os as _os
-                    _lg.getLogger(__name__).warning('swallowed: %r', _e)
-                    if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+                    # This is a best-effort operator-selection hint, not part
+                    # of model fitting.  It must never abort a valid PySR run.
+                    _trace.append(
+                        f"auto_exp_heuristic=skipped_{type(_e).__name__}:{str(_e)[:100]}"
+                    )
 
             _needs_exp_log = (
                 (self.domain in _EXP_DOMAINS or _data_needs_exp)
@@ -1787,6 +1912,55 @@ class SymbolicEngine:
             # Storing the actual final _X_fit/safe_names here — taken AFTER all
             # augmentation (geometric-mean, ratio) and BEFORE fit() mutates anything
             # further — closes the loop so RMSE can be computed correctly.
+            # Engineered GM/ratio columns can overflow even when source X is
+            # finite. Diagnose this boundary before passing data to PySR/sklearn.
+            if np.iscomplexobj(_X_fit):
+                _complex_fit = np.abs(np.imag(_X_fit)) > 0
+                _complex_fit_locations = [
+                    f"{safe_names[col]}@row{row}"
+                    for row, col in np.argwhere(_complex_fit)[:10]
+                ]
+                if np.any(_complex_fit):
+                    _trace.append(f"fit_complex_X_locations={_complex_fit_locations}")
+                    raise ValueError(
+                        f"complex engineered features at {_complex_fit_locations}; "
+                        "PySR requires real-valued features"
+                    )
+                _X_fit = np.real(_X_fit)
+            if np.iscomplexobj(_y_fit):
+                _complex_fit_y = np.abs(np.imag(_y_fit)) > 0
+                _complex_fit_y_rows = [
+                    int(i) for i in np.flatnonzero(_complex_fit_y)[:10]
+                ]
+                if np.any(_complex_fit_y):
+                    _trace.append(f"fit_complex_y_rows={_complex_fit_y_rows}")
+                    raise ValueError(
+                        f"complex prepared targets at rows {_complex_fit_y_rows}; "
+                        "PySR requires real-valued targets"
+                    )
+                _y_fit = np.real(_y_fit)
+            _bad_x_fit_mask = ~np.isfinite(_X_fit)
+            _bad_y_fit_mask = ~np.isfinite(_y_fit)
+            _bad_x_fit = int(_bad_x_fit_mask.sum())
+            _bad_y_fit = int(_bad_y_fit_mask.sum())
+            _bad_x_fit_locations = [
+                f"{safe_names[col]}@row{row}"
+                for row, col in np.argwhere(_bad_x_fit_mask)[:10]
+            ]
+            _bad_y_fit_locations = [
+                int(row) for row in np.flatnonzero(_bad_y_fit_mask)[:10]
+            ]
+            _trace.append(f"fit_nonfinite_X={_bad_x_fit}")
+            _trace.append(f"fit_nonfinite_y={_bad_y_fit}")
+            _trace.append(f"fit_nonfinite_X_locations={_bad_x_fit_locations}")
+            _trace.append(f"fit_nonfinite_y_rows={_bad_y_fit_locations}")
+            if _bad_x_fit or _bad_y_fit:
+                raise ValueError(
+                    f"non-finite prepared PySR data: X_fit has {_bad_x_fit} "
+                    f"NaN/inf value(s) at {_bad_x_fit_locations}; y_fit has "
+                    f"{_bad_y_fit} at rows {_bad_y_fit_locations}"
+                )
+
             self._last_X_aug = _X_fit
             self._last_aug_names = list(safe_names)
 
@@ -1825,18 +1999,53 @@ class SymbolicEngine:
                 # round of Julia predict() calls (previously called model.predict
                 # twice per equation — once in this loop, once in _pareto_r2s).
                 _cached_r2: dict[int, float] = {}
+                _cached_predictions: dict[int, np.ndarray] = {}
+                _target_for_r2 = np.asarray(y, dtype=np.float64).reshape(-1)
                 for idx in range(len(eqs)):
                     try:
-                        y_pred_i = self.model.predict(_X_fit, index=idx) * _y_std
-                        r2_i = r2_score(y, y_pred_i)
+                        # A finite training matrix does not guarantee every evolved
+                        # PySR expression is finite over that matrix (e.g. sqrt of a
+                        # negative subtree or an overflowing intermediate). Reject
+                        # that candidate, not the entire discovery run.
+                        y_pred_i = np.asarray(
+                            self.model.predict(_X_fit, index=idx), dtype=np.float64
+                        ).reshape(-1) * _y_std
+                        if y_pred_i.shape != _target_for_r2.shape:
+                            _trace.append(
+                                f"pareto_candidate_skipped_shape_mismatch=index:{idx},"
+                                f"pred:{y_pred_i.shape},target:{_target_for_r2.shape}"
+                            )
+                            continue
+                        _finite_pred = np.isfinite(y_pred_i)
+                        if not np.all(_finite_pred):
+                            _trace.append(
+                                f"pareto_candidate_skipped_nonfinite=index:{idx},"
+                                f"count:{int((~_finite_pred).sum())}"
+                            )
+                            continue
+                        r2_i = float(r2_score(_target_for_r2, y_pred_i))
+                        if not np.isfinite(r2_i):
+                            _trace.append(
+                                f"pareto_candidate_skipped_nonfinite_r2=index:{idx}"
+                            )
+                            continue
                         _cached_r2[idx] = r2_i
+                        _cached_predictions[idx] = y_pred_i
                         if r2_i > best_r2:
                             best_r2 = r2_i
                             best_idx = idx
                     except Exception as _e:
                         import logging as _lg, os as _os
-                        _lg.getLogger(__name__).warning('swallowed: %r', _e)
+                        _lg.getLogger(__name__).warning(
+                            "PySR Pareto candidate %s evaluation failed: %r", idx, _e
+                        )
                         if _os.environ.get('HYPATIAX_STRICT') == '1': raise
+
+                if not _cached_r2:
+                    raise ValueError(
+                        "PySR returned no Pareto candidates with finite predictions "
+                        "on the training matrix"
+                    )
 
                 # FIX (indentation bug): these three lines were erroneously
                 # INSIDE the for-loop above, causing best_eq_raw / best_eq /
@@ -1933,7 +2142,9 @@ class SymbolicEngine:
                         expression = f"[X-normalised: {_xscale_note}] {expression}"
 
                     # Make predictions with the best-R² equation (rescaled to original y)
-                    y_pred = self.model.predict(_X_fit, index=best_idx) * _y_std
+                    # Reuse the exact finite prediction vector used to score
+                    # this candidate; do not invoke Julia prediction a second time.
+                    y_pred = _cached_predictions[best_idx]
                     r2 = best_r2
 
                     print(f"   ✅ Found: {expression}")
@@ -2038,6 +2249,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
     # Phase 3 ablation switches; defaults preserve existing behaviour.
     _LLM_ACCEPT_R2 = 0.95
     _LLM_PRIOR_SEED = True
+    _COMPLEXITY_ROUTING = True
 
     def __init__(
         self,
@@ -2276,9 +2488,19 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 auto_sanitize=auto_sanitize,
                 **kwargs,
             )
+            _call_info = getattr(self.llm_engine, "last_call_info", {}) or {}
+            _response_replayed = bool(getattr(self.llm_engine, "last_response_replayed", False))
+            _response_received = bool(getattr(self.llm_engine, "last_response_received", False))
             result["llm_mode"] = "hybrid_llm_failed"
             result["llm_time"] = llm_time
-            result["llm_called"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
+            result["llm_attempted"] = bool(getattr(self.llm_engine, "last_call_attempted", False))
+            result["llm_called"] = _response_received and not _response_replayed
+            result["llm_proposal_generated"] = bool(
+                getattr(self.llm_engine, "last_proposal_generated", False)
+            )
+            result["llm_response_replayed"] = _response_replayed
+            result["llm_temperature_requested"] = _call_info.get("temperature_requested")
+            result["llm_temperature_sent"] = _call_info.get("temperature_sent")
             result["llm_error"] = getattr(self.llm_engine, "last_error", None)
             return result
 
@@ -2290,19 +2512,45 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         except Exception:
             pass
 
-        # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping)
+        # Audit trail: what the LLM actually proposed, in raw units (pre FIX-D mapping).
+        # Structural-risk detection is based on exact function calls, not substrings.
+        _structural_tokens = structural_risk_tokens(
+            best_hyp.equation, getattr(best_hyp, "raw_equation", None)
+        )
+        _structural_risk = bool(_structural_tokens)
+        _complexity_routing = bool(getattr(self, "_COMPLEXITY_ROUTING", True))
+        _structural_guard = _structural_risk and _complexity_routing
         _llm_info = {
+            "llm_attempted": bool(getattr(self.llm_engine, "last_call_attempted", False)),
+            "llm_called": (
+                bool(getattr(self.llm_engine, "last_response_received", False))
+                and not bool(getattr(self.llm_engine, "last_response_replayed", False))
+            ),
+            "llm_response_replayed": bool(getattr(self.llm_engine, "last_response_replayed", False)),
+            "llm_proposal_generated": bool(
+                getattr(self.llm_engine, "last_proposal_generated", False)
+            ),
+            "llm_temperature_requested": getattr(self.llm_engine, "last_call_info", {}).get("temperature_requested"),
+            "llm_temperature_sent": getattr(self.llm_engine, "last_call_info", {}).get("temperature_sent"),
             "llm_best_expression": getattr(best_hyp, "raw_equation", best_hyp.equation),
             "llm_best_r2": best_hyp.r2_score,
             "llm_confidence": getattr(best_hyp, "confidence", None),
             "llm_hypotheses_raw": [getattr(h, "raw_equation", h.equation) for h in hypotheses],
+            "structural_risk_flag": _structural_risk,
+            "structural_risk_tokens": _structural_tokens,
+            "complexity_routing_enabled": _complexity_routing,
+            "routing_reason": (
+                "structural_risk_forces_pysr_refinement" if _structural_guard
+                else ("structural_risk_gate_ablated" if _structural_risk else "ordinary_llm_acceptance_policy")
+            ),
         }
         print(f"   LLM best: {best_hyp.equation}")
         print(f"   LLM R²: {best_hyp.r2_score:.4f}")
         print(f"   LLM time: {llm_time:.2f}s")
 
         # Decision: Is LLM good enough?
-        if best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2:
+        if (best_hyp.r2_score and best_hyp.r2_score > self._LLM_ACCEPT_R2
+                and not _structural_guard):
             print("   ✅ LLM solution excellent, skipping PySR")
             return {
                 "expression": best_hyp.equation,
@@ -2320,6 +2568,13 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "validation": {"valid": True, "errors": [], "warnings": []},
                 "llm_hypotheses": [h.equation for h in hypotheses],
             }
+
+        if _structural_guard:
+            print(
+                f"   ⚠ Structural-risk functions {_structural_tokens}; "
+                "bypassing pure-LLM acceptance and forcing PySR refinement.",
+                flush=True,
+            )
 
         # Discard LLM prior if it is too weak to be a useful seed for PySR
         _use_llm_seed = True
@@ -2373,9 +2628,18 @@ class SymbolicEngineWithLLM(SymbolicEngine):
         print(f"   PySR R²: {result['r2_score']:.4f}")
 
         # Compare and choose best
-        if result["r2_score"] > best_hyp.r2_score:
-            print("   ✅ PySR refinement improved result")
-            result["llm_mode"] = "hybrid_pysr_better"
+        if _structural_guard or (
+            result.get("r2_score") is not None
+            and best_hyp.r2_score is not None
+            and result["r2_score"] > best_hyp.r2_score
+        ):
+            print(
+                "   ✅ Structural-risk policy selected PySR refinement"
+                if _structural_guard else "   ✅ PySR refinement improved result"
+            )
+            result["llm_mode"] = (
+                "hybrid_structural_risk_pysr" if _structural_guard else "hybrid_pysr_better"
+            )
             result.update(_llm_info)
             result["llm_hypotheses"] = [h.equation for h in hypotheses]
             result["llm_time"] = llm_time
@@ -2655,22 +2919,54 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 auto_sanitize=True,
             )
 
-            r2 = float(result.get("r2_score", 0.0))
-            y_pred = result.get("predictions", np.zeros_like(y))
+            _expression = str(result.get("expression", "DISCOVERY_FAILED"))
+            if _expression.strip().upper() in (
+                "", "N/A", "NONE", "DISCOVERY_FAILED",
+                "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
+            ):
+                raise ValueError(
+                    f"symbolic discovery returned {_expression!r}; "
+                    f"trace={result.get('trace', [])[-5:]}"
+                )
+            _validation = result.get("validation") or {}
+            if not bool(_validation.get("valid", False)):
+                _validation_errors = _validation.get("errors", [])
+                raise ValueError(
+                    "symbolic discovery formula failed validation: "
+                    f"{_validation_errors[:3]}"
+                )
 
-            # Compute RMSE from predictions if available
-            try:
-                rmse = float(np.sqrt(np.mean((y - y_pred) ** 2)))
-            except Exception:
-                rmse = None  # audit-M3: was float('inf')
+            _pred_raw = result.get("predictions")
+            if _pred_raw is None:
+                raise ValueError("symbolic discovery returned no training predictions")
+            y_pred = np.asarray(_pred_raw, dtype=float).reshape(-1)
+            y_true = np.asarray(y, dtype=float).reshape(-1)
+            if y_pred.shape != y_true.shape:
+                raise ValueError(
+                    f"symbolic prediction shape={y_pred.shape}; expected {y_true.shape}"
+                )
+            if not np.all(np.isfinite(y_pred)):
+                _bad_pred = int((~np.isfinite(y_pred)).sum())
+                raise ValueError(
+                    f"symbolic discovery returned {_bad_pred} non-finite prediction(s)"
+                )
+            if not np.all(np.isfinite(y_true)):
+                raise ValueError("symbolic adapter received non-finite target values")
+
+            # Derive both metrics from the same real prediction vector. Never
+            # synthesize zero predictions when the engine omitted its output.
+            r2 = float(r2_score(y_true, y_pred))
+            rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+            if not np.isfinite(r2) or not np.isfinite(rmse):
+                raise ValueError("symbolic discovery produced non-finite training metrics")
 
             return {
-                "success": r2 > 0.0 and result.get("expression", "DISCOVERY_FAILED") not in (
-                    "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED",
-                ),
+                # Success means a valid formula and finite evaluation, not
+                # that the model crossed an arbitrary positive-R² threshold.
+                "success": True,
                 "r2": r2,
                 "rmse": rmse,
-                "formula": result.get("expression", "N/A"),
+                "formula": _expression,
                 "iterations": max_iterations,
                 "llm_mode": result.get("llm_mode", self.llm_mode),
                 "variable_mapping": result.get("variable_name_mapping", {}),
@@ -2679,6 +2975,13 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             }
 
         except Exception as exc:
+            # Preserve the originating stack in the runner trace. The worker
+            # previously retained only the exception message, which hid
+            # whether NaN was raised by PySR fitting, candidate prediction,
+            # formula validation, or the adapter's metric calculation.
+            import traceback as _tb
+            _exception_tb = _tb.format_exc()
+            _exception_tb_lines = _exception_tb.strip().splitlines()[-24:]
             return {
                 "success": False,
                 "r2": None,  # PHASE1-FIX: failure, not a score
@@ -2686,7 +2989,14 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "formula": "N/A",
                 "iterations": max_iterations,
                 "error": str(exc)[:200],
-                "trace": [f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}"], "reason": "fit_or_metric_failed",
+                "trace": [
+                    f"discover_formula_exception={type(exc).__name__}:{str(exc)[:150]}",
+                    "exception_traceback_begin",
+                    *_exception_tb_lines,
+                    "exception_traceback_end",
+                    *getattr(self, "_last_trace", [])[-12:],
+                ],
+                "reason": "fit_or_metric_failed",
             }
 
     def _extract_operators_from_equation(self, equation: str) -> dict:

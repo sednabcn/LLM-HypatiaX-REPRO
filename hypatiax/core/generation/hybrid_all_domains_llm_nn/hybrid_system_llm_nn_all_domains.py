@@ -105,8 +105,9 @@ def _hardcoded_disabled() -> bool:
     return _switch_on("HYPATIAX_DISABLE_HARDCODED")
 
 
-_PROV_KEYS = ("llm_called", "bypass_kind", "bypass_flags", "stop_reason", "usage",
-              "prompt_sha256", "temperature_sent", "error_stage")
+_PROV_KEYS = ("llm_called", "llm_attempted", "generation_path", "bypass_kind", "bypass_flags",
+              "stop_reason", "usage", "prompt_sha256", "temperature_sent",
+              "temperature_requested", "error_stage", "delegate_attempt")
 
 
 def _prov(llm_result: dict) -> dict:
@@ -139,9 +140,9 @@ def _resolve_domains_from_env() -> list[str] | None:
 
 
 def _create_message_deterministic(client, **kwargs):
-    """Call client.messages.create(), preferring temperature=0.0 for
-    reproducibility (see FIX-ISSUE2B-LLM-TEMPERATURE below), but tolerate
-    newer models that no longer accept the parameter at all.
+    """Call the shared wrapper with Core-15 temperature=0.25.
+    The wrapper fails closed if the request is rejected; it does not retry
+    without temperature.
 
     FIX-TEMPERATURE-DEPRECATED: mirrors the identical helper in
     baseline_pure_llm_defi_discovery.py. Anthropic deprecated the
@@ -150,17 +151,12 @@ def _create_message_deterministic(client, **kwargs):
     default model), and these newer models reject the request outright
     with a 400 "`temperature` is deprecated for this model." error rather
     than ignoring the field, as observed failing the CI benchmark run.
-    Tries temperature=0.0 first and retries once without it only on that
-    specific deprecation error, so determinism is preserved wherever the
-    model still supports it.
+    The shared wrapper makes exactly one request with temperature=0.25 and
+    fails closed on rejection. No untempered fallback request is made.
     """
-    try:
-        return client.messages.create(temperature=0.0, **kwargs)
-    except Exception as e:
-        msg = str(e)
-        if "temperature" in msg.lower() and "deprecated" in msg.lower():
-            return client.messages.create(**kwargs)
-        raise
+    # UNIFIED-TEMPERATURE: shared wrapper enforces 0.25 and fails closed.
+    from hypatiax.core.llm_call import create_message
+    return create_message(client, **kwargs)
 
 
 class HybridSystemAllDomains:
@@ -218,9 +214,21 @@ class HybridSystemAllDomains:
         API call every time — required so HybridSystemLLMNN and PureLLMBaseline
         are evaluated independently in benchmarks.
         """
-        _cache_key = (description, domain, tuple(variable_names))
+        # Constants are part of the LLM prompt/task specification. Include
+        # them in the cache key so equal descriptions with different physical
+        # constants cannot reuse one another's generated formula.
+        _constants_key = json.dumps(
+            (metadata or {}).get("constants") or {},
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        _cache_key = (description, domain, tuple(variable_names), _constants_key)
         if not self._no_cache and _cache_key in self._formula_cache:
             return self._formula_cache[_cache_key]
+
+        # Preserve delegate provenance if an unusable result triggers a second request.
+        _delegate_attempt = None
 
         # ── Delegate to PureLLMBaseline (preferred path) ─────────────────────
         if self._llm_baseline is not None:
@@ -249,7 +257,15 @@ class HybridSystemAllDomains:
                     if not self._no_cache:
                         self._formula_cache[_cache_key] = result
                     return result
-                # Empty/N/A or error dict — fall through to local fallback below.
+                # Retain provenance before a possible second live request.
+                _delegate_attempt = {
+                    key: result.get(key)
+                    for key in (
+                        "llm_attempted", "llm_called", "bypass_kind",
+                        "temperature_sent", "temperature_requested",
+                        "error_stage", "generation_path",
+                    )
+                }
                 print(
                     f"⚠️  delegate returned no code "
                     f"({str(result.get('error', 'empty/N/A'))[:80]}); "
@@ -264,6 +280,8 @@ class HybridSystemAllDomains:
         # ── Local fallback implementation ─────────────────────────────────────
         prompt = self._generate_prompt(description, domain, variable_names, metadata)
 
+        _fallback_attempted = False
+        _fallback_response_received = False
         try:
             # FIX-ISSUE2B-LLM-TEMPERATURE: same fix as PureLLMBaseline's
             # call site (baseline_pure_llm_defi_discovery.py) -- this local
@@ -274,13 +292,29 @@ class HybridSystemAllDomains:
             # delegate can fail on live-LLM errors, so fallback use is
             # NOT guaranteed to be zero: each use is logged ("local fallback")
             # and tagged llm_source="local_fallback" in the result.
+            _fallback_attempted = True
             response = _create_message_deterministic(
                 self.client,
                 model=self.model,
                 max_tokens=4000,
                 messages=[{"role": "user", "content": prompt}],
             )
-            content = response.content[0].text
+            _fallback_response_received = True
+            from hypatiax.core.llm_call import last_call_info
+            _fallback_call_info = last_call_info()
+            # Anthropic extended-thinking responses may put a ThinkingBlock
+            # before the answer. Select the first text block rather than
+            # assuming response.content[0] has a .text attribute.
+            text_blocks = [
+                block for block in getattr(response, "content", [])
+                if getattr(block, "type", None) == "text"
+            ]
+            if not text_blocks:
+                raise ValueError(
+                    "LLM response contained no text block; block types: "
+                    f"{[getattr(block, 'type', type(block).__name__) for block in getattr(response, 'content', [])]}"
+                )
+            content = text_blocks[0].text
             parsed = self._parse_response(content)
 
             result = {
@@ -290,13 +324,41 @@ class HybridSystemAllDomains:
                 "explanation": parsed.get("explanation", "N/A"),
                 "llm_source": "local_fallback",
                 "llm_called": True,
+                "llm_attempted": True,
+                "temperature_sent": _fallback_call_info.get("temperature_sent", False),
+                "temperature_requested": _fallback_call_info.get("temperature_requested", 0.25),
+                "delegate_attempt": _delegate_attempt,
                 "bypass_kind": "local_fallback",
             }
         except Exception as e:
-            result = {"error": str(e), "llm_source": "local_fallback",
-                      "llm_called": False, "bypass_kind": "local_fallback"}
+            _fallback_call_info = {}
+            if _fallback_attempted:
+                from hypatiax.core.llm_call import last_call_info
+                _fallback_call_info = last_call_info()
+            result = {
+                "error": str(e),
+                "llm_source": "local_fallback",
+                "llm_called": _fallback_response_received,
+                "llm_attempted": _fallback_attempted,
+                "temperature_sent": _fallback_call_info.get("temperature_sent", False),
+                "temperature_requested": _fallback_call_info.get("temperature_requested", 0.25),
+                "delegate_attempt": _delegate_attempt,
+                "error_stage": ("post_response" if _fallback_response_received else
+                                "api_request" if _fallback_attempted else "pre_request"),
+                "bypass_kind": "local_fallback",
+            }
 
-        if not self._no_cache:
+        # Cache only usable formulas. Caching an API error or an empty/N/A
+        # parse would turn a transient failure into a permanent miss for this
+        # task during the run, preventing a later live retry.
+        _result_code = result.get("python_code", "") or result.get("formula_code", "")
+        if (
+            not self._no_cache
+            and isinstance(_result_code, str)
+            and _result_code.strip()
+            and _result_code.strip() != "N/A"
+            and not result.get("error")
+        ):
             self._formula_cache[_cache_key] = result
         return result
 
@@ -1141,9 +1203,10 @@ def run_hybrid_test_all_domains(
             hybrid.results.append(result)
 
     # Save results
-    os.makedirs("hypatiax/data/results", exist_ok=True)
+    results_root = os.environ.get("HYPATIAX_RESULTS_DIR", "hypatiax/data/results")
+    os.makedirs(results_root, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    hybrid.save_results(f"hypatiax/data/results/hybrid_llm_nn_all_domains_{ts}.json")
+    hybrid.save_results(os.path.join(results_root, f"hybrid_llm_nn_all_domains_{ts}.json"))
 
     # Print detailed results table
     hybrid.print_results_table(all_results)

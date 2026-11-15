@@ -21,7 +21,16 @@ Exit codes:
 import os
 import sys
 import time
+from pathlib import Path
+
 import anthropic
+
+# This script is executed by path (config/check_key_status.py), which makes
+# config/ rather than the repository root sys.path[0]. Add the checkout root
+# explicitly so `hypatiax` imports work in CI and from any local working dir.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 # --- retry config ---
 MAX_RETRIES = 5
@@ -44,7 +53,14 @@ if not api_key:
     print("   Locally: set it in your shell or in hypatiax/.env")
     sys.exit(1)
 
-print(f"ANTHROPIC_API_KEY present: YES ({len(api_key)} chars, prefix={api_key[:7]}...)")
+print(f"ANTHROPIC_API_KEY present: YES ({len(api_key)} chars)")
+
+model_id = os.environ.get("HYPATIAX_LLM_MODEL") or os.environ.get("LLM_MODEL") or "claude-sonnet-4-6"
+from hypatiax.core.llm_call import configured_temperature, create_message
+
+temperature = configured_temperature()
+print(f"LLM preflight model: {model_id}")
+print(f"LLM preflight temperature: {temperature}")
 
 client = anthropic.Anthropic(api_key=api_key)
 
@@ -52,8 +68,9 @@ for attempt in range(1, MAX_RETRIES + 1):
     try:
         print(f"\nValidation attempt {attempt}/{MAX_RETRIES}...")
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
+        response = create_message(
+            client,
+            model=model_id,
             max_tokens=10,
             messages=[{"role": "user", "content": "Hi"}],
         )
@@ -80,26 +97,27 @@ for attempt in range(1, MAX_RETRIES + 1):
         sys.exit(1)
 
     # ---- transient/retryable failures ----
-    except anthropic.APIError as e:
-        if getattr(e, "status_code", None) == 529:
-            # handle overloaded server
-            print("⚠️ Anthropic servers overloaded (HTTP 529)")
-            print("   Recommendation: wait a few seconds and retry; consider a lighter model.")
-            first_error = False
-        else:
-            # other API errors
-            print("❌ Unexpected API error")
-            sys.exit(1)
-
     except anthropic.RateLimitError as e:
         print(f"⚠️  Rate limited: {e}")
 
+    # These SDK exception classes inherit from APIError, so keep the
+    # retryable subclasses before the general APIError handler.
     except (
         anthropic.APIConnectionError,
         anthropic.APITimeoutError,
         anthropic.InternalServerError,
     ) as e:
         print(f"⚠️  Temporary API failure: {type(e).__name__}: {e}")
+
+    except anthropic.APIError as e:
+        if getattr(e, "status_code", None) == 529:
+            # handle overloaded server
+            print("⚠️ Anthropic servers overloaded (HTTP 529)")
+            print("   Recommendation: wait a few seconds and retry; consider a lighter model.")
+        else:
+            # other API errors
+            print("❌ Unexpected API error")
+            sys.exit(1)
 
     # ---- unknown fatal ----
 

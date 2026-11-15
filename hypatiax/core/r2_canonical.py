@@ -116,3 +116,14 @@ def selection_score(r2_value: float) -> float:
     """Use when ranking candidates by R^2: undefined scores must lose, not win
     or be silently dropped by NaN comparisons."""
     return float("-inf") if not np.isfinite(r2_value) else float(r2_value)
+
+
+def r2_detail(y_true, y_pred, sign_flip: bool | None = None) -> tuple[float | None, str]:
+    """Return the un-floored R² for diagnostics and the canonical scoring status.
+
+    The returned raw value is None when it is non-finite. Benchmark selection
+    and scoring must continue to use r2_scored(); this helper is for recording.
+    """
+    _, status = r2_scored(y_true, y_pred, sign_flip=sign_flip)
+    raw, _ = r2_scored(y_true, y_pred, sign_flip=sign_flip, floor=None)
+    return (float(raw) if np.isfinite(raw) else None), status

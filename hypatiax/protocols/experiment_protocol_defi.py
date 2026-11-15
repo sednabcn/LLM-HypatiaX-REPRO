@@ -1972,7 +1972,8 @@ class DeFiExperimentProtocol:
         ]
 
         r2_scores = [
-            r["evaluation"]["r2"] for r in successful if "r2" in r.get("evaluation", {})
+            r["evaluation"]["r2"] for r in successful
+            if r.get("evaluation", {}).get("r2") is not None   # L54: None = failed, not a score
         ]
 
         # By domain
@@ -1985,7 +1986,7 @@ class DeFiExperimentProtocol:
             by_domain[domain]["total"] += 1
             if r.get("evaluation", {}).get("success"):
                 by_domain[domain]["successful"] += 1
-                if "r2" in r.get("evaluation", {}):
+                if r.get("evaluation", {}).get("r2") is not None:   # L54
                     by_domain[domain]["r2_scores"].append(r["evaluation"]["r2"])
 
         # Calculate domain stats

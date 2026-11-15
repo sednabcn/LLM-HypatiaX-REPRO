@@ -22,7 +22,6 @@ also included verbatim, as compute_extrap_r2_far() depends on it.
 from __future__ import annotations
 
 import math
-import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 

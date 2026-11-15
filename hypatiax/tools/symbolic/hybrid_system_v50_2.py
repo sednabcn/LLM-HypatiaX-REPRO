@@ -427,7 +427,7 @@ class HybridDiscoverySystem:
         use_llm: bool = False,
         llm_mode: str = "hybrid",          # none | seed | hybrid | fallback
         llm_n_candidates: int = 3,
-        llm_temperature: float = float(os.environ.get("LLM_TEMPERATURE", "0.3")),  # AUDIT C1
+        llm_temperature: float = 0.25,  # Core-15 protocol default; API wrapper enforces 0.25
         # FIX-C: deterministic PySR (eliminates non-determinism warning).
         allow_nondeterministic: bool = False,
     ):
@@ -448,7 +448,7 @@ class HybridDiscoverySystem:
         llm_n_candidates : int
             Number of equation hypotheses to request from the LLM per call.
         llm_temperature : float
-            Sampling temperature passed to the LLM API.
+            Legacy-compatible value; the shared Core-15 API wrapper enforces temperature=0.25 for every live request.
         allow_nondeterministic : bool
             When False (default), forces deterministic=True + parallelism=
             'serial' on the engine call so PySR suppresses its non-determinism
@@ -724,12 +724,22 @@ class HybridDiscoverySystem:
         _inv_injected = False
 
         for attempt in range(self.max_retries):
+            result = None
             try:
                 # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
                 # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
                 seed = int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")) + attempt
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
+
+                _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
+                if _llm_engine is not None:
+                    _llm_engine.last_call_attempted = False
+                    _llm_engine.last_response_received = False
+                    _llm_engine.last_response_replayed = False
+                    _llm_engine.last_proposal_generated = False
+                    _llm_engine.last_call_info = {}
+                    _llm_engine.last_error = None
 
                 result = self.symbolic_engine.discover(
                     X, y, variable_names, equation_name=equation_name, random_state=seed,
@@ -743,7 +753,7 @@ class HybridDiscoverySystem:
                 r2 = result.get("r2_score", 0)
                 expr = result.get("expression", "")
 
-                # Track whether LLM was actually used this attempt
+                # Track live LLM response/proposal provenance for this attempt.
                 if result.get("llm_mode") and result["llm_mode"] != "none":
                     self.stats["llm_guided"] += 1
                     if not hasattr(self, "_llm_attempt_modes"):
@@ -754,7 +764,10 @@ class HybridDiscoverySystem:
                     self._llm_attempt_info.append({
                         k: result.get(k) for k in (
                             "llm_mode", "llm_time", "llm_best_expression", "llm_best_r2",
-                            "llm_confidence", "llm_hypotheses_raw", "llm_error")})
+                            "llm_confidence", "llm_hypotheses_raw", "llm_error",
+                            "llm_attempted", "llm_called", "llm_proposal_generated",
+                            "llm_response_replayed", "llm_temperature_requested",
+                            "llm_temperature_sent")})
                 else:
                     self.stats["llm_skipped"] += 1
 
@@ -813,9 +826,47 @@ class HybridDiscoverySystem:
                     return best_result
 
             except Exception as e:
+                _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
+                if (
+                    _llm_engine is not None
+                    and getattr(_llm_engine, "last_call_attempted", False)
+                    and not (
+                        isinstance(result, dict)
+                        and result.get("llm_mode") not in (None, "", "none")
+                    )
+                ):
+                    if not hasattr(self, "_llm_attempt_modes"):
+                        self._llm_attempt_modes = []
+                    if not hasattr(self, "_llm_attempt_info"):
+                        self._llm_attempt_info = []
+                    _response_replayed = bool(getattr(_llm_engine, "last_response_replayed", False))
+                    _response_received = bool(getattr(_llm_engine, "last_response_received", False))
+                    _call_info = getattr(_llm_engine, "last_call_info", {}) or {}
+                    self._llm_attempt_modes.append("hybrid_llm_failed")
+                    self._llm_attempt_info.append({
+                        "llm_mode": "hybrid_llm_failed",
+                        "llm_error": getattr(_llm_engine, "last_error", None) or f"{type(e).__name__}: {e}",
+                        "llm_attempted": True,
+                        "llm_called": _response_received and not _response_replayed,
+                        "llm_proposal_generated": bool(getattr(_llm_engine, "last_proposal_generated", False)),
+                        "llm_response_replayed": _response_replayed,
+                        "llm_temperature_requested": _call_info.get("temperature_requested"),
+                        "llm_temperature_sent": _call_info.get("temperature_sent"),
+                    })
                 last_attempt_error = e
                 logger.error(f"   [ERROR] Attempt {attempt + 1} failed: {e}")
                 logger.error(f"Attempt {attempt + 1} exception", exc_info=True)
+                # A hard timeout is a resource-budget boundary, not a signal
+                # to launch another equivalent full search. Preserve any
+                # earlier best result and return through the normal fallback
+                # path rather than multiplying the timeout cost.
+                _error_text = str(e).lower()
+                if isinstance(e, TimeoutError) or "timed out" in _error_text or "timeout" in _error_text:
+                    logger.warning(
+                        "[SYMBOLIC] Stopping retries after timeout; "
+                        "not repeating the same expensive search."
+                    )
+                    break
 
         if best_result and best_r2 >= 0.97:
             logger.info(f"\n[SUCCESS] SymbolicEngine succeeded (R2={best_r2:.4f})")
@@ -1538,24 +1589,47 @@ class HybridDiscoverySystem:
                 # B2: explicit provenance so result checkers can verify the
                 # LLM actually participated, and that no hardcoded-formula
                 # bypass was used (this engine has none: always "none").
-                # llm_called = an LLM attempt happened; llm_mode says what became of it
-                # (e.g. hybrid_pysr_better = prior discarded).
-                "llm_called": bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
+                # llm_called means a live API response was received; proposal
+                # availability is recorded separately from mere request attempts.
+                "llm_attempted": any(
+                    item.get("llm_attempted") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
                 ),
-                "bypass_kind": "live" if (bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
-                )) else "none",
-                "generation_path": "symbolic+llm" if (bool(
-                    self.llm_mode != "none"
-                    and (discovery.get("llm_mode") not in (None, "", "none")
-                         or bool(getattr(self, "_llm_attempt_modes", None)))
-                )) else "symbolic",
+                "llm_called": any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_proposal_generated": any(
+                    item.get("llm_proposal_generated") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_response_replayed": any(
+                    item.get("llm_response_replayed") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_temperature_requested": next((
+                    item.get("llm_temperature_requested")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
+                "llm_temperature_sent": any(
+                    item.get("llm_temperature_sent") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "bypass_kind": "live" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "none",
+                "generation_path": "symbolic+llm" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "symbolic",
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
+                "llm_attempt_info": list(getattr(self, "_llm_attempt_info", None) or []),
+                "structural_risk_flag": bool(discovery.get("structural_risk_flag", False)),
+                "structural_risk_tokens": list(discovery.get("structural_risk_tokens", [])),
+                "complexity_routing_enabled": bool(discovery.get("complexity_routing_enabled", True)),
+                "routing_reason": discovery.get("routing_reason"),
                 "validations": 1 if validation else 0,
                 "validation_score": validation.get("total_score", 0.0),
                 # FIX-D: flag log-space transform
@@ -1584,11 +1658,46 @@ class HybridDiscoverySystem:
                 "final_formula": "N/A",
                 "variable_names": var_names,
                 "strategy": "error",
-                "llm_mode": "none",
-                "llm_called": bool(getattr(self, "_llm_attempt_modes", None)),
+                "llm_mode": (getattr(self, "_llm_attempt_modes", None) or ["none"])[0],
+                "llm_attempted": any(
+                    item.get("llm_attempted") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_called": any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_proposal_generated": any(
+                    item.get("llm_proposal_generated") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_response_replayed": any(
+                    item.get("llm_response_replayed") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
+                "llm_temperature_requested": next((
+                    item.get("llm_temperature_requested")
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                    if item.get("llm_temperature_requested") is not None
+                ), None),
+                "llm_temperature_sent": any(
+                    item.get("llm_temperature_sent") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ),
                 "llm_info": (getattr(self, "_llm_attempt_info", None) or [None])[0],
-                "bypass_kind": "live" if (bool(getattr(self, "_llm_attempt_modes", None))) else "none",
-                "generation_path": "symbolic+llm" if (bool(getattr(self, "_llm_attempt_modes", None))) else "symbolic",
+                "llm_attempt_info": list(getattr(self, "_llm_attempt_info", None) or []),
+                "structural_risk_flag": False,
+                "structural_risk_tokens": [],
+                "complexity_routing_enabled": False,
+                "routing_reason": "discovery_failed",
+                "bypass_kind": "live" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "none",
+                "generation_path": "symbolic+llm" if any(
+                    item.get("llm_called") is True
+                    for item in (getattr(self, "_llm_attempt_info", None) or [])
+                ) else "symbolic",
                 "validations": 0,
                 "scale_log": False,
                 "x_log_flags": [False] * len(var_names),

@@ -53,7 +53,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools wheel
           python -m pip install -r requirements.txt
+          # Install the repository package itself. Installing requirements alone
+          # does not make the local hypatiax/ package importable from script paths.
+          python -m pip install --no-deps -e .
           python -m pip check
+          python - <<'PY'
+          import hypatiax
+          from hypatiax.core.r2_canonical import r2_checked
+          print("hypatiax package import: OK", hypatiax.__file__)
+          print("canonical R2 import: OK", r2_checked.__module__)
+          PY
           python - <<'PY'
           from importlib.metadata import version
           expected = {
@@ -75,7 +84,7 @@ jobs:
                   raise SystemExit(f"{package}: expected {wanted}, got {actual}")
           PY
 
-      - name: Verify explicit live API credential
+      - name: Verify API credential is configured
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -83,8 +92,6 @@ jobs:
             echo "::error::ANTHROPIC_API_KEY is not configured; refusing to run."
             exit 1
           }
-          # The launcher performs the single live API round-trip after env_check.
-          # Keep this step credential-presence-only to avoid a duplicate billable call.
 
       - name: Create isolated output location
         run: |

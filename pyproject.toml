@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "hypatiax"
 version = "0.0.0"
 description = "HypatiaX: LLM-guided symbolic regression for scientific discovery"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dynamic = []
 
 # The repo ships no packaging config, so pip's automatic package discovery

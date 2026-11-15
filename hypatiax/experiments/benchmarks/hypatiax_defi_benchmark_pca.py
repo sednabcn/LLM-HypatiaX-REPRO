@@ -54,6 +54,11 @@ from sklearn.preprocessing import StandardScaler
 _ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(_ROOT))
 
+from hypatiax.core.routing import (
+    kde_ood_probability, route_decision_from_diagnostics,
+    structural_risk_tokens, training_edge_split_indices,
+)
+
 # ── env / API key ─────────────────────────────────────────────────────────────
 for _ep in [
     _ROOT / "hypatiax" / ".env",
@@ -473,78 +478,61 @@ def _eval_formula_r2(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SECTION 3 — Routing helpers (Fixes 1, 2, 4)
+# SECTION 3 — Manuscript routing helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-_TRANSCENDENTAL_TOKENS = [
-    "math.exp", "np.exp", "exp(",
-    "math.log", "np.log", "log(",
-    "math.sqrt", "np.sqrt", "sqrt(",
-    "norm.cdf", "norm.pdf", "scipy.stats",
-    "np.maximum", "np.minimum", "max(", "min(",
-    "math.sin", "np.sin", "math.cos", "np.cos",
-    "**0.",
-]
-
-
-def _formula_has_transcendental(code: str) -> bool:
-    """Fix 2 — True if code contains ops that are structurally bad for NN extrapolation."""
-    low = code.lower()
-    return any(t.lower() in low for t in _TRANSCENDENTAL_TOKENS)
-
-
-def _sort_by_principal_direction(X: np.ndarray) -> np.ndarray:
-    """
-    FIX 8: Sort samples along the first principal component rather than
-    a single feature axis.  This gives a correct extrapolation split for
-    multivariate inputs where the primary direction of variation is not
-    aligned with any single feature.
-    """
-    Xc = X - X.mean(axis=0)
-    _, _, vh = np.linalg.svd(Xc, full_matrices=False)
-    principal = vh[0]
-    scores = Xc @ principal
-    return np.argsort(scores)
-
-
-def _extrapolation_probe(X_train: np.ndarray, y_train: np.ndarray,
-                          probe_frac: float = 0.15) -> float:
-    """
-    Fix 1 — measure how much an MLP degrades at the edge of training data.
-    Returns degradation = (in-distribution R²) - (probe R²).  Large → route to LLM.
-    """
-    n      = len(X_train)
-    split  = int(n * (1 - probe_frac))
-    # FIX 8: use principal direction for ordering instead of X[:, 0]
-    order  = _sort_by_principal_direction(X_train)
-    Xs, ys = X_train[order], y_train[order]
-    Xf, yf = Xs[:split], ys[:split]
-    Xp, yp = Xs[split:], ys[split:]
-
-    if len(Xp) < 5 or len(Xf) < 10:
-        return 0.0
-
+def _extrapolation_probe(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    probe_frac: float | None = None,
+) -> dict:
+    """Fit an NN on the central training region and score both training tails."""
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float).reshape(-1)
+    if probe_frac is None:
+        try:
+            probe_frac = float(os.getenv("HYPATIAX_ROUTING_EDGE_FRACTION", "0.15"))
+        except ValueError:
+            return {"status": "invalid_probe_fraction", "delta": None}
     try:
+        core_idx, edge_idx = training_edge_split_indices(X, probe_frac)
+        if len(core_idx) < 10 or len(edge_idx) < 5:
+            return {"status": "insufficient_rows", "delta": None}
         probe_result = _train_and_eval_nn(
-            Xf, yf, Xp, yp, epochs=200, hidden=[64, 32], seed=_NN_SEED
+            X[core_idx], y[core_idx], X[edge_idx], y[edge_idx],
+            epochs=200, hidden=[64, 32], seed=_NN_SEED,
         )
-        return max(0.0, probe_result["train_r2"] - probe_result["test_r2"])
-    except Exception as e:
-        return _m5_record_failure("_extrapolation_probe", e)
+        r2_core = float(probe_result["train_r2"])
+        r2_edge = float(probe_result["test_r2"])
+        if not (
+            probe_result.get("success", False)
+            and np.isfinite(r2_core) and np.isfinite(r2_edge)
+        ):
+            return {"status": "nonfinite_probe_scores", "delta": None,
+                    "r2_core": r2_core, "r2_edge": r2_edge}
+        return {
+            "status": "ok", "r2_train": r2_core, "r2_core": r2_core,
+            "r2_edge": r2_edge, "delta": float(r2_core - r2_edge),
+            "probe_fraction": float(probe_frac),
+            "n_core": int(len(core_idx)), "n_edge": int(len(edge_idx)),
+            "edge_sides": 2,
+        }
+    except Exception as exc:
+        _m5_record_failure("_extrapolation_probe", exc)
+        return {"status": "error", "delta": None,
+                "error": f"{type(exc).__name__}: {exc}"}
 
 
-# B4-reviewed: input-range only (no y_test); see docstring note below.
-def _distance_llm_weight(X_test: np.ndarray, X_train: np.ndarray,
-                          base_weight: float = 0.3) -> float:
-    """
-    Fix 4 — LLM blend weight: increases as test points move outside training range.
-    Returns scalar in [base_weight, 1.0].
-    """
-    # B4-reviewed: uses only the INPUT range of X_test (no y_test, no labels) --
-    # deployable at inference time. Document as an input-dependent blend weight.
-    lo, hi  = X_train.min(axis=0), X_train.max(axis=0)
-    outside = np.mean(np.any((X_test < lo) | (X_test > hi), axis=1))
-    return float(base_weight + (1.0 - base_weight) * outside)
+def _routing_delta_tau() -> float | None:
+    """Read a pre-calibrated training-only tau; absent or invalid fails closed."""
+    raw = os.environ.get("HYPATIAX_ROUTING_DELTA_TAU", "").strip()
+    if not raw:
+        return None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None
+    return value if np.isfinite(value) and value >= 0.0 else None
 
 
 def _ensemble_llm_nn(
@@ -555,11 +543,30 @@ def _ensemble_llm_nn(
     y_train: np.ndarray,
     llm_r2: float = None,
     nn_r2: float = None,
+    blend_weights: dict | None = None,
 ) -> np.ndarray:
     """
-    Uncertainty-weighted ensemble of LLM and NN predictions.
-    FIX 7: uncertainty is estimated from TRAINING residuals only — no test leakage.
+    Ensemble LLM and NN predictions. Manuscript weights, when supplied, are
+    applied per query; the legacy training-residual blend remains a fallback.
     """
+    if blend_weights is not None:
+        llm_w = np.asarray(blend_weights["llm"], dtype=float).reshape(-1)
+        nn_w = np.asarray(blend_weights["nn"], dtype=float).reshape(-1)
+        n_query = len(llm_pred_test)
+        if llm_w.size == 1:
+            llm_w = np.full(n_query, llm_w.item())
+        if nn_w.size == 1:
+            nn_w = np.full(n_query, nn_w.item())
+        if (
+            llm_w.size != n_query or nn_w.size != n_query
+            or not np.isfinite(llm_w).all() or not np.isfinite(nn_w).all()
+            or np.any((llm_w < 0.0) | (llm_w > 1.0))
+            or np.any((nn_w < 0.0) | (nn_w > 1.0))
+            or not np.allclose(llm_w + nn_w, 1.0)
+        ):
+            raise ValueError("Invalid per-query manuscript blend weights")
+        return llm_w * llm_pred_test + nn_w * nn_pred_test
+
     eps = 1e-8
     # FIX 7: use train residuals, not test residuals, to estimate uncertainty
     llm_unc = float(np.std(llm_pred_train - y_train))
@@ -619,13 +626,11 @@ def formula({var_list}):
     return <expression>
 """
     try:
-        resp = client.messages.create(
+        from hypatiax.core.llm_call import create_message  # UNIFIED-TEMPERATURE
+        resp = create_message(
+        client,
             model="claude-sonnet-4-6",
             max_tokens=1000,
-            # AUDIT-PATCH C2: direct messages.create(temperature=0.0). PureLLMBaseline and the shared
-            # wrapper do NOT send temperature on SDK>=1.0 (model default applies); the engine/CI
-            # env default is LLM_TEMPERATURE=0.25. These are different settings: report as such.
-            temperature=0.0,
             messages=[{"role": "user", "content": prompt}],
         )
         code = resp.content[0].text.strip()
@@ -672,160 +677,153 @@ def _hybrid_predict_and_eval(
     X_test:  np.ndarray, y_test:  np.ndarray,
     var_names: list[str], metadata: dict,
 ) -> dict:
-    """
-    Full hybrid pipeline for one test case.
-    Returns dict: train_r2, test_r2, decision, success.
-
-    Routing priority (in order):
-      Fix 2  → transcendental token detection → LLM  (if formula trustworthy)
-      Fix 1  → extrapolation probe degradation → LLM  (if formula trustworthy)
-      Fix 3  → LLM-feature augmentation for NN path   (if formula trustworthy)
-      Fix 4  → distance-gated blend for ensemble path
-      Fix 5  → unified evaluator for ALL LLM formula calls
-      Fix 5b → routing guard: only override if LLM train R² > 0
-    """
-
-    # Step 1: Generate LLM formula
+    """Apply the manuscript five-stage routing policy to one PCA-split case."""
     llm_result = _generate_llm_formula(description, domain, var_names, metadata)
-    llm_code   = llm_result.get("python_code") or ""
+    llm_code = llm_result.get("python_code") or ""
     has_formula = bool(llm_code and "def formula" in llm_code)
-
-    # Extract constants from metadata — injected into exec globals so formulas
-    # that reference protocol constants (e.g. K=100) don't NameError at eval time.
     constants = metadata.get("constants") or {}
 
-    # Step 2: Evaluate LLM on training data (Fix 5 — unified evaluator)
     llm_train_r2, llm_train_ok = (
         _eval_formula_r2(llm_code, X_train, y_train, constants=constants)
         if has_formula else (float("nan"), False)
     )
-
-    # Fix 5b + FIX 10: formula is trustworthy only if it fits training data well
-    # AND does not exhibit any known pathological patterns.
-    # FIX 10: raised threshold from > 0.0 to > 0.5 for stronger trust gate.
     llm_trustworthy = (
         has_formula
         and llm_train_ok
-        and llm_train_r2 > 0.5
+        and np.isfinite(llm_train_r2)
+        and llm_train_r2 >= 0.5
         and not _formula_has_pathological_behavior(llm_code)
     )
 
-    # Step 3: Initial routing decision based on training LLM R²
-    # Issue 4 fix: if LLM achieved near-perfect training fit, prefer it
-    # immediately — do NOT allow the cascade below to accidentally flip to NN.
-    # Previous code only checked train_r2 > 0.95 which was correct in principle,
-    # but the routing-override block (Step 4) could later change "llm" back to
-    # "ensemble" or "nn" even when train_r2 == 1.0.  We lock the decision here
-    # so the Step 4 overrides only apply when the initial decision is NOT "llm".
-    if llm_train_ok and llm_train_r2 >= 0.95:
-        decision = "llm"          # locked — Step 4 overrides will be skipped
-    elif llm_train_ok and llm_train_r2 > 0.50:
-        decision = "ensemble"
-    else:
-        decision = "nn"
+    structural_tokens = structural_risk_tokens(llm_code)
+    degradation_probe = (
+        _extrapolation_probe(X_train, y_train)
+        if llm_trustworthy else
+        {"status": "trust_gate_failed", "delta": None,
+         "r2_train": None, "r2_edge": None}
+    )
+    degradation_tau = _routing_delta_tau()
+    try:
+        ood_diagnostic = kde_ood_probability(X_train, X_test)
+    except Exception as exc:
+        _m5_record_failure("kde_ood_probability", exc)
+        ood_diagnostic = {"status": "error", "p_ood": None, "p_ood_per_query": []}
 
-    # Step 4: Routing overrides (only when formula is trustworthy — Fix 5b)
-    # IMPORTANT: do NOT override a locked "llm" decision (Issue 4 fix).
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 2: transcendental tokens → LLM wins
-        if _formula_has_transcendental(llm_code):
-            decision = "llm"
+    p_query = np.asarray(ood_diagnostic.get("p_ood_per_query") or [], dtype=float)
+    if (
+        p_query.size != len(X_test)
+        or not np.isfinite(p_query).all()
+        or np.any((p_query < 0.0) | (p_query > 1.0))
+    ):
+        p_query = np.zeros(len(X_test), dtype=float)
+    llm_weights = 0.3 + 0.7 * p_query
+    nn_weights = 1.0 - llm_weights
+    query_blend_weights = {
+        "llm": llm_weights.astype(float).tolist(),
+        "nn": nn_weights.astype(float).tolist(),
+    }
 
-    if llm_trustworthy and decision in ("nn", "ensemble"):
-        # Fix 1: NN edge-degradation probe → LLM wins
-        try:
-            degradation = _extrapolation_probe(X_train, y_train)
-            if degradation >= 0.15:
-                decision = "llm"
-        except Exception as _e:
-            import logging as _lg, os as _os
-            _lg.getLogger(__name__).warning('swallowed: %r', _e)
-            if _os.environ.get('HYPATIAX_STRICT') == '1': raise
-
-    # Step 5: Evaluate on TEST set using Fix 5 unified evaluator
-    nn_rerun_time_s = 0.0   # Issue 3: track NN cost paid by hybrid on fallback
+    policy = route_decision_from_diagnostics(
+        bool(llm_trustworthy), llm_train_r2, structural_tokens,
+        degradation_probe.get("delta"), degradation_tau,
+    )
+    decision = "llm" if policy["decision"] == "fitted_llm" else policy["decision"]
+    route_reason = policy["route_reason"]
+    route_execution_status = "selected_route_executed"
+    nn_rerun_time_s = 0.0
+    test_r2 = float("nan")
 
     if decision == "llm":
-        test_r2, ok = _eval_formula_r2(llm_code, X_test, y_test, constants=constants)
+        test_r2, ok = _eval_formula_r2(
+            llm_code, X_test, y_test, constants=constants
+        )
         if not ok or not np.isfinite(test_r2):
             _t_nn0 = time.time()
-            nn_m    = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+            nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
             nn_rerun_time_s = time.time() - _t_nn0
-            test_r2 = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = "nn_fallback" if nn_m.get("success") and np.isfinite(test_r2) else "nn_unavailable"
+            route_reason = (
+                "pure_llm_evaluation_failed_nn_fallback"
+                if decision == "nn_fallback"
+                else "pure_llm_evaluation_and_nn_fallback_failed"
+            )
+            route_execution_status = decision
 
-    elif decision == "ensemble" and has_formula:
-        # Fix 5: LLM test predictions via unified evaluator
+    elif decision == "ensemble":
         llm_test_preds = _execute_formula(llm_code, X_test, constants=constants)
-        _t_nn0         = time.time()
-        nn_m           = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
+        _t_nn0 = time.time()
+        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
         nn_rerun_time_s = time.time() - _t_nn0
-
-        if llm_test_preds is not None:
-            # FIX 7: also get LLM train predictions for uncertainty estimation
-            llm_train_preds = _execute_formula(llm_code, X_train, constants=constants)
-            if llm_train_preds is None:
-                test_r2  = nn_m["test_r2"]
-                decision = "nn_fallback"
-            else:
-                # B4-reviewed: weight depends on X_test inputs only, never y_test.
-                # AUDIT-PATCH B4 DISCLOSURE: blend weight is computed from X_test INPUTS (no labels), so the
-                # manuscript statement 'routing uses training data only' must be amended to say that the
-                # final ensemble weight is input-dependent at test time.
-                llm_w         = _distance_llm_weight(X_test, X_train, base_weight=0.3)
-                nn_w          = 1.0 - llm_w
-                ensemble_pred = _ensemble_llm_nn(
-                    llm_pred_test=llm_test_preds,
-                    nn_pred_test=nn_m["y_pred_test"],
-                    llm_pred_train=llm_train_preds,
-                    nn_pred_train=nn_m["y_pred_train"],
-                    y_train=y_train,
-                    llm_r2=llm_train_r2 * llm_w,
-                    nn_r2=nn_m["train_r2"] * nn_w,
-                )
-                m = _compute_metrics(y_test, ensemble_pred)
-                test_r2 = m["r2"]
+        nn_available = (
+            nn_m.get("success", False)
+            and nn_m.get("y_pred_test") is not None
+            and nn_m.get("y_pred_train") is not None
+        )
+        if llm_test_preds is not None and llm_train_preds is not None and nn_available:
+            ensemble_pred = _ensemble_llm_nn(
+                llm_pred_test=llm_test_preds,
+                nn_pred_test=nn_m["y_pred_test"],
+                llm_pred_train=llm_train_preds,
+                nn_pred_train=nn_m["y_pred_train"],
+                y_train=y_train,
+                llm_r2=llm_train_r2,
+                nn_r2=nn_m["train_r2"],
+                blend_weights=query_blend_weights,
+            )
+            metrics = _compute_metrics(y_test, ensemble_pred)
+            test_r2 = float(metrics.get("r2", float("nan")))
+            route_execution_status = (
+                "ensemble_executed" if np.isfinite(test_r2)
+                else "ensemble_metrics_undefined"
+            )
         else:
-            test_r2  = nn_m["test_r2"]
-            decision = "nn_fallback"
+            test_r2 = float(nn_m.get("test_r2", float("nan")))
+            decision = (
+                "nn_fallback"
+                if nn_available and np.isfinite(test_r2)
+                else "nn_unavailable"
+            )
+            route_reason = (
+                "ensemble_inputs_unavailable_nn_fallback"
+                if decision == "nn_fallback"
+                else "ensemble_and_nn_fallback_failed"
+            )
+            route_execution_status = decision
 
     else:
-        # decision == "nn"
-        # Fix 3: if formula trustworthy, augment X with LLM predictions
-        if llm_trustworthy:
-            try:
-                llm_tr_preds = _execute_formula(llm_code, X_train, constants=constants)
-                llm_te_preds = _execute_formula(llm_code, X_test,  constants=constants)
-                if (llm_tr_preds is not None and llm_te_preds is not None):
-                    X_tr_aug = np.column_stack([X_train, llm_tr_preds])
-                    X_te_aug = np.column_stack([X_test,  llm_te_preds])
-                    _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_tr_aug, y_train, X_te_aug, y_test)
-                    nn_rerun_time_s = time.time() - _t_nn0
-                else:
-                    _t_nn0 = time.time()
-                    nn_m     = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-                    nn_rerun_time_s = time.time() - _t_nn0
-            except Exception:
-                _t_nn0 = time.time()
-                nn_m         = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-                nn_rerun_time_s = time.time() - _t_nn0
-        else:
-            _t_nn0 = time.time()
-            nn_m             = _train_and_eval_nn(X_train, y_train, X_test, y_test)
-            nn_rerun_time_s = time.time() - _t_nn0
-        test_r2 = nn_m["test_r2"]
+        # Trust-gate failure: use the standalone NN path; no LLM feature or
+        # held-out label is used to choose the route.
+        _t_nn0 = time.time()
+        nn_m = _train_and_eval_nn(X_train, y_train, X_test, y_test)
+        nn_rerun_time_s = time.time() - _t_nn0
+        test_r2 = float(nn_m.get("test_r2", float("nan")))
+        decision = (
+            "nn_fallback"
+            if nn_m.get("success") and np.isfinite(test_r2)
+            else "nn_unavailable"
+        )
+        route_execution_status = decision
 
     return {
-        "train_r2":       float(llm_train_r2) if llm_train_ok else float("nan"),
-        "test_r2":        float(test_r2),
-        "decision":       decision,
-        "llm_code":       llm_code if has_formula else None,
-        "llm_train_r2":   float(llm_train_r2) if llm_train_ok else float("nan"),
-        "nn_rerun_time_s": round(nn_rerun_time_s, 3),  # Issue 3: NN cost paid by hybrid
-        "llm_called":     bool(llm_result.get("llm_called", False)),   # B2
-        "bypass_kind":    llm_result.get("bypass_kind", "none"),       # B2
-        "success":        True,
+        "train_r2": float(llm_train_r2) if llm_train_ok else float("nan"),
+        "test_r2": float(test_r2),
+        "decision": decision,
+        "route_reason": route_reason,
+        "route_execution_status": route_execution_status,
+        "structural_risk_flag": bool(structural_tokens),
+        "structural_risk_tokens": structural_tokens,
+        "degradation_probe": degradation_probe,
+        "degradation_tau": degradation_tau,
+        "ood_diagnostic": ood_diagnostic,
+        "blend_weights": query_blend_weights,
+        "llm_code": llm_code if has_formula else None,
+        "llm_train_r2": float(llm_train_r2) if llm_train_ok else float("nan"),
+        "nn_rerun_time_s": round(nn_rerun_time_s, 3),
+        "llm_called": bool(llm_result.get("llm_called", False)),
+        "bypass_kind": llm_result.get("bypass_kind", "none"),
+        "success": bool(np.isfinite(test_r2)),
     }
 
 
@@ -1389,12 +1387,10 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                 )
                 _hyb_wall = round(time.time() - _t0_hyb, 3)
 
-                # Issue 3 fix: when hybrid fell back to NN, the time already
-                # recorded for the standalone NN run CANNOT be reused — the
-                # hybrid must pay the full NN training cost itself.
-                # _hybrid_predict_and_eval() now returns nn_rerun_time_s for
-                # fallback cases so the reported hybrid time is self-contained.
-                hyb_time = _hyb_wall + hy_m.get("nn_rerun_time_s", 0.0)
+                # _hyb_wall already includes any NN rerun performed inside
+                # _hybrid_predict_and_eval. Keep nn_rerun_time_s as a subset
+                # diagnostic; adding it again would double-count wall time.
+                hyb_time = _hyb_wall
 
                 _train_r2 = hy_m["train_r2"]
                 _test_r2  = hy_m["test_r2"]
@@ -1404,9 +1400,17 @@ def run_benchmark(resume: bool = False, verify_fix5: bool = False,
                     "train_r2":        _train_r2,
                     "test_r2":         _test_r2,
                     "decision":        hy_m["decision"],
+                    "route_reason":    hy_m.get("route_reason"),
+                    "route_execution_status": hy_m.get("route_execution_status"),
+                    "structural_risk_flag": hy_m.get("structural_risk_flag"),
+                    "structural_risk_tokens": hy_m.get("structural_risk_tokens"),
+                    "degradation_probe": hy_m.get("degradation_probe"),
+                    "degradation_tau": hy_m.get("degradation_tau"),
+                    "ood_diagnostic": hy_m.get("ood_diagnostic"),
+                    "blend_weights": hy_m.get("blend_weights"),
                     "llm_called":      hy_m.get("llm_called"),      # B2
                     "bypass_kind":     hy_m.get("bypass_kind"),     # B2
-                    "success":         not (_nan(_train_r2) or _nan(_test_r2)),  # ← fixed
+                    "success":         bool(hy_m.get("success", not (_nan(_train_r2) or _nan(_test_r2)))),
                     "time_s":          round(hyb_time, 3),
                     "nn_rerun_time_s": hy_m.get("nn_rerun_time_s", 0.0),
                 }

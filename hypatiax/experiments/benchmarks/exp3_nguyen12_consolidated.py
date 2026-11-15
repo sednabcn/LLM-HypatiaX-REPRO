@@ -1398,8 +1398,8 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
     _CKPT_PATH     = _results_dir / f"_exp3_seed{seed}_temp{_temp_tag}_run{run_index}_partial.json"
 
     def _save(results_hypatia, results_pysr, n_total, complete):
-        h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= 0.9999)
-        p_recovered = sum(1 for r in results_pysr    if r["evaluation"]["r2"] >= 0.9999)
+        h_recovered = sum(1 for r in results_hypatia if (r["evaluation"].get("r2") is not None and r["evaluation"]["r2"] >= 0.9999))   # L54
+        p_recovered = sum(1 for r in results_pysr    if (r["evaluation"].get("r2") is not None and r["evaluation"]["r2"] >= 0.9999))
         _modes = {r.get("sparse_seed_mode", "off") for r in results_hypatia}
         _cfg_sparse_mode = (next(iter(_modes)) if len(_modes) == 1
                             else ("mixed" if _modes else _sparse_seed_mode))
@@ -1990,8 +1990,8 @@ def run(seed: int = 42, temperature: float = 0.25, run_index: int = 1,
 
     # ── Aggregate summary ─────────────────────────────────────────────────
     THRESH      = 0.9999
-    h_recovered = sum(1 for r in results_hypatia if r["evaluation"]["r2"] >= THRESH)
-    p_recovered = sum(1 for r in results_pysr    if r["evaluation"]["r2"] >= THRESH)
+    h_recovered = sum(1 for r in results_hypatia if (r["evaluation"].get("r2") is not None and r["evaluation"]["r2"] >= THRESH))   # L54
+    p_recovered = sum(1 for r in results_pysr    if (r["evaluation"].get("r2") is not None and r["evaluation"]["r2"] >= THRESH))
     n           = len(all_cases)
 
     print(f"\n{'='*68}")
