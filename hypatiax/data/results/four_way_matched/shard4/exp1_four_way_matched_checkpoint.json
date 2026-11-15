@@ -1,0 +1,812 @@
+{
+  "__run_metadata__": {
+    "sha256": "5959a54d431ba8b06253b2e4d024de71f4d0341fc17b4ea868dce777659e86db",
+    "schema": 1,
+    "source_sha256": {
+      "hypatiax/experiments/benchmarks/exp1_four_way_matched.py": "4e83ca18ce5c61b4bbfc8eb3973754d125e21bda1429145dc8763537da21bddc",
+      "hypatiax/experiments/benchmarks/exp1_ablation.py": "e57e829f14eed09f5aea2869a300361b47da748273ba1bb64d9c542569582a26",
+      "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py": "2ee000410c7f0739e273813151e07da7a686f75de037ca871f0c10038b7c9428",
+      "hypatiax/safe_formula.py": "4dfbbc2e4c9b400d928e68dc7660f704cc50ec5735998d3ee335fe2acb493145",
+      "hypatiax/core/r2_canonical.py": "994ed7a4a08b1ad73dd6121a946c2c0e1cf3548fadd22455dc25ac549f8e2a01",
+      "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py": "f6bdd15d96164bd637afe0ddf3141e5b3b7114a52ffb9ba04a6d1bbcc6447adf",
+      "hypatiax/core/llm_call.py": "3d37c1414c4f7ac1fcd1d0c9a345fe030ffea5ca0463fb7858de244ddb811b2d",
+      "hypatiax/core/training/baseline_neural_network_defi_improved.py": "9276b7769a96410134e7574dba0f70bc6115c20c4e09b15bf226a37e08e71cc2",
+      "hypatiax/tools/symbolic/symbolic_engine.py": "f92c47ee6d4f4308d2dd946ed8d089181b75bfaa46cb8e64099255423a343bc8",
+      "hypatiax/tools/symbolic/hybrid_system_v50_2.py": "cfda0d024209d4f61faf4492d4dccef7e3a6f681ecf41899558af35661dbe9d8",
+      "hypatiax/core/enforce_flags.py": "ff49c115894821f444f0feb365e7a7f2bf5ac531465bbabf14548119fede4f07"
+    },
+    "protocol_sha256": "14aebc1d3db8c6e48648add321653bd79f8c483cf758beb742f59a54f14492cb",
+    "settings": {
+      "python_version": "3.12.16",
+      "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+      "runtime_dependency_versions": {
+        "numpy": "2.5.4",
+        "scipy": "1.18.1",
+        "sympy": "1.14.0",
+        "pandas": "2.2.3",
+        "scikit-learn": "1.9.1",
+        "torch": "2.15.0+cpu",
+        "pysr": "2.0.0a1",
+        "anthropic": "0.73.0",
+        "PyYAML": "6.0.3"
+      },
+      "seed": 42,
+      "common_wall_clock_seconds": 900,
+      "noise_level": 0.05,
+      "n_train_source": 200,
+      "n_extrapolation": 100,
+      "pure_llm_model_effective": "claude-sonnet-4-6",
+      "pure_llm_model_source": "env:HYPATIAX_LLM_MODEL",
+      "hybrid_llm_model_effective": "claude-sonnet-4-6",
+      "ablation_llm_model_metadata": "claude-sonnet-4-6",
+      "llm_temperature_effective": 0.25,
+      "pysr_niterations_effective": 1000,
+      "pysr_populations_effective": 30,
+      "pysr_timeout_seconds_effective": 1100,
+      "hybrid_max_retries_effective": 3,
+      "llm_cache_disabled": true
+    }
+  },
+  "12": {
+    "name": "Value at Risk",
+    "domain": "DeFi Risk",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 379.49148738199995,
+        "test": {
+          "r2": 0.9954615104377689,
+          "rmse": 17.92119761566172,
+          "mae": 15.012784474983096,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9999415473280829,
+            "rmse": 3.2317267287145635,
+            "mae": 3.190090722092275
+          },
+          "medium": {
+            "r2": 0.9999918600793428,
+            "rmse": 14.034492203714699,
+            "mae": 12.678974755632852
+          },
+          "far": {
+            "r2": 0.9999415473280829,
+            "rmse": 51.707627659433015,
+            "mae": 51.0414515534764
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.997937339571425,
+          "train_rmse": 15.480324366171798,
+          "test_r2": 0.9954615104377689,
+          "test_rmse": 17.92119761566172,
+          "test_mae": 15.012784474983096,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 0.9999415473280829,
+          "extrap_r2_medium": 0.9999918600793428,
+          "extrap_r2_far": 0.9999415473280829,
+          "extrap_r2_raw": {
+            "near": 0.9999415473280829,
+            "medium": 0.9999918600793428,
+            "far": 0.9999415473280829
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 3.2317267287145635,
+          "extrap_rmse_medium": 14.034492203714699,
+          "extrap_rmse_far": 51.707627659433015,
+          "extrap_mae_near": 3.190090722092275,
+          "extrap_mae_medium": 12.678974755632852,
+          "extrap_mae_far": 51.0414515534764,
+          "sr_time_s": 379.20517325401306,
+          "llm_time_s": 5.057363033294678,
+          "total_time_s": 379.20517325401306,
+          "best_expression": "(sigma / 0.60716) * P",
+          "complexity": 21,
+          "llm_expression": "P * sigma",
+          "llm_confidence": 0.45,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 15.480324366171798,
+          "llm_mode_used": "hybrid_pysr_better",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_pysr_better",
+              "llm_time": 5.057363033294678,
+              "llm_best_expression": "P * sigma",
+              "llm_best_r2": 0.5311236211422767,
+              "llm_confidence": 0.45,
+              "llm_hypotheses_raw": [
+                "P * sigma",
+                "P * sigma ** 2",
+                "P ** 2 * sigma"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 74.3,
+          "ood_predictor_note": null,
+          "sanitized_vars": {}
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1105.8155315539998,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1105.8150322437286,
+          "llm_time_s": 0.0,
+          "total_time_s": 1105.8150322437286,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 10.841565492999962,
+        "test": {
+          "r2": 0.9955291564284858,
+          "rmse": 17.787138867465107,
+          "mae": 14.934121855691995
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "medium": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "far": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          }
+        },
+        "diagnostics": {
+          "formula": "def formula(P, sigma):\n    # Z-score for 95% confidence level (one-tailed)\n    Z = 1.645\n    VaR = P * sigma * Z\n    return VaR",
+          "formula_hash": "0e6d48e5bc769013f9c34a2d3ff9f0079e31c68a219128a963820562cd10d256",
+          "metadata": {
+            "llm_called": true,
+            "llm_attempted": true,
+            "bypass_kind": "live",
+            "llm_source": null,
+            "temperature_requested": 0.25,
+            "temperature_sent": true,
+            "truncated_formula": false,
+            "is_hardcoded": false
+          },
+          "extrapolation_errors": {},
+          "definition": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement",
+          "information_regime": "zero_shot_task_description_only",
+          "training_arrays_used_by_model": false
+        }
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.3945639510000092,
+        "test": {
+          "r2": 0.9946440270424196,
+          "rmse": 19.468412792302825,
+          "mae": 15.600547580038576
+        },
+        "extrapolation": {
+          "near": {
+            "r2": -0.10325301481606264,
+            "rmse": 443.9867480944938,
+            "mae": 406.18339153640585
+          },
+          "medium": {
+            "r2": -1.0011577510741683,
+            "rmse": 6958.686647097069,
+            "mae": 5809.986322399721
+          },
+          "far": {
+            "r2": -23.313630566334385,
+            "rmse": 33348.579193640886,
+            "mae": 32776.14910344968
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(2\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "7507dbe4c494905c4e93997a26ccf8db366c68b896d832c54f3cebac6e56c766",
+      "outer_test_sha256": "905d9db08151749e11d0fe4e0c98943ba3a4c1d69cc0a3f264dea7d51e459364",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 126,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "4362311a7362f996f43f9aafd670dcddf6b25095e86a8821f0a75e31876cf5f9",
+        "medium": "6030e7c28824ea69805fae8f31c3720c2635d3c9febdbc83594f696747add356",
+        "far": "1ec702b671e0a87d0741f0e9a70bd53c1855b198a169300637a678925541c10a"
+      }
+    }
+  },
+  "13": {
+    "name": "Liquidation Price",
+    "domain": "DeFi Risk",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 368.4990693080001,
+        "test": {
+          "r2": 0.9964433990822498,
+          "rmse": 53.39002758054519,
+          "mae": 42.05059998442253,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.9996941591670573,
+            "rmse": 11.132088313277336,
+            "mae": 10.948950265320573
+          },
+          "medium": {
+            "r2": 0.999923602505079,
+            "rmse": 36.34825915989902,
+            "mae": 33.608180971102804
+          },
+          "far": {
+            "r2": 0.999198566298985,
+            "rmse": 83.37619323371092,
+            "mae": 82.73013942833059
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.9974064095575633,
+          "train_rmse": 48.64508015548017,
+          "test_r2": 0.9964433990822498,
+          "test_rmse": 53.39002758054519,
+          "test_mae": 42.05059998442253,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 0.9996941591670573,
+          "extrap_r2_medium": 0.999923602505079,
+          "extrap_r2_far": 0.999198566298985,
+          "extrap_r2_raw": {
+            "near": 0.9996941591670573,
+            "medium": 0.999923602505079,
+            "far": 0.999198566298985
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 11.132088313277336,
+          "extrap_rmse_medium": 36.34825915989902,
+          "extrap_rmse_far": 83.37619323371092,
+          "extrap_mae_near": 10.948950265320573,
+          "extrap_mae_medium": 33.608180971102804,
+          "extrap_mae_far": 82.73013942833059,
+          "sr_time_s": 368.3670229911804,
+          "llm_time_s": 4.68004846572876,
+          "total_time_s": 368.3670229911804,
+          "best_expression": "(0.9961741 - (1.2370559 / L)) * p0",
+          "complexity": 34,
+          "llm_expression": "p0 * L",
+          "llm_confidence": 0.55,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 48.64508015548017,
+          "llm_mode_used": "hybrid_pysr_better",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_pysr_better",
+              "llm_time": 4.68004846572876,
+              "llm_best_expression": "p0 * L",
+              "llm_best_r2": -74.67561145547107,
+              "llm_confidence": 0.55,
+              "llm_hypotheses_raw": [
+                "p0 * L",
+                "p0 * L ** 2",
+                "p0 ** 2 * L"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 84.0,
+          "ood_predictor_note": null,
+          "sanitized_vars": {}
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1101.285377613,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1101.2851824760437,
+          "llm_time_s": 0.0,
+          "total_time_s": 1101.2851824760437,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 8.613957154999753,
+        "test": {
+          "r2": 0.8612078915738574,
+          "rmse": 333.5223665695311,
+          "mae": 270.88838692088933
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.8406381738152039,
+            "rmse": 254.1095915126901,
+            "mae": 250.65691683887025
+          },
+          "medium": {
+            "r2": 0.9940484879580762,
+            "rmse": 320.8172524240822,
+            "mae": 276.316958207133
+          },
+          "far": {
+            "r2": 0.9925556704178259,
+            "rmse": 254.10959151268978,
+            "mae": 250.65691683887005
+          }
+        },
+        "diagnostics": {
+          "formula": "def formula(p0, L):\n    return p0 * (1 - 1 / L)",
+          "formula_hash": "adf248a7b38cbcccaa456d3d86f7e117d208c4b22158bf9a8e390629e37bbc8d",
+          "metadata": {
+            "llm_called": true,
+            "llm_attempted": true,
+            "bypass_kind": "live",
+            "llm_source": null,
+            "temperature_requested": 0.25,
+            "temperature_sent": true,
+            "truncated_formula": false,
+            "is_hardcoded": false
+          },
+          "extrapolation_errors": {},
+          "definition": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement",
+          "information_regime": "zero_shot_task_description_only",
+          "training_arrays_used_by_model": false
+        }
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.38733952699976726,
+        "test": {
+          "r2": 0.996012883263125,
+          "rmse": 56.52909761317883,
+          "mae": 45.11851037013766
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.4643295226736266,
+            "rmse": 465.8839670789128,
+            "mae": 389.340698984919
+          },
+          "medium": {
+            "r2": -0.9683252420203421,
+            "rmse": 5834.350121202485,
+            "mae": 4740.85590616714
+          },
+          "far": {
+            "r2": -21.13459371975117,
+            "rmse": 13856.196682410768,
+            "mae": 13547.632932475943
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(2\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "39b9fd9f1f0b569a8eeabb2885885084c717ad78e5ce54c3f8743b74db80910d",
+      "outer_test_sha256": "23d3e107ced7c70d64be03422e4c045de431ee3799293de06ac6681217cbcf32",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 133,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "1179fce1eeb23aff27420ca27f163d559d0468174635e4e42bde9ce5fac8619c",
+        "medium": "33d94e3826f3d7d7f2e303e9c6d45fc22500e9c9876ef97bb2dee014b92bb118",
+        "far": "c98abd309193b868a616fb2df466e6e4e6b1f2668fc2ab704b0fd4ec1bc845b3"
+      }
+    }
+  },
+  "14": {
+    "name": "Portfolio Std Dev",
+    "domain": "DeFi Risk",
+    "seed": 42,
+    "methods": {
+      "hybrid_llm_pysr": {
+        "method": "hybrid_llm_pysr",
+        "success": true,
+        "error": null,
+        "elapsed_s": 4.591180313999757,
+        "test": {
+          "r2": 0.9967258733197543,
+          "rmse": 0.0032090510851872753,
+          "mae": 0.0026436250903375974,
+          "scope": "untouched_outer_test"
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 1.0,
+            "rmse": 2.7755575615628914e-17,
+            "mae": 9.436895709313831e-18
+          },
+          "medium": {
+            "r2": 1.0,
+            "rmse": 3.3993498887762956e-17,
+            "mae": 1.3322676295501878e-17
+          },
+          "far": {
+            "r2": 1.0,
+            "rmse": 2.0350724194510405e-16,
+            "mae": 9.325873406851315e-17
+          }
+        },
+        "diagnostics": {
+          "condition": "hypatia",
+          "success": true,
+          "timed_out": false,
+          "excluded_from_timing": false,
+          "train_r2": 0.9975455190273314,
+          "train_rmse": 0.002979863561992222,
+          "test_r2": 0.9967258733197543,
+          "test_rmse": 0.0032090510851872753,
+          "test_mae": 0.0026436250903375974,
+          "test_scope": "untouched_outer_test",
+          "extrap_r2_near": 1.0,
+          "extrap_r2_medium": 1.0,
+          "extrap_r2_far": 1.0,
+          "extrap_r2_raw": {
+            "near": 1.0,
+            "medium": 1.0,
+            "far": 1.0
+          },
+          "extrap_r2_status": {
+            "near": "ok",
+            "medium": "ok",
+            "far": "ok"
+          },
+          "extrap_rmse_near": 2.7755575615628914e-17,
+          "extrap_rmse_medium": 3.3993498887762956e-17,
+          "extrap_rmse_far": 2.0350724194510405e-16,
+          "extrap_mae_near": 9.436895709313831e-18,
+          "extrap_mae_medium": 1.3322676295501878e-17,
+          "extrap_mae_far": 9.325873406851315e-17,
+          "sr_time_s": 4.457494020462036,
+          "llm_time_s": 4.224730968475342,
+          "total_time_s": 4.457494020462036,
+          "best_expression": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+          "complexity": 34,
+          "llm_expression": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+          "llm_confidence": 0.65,
+          "engine_version": "5.4",
+          "scale_log": false,
+          "rmse_original_units": 0.002979863561992222,
+          "llm_mode_used": "hybrid_llm_only",
+          "structural_risk_flag": false,
+          "structural_risk_tokens": [],
+          "complexity_routing_enabled": true,
+          "routing_reason": "ordinary_llm_acceptance_policy",
+          "llm_attempted": true,
+          "llm_called": true,
+          "llm_proposal_generated": true,
+          "llm_response_replayed": false,
+          "llm_attempt_info": [
+            {
+              "llm_mode": "hybrid_llm_only",
+              "llm_time": 4.224730968475342,
+              "llm_best_expression": "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+              "llm_best_r2": 0.9975455190273314,
+              "llm_confidence": 0.65,
+              "llm_hypotheses_raw": [
+                "(s1**2 + s2**2 + 2*rho*s1*s2)**0.5",
+                "(s1**2 + s2**2 + 2*rho*s1*s2) / (s1 + s2)",
+                "((s1**2 + s2**2 + 2*rho*s1*s2)**0.5) / 2"
+              ],
+              "llm_error": null,
+              "llm_attempted": true,
+              "llm_called": true,
+              "llm_proposal_generated": true,
+              "llm_response_replayed": false,
+              "llm_temperature_requested": 0.25,
+              "llm_temperature_sent": true
+            }
+          ],
+          "bypass_kind": "live",
+          "llm_source": "live",
+          "llm_enabled": true,
+          "llm_model": "claude-sonnet-4-6",
+          "llm_temperature": 0.25,
+          "llm_temperature_requested": 0.25,
+          "llm_temperature_sent": true,
+          "wall_clock_budget_s": 900,
+          "pysr_attempts_allowed": 3,
+          "validation_score": 84.9,
+          "ood_predictor_note": null,
+          "sanitized_vars": {}
+        }
+      },
+      "pysr_only": {
+        "method": "pysr_only",
+        "success": false,
+        "error": "TIMED_OUT",
+        "elapsed_s": 1101.122955361,
+        "test": null,
+        "extrapolation": {},
+        "diagnostics": {
+          "train_r2": null,
+          "train_rmse": null,
+          "extrap_r2_near": null,
+          "extrap_r2_medium": null,
+          "extrap_r2_far": null,
+          "extrap_rmse_near": null,
+          "extrap_rmse_medium": null,
+          "extrap_rmse_far": null,
+          "llm_expression": null,
+          "llm_confidence": null,
+          "complexity": null,
+          "condition": "pysr_only",
+          "success": false,
+          "timed_out": true,
+          "excluded_from_timing": true,
+          "sr_time_s": 1101.1227021217346,
+          "llm_time_s": 0.0,
+          "total_time_s": 1101.1227021217346,
+          "best_expression": "TIMED_OUT",
+          "llm_called": false,
+          "bypass_kind": "none"
+        }
+      },
+      "llm_only": {
+        "method": "llm_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 10.069595362000655,
+        "test": {
+          "r2": 0.9967258733197543,
+          "rmse": 0.0032090510851872766,
+          "mae": 0.0026436250903375995
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "medium": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          },
+          "far": {
+            "r2": 1.0,
+            "rmse": 0.0,
+            "mae": 0.0
+          }
+        },
+        "diagnostics": {
+          "formula": "def formula(s1, s2, rho):\n    return np.sqrt(s1**2 + s2**2 + 2 * rho * s1 * s2)",
+          "formula_hash": "e4d44911855c6e2505c4773ebaec1a5d3c8756f4a682ee7288be170268c3b010",
+          "metadata": {
+            "llm_called": true,
+            "llm_attempted": true,
+            "bypass_kind": "live",
+            "llm_source": null,
+            "temperature_requested": 0.25,
+            "temperature_sent": true,
+            "truncated_formula": false,
+            "is_hardcoded": false
+          },
+          "extrapolation_errors": {},
+          "definition": "Zero-shot PureLLMBaseline formula generated from task description/domain/variable names; training arrays are not used for formula generation and are used only for pre-test formula evaluation/eligibility; no PySR refinement",
+          "information_regime": "zero_shot_task_description_only",
+          "training_arrays_used_by_model": false
+        }
+      },
+      "nn_only": {
+        "method": "nn_only",
+        "success": true,
+        "error": null,
+        "elapsed_s": 0.9962997249995169,
+        "test": {
+          "r2": 0.9828169966771924,
+          "rmse": 0.007351541756501606,
+          "mae": 0.004242341273097728
+        },
+        "extrapolation": {
+          "near": {
+            "r2": 0.48855525691369117,
+            "rmse": 0.02906415776517661,
+            "mae": 0.027426170510754452
+          },
+          "medium": {
+            "r2": 0.7168871272931987,
+            "rmse": 0.08481111250394414,
+            "mae": 0.07480584931298892
+          },
+          "far": {
+            "r2": -13.77277972430118,
+            "rmse": 1.0847426583458946,
+            "mae": 1.069219072536816
+          }
+        },
+        "diagnostics": {
+          "extrapolation_errors": {},
+          "architecture": "ImprovedNN(3\u2192256\u2192128\u219264\u219232\u21921,log)",
+          "metadata": {
+            "r2_heldout": null,
+            "rmse_heldout": null,
+            "heldout_scope": "not_applicable_all_supplied_training_rows_used",
+            "headline_r2_scope": "full_data_in_sample"
+          },
+          "headline_training_metric_not_used": true,
+          "fallbacks_disabled": true,
+          "all_shared_training_rows_used": true,
+          "internal_heldout_metric": "not_applicable"
+        }
+      }
+    },
+    "split": {
+      "generator": "exp1_ablation.generate_data",
+      "train_data_sha256": "fc99bd0483aec19e68adee1f8c599cd05264be58239d6c55580803f6b3fffa39",
+      "outer_test_sha256": "1a90f06a12d4a42dee85c65a552b7af0790712d04dbd27cf29eed533f09db301",
+      "n_source_samples": 200,
+      "n_train": 160,
+      "n_test": 40,
+      "noise_level": 0.05,
+      "equation_seed": 140,
+      "test_partition_used_for_fit_or_selection": false,
+      "extrapolation_sha256": {
+        "near": "c388c6481899076704c87d13c48cbd983561929149324e249d9afd5170dac1b8",
+        "medium": "e74124fb97939ce3262802aa7a4524d1b4c31ff4be4de0c02cfc0893ccec26bc",
+        "far": "2608b5e13ebe372d221870ea26321134b240048e631baa8e703cc33f129f3630"
+      }
+    }
+  }
+}

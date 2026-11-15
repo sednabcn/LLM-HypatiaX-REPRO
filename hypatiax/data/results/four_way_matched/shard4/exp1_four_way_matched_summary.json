@@ -1,0 +1,1395 @@
+{
+  "independent_unit": "equation (paired within equation; not individual generated samples)",
+  "method_test_metrics": {
+    "hybrid_llm_pysr": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.996210260946591,
+        "median": 0.9964433990822498
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 23.7714780824307,
+        "median": 17.92119761566172
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 19.022009361498654,
+        "median": 15.012784474983096
+      }
+    },
+    "llm_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9511543071073659,
+        "median": 0.9955291564284858
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 117.10423816269379,
+        "median": 17.787138867465107
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 95.27505080055722,
+        "median": 14.934121855691995
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9911579689942457,
+        "median": 0.9946440270424196
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 25.334953982412717,
+        "median": 19.468412792302825
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 20.24110009714978,
+        "median": 15.600547580038576
+      }
+    }
+  },
+  "paired_hybrid_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.04505595383922515,
+        "sd_paired_difference": 0.07809779170356022,
+        "descriptive_95pct_t_interval": [
+          -0.14894971573601085,
+          0.23906162341446113
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -6.764599071695798e-05
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.13523550750839242
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 93.3327600802631,
+        "sd_paired_difference": 161.77319463772147,
+        "descriptive_95pct_t_interval": [
+          -308.53413346962714,
+          495.1996536301533
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.1340587481966118
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 280.1323389889859
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.3010426069826053e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 76.25304143905856,
+        "sd_paired_difference": 132.14227168409641,
+        "descriptive_95pct_t_interval": [
+          -252.00655896776317,
+          404.5126418458803
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.07866261929110152
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 228.83778693646678
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 2.168404344971009e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0050522919523453185,
+        "sd_paired_difference": 0.0076724673513477015,
+        "descriptive_95pct_t_interval": [
+          -0.014007173537310676,
+          0.02411175744200131
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0008174833953492611
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0004305158191247882
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.013908876642561907
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1.5634758999820202,
+        "sd_paired_difference": 1.5675270274164859,
+        "descriptive_95pct_t_interval": [
+          -2.330477103011166,
+          5.457428902975207
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.5472151766411066
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.13907003263364
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.004142490671314331
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1.2190907356511234,
+        "sd_paired_difference": 1.627727786376681,
+        "descriptive_95pct_t_interval": [
+          -2.8244092429510754,
+          5.262590714253323
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.5877631050554797
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.0679103857151304
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0015987161827601304
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "paired_hybrid_test_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.04505595383922515,
+        "sd_paired_difference": 0.07809779170356022,
+        "descriptive_95pct_t_interval": [
+          -0.14894971573601085,
+          0.23906162341446113
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -6.764599071695798e-05
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.13523550750839242
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 93.3327600802631,
+        "sd_paired_difference": 161.77319463772147,
+        "descriptive_95pct_t_interval": [
+          -308.53413346962714,
+          495.1996536301533
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.1340587481966118
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 280.1323389889859
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.3010426069826053e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 76.25304143905856,
+        "sd_paired_difference": 132.14227168409641,
+        "descriptive_95pct_t_interval": [
+          -252.00655896776317,
+          404.5126418458803
+        ],
+        "hybrid_wins": 1,
+        "ties": 1,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.07866261929110152
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 228.83778693646678
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 2.168404344971009e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 0.0050522919523453185,
+        "sd_paired_difference": 0.0076724673513477015,
+        "descriptive_95pct_t_interval": [
+          -0.014007173537310676,
+          0.02411175744200131
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0008174833953492611
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0004305158191247882
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.013908876642561907
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1.5634758999820202,
+        "sd_paired_difference": 1.5675270274164859,
+        "descriptive_95pct_t_interval": [
+          -2.330477103011166,
+          5.457428902975207
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.5472151766411066
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.13907003263364
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.004142490671314331
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": 1.2190907356511234,
+        "sd_paired_difference": 1.627727786376681,
+        "descriptive_95pct_t_interval": [
+          -2.8244092429510754,
+          5.262590714253323
+        ],
+        "hybrid_wins": 3,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.5877631050554797
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.0679103857151304
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0015987161827601304
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "method_extrapolation_metrics": {
+    "hybrid_llm_pysr": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9998785688317134,
+          "median": 0.9999415473280829
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 4.787938347330633,
+          "median": 3.2317267287145635
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 4.713013662470949,
+          "median": 3.190090722092275
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.999971820861474,
+          "median": 0.9999918600793428
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 16.794250454537906,
+          "median": 14.034492203714699
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 15.429051908911886,
+          "median": 12.678974755632852
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9997133712090226,
+          "median": 0.9999415473280829
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 45.02794029771464,
+          "median": 51.707627659433015
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 44.59053032726899,
+          "median": 51.0414515534764
+        }
+      }
+    },
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.9468793912717346,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 84.7031971708967,
+          "median": 0.0
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 83.55230561295674,
+          "median": 0.0
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.998016162652692,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 106.93908414136074,
+          "median": 0.0
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 92.10565273571099,
+          "median": 0.0
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.997518556805942,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 84.70319717089659,
+          "median": 0.0
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 83.55230561295669,
+          "median": 0.0
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": 0.28321058825708506,
+          "median": 0.4643295226736266
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 303.2999264437239,
+          "median": 443.9867480944938
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 265.1838388972786,
+          "median": 389.340698984919
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -0.4175319552671039,
+          "median": -0.9683252420203421
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 4264.373859804019,
+          "median": 5834.350121202485
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 3516.9723448053915,
+          "median": 4740.85590616714
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -19.407001336795577,
+          "median": -21.13459371975117
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 15735.28687290333,
+          "median": 13856.196682410768
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 15441.617084999387,
+          "median": 13547.632932475943
+        }
+      }
+    }
+  },
+  "paired_hybrid_extrapolation_comparisons": {
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.05299917755997877,
+          "sd_paired_difference": 0.09184789444201043,
+          "descriptive_95pct_t_interval": [
+            -0.1751636407682829,
+            0.2811619958882404
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -5.845267191706416e-05
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.1590559853518534
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 79.91525882356606,
+          "sd_paired_difference": 141.22529047616976,
+          "descriptive_95pct_t_interval": [
+            -270.907811101182,
+            430.7383287483141
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.2317267287145635
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 242.97750319941275
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -2.7755575615628914e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 78.8392919504858,
+          "sd_paired_difference": 139.3254895054731,
+          "descriptive_95pct_t_interval": [
+            -267.26441073813476,
+            424.94299463910636
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.190090722092275
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 239.70796657354967
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -9.436895709313831e-18
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.001955658208781852,
+          "sd_paired_difference": 0.003394351197945193,
+          "descriptive_95pct_t_interval": [
+            -0.006476377608958712,
+            0.010387694026522416
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -8.139920657179722e-06
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0058751145470027355
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 90.14483368682282,
+          "sd_paired_difference": 168.43589578661545,
+          "descriptive_95pct_t_interval": [
+            -328.2731270491571,
+            508.56279442280277
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -14.034492203714699
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 284.46899326418315
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.3993498887762956e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 76.67660082679912,
+          "sd_paired_difference": 143.92776591958557,
+          "descriptive_95pct_t_interval": [
+            -280.85979026201727,
+            434.21299191561553
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -12.678974755632852
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 242.7087772360302
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -1.3322676295501878e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.0021948144030806693,
+          "sd_paired_difference": 0.0038522624268644617,
+          "descriptive_95pct_t_interval": [
+            -0.007374735967052189,
+            0.011764364773213527
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -5.845267191706416e-05
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.006642895881159072
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 39.675256873181944,
+          "sd_paired_difference": 116.40703162222647,
+          "descriptive_95pct_t_interval": [
+            -249.49584029250403,
+            328.8463540388679
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -51.707627659433015
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 170.73339827897885
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -2.0350724194510405e-16
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 38.96177528568768,
+          "sd_paired_difference": 114.56564176911303,
+          "descriptive_95pct_t_interval": [
+            -245.63505590384483,
+            323.5586064752202
+          ],
+          "hybrid_wins": 1,
+          "ties": 1,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -51.0414515534764
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 167.92677741053944
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -9.325873406851315e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.7166679805746284,
+          "sd_paired_difference": 0.3349554284080414,
+          "descriptive_95pct_t_interval": [
+            -0.11540743088927496,
+            1.5487433920385318
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.1031945621441457
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.5353646364934307
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.5114447430863088
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 298.5119880963933,
+          "sd_paired_difference": 258.58851466467456,
+          "descriptive_95pct_t_interval": [
+            -343.8574930076281,
+            940.8814692004146
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 440.7550213657792
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 454.75187876563547
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.029064157765176582
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 260.4708252348076,
+          "sd_paired_difference": 225.88577241271898,
+          "descriptive_95pct_t_interval": [
+            -300.66054056347997,
+            821.6021910330951
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 402.99330081431356
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 378.39174871959847
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.027426170510754442
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 1.417503776128578,
+          "sd_paired_difference": 0.9825490605744502,
+          "descriptive_95pct_t_interval": [
+            -1.0232833988892736,
+            3.8582909511464294
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 2.001149611153511
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.9682488445254211
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.2831128727068013
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 4247.579609349481,
+          "sd_paired_difference": 3722.8498182590342,
+          "descriptive_95pct_t_interval": [
+            -5000.492019370649,
+            13495.651238069611
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 6944.652154893354
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 5798.001862042586
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.08481111250394412
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 3501.5432928964797,
+          "sd_paired_difference": 3080.952558781322,
+          "descriptive_95pct_t_interval": [
+            -4151.967146485877,
+            11155.053732278837
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 5797.307347644088
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 4707.247725196037
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0748058493129889
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 20.406714708004603,
+          "sd_paired_difference": 4.9993777187430375,
+          "descriptive_95pct_t_interval": [
+            7.987571981590689,
+            32.825857434418516
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 24.313572113662467
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 22.133792286050156
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 14.77277972430118
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 15690.258932605619,
+          "sd_paired_difference": 16730.504555580428,
+          "descriptive_95pct_t_interval": [
+            -25870.618370522425,
+            57251.13623573366
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 33296.871565981455
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 13772.820489177057
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.0847426583458943
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 15397.026554672118,
+          "sd_paired_difference": 16447.35539565269,
+          "descriptive_95pct_t_interval": [
+            -25460.469242228995,
+            56254.522351573236
+          ],
+          "hybrid_wins": 3,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 32725.107651896204
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 13464.902793047611
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.069219072536816
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    }
+  },
+  "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Each metric/regime reports its own available-equation denominator; missing or failed extrapolation predictions are excluded from that metric's denominator."
+}
