@@ -94,13 +94,35 @@ on:
         default: ""
 
       four_way_smoke:
-        description: "Core-15 only: run exactly one selected equation on one worker, upload artifact only, skip official aggregation and repository commits."
+        description: "Core-15 only: run exactly one equation on one worker, upload artifact only, skip official aggregation and repository commits."
         required: false
         type: choice
         options:
           - "false"
           - "true"
         default: "false"
+
+      four_way_smoke_case:
+        description: "Core-15 one-case smoke equation ID (0-14). Default 3 = Allometric Scaling, a simple one-variable power law."
+        required: false
+        type: choice
+        options:
+          - "0"
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+          - "6"
+          - "7"
+          - "8"
+          - "9"
+          - "10"
+          - "11"
+          - "12"
+          - "13"
+          - "14"
+        default: "3"
 
       methods_override:
         description: "Protocol-30 smoke only: optional space-separated method IDs 1-6 (e.g. 6 to rerun HybridDiscoverySystem only). Blank runs all six methods."
@@ -696,6 +718,7 @@ jobs:
           EXP:            ${{ steps.meta.outputs.exp_id }}
           ORIG_EXP:       ${{ github.event.inputs.experiment }}
           FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke || 'false' }}
+          FOUR_WAY_SMOKE_CASE: ${{ github.event.inputs.four_way_smoke_case || '3' }}
         run: |
           python3 - <<'PYEOF'
           import json, os, sys
@@ -703,6 +726,7 @@ jobs:
           EXP          = os.environ["EXP"]
           N_SHARDS_RAW = int(os.environ["N_SHARDS"])
           FOUR_WAY_SMOKE = os.environ.get("FOUR_WAY_SMOKE", "false").lower() == "true"
+          FOUR_WAY_SMOKE_CASE = os.environ.get("FOUR_WAY_SMOKE_CASE", "3")
           if FOUR_WAY_SMOKE and EXP != "exp1_four_way_matched":
               print("ERROR: four_way_smoke is valid only for exp1_four_way_matched.", file=sys.stderr)
               sys.exit(1)
@@ -759,6 +783,14 @@ jobs:
                         f"table={N_SHARDS_DEFAULT} using={N_SHARDS} "
                         f"(table default enforced as minimum)")
           OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
+          if FOUR_WAY_SMOKE:
+              if FOUR_WAY_SMOKE_CASE not in {str(i) for i in range(15)}:
+                  print(f"ERROR: invalid four_way_smoke_case={FOUR_WAY_SMOKE_CASE!r}; expected 0..14.", file=sys.stderr)
+                  sys.exit(1)
+              if OVERRIDE:
+                  print("ERROR: use four_way_smoke_case, not task_ids_override, for Core-15 smoke.", file=sys.stderr)
+                  sys.exit(1)
+              OVERRIDE = [FOUR_WAY_SMOKE_CASE]
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
