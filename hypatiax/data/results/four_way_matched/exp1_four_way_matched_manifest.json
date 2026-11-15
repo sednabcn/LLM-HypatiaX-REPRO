@@ -1,0 +1,97 @@
+{
+  "protocol": "Core-15 matched four-arm predictive comparison",
+  "execution_status": "aggregated_complete",
+  "coverage_complete": true,
+  "all_arms_successful": false,
+  "arm_failure_counts": {
+    "hybrid_llm_pysr": 0,
+    "llm_only": 7,
+    "pysr_only": 15,
+    "nn_only": 0
+  },
+  "expected_equations": 15,
+  "observed_equations": 15,
+  "validated_shards": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "run_fingerprint": {
+    "sha256": "5959a54d431ba8b06253b2e4d024de71f4d0341fc17b4ea868dce777659e86db",
+    "schema": 1,
+    "source_sha256": {
+      "hypatiax/experiments/benchmarks/exp1_four_way_matched.py": "4e83ca18ce5c61b4bbfc8eb3973754d125e21bda1429145dc8763537da21bddc",
+      "hypatiax/experiments/benchmarks/exp1_ablation.py": "e57e829f14eed09f5aea2869a300361b47da748273ba1bb64d9c542569582a26",
+      "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py": "2ee000410c7f0739e273813151e07da7a686f75de037ca871f0c10038b7c9428",
+      "hypatiax/safe_formula.py": "4dfbbc2e4c9b400d928e68dc7660f704cc50ec5735998d3ee335fe2acb493145",
+      "hypatiax/core/r2_canonical.py": "994ed7a4a08b1ad73dd6121a946c2c0e1cf3548fadd22455dc25ac549f8e2a01",
+      "hypatiax/core/base_pure_llm/baseline_pure_llm_defi_discovery.py": "f6bdd15d96164bd637afe0ddf3141e5b3b7114a52ffb9ba04a6d1bbcc6447adf",
+      "hypatiax/core/llm_call.py": "3d37c1414c4f7ac1fcd1d0c9a345fe030ffea5ca0463fb7858de244ddb811b2d",
+      "hypatiax/core/training/baseline_neural_network_defi_improved.py": "9276b7769a96410134e7574dba0f70bc6115c20c4e09b15bf226a37e08e71cc2",
+      "hypatiax/tools/symbolic/symbolic_engine.py": "f92c47ee6d4f4308d2dd946ed8d089181b75bfaa46cb8e64099255423a343bc8",
+      "hypatiax/tools/symbolic/hybrid_system_v50_2.py": "cfda0d024209d4f61faf4492d4dccef7e3a6f681ecf41899558af35661dbe9d8",
+      "hypatiax/core/enforce_flags.py": "ff49c115894821f444f0feb365e7a7f2bf5ac531465bbabf14548119fede4f07"
+    },
+    "protocol_sha256": "14aebc1d3db8c6e48648add321653bd79f8c483cf758beb742f59a54f14492cb",
+    "settings": {
+      "python_version": "3.12.16",
+      "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+      "runtime_dependency_versions": {
+        "numpy": "2.5.4",
+        "scipy": "1.18.1",
+        "sympy": "1.14.0",
+        "pandas": "2.2.3",
+        "scikit-learn": "1.9.1",
+        "torch": "2.15.0+cpu",
+        "pysr": "2.0.0a1",
+        "anthropic": "0.73.0",
+        "PyYAML": "6.0.3"
+      },
+      "seed": 42,
+      "common_wall_clock_seconds": 900,
+      "noise_level": 0.05,
+      "n_train_source": 200,
+      "n_extrapolation": 100,
+      "pure_llm_model_effective": "claude-sonnet-4-6",
+      "pure_llm_model_source": "env:HYPATIAX_LLM_MODEL",
+      "hybrid_llm_model_effective": "claude-sonnet-4-6",
+      "ablation_llm_model_metadata": "claude-sonnet-4-6",
+      "llm_temperature_effective": 0.25,
+      "pysr_niterations_effective": 1000,
+      "pysr_populations_effective": 30,
+      "pysr_timeout_seconds_effective": 1100,
+      "hybrid_max_retries_effective": 3,
+      "llm_cache_disabled": true
+    }
+  },
+  "llm_temperature_effective": 0.25,
+  "assigned_equation_ids": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14"
+  ],
+  "arms": [
+    "hybrid_llm_pysr",
+    "llm_only",
+    "pysr_only",
+    "nn_only"
+  ],
+  "results_file": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/four_way_matched/exp1_four_way_matched_results.json",
+  "checkpoint_file": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/four_way_matched/exp1_four_way_matched_checkpoint.json",
+  "summary_file": "/home/runner/work/LLM-HypatiaX-REPRO/LLM-HypatiaX-REPRO/hypatiax/data/results/four_way_matched/exp1_four_way_matched_summary.json",
+  "scientific_interpretation": "Descriptive paired comparisons only; do not infer universal Hybrid superiority. LLM-only is zero-shot and does not use training arrays for formula generation."
+}

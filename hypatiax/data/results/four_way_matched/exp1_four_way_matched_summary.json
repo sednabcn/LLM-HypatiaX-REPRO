@@ -1,0 +1,2530 @@
+{
+  "independent_unit": "equation (paired within equation; not individual generated samples)",
+  "method_test_metrics": {
+    "hybrid_llm_pysr": {
+      "r2": {
+        "n_equations": 15,
+        "mean": 0.9929017336165652,
+        "median": 0.9972164852991815
+      },
+      "rmse": {
+        "n_equations": 15,
+        "mean": 253.03825531401907,
+        "median": 0.083738689359676
+      },
+      "mae": {
+        "n_equations": 15,
+        "mean": 209.01668517323043,
+        "median": 0.0682163796640354
+      }
+    },
+    "llm_only": {
+      "r2": {
+        "n_equations": 8,
+        "mean": 0.6765264715560367,
+        "median": 0.99612751487412
+      },
+      "rmse": {
+        "n_equations": 8,
+        "mean": 503.0346622629668,
+        "median": 9.455701276167519
+      },
+      "mae": {
+        "n_equations": 8,
+        "mean": 415.32294700846666,
+        "median": 7.829629049134574
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_equations": 15,
+        "mean": 0.9887815996328928,
+        "median": 0.996991460390372
+      },
+      "rmse": {
+        "n_equations": 15,
+        "mean": 577.8925668767947,
+        "median": 0.07989317948582811
+      },
+      "mae": {
+        "n_equations": 15,
+        "mean": 331.50467109623537,
+        "median": 0.06132032277808017
+      }
+    }
+  },
+  "paired_hybrid_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 0.31554111678792607,
+        "sd_paired_difference": 0.8384206111795894,
+        "descriptive_95pct_t_interval": [
+          -0.38539605528377996,
+          1.016478288859632
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0019298973051723456
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.7516239053660954e-06
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.387232927104466
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -6.764599071695798e-05
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.13523550750839242
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 35.173287073293274,
+        "sd_paired_difference": 98.9838645654397,
+        "descriptive_95pct_t_interval": [
+          -47.57929460717613,
+          117.92586875376267
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005225530999956006
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.1516811725896332
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.5391749650465547
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.1340587481966118
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 280.1323389889859
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.3010426069826053e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 28.73552273957343,
+        "sd_paired_difference": 80.85737968815191,
+        "descriptive_95pct_t_interval": [
+          -38.86293834787881,
+          96.33398382702566
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005340235816419757
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.8309166753751924
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 1.9554402512053082
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.07866261929110152
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 228.83778693646678
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 2.168404344971009e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 0.004120133983672266,
+        "sd_paired_difference": 0.008360782792375482,
+        "descriptive_95pct_t_interval": [
+          -0.0005099131997784497,
+          0.008750181167122981
+        ],
+        "hybrid_wins": 11,
+        "ties": 0,
+        "hybrid_losses": 4,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.0003071542384476267
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 9.078695107012091e-05
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00015017941780814947
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0002621888633209668
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 9.955609628242712e-06
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 7.213046653975486e-05
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.0001362149408222768
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.029452478818412398
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.012326168782027747
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.001474859372052828
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.004130033029675295
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.0003559005065756349
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0008174833953492611
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0004305158191247882
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.013908876642561907
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 324.8543115627756,
+        "sd_paired_difference": 1256.0499078219432,
+        "descriptive_95pct_t_interval": [
+          -370.72294267327027,
+          1020.4315657988215
+        ],
+        "hybrid_wins": 11,
+        "ties": 0,
+        "hybrid_losses": 4,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003972873001498414
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00039258326035836524
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.001856040511594985
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.002140901795089828
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0002045640837810836
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.016776102140743987
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.6797796708860115
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.007016918596955503
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 4865.201790787081
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0001656485852602384
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 3.588041833366148
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.006105290255865606
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.5472151766411066
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.13907003263364
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.004142490671314331
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 122.48798592300498,
+        "sd_paired_difference": 472.87130900832346,
+        "descriptive_95pct_t_interval": [
+          -139.3794165414214,
+          384.3553883874314
+        ],
+        "hybrid_wins": 10,
+        "ties": 0,
+        "hybrid_losses": 5,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003112410920587727
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.00039173825382179256
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.0015284054244117176
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0015391700999776853
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0011031048180318859
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.008297507895730138
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.9245515569031859
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.005150625881106478
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 1831.8114401830048
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 9.450460340320503e-05
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.771986154475215
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.007488971803713482
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.5877631050554797
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.0679103857151304
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0015987161827601304
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "paired_hybrid_test_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 0.31554111678792607,
+        "sd_paired_difference": 0.8384206111795894,
+        "descriptive_95pct_t_interval": [
+          -0.38539605528377996,
+          1.016478288859632
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0019298973051723456
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.7516239053660954e-06
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.387232927104466
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -6.764599071695798e-05
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.13523550750839242
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 35.173287073293274,
+        "sd_paired_difference": 98.9838645654397,
+        "descriptive_95pct_t_interval": [
+          -47.57929460717613,
+          117.92586875376267
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005225530999956006
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -1.1516811725896332
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.5391749650465547
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.1340587481966118
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 280.1323389889859
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.3010426069826053e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 8,
+        "mean_paired_difference_favoring_hybrid": 28.73552273957343,
+        "sd_paired_difference": 80.85737968815191,
+        "descriptive_95pct_t_interval": [
+          -38.86293834787881,
+          96.33398382702566
+        ],
+        "hybrid_wins": 3,
+        "ties": 3,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.0005340235816419757
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.8309166753751924
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 1.9554402512053082
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": -0.07866261929110152
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 228.83778693646678
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 2.168404344971009e-18
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 0.004120133983672266,
+        "sd_paired_difference": 0.008360782792375482,
+        "descriptive_95pct_t_interval": [
+          -0.0005099131997784497,
+          0.008750181167122981
+        ],
+        "hybrid_wins": 11,
+        "ties": 0,
+        "hybrid_losses": 4,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.0003071542384476267
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 9.078695107012091e-05
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00015017941780814947
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0002621888633209668
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 9.955609628242712e-06
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 7.213046653975486e-05
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.0001362149408222768
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.029452478818412398
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.012326168782027747
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.001474859372052828
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.004130033029675295
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.0003559005065756349
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0008174833953492611
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0004305158191247882
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.013908876642561907
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 324.8543115627756,
+        "sd_paired_difference": 1256.0499078219432,
+        "descriptive_95pct_t_interval": [
+          -370.72294267327027,
+          1020.4315657988215
+        ],
+        "hybrid_wins": 11,
+        "ties": 0,
+        "hybrid_losses": 4,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003972873001498414
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00039258326035836524
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.001856040511594985
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.002140901795089828
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0002045640837810836
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.016776102140743987
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.6797796708860115
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.007016918596955503
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 4865.201790787081
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 0.0001656485852602384
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 3.588041833366148
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.006105290255865606
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 1.5472151766411066
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.13907003263364
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.004142490671314331
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 15,
+        "mean_paired_difference_favoring_hybrid": 122.48798592300498,
+        "sd_paired_difference": 472.87130900832346,
+        "descriptive_95pct_t_interval": [
+          -139.3794165414214,
+          384.3553883874314
+        ],
+        "hybrid_wins": 10,
+        "ties": 0,
+        "hybrid_losses": 5,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003112410920587727
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.00039173825382179256
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.0015284054244117176
+          },
+          {
+            "equation": "Allometric Scaling",
+            "domain": "Biology",
+            "difference_favoring_hybrid": -0.0015391700999776853
+          },
+          {
+            "equation": "Michaelis-Menten",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.0011031048180318859
+          },
+          {
+            "equation": "Logistic Growth",
+            "domain": "Biology",
+            "difference_favoring_hybrid": 0.008297507895730138
+          },
+          {
+            "equation": "Kinetic Energy",
+            "domain": "Physics",
+            "difference_favoring_hybrid": -0.9245515569031859
+          },
+          {
+            "equation": "Gravitational Force",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 0.005150625881106478
+          },
+          {
+            "equation": "Ideal Gas Law",
+            "domain": "Physics",
+            "difference_favoring_hybrid": 1831.8114401830048
+          },
+          {
+            "equation": "Price Impact",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 9.450460340320503e-05
+          },
+          {
+            "equation": "Constant Product",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": 2.771986154475215
+          },
+          {
+            "equation": "Impermanent Loss",
+            "domain": "DeFi AMM",
+            "difference_favoring_hybrid": -0.007488971803713482
+          },
+          {
+            "equation": "Value at Risk",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.5877631050554797
+          },
+          {
+            "equation": "Liquidation Price",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 3.0679103857151304
+          },
+          {
+            "equation": "Portfolio Std Dev",
+            "domain": "DeFi Risk",
+            "difference_favoring_hybrid": 0.0015987161827601304
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "method_extrapolation_metrics": {
+    "hybrid_llm_pysr": {
+      "near": {
+        "r2": {
+          "n_equations": 15,
+          "mean": 0.4491457808154045,
+          "median": 0.9996941591670573
+        },
+        "rmse": {
+          "n_equations": 15,
+          "mean": 11.841458990832527,
+          "median": 0.028867368997115186
+        },
+        "mae": {
+          "n_equations": 15,
+          "mean": 6.986875061684994,
+          "median": 0.028548896886699867
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 14,
+          "mean": -5.420680659766815,
+          "median": 0.9999647855342895
+        },
+        "rmse": {
+          "n_equations": 15,
+          "mean": 27329.456276557896,
+          "median": 0.11048012997615403
+        },
+        "mae": {
+          "n_equations": 15,
+          "mean": 2895.138233209733,
+          "median": 0.09932554050692584
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 13,
+          "mean": 0.2871985701914753,
+          "median": 0.9997165936344296
+        },
+        "rmse": {
+          "n_equations": 15,
+          "mean": 71973275.9047989,
+          "median": 0.04953917550201358
+        },
+        "mae": {
+          "n_equations": 15,
+          "mean": 49010995.45037158,
+          "median": 0.04920842979583938
+        }
+      }
+    },
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_equations": 8,
+          "mean": -1.436846770712315,
+          "median": 0.9999999879059454
+        },
+        "rmse": {
+          "n_equations": 8,
+          "mean": 33.20596631568189,
+          "median": 1.6224459285225642e-07
+        },
+        "mae": {
+          "n_equations": 8,
+          "mean": 32.7391782467851,
+          "median": 1.553202880434602e-07
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 8,
+          "mean": -0.036929588321188034,
+          "median": 0.9999999989526138
+        },
+        "rmse": {
+          "n_equations": 8,
+          "mean": 44.200169567633395,
+          "median": 3.454331791765171e-05
+        },
+        "mae": {
+          "n_equations": 8,
+          "mean": 38.36465544575113,
+          "median": 6.502132187814319e-06
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 7,
+          "mean": 0.9989365072729204,
+          "median": 1.0
+        },
+        "rmse": {
+          "n_equations": 7,
+          "mean": 37.198746653025516,
+          "median": 0.0
+        },
+        "mae": {
+          "n_equations": 7,
+          "mean": 36.69081275727644,
+          "median": 0.0
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_equations": 13,
+          "mean": -2.0322539252202634,
+          "median": 0.44445161004628997
+        },
+        "rmse": {
+          "n_equations": 13,
+          "mean": 239.76811286106766,
+          "median": 3.78285329051955
+        },
+        "mae": {
+          "n_equations": 13,
+          "mean": 208.40705935556346,
+          "median": 3.330242164391849
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 14,
+          "mean": -6.372032848924755,
+          "median": -0.8053305195133137
+        },
+        "rmse": {
+          "n_equations": 14,
+          "mean": 6447.456005430991,
+          "median": 12.839978899821022
+        },
+        "mae": {
+          "n_equations": 14,
+          "mean": 4894.5881885668705,
+          "median": 10.8951048723194
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 11,
+          "mean": -14.03751689905232,
+          "median": -13.77277972430118
+        },
+        "rmse": {
+          "n_equations": 11,
+          "mean": 35957.196628675185,
+          "median": 522.8509051425106
+        },
+        "mae": {
+          "n_equations": 11,
+          "mean": 34732.56288240122,
+          "median": 507.43646543239424
+        }
+      }
+    }
+  },
+  "paired_hybrid_extrapolation_comparisons": {
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 8,
+          "mean_paired_difference_favoring_hybrid": 1.8431890620097273,
+          "sd_paired_difference": 7.128800267259128,
+          "descriptive_95pct_t_interval": [
+            -4.116637107538379,
+            7.8030152315578345
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -4.464905970412574
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 9.531927347428137e-08
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 19.051420838491186
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -5.845267191706416e-05
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.1590559853518534
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 8,
+          "mean_paired_difference_favoring_hybrid": 31.258936548524062,
+          "sd_paired_difference": 85.61603740373783,
+          "descriptive_95pct_t_interval": [
+            -40.31786194803266,
+            102.83573504508078
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.004408323521602878
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.5704086834973086
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 8.759715557518597
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.2317267287145635
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 242.97750319941275
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -2.7755575615628914e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 8,
+          "mean_paired_difference_favoring_hybrid": 30.841480097244133,
+          "sd_paired_difference": 84.4631176008084,
+          "descriptive_95pct_t_interval": [
+            -39.77145332310239,
+            101.45441351759065
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.004296463749694097
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.5446930378547767
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 8.673568352390593
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.190090722092275
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 239.70796657354967
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -9.436895709313831e-18
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 7,
+          "mean_paired_difference_favoring_hybrid": 0.19946477924823952,
+          "sd_paired_difference": 0.5251516702710077,
+          "descriptive_95pct_t_interval": [
+            -0.28621951022402153,
+            0.6851490687205006
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1.1960400336796795e-08
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 1.3903864681509308
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -8.139920657179722e-06
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0058751145470027355
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 8,
+          "mean_paired_difference_favoring_hybrid": -50461.95773565467,
+          "sd_paired_difference": 142839.31057586736,
+          "descriptive_95pct_t_interval": [
+            -169878.60980824384,
+            68954.69433693451
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -403971.1286915939
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.3641437413250674
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 2.6681615547389868
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -14.034492203714699
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 284.46899326418315
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -3.3993498887762956e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 8,
+          "mean_paired_difference_favoring_hybrid": -5025.69922505168,
+          "sd_paired_difference": 14311.289347036962,
+          "descriptive_95pct_t_interval": [
+            -16990.236534670985,
+            6938.838084567627
+          ],
+          "hybrid_wins": 3,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -40443.70324344778
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.0352675043037474
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 6.044373049642953
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -12.678974755632852
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 242.7087772360302
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -1.3322676295501878e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 7,
+          "mean_paired_difference_favoring_hybrid": -1.2049801126788744,
+          "sd_paired_difference": 3.190982185296803,
+          "descriptive_95pct_t_interval": [
+            -4.156146419709245,
+            1.7461861943514962
+          ],
+          "hybrid_wins": 2,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -8.441445327280636
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 9.531927347428137e-08
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -5.845267191706416e-05
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.006642895881159072
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 7,
+          "mean_paired_difference_favoring_hybrid": 17.900191970472697,
+          "sd_paired_difference": 70.26155054469731,
+          "descriptive_95pct_t_interval": [
+            -47.080904321024,
+            82.88128826196939
+          ],
+          "hybrid_wins": 2,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.006061560226186816
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 6.281634733989234
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -51.707627659433015
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 170.73339827897885
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -2.0350724194510405e-16
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 7,
+          "mean_paired_difference_favoring_hybrid": 17.579748372183705,
+          "sd_paired_difference": 69.13691336519807,
+          "descriptive_95pct_t_interval": [
+            -46.361232005452706,
+            81.52072874982012
+          ],
+          "hybrid_wins": 2,
+          "ties": 3,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -0.005859403196210726
+            },
+            {
+              "equation": "Ideal Gas Law",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 6.178772151419107
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -51.0414515534764
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 167.92677741053944
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": -9.325873406851315e-17
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 13,
+          "mean_paired_difference_favoring_hybrid": 2.7401072103611677,
+          "sd_paired_difference": 6.720915755127919,
+          "descriptive_95pct_t_interval": [
+            -1.321301532883198,
+            6.801515953605533
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -1.7286995489897006
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.5545085775826076
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.686389445051675
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.019491972894819187
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.02930395262406138
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 2.9010327646106693
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 3.673113016503368
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.05266115609521316
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 24.475614930270122
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -0.19202647367153947
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.1031945621441457
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.5353646364934307
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.5114447430863088
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 13,
+          "mean_paired_difference_favoring_hybrid": 226.10523007533885,
+          "sd_paired_difference": 567.8090449826722,
+          "descriptive_95pct_t_interval": [
+            -117.01834174243731,
+            569.228801893115
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -46.798846191119395
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.053373354893839695
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.7370341248397914
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.04793168209386796
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.016790978055142472
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 8.883777874899737
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2031.7396311826876
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.00033809044073809504
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 46.672576658295064
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -0.5205810648615412
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 440.7550213657792
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 454.75187876563547
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.029064157765176582
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 13,
+          "mean_paired_difference_favoring_hybrid": 200.34561095934166,
+          "sd_paired_difference": 496.1943825186974,
+          "descriptive_95pct_t_interval": [
+            -99.5016534514024,
+            500.19287537008574
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -12.349288075964054
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.05127021581925403
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.2877539392761967
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.03857879397215484
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.016837471189252284
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 6.868793063731644
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 1780.0073039061565
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.0002829939952364954
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 45.65575769118963
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -0.4968232323469829
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 402.99330081431356
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 378.39174871959847
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.027426170510754442
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 13,
+          "mean_paired_difference_favoring_hybrid": 0.9415790245511831,
+          "sd_paired_difference": 34.02794574045691,
+          "descriptive_95pct_t_interval": [
+            -19.62130278801904,
+            21.504460837121403
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -81.33683074961847
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.5520115794800856
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.2143403340666996
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.6718528851206707
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.004921662037712271
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 2.204681455035524
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 2.265754656805187
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 2.2571231692980365
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 84.9163993517672
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -6.76223835321299
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 2.001149611153511
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.9682488445254211
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.2831128727068013
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 14,
+          "mean_paired_difference_favoring_hybrid": -22834.104290881038,
+          "sd_paired_difference": 111574.69522967753,
+          "descriptive_95pct_t_interval": [
+            -87255.41536030815,
+            41587.20677854608
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 3,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -5063.044192160878
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.2845376320752628
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 21.522668615863186
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1.8450026737344656
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.010604500230786823
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 30.996741764598767
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 76396.92756343447
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -403969.5612292723
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.019718736924093816
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 184.6427100357293
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -23.84302634343414
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 6944.652154893354
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 5798.001862042586
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.08481111250394412
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 14,
+          "mean_paired_difference_favoring_hybrid": 1792.6543672707278,
+          "sd_paired_difference": 19476.421395652433,
+          "descriptive_95pct_t_interval": [
+            -9452.69654913345,
+            13038.005283674907
+          ],
+          "hybrid_wins": 11,
+          "ties": 0,
+          "hybrid_losses": 3,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -2392.797366163767
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.27284873658392067
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 18.002908519995426
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1.3305912468327787
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.001671086481281954
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 22.832509636143683
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 57264.24180108105
+            },
+            {
+              "equation": "Gravitational Force",
+              "domain": "Physics",
+              "difference_favoring_hybrid": -40442.38859938383
+            },
+            {
+              "equation": "Price Impact",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 0.017622752802412954
+            },
+            {
+              "equation": "Constant Product",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": 139.95380621843213
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -18.936530629974392
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 5797.307347644088
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 4707.247725196037
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 0.0748058493129889
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 9,
+          "mean_paired_difference_favoring_hybrid": 16.698584776050357,
+          "sd_paired_difference": 4.383699256771821,
+          "descriptive_95pct_t_interval": [
+            13.328975238181274,
+            20.068194313919438
+          ],
+          "hybrid_wins": 9,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 18.272814031967947
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 17.19046598456223
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 15.892783172383819
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 10.365464115814857
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 13.077968514594424
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 14.267623041116114
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 24.313572113662467
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 22.133792286050156
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 14.77277972430118
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 11,
+          "mean_paired_difference_favoring_hybrid": -98109419.03213336,
+          "sd_paired_difference": 325493302.8031206,
+          "descriptive_95pct_t_interval": [
+            -316778795.244343,
+            120559957.18007629
+          ],
+          "hybrid_wins": 9,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -1079508626.112264
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.3175393967081653
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 513.6651719442506
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 3.8711477153013014
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.18984394031877289
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1204.5723931229059
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 256275.26642846034
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -51.90052561310939
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 33296.871565981455
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 13772.820489177057
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.0847426583458943
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 11,
+          "mean_paired_difference_favoring_hybrid": -66798443.04625447,
+          "sd_paired_difference": 221643206.60351703,
+          "descriptive_95pct_t_interval": [
+            -215700375.32035935,
+            82103489.22785039
+          ],
+          "hybrid_wins": 9,
+          "ties": 0,
+          "hybrid_losses": 2,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -735077818.9606253
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.3172403887013341
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 498.62226216726003
+            },
+            {
+              "equation": "Allometric Scaling",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 3.785535199819604
+            },
+            {
+              "equation": "Michaelis-Menten",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 0.18200450501709908
+            },
+            {
+              "equation": "Logistic Growth",
+              "domain": "Biology",
+              "difference_favoring_hybrid": 1157.760048597379
+            },
+            {
+              "equation": "Kinetic Energy",
+              "domain": "Physics",
+              "difference_favoring_hybrid": 247144.88947391976
+            },
+            {
+              "equation": "Impermanent Loss",
+              "domain": "DeFi AMM",
+              "difference_favoring_hybrid": -51.18440268846757
+            },
+            {
+              "equation": "Value at Risk",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 32725.107651896204
+            },
+            {
+              "equation": "Liquidation Price",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 13464.902793047611
+            },
+            {
+              "equation": "Portfolio Std Dev",
+              "domain": "DeFi Risk",
+              "difference_favoring_hybrid": 1.069219072536816
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    }
+  },
+  "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Each metric/regime reports its own available-equation denominator; missing or failed extrapolation predictions are excluded from that metric's denominator."
+}
