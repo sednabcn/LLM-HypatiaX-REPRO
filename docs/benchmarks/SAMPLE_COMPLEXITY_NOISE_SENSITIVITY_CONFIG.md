@@ -125,3 +125,71 @@ The official validation is the full pipeline rerun with the documented configura
 and complete provenance. Historical outputs and partial checks are useful for audit
 and comparison, but do not substitute for that full rerun. No experiment is launched
 by this documentation change.
+
+
+## 7. Historical cross-method comparison (audit-only; not reproducible evidence)
+
+The historical per-equation CSV outputs were also compared using common thresholds,
+rather than comparing the original summary fields, which used inconsistent threshold
+settings. Rows explicitly marked `exclude_from_reported_results=True` were excluded.
+The following counts are descriptive recomputations over the six sample-size shards
+(30 equations per N; 180 equation-condition rows per method) and five historical
+noise shards (30 equations per noise level; 150 rows per method).
+
+### Sample complexity: common thresholds across all N
+
+| Method | R² ≥ 0.99 | R² ≥ 0.999 |
+|---|---:|---:|
+| Enhanced Hybrid | 180/180 | 179/180 |
+| Symbolic Engine + LLM | 180/180 | 174/180 |
+| Pure LLM | 175/180 | 175/180 |
+| Hybrid Discovery v50.2 | 178/180 | 162/180 |
+| Improved NN | 168/180 | 154/180 |
+
+At R² ≥ 0.99, Enhanced Hybrid and Symbolic Engine + LLM tie across the historical
+sample-size grid. At R² ≥ 0.999, Enhanced Hybrid has the highest count in this
+recomputation. Enhanced Hybrid is already at or near ceiling at N=50 (30/30 at
+0.99; 29/30 at 0.999), so these files do not establish a strong monotonic
+sample-efficiency gain as N increases.
+
+### Noise sensitivity: common thresholds across the five available levels
+
+| Method | 0% | 0.05% | 0.1% | 0.5% | 1% |
+|---|---:|---:|---:|---:|---:|
+| Enhanced Hybrid | 30/30 | 30/30 | 30/30 | 30/30 | 30/30 |
+| Symbolic Engine + LLM | 30/30 | 30/30 | 30/30 | 30/30 | 29/30 |
+| Pure LLM | 30/30 | 29/30 | 29/30 | 30/30 | 30/30 |
+| Improved NN | 29/30 | 27/30 | 28/30 | 29/30 | 29/30 |
+| Hybrid Discovery v50.2 | 30/30 | 24/30 | 26/30 | 24/30 | 26/30 |
+
+These are counts at R² ≥ 0.99 only. At the stricter R² ≥ 0.999 threshold,
+Enhanced Hybrid records 30/30 at 0% noise and 23/30 at each of the four nonzero
+historical levels. The five available files cover only 0% through 1%; they do not
+represent the configured 5% and 10% levels.
+
+### Reproducibility and claim boundary
+
+These tables document what the committed historical CSV rows report after applying
+a consistent threshold and the recorded eligibility exclusion. They do **not**
+establish that the results can be reproduced from the repository's current code and
+configuration. The corresponding historical JSON result files are labelled
+`NO_PROVENANCE` in `archive/audit/audit_out/results_manifest.csv`; the audit does
+not establish the exact source commit, run ID, random seed/effective configuration,
+or complete execution provenance for each result. Filenames, timestamps, successful
+workflow smoke manifests, and uploaded artifacts are not substitutes for that
+missing experiment-level provenance.
+
+Accordingly:
+- Treat all counts above as **historical, descriptive audit results**, not validated
+  benchmark outcomes or reproducible performance guarantees.
+- Do not describe sample efficiency or noise robustness as a reproducible product
+  feature, capability guarantee, or established scientific finding on this evidence.
+- Do not use these tables as a substitute for the official full-pipeline rerun.
+- A future official run must persist the per-shard manifest fields in Section 3,
+  use fixed thresholds and eligibility rules, and aggregate all expected conditions.
+- This documentation update changes no benchmark code, method behavior, or feature.
+  It launches no experiments and makes no LLM/API calls.
+
+The historical JSON outputs also contain non-standard `NaN` values in places; use
+the per-equation CSV rows for the above descriptive threshold counts and do not
+assume every JSON file is strict-JSON parseable.
