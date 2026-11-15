@@ -241,8 +241,13 @@ jobs:
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
           PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
           FRESH_MODE:         ${{ github.event.inputs.fresh_mode || 'false' }}
+          FOUR_WAY_SMOKE:     ${{ github.event.inputs.four_way_smoke || 'false' }}
         run: |
           set -euo pipefail
+          if [[ "${FOUR_WAY_SMOKE}" == "true" ]]; then
+            echo "::error::four_way_smoke cannot be combined with the experiments fan-out input."
+            exit 1
+          fi
 
           VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_five \
@@ -3141,6 +3146,16 @@ jobs:
           expected = {"hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"}
           if set(methods) != expected:
               raise SystemExit(f"four-arm records missing/extra: expected={sorted(expected)} actual={sorted(methods)}")
+          malformed = [name for name in sorted(expected)
+                       if not isinstance(methods[name], dict)
+                       or not isinstance(methods[name].get("success"), bool)
+                       or (methods[name].get("success") is False and not methods[name].get("error"))]
+          if malformed:
+              raise SystemExit(f"arm records lack an explicit success/failure outcome: {malformed}")
+          failed = [name for name in sorted(expected) if methods[name].get("success") is not True]
+          if failed:
+              details = {name: methods[name].get("error") for name in failed}
+              raise SystemExit(f"one-case smoke detected failed method arm(s): {details}")
           if summary.get("smoke_test") is not True or summary.get("official_aggregate_eligible") is not False:
               raise SystemExit("Core-15 smoke summary is not marked artifact-only")
           print("Validated Core-15 one-equation smoke artifact: all four arm records present; not eligible for official aggregation.")
