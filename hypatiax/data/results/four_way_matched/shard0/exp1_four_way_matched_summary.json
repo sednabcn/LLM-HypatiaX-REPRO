@@ -1,0 +1,1105 @@
+{
+  "independent_unit": "equation (paired within equation; not individual generated samples)",
+  "method_test_metrics": {
+    "hybrid_llm_pysr": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9974720625711769,
+        "median": 0.9971511115166664
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 0.04818554036240319,
+        "median": 0.03598470632328816
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 0.0391938092432289,
+        "median": 0.02846869820553996
+      }
+    },
+    "llm_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "rmse": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      },
+      "mae": {
+        "n_equations": 0,
+        "mean": null,
+        "median": null
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_equations": 3,
+        "mean": 0.9974941251943669,
+        "median": 0.9970603245655962
+      },
+      "rmse": {
+        "n_equations": 3,
+        "mean": 0.0476107906192215,
+        "median": 0.03784074683488314
+      },
+      "mae": {
+        "n_equations": 3,
+        "mean": 0.03853522799322962,
+        "median": 0.02999710362995168
+      }
+    }
+  },
+  "paired_hybrid_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -2.206262318978543e-05,
+        "sd_paired_difference": 0.0002486760706100422,
+        "descriptive_95pct_t_interval": [
+          -0.0006398082282020792,
+          0.0005956829818225082
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.0003071542384476267
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 9.078695107012091e-05
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00015017941780814947
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.000574749743181688,
+        "sd_paired_difference": 0.0030324673189638953,
+        "descriptive_95pct_t_interval": [
+          -0.008107816169870316,
+          0.00695831668350694
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003972873001498414
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00039258326035836524
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.001856040511594985
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.0006585812499992674,
+        "sd_paired_difference": 0.0023318872132803144,
+        "descriptive_95pct_t_interval": [
+          -0.0064513102160572815,
+          0.005134147716058747
+        ],
+        "hybrid_wins": 1,
+        "ties": 0,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003112410920587727
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.00039173825382179256
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.0015284054244117176
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "paired_hybrid_test_comparisons": {
+    "llm_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "pysr_only": {
+      "r2": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 0,
+        "mean_paired_difference_favoring_hybrid": null,
+        "sd_paired_difference": null,
+        "descriptive_95pct_t_interval": null,
+        "hybrid_wins": 0,
+        "ties": 0,
+        "hybrid_losses": 0,
+        "per_equation": [],
+        "direction": "positive favors Hybrid"
+      }
+    },
+    "nn_only": {
+      "r2": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -2.206262318978543e-05,
+        "sd_paired_difference": 0.0002486760706100422,
+        "descriptive_95pct_t_interval": [
+          -0.0006398082282020792,
+          0.0005956829818225082
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.0003071542384476267
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 9.078695107012091e-05
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00015017941780814947
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "rmse": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.000574749743181688,
+        "sd_paired_difference": 0.0030324673189638953,
+        "descriptive_95pct_t_interval": [
+          -0.008107816169870316,
+          0.00695831668350694
+        ],
+        "hybrid_wins": 2,
+        "ties": 0,
+        "hybrid_losses": 1,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003972873001498414
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.00039258326035836524
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.001856040511594985
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      },
+      "mae": {
+        "n_paired_equations": 3,
+        "mean_paired_difference_favoring_hybrid": -0.0006585812499992674,
+        "sd_paired_difference": 0.0023318872132803144,
+        "descriptive_95pct_t_interval": [
+          -0.0064513102160572815,
+          0.005134147716058747
+        ],
+        "hybrid_wins": 1,
+        "ties": 0,
+        "hybrid_losses": 2,
+        "per_equation": [
+          {
+            "equation": "Arrhenius",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.003112410920587727
+          },
+          {
+            "equation": "Henderson-Hasselbalch",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": -0.00039173825382179256
+          },
+          {
+            "equation": "Rate Law",
+            "domain": "Chemistry",
+            "difference_favoring_hybrid": 0.0015284054244117176
+          }
+        ],
+        "direction": "positive favors Hybrid"
+      }
+    }
+  },
+  "method_extrapolation_metrics": {
+    "hybrid_llm_pysr": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -0.16447739942057885,
+          "median": 0.9989601876288976
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 53.91687502989317,
+          "median": 0.04581916567975857
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 29.781275221987865,
+          "median": 0.04248822511565258
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -26.65987524209984,
+          "median": 0.9995808840538001
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 1964.0672437240491,
+          "median": 0.24858579293142347
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 971.4168645297422,
+          "median": 0.20320005395439952
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 2,
+          "mean": 0.9968263215740267,
+          "median": 0.9968263215740267
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 359866314.4649022,
+          "median": 9.185733198259959
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 245054913.05543956,
+          "median": 8.814203265134205
+        }
+      }
+    },
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "rmse": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        },
+        "mae": {
+          "n_equations": 0,
+          "mean": null,
+          "median": null
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -1.0018768906354396,
+          "median": -0.7631519327801217
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 39.580728792764596,
+          "median": 3.78285329051955
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 26.777853915031667,
+          "median": 3.330242164391849
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -0.8030489634092789,
+          "median": -0.6423357970062853
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 283.65491508640235,
+          "median": 21.771254408794608
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 179.90966156067952,
+          "median": 18.206108573949827
+        }
+      },
+      "far": {
+        "r2": {
+          "n_equations": 3,
+          "mean": -15.337417026096793,
+          "median": -16.195773529043073
+        },
+        "rmse": {
+          "n_equations": 3,
+          "mean": 30277.08838477991,
+          "median": 522.8509051425106
+        },
+        "mae": {
+          "n_equations": 3,
+          "mean": 29139.715065318756,
+          "median": 507.43646543239424
+        }
+      }
+    }
+  },
+  "paired_hybrid_extrapolation_comparisons": {
+    "llm_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "pysr_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 0,
+          "mean_paired_difference_favoring_hybrid": null,
+          "sd_paired_difference": null,
+          "descriptive_95pct_t_interval": null,
+          "hybrid_wins": 0,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    },
+    "nn_only": {
+      "near": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": 0.8373994912148608,
+          "sd_paired_difference": 2.7186058293008895,
+          "descriptive_95pct_t_interval": [
+            -5.91599177273576,
+            7.5907907551654805
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -1.7286995489897006
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.5545085775826076
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.686389445051675
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -14.336146237128588,
+          "sd_paired_difference": 28.173791107945267,
+          "descriptive_95pct_t_interval": [
+            -84.32372321135153,
+            55.65143073709436
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -46.798846191119395
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.053373354893839695
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.7370341248397914
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -3.003421306956201,
+          "sd_paired_difference": 8.253946084818121,
+          "descriptive_95pct_t_interval": [
+            -23.507360047006884,
+            17.50051743309448
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -12.349288075964054
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.05127021581925403
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.2877539392761967
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "medium": {
+        "r2": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -25.856826278690562,
+          "sd_paired_difference": 48.06552996347809,
+          "descriptive_95pct_t_interval": [
+            -145.25822189623193,
+            93.54456933885082
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -81.33683074961847
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.5520115794800856
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 3.2143403340666996
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -1680.4123286376464,
+          "sd_paired_difference": 2929.464372141076,
+          "descriptive_95pct_t_interval": [
+            -8957.605250702296,
+            5596.780593427004
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -5063.044192160878
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.2845376320752628
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 21.522668615863186
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -791.5072029690626,
+          "sd_paired_difference": 1386.7862952932126,
+          "descriptive_95pct_t_interval": [
+            -4236.475337245461,
+            2653.4609313073356
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -2392.797366163767
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.27284873658392067
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 18.002908519995426
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      },
+      "far": {
+        "r2": {
+          "n_paired_equations": 2,
+          "mean_paired_difference_favoring_hybrid": 17.73164000826509,
+          "sd_paired_difference": 0.7653356439246007,
+          "descriptive_95pct_t_interval": [
+            10.855372065197118,
+            24.60790795133306
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 0,
+          "per_equation": [
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 18.272814031967947
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 17.19046598456223
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "rmse": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -359836037.37651753,
+          "sd_paired_difference": 623254744.2525198,
+          "descriptive_95pct_t_interval": [
+            -1908086651.6015096,
+            1188414576.8484745
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -1079508626.112264
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.3175393967081653
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 513.6651719442506
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        },
+        "mae": {
+          "n_paired_equations": 3,
+          "mean_paired_difference_favoring_hybrid": -245025773.34037426,
+          "sd_paired_difference": 424397520.6837413,
+          "descriptive_95pct_t_interval": [
+            -1299287659.2441967,
+            809236112.5634482
+          ],
+          "hybrid_wins": 2,
+          "ties": 0,
+          "hybrid_losses": 1,
+          "per_equation": [
+            {
+              "equation": "Arrhenius",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": -735077818.9606253
+            },
+            {
+              "equation": "Henderson-Hasselbalch",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 0.3172403887013341
+            },
+            {
+              "equation": "Rate Law",
+              "domain": "Chemistry",
+              "difference_favoring_hybrid": 498.62226216726003
+            }
+          ],
+          "direction": "positive favors Hybrid"
+        }
+      }
+    }
+  },
+  "interpretation": "Descriptive paired summaries only; do not infer universal Hybrid superiority. Each metric/regime reports its own available-equation denominator; missing or failed extrapolation predictions are excluded from that metric's denominator."
+}
