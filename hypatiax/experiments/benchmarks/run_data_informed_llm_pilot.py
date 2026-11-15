@@ -71,7 +71,7 @@ def fixed_examples(X, y, names):
     return rows
 
 
-def prompt_for(eq, names, mode, X_train, y_train, examples, feedback=None):
+def prompt_for(eq, names, mode, X_train, y_train, examples, feedback=None, previous_formula=None):
     base = f"""You are discovering a mathematical relationship from a benchmark task.
 Task: {eq['name']}
 Domain: {eq['domain']}
@@ -110,7 +110,9 @@ brief explanation
         base += "\nTraining-only input/output examples (12 deterministic rows):\n"
         base += json.dumps(examples, sort_keys=True)
         if feedback is not None:
-            base += "\nTraining-only error feedback for the previous proposed formula; revise once:\n"
+            base += "\nPrevious proposed Python formula (training-only evaluation; revise this formula once):\n"
+            base += str(previous_formula or "")
+            base += "\nTraining-only error feedback for that formula; revise once:\n"
             base += json.dumps(feedback, sort_keys=True)
             base += "\nReturn a revised final formula. Do not use any held-out data."
     return base
@@ -132,9 +134,15 @@ def call_llm(baseline, prompt):
     if not code or code == "N/A":
         raise RuntimeError("LLM response did not contain a Python formula")
     baseline.validate_formula_signature(code, VAR_NAMES)
+    from hypatiax.core import llm_call
+    call_info = llm_call.last_call_info()
+    if not call_info.get("temperature_sent") or call_info.get("temperature_requested") != TEMPERATURE:
+        raise RuntimeError(f"shared LLM temperature contract not confirmed: {call_info}")
     return {
         "response_text": text, "response_sha256": sha(text),
         "formula": code, "formula_sha256": sha(code),
+        "temperature_requested": call_info.get("temperature_requested"),
+        "temperature_sent": call_info.get("temperature_sent"),
         "usage": {
             "input_tokens": getattr(getattr(response, "usage", None), "input_tokens", None),
             "output_tokens": getattr(getattr(response, "usage", None), "output_tokens", None),
@@ -161,14 +169,18 @@ def score_formula(code, X_test, y_test, extrap, names):
     pred = driver.rcsb._runner_eval_formula(code, X_test, names)
     test = driver._metrics(y_test, pred)
     extra = {}
+    failures = {}
     for regime, (X_e, y_e) in extrap.items():
         try:
             extra[regime] = driver._metrics(
                 y_e, driver.rcsb._runner_eval_formula(code, X_e, names)
             )
         except Exception as exc:
-            extra[regime] = {"success": False, "error": f"{type(exc).__name__}: {exc}"}
-    return {"test": test, "extrapolation": extra}
+            message = f"{type(exc).__name__}: {exc}"
+            extra[regime] = {"success": False, "error": message}
+            failures[regime] = message
+    return {"test": test, "extrapolation": extra, "success": not failures,
+            "extrapolation_failures": failures}
 
 
 def main():
@@ -229,7 +241,14 @@ def main():
                 )
                 code = raw.get("python_code", "")
                 baseline.validate_formula_signature(code, VAR_NAMES)
-                row["response_sha256"] = raw.get("response_sha256")
+                if not raw.get("llm_called") or not raw.get("temperature_sent"):
+                    raise RuntimeError("zero-shot control did not confirm a live LLM response at the protocol temperature")
+                row["response_sha256"] = sha(raw.get("raw_response", ""))
+                row["prompt_sha256"] = raw.get("prompt_sha256")
+                row["temperature_requested"] = raw.get("temperature_requested")
+                row["temperature_sent"] = raw.get("temperature_sent")
+                row["usage"] = raw.get("usage")
+                row["model"] = raw.get("model")
                 row["formula"] = code
                 row["formula_sha256"] = sha(code)
                 row["api_calls"] = 1
@@ -245,20 +264,27 @@ def main():
                 if key == "llm_only_train_feedback":
                     feedback = train_feedback(first["formula"], X_train, y_train, VAR_NAMES)
                     revision_prompt = prompt_for(
-                        eq, VAR_NAMES, mode, X_train, y_train, examples, feedback=feedback
+                        eq, VAR_NAMES, mode, X_train, y_train, examples,
+                        feedback=feedback, previous_formula=first["formula"],
                     )
                     final = call_llm(baseline, revision_prompt)
                     row["revision_prompt_sha256"] = sha(revision_prompt)
                     row["training_feedback"] = feedback
                     row["revision_response_sha256"] = final["response_sha256"]
                     row["revision_usage"] = final["usage"]
+                    row["revision_temperature_requested"] = final["temperature_requested"]
+                    row["revision_temperature_sent"] = final["temperature_sent"]
                     row["api_calls"] = 2
                 row["formula"] = final["formula"]
                 row["formula_sha256"] = final["formula_sha256"]
                 row["usage"] = final["usage"]
+                row["temperature_requested"] = final["temperature_requested"]
+                row["temperature_sent"] = final["temperature_sent"]
 
             row["metrics"] = score_formula(row["formula"], X_test, y_test, extrap, VAR_NAMES)
-            row["success"] = True
+            row["success"] = bool(row["metrics"].get("success", True))
+            if not row["success"]:
+                row["error"] = "one or more outer-test/extrapolation metric partitions failed"
         except Exception as exc:
             row["success"] = False
             row["error"] = f"{type(exc).__name__}: {exc}"
@@ -279,7 +305,7 @@ def main():
         json.dumps(driver._json_safe(results), indent=2, allow_nan=False), encoding="utf-8"
     )
     (output / "data_informed_llm_pilot_manifest.json").write_text(
-        json.dumps({
+        json.dumps(driver._json_safe({
             "experiment": "single-case data-informed LLM-only strategy pilot",
             "case_id": CASE_ID, "equation": eq["name"], "model": MODEL,
             "temperature": TEMPERATURE, "seed": driver.SEED,
@@ -287,7 +313,7 @@ def main():
             "outer_test_sha256": results["outer_test_sha256"],
             "variants": list(variants),
             "execution_status": "completed",
-        }, indent=2), encoding="utf-8"
+        }), indent=2, allow_nan=False), encoding="utf-8"
     )
     print(f"[pilot] artifacts: {output}", flush=True)
 
