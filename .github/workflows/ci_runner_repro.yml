@@ -3411,7 +3411,7 @@ jobs:
   exp1_four_way_matched_aggregate:
     name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
     needs: [plan, worker]
-    if: ${{ always() && github.event.inputs.dry_run != 'true' && ((github.event.inputs.aggregate_run_id != '' && github.event.inputs.experiment == 'exp1_four_way_matched' && github.event.inputs.experiments == '') || (needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success')) }}
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && (github.event.inputs.aggregate_run_id != '' || (needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
