@@ -140,11 +140,18 @@ def main() -> int:
         )
         for method in driver.METHOD_KEYS
     }
+    arm_success_counts = {
+        method: len(merged) - arm_failure_counts[method]
+        for method in driver.METHOD_KEYS
+    }
+    all_arms_successful = all(count == 0 for count in arm_failure_counts.values())
     manifest = {
         "protocol": "Core-15 matched four-arm predictive comparison",
         "execution_status": "aggregated_complete",
+        "comparison_status": "complete" if all_arms_successful else "partial",
         "coverage_complete": True,
-        "all_arms_successful": all(count == 0 for count in arm_failure_counts.values()),
+        "all_arms_successful": all_arms_successful,
+        "arm_success_counts": arm_success_counts,
         "arm_failure_counts": arm_failure_counts,
         "expected_equations": 15,
         "observed_equations": len(merged),
