@@ -238,6 +238,8 @@ def main():
         }
         try:
             if key == "llm_only_zero_shot":
+                # Count the request even if the provider or response parser fails.
+                row["api_calls"] = 1
                 # Preserve the established strict zero-shot implementation unchanged.
                 raw = baseline.generate_formula(
                     description=eq["name"], domain=eq["domain"].lower().replace(" ", "_"),
@@ -268,6 +270,7 @@ def main():
                 row["api_calls"] = 1
             else:
                 prompt = prompt_for(eq, VAR_NAMES, mode, X_train, y_train, examples)
+                row["api_calls"] = 1
                 first = call_llm(baseline, prompt)
                 row["prompt_sha256"] = sha(prompt)
                 row["first_response_sha256"] = first["response_sha256"]
@@ -275,7 +278,6 @@ def main():
                 row["first_usage"] = first["usage"]
                 row["first_temperature_requested"] = first["temperature_requested"]
                 row["first_temperature_sent"] = first["temperature_sent"]
-                row["api_calls"] = 1
                 final = first
                 if key == "llm_only_train_feedback":
                     feedback = train_feedback(first["formula"], X_train, y_train, VAR_NAMES)
@@ -283,6 +285,7 @@ def main():
                         eq, VAR_NAMES, mode, X_train, y_train, examples,
                         feedback=feedback, previous_formula=first["formula"],
                     )
+                    row["api_calls"] = 2
                     final = call_llm(baseline, revision_prompt)
                     row["revision_prompt_sha256"] = sha(revision_prompt)
                     row["training_feedback"] = feedback
@@ -290,7 +293,6 @@ def main():
                     row["revision_usage"] = final["usage"]
                     row["revision_temperature_requested"] = final["temperature_requested"]
                     row["revision_temperature_sent"] = final["temperature_sent"]
-                    row["api_calls"] = 2
                 row["formula"] = final["formula"]
                 row["formula_sha256"] = final["formula_sha256"]
                 row["usage"] = final["usage"]
@@ -308,6 +310,9 @@ def main():
         results["variants"][key] = row
         print(f"[pilot] {key}: success={row['success']} calls={row['api_calls']} elapsed={row['elapsed_seconds']:.1f}s", flush=True)
 
+    results["total_api_calls"] = sum(
+        int(row.get("api_calls", 0)) for row in results["variants"].values()
+    )
     results["protocol"] = {
         "test_and_extrapolation_data_sent_to_llm": False,
         "external_fitting_or_symbolic_regression": False,
@@ -316,6 +321,7 @@ def main():
         "scoring": "shared canonical R2/RMSE/MAE; catastrophic R2 below -100 remains failure",
         "fewshot_examples": N_EXAMPLES,
         "feedback_revisions_max": 1,
+        "api_call_count_semantics": "request attempts, including provider/parser failures",
     }
     (output / "data_informed_llm_pilot_results.json").write_text(
         json.dumps(driver._json_safe(results), indent=2, allow_nan=False), encoding="utf-8"
