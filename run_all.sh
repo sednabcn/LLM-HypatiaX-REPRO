@@ -2344,6 +2344,52 @@ run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 
     if [[ -f "\${_flat}" ]]; then cp -f "\${_flat}" "\${_P30_RANDOM_DIR}/"; fi
   done
   _P30_MANIFEST_ARGS=(--output-dir "\${_P30_RANDOM_DIR}" --shard "\${SHARD:-0}" --started-ns "\${_P30_RUN_START_NS}" --variant random_8020)
+  if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
+    _P30_MANIFEST_ARGS+=(--indices "\${_P30_TASKS[@]}")
+  fi
+  python3 '${REPO_ROOT}/scripts/ci/write_protocol30_manifest.py' "\${_P30_MANIFEST_ARGS[@]}"
+"
+
+run exp2_protocol30_pca_4060 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, PCA 40/60, six methods" bash -c "
+  set -euo pipefail
+  cd '${REPO_ROOT}'
+  _P30_TASKS=()
+  if [[ -n \"\${TASK_IDS:-}\" ]]; then
+    for _tid in \${TASK_IDS}; do
+      [[ \"\${_tid}\" =~ ^M\\.([0-9]{2})$ ]] || { echo \"::error::invalid Protocol-30 task ID: \${_tid}\"; exit 1; }
+      _n=\${BASH_REMATCH[1]}; _n=\$((10#\${_n}))
+      (( _n >= 1 && _n <= 30 )) || { echo \"::error::Protocol-30 task out of range: \${_tid}\"; exit 1; }
+      _P30_TASKS+=(\"\${_n}\")
+    done
+    [[ \${#_P30_TASKS[@]} -gt 0 ]] || { echo '::error::empty Protocol-30 task assignment'; exit 1; }
+    _uniq=\$(printf '%s\\n' \"\${_P30_TASKS[@]}\" | sort -n -u | wc -l)
+    [[ \"\${_uniq}\" -eq \"\${#_P30_TASKS[@]}\" ]] || { echo '::error::duplicate Protocol-30 task IDs'; exit 1; }
+    if [[ -n \"\${PROTOCOL30_SMOKE_DIR:-}\" ]]; then
+      _P30_PCA_DIR=\"\${PROTOCOL30_SMOKE_DIR}\"
+    else
+      _P30_PCA_DIR=\"${RESULTS_DIR}/comparison_results/protocol30/pca-40-60/shard\${SHARD:-0}\"
+    fi
+  else
+    _P30_PCA_DIR='${RESULTS_DIR}/comparison_results/protocol30/pca-40-60'
+  fi
+  mkdir -p \"\${_P30_PCA_DIR}\"
+  _P30_RUN_START_NS=\$(date +%s%N)
+  _P30_EQ_ARGS=()
+  [[ \${#_P30_TASKS[@]} -eq 0 ]] || _P30_EQ_ARGS+=(--equations \"\${_P30_TASKS[@]}\")
+  FEYNMAN_TIMEOUT=${FEYNMAN_TIMEOUT} \
+  METHOD_TIMEOUT=${METHOD_TIMEOUT} \
+  PYSR_FIT_WALL_TIMEOUT=${PYSR_FIT_WALL_TIMEOUT} \
+  PYSR_FIT_GRACE_SECS=${PYSR_FIT_GRACE_SECS} \
+  JOB_DEADLINE=${JOB_DEADLINE} \
+  SHARD_IDS='' \
+    python3 '${EXPERIMENTS_DIR}/run_comparative_suite_benchmark_pca.py' \
+      --protocol protocol30 --domain all_domains --samples ${FEYNMAN_SAMPLES} \
+      --pysr-timeout ${FEYNMAN_TIMEOUT} --method-timeout ${METHOD_TIMEOUT} \
+      --populations ${PYSR_POPULATIONS} --parsimony 0.01 \
+      --use-transcendental-compositions --noiseless --threshold 0.999999 \
+      --methods ${PROTOCOL30_METHODS_ARGS} --no-llm-cache --force-fresh --no-checkpoint \
+      --output-dir \"\${_P30_PCA_DIR}\" \"\${_P30_EQ_ARGS[@]}\" \
+      2>&1 | tee -a \"\${_P30_PCA_DIR}/protocol30_pca_4060_run.log\"
   _P30_MANIFEST_ARGS=(--output-dir "\${_P30_PCA_DIR}" --shard "\${SHARD:-0}" --started-ns "\${_P30_RUN_START_NS}" --variant pca_4060)
   if [[ \${#_P30_TASKS[@]} -gt 0 ]]; then
     _P30_MANIFEST_ARGS+=(--indices "\${_P30_TASKS[@]}")
