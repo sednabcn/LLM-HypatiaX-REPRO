@@ -518,11 +518,13 @@ class PureLLMBaseline:
         # constants_info above is the protocol's task-spec constants; it must
         # be identical for every system compared (see input-parity paragraph).
 
+        signature = ", ".join(variable_names or [])
         return f"""You are a mathematical formula expert in DeFi and quantitative finance.
 
 Task: {description}
 Domain: {domain}{var_info}{constants_info}
 
+The only input variables available to the formula are exactly: {", ".join(variable_names or [])}.
 Provide your response in this EXACT format:
 
 FORMULA:
@@ -532,14 +534,15 @@ LATEX:
 [Write the formula in LaTeX notation]
 
 PYTHON:
-def formula(param1, param2, ...):
-    # Use individual parameters, NOT a dict
-    # Use EXACT constants if specified above
-    # Use numpy functions: np.sqrt, np.minimum, np.maximum, etc.
+def formula({signature}):
+    # Use only the declared input variables, numeric literals, and numpy/math functions.
+    # Every coefficient or constant not supplied in the task specification must be a numeric literal.
+    # Do not add parameters for unknown coefficients or other undeclared symbols.
+    # Do not estimate or fit coefficients from X or y.
     return result
 
 VARIABLES:
-[List each variable with meaning]
+[List each declared input variable with meaning]
 
 ASSUMPTIONS:
 [List assumptions]
@@ -548,10 +551,13 @@ EXPLANATION:
 [Brief explanation]
 
 CRITICAL REQUIREMENTS:
-- Function signature must be: def formula(param1, param2, ...) with individual parameters
-- DO NOT use dict parameters like def formula(params)
-- Use numpy for all math operations (np.sqrt, np.log, etc.)
-- Use EXACT constant values if specified
+- The function signature must match the declared input variables EXACTLY, in the same order: def formula({signature})
+- Do not add parameters such as a, b, c, or other symbols unless they are declared input variables.
+- Every symbol in the expression must be a declared input, a numeric literal, or an approved numpy/math function.
+- Do not use dict parameters, *args, **kwargs, or optional/default parameters.
+- Use numpy for element-wise math operations (np.sqrt, np.minimum, np.maximum, etc.).
+- Use EXACT task-specification constant values if supplied; otherwise express coefficients as numeric literals.
+- Do not infer coefficients from training data or fit any parameters.
 - NO scipy imports (use only numpy)
 - NO markdown code blocks
 - Ensure operations work element-wise on numpy arrays"""
@@ -613,6 +619,37 @@ CRITICAL REQUIREMENTS:
         code = re.sub(r"^```(?:python)?\s*\n?", "", code, flags=re.IGNORECASE)
         code = re.sub(r"\n?```\s*$", "", code)
         return code.strip()
+
+    @staticmethod
+    def validate_formula_signature(python_code: str, var_names: list[str] | None):
+        """Require an LLM formula to accept exactly the declared input variables.
+
+        This is a structural contract only: it never supplies or estimates
+        missing coefficients. Unknown symbols must be represented as numeric
+        literals in the generated expression or the formula fails closed.
+        """
+        func = parse_formula(python_code)
+        expected = list(var_names or [])
+        params = list(inspect.signature(func).parameters.values())
+        actual = [param.name for param in params]
+        if actual != expected:
+            raise ValueError(
+                "formula signature mismatch: "
+                f"expected parameters {expected}, got {actual}"
+            )
+        invalid_kinds = [
+            param.name for param in params
+            if param.kind not in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            ) or param.default is not inspect.Parameter.empty
+        ]
+        if invalid_kinds:
+            raise ValueError(
+                "formula signature contains unsupported variadic, keyword-only, "
+                f"or default parameters: {invalid_kinds}"
+            )
+        return func
 
     def test_formula_accuracy(
         self,
@@ -707,7 +744,7 @@ CRITICAL REQUIREMENTS:
             # B2: ONE namespace. With separate globals/locals dicts, any
             # module-level constant or helper the LLM wrote landed in locals,
             # but formula() resolves names in globals -> spurious NameError.
-            func = parse_formula(python_code)
+            func = self.validate_formula_signature(python_code, var_names)
 
             if verbose:
                 print(f"  DEBUG - Found function: {func.__name__}")
