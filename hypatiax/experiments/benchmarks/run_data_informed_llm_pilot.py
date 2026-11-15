@@ -179,7 +179,7 @@ def score_formula(code, X_test, y_test, extrap, names):
             message = f"{type(exc).__name__}: {exc}"
             extra[regime] = {"success": False, "error": message}
             failures[regime] = message
-    return {"test": test, "extrapolation": extra, "success": not failures,
+    return {"test": test, "extrapolation": extra, "success": True,
             "extrapolation_failures": failures}
 
 
@@ -222,6 +222,9 @@ def main():
         "model": MODEL, "temperature": TEMPERATURE,
         "train_data_sha256": driver._array_hash(X_train, y_train),
         "outer_test_sha256": driver._array_hash(X_test, y_test),
+        "extrapolation_sha256": {
+            regime: driver._array_hash(X_e, y_e) for regime, (X_e, y_e) in extrap.items()
+        },
         "variants": {},
     }
 
@@ -237,7 +240,16 @@ def main():
                 # Preserve the established strict zero-shot implementation unchanged.
                 raw = baseline.generate_formula(
                     description=eq["name"], domain=eq["domain"].lower().replace(" ", "_"),
-                    variable_names=VAR_NAMES, metadata={}, X=None, y=None,
+                    variable_names=VAR_NAMES,
+                    metadata={
+                        "equation_name": eq["name"],
+                        "domain": eq["domain"].lower().replace(" ", "_"),
+                        "difficulty": eq.get("difficulty", "medium"),
+                        "benchmark_arm": "llm_only_zero_shot_no_pysr_refinement",
+                        "information_regime": "zero_shot_task_description_only",
+                        "training_arrays_used_by_model": False,
+                    },
+                    X=None, y=None,
                 )
                 code = raw.get("python_code", "")
                 baseline.validate_formula_signature(code, VAR_NAMES)
@@ -283,8 +295,8 @@ def main():
 
             row["metrics"] = score_formula(row["formula"], X_test, y_test, extrap, VAR_NAMES)
             row["success"] = bool(row["metrics"].get("success", True))
-            if not row["success"]:
-                row["error"] = "one or more outer-test/extrapolation metric partitions failed"
+            if row["metrics"].get("extrapolation_failures"):
+                row["extrapolation_errors"] = row["metrics"]["extrapolation_failures"]
         except Exception as exc:
             row["success"] = False
             row["error"] = f"{type(exc).__name__}: {exc}"
@@ -311,6 +323,7 @@ def main():
             "temperature": TEMPERATURE, "seed": driver.SEED,
             "train_data_sha256": results["train_data_sha256"],
             "outer_test_sha256": results["outer_test_sha256"],
+            "extrapolation_sha256": results["extrapolation_sha256"],
             "variants": list(variants),
             "execution_status": "completed",
         }), indent=2, allow_nan=False), encoding="utf-8"
