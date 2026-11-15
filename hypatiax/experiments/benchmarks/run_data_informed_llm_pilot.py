@@ -46,7 +46,8 @@ def compact_stats(X, y, names):
             "q75": float(np.quantile(values, .75)),
             "q90": float(np.quantile(values, .9)),
         }
-        result["features"][name]["target_correlation"] = float(np.corrcoef(values, y)[0, 1])
+        correlation = float(np.corrcoef(values, y)[0, 1])
+        result["features"][name]["target_correlation"] = correlation if np.isfinite(correlation) else None
     result["target"] = {
         "min": float(np.min(y)), "max": float(np.max(y)),
         "mean": float(np.mean(y)), "std": float(np.std(y)),
