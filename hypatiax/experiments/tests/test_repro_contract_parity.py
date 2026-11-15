@@ -17,7 +17,9 @@ def test_canonical_llm_and_pysr_values_are_aligned():
     assert 'LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"' in run
     assert 'LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"' in run
     assert 'os.environ.get("LLM_TEMPERATURE", "0.25")' in ablation
-    assert "population_size= 33," in ablation
+    # Core-15 ablation keeps its explicit population_size=50 profile;
+    # config/repro.yaml population_size=33 is the separate shared PySR profile.
+    assert "population_size= 50," in ablation
     assert "population_size: 33" in cfg
 
 
