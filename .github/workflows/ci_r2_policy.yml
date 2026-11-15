@@ -6,6 +6,7 @@ on:
       - "hypatiax/core/**"
       - "hypatiax/tools/utils/pca_split_utils.py"
       - "hypatiax/experiments/tests/**"
+      - "tests/test_hybrid_discovery_timeout.py"
       - "hypatiax/protocols/**"
       - "config/repro.yaml"
       - "config/fresh_rerun.yaml"
@@ -216,6 +217,8 @@ jobs:
             uname -a
             python -m pip freeze --all
           } > environment-provenance.txt
+      - name: Run HybridDiscovery timeout regressions
+        run: python -m pytest -q tests/test_hybrid_discovery_timeout.py
       - name: Run complete test suite without LLM API credentials
         env:
           HYPATIAX_DISABLE_HARDCODED: "1"
