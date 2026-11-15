@@ -89,9 +89,40 @@ on:
         default: "30"
 
       task_ids_override:
-        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; official Protocol-30 variants require all M.01-M.30."
+        description: "Space-separated task IDs to run (blank = full experiment set). Protocol-30 smoke variants accept 1-5 unique IDs; Core-15 smoke accepts exactly one ID 0-14; official protocols require their full registry."
         required: false
         default: ""
+
+      four_way_smoke:
+        description: "Core-15 only: run exactly one equation on one worker, upload artifact only, skip official aggregation and repository commits."
+        required: false
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+
+      four_way_smoke_case:
+        description: "Core-15 one-case smoke equation ID (0-14). Default 3 = Allometric Scaling, a simple one-variable power law."
+        required: false
+        type: choice
+        options:
+          - "0"
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+          - "6"
+          - "7"
+          - "8"
+          - "9"
+          - "10"
+          - "11"
+          - "12"
+          - "13"
+          - "14"
+        default: "3"
 
       methods_override:
         description: "Protocol-30 smoke only: optional space-separated method IDs 1-6 (e.g. 6 to rerun HybridDiscoverySystem only). Blank runs all six methods."
@@ -210,8 +241,13 @@ jobs:
           SPARSE_SEED_IN:     ${{ github.event.inputs.sparse_seed }}
           PCA_PORTFOLIO_SWEEP_IN: ${{ github.event.inputs.pca_portfolio_sweep }}
           FRESH_MODE:         ${{ github.event.inputs.fresh_mode || 'false' }}
+          FOUR_WAY_SMOKE:     ${{ github.event.inputs.four_way_smoke || 'false' }}
         run: |
           set -euo pipefail
+          if [[ "${FOUR_WAY_SMOKE}" == "true" ]]; then
+            echo "::error::four_way_smoke cannot be combined with the experiments fan-out input."
+            exit 1
+          fi
 
           VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_five \
@@ -639,6 +675,15 @@ jobs:
               echo "ERROR: unknown experiment '$EXP'"; exit 1 ;;
           esac
 
+          if [[ "${{ github.event.inputs.four_way_smoke }}" == "true" ]]; then
+            if [[ "$EXP" != "exp1_four_way_matched" || "${{ github.event.inputs.experiments }}" != "" ]]; then
+              echo "::error::four_way_smoke=true is supported only for a single exp1_four_way_matched dispatch."
+              exit 1
+            fi
+            RESULT_SUBDIR="four_way_matched_smoke/run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+            echo "::notice::Core-15 one-equation smoke: artifact-only output in ${RESULT_SUBDIR}; no aggregate or repository commit."
+          fi
+
           # exp3/exp3b only: fallback (script default) keeps the normal folders; off/always are
           # isolated. RESULT_SUBDIR drives checkpoint seeding, store, verify, commit and upload.
           if [[ "$EXP" == "exp3" || "$EXP" == "exp3b" ]]; then
@@ -677,12 +722,19 @@ jobs:
           EFFECTIVE_SEEDS: ${{ steps.meta.outputs.effective_seeds }}
           EXP:            ${{ steps.meta.outputs.exp_id }}
           ORIG_EXP:       ${{ github.event.inputs.experiment }}
+          FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke || 'false' }}
+          FOUR_WAY_SMOKE_CASE: ${{ github.event.inputs.four_way_smoke_case || '3' }}
         run: |
           python3 - <<'PYEOF'
           import json, os, sys
 
           EXP          = os.environ["EXP"]
           N_SHARDS_RAW = int(os.environ["N_SHARDS"])
+          FOUR_WAY_SMOKE = os.environ.get("FOUR_WAY_SMOKE", "false").lower() == "true"
+          FOUR_WAY_SMOKE_CASE = os.environ.get("FOUR_WAY_SMOKE_CASE", "3")
+          if FOUR_WAY_SMOKE and EXP != "exp1_four_way_matched":
+              print("ERROR: four_way_smoke is valid only for exp1_four_way_matched.", file=sys.stderr)
+              sys.exit(1)
 
           EXP_SHARD_TABLE = {
               "exp1":               1,
@@ -715,7 +767,7 @@ jobs:
               "hybrid_all_domains": 1,
               "extrap":             1,
           }
-          N_SHARDS_DEFAULT = EXP_SHARD_TABLE.get(EXP, 1)
+          N_SHARDS_DEFAULT = 1 if FOUR_WAY_SMOKE else EXP_SHARD_TABLE.get(EXP, 1)
           if N_SHARDS_DEFAULT == 1:
               N_SHARDS = 1
               if N_SHARDS_RAW not in (1,):
@@ -736,6 +788,14 @@ jobs:
                         f"table={N_SHARDS_DEFAULT} using={N_SHARDS} "
                         f"(table default enforced as minimum)")
           OVERRIDE     = os.environ["OVERRIDE"].split() if os.environ["OVERRIDE"].strip() else []
+          if FOUR_WAY_SMOKE:
+              if FOUR_WAY_SMOKE_CASE not in {str(i) for i in range(15)}:
+                  print(f"ERROR: invalid four_way_smoke_case={FOUR_WAY_SMOKE_CASE!r}; expected 0..14.", file=sys.stderr)
+                  sys.exit(1)
+              if OVERRIDE:
+                  print("ERROR: use four_way_smoke_case, not task_ids_override, for Core-15 smoke.", file=sys.stderr)
+                  sys.exit(1)
+              OVERRIDE = [FOUR_WAY_SMOKE_CASE]
           SEEDS        = [s.strip() for s in os.environ["EFFECTIVE_SEEDS"].split(",") if s.strip()]
           NOISE_LEVELS = [l.strip() for l in os.environ["NOISE_LEVELS"].split(",") if l.strip()]
 
@@ -842,9 +902,15 @@ jobs:
           }
 
           all_ids = OVERRIDE if OVERRIDE else registry.get(EXP, [])
-          if EXP == "exp1_four_way_matched" and all_ids != [str(i) for i in range(15)]:
-              print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
-              sys.exit(1)
+          if EXP == "exp1_four_way_matched":
+              if FOUR_WAY_SMOKE:
+                  valid_core15_ids = {str(i) for i in range(15)}
+                  if len(all_ids) != 1 or all_ids[0] not in valid_core15_ids:
+                      print("ERROR: Core-15 smoke requires exactly one task_ids_override ID from 0..14.", file=sys.stderr)
+                      sys.exit(1)
+              elif all_ids != [str(i) for i in range(15)]:
+                  print("ERROR: exp1_four_way_matched requires the complete Core-15 task set 0..14; partial task_ids_override is not aggregatable.", file=sys.stderr)
+                  sys.exit(1)
           if EXP in ("exp2_protocol30_random_8020", "exp2_protocol30_pca_4060") and all_ids != MULTI30:
               print(f"ERROR: {EXP} requires the complete Protocol-30 task set M.01..M.30; partial task_ids_override is not aggregatable.", file=sys.stderr)
               sys.exit(1)
@@ -1410,6 +1476,8 @@ jobs:
           DRY_RUN:           ${{ github.event.inputs.dry_run || 'false' }}
           SHARD:             ${{ matrix.shard }}
           SPARSE_SEED_INPUT: ${{ github.event.inputs.sparse_seed || 'fallback' }}
+          FOUR_WAY_SMOKE:   ${{ github.event.inputs.four_way_smoke == 'true' && '1' || '' }}
+          FOUR_WAY_SMOKE_OUTPUT_DIR: ${{ github.event.inputs.four_way_smoke == 'true' && format('{0}/{1}/shard{2}', env.OUT_BASE, needs.plan.outputs.result_subdir, matrix.shard) || '' }}
         run: |
           set -euo pipefail
 
@@ -3025,6 +3093,7 @@ jobs:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
           EXP:           ${{ needs.plan.outputs.exp_id }}
           SHARD:         ${{ matrix.shard }}
+          FOUR_WAY_SMOKE: ${{ github.event.inputs.four_way_smoke == 'true' && '1' || '' }}
         run: |
           # Match the exact directory passed to upload-artifact below. Protocol-30
           # and Core-15 workers upload only their own isolated shard directory;
@@ -3048,7 +3117,50 @@ jobs:
             echo "  Check 'Run experiment tasks' and the artifact upload step logs above."
           fi
 
-          if [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
+          if [[ "${EXP}" == "exp1_four_way_matched" && "${FOUR_WAY_SMOKE:-}" == "1" ]]; then
+            python3 - "${UPLOAD_DIR}" <<'PY'
+          import json, sys
+          from pathlib import Path
+          output_dir = Path(sys.argv[1])
+          required = (
+              "exp1_four_way_matched_results.json",
+              "exp1_four_way_matched_checkpoint.json",
+              "exp1_four_way_matched_manifest.json",
+              "exp1_four_way_matched_summary.json",
+          )
+          missing = [name for name in required if not (output_dir / name).is_file()]
+          if missing:
+              raise SystemExit(f"missing Core-15 smoke outputs: {missing}")
+          manifest = json.loads((output_dir / required[2]).read_text())
+          summary = json.loads((output_dir / required[3]).read_text())
+          results = json.loads((output_dir / required[0]).read_text())
+          equation_rows = {
+              key: row for key, row in results.items()
+              if key != "__run_metadata__" and isinstance(row, dict) and isinstance(row.get("methods"), dict)
+          }
+          if manifest.get("smoke_test") is not True or manifest.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 output is not marked artifact-only smoke")
+          if len(manifest.get("assigned_equation_ids", [])) != 1 or len(equation_rows) != 1:
+              raise SystemExit(f"expected exactly one equation row; manifest={manifest.get('assigned_equation_ids')} rows={list(equation_rows)}")
+          methods = next(iter(equation_rows.values()))["methods"]
+          expected = {"hybrid_llm_pysr", "llm_only", "pysr_only", "nn_only"}
+          if set(methods) != expected:
+              raise SystemExit(f"four-arm records missing/extra: expected={sorted(expected)} actual={sorted(methods)}")
+          malformed = [name for name in sorted(expected)
+                       if not isinstance(methods[name], dict)
+                       or not isinstance(methods[name].get("success"), bool)
+                       or (methods[name].get("success") is False and not methods[name].get("error"))]
+          if malformed:
+              raise SystemExit(f"arm records lack an explicit success/failure outcome: {malformed}")
+          failed = [name for name in sorted(expected) if methods[name].get("success") is not True]
+          if failed:
+              details = {name: methods[name].get("error") for name in failed}
+              raise SystemExit(f"one-case smoke detected failed method arm(s): {details}")
+          if summary.get("smoke_test") is not True or summary.get("official_aggregate_eligible") is not False:
+              raise SystemExit("Core-15 smoke summary is not marked artifact-only")
+          print("Validated Core-15 one-equation smoke artifact: all four arm records present; not eligible for official aggregation.")
+          PY
+          elif [[ "${EXP}" == "exp2_protocol30_smoke_random_8020" || "${EXP}" == "exp2_protocol30_smoke_pca_4060" ]]; then
             python3 - "${UPLOAD_DIR}/protocol30_shard_manifest.json" "${UPLOAD_DIR}" <<'PY'
           import json, sys
           from pathlib import Path
@@ -3079,7 +3191,7 @@ jobs:
           retention-days: ${{ github.event.inputs.experiment == 'exp1-provenance' && 90 || 30 }}
 
       - name: Commit and push shard results to repo
-        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
+        if: ${{ success() && github.event.inputs.fresh_mode != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_random_8020' && needs.plan.outputs.exp_id != 'exp2_protocol30_smoke_pca_4060' }}
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
@@ -3406,7 +3518,7 @@ jobs:
   exp1_four_way_matched_aggregate:
     name: "Aggregate - Core-15 four-way (validate five shards + paired summary)"
     needs: [plan, worker]
-    if: ${{ always() && github.event.inputs.dry_run != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
+    if: ${{ always() && github.event.inputs.dry_run != 'true' && github.event.inputs.four_way_smoke != 'true' && needs.plan.outputs.exp_id == 'exp1_four_way_matched' && needs.worker.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
