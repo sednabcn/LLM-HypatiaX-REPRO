@@ -254,7 +254,8 @@ def main():
                 )
                 code = raw.get("python_code", "")
                 baseline.validate_formula_signature(code, VAR_NAMES)
-                if not raw.get("llm_called") or not raw.get("temperature_sent"):
+                if (not raw.get("llm_called") or not raw.get("temperature_sent")
+                        or raw.get("temperature_requested") != TEMPERATURE):
                     raise RuntimeError("zero-shot control did not confirm a live LLM response at the protocol temperature")
                 row["response_sha256"] = sha(raw.get("raw_response", ""))
                 row["prompt_sha256"] = raw.get("prompt_sha256")
@@ -272,6 +273,8 @@ def main():
                 row["first_response_sha256"] = first["response_sha256"]
                 row["first_formula"] = first["formula"]
                 row["first_usage"] = first["usage"]
+                row["first_temperature_requested"] = first["temperature_requested"]
+                row["first_temperature_sent"] = first["temperature_sent"]
                 row["api_calls"] = 1
                 final = first
                 if key == "llm_only_train_feedback":
