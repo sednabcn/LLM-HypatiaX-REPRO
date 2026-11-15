@@ -18,6 +18,9 @@ SCRIPTS_DIR="${SCRIPTS_DIR:-${REPO_ROOT}/scripts}"
 # Export them so it cannot silently resolve repository-relative paths as "/...".
 export REPO_ROOT EXPERIMENTS_DIR GENERATION_DIR CORE_DIR ANALYSIS_DIR SCRIPTS_DIR
 
+# Canonical LLM sampling contract; keep shell, Python and YAML profiles aligned.
+export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
+
 export PYSR_TOURNAMENT_SIZE=3
 export PYSR_CROSSOVER=0.9
 export PYSR_MUTATION=0.1
