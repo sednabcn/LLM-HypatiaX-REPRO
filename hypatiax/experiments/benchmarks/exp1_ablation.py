@@ -134,8 +134,12 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
-# Core-15 protocol: all LLM arms use a fixed sampling temperature.
-LLM_TEMPERATURE    = 0.25
+# Core-15 protocol: read the shared runner setting, then fail closed if it drifts.
+LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
+if not np.isfinite(LLM_TEMPERATURE) or LLM_TEMPERATURE != 0.25:
+    raise ValueError(
+        f"Core-15 requires LLM_TEMPERATURE=0.25; got {LLM_TEMPERATURE!r}"
+    )
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
