@@ -124,8 +124,6 @@ jobs:
         run: python -m pytest -q hypatiax/experiments/tests/test_result_subdir_map.py
       - name: Run LLM provenance and temperature contract regressions
         run: python -m pytest -q hypatiax/experiments/tests/test_hypatia_llm_provenance.py hypatiax/experiments/tests/test_llm_call_protocol.py
-      - name: Run non-finite routing and failure-gate regressions
-        run: PYTHONPATH=. python scripts/audit_checks/test_nonfinite_paths.py
       - name: Run Core-295 catalogue and shard-planner safeguards
         run: >-
           python -m pytest -q
@@ -226,6 +224,8 @@ jobs:
           HYPATIAX_STRICT: "1"
           PYTHONHASHSEED: "0"
         run: timeout 600s python -m pytest -q -ra --timeout=600 --junitxml=pytest-report.xml
+      - name: Run non-finite routing and failure-gate regressions
+        run: PYTHONPATH=. python scripts/audit_checks/test_nonfinite_paths.py
       - name: Upload full test report and environment provenance
         if: always()
         uses: actions/upload-artifact@v4
