@@ -23,6 +23,7 @@ seeds:
   portfolio_variance: [42, 99, 123, 777, 2024]
 
 llm_model:     "claude-sonnet-4-6"
+llm_temperature: 0.25
 llm_retries:   3
 llm_k_runs:    30
 

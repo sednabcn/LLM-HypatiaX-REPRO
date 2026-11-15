@@ -125,9 +125,8 @@ SEED               = _GLOBAL_SEED
 CONDITIONS         = ["pysr_only", "hypatia"] + (
     ["hypatia_nollm"] if os.environ.get("HYPATIAX_NOLLM_ARM") == "1" else [])
 MODEL_STRING       = os.environ.get("LLM_MODEL", "claude-sonnet-4-6")
-# AUDIT C1: temperature is now env-controlled and recorded in every hypatia row.
-# Default stays 0.3 (previous hard-coded value); the paper cites 0.25 -- decide and set LLM_TEMPERATURE.
-LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.3"))
+# Canonical protocol temperature is 0.25; explicit overrides are recorded per result row.
+LLM_TEMPERATURE    = float(os.environ.get("LLM_TEMPERATURE", "0.25"))
 
 # FIX-WALLCLOCK: per-condition wall-clocks.
 # hypatia runs _HYPATIA_MAX_RETRIES × PySR attempts — shared cap fired inside
@@ -566,7 +565,7 @@ def make_pysr(warm_start_expr=None, seed=42, niterations=None,
     kwargs = dict(
         niterations    = _niter,
         populations    = _pops,
-        population_size= 50,
+        population_size= 33,
         maxsize        = 15,
         parsimony      = 0.02,
         binary_operators = ["+", "-", "*", "/"],

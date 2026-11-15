@@ -21,6 +21,10 @@ export PYSR_PARETO_PRESSURE=0.001
 export PYSR_SEED="${PYSR_SEED:-42}"
 export PYSR_POPULATIONS="${PYSR_POPULATIONS:-30}"
 
+# Canonical live-LLM defaults; explicit overrides are recorded in result provenance.
+export LLM_MODEL="${LLM_MODEL:-claude-sonnet-4-6}"
+export LLM_TEMPERATURE="${LLM_TEMPERATURE:-0.25}"
+
 export NOISE_LEVELS="${NOISE_LEVELS:-0.0,0.05,0.1,0.5,1.0}"
 
 # Clean live-LLM run: the shared PureLLMBaseline reads these two flags.
