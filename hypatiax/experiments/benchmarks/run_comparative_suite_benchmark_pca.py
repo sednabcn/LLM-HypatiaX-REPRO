@@ -161,6 +161,8 @@ for _noisy_logger in ("httpx", "httpcore", "anthropic"):
 
 import numpy as np
 
+from hypatiax.experiments.benchmarks.pca_holdout_utils import compose_hybrid_predictor
+
 # --- BEGIN null-json helpers (AUDIT L37; identical in v2 and pca suites) -------
 # In memory MethodResult keeps -inf/inf (comparisons and routing unchanged).
 # Result EXPORTS write null + r2_status/rmse_status instead of bare -Infinity,
@@ -2185,54 +2187,80 @@ class HybridDeFiMethod(BaseMethod):
                         "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)"
                     )
 
-            # ── Build formula string ──────────────────────────────────────
+            # Reconstruct the exact route selected by EnhancedHybridSystemDeFi
+            # on training data. Never synthesize predictions from R²/RMSE:
+            # the PCA holdout must evaluate the actual fitted formula/NN route.
             _llm_code = (result.get("llm_result") or {}).get("python_code", "")
-            _formula  = _llm_code if _llm_code else f"[NN fallback — decision={decision}]"
+            _formula_code = result.get("fitted_code") or ""
+            if not _formula_code or _formula_code == "N/A":
+                _formula_code = _llm_code or ""
+            _formula = _formula_code if _formula_code else f"[NN route — decision={decision}]"
 
-            # ── NN residual correction (same as HybridAllDomainsMethod) ──────
-            # EnhancedHybridSystemDeFi delegates to PureLLMBaseline first.
-            # At temperature=0 this produces the same formula → same RMSE as
-            # PureLLM Baseline → flagged as duplicate.  Train a shallow MLP on
-            # the real residuals so this method is always data-independent.
-            _y_pred_defi = eval_.get("y_pred")
-            if _y_pred_defi is None:
-                _y_pred_defi = result.get("y_pred")
-            _nn_applied_defi = False
-            if _y_pred_defi is None and _llm_code:
-                _y_pred_defi = self._runner_eval_formula(_llm_code, X, var_names)
-            if _y_pred_defi is not None:
-                _y_pred_defi = np.asarray(_y_pred_defi, dtype=float).flatten()
-                if not np.all(np.isfinite(_y_pred_defi)):
-                    _y_pred_defi = None
-            if _y_pred_defi is None and np.isfinite(r2_val) and r2_val > 0 and np.isfinite(rmse_val):
-                try:
-                    _yc = y - float(np.mean(y))
-                    if float(np.sum(_yc**2)) > 0:
-                        _y_pred_defi = float(np.mean(y)) + float(np.sqrt(max(r2_val, 0.0))) * _yc
-                        _rng = np.random.default_rng(seed=int(abs(hash(description)) % (2**31)))
-                        _y_pred_defi = _y_pred_defi + _rng.normal(0, rmse_val * 0.01, size=len(y))
-                except Exception:
-                    _y_pred_defi = None
-            if (TORCH_AVAILABLE and _y_pred_defi is not None
-                    and np.all(np.isfinite(_y_pred_defi))
-                    and _finite(r2_val) and r2_val > -1.0):
-                _y_hybrid = self._nn_residual_fit(X, y, _y_pred_defi)
-                if _y_hybrid is not None and np.all(np.isfinite(_y_hybrid)):
-                    _r2h  = self._safe_r2(y, _y_hybrid)
-                    _rmh  = self._safe_rmse(y, _y_hybrid)
-                    if _finite(_r2h) and _r2h >= r2_val - 0.002:
-                        r2_val   = _r2h
-                        rmse_val = _rmh
-                        _nn_applied_defi = True
-                        self._log(f"NN residual correction applied R²={r2_val:.4f}")
+            _formula_predictor = None
+            if _formula_code and _formula_code != "N/A":
+                _train_formula_pred = self._runner_eval_formula(
+                    _formula_code, X, var_names
+                )
+                if _train_formula_pred is not None:
+                    def _formula_predictor(X_new, _code=_formula_code):
+                        _pred = self._runner_eval_formula(
+                            _code, np.asarray(X_new, dtype=float), var_names
+                        )
+                        if _pred is None:
+                            raise ValueError("selected formula could not be evaluated on PCA holdout")
+                        return _pred
 
+            _nn_predictor = None
+            _nn_model = result.get("nn_model")
+            _scaler_X = result.get("scaler_X")
+            _scaler_y = result.get("scaler_y")
+            if _nn_model is not None and _scaler_X is not None and _scaler_y is not None:
+                def _nn_predictor(X_new, _model=_nn_model,
+                                  _sx=_scaler_X, _sy=_scaler_y):
+                    _X_new = np.asarray(X_new, dtype=float)
+                    if (
+                        _X_new.ndim != 2
+                        or _X_new.shape[1] != len(var_names)
+                        or not np.isfinite(_X_new).all()
+                    ):
+                        raise ValueError("selected NN received invalid PCA holdout features")
+                    _X_scaled = _sx.transform(_X_new)
+                    import torch as _torch
+                    _model.eval()
+                    with _torch.no_grad():
+                        _scaled = _model(
+                            _torch.as_tensor(_X_scaled, dtype=_torch.float32)
+                        ).detach().cpu().numpy().reshape(-1, 1)
+                    _pred = _sy.inverse_transform(_scaled).reshape(-1)
+                    if not np.isfinite(_pred).all():
+                        raise ValueError("selected NN returned non-finite PCA holdout predictions")
+                    return _pred
+
+            _predict_fn = compose_hybrid_predictor(
+                decision=decision,
+                formula_predictor=_formula_predictor,
+                nn_predictor=_nn_predictor,
+                blend_weights=result.get("blend_weights"),
+            )
             _fdisp, _fhash, _ffull = BaseMethod._make_formula_result(str(_formula))
             _method_result = MethodResult(
-                method=self.name, success=True,
-                r2=r2_val, rmse=rmse_val,
-                formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
-                metadata={**_provenance(result), "decision": decision, "nn_applied": _nn_applied_defi},
+                method=self.name,
+                success=True,
+                r2=r2_val,
+                rmse=rmse_val,
+                formula=_fdisp,
+                formula_hash=_fhash,
+                formula_full=_ffull,
+                metadata={
+                    **_provenance(result),
+                    "decision": decision,
+                    "nn_applied": decision in ("nn", "ensemble"),
+                    "external_predictor_available": callable(_predict_fn),
+                    "external_predictor_route": decision,
+                },
             )
+            if callable(_predict_fn):
+                _method_result._predict_fn = _predict_fn
             return _method_result
 
         except Exception as exc:
@@ -2922,6 +2950,8 @@ try:
             pysr_timeout=_pysr_to,
             population_size=_pop_size,
             parsimony=_parsimony,
+            binary_operators=kwargs.get("binary_operators", ["+", "-", "*", "/", "^"]),
+            unary_operators=kwargs.get("unary_operators", ["sqrt"]),
             use_transcendental_compositions=_use_tc,
         )
         if _populations is not None:
@@ -3312,11 +3342,11 @@ class HybridSystemV50_2Method(BaseMethod):
         import math as _math
 
         _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
-        _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
-        _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
-        # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
-        # Iterations: scale to per-attempt timeout.  Cap raised to 1000 to match
-        # repro.yaml pysr.niterations=1000; actual execution bounded by pysr_timeout.
+        # Reserve 250 seconds for Julia startup, serialization and cleanup;
+        # divide the remaining method budget across the two bounded attempts.
+        _per_to_outer    = min(320, max(60, (_METHOD_TIMEOUT_SECS - 250) // _MAX_RETRIES_V50_2_OUTER))
+        # Scale iterations to the bounded per-attempt wall-clock budget.
+        # The timeout remains the hard stop if Julia/PySR iteration cost varies.
         _ITER_MAX  = max(40, min(1000, _per_to_outer - 30))
         _ITER_MIN  = 40
 
@@ -3360,7 +3390,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Three full searches could consume the entire outer budget before
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
-        _reserved_overhead = 400
+        _reserved_overhead = 250
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
         # Respect the caller's PySR timeout while ensuring the retry budget
@@ -3369,8 +3399,12 @@ class HybridSystemV50_2Method(BaseMethod):
 
         _tc_kwargs = {
             "max_iterations": _n_iter_adaptive,
-            "pysr_timeout":   _per_attempt_to,     # FIX: was _PYSR_TIMEOUT (600s) — now per-attempt
-            "max_retries":    _MAX_RETRIES_V50_2,     # FIX: was not forwarded at all
+            "pysr_timeout":   _per_attempt_to,
+            "max_retries":    _MAX_RETRIES_V50_2,
+            "populations":    30,
+            "population_size": 33,
+            "binary_operators": ["+", "-", "*", "/", "^"],
+            "unary_operators": ["sqrt"],
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
@@ -3430,6 +3464,15 @@ class HybridSystemV50_2Method(BaseMethod):
                     **_provenance(result),
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
+                    "search_config": {
+                        "max_iterations": _n_iter_adaptive,
+                        "pysr_timeout_seconds": _per_attempt_to,
+                        "max_retries": _MAX_RETRIES_V50_2,
+                        "populations": _tc_kwargs["populations"],
+                        "population_size": _tc_kwargs["population_size"],
+                        "binary_operators": list(_tc_kwargs["binary_operators"]),
+                        "unary_operators": list(_tc_kwargs["unary_operators"]),
+                    },
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
@@ -4302,7 +4345,9 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
+                _pca_r2_map      = rec.get("pca_test_r2", {})
                 for _mname, _mres in rec.get("results", {}).items():
+                    _method_meta = _mres.get("metadata") or {}
                     _row = {
                         "test":           _desc,
                         "domain":         _dom,
@@ -4310,6 +4355,14 @@ class ProtocolBenchmarkSuite:
                         "formula":        _mres.get("formula", ""),
                         "r2":             _mres.get("r2"),
                         "rmse":           _mres.get("rmse"),
+                        "pca_test_r2":    _pca_r2_map.get(_mname),
+                        "pca_split_protocol": rec.get("pca_split_protocol"),
+                        "pca_n_train":    rec.get("pca_n_train"),
+                        "pca_n_test":     rec.get("pca_n_test"),
+                        "external_holdout_status": _mres.get("external_holdout_status"),
+                        "external_holdout_error": _mres.get("external_holdout_error"),
+                        "provenance_status": _method_meta.get("provenance_status"),
+                        "exclude_from_reported_results": _method_meta.get("exclude_from_reported_results", False),
                         "runtime":        _mres.get("time"),
                         "success":        _mres.get("success", False),
                         "llm_called":     _mres.get("llm_called"),    # B2
