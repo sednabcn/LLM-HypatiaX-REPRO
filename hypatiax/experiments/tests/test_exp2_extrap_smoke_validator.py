@@ -4,7 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts" / "ci" / "validate_exp2_extrap_smoke.py"
 SPEC = importlib.util.spec_from_file_location("exp2_extrap_smoke_validator", SCRIPT)
 assert SPEC and SPEC.loader
