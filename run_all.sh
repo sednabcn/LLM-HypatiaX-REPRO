@@ -1652,6 +1652,10 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 
 
 run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab 16-18)" bash -c "
+  _EXP2_RESUME_ARG=--resume
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2'
   for DOMAIN_ID in ${FEYNMAN_DOMAINS}; do
@@ -1682,7 +1686,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --no-llm-cache \
         --checkpoint-name \"feynman_exp2_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
     || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -1983,13 +1987,20 @@ PYEOF_FINGERPRINT_2
 
 
 
-run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
+run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analysis in DEV)" bash -c "
+  _EXP2_RESUME_ARG=--resume
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
+  set -euo pipefail
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
 
   _EXT_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
   _EXT_SHARD=\${SHARD_INDEX:-0}
   ACTIVE_DOMAINS=\"\${DOMAIN_FILTER:-${FEYNMAN_DOMAINS}}\"
+  _EXT_RUN_MARKER=$(mktemp)
+  touch "\${_EXT_RUN_MARKER}"
   for DOMAIN_ID in \${ACTIVE_DOMAINS}; do
     echo '=== exp2_feynman_extrap: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
@@ -2013,7 +2024,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"feynman_extrap_checkpoint_\${DOMAIN_ID}\" \
         --output-dir \"\${_EXT_DIR}\" \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
     || { echo '::error::exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -2022,42 +2033,41 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   while IFS= read -r _pf; do
     _pfn=\$(basename \"\${_pf}\")
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
-      || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" \
-      || true
-  done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' 2>/dev/null)
+      || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 
+  done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' -newer "\${_EXT_RUN_MARKER}" 2>/dev/null)
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
   _BENCH_EXT_SRC=\"\${_EXT_DIR}/benchmark_results_extrap.json\"
-  if [ ! -f \"\${_BENCH_EXT_SRC}\" ]; then
-    _BENCH_EXT_SRC=\"\${RESULTS_DIR}/comparison_results/benchmark_results_extrap.json\"
-    if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
-      echo \"WARNING: benchmark_results_extrap.json found in comparison_results/ root, not \${_EXT_DIR} — script may be an older/unpatched version (expected it to honor --output-dir).\"
-    fi
+  if [[ ! -f "\${_BENCH_EXT_SRC}" || ! "\${_BENCH_EXT_SRC}" -nt "\${_EXT_RUN_MARKER}" ]]; then
+    echo \"::error::benchmark_results_extrap.json missing from the current exp2_extrap output directory; refusing a stale shard/root fallback.\"
+    exit 1
   fi
-  if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
-    _BENCH_EXT_DST=\"\${_EXT_DIR}/benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
-    cp \"\${_BENCH_EXT_SRC}\" \"\${_BENCH_EXT_DST}\"
-    echo \"[E6-guard] copied \${_BENCH_EXT_SRC} -> benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
-  else
-    echo \"WARNING: benchmark_results_extrap.json not found in \${_EXT_DIR} or \${RESULTS_DIR}/comparison_results\"
-  fi
+  _BENCH_EXT_DST=\"\${_EXT_DIR}/benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
+  cp \"\${_BENCH_EXT_SRC}\" \"\${_BENCH_EXT_DST}\"
+  echo \"[E6-guard] copied \${_BENCH_EXT_SRC} -> benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
 
   echo '=== exp2_feynman_extrap verification ==='
   find \"\${_EXT_DIR}\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | sort || echo '  (none yet)'
   COUNT_EXTRAP=\$(find \"\${_EXT_DIR}\" \
-    -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
+    -name 'protocol_core_extrap_*.json' -newer "\${_EXT_RUN_MARKER}" 2>/dev/null | wc -l)
   COUNT_BENCH_EXTRAP=\$(find \"\${_EXT_DIR}\" \
     -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | wc -l)
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
+  read -r -a _DOMAIN_ARRAY <<< "\${ACTIVE_DOMAINS}"
+  EXPECTED_DOMAINS=\${#_DOMAIN_ARRAY[@]}
+  if [[ "\${COUNT_EXTRAP}" -ne "\${EXPECTED_DOMAINS}" ]]; then
+    echo "::error::Exp2 extrapolation wrote \${COUNT_EXTRAP} current-run protocol files for \${EXPECTED_DOMAINS} assigned domains."
+    exit 1
+  fi
   if [[ \"\${COUNT_EXTRAP}\" -eq 0 && \"\${COUNT_SAVED}\" -gt 0 ]]; then
     echo \"::error:: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
     exit 1
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
-    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'\n    exit 1
+    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — the far-region result set is incomplete'\n    exit 1
   else
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
@@ -2065,61 +2075,26 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'\n    exit 1
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
-    echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
+    echo '    post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV.'
   fi
 "
 
 (
   set -euo pipefail
-  _SCRIPT_MERGE="${REPO_ROOT}/.github/scripts/merge_extrap_into_benchmark.py"
-  _EXTRAP_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-  _BENCHMARK_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2"
-  _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
-
-  mkdir -p "${_EXTRAP_DIR}"
-
-  if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
-    echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
-    echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
-  else
-    _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
-    if [[ -z "${_BENCH_EXT}" ]]; then
-      echo "[SKIP] benchmark_results_extrap*.json not found — run exp2_feynman_extrap first."
-    else
-      echo "[merge] Running merge_extrap_into_benchmark.py → ablation_paired.json"
-      python3 "${_SCRIPT_MERGE}" \
-        --extrap-benchmark-dir "${_EXTRAP_DIR}" \
-        --benchmark-dir        "${_BENCHMARK_DIR}" \
-        --output               "${_PAIRED}" \
-        2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || { echo "::error::merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"; exit 1; }
-      if [[ -f "${_PAIRED}" ]]; then
-        _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
-        echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
-      fi
-    fi
-  fi
-
-  _SUMMARY="${_EXTRAP_DIR}/exp2_extrap_summary.json"
-  python3 - "${_EXTRAP_DIR}" "${_PAIRED}" "${_SUMMARY}" <<'PYEOF'
+  _EXTRAP_DIR="\${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
+  _SUMMARY="\${_EXTRAP_DIR}/exp2_extrap_summary.json"
+  python3 - "\${_EXTRAP_DIR}" "\${_SUMMARY}" "\${_EXT_RUN_MARKER}" <<'PYEOF'
 import json, sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-extrap_dir, paired_path, summary_path = (Path(p) for p in sys.argv[1:4])
-
-protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json"))
-bench_files    = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json"))
-saved_dir      = extrap_dir / "_saved"
-saved_count    = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
-
-paired_exists = paired_path.is_file()
-paired_count  = None
-if paired_exists:
-    try:
-        paired_count = len(json.loads(paired_path.read_text()))
-    except Exception:
-        paired_count = None
+extrap_dir, summary_path, run_marker = (Path(p) for p in sys.argv[1:4])
+protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
+bench_files = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
+saved_dir = extrap_dir / "_saved"
+saved_count = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
+canonical_benchmark = extrap_dir / "benchmark_results_extrap.json"
+complete = bool(protocol_files) and canonical_benchmark.is_file() and canonical_benchmark.stat().st_mtime > run_marker.stat().st_mtime
 
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -2129,21 +2104,22 @@ summary = {
     "protocol_core_extrap_count": len(protocol_files),
     "protocol_core_extrap_saved_count": saved_count,
     "benchmark_results_extrap_files": bench_files,
-    "ablation_paired_json": {
-        "path": str(paired_path),
-        "present": paired_exists,
-        "record_count": paired_count,
+    "worker_outputs_complete": complete,
+    "post_run_analysis": {
+        "repository": "sednabcn/LLM-HypatiaX-DEV",
+        "status": "delegated_to_post_run_repository",
+        "note": "REPRO produces reproducible worker outputs; cross-method pairing and downstream analysis run separately in DEV."
     },
-    "status": "ok" if (protocol_files and bench_files) else "incomplete",
+    "status": "complete" if complete else "incomplete",
 }
-
-summary_path.write_text(json.dumps(summary, indent=2))
-print(f"[summary] wrote {summary_path}  (status={summary['status']}, "
-      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)}, "
-      f"paired_records={paired_count})")
+summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
+print(f"[summary] wrote {summary_path} (status={summary['status']}, "
+      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})"
+run_marker.unlink(missing_ok=True)
+if not complete:
+    raise SystemExit("Exp2 extrapolation worker outputs are incomplete")
 PYEOF
 )
-
 
 run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
   set -euo pipefail
@@ -2263,6 +2239,10 @@ run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protoc
     --variant pca_4060
 "
 run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
+  _EXP2_RESUME_ARG=--resume
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/all-domains-random-80-20'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
@@ -2287,7 +2267,7 @@ run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six method
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"exp2_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/comparison_results/all-domains-random-80-20' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/all-domains-random-80-20/exp2_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -2356,6 +2336,10 @@ PYEOF
 "
  
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
+  _EXP2_RESUME_ARG=--resume
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/five_systems/exp2_five'
   EXP2_DOMAINS=\$(python3 -c 'from hypatiax.protocols.experiment_protocol_all_30 import ExperimentProtocolAll; print(" ".join(ExperimentProtocolAll.get_all_domains()))')
@@ -2381,7 +2365,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --methods 1 2 4 5 6 \
         --checkpoint-name \"exp2_five_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
