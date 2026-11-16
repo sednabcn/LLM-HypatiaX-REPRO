@@ -121,12 +121,27 @@ def build_extrap_split(
     X_far / y_far may have length 0 when no samples fall within the multiplier
     boundary — callers must guard with `len(X_far) > 1` before using them.
     """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float).reshape(-1)
+    if X.ndim != 2 or X.shape[1] < 1 or X.shape[0] != y.shape[0]:
+        raise ValueError("extrapolation split requires aligned 2-D X and 1-D y arrays")
+    if X.shape[0] < 4:
+        raise ValueError("extrapolation split requires at least four samples")
+    if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
+        raise ValueError("extrapolation split inputs must be finite")
+    if not math.isfinite(float(train_frac)) or not 0.0 < float(train_frac) < 1.0:
+        raise ValueError("train_frac must be finite and strictly between 0 and 1")
+    if not math.isfinite(float(multiplier)) or float(multiplier) <= 0.0:
+        raise ValueError("multiplier must be finite and greater than zero")
+
     # Sort by first variable to get a contiguous training region.
     order    = np.argsort(X[:, 0])
     Xs       = X[order]
     ys       = y[order]
     n        = len(Xs)
-    split    = max(1, int(n * train_frac))
+    split    = int(n * train_frac)
+    if split < 2 or n - split < 2:
+        raise ValueError(f"split leaves too few train/far rows: train={split}, far={n - split}")
     X_train  = Xs[:split]
     y_train  = ys[:split]
 
@@ -142,6 +157,8 @@ def build_extrap_split(
     far_mask     = far_all[:, 0] <= far_ceiling
     X_far        = far_all[far_mask]
     y_far        = far_y_all[far_mask]
+    if len(X_far) < 2:
+        raise ValueError(f"far region has only {len(X_far)} rows after multiplier clipping")
     n_clipped    = int((~far_mask).sum())
 
     if n_clipped > 0:
