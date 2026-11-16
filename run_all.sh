@@ -2030,7 +2030,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
   _BENCH_EXT_SRC=\"\${_EXT_DIR}/benchmark_results_extrap.json\"
-  if [[ ! -f \"\${_BENCH_EXT_SRC}\" ]]; then
+  if [[ ! -f "\${_BENCH_EXT_SRC}" || ! "\${_BENCH_EXT_SRC}" -nt "\${_EXT_RUN_MARKER}" ]]; then
     echo \"::error::benchmark_results_extrap.json missing from the current exp2_extrap output directory; refusing a stale shard/root fallback.\"
     exit 1
   fi
@@ -2099,6 +2099,7 @@ summary = {
 }
 summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
 print(f"[summary] wrote {summary_path} (status={summary['status']}, "
+      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})"
 run_marker.unlink(missing_ok=True)
       f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})")
 if not complete:
