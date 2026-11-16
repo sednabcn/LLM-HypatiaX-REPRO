@@ -1653,6 +1653,10 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 
 run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab 16-18)" bash -c "
   _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
+  _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
   if [[ "\${RESUME:-true}" != "true" || "\${CLEAN_LLM_RERUN:-false}" == "true" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -1989,6 +1993,10 @@ PYEOF_FINGERPRINT_2
 
 run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
   _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
+  _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
   if [[ "\${RESUME:-true}" != "true" || "\${CLEAN_LLM_RERUN:-false}" == "true" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -2234,6 +2242,10 @@ run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protoc
 "
 run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
   _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
+  _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
   if [[ "\${RESUME:-true}" != "true" || "\${CLEAN_LLM_RERUN:-false}" == "true" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -2330,6 +2342,10 @@ PYEOF
 "
  
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
+  _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
+  if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
+    _EXP2_RESUME_ARG="--force-fresh"
+  fi
   _EXP2_RESUME_ARG="\${_EXP2_RESUME_ARG}"
   if [[ "\${RESUME:-true}" != "true" || "\${CLEAN_LLM_RERUN:-false}" == "true" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
