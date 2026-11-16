@@ -199,8 +199,8 @@ def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_
     assert "::error::required ablation artifact" in runner
     assert "::error::[instability]" in runner
     assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
-    assert "::error::benchmark_results_extrap.json not found" in runner
-    assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" in runner
+    assert "::error::benchmark_results_extrap.json missing from the current exp2_extrap output directory" in runner
+    assert "post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV." in runner
 
 
 def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
@@ -303,3 +303,35 @@ def test_all_portfolio_seed_parsers_allow_empty_unsharded_task_ids():
     exp1b = runner[exp1b_start:exp1b_end]
     assert "running full default seed list" in exp1b
     assert "_SHARD_SEEDS='42,99,123,777,2024'" in exp1b
+
+
+def test_exp2_extrap_rejects_stale_files_and_delegates_post_run_analysis():
+    runner = (ROOT / "run_all.sh").read_text()
+    start = runner.index('run exp2_feynman_extrap "')
+    end = runner.find("\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert "_EXT_RUN_MARKER=$(mktemp)" in block
+    assert "EXPECTED_DOMAINS=" in block
+    assert '-ne "\\${EXPECTED_DOMAINS}"' in block
+    assert '-newer "\\${_EXT_RUN_MARKER}"' in block
+    assert ' -nt "\\${_EXT_RUN_MARKER}"' in block
+    assert "ablation_paired.json" not in block
+    assert "ci_analysis.yml" not in block
+    check = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
+    assert '"exp2_feynman_extrap": ["benchmark_results_extrap*.json", "protocol_core_extrap_*.json",' in check
+    assert '"exp2_extrap_summary.json"]' in check
+
+
+def test_exp2_resume_false_skips_cached_and_committed_checkpoints():
+    workflow = (ROOT / ".github/workflows/ci_runner_repro.yml").read_text()
+    assert "github.event.inputs.resume != 'false'" in workflow
+    assert 'resume = os.environ.get("RESUME", "true").lower() == "true"' in workflow
+    assert 'if resume and os.path.exists(ckpt_path):' in workflow
+    runner = (ROOT / "run_all.sh").read_text()
+    for step in ("exp2_feynman", "exp2_feynman_extrap", "exp2", "exp2_five"):
+        start = runner.index(f'run {step} \\"')
+        end = runner.find("\nrun ", start + 1)
+        block = runner[start: end if end >= 0 else len(runner)]
+        assert "_EXP2_RESUME_ARG=--resume" in block
+        assert '_EXP2_RESUME_ARG=\\\"--force-fresh\\\"' in block
+        assert '\\${_EXP2_RESUME_ARG}' in block
