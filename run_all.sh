@@ -2056,6 +2056,12 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | wc -l)
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
+  read -r -a _DOMAIN_ARRAY <<< "\${ACTIVE_DOMAINS}"
+  EXPECTED_DOMAINS=\${#_DOMAIN_ARRAY[@]}
+  if [[ "\${COUNT_EXTRAP}" -ne "\${EXPECTED_DOMAINS}" ]]; then
+    echo "::error::Exp2 extrapolation wrote \${COUNT_EXTRAP} current-run protocol files for \${EXPECTED_DOMAINS} assigned domains."
+    exit 1
+  fi
   if [[ \"\${COUNT_EXTRAP}\" -eq 0 && \"\${COUNT_SAVED}\" -gt 0 ]]; then
     echo \"::error:: primary protocol_core_extrap_*.json were deleted (prune_old E2); \${COUNT_SAVED} copies survived in _saved/ — restore with:\"
     exit 1
