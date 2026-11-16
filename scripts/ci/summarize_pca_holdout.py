@@ -62,11 +62,14 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
             description = str(test.get("description") or "").strip()
             if not description:
                 raise ValueError(f"{path.name}: test record has no description")
-            if description in seen_in_file:
+            domain = str(test.get("domain") or "")
+            case_key = (domain, description)
+            if case_key in seen_in_file:
                 raise ValueError(
-                    f"Duplicate PCA equation record {description!r} within {path.name}"
+                    f"Duplicate PCA equation record {description!r} in domain "
+                    f"{domain!r} within {path.name}"
                 )
-            seen_in_file.add(description)
+            seen_in_file.add(case_key)
 
             results = test.get("results") or {}
             pca_scores = test.get("pca_test_r2") or {}
@@ -80,11 +83,11 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
                 "results": results,
                 "pca_scores": pca_scores,
             }
-            previous = cases.get(description)
+            previous = cases.get(case_key)
             if previous is None or file_timestamp >= previous["timestamp"]:
                 if previous is not None:
                     superseded_case_records += 1
-                cases[description] = candidate
+                cases[case_key] = candidate
             else:
                 superseded_case_records += 1
 
