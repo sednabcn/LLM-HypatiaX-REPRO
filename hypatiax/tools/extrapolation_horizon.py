@@ -272,16 +272,21 @@ def plot_horizon_curves(records: Iterable[Mapping], metric: str = "far_r2",
     grouped = {}
     for record in records:
         value = record.get("metrics", {}).get(metric)
-        distance = record.get("evaluation", {}).get("distance")
+        evaluation = record.get("evaluation", {})
+        distance = evaluation.get("distance")
         if value is None or distance is None:
             continue
-        grouped.setdefault(record.get("method", "unspecified"), []).append((float(distance), float(value)))
+        method = record.get("method", "unspecified")
+        scenario = evaluation.get("strategy", "horizon")
+        moved = ",".join(evaluation.get("features_moved", []))
+        label = f"{method} | {scenario}" + (f" | {moved}" if moved else "")
+        grouped.setdefault(label, []).append((float(distance), float(value)))
     if not grouped:
         raise ValueError(f"No finite values found for metric {metric!r}.")
     figure, axis = plt.subplots()
-    for method, points in sorted(grouped.items()):
+    for label, points in sorted(grouped.items()):
         points.sort(key=lambda pair: pair[0])
-        axis.plot([p[0] for p in points], [p[1] for p in points], marker="o", label=method)
+        axis.plot([p[0] for p in points], [p[1] for p in points], marker="o", label=label)
     axis.set_xlabel("Extrapolation distance (training-range widths)")
     axis.set_ylabel(metric.replace("_", " "))
     axis.set_title(title or f"{metric.replace('_', ' ')} vs extrapolation distance")
