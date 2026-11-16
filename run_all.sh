@@ -2082,44 +2082,11 @@ run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analys
 
 (
   set -euo pipefail
-  _EXTRAP_DIR="\${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-  _SUMMARY="\${_EXTRAP_DIR}/exp2_extrap_summary.json"
-  python3 - "\${_EXTRAP_DIR}" "\${_SUMMARY}" "\${_EXT_RUN_MARKER}" <<'PYEOF'
-import json, sys
-from pathlib import Path
-from datetime import datetime, timezone
-
-extrap_dir, summary_path, run_marker = (Path(p) for p in sys.argv[1:4])
-protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
-bench_files = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
-saved_dir = extrap_dir / "_saved"
-saved_count = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
-canonical_benchmark = extrap_dir / "benchmark_results_extrap.json"
-complete = bool(protocol_files) and canonical_benchmark.is_file() and canonical_benchmark.stat().st_mtime > run_marker.stat().st_mtime
-
-summary = {
-    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-    "step": "exp2_feynman_extrap",
-    "extrap_dir": str(extrap_dir),
-    "protocol_core_extrap_files": protocol_files,
-    "protocol_core_extrap_count": len(protocol_files),
-    "protocol_core_extrap_saved_count": saved_count,
-    "benchmark_results_extrap_files": bench_files,
-    "worker_outputs_complete": complete,
-    "post_run_analysis": {
-        "repository": "sednabcn/LLM-HypatiaX-DEV",
-        "status": "delegated_to_post_run_repository",
-        "note": "REPRO produces reproducible worker outputs; cross-method pairing and downstream analysis run separately in DEV."
-    },
-    "status": "complete" if complete else "incomplete",
-}
-summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
-print(f"[summary] wrote {summary_path} (status={summary['status']}, "
-      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})"
-run_marker.unlink(missing_ok=True)
-if not complete:
-    raise SystemExit("Exp2 extrapolation worker outputs are incomplete")
-PYEOF
+  python3 '\${REPO_ROOT}/scripts/ci/validate_exp2_extrap_worker.py' \
+    --output-dir "\${_EXT_DIR}" \
+    --run-start-marker "\${_EXT_RUN_MARKER}" \
+    --expected-domains "\${ACTIVE_DOMAINS}"
+  rm -f "\${_EXT_RUN_MARKER}"
 )
 
 run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
