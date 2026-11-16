@@ -312,10 +312,12 @@ The prompt CLI now preserves and scores **both** extrapolation target sets:
    existing interpretation (mathematical-function recovery).
 2. **Noise-matched extrapolation** adds deterministic Gaussian noise using
    the benchmark's configured noise level (currently 0.05) multiplied by the
-   standard deviation of clean targets within each regime.
+   standard deviation of the full clean target vector returned by the same training-data generator, matching its noise-scale convention.
 
 Noise-matched targets use independent deterministic random streams with
-seed rule `equation_seed + 1999 + regime_index`. Clean targets are not
+seed rule `equation_seed + 1999 + regime_index`. Their shared noise standard
+deviation is `noise_level * std(y_clean_full)`, matching `generate_data()`;
+it is not recalculated separately for each extrapolation regime. Clean targets are not
 modified. Results are labelled `extrapolation_<regime>_clean` and
 `extrapolation_<regime>_noise_matched`; separate SHA-256 hashes and the
 noise-generation rule are recorded. Neither set is sent to the LLM.
