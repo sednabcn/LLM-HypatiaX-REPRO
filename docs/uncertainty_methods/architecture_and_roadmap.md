@@ -62,8 +62,8 @@ dependent; do not presume random exchangeability.
 |---|---|---|
 | \`ensemble.py\` | Implemented | Adapts supplied fitted members; disagreement is not automatically calibrated |
 | \`bootstrap.py\` | Implemented | Explicit factory-based pairs, residual, and moving-block resampling; percentile bounds quantify fitted-mean sampling spread, not calibrated future-observation intervals |
+| \`quantile_regression.py\` | Implemented | Explicit per-quantile factories; central conditional-quantile bounds and crossing diagnostics; no automatic calibration |
 | \`bayesian.py\` | Planned | Posterior and posterior-predictive summaries; credible intervals depend on model and prior |
-| \`quantile.py\` | Planned | Conditional quantile predictions; check quantile crossing and tail extrapolation |
 | \`shift_aware.py\` | Planned | Weighted/local/group calibration; requires assumptions and support overlap |
 | \`calibration.py\` | Partial | Split-conformal baseline exists separately; calibration adapters remain extensible |
 
@@ -71,9 +71,9 @@ dependent; do not presume random exchangeability.
 
 - **Phase 0:** contracts, estimate container, registries, evaluation, JSON schema,
   documentation, and side-effect-free contract validators.
-- **Phase 1:** adapters for supplied fitted ensembles and explicit bootstrap
-  resampling; next, quantile adapter with common contract tests.
-- **Phase 2:** Bayesian linear/GP adapters and posterior-predictive summaries.
+- **Phase 1:** adapters for supplied fitted ensembles, explicit bootstrap
+  resampling, and quantile regression; next, Bayesian linear/GP adapters.
+- **Phase 2:** Bayesian posterior and posterior-predictive summaries.
 - **Phase 3:** weighted/local/group conformal with effective sample size,
   overlap, and support diagnostics.
 - **Phase 4:** integrate estimates with existing horizon scenarios and compare
@@ -87,13 +87,6 @@ scope; handle invalid/missing outputs explicitly; emit schema-compatible
 records; include deterministic offline tests where possible; and avoid hidden
 fitting, tuning, or expensive jobs during reporting.
 
-## Non-goals of the ensemble adapter
-
-The ensemble adapter does not train or refit constituent predictors, select
-members, calibrate empirical spread, construct confidence intervals, or
-orchestrate horizon experiments. The supplied split-conformal baseline remains
-a separate calibration stage.
-
 ## Bootstrap-specific safeguards
 
 Bootstrap fitting is explicit and factory-based. Pairs resampling assumes
@@ -102,3 +95,12 @@ residual model; moving-block resampling assumes rows are pre-ordered and uses
 contiguous blocks only. The adapter's percentile intervals describe model
 sampling variability and do not include future observation noise or provide
 extrapolation coverage guarantees.
+
+## Quantile-regression safeguards
+
+Each quantile model is supplied by an independent factory and fit only on the
+explicit \`fit()\` call. Central bounds require the exact configured tail
+quantiles; missing levels are reported rather than interpolated. Quantile
+crossings are surfaced in diagnostics and are not silently rearranged. The
+resulting conditional-quantile intervals are not automatically calibrated and
+carry no extrapolation coverage guarantee.
