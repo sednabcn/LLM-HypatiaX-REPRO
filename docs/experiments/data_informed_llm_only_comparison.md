@@ -329,3 +329,77 @@ The already completed one-call result above remains unchanged. The added
 noise-matched metrics require rerunning the local CLI test; doing so makes
 one additional LLM request. No such request was made while implementing
 this change, and no new noisy metrics are claimed here.
+
+
+## Training-summary replication with noise-matched extrapolation (2026-11-16)
+
+After merging the CLI and dual-evaluation change (PR #132), the local
+one-case training-summary command was rerun successfully:
+
+```bash
+python scripts/test_formula_prompt.py --mode train-summary --case-id 3
+```
+
+The run used Allometric Scaling (case 3), benchmark seed 42 / data-generation
+seed 63, 160 training rows, 40 outer-test rows, 5% noise, Claude Sonnet 4.6,
+and temperature 0.25. It completed with exactly one Anthropic API call.
+
+The LLM returned the exact generating expression:
+
+```python
+def formula(M):
+    return 0.1 * M ** 0.75
+```
+
+### Metrics
+
+| Partition | R² | RMSE | MAE |
+|---|---:|---:|---:|
+| Training | 0.997736 | 0.039683 | 0.031733 |
+| Outer test | 0.997216 | 0.044361 | 0.035063 |
+| Near — clean | 1.000000 | 0.000000 | 0.000000 |
+| Medium — clean | 1.000000 | 0.000000 | 0.000000 |
+| Far — clean | 1.000000 | 0.000000 | 0.000000 |
+| Near — noise-matched | 0.984773 | 0.042431 | 0.034340 |
+| Medium — noise-matched | 0.999707 | 0.038507 | 0.030683 |
+| Far — noise-matched | 0.998319 | 0.039811 | 0.030688 |
+
+The noise-matched results are the relevant noisy extrapolation comparison.
+Near extrapolation is the most difficult of the three regimes, while medium
+and far remain above R² = 0.999 and 0.998 respectively. The clean partitions
+remain perfect because their targets are generated directly from the
+noiseless equation; they measure function recovery, not performance against
+noisy out-of-range observations.
+
+### Reproducibility and information boundary
+
+- Prompt SHA-256:
+  `9a6753e7a91861271514407eded85dca7330940b12c699ea97a0c0b690c1fa81`
+- Response SHA-256:
+  `80e03863617323f4a17f6787b452211c87099db81a64bda67058f999ee968f92`
+- Formula SHA-256:
+  `f600c58f39710321afce6227eed9f8b36f49dfd442208529db32ef5993b0370d`
+- Training-summary SHA-256:
+  `ff4a86f240543b1b677ab887026eada65cf9d5d45dcc1c58c3dbe82be1ec709b`
+- Clean extrapolation hashes:
+  - near: `5feb3c6dc6b197d087bad0d0ebcf7a071148b1221145c657293d819a5d30e96a`
+  - medium: `ccba21d712cd1b262f744da037861c585f06253d5059ac77c2c371fdf603c62a`
+  - far: `fb71ae7114f58e1e1289340a5007e9c47ff4c22d7053b04ca2d5483ea1a3a404`
+- Noise-matched extrapolation hashes:
+  - near: `5d551ba7c22d13e4581d5c0b1aac7332d56637c41aad57321e940f2a3f36b066`
+  - medium: `571af33b03764e8755c33e265154c57be72a31b559307ab8f3b266971f6a0a66`
+  - far: `a833d44c348852f70993cd48a4bd068e25dbb3b51fe633bf7f0d350ea68ef0a9`
+
+The run records that training-summary statistics were sent, but raw training
+rows, outer-test data, extrapolation data, and the ground-truth formula were
+not. No external fitting, optimizer, or PySR was used; retry count was zero.
+Noise-matched targets use the documented 5% benchmark scale based on the
+standard deviation of the full clean target vector, with independent
+deterministic per-regime random streams.
+
+This is a successful one-case replication, not a multi-equation or
+multi-seed validation. It strengthens the evidence for the training-summary
+strategy on this Allometric case but does not establish general Core-15
+superiority or justify replacing the zero-shot control. The result is
+evaluation/documentation only and does not change the official benchmark
+protocol or historical experiment aggregates.
