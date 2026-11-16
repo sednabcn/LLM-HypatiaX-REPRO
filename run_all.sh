@@ -1652,7 +1652,7 @@ run instability "Instability Index analysis (numerical only, no figures) -- SS10
 
 
 run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab 16-18)" bash -c "
-  _EXP2_RESUME_ARG=\${_EXP2_RESUME_ARG}
+  _EXP2_RESUME_ARG=--resume
   if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -1686,7 +1686,7 @@ run exp2_feynman "Feynman SR benchmark -- Phase 2 noisy protocol per-domain (Tab
         --no-llm-cache \
         --checkpoint-name \"feynman_exp2_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/comparison_results/feynman-tests/exp2' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
       2>&1 | tee -a '${RESULTS_DIR}/comparison_results/feynman-tests/exp2/exp2_run.log' \
     || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -1988,7 +1988,7 @@ PYEOF_FINGERPRINT_2
 
 
 run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
-  _EXP2_RESUME_ARG=\${_EXP2_RESUME_ARG}
+  _EXP2_RESUME_ARG=--resume
   if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -2024,7 +2024,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"feynman_extrap_checkpoint_\${DOMAIN_ID}\" \
         --output-dir \"\${_EXT_DIR}\" \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
       2>&1 | tee -a \"\${_EXT_DIR}/exp2_extrap_run.log\" \
     || { echo '::error::exp2_feynman_extrap domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -2233,7 +2233,7 @@ run exp2_protocol30_pca_4060_aggregate "Validate and aggregate manuscript Protoc
     --variant pca_4060
 "
 run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six methods (not manuscript Protocol-30)" bash -c "
-  _EXP2_RESUME_ARG=\${_EXP2_RESUME_ARG}
+  _EXP2_RESUME_ARG=--resume
   if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -2261,7 +2261,7 @@ run exp2 "All-domains 30-equation registry proxy -- random 80/20, all six method
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"exp2_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/comparison_results/all-domains-random-80-20' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
         2>&1 | tee -a '${RESULTS_DIR}/comparison_results/all-domains-random-80-20/exp2_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
@@ -2330,7 +2330,7 @@ PYEOF
 "
  
 run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod (Tab 1, §10.1)" bash -c "
-  _EXP2_RESUME_ARG=\${_EXP2_RESUME_ARG}
+  _EXP2_RESUME_ARG=--resume
   if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
   fi
@@ -2359,7 +2359,7 @@ run exp2_five "Five-System Comparison -- 5 Methods only, excl. HybridDeFiMethod 
         --methods 1 2 4 5 6 \
         --checkpoint-name \"exp2_five_checkpoint_\${DOMAIN_ID}\" \
         --output-dir '${RESULTS_DIR}/five_systems/exp2_five' \
-        --resume \
+        \${_EXP2_RESUME_ARG} \
         2>&1 | tee -a '${RESULTS_DIR}/five_systems/exp2_five/exp2_five_run.log' \
       || { echo '::error::domain '\${DOMAIN_ID}' exited non-zero'; exit 1; }
   done
