@@ -2021,6 +2021,7 @@ run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analys
         --populations ${PYSR_POPULATIONS} \
         --parsimony 0.01 \
         --noiseless \
+        --no-llm-cache \
         --threshold ${FEYNMAN_NOISELESS_THRESHOLD} \
         --checkpoint-name \"feynman_extrap_checkpoint_\${DOMAIN_ID}\" \
         --output-dir \"\${_EXT_DIR}\" \
