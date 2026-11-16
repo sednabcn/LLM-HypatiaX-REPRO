@@ -292,7 +292,10 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
         "raw_training_rows_sent_to_model": False,
         "train_data_sha256": driver._array_hash(X_train, y_train),
         "outer_test_data_sha256": driver._array_hash(X_test, y_test),
-        "extrapolation_data_sha256": {\n            regime: driver._array_hash(X_e, y_e)\n            for regime, (X_e, y_e) in extrapolation.items()\n        },
+        "extrapolation_data_sha256": {
+            regime: driver._array_hash(X_e, y_e)
+            for regime, (X_e, y_e) in extrapolation.items()
+        },
         "metrics": metric_results,
         "metric_errors": metric_errors,
         "protocol": {
