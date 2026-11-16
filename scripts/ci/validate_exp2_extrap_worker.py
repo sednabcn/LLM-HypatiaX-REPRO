@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Validate one REPRO worker's Exp2 Feynman extrapolation outputs.
+
+This is an offline structural/provenance gate. It does not run experiments,
+load model backends, or call any LLM API.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+EXPECTED_METHOD_COUNT = 6
+
+
+def _reject_nonfinite(token: str) -> None:
+    raise ValueError(f"non-standard JSON numeric token: {token}")
+
+
+def _load_strict_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_nonfinite)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def validate_worker_outputs(
+    output_dir: Path,
+    run_start_marker: Path,
+    expected_domains: list[str],
+) -> dict[str, Any]:
+    output_dir = output_dir.resolve()
+    marker_time = run_start_marker.stat().st_mtime
+    expected_domains = [domain for domain in expected_domains if domain]
+    if not expected_domains or len(expected_domains) != len(set(expected_domains)):
+        raise ValueError("expected domains must be non-empty and unique")
+
+    protocol_files = sorted(
+        path for path in output_dir.glob("protocol_core_extrap_*.json")
+        if path.stat().st_mtime > marker_time
+    )
+    if len(protocol_files) != len(expected_domains):
+        raise ValueError(
+            f"expected one current-run protocol file per assigned domain "
+            f"({len(expected_domains)}), found {len(protocol_files)}"
+        )
+
+    expected_domain_set = set(expected_domains)
+    expected_identities: set[tuple[str, str, str]] = set()
+    methods_reference: list[str] | None = None
+    equation_domains: set[str] = set()
+    protocol_manifest: list[dict[str, Any]] = []
+
+    for protocol_path in protocol_files:
+        protocol = _load_strict_json(protocol_path)
+        methods = protocol.get("methods")
+        tests = protocol.get("tests")
+        if not isinstance(methods, list) or len(methods) != EXPECTED_METHOD_COUNT:
+            raise ValueError(f"{protocol_path.name}: expected {EXPECTED_METHOD_COUNT} methods")
+        if len(methods) != len(set(methods)):
+            raise ValueError(f"{protocol_path.name}: duplicate method names")
+        if methods_reference is None:
+            methods_reference = methods
+        elif methods != methods_reference:
+            raise ValueError(f"{protocol_path.name}: method roster differs between domains")
+        if not isinstance(tests, list) or not tests:
+            raise ValueError(f"{protocol_path.name}: tests must be a non-empty list")
+        if protocol.get("total_tests") != len(tests):
+            raise ValueError(
+                f"{protocol_path.name}: total_tests={protocol.get('total_tests')} "
+                f"but tests has {len(tests)} records"
+            )
+
+        file_domains: set[str] = set()
+        for test in tests:
+            domain = str(test.get("domain") or "")
+            description = str(test.get("description") or "")
+            if not domain or not description:
+                raise ValueError(f"{protocol_path.name}: test missing domain/description")
+            if domain not in expected_domain_set:
+                raise ValueError(
+                    f"{protocol_path.name}: unexpected domain {domain!r}; "
+                    f"expected {sorted(expected_domain_set)}"
+                )
+            file_domains.add(domain)
+            equation_domains.add(domain)
+
+            results = test.get("results")
+            far_r2 = test.get("extrap_r2_far")
+            far_rmse = test.get("extrap_rmse_far")
+            if not isinstance(results, dict) or set(results) != set(methods):
+                raise ValueError(f"{protocol_path.name}: {description!r} has incomplete method results")
+            if not isinstance(far_r2, dict) or set(far_r2) != set(methods):
+                raise ValueError(f"{protocol_path.name}: {description!r} has incomplete far-R2 map")
+            if not isinstance(far_rmse, dict) or set(far_rmse) != set(methods):
+                raise ValueError(f"{protocol_path.name}: {description!r} has incomplete far-RMSE map")
+            if int(test.get("extrap_n_train") or 0) < 2:
+                raise ValueError(f"{protocol_path.name}: {description!r} has fewer than 2 train rows")
+            if int(test.get("extrap_n_test") or 0) < 2:
+                raise ValueError(f"{protocol_path.name}: {description!r} has fewer than 2 far rows")
+
+            for method in methods:
+                result = results[method]
+                if not isinstance(result.get("success"), bool):
+                    raise ValueError(
+                        f"{protocol_path.name}: {description!r}/{method} missing success boolean"
+                    )
+                expected_identities.add((domain, description, method))
+
+        if len(file_domains) != 1:
+            raise ValueError(
+                f"{protocol_path.name}: protocol file must represent exactly one domain, "
+                f"found {sorted(file_domains)}"
+            )
+        protocol_manifest.append({
+            "file": protocol_path.name,
+            "sha256": _sha256(protocol_path),
+            "bytes": protocol_path.stat().st_size,
+            "domain": next(iter(file_domains)),
+            "equations": len(tests),
+        })
+
+    if equation_domains != expected_domain_set:
+        raise ValueError(
+            f"protocol domain coverage mismatch: expected {sorted(expected_domain_set)}, "
+            f"found {sorted(equation_domains)}"
+        )
+
+    benchmark_path = output_dir / "benchmark_results_extrap.json"
+    if not benchmark_path.is_file() or benchmark_path.stat().st_mtime <= marker_time:
+        raise ValueError("benchmark_results_extrap.json was not produced by the current run")
+    benchmark_rows = _load_strict_json(benchmark_path)
+    if not isinstance(benchmark_rows, list):
+        raise ValueError("benchmark_results_extrap.json must contain a JSON list")
+
+    row_counts: Counter[tuple[str, str, str]] = Counter()
+    for row in benchmark_rows:
+        identity = (
+            str(row.get("domain") or ""),
+            str(row.get("test") or ""),
+            str(row.get("method") or ""),
+        )
+        if not all(identity):
+            raise ValueError("benchmark row missing domain/test/method identity")
+        row_counts[identity] += 1
+        if identity in expected_identities:
+            if not isinstance(row.get("success"), bool):
+                raise ValueError(f"current-run row {identity} missing success boolean")
+            if "extrap_r2_far" not in row or "extrap_rmse_far" not in row:
+                raise ValueError(f"current-run row {identity} missing far-region metrics")
+
+    missing = sorted(identity for identity in expected_identities if row_counts[identity] == 0)
+    duplicated = sorted(identity for identity in expected_identities if row_counts[identity] != 1 and row_counts[identity] > 1)
+    if missing:
+        raise ValueError(f"benchmark flat output missing {len(missing)} expected method/equation rows")
+    if duplicated:
+        raise ValueError(f"benchmark flat output duplicates {len(duplicated)} expected method/equation rows")
+
+    summary = {
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "step": "exp2_feynman_extrap",
+        "worker_outputs_complete": True,
+        "status": "complete",
+        "run_id": os.environ.get("GITHUB_RUN_ID"),
+        "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+        "git_sha": os.environ.get("GITHUB_SHA"),
+        "shard": os.environ.get("SHARD_INDEX", os.environ.get("SHARD")),
+        "expected_domains": expected_domains,
+        "method_count": len(methods_reference or []),
+        "equation_count": len(expected_identities) // EXPECTED_METHOD_COUNT,
+        "expected_method_equation_rows": len(expected_identities),
+        "benchmark_row_count": len(benchmark_rows),
+        "protocol_files": protocol_manifest,
+        "benchmark_file": {
+            "file": benchmark_path.name,
+            "sha256": _sha256(benchmark_path),
+            "bytes": benchmark_path.stat().st_size,
+        },
+        "post_run_analysis": {
+            "repository": "sednabcn/LLM-HypatiaX-DEV",
+            "status": "delegated_to_post_run_repository",
+        },
+    }
+    return summary
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--run-start-marker", type=Path, required=True)
+    parser.add_argument("--expected-domains", required=True)
+    parser.add_argument("--summary-name", default="exp2_extrap_summary.json")
+    args = parser.parse_args()
+
+    domains = args.expected_domains.split()
+    summary = validate_worker_outputs(args.output_dir, args.run_start_marker, domains)
+    summary_path = args.output_dir / args.summary_name
+    summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    print(
+        f"[exp2-extrap-validation] complete: domains={len(summary['expected_domains'])}, "
+        f"equations={summary['equation_count']}, methods={summary['method_count']}, "
+        f"method-equation rows={summary['expected_method_equation_rows']}"
+    )
+    print(f"[exp2-extrap-validation] manifest: {summary_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as exc:
+        raise SystemExit(f"::error::Exp2 extrapolation output validation failed: {exc}")
