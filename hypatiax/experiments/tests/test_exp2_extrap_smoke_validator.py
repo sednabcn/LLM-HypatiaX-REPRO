@@ -70,7 +70,7 @@ def test_smoke_rejects_missing_far_metric_for_one_method(tmp_path):
     try:
         validator.validate_smoke_outputs(tmp_path)
     except ValueError as exc:
-        assert "far-RMSE map" in str(exc)
+        assert "far-region RMSE map" in str(exc)
     else:
         raise AssertionError("validator accepted an incomplete far-RMSE map")
 
