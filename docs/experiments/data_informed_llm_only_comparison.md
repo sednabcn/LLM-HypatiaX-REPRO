@@ -286,3 +286,46 @@ Keep the strict zero-shot baseline unchanged. The next comparison should
 run the training-summary, few-shot, and bounded training-feedback
 strategies under a declared, matched seed/data protocol, preserving
 separate method keys, API-call accounting, and test/extrapolation isolation.
+
+
+## Clean versus noise-matched extrapolation (2026-11-16)
+
+The isolated training-summary CLI result for Allometric Scaling (case 3,
+seed 42; data-generation seed 63) returned the exact generating expression:
+
+```python
+def formula(M):
+    return 0.1 * M ** 0.75
+```
+
+Its clean near, medium, and far extrapolation partitions each reported
+R² = 1.0, RMSE = 0.0, and MAE = 0.0. This is expected from the benchmark
+implementation: `generate_extrap_data()` evaluates the noiseless equation
+function directly, whereas `generate_data()` adds Gaussian noise to the
+training/outer-test targets. The zero errors therefore demonstrate exact
+recovery of the underlying noiseless function on those generated points;
+they are not evidence of performance against noisy out-of-range observations.
+
+The prompt CLI now preserves and scores **both** extrapolation target sets:
+
+1. **Clean extrapolation** retains the original deterministic targets and
+   existing interpretation (mathematical-function recovery).
+2. **Noise-matched extrapolation** adds deterministic Gaussian noise using
+   the benchmark's configured noise level (currently 0.05) multiplied by the
+   standard deviation of the full clean target vector returned by the same training-data generator, matching its noise-scale convention.
+
+Noise-matched targets use independent deterministic random streams with
+seed rule `equation_seed + 1999 + regime_index`. Their shared noise standard
+deviation is `noise_level * std(y_clean_full)`, matching `generate_data()`;
+it is not recalculated separately for each extrapolation regime. Clean targets are not
+modified. Results are labelled `extrapolation_<regime>_clean` and
+`extrapolation_<regime>_noise_matched`; separate SHA-256 hashes and the
+noise-generation rule are recorded. Neither set is sent to the LLM.
+
+This is an evaluation-only change: it does not change the prompt, training
+summary, generated formula, training/outer-test data, benchmark's historical
+clean extrapolation generator, or official Core-15 experiment protocol.
+The already completed one-call result above remains unchanged. The added
+noise-matched metrics require rerunning the local CLI test; doing so makes
+one additional LLM request. No such request was made while implementing
+this change, and no new noisy metrics are claimed here.
