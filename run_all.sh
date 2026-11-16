@@ -1984,6 +1984,7 @@ PYEOF_FINGERPRINT_2
 
 
 run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
+  set -euo pipefail
   cd '${REPO_ROOT}'
   mkdir -p '${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
 
