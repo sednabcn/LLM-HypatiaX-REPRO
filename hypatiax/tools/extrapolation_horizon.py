@@ -235,7 +235,7 @@ def evaluate_horizon_scenarios(
 
 def _json_safe(value):
     if isinstance(value, np.ndarray):
-        return value.tolist()
+        return _json_safe(value.tolist())
     if isinstance(value, np.integer):
         return int(value)
     if isinstance(value, np.floating):
@@ -279,7 +279,8 @@ def plot_horizon_curves(records: Iterable[Mapping], metric: str = "far_r2",
         method = record.get("method", "unspecified")
         scenario = evaluation.get("strategy", "horizon")
         moved = ",".join(evaluation.get("features_moved", []))
-        label = f"{method} | {scenario}" + (f" | {moved}" if moved else "")
+        direction = ",".join(str(v) for v in evaluation.get("direction", []))
+        label = f"{method} | {scenario}" + (f" | {moved}" if moved else "") + (f" | dir={direction}" if direction else "")
         grouped.setdefault(label, []).append((float(distance), float(value)))
     if not grouped:
         raise ValueError(f"No finite values found for metric {metric!r}.")
