@@ -423,7 +423,20 @@ def _runner_eval_formula(
 
         if code.startswith("def "):
             func = parse_formula(code)
-            y_pred = func(*(X[:, i] for i in range(X.shape[1])))
+            parameter_names = list(func.__signature__.parameters)
+            if all(name in var_names for name in parameter_names):
+                argument_columns = [var_names.index(name) for name in parameter_names]
+            elif len(parameter_names) == X.shape[1]:
+                # Preserve positional compatibility for older formulas whose
+                # parameter names do not match the dataset's feature labels.
+                argument_columns = list(range(X.shape[1]))
+            else:
+                missing = [name for name in parameter_names if name not in var_names]
+                raise ValueError(
+                    "formula parameters do not match holdout features: "
+                    f"missing={missing}, features={list(var_names)}"
+                )
+            y_pred = func(*(X[:, i] for i in argument_columns))
         else:
             assignment = re.fullmatch(
                 r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)\s*",

@@ -21,6 +21,32 @@ def test_runner_formula_evaluator_imports_regex_and_scores_expression():
     np.testing.assert_allclose(predicted, [2.0, 3.0, 4.0])
 
 
+
+
+def test_def_formula_uses_named_columns_when_holdout_has_extra_engineered_features():
+    X = np.array([
+        [2.0, 3.0, 5.0, 99.0],
+        [4.0, 7.0, 2.0, 88.0],
+    ])
+    formula = """def formula(m1, m2, r):
+    return m1 * m2 / r**2
+"""
+    predicted = _runner_eval_formula(formula, X, ["m1", "m2", "r", "ratio_m1_m2"])
+    np.testing.assert_allclose(predicted, [0.24, 7.0])
+
+
+def test_def_formula_maps_named_parameters_independent_of_feature_column_order():
+    X = np.array([
+        [5.0, 2.0, 3.0],
+        [2.0, 4.0, 7.0],
+    ])
+    formula = """def formula(m1, m2, r):
+    return m1 * m2 / r**2
+"""
+    predicted = _runner_eval_formula(formula, X, ["r", "m1", "m2"])
+    np.testing.assert_allclose(predicted, [0.24, 7.0])
+
+
 def test_far_rmse_is_preserved_when_far_r2_is_catastrophic():
     X_far = np.array([[1.0], [2.0], [3.0]])
     y_far = np.array([1.0, 2.0, 3.0])
