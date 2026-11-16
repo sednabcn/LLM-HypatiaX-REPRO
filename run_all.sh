@@ -2057,7 +2057,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     exit 1
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
-    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — extrap_r2_far will be missing from ablation_paired.json'\n    exit 1
+    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — the far-region result set is incomplete'\n    exit 1
   else
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
@@ -2065,7 +2065,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'\n    exit 1
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
-    echo '    ci_analysis.yml / the local merge block will merge this into ablation_paired.json in exp2_extrap/'
+    echo '    post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV.'
   fi
 "
 
