@@ -153,14 +153,34 @@ jobs:
           python3 - "${OUT_DIR}" "${EQUATIONS}" <<'PY'
           import glob, json, math, pathlib, sys
           root = pathlib.Path(sys.argv[1])
-          expected = sys.argv[2].split()
+          selected_ids = sorted(int(value) for value in sys.argv[2].split())
+          threshold = 0.999999
           files = sorted(glob.glob(str(root / "results" / "protocol_core_noiseless_pca_*.json")))
           if len(files) != 1:
               raise SystemExit(f"Expected exactly one fresh PCA result JSON; found {len(files)}")
           payload = json.loads(pathlib.Path(files[0]).read_text(encoding="utf-8"))
           tests = payload.get("tests")
-          if not isinstance(tests, list) or len(tests) != len(expected):
-              raise SystemExit(f"Expected {len(expected)} equation records; found {len(tests) if isinstance(tests, list) else 'invalid'}")
+          if not isinstance(tests, list) or len(tests) != len(selected_ids):
+              raise SystemExit(f"Expected {len(selected_ids)} equation records; found {len(tests) if isinstance(tests, list) else 'invalid'}")
+
+          # Rebuild the runner's exact 1-based registry ordering, then compare
+          # returned descriptions against the requested IDs (not just row count).
+          from hypatiax.protocols.experiment_protocol_benchmark_v2 import BenchmarkProtocol
+          protocol = BenchmarkProtocol(benchmark="feynman", num_samples=200, seed=42, noiseless=True)
+          registry = []
+          for domain in protocol.get_all_domains():
+              for case in protocol.load_test_data(domain, num_samples=200):
+                  registry.append(case[0])
+          if selected_ids[-1] > len(registry):
+              raise SystemExit(f"Selected ID exceeds registry size {len(registry)}")
+          expected_descriptions = [registry[equation_id - 1] for equation_id in selected_ids]
+          actual_descriptions = [row.get("description") for row in tests]
+          if actual_descriptions != expected_descriptions:
+              raise SystemExit(
+                  "Returned equation identities/order do not match selection: "
+                  f"expected={expected_descriptions!r}, actual={actual_descriptions!r}"
+              )
+
           methods = (
               "EnhancedHybridSystemDeFi (core)",
               "HybridDiscoverySystem v50_2 (tools)",
@@ -187,8 +207,13 @@ jobs:
                       raise SystemExit(f"Record {index} {method}: external PCA holdout unavailable: {result.get('external_holdout_error')}")
                   if not math.isfinite(score):
                       raise SystemExit(f"Record {index} {method}: PCA holdout R² missing/non-finite")
+                  if score < threshold:
+                      raise SystemExit(
+                          f"Record {index} {method}: PCA holdout R²={score:.9f} "
+                          f"is below required threshold {threshold:.6f}"
+                      )
                   print(f"[PCA-SMOKE] {row.get('domain')} / {row.get('description')} / {method}: holdout R²={score:.9f}")
-          print(f"[PCA-SMOKE] PASS: {len(tests)} fresh equation(s), both corrected methods have finite PCA holdout scores.")
+          print(f"[PCA-SMOKE] PASS: {len(tests)} selected equation(s) match registry IDs and both methods meet PCA holdout R² >= {threshold}.")
           print("[PCA-SMOKE] This is a bounded smoke only; it is not the 30-equation headline result.")
           PY
 
