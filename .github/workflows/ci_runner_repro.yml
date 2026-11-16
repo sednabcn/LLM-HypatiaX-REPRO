@@ -387,7 +387,7 @@ jobs:
 
       - name: Restore shared checkpoint (plan)
         id: restore_plan
-        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
+        if: ${{ github.event.inputs.resume != 'false' && github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_plan.json
@@ -1141,7 +1141,7 @@ jobs:
 
       - name: Restore shard checkpoint
         id: restore_worker
-        if: ${{ github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
+        if: ${{ github.event.inputs.resume != 'false' && github.event.inputs.fresh_mode != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.experiment != 'exp1-provenance' }}
         uses: actions/cache/restore@v4.2.3
         with:
           path: checkpoint_worker_shard${{ matrix.shard }}.json
@@ -1218,7 +1218,7 @@ jobs:
             "${{ github.workspace }}/logs"
 
       - name: Seed shard checkpoint from committed results (cache miss only)
-        if: ${{ steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.fresh_mode != 'true' }}
+        if: ${{ github.event.inputs.resume != 'false' && steps.restore_worker.outputs.cache-hit != 'true' && github.event.inputs.clean_llm_rerun != 'true' && github.event.inputs.fresh_mode != 'true' }}
         env:
           SHARD_IDS_JSON: ${{ matrix.ids }}
           RESULT_SUBDIR:  ${{ needs.plan.outputs.result_subdir }}
@@ -1291,6 +1291,9 @@ jobs:
 
       - name: Resolve this shard's pending IDs
         id: resolve_ids
+        env:
+          RESUME: ${{ github.event.inputs.resume || 'true' }}
+          CLEAN_LLM_RERUN: ${{ github.event.inputs.clean_llm_rerun || 'false' }}
         run: |
           python3 - <<'PYEOF'
           import json, os
@@ -1298,8 +1301,9 @@ jobs:
           shard_ids = json.loads(os.environ.get("SHARD_IDS") or "[]")
           ckpt_path = f"checkpoint_worker_shard{os.environ['SHARD_INDEX']}.json"
 
+          resume = os.environ.get("RESUME", "true").lower() == "true" and os.environ.get("CLEAN_LLM_RERUN", "false").lower() != "true"
           done = set()
-          if os.path.exists(ckpt_path):
+          if resume and os.path.exists(ckpt_path):
               try:
                   with open(ckpt_path) as f:
                       done = set(json.load(f).get("completed", []))
