@@ -258,7 +258,7 @@ jobs:
           # Instead, presence is determined by scanning the canonical RESULT_SUBDIR
           # for non-meta data files (*.json / *.csv not starting with "_").
           # This is consistent with the "Verify output files exist" steps in the
-          # worker job and with what ci_analysis.yml uses as its readiness signal.
+          # worker job. Post-run statistical analysis is handled separately in DEV.
           #
           # Per-experiment result file globs (primary output patterns):
           RESULT_GLOBS = {
