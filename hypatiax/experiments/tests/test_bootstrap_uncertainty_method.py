@@ -47,7 +47,8 @@ def test_bootstrap_methods_fit_explicitly_and_return_contract(resampling):
     assert estimate.samples.shape == (5, 8)
     assert estimate.lower.shape == estimate.upper.shape == (5,)
     assert estimate.metadata["not_a_calibrated_prediction_interval"] is True
-    assert validate_uncertainty_method_contract(method, X[:5], estimate) is not None
+    contract = validate_uncertainty_method_contract(method, X[:5], {0.9: estimate})
+    assert contract["status"] == "ok"
 
 
 def test_seed_reproduces_bootstrap_predictions():
