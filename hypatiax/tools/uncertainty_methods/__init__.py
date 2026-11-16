@@ -4,6 +4,7 @@ from .evaluation import evaluate_estimate
 from .registry import CALIBRATION_METHODS, UNCERTAINTY_METHODS, MethodRegistry
 from .results import RESULT_SCHEMA_VERSION, UncertaintyResult, write_uncertainty_results_json
 from .protocol import ComparisonProtocol, validate_split_indices
+from .contracts import validate_calibration_method_contract, validate_uncertainty_method_contract
 
 __all__ = [
     "UncertaintyMethod", "CalibrationMethod", "UncertaintyEstimate",
@@ -11,4 +12,5 @@ __all__ = [
     "evaluate_estimate", "UncertaintyResult", "write_uncertainty_results_json",
     "RESULT_SCHEMA_VERSION",
     "ComparisonProtocol", "validate_split_indices",
+    "validate_uncertainty_method_contract", "validate_calibration_method_contract",
 ]
