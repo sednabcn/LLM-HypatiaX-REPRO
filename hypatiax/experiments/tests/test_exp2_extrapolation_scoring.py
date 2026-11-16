@@ -105,3 +105,84 @@ def test_feynman_output_identity_includes_domain_and_timestamp_precision():
         assert '_new_keys = {(r.get("domain"), r["test"], r["method"])' in source
         assert '_ext_new_keys = {(r.get("domain"), r["test"], r["method"])' in source
         assert 'datetime.now().strftime("%Y%m%d_%H%M%S_%f")' in source
+
+
+def _load_exp2_worker_validator():
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    script = root / "scripts/ci/validate_exp2_extrap_worker.py"
+    spec = importlib.util.spec_from_file_location("validate_exp2_extrap_worker", script)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write_synthetic_extrap_worker_outputs(tmp_path):
+    import json
+    import os
+    from pathlib import Path
+
+    methods = [f"method-{index}" for index in range(6)]
+    tests = []
+    rows = []
+    for equation in ("equation-A", "equation-B"):
+        tests.append({
+            "description": equation,
+            "domain": "domain-A",
+            "results": {method: {"success": True} for method in methods},
+            "extrap_r2_far": {method: 0.9 for method in methods},
+            "extrap_rmse_far": {method: 0.1 for method in methods},
+            "extrap_n_train": 8,
+            "extrap_n_test": 2,
+        })
+        for method in methods:
+            rows.append({
+                "test": equation,
+                "domain": "domain-A",
+                "method": method,
+                "success": True,
+                "extrap_r2_far": 0.9,
+                "extrap_rmse_far": 0.1,
+            })
+    marker = tmp_path / "run-start.marker"
+    marker.touch()
+    protocol = tmp_path / "protocol_core_extrap_test.json"
+    protocol.write_text(json.dumps({
+        "total_tests": len(tests),
+        "methods": methods,
+        "tests": tests,
+    }))
+    benchmark = tmp_path / "benchmark_results_extrap.json"
+    benchmark.write_text(json.dumps(rows))
+    future_ns = marker.stat().st_mtime_ns + 1_000_000
+    os.utime(protocol, ns=(future_ns, future_ns))
+    os.utime(benchmark, ns=(future_ns, future_ns))
+    return marker, methods, rows
+
+
+def test_exp2_worker_validator_accepts_complete_method_equation_coverage(tmp_path):
+    module = _load_exp2_worker_validator()
+    marker, methods, rows = _write_synthetic_extrap_worker_outputs(tmp_path)
+    summary = module.validate_worker_outputs(tmp_path, marker, ["domain-A"])
+    assert summary["worker_outputs_complete"] is True
+    assert summary["method_count"] == 6
+    assert summary["equation_count"] == 2
+    assert summary["expected_method_equation_rows"] == 12
+
+
+def test_exp2_worker_validator_rejects_missing_method_rows(tmp_path):
+    import json
+    import pytest
+
+    module = _load_exp2_worker_validator()
+    marker, methods, rows = _write_synthetic_extrap_worker_outputs(tmp_path)
+    rows.pop()
+    (tmp_path / "benchmark_results_extrap.json").write_text(json.dumps(rows))
+    future_ns = marker.stat().st_mtime_ns + 2_000_000
+    import os
+    os.utime(tmp_path / "benchmark_results_extrap.json", ns=(future_ns, future_ns))
+    with pytest.raises(ValueError, match="missing"):
+        module.validate_worker_outputs(tmp_path, marker, ["domain-A"])
