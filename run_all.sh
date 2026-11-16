@@ -2068,26 +2068,24 @@ run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analys
     exit 1
     echo \"         cp \${_EXT_DIR}/_saved/protocol_core_extrap_*.json \${_EXT_DIR}/\"
   elif [[ \"\${COUNT_EXTRAP}\" -eq 0 ]]; then
-    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — the far-region result set is incomplete'\n    exit 1
+    echo '::error::exp2_feynman_extrap produced no protocol_core_extrap_*.json — the far-region result set is incomplete'
+    exit 1
   else
     echo \"OK: \${COUNT_EXTRAP} extrap protocol file(s) produced  (\${COUNT_SAVED} backed up in _saved/)\"
   fi
   if [[ \"\${COUNT_BENCH_EXTRAP}\" -eq 0 ]]; then
-    echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'\n    exit 1
+    echo '::error::benchmark_results_extrap.json not found in exp2_extrap/ or comparison_results/'
+    exit 1
   else
     echo \"OK: benchmark_results_extrap_shard\${_EXT_SHARD}.json present in \${_EXT_DIR}\"
     echo '    post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV.'
   fi
+  python3 scripts/ci/validate_exp2_extrap_worker.py \\
+    --output-dir "\\${_EXT_DIR}" \\
+    --run-start-marker "\\${_EXT_RUN_MARKER}" \\
+    --expected-domains "\\${ACTIVE_DOMAINS}"
 "
 
-(
-  set -euo pipefail
-  python3 scripts/ci/validate_exp2_extrap_worker.py \
-    --output-dir "\${_EXT_DIR}" \
-    --run-start-marker "\${_EXT_RUN_MARKER}" \
-    --expected-domains "\${ACTIVE_DOMAINS}"
-  rm -f "\${_EXT_RUN_MARKER}"
-)
 
 run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
   set -euo pipefail
