@@ -524,6 +524,8 @@ def compute_extrap_r2_far(
     y_train: Optional[np.ndarray] = None,                   # training targets for RMSE_train
     y_pred_train: Optional[Dict[str, np.ndarray]] = None,   # {method: train predictions}
     verbose: bool = True,
+    diagnostics: Optional[Dict[str, Dict[str, str]]] = None,
+    X_far_predictor: Optional[np.ndarray] = None,
 ) -> Tuple[
     Dict[str, Optional[float]],   # extrap_r2_far
     Dict[str, Optional[float]],   # extrap_rmse_far
@@ -568,6 +570,8 @@ def compute_extrap_r2_far(
     extrap_r2_far:    Dict[str, Optional[float]] = {}
     extrap_rmse_far:  Dict[str, Optional[float]] = {}
     extrap_error_pct: Dict[str, Optional[float]] = {}
+    _diag = diagnostics if diagnostics is not None else {}
+    _X_predict = X_far if X_far_predictor is None else X_far_predictor
 
     # Guard: skip entirely when not in extrap mode or far region is degenerate.
     _do_extrap = (
@@ -580,56 +584,108 @@ def compute_extrap_r2_far(
         return extrap_r2_far, extrap_rmse_far, extrap_error_pct
 
     for mname, res in results.items():
-        # Failed methods → null across the board.
-        if not res.success:
-            extrap_r2_far[mname]    = None
-            extrap_rmse_far[mname]  = None
+        def _mark(status: str, reason: str = "") -> None:
+            _diag[mname] = {"status": status, **({"reason": reason} if reason else {})}
+
+        if not getattr(res, "success", False):
+            extrap_r2_far[mname] = None
+            extrap_rmse_far[mname] = None
             extrap_error_pct[mname] = None
+            _mark("method_failed")
             continue
 
-        formula = (res.formula or "").strip()
-
-        # NN / black-box methods return architecture tags — not evaluable.
-        is_nn_tag = (
-            formula.startswith("ImprovedNN(")
-            or formula.startswith("[NN fallback")
-            or formula in ("N/A", "")
-        )
-        if is_nn_tag:
-            extrap_r2_far[mname]    = None
-            extrap_rmse_far[mname]  = None
-            extrap_error_pct[mname] = None
-            continue
-
-        # Symbolic methods: re-evaluate on the far region.
-        try:
-            y_far_pred = _runner_eval_formula(formula, X_far, var_names)  # audit: ignore[L2] formula = method OUTPUT (res.formula), not ground truth
-            if y_far_pred is None or len(y_far_pred) != len(y_far):
-                extrap_r2_far[mname]    = None
-                extrap_rmse_far[mname]  = None
+        # Prefer the fitted inference callable retained by the method result.
+        # It receives the original feature schema, just as the independent
+        # external-holdout evaluator does; no fitting occurs on X_far.
+        predictor = getattr(res, "_predict_fn", None)
+        if callable(predictor):
+            try:
+                y_far_pred = np.asarray(predictor(_X_predict), dtype=float).reshape(-1)
+            except Exception as exc:
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
                 extrap_error_pct[mname] = None
-            else:
-                r2f      = _far_r2(y_far, y_far_pred)
-                rmse_far = _far_rmse(y_far, y_far_pred)
-                extrap_r2_far[mname]   = r2f
-                extrap_rmse_far[mname] = rmse_far
+                _mark("prediction_error", f"{type(exc).__name__}: {exc}")
+                continue
+            if y_far_pred.shape != (len(y_far),):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("prediction_length_mismatch", f"expected {len(y_far)}, got {y_far_pred.size}")
+                continue
+            if not np.all(np.isfinite(y_far_pred)):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("nonfinite_prediction")
+                continue
+        else:
+            formula = (getattr(res, "formula", None) or "").strip()
+            if formula in ("N/A", ""):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("formula_missing")
+                continue
+            if (
+                formula.startswith("ImprovedNN(")
+                or formula.startswith("[NN fallback")
+            ):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("unsupported_predictor", "architecture label has no retained _predict_fn")
+                continue
+            _formula_diagnostics: List[str] = []
+            y_far_pred = _runner_eval_formula(formula, X_far, var_names, diagnostics=_formula_diagnostics)
+            if y_far_pred is None:
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("formula_evaluation_failed", "; ".join(_formula_diagnostics) or "formula evaluator returned no prediction")
+                continue
+            if np.asarray(y_far_pred).shape != (len(y_far),):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("prediction_length_mismatch", f"expected {len(y_far)}, got {np.asarray(y_far_pred).size}")
+                continue
+            if not np.all(np.isfinite(y_far_pred)):
+                extrap_r2_far[mname] = None
+                extrap_rmse_far[mname] = None
+                extrap_error_pct[mname] = None
+                _mark("nonfinite_prediction")
+                continue
 
-                # error_pct = (RMSE_far / RMSE_train) × 100
-                error_pct: Optional[float] = None
-                if (
-                    rmse_far is not None
-                    and y_pred_train is not None
-                    and y_train is not None
-                    and mname in y_pred_train
-                ):
-                    rmse_train = _far_rmse(y_train, y_pred_train[mname])
-                    error_pct  = calculate_extrapolation_error(rmse_far, rmse_train)
-                extrap_error_pct[mname] = error_pct
-
-        except Exception:
-            extrap_r2_far[mname]    = None
-            extrap_rmse_far[mname]  = None
+        try:
+            r2f = _far_r2(y_far, y_far_pred)
+            rmse_far = _far_rmse(y_far, y_far_pred)
+        except Exception as exc:
+            extrap_r2_far[mname] = None
+            extrap_rmse_far[mname] = None
             extrap_error_pct[mname] = None
+            _mark("metric_error", f"{type(exc).__name__}: {exc}")
+            continue
+
+        extrap_r2_far[mname] = r2f
+        extrap_rmse_far[mname] = rmse_far
+        error_pct: Optional[float] = None
+        if (
+            rmse_far is not None and y_pred_train is not None
+            and y_train is not None and mname in y_pred_train
+        ):
+            try:
+                rmse_train = _far_rmse(y_train, y_pred_train[mname])
+                error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
+            except Exception as exc:
+                _mark("metric_error", f"training RMSE: {type(exc).__name__}: {exc}")
+        extrap_error_pct[mname] = error_pct
+        if r2f is None:
+            _mark("r2_metric_unavailable")
+        elif rmse_far is None:
+            _mark("rmse_metric_unavailable")
+        else:
+            _mark("scored")
 
     if verbose and any(v is not None for v in extrap_r2_far.values()):
         print(
@@ -3956,6 +4012,7 @@ class ProtocolBenchmarkSuite:
         extrap_r2_far:    Dict[str, Optional[float]] = {}
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
+        extrap_diagnostics: Dict[str, Dict[str, str]] = {}
         _do_extrap = (
             X_far is not None
             and y_far is not None
@@ -4105,7 +4162,9 @@ class ProtocolBenchmarkSuite:
 
                 extrap_r2_far, extrap_rmse_far, extrap_error_pct = compute_extrap_r2_far(
                     results=_results_full,
-                    X_far=X_far_aug,       # FIX-N3b: augmented far matrix
+                    X_far=X_far_aug,       # engineered columns for formula evaluation
+                    X_far_predictor=X_far, # original schema for retained fitted predictors
+                    diagnostics=extrap_diagnostics,
                     y_far=y_far,
                     var_names=aug_names,   # FIX-N3a: includes ratio_*/gm_* names
                     y_train=y,
@@ -4223,7 +4282,8 @@ class ProtocolBenchmarkSuite:
         if _do_extrap:
             record["extrap_r2_far"]    = extrap_r2_far
             record["extrap_rmse_far"]  = extrap_rmse_far
-            record["extrap_error_pct"] = extrap_error_pct   # NEW: % degradation per method
+            record["extrap_error_pct"] = extrap_error_pct   # % degradation per method
+            record["extrap_diagnostics"] = extrap_diagnostics
             # FIX: store extrap split context at the record level so that
             # print_summary()'s benchmark_results_extrap.json export can read
             # train_frac / n_train / n_test without searching MethodResult.metadata
@@ -4550,6 +4610,7 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
+                _extrap_diag_map = rec.get("extrap_diagnostics", {})
                 for _mname, _mres in rec.get("results", {}).items():
                     _row = {
                         "test":           _desc,
@@ -4570,6 +4631,7 @@ class ProtocolBenchmarkSuite:
                     if _extrap_r2_map:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
+                        _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
             _json_path = _FLAT_OUTPUT_DIR / f"benchmark_results{_SHARD_TAG}.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4615,6 +4677,7 @@ class ProtocolBenchmarkSuite:
                 _er_map   = rec.get("extrap_r2_far")
                 _erm_map  = rec.get("extrap_rmse_far", {})
                 _eep_map  = rec.get("extrap_error_pct", {})
+                _diag_map = rec.get("extrap_diagnostics", {})
                 if not _er_map:
                     continue
                 _desc = rec.get("description", "")
@@ -4645,7 +4708,8 @@ class ProtocolBenchmarkSuite:
                         "llm_source":        _mres.get("llm_source"),
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
-                        "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation
+                        "extrap_error_pct":  _eep_map.get(_mname),  # % degradation
+                        "extrap_diagnostic": _diag_map.get(_mname),
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
                         "extrap_n_test":     _n_test,

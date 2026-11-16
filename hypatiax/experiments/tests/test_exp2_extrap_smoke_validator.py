@@ -33,6 +33,8 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
             "results": results,
             "extrap_r2_far": far_r2,
             "extrap_rmse_far": far_rmse,
+            "extrap_error_pct": {method: 10.0 for method in METHODS},
+            "extrap_diagnostics": {method: {"status": "scored"} for method in METHODS},
             "extrap_n_train": 96,
             "extrap_n_test": 24,
         })
@@ -45,6 +47,8 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
                 "rmse": 0.01,
                 "extrap_r2_far": 0.9,
                 "extrap_rmse_far": 0.02,
+                "extrap_error_pct": 10.0,
+                "extrap_diagnostic": {"status": "scored"},
             })
     (output_dir / "protocol_core_extrap_smoke.json").write_text(
         json.dumps({"methods": METHODS, "total_tests": 3, "tests": tests}),
@@ -63,6 +67,8 @@ def test_three_equation_six_method_smoke_artifacts_validate(tmp_path):
     assert summary["method_equation_rows"] == 18
     assert summary["far_r2_non_null_count"] == 18
     assert summary["far_rmse_non_null_count"] == 18
+    assert summary["far_error_pct_non_null_count"] == 18
+    assert summary["far_diagnostic_status_counts"] == {"scored": 18}
 
 
 def test_smoke_rejects_missing_far_metric_for_one_method(tmp_path):
