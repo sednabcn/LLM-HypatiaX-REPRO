@@ -2028,19 +2028,13 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
   _BENCH_EXT_SRC=\"\${_EXT_DIR}/benchmark_results_extrap.json\"
-  if [ ! -f \"\${_BENCH_EXT_SRC}\" ]; then
-    _BENCH_EXT_SRC=\"\${RESULTS_DIR}/comparison_results/benchmark_results_extrap.json\"
-    if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
-      echo \"WARNING: benchmark_results_extrap.json found in comparison_results/ root, not \${_EXT_DIR} — script may be an older/unpatched version (expected it to honor --output-dir).\"
-    fi
+  if [[ ! -f \"\${_BENCH_EXT_SRC}\" ]]; then
+    echo \"::error::benchmark_results_extrap.json missing from the current exp2_extrap output directory; refusing a stale shard/root fallback.\"
+    exit 1
   fi
-  if [ -f \"\${_BENCH_EXT_SRC}\" ]; then
-    _BENCH_EXT_DST=\"\${_EXT_DIR}/benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
-    cp \"\${_BENCH_EXT_SRC}\" \"\${_BENCH_EXT_DST}\"
-    echo \"[E6-guard] copied \${_BENCH_EXT_SRC} -> benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
-  else
-    echo \"WARNING: benchmark_results_extrap.json not found in \${_EXT_DIR} or \${RESULTS_DIR}/comparison_results\"
-  fi
+  _BENCH_EXT_DST=\"\${_EXT_DIR}/benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
+  cp \"\${_BENCH_EXT_SRC}\" \"\${_BENCH_EXT_DST}\"
+  echo \"[E6-guard] copied \${_BENCH_EXT_SRC} -> benchmark_results_extrap_shard\${_EXT_SHARD}.json\"
 
   echo '=== exp2_feynman_extrap verification ==='
   find \"\${_EXT_DIR}\" \
