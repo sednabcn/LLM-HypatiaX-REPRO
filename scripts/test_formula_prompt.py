@@ -221,8 +221,6 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
 def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
     """Run the existing training-summary arm alone with exactly one LLM request."""
     _strict_environment()
-    import numpy as np
-
     from hypatiax.experiments.benchmarks import exp1_four_way_matched as driver
     from hypatiax.experiments.benchmarks import run_data_informed_llm_pilot as pilot
 
@@ -294,6 +292,7 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
         "raw_training_rows_sent_to_model": False,
         "train_data_sha256": driver._array_hash(X_train, y_train),
         "outer_test_data_sha256": driver._array_hash(X_test, y_test),
+        "extrapolation_data_sha256": {\n            regime: driver._array_hash(X_e, y_e)\n            for regime, (X_e, y_e) in extrapolation.items()\n        },
         "metrics": metric_results,
         "metric_errors": metric_errors,
         "protocol": {
@@ -319,11 +318,11 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Offline contract check and one-call live test of the strict formula prompt."
+        description="Offline, zero-shot, and one-call training-summary formula prompt tests."
     )
     parser.add_argument(
         "--mode", choices=("offline", "live", "train-summary", "both"), default="offline",
-        help="offline makes zero API calls; live makes exactly one; both runs offline then live",
+        help="offline makes zero calls; live and train-summary each make one call; both runs offline then zero-shot live",
     )
     parser.add_argument("--case-id", type=int, default=3,
                         help="Core-15 case index (default: 3, Allometric Scaling)")
