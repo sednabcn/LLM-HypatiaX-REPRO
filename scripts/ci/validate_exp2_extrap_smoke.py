@@ -40,6 +40,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     method_rows = 0
     far_r2_available = 0
     far_rmse_available = 0
+    far_error_pct_available = 0
+    diagnostic_status_counts: Counter[str] = Counter()
     for test in tests:
         description = str(test.get("description") or "")
         if not description or description in equation_names:
@@ -48,12 +50,18 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         results = test.get("results")
         far_r2 = test.get("extrap_r2_far")
         far_rmse = test.get("extrap_rmse_far")
+        far_error_pct = test.get("extrap_error_pct")
+        diagnostics = test.get("extrap_diagnostics")
         if not isinstance(results, dict) or set(results) != set(methods):
             raise ValueError(f"{description}: missing one or more of the six method results")
         if not isinstance(far_r2, dict) or set(far_r2) != set(methods):
             raise ValueError(f"{description}: far-region R² map does not cover all methods")
         if not isinstance(far_rmse, dict) or set(far_rmse) != set(methods):
             raise ValueError(f"{description}: far-region RMSE map does not cover all methods")
+        if not isinstance(far_error_pct, dict) or set(far_error_pct) != set(methods):
+            raise ValueError(f"{description}: extrapolation error-percent map does not cover all methods")
+        if not isinstance(diagnostics, dict) or set(diagnostics) != set(methods):
+            raise ValueError(f"{description}: far-region diagnostic map does not cover all methods")
         if int(test.get("extrap_n_train") or 0) < 2 or int(test.get("extrap_n_test") or 0) < 2:
             raise ValueError(f"{description}: extrapolation split has fewer than two rows in a region")
         for method in methods:
@@ -66,6 +74,11 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
                 raise ValueError(f"{description}/{method}: missing far-region scores")
             far_r2_available += far_r2[method] is not None
             far_rmse_available += far_rmse[method] is not None
+            far_error_pct_available += far_error_pct[method] is not None
+            diagnostic = diagnostics[method]
+            if not isinstance(diagnostic, dict) or not isinstance(diagnostic.get("status"), str):
+                raise ValueError(f"{description}/{method}: missing far-region diagnostic status")
+            diagnostic_status_counts[diagnostic["status"]] += 1
             method_rows += 1
 
     flat_files = sorted(output_dir.glob("benchmark_results_extrap*.json"))
@@ -98,6 +111,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "methods": methods,
         "far_r2_non_null_count": far_r2_available,
         "far_rmse_non_null_count": far_rmse_available,
+        "far_error_pct_non_null_count": far_error_pct_available,
+        "far_diagnostic_status_counts": dict(sorted(diagnostic_status_counts.items())),
         "protocol_file": {"name": protocol_path.name, "sha256": hashlib.sha256(protocol_path.read_bytes()).hexdigest()},
         "flat_file": {"name": flat_files[0].name, "sha256": hashlib.sha256(flat_files[0].read_bytes()).hexdigest()},
         "note": "Null far scores are retained as explicit method outcomes; missing score fields or rows fail validation.",
@@ -115,6 +130,8 @@ def main() -> int:
     print(f"[exp2-extrap-smoke] PASS: {summary['equation_count']} equations x {summary['method_count']} methods")
     print(f"[exp2-extrap-smoke] far R² available: {summary['far_r2_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] far RMSE available: {summary['far_rmse_non_null_count']}/{summary['method_equation_rows']}")
+    print(f"[exp2-extrap-smoke] error-% available: {summary['far_error_pct_non_null_count']}/{summary['method_equation_rows']}")
+    print(f"[exp2-extrap-smoke] diagnostic statuses: {summary['far_diagnostic_status_counts']}")
     print(f"[exp2-extrap-smoke] summary: {target}")
     return 0
 
