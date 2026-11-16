@@ -289,8 +289,8 @@ def build_extrap_split(
 ) -> Tuple[
     np.ndarray,   # X_train
     np.ndarray,   # y_train
-    np.ndarray,   # X_far  (may be empty)
-    np.ndarray,   # y_far  (may be empty)
+    np.ndarray,   # X_far  (at least two rows)
+    np.ndarray,   # y_far  (aligned with X_far)
     Dict,         # extrap metadata dict (stored in record)
 ]:
     """
@@ -302,15 +302,30 @@ def build_extrap_split(
     repro.yaml benchmarks.feynman.extrap_mult=2.0.
 
     Returns (X_train, y_train, X_far, y_far, metadata).
-    X_far / y_far may have length 0 when no samples fall within the multiplier
-    boundary — callers must guard with `len(X_far) > 1` before using them.
+    Raises ValueError when the requested split cannot provide at least two
+    training rows and two far-region rows after multiplier clipping.
     """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float).reshape(-1)
+    if X.ndim != 2 or X.shape[1] < 1 or X.shape[0] != y.shape[0]:
+        raise ValueError("extrapolation split requires aligned 2-D X and 1-D y arrays")
+    if X.shape[0] < 4:
+        raise ValueError("extrapolation split requires at least four samples")
+    if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
+        raise ValueError("extrapolation split inputs must be finite")
+    if not math.isfinite(float(train_frac)) or not 0.0 < float(train_frac) < 1.0:
+        raise ValueError("train_frac must be finite and strictly between 0 and 1")
+    if not math.isfinite(float(multiplier)) or float(multiplier) <= 0.0:
+        raise ValueError("multiplier must be finite and greater than zero")
+
     # Sort by first variable to get a contiguous training region.
     order    = np.argsort(X[:, 0])
     Xs       = X[order]
     ys       = y[order]
     n        = len(Xs)
-    split    = max(1, int(n * train_frac))
+    split    = int(n * train_frac)
+    if split < 2 or n - split < 2:
+        raise ValueError(f"split leaves too few train/far rows: train={split}, far={n - split}")
     X_train  = Xs[:split]
     y_train  = ys[:split]
 
@@ -326,17 +341,14 @@ def build_extrap_split(
     far_mask     = far_all[:, 0] <= far_ceiling
     X_far        = far_all[far_mask]
     y_far        = far_y_all[far_mask]
+    if len(X_far) < 2:
+        raise ValueError(f"far region has only {len(X_far)} rows after multiplier clipping")
     n_clipped    = int((~far_mask).sum())
 
     if n_clipped > 0:
         print(
             f"   ℹ️  '{description[:45]}': clipped {n_clipped} far sample(s) "
             f"beyond {multiplier}× boundary (x>{far_ceiling:.3g})"
-        )
-    if len(X_far) == 0:
-        print(
-            f"  ⚠️  '{description[:45]}': no far samples within "
-            f"multiplier={multiplier}× — extrap_r2_far will be null"
         )
 
     metadata = {
@@ -627,7 +639,7 @@ def compute_extrap_r2_far(
                 extrap_error_pct[mname] = None
             else:
                 r2f      = _far_r2(y_far, y_far_pred)
-                rmse_far = _far_rmse(y_far, y_far_pred) if r2f is not None else None
+                rmse_far = _far_rmse(y_far, y_far_pred)
                 extrap_r2_far[mname]   = r2f
                 extrap_rmse_far[mname] = rmse_far
 
@@ -4388,9 +4400,9 @@ class ProtocolBenchmarkSuite:
                 except Exception:
                     _existing = []
             # Drop stale entries for tests being re-written by this run
-            _new_keys = {(r["test"], r["method"]) for r in _flat_records}
+            _new_keys = {(r.get("domain"), r["test"], r["method"]) for r in _flat_records}
             _existing = [r for r in _existing
-                         if (r.get("test"), r.get("method")) not in _new_keys]
+                         if (r.get("domain"), r.get("test"), r.get("method")) not in _new_keys]
             _merged = _existing + _flat_records
             with open(_json_path, "w") as _jf:
                 _dump_json_null(_merged, _jf, indent=2)
@@ -4467,9 +4479,9 @@ class ProtocolBenchmarkSuite:
                             _ext_existing = []
                     except Exception:
                         _ext_existing = []
-                _ext_new_keys = {(r["test"], r["method"]) for r in _extrap_rows}
+                _ext_new_keys = {(r.get("domain"), r["test"], r["method"]) for r in _extrap_rows}
                 _ext_existing = [r for r in _ext_existing
-                                 if (r.get("test"), r.get("method")) not in _ext_new_keys]
+                                 if (r.get("domain"), r.get("test"), r.get("method")) not in _ext_new_keys]
                 _ext_merged = _ext_existing + _extrap_rows
                 with open(_ext_path, "w") as _ef:
                     _dump_json_null(_ext_merged, _ef, indent=2)
@@ -4482,7 +4494,7 @@ class ProtocolBenchmarkSuite:
     def _save(self, noiseless: bool = False, threshold: float = 0.99, extrap: bool = False):
         out_dir = _OUTPUT_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
-        ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ts   = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         if extrap:
             mode = "extrap"
         elif noiseless:
@@ -5171,9 +5183,10 @@ Examples
                 _extrap_tests.append((_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
                                       _X_far, _y_far))
             except Exception as _esplit_exc:
-                print(f"  ⚠️  extrap split failed for '{_desc[:50]}': {_esplit_exc} — using full data")
-                _extrap_tests.append((_desc, _X, _y, _vnames, {**_meta, "extrap": False}, _dom,
-                                      None, None))
+                raise RuntimeError(
+                    f"Extrapolation split failed for '{_desc[:80]}'; refusing an in-sample fallback: "
+                    f"{type(_esplit_exc).__name__}: {_esplit_exc}"
+                ) from _esplit_exc
         all_tests = _extrap_tests
         print(f"   Applied extrap split to {len(all_tests)} test(s). "
               f"Each uses {int(_efrac*100)}% of samples for training.\n")

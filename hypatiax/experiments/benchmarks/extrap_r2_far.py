@@ -22,6 +22,7 @@ also included verbatim, as compute_extrap_r2_far() depends on it.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -104,8 +105,8 @@ def build_extrap_split(
 ) -> Tuple[
     np.ndarray,   # X_train
     np.ndarray,   # y_train
-    np.ndarray,   # X_far  (may be empty)
-    np.ndarray,   # y_far  (may be empty)
+    np.ndarray,   # X_far  (at least two rows)
+    np.ndarray,   # y_far  (aligned with X_far)
     Dict,         # extrap metadata dict (stored in record)
 ]:
     """
@@ -117,15 +118,30 @@ def build_extrap_split(
     repro.yaml benchmarks.feynman.extrap_mult=2.0.
 
     Returns (X_train, y_train, X_far, y_far, metadata).
-    X_far / y_far may have length 0 when no samples fall within the multiplier
-    boundary — callers must guard with `len(X_far) > 1` before using them.
+    Raises ValueError when the requested split cannot provide at least two
+    training rows and two far-region rows after multiplier clipping.
     """
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y, dtype=float).reshape(-1)
+    if X.ndim != 2 or X.shape[1] < 1 or X.shape[0] != y.shape[0]:
+        raise ValueError("extrapolation split requires aligned 2-D X and 1-D y arrays")
+    if X.shape[0] < 4:
+        raise ValueError("extrapolation split requires at least four samples")
+    if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
+        raise ValueError("extrapolation split inputs must be finite")
+    if not math.isfinite(float(train_frac)) or not 0.0 < float(train_frac) < 1.0:
+        raise ValueError("train_frac must be finite and strictly between 0 and 1")
+    if not math.isfinite(float(multiplier)) or float(multiplier) <= 0.0:
+        raise ValueError("multiplier must be finite and greater than zero")
+
     # Sort by first variable to get a contiguous training region.
     order    = np.argsort(X[:, 0])
     Xs       = X[order]
     ys       = y[order]
     n        = len(Xs)
-    split    = max(1, int(n * train_frac))
+    split    = int(n * train_frac)
+    if split < 2 or n - split < 2:
+        raise ValueError(f"split leaves too few train/far rows: train={split}, far={n - split}")
     X_train  = Xs[:split]
     y_train  = ys[:split]
 
@@ -141,17 +157,14 @@ def build_extrap_split(
     far_mask     = far_all[:, 0] <= far_ceiling
     X_far        = far_all[far_mask]
     y_far        = far_y_all[far_mask]
+    if len(X_far) < 2:
+        raise ValueError(f"far region has only {len(X_far)} rows after multiplier clipping")
     n_clipped    = int((~far_mask).sum())
 
     if n_clipped > 0:
         print(
             f"   ℹ️  '{description[:45]}': clipped {n_clipped} far sample(s) "
             f"beyond {multiplier}× boundary (x>{far_ceiling:.3g})"
-        )
-    if len(X_far) == 0:
-        print(
-            f"  ⚠️  '{description[:45]}': no far samples within "
-            f"multiplier={multiplier}× — extrap_r2_far will be null"
         )
 
     metadata = {
@@ -369,7 +382,7 @@ def compute_extrap_r2_far(
                 extrap_error_pct[mname] = None
             else:
                 r2f      = _far_r2(y_far, y_far_pred)
-                rmse_far = _far_rmse(y_far, y_far_pred) if r2f is not None else None
+                rmse_far = _far_rmse(y_far, y_far_pred)
                 extrap_r2_far[mname]   = r2f
                 extrap_rmse_far[mname] = rmse_far
 
