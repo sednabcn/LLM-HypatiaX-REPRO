@@ -12,10 +12,10 @@ def test_split_conformal_uses_finite_sample_rank_and_frozen_predictions():
     calibrator = SplitConformalRegressor(0.8).fit(
         [1.0, 2.0, 3.0, 4.0, 5.0], [0.0, 0.0, 0.0, 0.0, 0.0]
     )
-    assert calibrator.quantile() == 4.0
+    assert calibrator.quantile() == 5.0
     lower, upper = calibrator.predict_interval([10.0, 20.0])
-    np.testing.assert_allclose(lower, [6.0, 16.0])
-    np.testing.assert_allclose(upper, [14.0, 24.0])
+    np.testing.assert_allclose(lower, [5.0, 15.0])
+    np.testing.assert_allclose(upper, [15.0, 25.0])
     assert calibrator.calibration_metadata["extra_domain_guarantee"] is False
 
 
