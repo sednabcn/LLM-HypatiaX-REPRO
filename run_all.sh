@@ -1987,7 +1987,7 @@ PYEOF_FINGERPRINT_2
 
 
 
-run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney ablation)" bash -c "
+run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analysis in DEV)" bash -c "
   _EXP2_RESUME_ARG=--resume
   if [[ "\${RESUME:-true}" != "true" || -n "\${CLEAR_CHECKPOINT:-}" ]]; then
     _EXP2_RESUME_ARG="--force-fresh"
