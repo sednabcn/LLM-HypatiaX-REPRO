@@ -45,6 +45,8 @@ def test_quantile_predictions_and_central_interval_follow_contract():
     np.testing.assert_allclose(estimate.lower, [1.05, 3.05, 5.05])
     np.testing.assert_allclose(estimate.upper, [1.95, 3.95, 5.95])
     assert set(estimate.quantiles) == {0.05, 0.5, 0.95}
+    assert estimate.diagnostics["central_interval_available"] is True
+    assert estimate.diagnostics["required_interval_levels"] == pytest.approx([0.05, 0.95])
     report = validate_uncertainty_method_contract(method, X, {0.9: estimate})
     assert report["status"] == "ok"
 
