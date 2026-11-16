@@ -5188,9 +5188,10 @@ Examples
                 _extrap_tests.append((_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
                                       _X_far, _y_far))
             except Exception as _esplit_exc:
-                print(f"  ⚠️  extrap split failed for '{_desc[:50]}': {_esplit_exc} — using full data")
-                _extrap_tests.append((_desc, _X, _y, _vnames, {**_meta, "extrap": False}, _dom,
-                                      None, None))
+                raise RuntimeError(
+                    f"Extrapolation split failed for '{_desc[:80]}'; refusing an in-sample fallback: "
+                    f"{type(_esplit_exc).__name__}: {_esplit_exc}"
+                ) from _esplit_exc
         all_tests = _extrap_tests
         print(f"   Applied extrap split to {len(all_tests)} test(s). "
               f"Each uses {int(_efrac*100)}% of samples for training.\n")
