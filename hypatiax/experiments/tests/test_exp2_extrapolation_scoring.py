@@ -91,3 +91,17 @@ def test_both_active_feynman_runners_fail_closed_on_invalid_extrapolation_splits
         assert "if split < 2 or n - split < 2:" in source
         assert "if len(X_far) < 2:" in source
         assert "rmse_far = _far_rmse(y_far, y_far_pred)" in source
+
+
+def test_feynman_output_identity_includes_domain_and_timestamp_precision():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    for filename in (
+        "run_comparative_suite_benchmark_v2.py",
+        "run_comparative_suite_benchmark_pca.py",
+    ):
+        source = (root / "hypatiax/experiments/benchmarks" / filename).read_text()
+        assert '_new_keys = {(r.get("domain"), r["test"], r["method"])' in source
+        assert '_ext_new_keys = {(r.get("domain"), r["test"], r["method"])' in source
+        assert 'datetime.now().strftime("%Y%m%d_%H%M%S_%f")' in source
