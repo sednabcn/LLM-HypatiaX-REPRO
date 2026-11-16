@@ -199,7 +199,7 @@ def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_
     assert "::error::required ablation artifact" in runner
     assert "::error::[instability]" in runner
     assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
-    assert "::error::benchmark_results_extrap.json not found" in runner
+    assert "::error::benchmark_results_extrap.json missing from the current exp2_extrap output directory" in runner
     assert "post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV." in runner
 
 
@@ -303,3 +303,18 @@ def test_all_portfolio_seed_parsers_allow_empty_unsharded_task_ids():
     exp1b = runner[exp1b_start:exp1b_end]
     assert "running full default seed list" in exp1b
     assert "_SHARD_SEEDS='42,99,123,777,2024'" in exp1b
+
+
+def test_exp2_extrap_rejects_stale_files_and_delegates_post_run_analysis():
+    runner = (ROOT / "run_all.sh").read_text()
+    start = runner.index('run exp2_feynman_extrap "')
+    end = runner.find("\\nrun ", start + 1)
+    block = runner[start: end if end >= 0 else len(runner)]
+    assert "_EXT_RUN_MARKER=$(mktemp)" in block
+    assert '-newer "\\${_EXT_RUN_MARKER}"' in block
+    assert ' -nt "\\${_EXT_RUN_MARKER}"' in block
+    assert "ablation_paired.json" not in block
+    assert "ci_analysis.yml" not in block
+    check = (ROOT / ".github/workflows/ci_pipeline_check.yml").read_text()
+    assert '"exp2_feynman_extrap": ["benchmark_results_extrap*.json", "protocol_core_extrap_*.json",' in check
+    assert '"exp2_extrap_summary.json"]' in check
