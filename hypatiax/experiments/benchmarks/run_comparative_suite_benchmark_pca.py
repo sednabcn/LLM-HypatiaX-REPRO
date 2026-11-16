@@ -4400,9 +4400,9 @@ class ProtocolBenchmarkSuite:
                 except Exception:
                     _existing = []
             # Drop stale entries for tests being re-written by this run
-            _new_keys = {(r["test"], r["method"]) for r in _flat_records}
+            _new_keys = {(r.get("domain"), r["test"], r["method"]) for r in _flat_records}
             _existing = [r for r in _existing
-                         if (r.get("test"), r.get("method")) not in _new_keys]
+                         if (r.get("domain"), r.get("test"), r.get("method")) not in _new_keys]
             _merged = _existing + _flat_records
             with open(_json_path, "w") as _jf:
                 _dump_json_null(_merged, _jf, indent=2)
@@ -4479,9 +4479,9 @@ class ProtocolBenchmarkSuite:
                             _ext_existing = []
                     except Exception:
                         _ext_existing = []
-                _ext_new_keys = {(r["test"], r["method"]) for r in _extrap_rows}
+                _ext_new_keys = {(r.get("domain"), r["test"], r["method"]) for r in _extrap_rows}
                 _ext_existing = [r for r in _ext_existing
-                                 if (r.get("test"), r.get("method")) not in _ext_new_keys]
+                                 if (r.get("domain"), r.get("test"), r.get("method")) not in _ext_new_keys]
                 _ext_merged = _ext_existing + _extrap_rows
                 with open(_ext_path, "w") as _ef:
                     _dump_json_null(_ext_merged, _ef, indent=2)
@@ -4494,7 +4494,7 @@ class ProtocolBenchmarkSuite:
     def _save(self, noiseless: bool = False, threshold: float = 0.99, extrap: bool = False):
         out_dir = _OUTPUT_DIR
         out_dir.mkdir(parents=True, exist_ok=True)
-        ts   = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ts   = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         if extrap:
             mode = "extrap"
         elif noiseless:
