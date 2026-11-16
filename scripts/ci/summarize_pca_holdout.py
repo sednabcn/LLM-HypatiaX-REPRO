@@ -161,7 +161,10 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
         "threshold": threshold,
         "expected_equations": expected_equations,
         "observed_equations": len(cases),
-        "protocol_complete": len(cases) == expected_equations,
+        "protocol_complete": (
+            len(cases) == expected_equations
+            and all(v["n_total"] == expected_equations for v in per_method.values())
+        ),
         "n_pass": n_pass_total,
         "n_total": n_total_total,
         "solve_rate": n_pass_total / n_total_total if n_total_total else None,
