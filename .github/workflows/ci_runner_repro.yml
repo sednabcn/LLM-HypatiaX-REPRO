@@ -1594,6 +1594,8 @@ jobs:
             # and every case record carries its seed.
             _EXTRA=()
             [[ "${RESUME}" == "true" ]] && _EXTRA+=(--resume)
+            RESUME="${{ github.event.inputs.resume || 'true' }}" \
+            CLEAN_LLM_RERUN="${{ github.event.inputs.clean_llm_rerun || 'false' }}" \
             TASK_IDS="${TASK_IDS}" \
             SHARD_IDS="${_RUN_SHARD_IDS}" \
             SHARD="${SHARD_INDEX}" \
