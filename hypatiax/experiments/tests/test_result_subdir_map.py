@@ -311,6 +311,8 @@ def test_exp2_extrap_rejects_stale_files_and_delegates_post_run_analysis():
     end = runner.find("\nrun ", start + 1)
     block = runner[start: end if end >= 0 else len(runner)]
     assert "_EXT_RUN_MARKER=$(mktemp)" in block
+    assert "EXPECTED_DOMAINS=" in block
+    assert '"-ne"' not in block
     assert '-newer "\\${_EXT_RUN_MARKER}"' in block
     assert ' -nt "\\${_EXT_RUN_MARKER}"' in block
     assert "ablation_paired.json" not in block
