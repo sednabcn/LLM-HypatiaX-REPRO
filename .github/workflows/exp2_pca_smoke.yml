@@ -1,0 +1,202 @@
+name: "Exp2 PCA · bounded smoke (max 3 equations)"
+run-name: "Exp2 PCA smoke · ${{ inputs.equation_ids }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      equation_ids:
+        description: "One to three 1-based equation IDs from the 30-equation Exp2 registry (e.g. '1 2 3')."
+        required: true
+        default: "1 2 3"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exp2-pca-smoke-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  pca_smoke:
+    name: "PCA holdout smoke (max 3 equations; methods 3 and 6)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      HYPATIAX_STRICT: "1"
+      HYPATIAX_DISABLE_HARDCODED: "1"
+      HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+      HYPATIAX_R2_SIGN_FLIP: "0"
+      LLM_MODEL: "claude-sonnet-4-6"
+      HYPATIAX_LLM_MODEL: "claude-sonnet-4-6"
+      LLM_TEMPERATURE: "0.25"
+      FEYNMAN_SAMPLES: "200"
+      FEYNMAN_TIMEOUT: "1100"
+      METHOD_TIMEOUT: "900"
+      PYSR_POPULATIONS: "30"
+      JULIA_NUM_THREADS: "4"
+      JULIA_EXCLUSIVE: "0"
+      PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate requested equation IDs (hard cap 3)
+        id: selection
+        env:
+          EQUATION_IDS: ${{ inputs.equation_ids }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          raw = os.environ["EQUATION_IDS"].strip()
+          tokens = raw.split()
+          if not 1 <= len(tokens) <= 3:
+              raise SystemExit("Select between one and three equation IDs; more than three is refused.")
+          if any(not re.fullmatch(r"[1-9]|[12][0-9]|30", token) for token in tokens):
+              raise SystemExit("Equation IDs must be integers from 1 through 30.")
+          if len(set(tokens)) != len(tokens):
+              raise SystemExit("Duplicate equation IDs are not allowed.")
+          normalized = " ".join(tokens)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"equations={normalized}\n")
+          print(f"Accepted {len(tokens)} equation(s): {normalized}")
+          PY
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Set up Julia 1.11
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: "1.11"
+
+      - name: Cache Julia depot
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: exp2-pca-smoke-julia-${{ runner.os }}-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
+          restore-keys: |
+            exp2-pca-smoke-julia-${{ runner.os }}-
+
+      - name: Install runtime dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          if [[ -f requirements.txt ]]; then python -m pip install -r requirements.txt; fi
+          python -m pip install numpy scipy scikit-learn pysr juliacall pint anthropic torch --index-url https://download.pytorch.org/whl/cpu python-dotenv psutil
+          python -c "import pysr; pysr.install()"
+
+      - name: Run isolated PCA smoke
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EQUATIONS: ${{ steps.selection.outputs.equations }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${ANTHROPIC_API_KEY:-}" ]]; then
+            echo "::error::ANTHROPIC_API_KEY is required for the live-LLM hybrid route."
+            exit 1
+          fi
+          OUT_DIR="artifacts/exp2-pca-smoke/run-${RUN_ID}-attempt-${RUN_ATTEMPT}"
+          mkdir -p "${OUT_DIR}/results"
+          read -r -a EQ_ARRAY <<< "${EQUATIONS}"
+          echo "Smoke equation IDs: ${EQUATIONS}"
+          echo "Target methods: 3 (EnhancedHybridSystemDeFi), 6 (HybridDiscoverySystem v50_2)"
+          echo "Split: PCA-directed 40/60; train=40%, holdout=60%; noiseless; n=200"
+          echo "Output is isolated under ${OUT_DIR}; no repository result commit or full aggregation."
+          set +e
+          python hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_pca.py \
+            --benchmark feynman \
+            --samples 200 \
+            --noiseless \
+            --threshold 0.999999 \
+            --methods 3 6 \
+            --equations "${EQ_ARRAY[@]}" \
+            --pysr-timeout 1100 \
+            --method-timeout 900 \
+            --populations 30 \
+            --parsimony 0.01 \
+            --no-llm-cache \
+            --force-fresh \
+            --no-checkpoint \
+            --checkpoint-name "exp2_pca_smoke_${RUN_ID}_${RUN_ATTEMPT}" \
+            --output-dir "${OUT_DIR}/results" \
+            2>&1 | tee "${OUT_DIR}/smoke.log"
+          RUN_STATUS=${PIPESTATUS[0]}
+          set -e
+          echo "${RUN_STATUS}" > "${OUT_DIR}/runner_exit_code.txt"
+          if [[ "${RUN_STATUS}" -ne 0 ]]; then
+            echo "::error::PCA smoke runner exited with status ${RUN_STATUS}; diagnostic artifact will still be uploaded."
+            exit "${RUN_STATUS}"
+          fi
+          echo "${OUT_DIR}" > smoke_output_dir.txt
+
+      - name: Validate PCA holdout outputs
+        if: always() && steps.selection.outcome == 'success'
+        env:
+          EQUATIONS: ${{ steps.selection.outputs.equations }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          OUT_DIR="artifacts/exp2-pca-smoke/run-${RUN_ID}-attempt-${RUN_ATTEMPT}"
+          python3 - "${OUT_DIR}" "${EQUATIONS}" <<'PY'
+          import glob, json, math, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          expected = sys.argv[2].split()
+          files = sorted(glob.glob(str(root / "results" / "protocol_core_noiseless_pca_*.json")))
+          if len(files) != 1:
+              raise SystemExit(f"Expected exactly one fresh PCA result JSON; found {len(files)}")
+          payload = json.loads(pathlib.Path(files[0]).read_text(encoding="utf-8"))
+          tests = payload.get("tests")
+          if not isinstance(tests, list) or len(tests) != len(expected):
+              raise SystemExit(f"Expected {len(expected)} equation records; found {len(tests) if isinstance(tests, list) else 'invalid'}")
+          methods = (
+              "EnhancedHybridSystemDeFi (core)",
+              "HybridDiscoverySystem v50_2 (tools)",
+          )
+          for index, row in enumerate(tests, start=1):
+              if row.get("pca_split_protocol") != "pca_40_60":
+                  raise SystemExit(f"Record {index}: wrong or missing PCA split protocol")
+              if not row.get("pca_n_train") or not row.get("pca_n_test"):
+                  raise SystemExit(f"Record {index}: missing PCA train/holdout sizes")
+              if int(row["pca_n_train"]) + int(row["pca_n_test"]) != 200:
+                  raise SystemExit(f"Record {index}: PCA split sizes do not sum to 200")
+              scores = row.get("pca_test_r2") or {}
+              results = row.get("results") or {}
+              for method in methods:
+                  result = results.get(method) or {}
+                  score = scores.get(method)
+                  try:
+                      score = float(score)
+                  except (TypeError, ValueError):
+                      score = float("nan")
+                  if not result.get("success"):
+                      raise SystemExit(f"Record {index} {method}: method failed")
+                  if result.get("external_holdout_status") != "success":
+                      raise SystemExit(f"Record {index} {method}: external PCA holdout unavailable: {result.get('external_holdout_error')}")
+                  if not math.isfinite(score):
+                      raise SystemExit(f"Record {index} {method}: PCA holdout R² missing/non-finite")
+                  print(f"[PCA-SMOKE] {row.get('domain')} / {row.get('description')} / {method}: holdout R²={score:.9f}")
+          print(f"[PCA-SMOKE] PASS: {len(tests)} fresh equation(s), both corrected methods have finite PCA holdout scores.")
+          print("[PCA-SMOKE] This is a bounded smoke only; it is not the 30-equation headline result.")
+          PY
+
+      - name: Upload smoke diagnostics (artifact only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exp2-pca-smoke-run-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: artifacts/exp2-pca-smoke/run-${{ github.run_id }}-attempt-${{ github.run_attempt }}/
+          if-no-files-found: warn
+          retention-days: 30
