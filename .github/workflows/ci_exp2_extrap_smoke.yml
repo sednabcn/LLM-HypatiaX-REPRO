@@ -78,10 +78,6 @@ jobs:
             "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn \
             pmlb pint psutil
 
-      - name: Install Julia SymbolicRegression dependencies
-        run: |
-          julia --project -e 'using Pkg; Pkg.add(name="SymbolicRegression", version="1.11.0")'
-
       - name: Run three-equation extrapolation benchmark
         id: benchmark
         shell: bash
