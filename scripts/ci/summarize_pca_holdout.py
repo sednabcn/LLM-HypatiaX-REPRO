@@ -73,22 +73,10 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
             if not isinstance(results, dict) or not isinstance(pca_scores, dict):
                 raise ValueError(f"{path.name}: malformed results/pca_test_r2 mapping")
 
-            nn_result = results.get(NN_HYBRID_KEY) or {}
-            nn_meta = nn_result.get("metadata") or {}
-            decision = nn_meta.get("decision")
-            domain = test.get("domain")
-            if decision is not None and domain is not None:
-                entry = decision_by_domain.setdefault(
-                    domain, {"llm": 0, "other": 0, "forced": domain in FORCED_LLM_DOMAINS}
-                )
-                if decision == "llm":
-                    entry["llm"] += 1
-                else:
-                    entry["other"] += 1
-
             candidate = {
                 "file": path.name,
                 "timestamp": file_timestamp,
+                "domain": test.get("domain"),
                 "results": results,
                 "pca_scores": pca_scores,
             }
@@ -99,6 +87,22 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
                 cases[description] = candidate
             else:
                 superseded_case_records += 1
+
+    # Routing counts are derived only from the selected latest record for
+    # each equation, not summed across historical reruns.
+    for case in cases.values():
+        domain = case.get("domain")
+        nn_result = case["results"].get(NN_HYBRID_KEY) or {}
+        nn_meta = nn_result.get("metadata") or {}
+        decision = nn_meta.get("decision")
+        if decision is not None and domain is not None:
+            entry = decision_by_domain.setdefault(
+                domain, {"llm": 0, "other": 0, "forced": domain in FORCED_LLM_DOMAINS}
+            )
+            if decision == "llm":
+                entry["llm"] += 1
+            else:
+                entry["other"] += 1
 
     per_method = {}
     for method in TARGET_METHODS:
@@ -230,9 +234,10 @@ def main():
         )
     if not summary["protocol_complete"]:
         print(
-            f"[PCA-HOLDOUT] WARNING: expected {args.expected_equations} equations, "
-            f"found {summary['observed_equations']}"
+            f"[PCA-HOLDOUT] ERROR: expected {args.expected_equations} unique equations "
+            f"with both method records; found {summary['observed_equations']}"
         )
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
