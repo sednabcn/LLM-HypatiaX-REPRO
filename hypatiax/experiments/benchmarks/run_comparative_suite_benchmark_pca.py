@@ -3345,9 +3345,8 @@ class HybridSystemV50_2Method(BaseMethod):
         # Reserve 250 seconds for Julia startup, serialization and cleanup;
         # divide the remaining method budget across the two bounded attempts.
         _per_to_outer    = min(320, max(60, (_METHOD_TIMEOUT_SECS - 250) // _MAX_RETRIES_V50_2_OUTER))
-        # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
-        # Iterations: scale to per-attempt timeout.  Cap raised to 1000 to match
-        # repro.yaml pysr.niterations=1000; actual execution bounded by pysr_timeout.
+        # Scale iterations to the bounded per-attempt wall-clock budget.
+        # The timeout remains the hard stop if Julia/PySR iteration cost varies.
         _ITER_MAX  = max(40, min(1000, _per_to_outer - 30))
         _ITER_MIN  = 40
 
