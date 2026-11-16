@@ -101,9 +101,19 @@ class QuantileRegressionUncertainty(UncertaintyMethod):
         quantiles = {level: values[:, index] for index, level in enumerate(self.quantile_levels)}
         alpha = (1.0 - coverage) / 2.0
         lower_level, upper_level = alpha, 1.0 - alpha
-        has_interval = lower_level in quantiles and upper_level in quantiles
-        lower = quantiles[lower_level] if has_interval else None
-        upper = quantiles[upper_level] if has_interval else None
+        # Arithmetic such as (1 - 0.9) / 2 can produce 0.04999999999999999,
+        # which must still match a configured 0.05 quantile.
+        level_tolerance = 1e-12
+
+        def configured_level(target: float) -> float | None:
+            match = min(self.quantile_levels, key=lambda level: abs(level - target))
+            return match if abs(match - target) <= level_tolerance else None
+
+        matched_lower = configured_level(lower_level)
+        matched_upper = configured_level(upper_level)
+        has_interval = matched_lower is not None and matched_upper is not None
+        lower = quantiles[matched_lower] if has_interval else None
+        upper = quantiles[matched_upper] if has_interval else None
         crossing_matrix = np.diff(values, axis=1) < 0
         crossing_rows = np.any(crossing_matrix, axis=1)
         crossing_count = int(np.count_nonzero(crossing_rows))
