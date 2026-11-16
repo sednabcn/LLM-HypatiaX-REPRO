@@ -163,7 +163,11 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
         "observed_equations": len(cases),
         "protocol_complete": (
             len(cases) == expected_equations
-            and all(v["n_total"] == expected_equations for v in per_method.values())
+            and all(
+                v["n_total"] == expected_equations
+                and v["failure_reasons"].get("missing_method_record", 0) == 0
+                for v in per_method.values()
+            )
         ),
         "n_pass": n_pass_total,
         "n_total": n_total_total,
