@@ -19,7 +19,6 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 sys.path.insert(0, str(ROOT))
 
-from hypatiax.experiments.benchmarks import exp1_four_way_matched as driver
 from hypatiax.core.base_pure_llm import baseline_pure_llm_defi_discovery as pure_llm
 
 
@@ -152,6 +151,10 @@ def call_llm(baseline, prompt):
 
 
 def train_feedback(code, X, y, names):
+    # Keep prompt/statistics helpers importable without loading the benchmark
+    # driver, PySR, or Julia during offline test collection.
+    from hypatiax.experiments.benchmarks import exp1_four_way_matched as driver
+
     pred = driver.rcsb._runner_eval_formula(code, X, names)
     yt = np.asarray(y, dtype=float).reshape(-1)
     yp = np.asarray(pred, dtype=float).reshape(-1)
@@ -167,6 +170,8 @@ def train_feedback(code, X, y, names):
 
 
 def score_formula(code, X_test, y_test, extrap, names):
+    from hypatiax.experiments.benchmarks import exp1_four_way_matched as driver
+
     pred = driver.rcsb._runner_eval_formula(code, X_test, names)
     test = driver._metrics(y_test, pred)
     extra = {}
@@ -185,6 +190,10 @@ def score_formula(code, X_test, y_test, extrap, names):
 
 
 def main():
+    # The executable pilot needs the benchmark data/evaluator, but the pure
+    # prompt helpers above should remain importable in lightweight offline tests.
+    from hypatiax.experiments.benchmarks import exp1_four_way_matched as driver
+
     if not os.environ.get("ANTHROPIC_API_KEY", "").startswith("sk-"):
         raise RuntimeError("ANTHROPIC_API_KEY is required; refusing offline or hardcoded fallback")
     if not 0 <= CASE_ID < len(driver.abl.CORE_15):
