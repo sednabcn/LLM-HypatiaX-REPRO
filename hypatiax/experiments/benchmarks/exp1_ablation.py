@@ -194,7 +194,15 @@ try:
     from pysr import PySRRegressor
     PYSR_AVAILABLE = True
     import pysr as _pysr_mod
-    print(f"✅ PySR {_pysr_mod.__version__} ready")
+    # PySR 2.x (including prereleases) may not expose __version__ on the
+    # module. Read installed distribution metadata instead; version reporting
+    # must never prevent the estimator from importing.
+    from importlib.metadata import PackageNotFoundError, version as _package_version
+    try:
+        _pysr_version = getattr(_pysr_mod, "__version__", None) or _package_version("pysr")
+    except PackageNotFoundError:
+        _pysr_version = "unknown"
+    print(f"✅ PySR {_pysr_version} ready")
 except ImportError:
     PYSR_AVAILABLE = False
     print("⚠️  PySR not installed — pysr_only condition will fail. Run: pip install pysr")
