@@ -1890,7 +1890,7 @@ PYEOF
   fi
 
   echo '[FIX-C3] Computing solve rate from genuine PCA holdout R²...'
-  python3 scripts/ci/summarize_pca_holdout.py \
+  python3 "${SCRIPTS_DIR}/ci/summarize_pca_holdout.py" \
     --pca-dir "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060" \
     --summary "${RESULTS_DIR}/comparison_results/feynman-tests/exp2_pca_4060/exp2_pca_4060_summary.json" \
     --threshold 0.999999 \
