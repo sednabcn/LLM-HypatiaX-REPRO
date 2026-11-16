@@ -2081,9 +2081,9 @@ run exp2_feynman_extrap "Feynman far-region R² (worker artifacts; paired analys
     echo '    post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV.'
   fi
   python3 scripts/ci/validate_exp2_extrap_worker.py \\
-    --output-dir "\\${_EXT_DIR}" \\
-    --run-start-marker "\\${_EXT_RUN_MARKER}" \\
-    --expected-domains "\\${ACTIVE_DOMAINS}"
+    --output-dir "\${_EXT_DIR}" \\
+    --run-start-marker "\${_EXT_RUN_MARKER}" \\
+    --expected-domains "\${ACTIVE_DOMAINS}"
 "
 
 
