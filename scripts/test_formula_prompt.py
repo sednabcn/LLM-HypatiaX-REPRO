@@ -164,8 +164,23 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
         raise RuntimeError("shared LLM wrapper did not confirm temperature 0.25")
     baseline.validate_formula_signature(code, names)
 
+    metric_results = {}
+    metric_errors = {}
+    partitions = {
+        "train": (X_train, y_train),
+        "outer_test": (X_test, y_test),
+        **{f"extrapolation_{k}": v for k, v in extrapolation.items()},
+    }
+    for partition, (X_part, y_part) in partitions.items():
+        try:
+            metric_results[partition] = _evaluate(
+                code, X_part, y_part, names, driver
+            )
+        except Exception as exc:
+            metric_errors[partition] = f"{type(exc).__name__}: {exc}"
+
     result = {
-        "status": "passed",
+        "status": "passed" if not metric_errors else "failed",
         "api_calls": 1,
         "equation": eq["name"],
         "case_id": case_id,
@@ -179,14 +194,8 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
         "formula": code,
         "formula_sha256": hashlib.sha256(code.encode("utf-8")).hexdigest(),
         "training_arrays_sent_to_model": False,
-        "metrics": {
-            "train": _evaluate(code, X_train, y_train, names, driver),
-            "outer_test": _evaluate(code, X_test, y_test, names, driver),
-            "extrapolation": {
-                regime: _evaluate(code, X_e, y_e, names, driver)
-                for regime, (X_e, y_e) in extrapolation.items()
-            },
-        },
+        "metrics": metric_results,
+        "metric_errors": metric_errors,
         "protocol": {
             "zero_shot_task_description_only": True,
             "test_or_extrapolation_data_sent_to_model": False,
@@ -195,9 +204,9 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
             "pysr_used": False,
             "retry_count": 0,
         },
+        "usage": generated.get("usage"),
+        "llm_call_info": llm_call.last_call_info(),
     }
-    result["usage"] = generated.get("usage")
-    result["llm_call_info"] = llm_call.last_call_info()
 
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -229,11 +238,12 @@ def main() -> int:
         print("OFFLINE PROMPT CONTRACT: PASS (0 API calls)", flush=True)
     if args.mode in ("live", "both"):
         report["live"] = _live_test(args.case_id, args.model, args.output)
-        print("LIVE PROMPT TEST: PASS (1 API call)", flush=True)
+        live_status = report["live"].get("status")
+        print(f"LIVE PROMPT TEST: {str(live_status).upper()} (1 API call)", flush=True)
         print(f"Live result written to: {args.output}", flush=True)
 
     print(json.dumps(report, indent=2, allow_nan=False))
-    return 0
+    return 1 if report.get("live", {}).get("status") == "failed" else 0
 
 
 if __name__ == "__main__":
