@@ -627,7 +627,7 @@ def compute_extrap_r2_far(
                 extrap_error_pct[mname] = None
             else:
                 r2f      = _far_r2(y_far, y_far_pred)
-                rmse_far = _far_rmse(y_far, y_far_pred) if r2f is not None else None
+                rmse_far = _far_rmse(y_far, y_far_pred)
                 extrap_r2_far[mname]   = r2f
                 extrap_rmse_far[mname] = rmse_far
 
