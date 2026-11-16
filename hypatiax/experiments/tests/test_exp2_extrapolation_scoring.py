@@ -75,3 +75,19 @@ def test_extrap_split_rejects_empty_or_too_small_far_region():
     y = X[:, 0] ** 2
     with pytest.raises(ValueError, match="far region"):
         build_extrap_split(X, y, train_frac=0.8, multiplier=0.001)
+
+
+def test_both_active_feynman_runners_fail_closed_on_invalid_extrapolation_splits():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    for filename in (
+        "run_comparative_suite_benchmark_v2.py",
+        "run_comparative_suite_benchmark_pca.py",
+    ):
+        source = (root / "hypatiax/experiments/benchmarks" / filename).read_text()
+        assert "raise RuntimeError(" in source
+        assert "refusing an in-sample fallback" in source
+        assert "if split < 2 or n - split < 2:" in source
+        assert "if len(X_far) < 2:" in source
+        assert "rmse_far = _far_rmse(y_far, y_far_pred)" in source
