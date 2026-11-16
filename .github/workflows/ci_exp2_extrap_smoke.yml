@@ -1,0 +1,119 @@
+name: "Exp2 Feynman extrapolation smoke (3 equations × 6 methods)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: "Samples per equation (minimum 40; default 120)"
+        required: false
+        default: "120"
+      pysr_timeout:
+        description: "Per PySR attempt timeout in seconds"
+        required: false
+        default: "300"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exp2-extrap-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: "3 equations × all 6 methods + far-region scoring"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HYPATIAX_R2_SIGN_FLIP: "0"
+      HYPATIAX_STRICT: "1"
+      HYPATIAX_DISABLE_HARDCODED: "1"
+      HYPATIAX_DISABLE_PROMPT_HINTS: "1"
+      PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+      JULIA_NUM_THREADS: "4"
+      JULIA_EXCLUSIVE: "0"
+      PYSR_SEED: "42"
+      PYSR_POPULATIONS: "5"
+      PYSR_FIT_WALL_TIMEOUT: "360"
+      PYSR_FIT_GRACE_SECS: "60"
+      METHOD_TIMEOUT: "240"
+      JOB_DEADLINE: "5400"
+      FEYNMAN_SAMPLES: ${{ inputs.samples || '120' }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Validate smoke inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${FEYNMAN_SAMPLES}" =~ ^[0-9]+$ ]] && (( FEYNMAN_SAMPLES >= 40 && FEYNMAN_SAMPLES <= 300 )) || {
+            echo "::error::samples must be an integer from 40 to 300"; exit 1;
+          }
+          [[ -n "${ANTHROPIC_API_KEY}" ]] || {
+            echo "::error::ANTHROPIC_API_KEY repository secret is required for the live PureLLM method"; exit 1;
+          }
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up Julia 1.11
+        uses: julia-actions/setup-julia@v2.6.1
+        with:
+          version: "1.11"
+
+      - name: Install benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "pandas==2.2.3" "pysr==2.0.0a1" numpy scipy sympy \
+            "anthropic==0.73.0" scikit-learn pyyaml python-dotenv matplotlib seaborn \
+            pmlb pint psutil
+
+      - name: Install Julia SymbolicRegression dependencies
+        run: |
+          julia --project -e 'using Pkg; Pkg.add(name="SymbolicRegression", version="1.11.0")'
+
+      - name: Run three-equation extrapolation benchmark
+        id: benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT_DIR="${RUNNER_TEMP}/exp2-extrap-smoke/run-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "${OUT_DIR}"
+          echo "OUT_DIR=${OUT_DIR}" >> "${GITHUB_ENV}"
+          PYTHONPATH="${GITHUB_WORKSPACE}${PYTHONPATH:+:${PYTHONPATH}}" \
+          PYSR_TIMEOUT="${{ inputs.pysr_timeout || '300' }}" \
+            python hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py \
+              --benchmark feynman \
+              --protocol benchmark \
+              --domain feynman_mechanics \
+              --equations 1 2 3 \
+              --methods 1 2 3 4 5 6 \
+              --samples "${FEYNMAN_SAMPLES}" \
+              --noiseless --threshold 0.999999 \
+              --extrap --extrap-multiplier 2.0 --extrap-train-frac 0.8 \
+              --pysr-timeout "${{ inputs.pysr_timeout || '300' }}" \
+              --method-timeout "${METHOD_TIMEOUT}" \
+              --populations "${PYSR_POPULATIONS}" \
+              --parsimony 0.01 \
+              --no-llm-cache --no-checkpoint \
+              --output-dir "${OUT_DIR}" \
+              2>&1 | tee "${OUT_DIR}/smoke_run.log"
+
+      - name: Validate all six method scores and far extrapolation scores
+        run: |
+          python scripts/ci/validate_exp2_extrap_smoke.py --output-dir "${OUT_DIR}"
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: exp2-feynman-extrap-smoke-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/exp2-extrap-smoke/
+          if-no-files-found: warn
+          retention-days: 30
