@@ -2022,8 +2022,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   while IFS= read -r _pf; do
     _pfn=\$(basename \"\${_pf}\")
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
-      || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" \
-     
+      || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 
   done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' 2>/dev/null)
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
