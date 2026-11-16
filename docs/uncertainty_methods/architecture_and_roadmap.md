@@ -61,8 +61,8 @@ dependent; do not presume random exchangeability.
 | Module | Status | Intended role / caveat |
 |---|---|---|
 | \`ensemble.py\` | Implemented | Adapts supplied fitted members; disagreement is not automatically calibrated |
+| \`bootstrap.py\` | Implemented | Explicit factory-based pairs, residual, and moving-block resampling; percentile bounds quantify fitted-mean sampling spread, not calibrated future-observation intervals |
 | \`bayesian.py\` | Planned | Posterior and posterior-predictive summaries; credible intervals depend on model and prior |
-| \`bootstrap.py\` | Planned | Resampling-based prediction distributions; resampling unit must match dependence structure |
 | \`quantile.py\` | Planned | Conditional quantile predictions; check quantile crossing and tail extrapolation |
 | \`shift_aware.py\` | Planned | Weighted/local/group calibration; requires assumptions and support overlap |
 | \`calibration.py\` | Partial | Split-conformal baseline exists separately; calibration adapters remain extensible |
@@ -71,8 +71,8 @@ dependent; do not presume random exchangeability.
 
 - **Phase 0:** contracts, estimate container, registries, evaluation, JSON schema,
   documentation, and side-effect-free contract validators.
-- **Phase 1:** implemented adapter for supplied fitted ensemble members; next,
-  bootstrap and quantile adapters with common contract tests.
+- **Phase 1:** adapters for supplied fitted ensembles and explicit bootstrap
+  resampling; next, quantile adapter with common contract tests.
 - **Phase 2:** Bayesian linear/GP adapters and posterior-predictive summaries.
 - **Phase 3:** weighted/local/group conformal with effective sample size,
   overlap, and support diagnostics.
@@ -93,3 +93,12 @@ The ensemble adapter does not train or refit constituent predictors, select
 members, calibrate empirical spread, construct confidence intervals, or
 orchestrate horizon experiments. The supplied split-conformal baseline remains
 a separate calibration stage.
+
+## Bootstrap-specific safeguards
+
+Bootstrap fitting is explicit and factory-based. Pairs resampling assumes
+row-level exchangeability; residual resampling assumes a defensible fixed-design
+residual model; moving-block resampling assumes rows are pre-ordered and uses
+contiguous blocks only. The adapter's percentile intervals describe model
+sampling variability and do not include future observation noise or provide
+extrapolation coverage guarantees.
