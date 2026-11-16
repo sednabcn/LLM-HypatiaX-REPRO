@@ -3,6 +3,8 @@ HypatiaX - Hybrid Symbolic-Neural Framework
 hypatiax/tools - Symbolic regression tools and validation pipeline
 """
 
+from .feynman_horizon import evaluate_feynman_horizon_curves
+
 from .extrapolation_horizon import (
     evaluate_horizon_scenarios,
     generate_horizon_scenarios,
@@ -17,4 +19,5 @@ __all__ = [
     "evaluate_horizon_scenarios",
     "write_results_json",
     "plot_horizon_curves",
+    "evaluate_feynman_horizon_curves",
 ]
