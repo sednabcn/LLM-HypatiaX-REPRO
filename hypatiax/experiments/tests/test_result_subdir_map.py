@@ -331,5 +331,5 @@ def test_exp2_resume_false_skips_cached_and_committed_checkpoints():
         end = runner.find("\nrun ", start + 1)
         block = runner[start: end if end >= 0 else len(runner)]
         assert "_EXP2_RESUME_ARG=--resume" in block
-        assert '_EXP2_RESUME_ARG="--force-fresh"' in block
+        assert '_EXP2_RESUME_ARG=\\\"--force-fresh\\\"' in block
         assert '\\${_EXP2_RESUME_ARG}' in block
