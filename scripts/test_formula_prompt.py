@@ -333,17 +333,23 @@ def main() -> int:
     args = parser.parse_args()
 
     report = {}
+    if args.mode == "train-summary":
+        output = args.output or Path("prompt_test_train_summary_result.json")
+        report["train_summary"] = _train_summary_test(args.case_id, args.model, output)
+        print("TRAIN-SUMMARY LIVE TEST: COMPLETED (1 API call)", flush=True)
+        print(f"Train-summary result written to: {output}", flush=True)
     if args.mode in ("offline", "both"):
         report["offline"] = _prompt_contract()
         print("OFFLINE PROMPT CONTRACT: PASS (0 API calls)", flush=True)
     if args.mode in ("live", "both"):
-        output = args.output or Path("prompt_test_result.json")\n        report["live"] = _live_test(args.case_id, args.model, output)
+        output = args.output or Path("prompt_test_result.json")
+        report["live"] = _live_test(args.case_id, args.model, output)
         live_status = report["live"].get("status")
         print(f"LIVE PROMPT TEST: {str(live_status).upper()} (1 API call)", flush=True)
         print(f"Live result written to: {output}", flush=True)
 
     print(json.dumps(report, indent=2, allow_nan=False))
-    return 1 if (report.get("live", {}).get("status") == "failed" or report.get("train_summary", {}).get("execution_status") != "completed") else 0
+    return 1 if (report.get("live", {}).get("status") == "failed" or ("train_summary" in report and report["train_summary"].get("execution_status") != "completed")) else 0
 
 
 if __name__ == "__main__":
