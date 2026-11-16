@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from hypatiax.experiments.benchmarks.extrap_r2_far import (
+from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     _runner_eval_formula,
     build_extrap_split,
     compute_extrap_r2_far,
