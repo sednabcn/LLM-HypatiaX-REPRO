@@ -13,6 +13,14 @@ from .uncertainty import (
     evaluate_interval_levels,
     evaluate_prediction_intervals,
 )
+from .uncertainty_methods import (
+    CalibrationMethod,
+    UncertaintyEstimate,
+    UncertaintyMethod,
+    UncertaintyResult,
+    evaluate_estimate,
+    write_uncertainty_results_json,
+)
 
 __all__ = [
     "generate_horizon_scenarios",
@@ -24,4 +32,10 @@ __all__ = [
     "SplitConformalRegressor",
     "evaluate_prediction_intervals",
     "evaluate_interval_levels",
+    "UncertaintyMethod",
+    "CalibrationMethod",
+    "UncertaintyEstimate",
+    "UncertaintyResult",
+    "evaluate_estimate",
+    "write_uncertainty_results_json",
 ]
