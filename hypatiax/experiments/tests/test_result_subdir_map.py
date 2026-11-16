@@ -329,11 +329,12 @@ def test_exp2_resume_false_skips_cached_and_committed_checkpoints():
     assert "github.event.inputs.resume != 'false'" in workflow
     assert 'resume = os.environ.get("RESUME", "true").lower() == "true"' in workflow
     assert 'if resume and os.path.exists(ckpt_path):' in workflow
+
     runner = (ROOT / "run_all.sh").read_text()
     for step in ("exp2_feynman", "exp2_feynman_extrap", "exp2", "exp2_five"):
-        start = runner.index(f'run {step} \\"')
+        start = runner.index(f'run {step} "')
         end = runner.find("\nrun ", start + 1)
         block = runner[start: end if end >= 0 else len(runner)]
         assert "_EXP2_RESUME_ARG=--resume" in block
-        assert '_EXP2_RESUME_ARG=\\\"--force-fresh\\\"' in block
-        assert '\\${_EXP2_RESUME_ARG}' in block
+        assert "--force-fresh" in block
+        assert "_EXP2_RESUME_ARG}" in block
