@@ -1,0 +1,120 @@
+{
+  "execution_status": "completed",
+  "api_calls": 1,
+  "equation": "Allometric Scaling",
+  "case_id": 3,
+  "model": "claude-sonnet-4-6",
+  "temperature_requested": 0.25,
+  "temperature_sent": true,
+  "prompt_sha256": "9a6753e7a91861271514407eded85dca7330940b12c699ea97a0c0b690c1fa81",
+  "response_sha256": "80e03863617323f4a17f524ed4498b196fc0249281ec141f636ce6e50b583c37",
+  "formula": "def formula(M):\n    return 0.1 * M ** 0.75",
+  "formula_sha256": "f600c58f39710321afce6227eed9f8b36f49dfd442208529db32ef5993b0370d",
+  "training_summary_sha256": "ff4a86f240543b1b677ab887026eada65cf9d5d45dcc1c58c3dbe82be1ec709b",
+  "training_summary_statistics": {
+    "n": 160,
+    "features": {
+      "M": {
+        "min": 1.255403222106839,
+        "max": 98.658825059489,
+        "mean": 50.93607741616647,
+        "std": 28.317677291237853,
+        "q10": 11.84778429306452,
+        "q25": 26.78179024704304,
+        "median": 54.68423808690916,
+        "q75": 70.58609803775916,
+        "q90": 91.1276130716318,
+        "target_correlation": 0.9950541595453714
+      }
+    },
+    "target": {
+      "min": 0.09151759683398107,
+      "max": 3.153368090945695,
+      "mean": 1.8408986803489458,
+      "std": 0.8339229525424796,
+      "q10": 0.6700225481121258,
+      "q25": 1.2295559830905425,
+      "median": 2.018564195752207,
+      "q75": 2.4334453747897586,
+      "q90": 2.926621021253207
+    }
+  },
+  "training_summary_sent_to_model": true,
+  "raw_training_rows_sent_to_model": false,
+  "train_data_sha256": "a21c3a23dad5d49d8936028a22ecc45e3cb557e048adb4d508416f664a3f5d58",
+  "outer_test_data_sha256": "698323421595e225fb92981e04acae72cf6d2d3321e2273593e1991549032cf9",
+  "extrapolation_clean_data_sha256": {
+    "near": "5feb3c6dc6b197d087bad0d0ebcf7a071148b1221145c657293d819a5d30e96a",
+    "medium": "ccba21d712cd1b262f744da037861c585f06253d5059ac77c2c371fdf603c62a",
+    "far": "fb71ae7114f58e1e1289340a5007e9c47ff4c22d7053b04ca2d5483ea1a3a404"
+  },
+  "extrapolation_noise_matched_data_sha256": {
+    "near": "5d551ba7c22d13e4581d5c0b1aac7332d56637c41aad57321e940f2a3f36b066",
+    "medium": "571af33b03764e8755c33e265154c57be72a31b559307ab8f3b266971f6a0a66",
+    "far": "a833d44c348852f70993cd48a4bd068e25dbb3b51fe633bf7f0d350ea68ef0a9"
+  },
+  "extrapolation_noise_protocol": {
+    "noise_level": 0.05,
+    "scale": "noise_level * std(clean full-dataset targets, matching generate_data)",
+    "seed_rule": "equation_seed + 1999 + regime_index",
+    "clean_targets_preserved": true
+  },
+  "metrics": {
+    "train": {
+      "r2": 0.997735561587159,
+      "rmse": 0.039683154152126414,
+      "mae": 0.03173309956196097
+    },
+    "outer_test": {
+      "r2": 0.9972164852991815,
+      "rmse": 0.044360629225541244,
+      "mae": 0.03506314038866511
+    },
+    "extrapolation_near_clean": {
+      "r2": 1.0,
+      "rmse": 0.0,
+      "mae": 0.0
+    },
+    "extrapolation_medium_clean": {
+      "r2": 1.0,
+      "rmse": 0.0,
+      "mae": 0.0
+    },
+    "extrapolation_far_clean": {
+      "r2": 1.0,
+      "rmse": 0.0,
+      "mae": 0.0
+    },
+    "extrapolation_near_noise_matched": {
+      "r2": 0.9847729036968715,
+      "rmse": 0.042431445710031275,
+      "mae": 0.034340245427285886
+    },
+    "extrapolation_medium_noise_matched": {
+      "r2": 0.9997071159930513,
+      "rmse": 0.038506971788395634,
+      "mae": 0.03068250413073183
+    },
+    "extrapolation_far_noise_matched": {
+      "r2": 0.998319421300158,
+      "rmse": 0.03981096700703983,
+      "mae": 0.030687594125823826
+    }
+  },
+  "metric_errors": {},
+  "protocol": {
+    "information_regime": "training_summary_statistics",
+    "summary_computed_from_training_partition_only": true,
+    "test_or_extrapolation_data_sent_to_model": false,
+    "ground_truth_formula_sent_to_model": false,
+    "raw_training_rows_sent_to_model": false,
+    "external_fitting_or_optimizer_used": false,
+    "pysr_used": false,
+    "retry_count": 0,
+    "api_calls": 1
+  },
+  "usage": {
+    "input_tokens": 482,
+    "output_tokens": 911
+  }
+}

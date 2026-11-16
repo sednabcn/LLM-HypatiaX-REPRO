@@ -1,0 +1,58 @@
+{
+  "status": "passed",
+  "api_calls": 1,
+  "equation": "Allometric Scaling",
+  "case_id": 3,
+  "model": "claude-sonnet-4-6",
+  "temperature_requested": 0.25,
+  "temperature_sent": true,
+  "prompt_sha256": "c48c878d1cef1b4173165e623f724153b1cd59fba198309db9d3f9be589e8bca",
+  "response_sha256": "edf3b6493ffc66a5a564f3e9af82ae0a7528487f782b5e36bd8da8826521e7ee",
+  "formula": "def formula(M):\n    import numpy as np\n    result = 0.0076 * np.power(M, 0.75)\n    return result",
+  "formula_sha256": "afd31d276dffe3470ea9ed2955f47ae8aee31daa39ff298dbe3ef76ba0222a84",
+  "training_arrays_sent_to_model": false,
+  "metrics": {
+    "train": {
+      "r2": -4.015016815506582,
+      "rmse": 1.867506508747169,
+      "mae": 1.701229612475585
+    },
+    "outer_test": {
+      "r2": -3.7030166983801953,
+      "rmse": 1.8234304309664466,
+      "mae": 1.6495731875944237
+    },
+    "extrapolation_near": {
+      "r2": -96.972602740186,
+      "rmse": 3.3981855877610023,
+      "mae": 3.383346552744452
+    },
+    "extrapolation_medium": {
+      "r2": -7.235173545975661,
+      "rmse": 6.459461060574304,
+      "mae": 6.11546105320813
+    },
+    "extrapolation_far": {
+      "r2": -96.97260274018593,
+      "rmse": 9.611520291344794,
+      "mae": 9.569549162198928
+    }
+  },
+  "metric_errors": {},
+  "protocol": {
+    "zero_shot_task_description_only": true,
+    "test_or_extrapolation_data_sent_to_model": false,
+    "ground_truth_formula_sent_to_model": false,
+    "fitting_or_optimizer_used": false,
+    "pysr_used": false,
+    "retry_count": 0
+  },
+  "usage": {
+    "in": 397,
+    "out": 359
+  },
+  "llm_call_info": {
+    "temperature_requested": 0.25,
+    "temperature_sent": true
+  }
+}
