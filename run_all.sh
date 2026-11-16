@@ -1990,6 +1990,8 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   _EXT_DIR='${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap'
   _EXT_SHARD=\${SHARD_INDEX:-0}
   ACTIVE_DOMAINS=\"\${DOMAIN_FILTER:-${FEYNMAN_DOMAINS}}\"
+  _EXT_RUN_MARKER=$(mktemp)
+  touch "\${_EXT_RUN_MARKER}"
   for DOMAIN_ID in \${ACTIVE_DOMAINS}; do
     echo '=== exp2_feynman_extrap: domain='\${DOMAIN_ID}' ==='
     FEYNMAN_SAMPLES=${FEYNMAN_SAMPLES} \
@@ -2023,7 +2025,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     _pfn=\$(basename \"\${_pf}\")
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
       || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 
-  done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' 2>/dev/null)
+  done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' -newer "\${_EXT_RUN_MARKER}" 2>/dev/null)
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
 
@@ -2040,7 +2042,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   find \"\${_EXT_DIR}\" \
     -name 'protocol_core_extrap_*.json' 2>/dev/null | sort || echo '  (none yet)'
   COUNT_EXTRAP=\$(find \"\${_EXT_DIR}\" \
-    -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
+    -name 'protocol_core_extrap_*.json' -newer "\${_EXT_RUN_MARKER}" 2>/dev/null | wc -l)
   COUNT_BENCH_EXTRAP=\$(find \"\${_EXT_DIR}\" \
     -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | wc -l)
   COUNT_SAVED=\$(find \"\${_EXT_DIR}/_saved\" \
@@ -2066,18 +2068,18 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
   set -euo pipefail
   _EXTRAP_DIR="\${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
   _SUMMARY="\${_EXTRAP_DIR}/exp2_extrap_summary.json"
-  python3 - "\${_EXTRAP_DIR}" "\${_SUMMARY}" <<'PYEOF'
+  python3 - "\${_EXTRAP_DIR}" "\${_SUMMARY}" "\${_EXT_RUN_MARKER}" <<'PYEOF'
 import json, sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-extrap_dir, summary_path = (Path(p) for p in sys.argv[1:3])
-protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json"))
-bench_files = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json"))
+extrap_dir, summary_path, run_marker = (Path(p) for p in sys.argv[1:4])
+protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
+bench_files = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json") if p.stat().st_mtime > run_marker.stat().st_mtime)
 saved_dir = extrap_dir / "_saved"
 saved_count = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
 canonical_benchmark = extrap_dir / "benchmark_results_extrap.json"
-complete = bool(protocol_files) and canonical_benchmark.is_file()
+complete = bool(protocol_files) and canonical_benchmark.is_file() and canonical_benchmark.stat().st_mtime > run_marker.stat().st_mtime
 
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -2097,6 +2099,7 @@ summary = {
 }
 summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
 print(f"[summary] wrote {summary_path} (status={summary['status']}, "
+run_marker.unlink(missing_ok=True)
       f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})")
 if not complete:
     raise SystemExit("Exp2 extrapolation worker outputs are incomplete")
