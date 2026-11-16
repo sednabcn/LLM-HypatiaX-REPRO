@@ -177,3 +177,112 @@ the summary strategy as a general winner until that comparison is complete.
 - The artifact records that test and extrapolation data were not sent to
   the LLM, no external fitting or symbolic regression was used, and the
   ground-truth formula was not supplied.
+
+
+## Follow-up prompt contract and live test: Allometric Scaling (2026-11-16)
+
+A lightweight command-line test was added and run against the same strict
+zero-shot prompt used by the comparison. The test separates prompt-contract
+validity from scientific predictive quality.
+
+### Offline contract test
+
+Command:
+
+```bash
+python scripts/test_formula_prompt.py --mode offline
+```
+
+Outcome: **PASS; zero API calls**.
+
+- Prompt SHA-256:
+  `c48c878d1cef1b4173165e623f724153b1cd59fba198309db9d3f9be589e8bca`
+- Declared variables: `M`
+- Exact ordered function signature required: pass
+- Numeric literal coefficients required: pass
+- Coefficient fitting forbidden: pass
+- Ground-truth formula and equation-specific hints absent: pass
+- Valid signature accepted: pass
+- Undeclared parameters rejected: pass
+
+This validates the prompt's structural contract; it does not establish that
+the generated numerical formula will be accurate.
+
+### Live LLM prompt test
+
+Command:
+
+```bash
+python scripts/test_formula_prompt.py --mode live --case-id 3
+```
+
+Outcome: **prompt test passed; scientific accuracy failed**. The script made
+one Anthropic API call using Claude Sonnet 4.6 at requested temperature 0.25.
+The prompt hash exactly matches the offline test, so both modes exercised
+the same prompt. The run used data-generation seed 63 (the script's default),
+160 training rows, and 40 outer-test rows.
+
+Generated formula:
+
+```python
+def formula(M):
+    import numpy as np
+    result = 0.0076 * np.power(M, 0.75)
+    return result
+```
+
+The benchmark's synthetic target is `0.1 * M**0.75`. The generated
+exponent is correct, but the coefficient is approximately 13.16 times too
+small.
+
+| Partition | R² | RMSE | MAE |
+|---|---:|---:|---:|
+| Training | -4.015017 | 1.867507 | 1.701230 |
+| Outer test | -3.703017 | 1.823430 | 1.649573 |
+| Near extrapolation | -96.972603 | 3.398185 | 3.383347 |
+| Medium extrapolation | -7.235174 | 6.459462 | 6.115461 |
+| Far extrapolation | -96.972603 | 9.611521 | 9.569549 |
+
+The response passed the syntax/signature contract but failed numerical
+prediction quality: all reported R² values are negative. This illustrates
+why prompt tests must report two independent outcomes:
+
+1. **Contract pass/fail** — valid response structure, exact declared input
+   signature, numeric coefficients, and no prohibited fitting or leakage.
+2. **Scientific pass/fail** — finite metrics and benchmark-defined
+   predictive thresholds on training/test/extrapolation partitions.
+
+Protocol and provenance recorded by the script:
+
+- Prompt SHA-256:
+  `c48c878d1cef1b4173165e623f724153b1cd59fba198309db9d3f9be589e8bca`
+- Response SHA-256:
+  `edf3b6493ffc66a5a564f3e9af82ae0a7528487f782b5e36bd8da8826521e7ee`
+- Formula SHA-256:
+  `afd31d276dffe3470ea9ed2955f47ae8aee31daa39ff298dbe3ef76ba0222a84`
+- API calls: 1; usage: 397 input tokens, 359 output tokens.
+- Training arrays sent to model: false.
+- Test/extrapolation data sent to model: false.
+- Ground-truth formula sent to model: false.
+- Fitting/optimizer used: false; PySR used: false; retries: 0.
+- Result file: `prompt_test_result.json` (written locally by the command).
+
+The command output also contained a non-fatal python-dotenv parse warning at
+`.env` line 8. It did not prevent the API call or result generation; the
+environment-file formatting should be checked separately, without exposing
+secrets in logs or documentation.
+
+### Interpretation
+
+This is a second one-case, one-seed zero-shot observation, not a new
+benchmark aggregate. It agrees with the earlier seed-42 pilot on the key
+limitation: the LLM can return the correct power-law shape while failing
+to infer the hidden coefficient from task-description-only input. The
+numerical values differ because the live prompt test used seed 63 and one
+fresh model response. Do not pool it with the seed-42 data-informed pilot
+or claim a general performance estimate.
+
+Keep the strict zero-shot baseline unchanged. The next comparison should
+run the training-summary, few-shot, and bounded training-feedback
+strategies under a declared, matched seed/data protocol, preserving
+separate method keys, API-call accounting, and test/extrapolation isolation.
