@@ -4012,6 +4012,7 @@ class ProtocolBenchmarkSuite:
         extrap_r2_far:    Dict[str, Optional[float]] = {}
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
+        extrap_diagnostics: Dict[str, Dict[str, str]] = {}
         _do_extrap = (
             X_far is not None
             and y_far is not None
@@ -4159,7 +4160,6 @@ class ProtocolBenchmarkSuite:
                     mn: _FullFormulaProxy(res) for mn, res in results.items()
                 }
 
-                extrap_diagnostics: Dict[str, Dict[str, str]] = {}
                 extrap_r2_far, extrap_rmse_far, extrap_error_pct = compute_extrap_r2_far(
                     results=_results_full,
                     X_far=X_far_aug,       # engineered columns for formula evaluation
