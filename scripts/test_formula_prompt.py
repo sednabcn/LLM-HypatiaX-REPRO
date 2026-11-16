@@ -15,10 +15,11 @@ import os
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+from hypatiax.experiments.evaluation import add_noise_matched_extrapolation
 
 
 def _strict_environment() -> None:
@@ -96,24 +97,6 @@ def _prompt_contract(case_name: str = "Allometric Scaling",
     }
 
 
-def _noise_matched_extrapolation(extrapolation: dict, seed: int, noise_level: float, reference_y) -> dict:
-    """Create deterministic noisy targets without changing clean OOD targets.
-
-    Each regime gets an independent RNG stream. Noise scale follows the
-    benchmark convention: noise_level * std(full clean target vector).
-    """
-    import numpy as np
-
-    noisy = {}
-    reference_scale = float(noise_level * np.std(np.asarray(reference_y, dtype=float)))
-    for regime_index, (regime, (X_part, y_clean)) in enumerate(extrapolation.items()):
-        y_clean = np.asarray(y_clean, dtype=float).reshape(-1)
-        rng = np.random.RandomState(seed + 1999 + regime_index)
-        y_noisy = y_clean + rng.normal(0.0, reference_scale, size=len(y_clean))
-        noisy[regime] = (X_part, y_noisy)
-    return noisy
-
-
 def _evaluate(code: str, X, y, names, driver) -> dict:
     diagnostics: list[str] = []
     prediction = driver.rcsb._runner_eval_formula(
@@ -184,7 +167,7 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
 
     metric_results = {}
     metric_errors = {}
-    noise_matched_extrapolation = _noise_matched_extrapolation(
+    noise_matched_extrapolation = add_noise_matched_extrapolation(
         extrapolation, equation_seed, driver.NOISE_LEVEL, y_reference
     )
     partitions = {
@@ -283,7 +266,7 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
 
     metric_results = {}
     metric_errors = {}
-    noise_matched_extrapolation = _noise_matched_extrapolation(
+    noise_matched_extrapolation = add_noise_matched_extrapolation(
         extrapolation, equation_seed, driver.NOISE_LEVEL, y_reference
     )
     partitions = {
