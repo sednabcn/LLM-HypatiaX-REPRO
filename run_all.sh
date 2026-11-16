@@ -2023,7 +2023,7 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
     _pfn=\$(basename \"\${_pf}\")
     ln -f \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" 2>/dev/null \
       || cp \"\${_pf}\" \"\${_EXT_DIR}/_saved/\${_pfn}\" \
-      || true
+     
   done < <(find \"\${_EXT_DIR}\" -maxdepth 1 -name 'protocol_core_extrap_*.json' 2>/dev/null)
   _SAVED=\$(find \"\${_EXT_DIR}/_saved\" -name 'protocol_core_extrap_*.json' 2>/dev/null | wc -l)
   echo \"[E2-guard] \${_SAVED} protocol_core_extrap_*.json hard-linked into \${_EXT_DIR}/_saved/\"
@@ -2071,55 +2071,20 @@ run exp2_feynman_extrap "Feynman far-region R² (extrap_r2_far for Mann-Whitney 
 
 (
   set -euo pipefail
-  _SCRIPT_MERGE="${REPO_ROOT}/.github/scripts/merge_extrap_into_benchmark.py"
-  _EXTRAP_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
-  _BENCHMARK_DIR="${RESULTS_DIR}/comparison_results/feynman-tests/exp2"
-  _PAIRED="${_EXTRAP_DIR}/ablation_paired.json"
-
-  mkdir -p "${_EXTRAP_DIR}"
-
-  if [[ ! -f "${_SCRIPT_MERGE}" ]]; then
-    echo "[WARN] merge_extrap_into_benchmark.py not found at ${_SCRIPT_MERGE}"
-    echo "       ablation_paired.json will not be produced locally — ci_analysis.yml will generate it."
-  else
-    _BENCH_EXT="$(find "${_EXTRAP_DIR}" -maxdepth 1 -name 'benchmark_results_extrap*.json' 2>/dev/null | head -1 || true)"
-    if [[ -z "${_BENCH_EXT}" ]]; then
-      echo "[SKIP] benchmark_results_extrap*.json not found — run exp2_feynman_extrap first."
-    else
-      echo "[merge] Running merge_extrap_into_benchmark.py → ablation_paired.json"
-      python3 "${_SCRIPT_MERGE}" \
-        --extrap-benchmark-dir "${_EXTRAP_DIR}" \
-        --benchmark-dir        "${_BENCHMARK_DIR}" \
-        --output               "${_PAIRED}" \
-        2>&1 | tee -a "${_EXTRAP_DIR}/ablation_paired_run.log" \
-      || { echo "::error::merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete"; exit 1; }
-      if [[ -f "${_PAIRED}" ]]; then
-        _NR=$(python3 -c "import json; print(len(json.load(open('${_PAIRED}'))))" 2>/dev/null || echo "?")
-        echo "[merge] ablation_paired.json: ${_NR} paired record(s) → ${_PAIRED}"
-      fi
-    fi
-  fi
-
-  _SUMMARY="${_EXTRAP_DIR}/exp2_extrap_summary.json"
-  python3 - "${_EXTRAP_DIR}" "${_PAIRED}" "${_SUMMARY}" <<'PYEOF'
+  _EXTRAP_DIR="\${RESULTS_DIR}/comparison_results/feynman-tests/exp2_extrap"
+  _SUMMARY="\${_EXTRAP_DIR}/exp2_extrap_summary.json"
+  python3 - "\${_EXTRAP_DIR}" "\${_SUMMARY}" <<'PYEOF'
 import json, sys
 from pathlib import Path
 from datetime import datetime, timezone
 
-extrap_dir, paired_path, summary_path = (Path(p) for p in sys.argv[1:4])
-
+extrap_dir, summary_path = (Path(p) for p in sys.argv[1:3])
 protocol_files = sorted(p.name for p in extrap_dir.glob("protocol_core_extrap_*.json"))
-bench_files    = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json"))
-saved_dir      = extrap_dir / "_saved"
-saved_count    = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
-
-paired_exists = paired_path.is_file()
-paired_count  = None
-if paired_exists:
-    try:
-        paired_count = len(json.loads(paired_path.read_text()))
-    except Exception:
-        paired_count = None
+bench_files = sorted(p.name for p in extrap_dir.glob("benchmark_results_extrap*.json"))
+saved_dir = extrap_dir / "_saved"
+saved_count = len(list(saved_dir.glob("protocol_core_extrap_*.json"))) if saved_dir.is_dir() else 0
+canonical_benchmark = extrap_dir / "benchmark_results_extrap.json"
+complete = bool(protocol_files) and canonical_benchmark.is_file()
 
 summary = {
     "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -2129,21 +2094,21 @@ summary = {
     "protocol_core_extrap_count": len(protocol_files),
     "protocol_core_extrap_saved_count": saved_count,
     "benchmark_results_extrap_files": bench_files,
-    "ablation_paired_json": {
-        "path": str(paired_path),
-        "present": paired_exists,
-        "record_count": paired_count,
+    "worker_outputs_complete": complete,
+    "post_run_analysis": {
+        "repository": "sednabcn/LLM-HypatiaX-DEV",
+        "status": "delegated_to_post_run_repository",
+        "note": "REPRO produces reproducible worker outputs; cross-method pairing and downstream analysis run separately in DEV."
     },
-    "status": "ok" if (protocol_files and bench_files) else "incomplete",
+    "status": "complete" if complete else "incomplete",
 }
-
-summary_path.write_text(json.dumps(summary, indent=2))
-print(f"[summary] wrote {summary_path}  (status={summary['status']}, "
-      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)}, "
-      f"paired_records={paired_count})")
+summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
+print(f"[summary] wrote {summary_path} (status={summary['status']}, "
+      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})")
+if not complete:
+    raise SystemExit("Exp2 extrapolation worker outputs are incomplete")
 PYEOF
 )
-
 
 run exp2_protocol30_random_8020 "Manuscript Protocol-30 -- custom 30 equations, 11 domains, random 80/20, six methods" bash -c "
   set -euo pipefail
