@@ -8,7 +8,9 @@ Core functionality for the HypatiaX NER system.
 __version__ = "1.0.0"
 __author__ = "HypatiaX Team"
 
-__all__ = []
+from .evaluation import add_noise_matched_extrapolation
+
+__all__ = ["add_noise_matched_extrapolation"]
 
 # Optional module
 try:
