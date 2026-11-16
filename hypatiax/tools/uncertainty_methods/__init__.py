@@ -7,6 +7,7 @@ from .protocol import ComparisonProtocol, validate_split_indices
 from .contracts import validate_calibration_method_contract, validate_uncertainty_method_contract
 from .ensemble import EnsembleUncertainty
 from .bootstrap import BootstrapUncertainty
+from .quantile_regression import QuantileRegressionUncertainty
 
 __all__ = [
     "UncertaintyMethod", "CalibrationMethod", "UncertaintyEstimate",
@@ -15,5 +16,5 @@ __all__ = [
     "RESULT_SCHEMA_VERSION",
     "ComparisonProtocol", "validate_split_indices",
     "validate_uncertainty_method_contract", "validate_calibration_method_contract",
-    "EnsembleUncertainty", "BootstrapUncertainty",
+    "EnsembleUncertainty", "BootstrapUncertainty", "QuantileRegressionUncertainty",
 ]
