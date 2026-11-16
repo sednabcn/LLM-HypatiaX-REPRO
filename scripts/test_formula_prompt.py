@@ -100,7 +100,7 @@ def _noise_matched_extrapolation(extrapolation: dict, seed: int, noise_level: fl
     """Create deterministic noisy targets without changing clean OOD targets.
 
     Each regime gets an independent RNG stream. Noise scale follows the
-    benchmark convention: noise_level * std(clean targets) for that regime.
+    benchmark convention: noise_level * std(full clean target vector).
     """
     import numpy as np
 
@@ -142,7 +142,7 @@ def _live_test(case_id: int, model: str | None, output: Path | None) -> dict:
     eq = driver.abl.CORE_15[case_id]
     names = list(eq["vars"])
     equation_seed = driver.SEED + driver.abl.EQ_ID[eq["name"]] * 7
-    X_train, X_test, y_train, y_test, _, _ = driver.abl.generate_data(
+    X_train, X_test, y_train, y_test, X_all, y_reference = driver.abl.generate_data(
         eq,
         N=driver.N_TRAIN_SOURCE,
         noise_level=driver.NOISE_LEVEL,
@@ -254,7 +254,7 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
     eq = driver.abl.CORE_15[case_id]
     names = list(eq["vars"])
     equation_seed = driver.SEED + driver.abl.EQ_ID[eq["name"]] * 7
-    X_train, X_test, y_train, y_test, _, _ = driver.abl.generate_data(
+    X_train, X_test, y_train, y_test, X_all, y_reference = driver.abl.generate_data(
         eq,
         N=driver.N_TRAIN_SOURCE,
         noise_level=driver.NOISE_LEVEL,
@@ -284,7 +284,7 @@ def _train_summary_test(case_id: int, model: str | None, output: Path) -> dict:
     metric_results = {}
     metric_errors = {}
     noise_matched_extrapolation = _noise_matched_extrapolation(
-        extrapolation, equation_seed, driver.NOISE_LEVEL
+        extrapolation, equation_seed, driver.NOISE_LEVEL, y_reference
     )
     partitions = {
         "train": (X_train, y_train),
