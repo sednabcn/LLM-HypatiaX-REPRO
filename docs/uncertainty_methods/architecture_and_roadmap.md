@@ -11,7 +11,7 @@
 
 ## Architecture
 
-```text
+\`\`\`text
 Data split and provenance
         |
         v
@@ -34,7 +34,7 @@ CalibrationMethod       Diagnostics
                   |
                   v
        Existing horizon curves
-```
+\`\`\`
 
 The estimator layer is independent of Feynman adapters and horizon generation.
 A future horizon adapter should simply call the common estimate interface for
@@ -44,7 +44,7 @@ each existing scenario and retain scenario provenance.
 
 1. Define training, validation, calibration, in-domain test, boundary test,
    and extra-domain test roles before fitting.
-2. Fit on training data only.
+2. Fit constituent predictors on training data only.
 3. Select methods/settings using validation only.
 4. Calibrate on a separate calibration split where required.
 5. Freeze all choices.
@@ -56,23 +56,23 @@ each existing scenario and retain scenario provenance.
 Use blocked, grouped, temporal, or spatial splits where observations are
 dependent; do not presume random exchangeability.
 
-## Future method extension map (not implemented)
+## Method implementation status
 
-| Module | Intended role | Caveat |
+| Module | Status | Intended role / caveat |
 |---|---|---|
-| `bayesian.py` | Posterior and posterior-predictive summaries | Credible intervals depend on model and prior |
-| `ensemble.py` | Across-member predictions and disagreement | Disagreement is not automatically calibrated |
-| `bootstrap.py` | Resampling-based prediction distributions | Resampling unit must match dependence structure |
-| `quantile.py` | Conditional quantile predictions | Check quantile crossing and tail extrapolation |
-| `shift_aware.py` | Weighted/local/group calibration and shift diagnostics | Requires assumptions and support overlap |
-| `calibration.py` | Shared calibration adapters and split metadata | Calibration is not itself an uncertainty estimator |
+| \`ensemble.py\` | Implemented | Adapts supplied fitted members; disagreement is not automatically calibrated |
+| \`bayesian.py\` | Planned | Posterior and posterior-predictive summaries; credible intervals depend on model and prior |
+| \`bootstrap.py\` | Planned | Resampling-based prediction distributions; resampling unit must match dependence structure |
+| \`quantile.py\` | Planned | Conditional quantile predictions; check quantile crossing and tail extrapolation |
+| \`shift_aware.py\` | Planned | Weighted/local/group calibration; requires assumptions and support overlap |
+| \`calibration.py\` | Partial | Split-conformal baseline exists separately; calibration adapters remain extensible |
 
 ## Implementation phases
 
-- **Phase 0 (this change):** contracts, estimate container, registries,
-  evaluation, JSON schema, documentation.
-- **Phase 1:** adapters for supplied ensemble/bootstrap samples and quantile
-  outputs; common cross-method contract tests.
+- **Phase 0:** contracts, estimate container, registries, evaluation, JSON schema,
+  documentation, and side-effect-free contract validators.
+- **Phase 1:** implemented adapter for supplied fitted ensemble members; next,
+  bootstrap and quantile adapters with common contract tests.
 - **Phase 2:** Bayesian linear/GP adapters and posterior-predictive summaries.
 - **Phase 3:** weighted/local/group conformal with effective sample size,
   overlap, and support diagnostics.
@@ -87,9 +87,9 @@ scope; handle invalid/missing outputs explicitly; emit schema-compatible
 records; include deterministic offline tests where possible; and avoid hidden
 fitting, tuning, or expensive jobs during reporting.
 
-## Non-goals of this change
+## Non-goals of the ensemble adapter
 
-No Bayesian inference, ensemble training, bootstrap resampling, quantile
-regression, shift-aware calibration, automatic uncertainty estimation,
-confidence-interval construction, or horizon orchestration is implemented.
-The current split-conformal baseline remains unchanged.
+The ensemble adapter does not train or refit constituent predictors, select
+members, calibrate empirical spread, construct confidence intervals, or
+orchestrate horizon experiments. The supplied split-conformal baseline remains
+a separate calibration stage.
