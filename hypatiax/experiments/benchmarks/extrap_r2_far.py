@@ -189,6 +189,7 @@ def _runner_eval_formula(
     python_code: str,
     X: np.ndarray,
     var_names: List[str],
+    diagnostics: Optional[List[str]] = None,
 ) -> Optional[np.ndarray]:
     """Evaluate formulas using the shared restricted AST interpreter."""
     from hypatiax.safe_formula import parse_formula, evaluate_expression
@@ -246,7 +247,9 @@ def _runner_eval_formula(
         if not np.all(np.isfinite(result)):
             return None
         return result
-    except Exception:
+    except Exception as exc:
+        if diagnostics is not None:
+            diagnostics.append(f"{type(exc).__name__}: {exc}")
         return None
 
 
