@@ -4282,7 +4282,8 @@ class ProtocolBenchmarkSuite:
         if _do_extrap:
             record["extrap_r2_far"]    = extrap_r2_far
             record["extrap_rmse_far"]  = extrap_rmse_far
-            record["extrap_error_pct"] = extrap_error_pct   # NEW: % degradation per method
+            record["extrap_error_pct"] = extrap_error_pct   # % degradation per method
+            record["extrap_diagnostics"] = extrap_diagnostics
             # FIX: store extrap split context at the record level so that
             # print_summary()'s benchmark_results_extrap.json export can read
             # train_frac / n_train / n_test without searching MethodResult.metadata
@@ -4609,6 +4610,7 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
+                _extrap_diag_map = rec.get("extrap_diagnostics", {})
                 for _mname, _mres in rec.get("results", {}).items():
                     _row = {
                         "test":           _desc,
@@ -4629,6 +4631,7 @@ class ProtocolBenchmarkSuite:
                     if _extrap_r2_map:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
+                        _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
             _json_path = _FLAT_OUTPUT_DIR / f"benchmark_results{_SHARD_TAG}.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
@@ -4674,6 +4677,7 @@ class ProtocolBenchmarkSuite:
                 _er_map   = rec.get("extrap_r2_far")
                 _erm_map  = rec.get("extrap_rmse_far", {})
                 _eep_map  = rec.get("extrap_error_pct", {})
+                _diag_map = rec.get("extrap_diagnostics", {})
                 if not _er_map:
                     continue
                 _desc = rec.get("description", "")
@@ -4704,7 +4708,8 @@ class ProtocolBenchmarkSuite:
                         "llm_source":        _mres.get("llm_source"),
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
-                        "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation
+                        "extrap_error_pct":  _eep_map.get(_mname),  # % degradation
+                        "extrap_diagnostic": _diag_map.get(_mname),
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
                         "extrap_n_test":     _n_test,
