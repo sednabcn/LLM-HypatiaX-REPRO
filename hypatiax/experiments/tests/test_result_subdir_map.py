@@ -200,7 +200,7 @@ def test_required_portfolio_ablation_instability_and_extrapolation_outputs_fail_
     assert "::error::[instability]" in runner
     assert "::error::exp2_feynman_extrap produced no protocol_core_extrap_" in runner
     assert "::error::benchmark_results_extrap.json not found" in runner
-    assert "merge_extrap_into_benchmark.py exited non-zero — ablation_paired.json may be incomplete" in runner
+    assert "post-run pairing and analysis are handled separately in LLM-HypatiaX-DEV." in runner
 
 
 def test_ground_truth_leak_guard_fails_closed_when_any_target_is_missing():
