@@ -1,46 +1,50 @@
-"""L45: the three copies of compute_extrap_r2_far (and its scoring helpers) must stay identical.
-
-Compared on the AST (comments, docstrings and formatting ignored) and without importing the
-runners, so the test needs neither torch nor an API key. If one copy is edited, edit all three
-(or consolidate them on extrap_r2_far.py) -- otherwise this test fails.
-"""
+"""The Exp2 Feynman runners must use one canonical extrapolation implementation."""
 import ast
 from pathlib import Path
 
-import pytest
-
 BENCH = Path(__file__).resolve().parents[1] / "benchmarks"
-FILES = {
-    "extrap_r2_far": BENCH / "extrap_r2_far.py",
-    "v2": BENCH / "run_comparative_suite_benchmark_v2.py",
-    "pca": BENCH / "run_comparative_suite_benchmark_pca.py",
-}
-FUNCS = ("compute_extrap_r2_far", "_far_r2", "_far_rmse")
+CORE = BENCH / "exp2_extrapolation_core.py"
+RUNNERS = (
+    BENCH / "extrap_r2_far.py",
+    BENCH / "run_comparative_suite_benchmark_v2.py",
+    BENCH / "run_comparative_suite_benchmark_pca.py",
+)
+FUNCTIONS = (
+    "calculate_extrapolation_error",
+    "extrapolation_error_status",
+    "build_extrap_split",
+    "_runner_eval_formula",
+    "_far_r2",
+    "_far_rmse",
+    "compute_extrap_r2_far",
+)
 
 
-def _norm(path: Path, name: str) -> str:
+def _top_level_functions(path):
     tree = ast.parse(path.read_text(encoding="utf-8"))
-    fns = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name]
-    assert len(fns) == 1, f"{path.name}: expected exactly one top-level def {name}, found {len(fns)}"
-    fn = fns[0]
-    if ast.get_docstring(fn):
-        fn.body = fn.body[1:]
-    return ast.unparse(fn)
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
 
 
-@pytest.mark.parametrize("name", FUNCS)
-@pytest.mark.parametrize("other", ["v2", "pca"])
-def test_copies_agree(name, other):
-    ref = _norm(FILES["extrap_r2_far"], name)
-    assert _norm(FILES[other], name) == ref, (
-        f"{name} in {FILES[other].name} differs from extrap_r2_far.py; "
-        "sync the copies or consolidate them (ledger L45)"
-    )
+def test_shared_core_owns_each_extrapolation_helper_once():
+    functions = _top_level_functions(CORE)
+    for name in FUNCTIONS:
+        assert name in functions
+    for runner in RUNNERS:
+        runner_functions = _top_level_functions(runner)
+        assert not (set(FUNCTIONS) & runner_functions), (
+            f"{runner.name} still contains duplicated extrapolation helpers"
+        )
+        source = runner.read_text(encoding="utf-8")
+        assert "from hypatiax.experiments.benchmarks.exp2_extrapolation_core import" in source
 
 
-@pytest.mark.parametrize("key", FILES)
-def test_far_r2_uses_canonical_scorer(key):
-    """No copy may re-implement R^2: _far_r2 must delegate to r2_canonical.r2_scored."""
-    src = _norm(FILES[key], "_far_r2")
-    assert "_r2_scored" in src
-    assert "ss_tot" not in src and "ss_res" not in src
+def test_far_r2_uses_canonical_scorer():
+    tree = ast.parse(CORE.read_text(encoding="utf-8"))
+    fn = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "_far_r2")
+    source = ast.unparse(fn)
+    assert "_r2_scored" in source
+    assert "ss_tot" not in source and "ss_res" not in source
