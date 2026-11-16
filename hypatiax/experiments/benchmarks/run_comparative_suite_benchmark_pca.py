@@ -2191,7 +2191,9 @@ class HybridDeFiMethod(BaseMethod):
             # on training data. Never synthesize predictions from R²/RMSE:
             # the PCA holdout must evaluate the actual fitted formula/NN route.
             _llm_code = (result.get("llm_result") or {}).get("python_code", "")
-            _formula_code = result.get("fitted_code") or _llm_code or ""
+            _formula_code = result.get("fitted_code") or ""
+            if not _formula_code or _formula_code == "N/A":
+                _formula_code = _llm_code or ""
             _formula = _formula_code if _formula_code else f"[NN route — decision={decision}]"
 
             _formula_predictor = None
@@ -3341,7 +3343,7 @@ class HybridSystemV50_2Method(BaseMethod):
 
         _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
         _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
-        _per_to_outer    = min(200, max(60, _t_avail_outer // _MAX_RETRIES_V50_2_OUTER))
+        _per_to_outer    = min(320, max(60, (_METHOD_TIMEOUT_SECS - 250) // _MAX_RETRIES_V50_2_OUTER))
         # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
         # Iterations: scale to per-attempt timeout.  Cap raised to 1000 to match
         # repro.yaml pysr.niterations=1000; actual execution bounded by pysr_timeout.
