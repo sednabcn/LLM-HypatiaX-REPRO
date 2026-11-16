@@ -2101,7 +2101,6 @@ summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False))
 print(f"[summary] wrote {summary_path} (status={summary['status']}, "
       f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})"
 run_marker.unlink(missing_ok=True)
-      f"protocol_files={len(protocol_files)}, benchmark_files={len(bench_files)})")
 if not complete:
     raise SystemExit("Exp2 extrapolation worker outputs are incomplete")
 PYEOF
