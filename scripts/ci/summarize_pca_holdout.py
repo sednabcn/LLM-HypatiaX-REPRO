@@ -45,9 +45,12 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
     cases = {}
     source_files = []
     decision_by_domain = {}
+    superseded_case_records = 0
 
     for path in files:
         data = json.loads(path.read_text(encoding="utf-8"))
+        file_timestamp = str(data.get("timestamp") or path.name)
+        seen_in_file = set()
         tests = data.get("tests") if isinstance(data, dict) else None
         if not isinstance(tests, list):
             raise ValueError(f"{path.name}: expected a top-level tests array")
@@ -59,12 +62,11 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
             description = str(test.get("description") or "").strip()
             if not description:
                 raise ValueError(f"{path.name}: test record has no description")
-            if description in cases:
+            if description in seen_in_file:
                 raise ValueError(
-                    f"Duplicate PCA equation record {description!r} in "
-                    f"{cases[description]} and {path.name}; refusing to inflate denominator"
+                    f"Duplicate PCA equation record {description!r} within {path.name}"
                 )
-            cases[description] = path.name
+            seen_in_file.add(description)
 
             results = test.get("results") or {}
             pca_scores = test.get("pca_test_r2") or {}
@@ -84,11 +86,19 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
                 else:
                     entry["other"] += 1
 
-            cases[description] = {
+            candidate = {
                 "file": path.name,
+                "timestamp": file_timestamp,
                 "results": results,
                 "pca_scores": pca_scores,
             }
+            previous = cases.get(description)
+            if previous is None or file_timestamp >= previous["timestamp"]:
+                if previous is not None:
+                    superseded_case_records += 1
+                cases[description] = candidate
+            else:
+                superseded_case_records += 1
 
     per_method = {}
     for method in TARGET_METHODS:
@@ -188,6 +198,7 @@ def build_summary(pca_dir: Path, threshold: float = 0.999999,
             },
         },
         "source_files": source_files,
+        "superseded_duplicate_case_records": superseded_case_records,
         "interpretation": (
             "Training R² is not used for the PCA solve rate. Missing or non-finite "
             "holdout scores count as failures. The unverified all-domains method "
