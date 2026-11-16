@@ -3342,7 +3342,8 @@ class HybridSystemV50_2Method(BaseMethod):
         import math as _math
 
         _MAX_RETRIES_V50_2_OUTER = 2   # kept in sync with _MAX_RETRIES_V50_2 below
-        _t_avail_outer   = max(60, _METHOD_TIMEOUT_SECS - 150)
+        # Reserve 250 seconds for Julia startup, serialization and cleanup;
+        # divide the remaining method budget across the two bounded attempts.
         _per_to_outer    = min(320, max(60, (_METHOD_TIMEOUT_SECS - 250) // _MAX_RETRIES_V50_2_OUTER))
         # Iterations: scale to per-attempt timeout, assuming ~1s/iteration
         # Iterations: scale to per-attempt timeout.  Cap raised to 1000 to match
@@ -3390,7 +3391,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # Three full searches could consume the entire outer budget before
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
-        _reserved_overhead = 400
+        _reserved_overhead = 250
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
         _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
         # Respect the caller's PySR timeout while ensuring the retry budget
@@ -4345,7 +4346,9 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
+                _pca_r2_map      = rec.get("pca_test_r2", {})
                 for _mname, _mres in rec.get("results", {}).items():
+                    _method_meta = _mres.get("metadata") or {}
                     _row = {
                         "test":           _desc,
                         "domain":         _dom,
@@ -4353,6 +4356,14 @@ class ProtocolBenchmarkSuite:
                         "formula":        _mres.get("formula", ""),
                         "r2":             _mres.get("r2"),
                         "rmse":           _mres.get("rmse"),
+                        "pca_test_r2":    _pca_r2_map.get(_mname),
+                        "pca_split_protocol": rec.get("pca_split_protocol"),
+                        "pca_n_train":    rec.get("pca_n_train"),
+                        "pca_n_test":     rec.get("pca_n_test"),
+                        "external_holdout_status": _mres.get("external_holdout_status"),
+                        "external_holdout_error": _mres.get("external_holdout_error"),
+                        "provenance_status": _method_meta.get("provenance_status"),
+                        "exclude_from_reported_results": _method_meta.get("exclude_from_reported_results", False),
                         "runtime":        _mres.get("time"),
                         "success":        _mres.get("success", False),
                         "llm_called":     _mres.get("llm_called"),    # B2
