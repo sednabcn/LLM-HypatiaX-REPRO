@@ -265,8 +265,8 @@ def build_extrap_split(
 ) -> Tuple[
     np.ndarray,   # X_train
     np.ndarray,   # y_train
-    np.ndarray,   # X_far  (may be empty)
-    np.ndarray,   # y_far  (may be empty)
+    np.ndarray,   # X_far  (at least two rows)
+    np.ndarray,   # y_far  (aligned with X_far)
     Dict,         # extrap metadata dict (stored in record)
 ]:
     """
@@ -278,8 +278,8 @@ def build_extrap_split(
     repro.yaml benchmarks.feynman.extrap_mult=2.0.
 
     Returns (X_train, y_train, X_far, y_far, metadata).
-    X_far / y_far may have length 0 when no samples fall within the multiplier
-    boundary — callers must guard with `len(X_far) > 1` before using them.
+    Raises ValueError when the requested split cannot provide at least two
+    training rows and two far-region rows after multiplier clipping.
     """
     X = np.asarray(X, dtype=float)
     y = np.asarray(y, dtype=float).reshape(-1)
@@ -325,11 +325,6 @@ def build_extrap_split(
         print(
             f"   ℹ️  '{description[:45]}': clipped {n_clipped} far sample(s) "
             f"beyond {multiplier}× boundary (x>{far_ceiling:.3g})"
-        )
-    if len(X_far) == 0:
-        print(
-            f"  ⚠️  '{description[:45]}': no far samples within "
-            f"multiplier={multiplier}× — extrap_r2_far will be null"
         )
 
     metadata = {
