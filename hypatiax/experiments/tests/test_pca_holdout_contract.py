@@ -89,3 +89,12 @@ def test_hybrid_predictor_rejects_invalid_blend_weights():
     assert compose_hybrid_predictor("ensemble", lambda X: X[:, 0],
                                     lambda X: X[:, 0],
                                     {"llm": 0.8, "nn": 0.8}) is None
+
+
+def test_v50_adapter_forwards_power_operator_and_records_search_config():
+    runner = Path(__file__).resolve().parents[1] / "benchmarks" / "run_comparative_suite_benchmark_pca.py"
+    source = runner.read_text(encoding="utf-8")
+    assert 'binary_operators=kwargs.get("binary_operators", ["+", "-", "*", "/", "^"])' in source
+    assert '"binary_operators": ["+", "-", "*", "/", "^"]' in source
+    assert '"search_config": {' in source
+    assert '"external_predictor_available": callable(_predict_fn)' in source
