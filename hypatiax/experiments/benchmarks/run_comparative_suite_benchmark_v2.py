@@ -213,6 +213,19 @@ def _finite(x) -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# Optional PyTorch dependency
+# Define the flag before method-availability probes; neural methods are
+# disabled cleanly when PyTorch is absent or fails to import.
+# ---------------------------------------------------------------------------
+try:
+    import torch as _torch
+    TORCH_AVAILABLE = True
+except Exception as _torch_exc:
+    TORCH_AVAILABLE = False
+    print(f"⚠️  PyTorch unavailable — neural methods disabled: {_torch_exc}")
+
+
 def _probe(module_path: str, class_name: str) -> bool:
     """Return True if a dotted module path exports the given class name.
 
