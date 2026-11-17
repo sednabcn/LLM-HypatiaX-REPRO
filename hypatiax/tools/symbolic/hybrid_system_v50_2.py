@@ -809,9 +809,9 @@ class HybridDiscoverySystem:
                 _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
                 _candidate_gate = None
                 _candidate_gate_passed = True
-                if _valid_expression and _valid_score and self._active_discovery_problem is not None:
+                if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
                     _candidate_gate = self._candidate_validator.validate(
-                        self._active_discovery_problem,
+                        getattr(self, "_active_discovery_problem", None),
                         expr,
                         source="pysr_search",
                         search_strategy="retry_search",
@@ -827,7 +827,7 @@ class HybridDiscoverySystem:
                             "   [REJECTED] Candidate failed declared scientific gates: %s",
                             list(_candidate_gate.rejection_reasons),
                         )
-                elif self._active_discovery_problem is None:
+                elif getattr(self, "_active_discovery_problem", None) is None:
                     result["candidate_validation_status"] = "not_configured"
                 if _valid_expression and _valid_score:
                     quality = self._check_expression_quality(expr, float(r2))
@@ -980,9 +980,9 @@ class HybridDiscoverySystem:
                     "discovery_engine": "physics_aware",
                     "complexity": len(expression),
                 }
-                if self._active_discovery_problem is not None:
+                if getattr(self, "_active_discovery_problem", None) is not None:
                     _physics_gate = self._candidate_validator.validate(
-                        self._active_discovery_problem,
+                        getattr(self, "_active_discovery_problem", None),
                         expression,
                         source="domain_template",
                         search_strategy="physics_aware_fallback",
@@ -1018,7 +1018,7 @@ class HybridDiscoverySystem:
             raise ValueError(
                 f"All {self.max_retries} discovery attempts failed"
                 + (f": {last_attempt_error}" if last_attempt_error else "")
-                + f"\n  Domain detected: '{self.domain}'."
+                + f"\n  Domain detected: '{getattr(self, 'domain', 'general')}'."
             ) from last_attempt_error
 
     @staticmethod
