@@ -35,3 +35,14 @@ def test_metric_recomputation_rejects_nonfinite_inputs():
             np.array([1.0, 2.0, 3.0]),
             np.array([1.0, np.nan, 3.0]),
         )
+
+
+def test_zero_r2_is_preserved_as_a_valid_score():
+    y_true = np.array([1.0, 2.0, 3.0, 4.0])
+    y_pred = np.full(4, 2.5)
+
+    r2, rmse, status = _recompute_prediction_metrics(y_true, y_pred)
+
+    assert status == "ok"
+    assert r2 == pytest.approx(0.0)
+    assert rmse == pytest.approx(np.sqrt(1.25))
