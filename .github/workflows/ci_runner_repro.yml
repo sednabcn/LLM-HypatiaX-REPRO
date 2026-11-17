@@ -1094,7 +1094,15 @@ jobs:
             seaborn \
             pmlb \
             pint \
-            psutil
+            psutil \
+            pytest
+
+      - name: Run Exp2 offline regression tests
+        if: ${{ startsWith(github.event.inputs.experiment, 'exp2') }}
+        run: |
+          python -m pytest -q \
+            hypatiax/experiments/tests/test_exp2_extrapolation_scoring.py \
+            hypatiax/experiments/tests/test_exp2_extrap_smoke_validator.py
 
       - name: Install Julia / SymbolicRegression (if needed)
         if: ${{ needs.plan.outputs.needs_julia == 'true' }}
