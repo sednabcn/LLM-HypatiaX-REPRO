@@ -236,7 +236,8 @@ def _finite(x) -> bool:
 # disabled cleanly when PyTorch is absent or fails to import.
 # ---------------------------------------------------------------------------
 try:
-    import torch as _torch
+    import torch
+    _torch = torch  # retain the private alias used by deterministic seeding paths
     TORCH_AVAILABLE = True
 except Exception as _torch_exc:
     TORCH_AVAILABLE = False
