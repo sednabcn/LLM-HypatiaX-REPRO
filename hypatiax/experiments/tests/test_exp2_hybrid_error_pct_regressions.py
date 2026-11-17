@@ -232,6 +232,7 @@ def test_defi_composite_base_plus_residual_marks_full_dataset_rmse_not_comparabl
         _predict_fn=final_base_plus_residual,
         metadata={
             "benchmark_metric_row_scope": "full_input_dataset",
+            "benchmark_metric_row_count": 4,
             "evaluation_source_key": "evaluation",
             "evaluation_metric_source": "evaluation.rmse",
             "evaluation_prediction_source": "evaluation.y_pred",
