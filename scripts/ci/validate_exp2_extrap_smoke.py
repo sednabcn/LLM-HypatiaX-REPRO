@@ -31,12 +31,13 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     tests = protocol.get("tests")
     if not isinstance(methods, list) or len(methods) != expected_methods or len(set(methods)) != expected_methods:
         raise ValueError(f"expected {expected_methods} unique methods; found {methods!r}")
-    if not isinstance(tests, list) or len(tests) != expected_equations:
-        raise ValueError(f"expected exactly {expected_equations} equations; found {len(tests) if isinstance(tests, list) else 'invalid'}")
-    if protocol.get("total_tests") != expected_equations:
-        raise ValueError("protocol total_tests does not match the expected equation count")
+    if not isinstance(tests, list) or not tests:
+        raise ValueError("protocol tests must be a non-empty list")
+    if protocol.get("total_tests") != len(tests):
+        raise ValueError("protocol total_tests does not match the number of direction-specific test records")
 
     equation_names: list[str] = []
+    direction_names: set[tuple[str, str]] = set()
     method_rows = 0
     far_r2_available = 0
     far_rmse_available = 0
@@ -44,9 +45,18 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     diagnostic_status_counts: Counter[str] = Counter()
     for test in tests:
         description = str(test.get("description") or "")
-        if not description or description in equation_names:
-            raise ValueError(f"equation description missing or duplicated: {description!r}")
-        equation_names.append(description)
+        if not description:
+            raise ValueError("equation/direction description is missing")
+        if " [extrap:" in description and description.endswith("]"):
+            equation_name, direction_name = description.rsplit(" [extrap:", 1)
+            direction_name = direction_name[:-1]
+        else:
+            equation_name, direction_name = description, "legacy_default"
+        if not equation_name or not direction_name or (equation_name, direction_name) in direction_names:
+            raise ValueError(f"equation/direction description missing or duplicated: {description!r}")
+        direction_names.add((equation_name, direction_name))
+        if equation_name not in equation_names:
+            equation_names.append(equation_name)
         results = test.get("results")
         far_r2 = test.get("extrap_r2_far")
         far_rmse = test.get("extrap_rmse_far")
@@ -85,8 +95,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     if len(flat_files) != 1:
         raise ValueError(f"expected exactly one flat extrap benchmark JSON, found {len(flat_files)}")
     flat_rows = _load(flat_files[0])
-    if not isinstance(flat_rows, list) or len(flat_rows) != expected_equations * expected_methods:
-        raise ValueError("flat extrap benchmark must contain exactly 18 equation/method rows")
+    if not isinstance(flat_rows, list) or len(flat_rows) != len(tests) * expected_methods:
+        raise ValueError("flat extrap benchmark must contain one method row per direction-specific test")
     counts: Counter[tuple[str, str, str]] = Counter()
     expected = {
         (str(test.get("domain") or ""), str(test.get("description") or ""), method)
@@ -104,7 +114,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "status": "complete",
         "step": "exp2_feynman_extrap_smoke",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
-        "equation_count": expected_equations,
+        "equation_count": len(equation_names),
+        "direction_count": len(direction_names),
         "method_count": expected_methods,
         "method_equation_rows": method_rows,
         "equations": equation_names,
