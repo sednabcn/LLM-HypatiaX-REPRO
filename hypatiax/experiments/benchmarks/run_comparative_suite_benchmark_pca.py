@@ -3838,6 +3838,7 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
+                _extrap_diag_map = rec.get("extrap_diagnostics", {})
                 _pca_r2_map      = rec.get("pca_test_r2", {})
                 for _mname, _mres in rec.get("results", {}).items():
                     _method_meta = _mres.get("metadata") or {}
@@ -3867,6 +3868,7 @@ class ProtocolBenchmarkSuite:
                     if _extrap_r2_map:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
+                        _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
             _json_path = _OUTPUT_DIR / "benchmark_results_pca_4060.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
