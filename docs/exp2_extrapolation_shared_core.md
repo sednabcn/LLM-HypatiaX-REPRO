@@ -30,3 +30,10 @@ Both `run_comparative_suite_benchmark_v2.py` and `run_comparative_suite_benchmar
 Offline regression tests cover formula argument alignment, split validation, far metric behavior, retained-predictor training baselines, zero-training-RMSE handling, diagnostics persistence, and runner delegation. These tests are committed for CI; they have not been run locally as part of this change.
 
 No experiment, benchmark, worker, model fit, or LLM request is launched by this refactor.
+
+
+## Run-specific zero-denominator diagnosis
+
+The 3-equation × 6-method smoke run [44087232173](https://github.com/sednabcn/LLM-HypatiaX-REPRO/actions/runs/44087232173) produced 18/18 far R² and RMSE values and 7/18 defined `error_pct` values. All 11 null ratios have finite far RMSE equal to zero and `error_pct_status=zero_or_invalid_training_rmse`; all have consistent train/far predictor routes. The scorer validates finite training targets and predictions before calculating the ratio, and its ratio helper returns null for a non-positive training RMSE. These are therefore 0/0 cases, not missing far predictions or route mismatches.
+
+The exact numeric training-split RMSE used as the denominator is not currently serialized as its own field. The separate benchmark `rmse` column is not that denominator: the extrapolation scorer recomputes RMSE on the exact training partition. See [the run-specific diagnosis](exp2_smoke_run_44087232173_null_error_pct_diagnosis.md) for the full 11-row breakdown and interpretation. Future artifacts should persist `extrap_rmse_train` and distinguish zero from non-finite denominators.
