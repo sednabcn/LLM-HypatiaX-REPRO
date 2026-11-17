@@ -556,7 +556,10 @@ def compute_extrap_r2_far(
                         else:
                             extrap_nrmse_status = "zero_training_target_scale"
                         error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
-                        if float(rmse_train) < rmse_epsilon:
+                        if float(rmse_train) == 0.0:
+                            error_pct = None
+                            error_pct_status = "zero_training_rmse"
+                        elif float(rmse_train) < rmse_epsilon:
                             error_pct = None
                             error_pct_status = "below_training_rmse_epsilon"
                         elif error_pct is None:
