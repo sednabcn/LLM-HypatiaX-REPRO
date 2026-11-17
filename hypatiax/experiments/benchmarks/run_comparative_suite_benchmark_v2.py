@@ -149,6 +149,7 @@ for _noisy_logger in ("httpx", "httpcore", "anthropic"):
 
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # --- BEGIN null-json helpers (AUDIT L37; identical in v2 and pca suites) -------
 # In memory MethodResult keeps -inf/inf (comparisons and routing unchanged).
