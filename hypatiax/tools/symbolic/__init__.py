@@ -8,6 +8,12 @@ __all__ = [
     "SymbolicEngineWithLLM",
     "DiscoveryConfig",
     "LLMConfig",
+    "DiscoveryProblem",
+    "DiscoveryBudget",
+    "ConstraintSpec",
+    "ConstraintOutcome",
+    "CandidateRecord",
+    "DiscoveryReport",
 ]
 
 
@@ -22,6 +28,15 @@ def __getattr__(name: str):
         "LLMConfig",
     }:
         module = import_module(".symbolic_engine", __name__)
+    elif name in {
+        "DiscoveryProblem",
+        "DiscoveryBudget",
+        "ConstraintSpec",
+        "ConstraintOutcome",
+        "CandidateRecord",
+        "DiscoveryReport",
+    }:
+        module = import_module(".discovery_contracts", __name__)
     else:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
