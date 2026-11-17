@@ -24,7 +24,23 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
             for method in METHODS
         }
         far_r2 = {method: 0.9 for method in METHODS}
-        far_rmse = {method: 0.02 for method in METHODS}
+        audit_y_true = [-1.0, 1.0] * 12
+        audit_error = 0.1 ** 0.5
+        audit_y_pred = [value + audit_error for value in audit_y_true]
+        audit_rmse = audit_error
+        audit = {
+            method: {
+                "verification_status": "recomputed_from_aligned_far_predictions",
+                "prediction_source": "retained_final_predictor",
+                "row_count": 24,
+                "y_true": audit_y_true,
+                "y_pred": audit_y_pred,
+                "r2": 0.9,
+                "rmse": audit_rmse,
+            }
+            for method in METHODS
+        }
+        far_rmse = {method: audit_rmse for method in METHODS}
         if omit_far_rmse:
             far_rmse.pop(METHODS[-1])
         tests.append({
@@ -35,6 +51,7 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
             "extrap_rmse_far": far_rmse,
             "extrap_error_pct": {method: 10.0 for method in METHODS},
             "extrap_diagnostics": {method: {"status": "scored"} for method in METHODS},
+            "extrap_prediction_audit": audit,
             "extrap_n_train": 96,
             "extrap_n_test": 24,
         })
@@ -46,7 +63,8 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
                 "r2": 0.99,
                 "rmse": 0.01,
                 "extrap_r2_far": 0.9,
-                "extrap_rmse_far": 0.02,
+                "extrap_rmse_far": audit_rmse,
+                "extrap_prediction_audit": audit[method],
                 "extrap_error_pct": 10.0,
                 "extrap_diagnostic": {"status": "scored"},
             })
@@ -67,6 +85,8 @@ def test_three_equation_six_method_smoke_artifacts_validate(tmp_path):
     assert summary["method_equation_rows"] == 18
     assert summary["far_r2_non_null_count"] == 18
     assert summary["far_rmse_non_null_count"] == 18
+    assert summary["prediction_audit_verified_count"] == 18
+    assert summary["prediction_audit_unavailable_count"] == 0
     assert summary["far_error_pct_non_null_count"] == 18
     assert summary["far_diagnostic_status_counts"] == {"scored": 18}
 
