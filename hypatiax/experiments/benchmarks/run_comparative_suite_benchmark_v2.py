@@ -2264,21 +2264,37 @@ class HybridAllDomainsMethod(BaseMethod):
                         )
 
             _fstr_2534 = _extract_formula(result)  # B2/B3: formula is nested under llm_result
+            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
+                _predict_fn = _base_predict_fn
+            # A formula is a valid fallback only if it is the actual prediction
+            # route. When backend predictions or an NN correction changed the
+            # method but no complete inference callable was retained, keep an
+            # architecture label rather than silently scoring the base formula.
+            _formula_for_result = (
+                _fstr_2534 if callable(_predict_fn)
+                else "[final hybrid predictor unavailable]"
+            )
             _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
                 rmse=rmse,
-                formula=_fstr_2534[:500], formula_hash=BaseMethod._make_formula_result(_fstr_2534)[1], formula_full=_fstr_2534,
+                formula=_formula_for_result[:500],
+                formula_hash=BaseMethod._make_formula_result(_formula_for_result)[1],
+                formula_full=_formula_for_result,
                 metadata={
                     **_provenance(result),
                     "decision":   result.get("decision", "unknown"),
                     "nn_applied": nn_applied,
+                    "external_predictor_available": callable(_predict_fn),
+                    "external_predictor_route": (
+                        "base_plus_residual_nn" if nn_applied and callable(_predict_fn)
+                        else "base_predictor" if callable(_predict_fn)
+                        else "unavailable"
+                    ),
                     "force_llm_domain_override": _force_llm_domain_override,
                     "forced_domain": _domain if _force_llm_domain_override else None,
                 },
             )
-            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
-                _predict_fn = _base_predict_fn
             if callable(_predict_fn):
                 _method_result._predict_fn = _predict_fn
             return _method_result
