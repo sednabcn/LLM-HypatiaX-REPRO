@@ -992,3 +992,13 @@ the LLM; the final full-training discovery retains its configured LLM policy.
 No far/test values or metrics enter candidate evaluation or Pareto selection.
 No experiment, benchmark, smoke workflow, worker, or LLM API call is part of
 this implementation.
+
+
+### Retry and LLM budget interaction
+
+The existing early-stop rule is preserved. Therefore the Pareto front contains
+the candidates actually generated before early-stop or the existing retry
+budget/timeout boundary; it does not force extra retries merely to enlarge the
+front. Candidate fold refits do not call the LLM. The number and policy of
+LLM proposal calls remain governed by the existing HybridDiscovery retry
+lifecycle and are not silently increased by this report integration.
