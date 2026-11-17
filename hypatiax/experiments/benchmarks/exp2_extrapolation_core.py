@@ -525,6 +525,7 @@ def compute_extrap_r2_far(
                             "evaluation_prediction_source",
                             "evaluation_prediction_row_count",
                             "evaluation_feature_representation",
+                            "benchmark_metric_row_count",
                             "formula_replay_status",
                             "formula_replay_max_abs_error",
                             "residual_correction_attempted",
