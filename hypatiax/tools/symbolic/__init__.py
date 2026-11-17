@@ -14,6 +14,7 @@ __all__ = [
     "ConstraintOutcome",
     "CandidateRecord",
     "DiscoveryReport",
+    "CandidateValidator",
 ]
 
 
@@ -28,6 +29,8 @@ def __getattr__(name: str):
         "LLMConfig",
     }:
         module = import_module(".symbolic_engine", __name__)
+    elif name == "CandidateValidator":
+        module = import_module(".discovery_validation", __name__)
     elif name in {
         "DiscoveryProblem",
         "DiscoveryBudget",
