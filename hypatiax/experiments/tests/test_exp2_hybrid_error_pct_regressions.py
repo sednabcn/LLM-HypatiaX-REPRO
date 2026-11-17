@@ -62,7 +62,7 @@ def test_defi_formula_scores_far_region_but_zero_train_rmse_makes_ratio_undefine
     y_far = X_far[:, 0] + 1.1
     result = SimpleNamespace(
         success=True,
-        formula="def formula(x):\\n    return x + 1\\n",
+        formula="def formula(x):\n    return x + 1\n",
     )
     diagnostics = {}
 
@@ -91,7 +91,7 @@ def test_defi_formula_with_nonzero_training_error_has_defined_ratio():
     y_far = X_far[:, 0] + 0.8
     result = SimpleNamespace(
         success=True,
-        formula="def formula(x):\\n    return x + 0.8\\n",
+        formula="def formula(x):\n    return x + 0.8\n",
     )
     diagnostics = {}
 
