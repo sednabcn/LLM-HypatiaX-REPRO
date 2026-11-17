@@ -2131,8 +2131,8 @@ class HybridAllDomainsMethod(BaseMethod):
             eval_d = result.get("evaluation") or {}
             r2v  = eval_d.get("r2")   if eval_d.get("r2")   is not None else result.get("r2")
             rmse = eval_d.get("rmse") if eval_d.get("rmse") is not None else result.get("rmse")
-            r2v  = float(r2v)  if r2v  is not None else 0.0
-            rmse = float(rmse) if rmse is not None else float("inf")
+            r2v  = float(r2v)  if r2v  is not None else float("nan")
+            rmse = float(rmse) if rmse is not None else float("nan")
 
             # ── Get y_pred: 3-strategy cascade ────────────────────────────────
             # Strategy 1: y_pred in result/eval dict
@@ -2341,6 +2341,17 @@ class HybridAllDomainsMethod(BaseMethod):
                     # then re-scored it as if it were the LLM's output. Without real predictions the row keeps
                     # its reported values and the NN correction is skipped (see the y_pred source log below).
                     self._log("y_pred unavailable: synthetic reconstruction disabled (Phase 1)")
+            if y_pred_llm is None and (
+                not np.isfinite(r2v) or not np.isfinite(rmse)
+            ):
+                return self._unavailable(
+                    "HybridSystemLLMNN has neither aligned row predictions nor finite reported R²/RMSE",
+                    metadata={
+                        **_provenance(result),
+                        "metric_verification_status": _metric_verification_status,
+                        "evaluation_prediction_source": _ypred_source,
+                    },
+                )
             self._log(
                 f"y_pred source: {_ypred_source or 'NONE — NN correction will be skipped'}"
             )
