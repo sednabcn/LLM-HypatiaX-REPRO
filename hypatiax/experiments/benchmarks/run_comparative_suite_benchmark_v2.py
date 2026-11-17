@@ -4255,6 +4255,7 @@ class ProtocolBenchmarkSuite:
                         "train_rmse_consistent": (_diag_map.get(_mname) or {}).get("train_rmse_consistent"),
                         "train_rmse_consistency_status": (_diag_map.get(_mname) or {}).get("train_rmse_consistency_status"),
                         "benchmark_rmse_row_scope": (_diag_map.get(_mname) or {}).get("benchmark_rmse_row_scope"),
+                        "benchmark_metric_row_count": (_diag_map.get(_mname) or {}).get("benchmark_metric_row_count"),
                         "evaluation_source_key": (_diag_map.get(_mname) or {}).get("evaluation_source_key"),
                         "evaluation_metric_source": (_diag_map.get(_mname) or {}).get("evaluation_metric_source"),
                         "evaluation_prediction_source": (_diag_map.get(_mname) or {}).get("evaluation_prediction_source"),
