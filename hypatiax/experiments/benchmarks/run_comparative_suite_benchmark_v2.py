@@ -1663,9 +1663,19 @@ class HybridDeFiMethod(BaseMethod):
             if _nn_applied_defi and callable(_base_predictor_defi) and callable(_residual_predictor_defi):
                 def _final_predictor_defi(X_new, _base=_base_predictor_defi,
                                           _residual=_residual_predictor_defi):
-                    _base_pred = np.asarray(_base(X_new), dtype=float).reshape(-1)
+                    _X_new = np.asarray(X_new, dtype=float)
+                    _base_values = _base(_X_new)
+                    if _base_values is None:
+                        raise ValueError("DeFi base formula could not evaluate inference features")
+                    _base_pred = np.asarray(_base_values, dtype=float).reshape(-1)
+                    if (
+                        _X_new.ndim != 2
+                        or _base_pred.shape != (_X_new.shape[0],)
+                        or not np.isfinite(_base_pred).all()
+                    ):
+                        raise ValueError("DeFi base predictor returned invalid predictions")
                     _corrected = np.asarray(
-                        _residual(X_new, _base_pred), dtype=float
+                        _residual(_X_new, _base_pred), dtype=float
                     ).reshape(-1)
                     if _corrected.shape != _base_pred.shape or not np.isfinite(_corrected).all():
                         raise ValueError("DeFi hybrid predictor returned invalid predictions")
