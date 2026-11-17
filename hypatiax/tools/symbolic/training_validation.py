@@ -646,6 +646,25 @@ class FoldFeaturePipeline:
             raise RuntimeError("FoldFeaturePipeline must be fitted before feature names are available")
         return self.plan_.output_feature_names
 
+
+    def check_candidate_schema(
+        self, candidate_variable_names: list[str] | tuple[str, ...]
+    ) -> dict:
+        """Require exact candidate-variable order before any fold prediction."""
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePipeline must be fitted before schema checks")
+        supplied = tuple(str(name) for name in candidate_variable_names)
+        expected = self.plan_.output_feature_names
+        return {
+            "status": "compatible" if supplied == expected else "ineligible_feature_schema_mismatch",
+            "compatible": supplied == expected,
+            "expected_feature_names": list(expected),
+            "candidate_variable_names": list(supplied),
+            "missing_features": [name for name in supplied if name not in expected],
+            "unavailable_features": [name for name in expected if name not in supplied],
+            "order_matches": supplied == expected,
+        }
+
     def audit_state(self) -> dict:
         if not self._fitted:
             raise RuntimeError("FoldFeaturePipeline is not fitted")
@@ -711,11 +730,101 @@ class FoldTargetScaler:
         }
 
 
+
+def make_fold_preprocessed_symbolic_predictor(
+    expression: str,
+    candidate_variable_names: list[str] | tuple[str, ...],
+    raw_feature_names: list[str] | tuple[str, ...],
+    *,
+    include_geometric_means: bool = False,
+    include_ratios: bool = False,
+    max_ratio_features: int = 10,
+    max_nfev: int = 500,
+) -> Callable[[np.ndarray, np.ndarray, np.ndarray], tuple[np.ndarray, str]]:
+    """Create a fold callback with fold-local X features and y scaling.
+
+    Each invocation independently fits feature preprocessing, engineered
+    feature selection, and target scaling on that fold's fitting rows only.
+    Candidate feature names must exactly match the fold plan in both content
+    and order. The fixed symbolic structure is coefficient-refitted per fold;
+    this is not a fresh PySR search.
+    """
+    variable_names = tuple(candidate_variable_names)
+    raw_names = tuple(raw_feature_names)
+    if not raw_names or len(set(raw_names)) != len(raw_names):
+        raise ValueError("raw_feature_names must be non-empty and unique")
+    if not variable_names or len(set(variable_names)) != len(variable_names):
+        raise ValueError("candidate_variable_names must be non-empty and unique")
+    symbolic_predictor = make_symbolic_refit_predictor(
+        expression, variable_names, max_nfev=max_nfev
+    )
+
+    def _predict(
+        X_fit: np.ndarray, y_fit: np.ndarray, X_validation: np.ndarray
+    ) -> tuple[np.ndarray, str]:
+        pipeline = FoldFeaturePipeline(
+            raw_names,
+            include_geometric_means=include_geometric_means,
+            include_ratios=include_ratios,
+            max_ratio_features=max_ratio_features,
+        ).fit(X_fit)
+        compatibility = pipeline.check_candidate_schema(variable_names)
+        if not compatibility["compatible"]:
+            raise ValueError(
+                "candidate is ineligible for this fold: feature schema mismatch "
+                f"(expected={compatibility['expected_feature_names']}, "
+                f"candidate={compatibility['candidate_variable_names']})"
+            )
+        X_fit_fold = pipeline.transform(X_fit)
+        X_validation_fold = pipeline.transform(X_validation)
+        target_scaler = FoldTargetScaler().fit(y_fit)
+        y_fit_scaled = target_scaler.transform(y_fit)
+        prediction_scaled, fitted_expression = symbolic_predictor(
+            X_fit_fold, y_fit_scaled, X_validation_fold
+        )
+        prediction = target_scaler.inverse_transform(prediction_scaled)
+        return prediction, fitted_expression
+
+    return _predict
+
+
+def evaluate_preprocessed_symbolic_candidate_on_training_folds(
+    expression: str,
+    candidate_variable_names: list[str] | tuple[str, ...],
+    raw_feature_names: list[str] | tuple[str, ...],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    folds: tuple[TrainingFold, ...],
+    *,
+    include_geometric_means: bool = False,
+    include_ratios: bool = False,
+    max_ratio_features: int = 10,
+    minimum_valid_folds: int = 2,
+    max_nfev: int = 500,
+) -> CandidateValidationSummary:
+    """Evaluate a fixed expression with fold-local X plans and target scaling."""
+    predictor = make_fold_preprocessed_symbolic_predictor(
+        expression,
+        candidate_variable_names,
+        raw_feature_names,
+        include_geometric_means=include_geometric_means,
+        include_ratios=include_ratios,
+        max_ratio_features=max_ratio_features,
+        max_nfev=max_nfev,
+    )
+    return evaluate_candidate_on_training_folds(
+        expression, predictor, X_train, y_train, folds,
+        minimum_valid_folds=minimum_valid_folds,
+    )
+
+
 __all__ = [
     "FoldFeaturePreprocessor",
     "FoldFeaturePlan",
     "FoldFeaturePipeline",
     "FoldTargetScaler",
+    "make_fold_preprocessed_symbolic_predictor",
+    "evaluate_preprocessed_symbolic_candidate_on_training_folds",
     "TrainingFold",
     "FoldMetric",
     "CandidateValidationSummary",
