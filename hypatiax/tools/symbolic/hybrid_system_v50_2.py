@@ -1115,10 +1115,16 @@ class HybridDiscoverySystem:
             best_result["candidate_selection_policy"] = "training_only_physics_gated_pareto"
 
         if best_result:
-            logger.warning(
-                f"[PARTIAL] Returning best result with R2={best_r2:.4f}. "
-                "If R2 is very low, check that the right unary operators are enabled."
-            )
+            if best_r2 >= 0.97:
+                logger.info(
+                    "[SUCCESS] Returning Pareto-selected candidate "
+                    f"with R2={best_r2:.4f}."
+                )
+            else:
+                logger.warning(
+                    f"[PARTIAL] Returning best result with R2={best_r2:.4f}. "
+                    "If R2 is very low, check that the right unary operators are enabled."
+                )
             return best_result
         else:
             raise ValueError(
