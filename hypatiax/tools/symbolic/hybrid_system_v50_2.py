@@ -1437,6 +1437,11 @@ class HybridDiscoverySystem:
         self._training_only_search_selection = None
 
         _validation_settings = metadata.get("training_only_search_validation")
+        self._active_training_validation_settings = _validation_settings or None
+        self._active_training_validation_seed = int(
+            metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+        )
+        self._last_discovery_report = None
         if _validation_settings:
             if not isinstance(_validation_settings, dict):
                 raise TypeError(
@@ -1653,6 +1658,10 @@ class HybridDiscoverySystem:
                     full_result["metadata"]["selected_search_strategy"] = (
                         self._selected_training_search_strategy
                     )
+                if self._last_discovery_report is not None:
+                    full_result.setdefault("metadata", {})[
+                        "discovery_report"
+                    ] = self._last_discovery_report
             finally:
                 self.symbolic_engine.config.parsimony = _original_parsimony
 
