@@ -208,7 +208,7 @@ def test_training_prediction_failure_preserves_independent_far_metrics():
 
 
 
-def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
+def test_defi_composite_base_plus_residual_marks_full_dataset_rmse_not_comparable():
     X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
     y_train = X_train[:, 0] + 1.25
     X_far = np.array([[4.0], [5.0], [6.0]])
@@ -223,8 +223,8 @@ def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
     def final_base_plus_residual(X):
         return residual_predictor(X, base_predictor(X))
 
-    # The wrapper's reported benchmark RMSE is deliberately inconsistent
-    # with this retained final composite predictor (which has RMSE 0.0).
+    # The wrapper metric covers the full input dataset; the retained predictor
+    # diagnostic below covers only the extrapolation training partition.
     result = SimpleNamespace(
         success=True,
         formula="[NN residual correction — final predictor]",
