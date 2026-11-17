@@ -89,6 +89,41 @@ def test_smoke_rejects_incomplete_flat_method_coverage(tmp_path):
     try:
         validator.validate_smoke_outputs(tmp_path)
     except ValueError as exc:
-        assert "exactly 18" in str(exc)
+        assert "direction-specific test" in str(exc)
     else:
         raise AssertionError("validator accepted fewer than 18 flat rows")
+
+
+def test_smoke_validator_accepts_multiple_directions_per_equation(tmp_path):
+    _write_fixture(tmp_path)
+    protocol_path = tmp_path / "protocol_core_extrap_smoke.json"
+    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
+    flat_path = tmp_path / "benchmark_results_extrap.json"
+    flat = json.loads(flat_path.read_text(encoding="utf-8"))
+
+    extra_tests = []
+    extra_rows = []
+    for test in protocol["tests"]:
+        clone = dict(test)
+        clone["description"] = test["description"] + " [extrap:joint]"
+        extra_tests.append(clone)
+        for row in flat:
+            if row["test"] == test["description"]:
+                extra = dict(row)
+                extra["test"] = clone["description"]
+                extra_rows.append(extra)
+
+    for test in protocol["tests"]:
+        test["description"] += " [extrap:feature_0]"
+    protocol["tests"].extend(extra_tests)
+    protocol["total_tests"] = len(protocol["tests"])
+    for row in flat:
+        row["test"] += " [extrap:feature_0]"
+    flat.extend(extra_rows)
+
+    protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
+    flat_path.write_text(json.dumps(flat), encoding="utf-8")
+    summary = validator.validate_smoke_outputs(tmp_path)
+    assert summary["equation_count"] == 3
+    assert summary["direction_count"] == 6
+    assert summary["method_equation_rows"] == 36
