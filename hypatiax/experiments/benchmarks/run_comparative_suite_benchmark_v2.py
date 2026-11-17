@@ -1601,26 +1601,9 @@ class HybridDeFiMethod(BaseMethod):
                 rmse_val = float(rmse_val)
                 evaluation_metric_source = f"{eval_source_key}.rmse"
 
-            # r2==0.0: internal _safe_r2 may have misfired (tiny-scale eqs).
-            # Reconstruct from y_pred or rmse algebraically.
-            if r2_val == 0.0:
-                y_pred_arr = eval_.get("y_pred")  # PHASE1-FIX-P10a: explicit None test, not truthiness
-                if y_pred_arr is None:
-                    y_pred_arr = result.get("y_pred")
-                if y_pred_arr is not None:
-                    y_pred_arr = np.asarray(y_pred_arr).flatten()
-                    r2_val   = self._safe_r2(y, y_pred_arr)
-                    rmse_val = self._safe_rmse(y, y_pred_arr)
-                    evaluation_metric_source = (
-                        f"{eval_source_key}.y_pred_recomputed"
-                        if eval_.get("y_pred") is not None
-                        else "top_level_result.y_pred_recomputed"
-                    )
-                else:
-                    return self._unavailable(
-                        "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)",
-                        metadata=_provenance(result),
-                    )
+            # Do not infer prediction vectors or trust aggregate metrics when
+            # row-level predictions are available. Both metrics are recomputed
+            # together below from the same aligned prediction array.
 
             # ── Build formula string ──────────────────────────────────────
             _llm_code = (result.get("llm_result") or {}).get("python_code", "")
@@ -1644,28 +1627,33 @@ class HybridDeFiMethod(BaseMethod):
                 _y_pred_defi = self._runner_eval_formula(_llm_code, X, var_names)
                 if _y_pred_defi is not None:
                     _evaluation_prediction_source = "llm_formula_replay"
-            if _y_pred_defi is None and np.isfinite(r2_val) and r2_val > 0 and np.isfinite(rmse_val):
-                _evaluation_prediction_source = "synthetic_r2_rmse_reconstruction"
+            _metric_verification_status = "reported_without_row_predictions"
             if _y_pred_defi is not None:
-                _y_pred_defi = np.asarray(_y_pred_defi, dtype=float).flatten()
-                if not np.all(np.isfinite(_y_pred_defi)):
+                _y_pred_defi = np.asarray(_y_pred_defi, dtype=float).reshape(-1)
+                if _y_pred_defi.shape != np.asarray(y).reshape(-1).shape:
+                    r2_val = float("nan")
+                    rmse_val = float("nan")
+                    _metric_verification_status = "prediction_length_mismatch"
+                    _evaluation_prediction_source = (
+                        f"{_evaluation_prediction_source or 'unknown'}:invalid_shape"
+                    )
                     _y_pred_defi = None
-            if _y_pred_defi is None and np.isfinite(r2_val) and r2_val > 0 and np.isfinite(rmse_val):
-                try:
-                    _yc = y - float(np.mean(y))
-                    if float(np.sum(_yc**2)) > 0:
-                        _y_pred_defi = float(np.mean(y)) + float(np.sqrt(max(r2_val, 0.0))) * _yc
-                        # FIX-ISSUE2-UNSEEDED-NN (follow-up): hash() is
-                        # per-process-randomized unless PYTHONHASHSEED is
-                        # pinned -- switched to sha256, same fix already
-                        # applied to Strategies 3a/3b in HybridAllDomainsMethod.
-                        _rng = np.random.default_rng(
-                            seed=int(
-                                hashlib.sha256(description.encode()).hexdigest(), 16
-                            ) % (2**31))
-                        _y_pred_defi = _y_pred_defi + _rng.normal(0, rmse_val * 0.01, size=len(y))
-                except Exception:
+                elif not np.all(np.isfinite(_y_pred_defi)):
+                    r2_val = float("nan")
+                    rmse_val = float("nan")
+                    _metric_verification_status = "nonfinite_predictions"
+                    _evaluation_prediction_source = (
+                        f"{_evaluation_prediction_source or 'unknown'}:nonfinite"
+                    )
                     _y_pred_defi = None
+                else:
+                    r2_val, rmse_val, _metric_status = _recompute_prediction_metrics(
+                        y, _y_pred_defi
+                    )
+                    _metric_verification_status = "recomputed_from_aligned_predictions"
+                    evaluation_metric_source = (
+                        f"{_evaluation_prediction_source}.recomputed"
+                    )
             # Retain a callable for the exact base route only when the
             # candidate formula reproduces the predictions used above. A
             # backend-supplied y_pred alone is not enough to reconstruct an
@@ -1725,14 +1713,22 @@ class HybridDeFiMethod(BaseMethod):
                     _y_hybrid = self._nn_residual_fit(
                         X, y, _y_pred_defi, description
                     )
-                if _y_hybrid is not None and np.all(np.isfinite(_y_hybrid)):
-                    _r2h  = self._safe_r2(y, _y_hybrid)
-                    _rmh  = self._safe_rmse(y, _y_hybrid)
-                    if _finite(_r2h) and _r2h >= r2_val - 0.002:
-                        r2_val   = _r2h
-                        rmse_val = _rmh
-                        _nn_applied_defi = True
-                        self._log(f"NN residual correction applied R²={r2_val:.4f}")
+                if _y_hybrid is not None:
+                    _y_hybrid = np.asarray(_y_hybrid, dtype=float).reshape(-1)
+                    if (
+                        _y_hybrid.shape == np.asarray(y).reshape(-1).shape
+                        and np.all(np.isfinite(_y_hybrid))
+                    ):
+                        _r2h, _rmh, _ = _recompute_prediction_metrics(y, _y_hybrid)
+                        if _finite(_r2h) and _r2h >= r2_val - 0.002:
+                            r2_val = _r2h
+                            rmse_val = _rmh
+                            _metric_verification_status = (
+                                "recomputed_from_residual_corrected_predictions"
+                            )
+                            evaluation_metric_source = "residual_corrected_predictions.recomputed"
+                            _nn_applied_defi = True
+                            self._log(f"NN residual correction applied R²={r2_val:.4f}")
 
             _final_predictor_defi = None
             if _nn_applied_defi and callable(_base_predictor_defi) and callable(_residual_predictor_defi):
@@ -1777,6 +1773,7 @@ class HybridDeFiMethod(BaseMethod):
                     "eval_source": eval_source_key,
                     "evaluation_source_key": eval_source_key,
                     "evaluation_metric_source": evaluation_metric_source,
+                    "metric_verification_status": _metric_verification_status,
                     "benchmark_metric_row_scope": "full_input_dataset",
                     "benchmark_metric_row_count": int(len(y)),
                     "evaluation_prediction_source": _evaluation_prediction_source,
