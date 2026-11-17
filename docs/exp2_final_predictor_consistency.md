@@ -432,3 +432,18 @@ not been run locally. No experiment or smoke workflow has been dispatched.
 The latest 3-equation × 6-method smoke run is documented in [the run-specific null-ratio diagnosis](exp2_smoke_run_44087232173_null_error_pct_diagnosis.md). Its 11 null `error_pct` values are not predictor failures: all 11 have finite far RMSE equal to zero, a consistent train/far predictor route, and `zero_or_invalid_training_rmse` status. The scorer reports `zero_or_invalid_training_rmse`; its helper returns null for a non-finite or non-positive training RMSE. The artifact does not persist the numeric denominator, so it confirms an undefined ratio but does not distinguish zero from non-finite arithmetic for every row.
 
 Do not infer the denominator from the ordinary benchmark `rmse` field: that field is not the exact extrapolation-training-partition RMSE. The smoke artifact currently omits the latter as a numeric field; future reporting should persist `extrap_rmse_train` directly and separate zero from non-finite denominator statuses.
+
+
+## Hybrid RMSE consistency diagnostics
+
+The shared extrapolation scorer now records the exact `extrap_rmse_train` computed from the retained final predictor on the exact extrapolation training rows. It also records the method wrapper's reported `benchmark_rmse`, their signed difference (`train_rmse_delta = extrap_rmse_train - benchmark_rmse`), and a tolerance-based consistency status.
+
+Interpretation:
+
+- `matches`: the retained predictor's training RMSE agrees with the method-reported benchmark RMSE within `rel_tol=1e-6`, `abs_tol=1e-15`.
+- `mismatch`: the two metrics differ beyond that tolerance. This is an audit signal that the wrapper's reported predictions/metric and its retained inference callable may not represent the same final pipeline.
+- `benchmark_rmse_unavailable`: no finite, non-negative wrapper RMSE was available for comparison.
+
+The scorer does not silently replace either value, change the selected predictor, or manufacture a defined `error_pct`. It continues to use the retained final predictor for both far and training predictions. The diagnostics are also flattened into the per-method extrapolation artifact so discrepancies can be inspected without unpacking nested metadata.
+
+Offline regression coverage includes (1) a synthetic DeFi base-plus-residual composite whose retained predictor intentionally disagrees with the wrapper RMSE, and (2) a HybridSystemLLMNN retained predictor whose training RMSE matches the wrapper metric. These tests validate the comparison instrumentation; they do not claim to reproduce a live backend's internal hybrid training.

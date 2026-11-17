@@ -4165,6 +4165,11 @@ class ProtocolBenchmarkSuite:
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
                         "extrap_error_pct":  _eep_map.get(_mname),  # % degradation
+                        "extrap_rmse_train": (_diag_map.get(_mname) or {}).get("extrap_rmse_train"),
+                        "benchmark_rmse": (_diag_map.get(_mname) or {}).get("benchmark_rmse"),
+                        "train_rmse_delta": (_diag_map.get(_mname) or {}).get("train_rmse_delta"),
+                        "train_rmse_consistent": (_diag_map.get(_mname) or {}).get("train_rmse_consistent"),
+                        "train_rmse_consistency_status": (_diag_map.get(_mname) or {}).get("train_rmse_consistency_status"),
                         "extrap_diagnostic": _diag_map.get(_mname),
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
