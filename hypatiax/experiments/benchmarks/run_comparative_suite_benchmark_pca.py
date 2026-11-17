@@ -3839,7 +3839,7 @@ class ProtocolBenchmarkSuite:
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
                 _diag_map = rec.get("extrap_diagnostics", {})
-        _extrap_diag_map = _diag_map
+                _extrap_diag_map = _diag_map
                 _pca_r2_map      = rec.get("pca_test_r2", {})
                 for _mname, _mres in rec.get("results", {}).items():
                     _method_meta = _mres.get("metadata") or {}
@@ -3870,7 +3870,7 @@ class ProtocolBenchmarkSuite:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
                         _row.update({"extrap_diagnostic": _diag_map.get(_mname)})
-                _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
+                        _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
             _json_path = _OUTPUT_DIR / "benchmark_results_pca_4060.json"
             _json_path.parent.mkdir(parents=True, exist_ok=True)
