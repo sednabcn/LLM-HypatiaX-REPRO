@@ -695,16 +695,23 @@ def compute_extrap_r2_far(
 
     if verbose and any(v is not None for v in extrap_r2_far.values()):
         print(
-            f"\n  📐 Extrapolation R² on far region (n={len(X_far)} held-out samples):",
+            f"\n  📐 Far-region extrapolation metrics (n={len(X_far)} held-out samples):",
             flush=True,
         )
         for mn, r2f in extrap_r2_far.items():
-            r2s  = f"{r2f:.4f}" if (r2f is not None and math.isfinite(r2f)) else "null"
+            r2s = f"{r2f:.4f}" if (r2f is not None and math.isfinite(r2f)) else "null"
+            method_diag = _diag.get(mn, {})
+            score = method_diag.get("extrapolation_score")
+            score_status = method_diag.get(
+                "extrap_nrmse_far_status", "prediction_or_training_scale_unavailable"
+            )
+            score_s = f"{score:.6g}" if (score is not None and math.isfinite(score)) else "null"
             pctr = extrap_error_pct.get(mn)
             pcts = f"{pctr:.1f}%" if (pctr is not None and math.isfinite(pctr)) else "null"
-            tier = extrapolation_error_status(pctr)
             print(
-                f"     {mn:<42} extrap_r2_far={r2s}  error_pct={pcts}  [{tier}]",
+                f"     {mn:<42} extrap_r2_far={r2s}  "
+                f"extrapolation_score={score_s} [{score_status}]  "
+                f"legacy_error_pct={pcts}",
                 flush=True,
             )
 
