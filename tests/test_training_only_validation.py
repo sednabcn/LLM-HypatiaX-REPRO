@@ -151,3 +151,61 @@ def test_fold_preprocessor_rejects_schema_mismatch_and_unfitted_transform():
     preprocessor.fit(np.array([[1.0], [2.0]]))
     with pytest.raises(ValueError, match="feature schema"):
         preprocessor.transform(np.ones((2, 2)))
+
+
+def test_fold_feature_pipeline_selects_engineered_features_from_fit_rows_only():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePipeline
+
+    X_fit = np.array([
+        [1.0, 2.0, 5.0],
+        [2.0, 2.5, 7.0],
+        [4.0, 3.0, 11.0],
+        [8.0, 3.5, 13.0],
+        [16.0, 4.0, 17.0],
+    ])
+    pipeline = FoldFeaturePipeline(
+        ["a", "b", "c"],
+        include_geometric_means=True,
+        include_ratios=True,
+        max_ratio_features=2,
+    )
+    X_fit_augmented = pipeline.fit_transform(X_fit)
+    audit_before = pipeline.audit_state()
+    X_validation = pipeline.transform(np.array([[1e6, 5.0, 19.0]]))
+    audit_after = pipeline.audit_state()
+
+    assert audit_before == audit_after
+    assert audit_before["fit_scope"] == "fold_fitting_rows_only"
+    assert audit_before["validation_used_for_plan_selection"] is False
+    assert len(pipeline.plan_.geometric_mean_pairs) == 3
+    assert len(pipeline.plan_.ratio_pairs) == 2
+    assert X_fit_augmented.shape[1] == len(pipeline.get_feature_names_out())
+    assert X_validation.shape[1] == X_fit_augmented.shape[1]
+
+
+def test_fold_feature_pipeline_fails_closed_when_derived_feature_leaves_domain():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePipeline
+
+    X_fit = np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
+    pipeline = FoldFeaturePipeline(
+        ["a", "b"], include_geometric_means=True, include_ratios=True
+    ).fit(X_fit)
+    with pytest.raises(ValueError, match="left its positive domain"):
+        pipeline.transform(np.array([[0.0, 2.0]]))
+
+
+def test_fold_target_scaler_fits_on_training_targets_and_inverts_predictions():
+    from hypatiax.tools.symbolic.training_validation import FoldTargetScaler
+
+    y_fit = np.array([1e-8, 2e-8, 3e-8, 4e-8])
+    scaler = FoldTargetScaler()
+    y_scaled = scaler.fit_transform(y_fit)
+    state_before = scaler.audit_state()
+    y_validation_scaled = scaler.transform(np.array([5e-8]))
+    y_validation = scaler.inverse_transform(y_validation_scaled)
+
+    assert state_before == scaler.audit_state()
+    assert state_before["fit_scope"] == "fold_fitting_targets_only"
+    assert state_before["scale"] == pytest.approx(np.std(y_fit))
+    np.testing.assert_allclose(y_scaled * state_before["scale"], y_fit)
+    np.testing.assert_allclose(y_validation, np.array([5e-8]))
