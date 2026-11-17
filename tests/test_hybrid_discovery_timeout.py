@@ -106,3 +106,31 @@ def test_subprocess_timeout_sets_worker_budget_and_kills_process_group(
     assert result["success"] is False
     assert "timed out after 3s" in result["error"]
     assert fake_process.communicate_calls == 2
+
+
+def test_timeout_error_is_not_masked_when_constructed_without_domain():
+    from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+
+    # __new__ deliberately models partially initialized instances used by
+    # lightweight callers and regression tests.
+    system = HybridDiscoverySystem.__new__(HybridDiscoverySystem)
+    system.max_retries = 1
+    system._pysr_deterministic = False
+    system.enable_physics_fallback = False
+    system.complexity_penalty_threshold = 20
+    system.stats = defaultdict(int)
+    engine = Mock()
+    engine.discover.side_effect = TimeoutError("PySR timed out")
+    system.symbolic_engine = engine
+
+    with pytest.raises(ValueError, match="Domain detected: 'general'") as exc:
+        system._discover_with_retry(
+            X=np.array([[1.0], [2.0], [3.0]]),
+            y=np.array([2.0, 3.0, 4.0]),
+            variable_names=["x"],
+            variable_descriptions={},
+            variable_units={},
+        )
+
+    assert "PySR timed out" in str(exc.value)
+    assert engine.discover.call_count == 1
