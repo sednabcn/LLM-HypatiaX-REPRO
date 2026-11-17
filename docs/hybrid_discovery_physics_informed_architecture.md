@@ -744,3 +744,22 @@ Consequently, this PR adds fold-local primitives and contracts only. It does not
 - Regression tests added but not run.
 - No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
 - No far/test data was accessed.
+
+
+### 17.6 Fold callback and exact expression-schema gate
+
+Added `make_fold_preprocessed_symbolic_predictor` and `evaluate_preprocessed_symbolic_candidate_on_training_folds`.
+
+For every internal fold, the callback now:
+1. Fits raw-column preprocessing and the explicit GM/ratio feature plan on the fitting rows only.
+2. Checks the candidate's variable names against the fold's generated feature names using exact order, not merely set equality.
+3. Rejects the fold if a candidate references an unavailable engineered feature or if the generated schema differs.
+4. Transforms fitting and held-out training features with the same frozen fold plan.
+5. Fits the target standard-deviation scale on fitting targets only.
+6. Refits the candidate's floating-point coefficients on transformed fitting rows and scaled fitting targets.
+7. Inverse-transforms held-out predictions before the evaluator computes RMSE against original held-out training targets.
+
+The wrapper is an offline training-fold evaluator for a fixed symbolic structure. It is not wired into `HybridDiscoverySystem._discover_with_retry()`, does not initiate PySR or LLM calls, and does not alter the production selector. If the fold-specific ratio ranking or positivity eligibility changes the schema, that fold is counted as failed rather than evaluated against a different variable mapping.
+
+Regression source now covers a raw-feature candidate and a geometric-mean candidate through the fold-local preprocessing/refit/target-inversion path. These tests were added but not run.
+
