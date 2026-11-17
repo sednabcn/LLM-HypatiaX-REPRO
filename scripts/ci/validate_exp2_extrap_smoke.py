@@ -155,11 +155,18 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         (str(test.get("domain") or ""), str(test.get("description") or ""), method)
         for test in tests for method in methods
     }
+    expected_audits = {
+        (str(test.get("domain") or ""), str(test.get("description") or ""), method):
+            (test.get("extrap_prediction_audit") or {}).get(method)
+        for test in tests for method in methods
+    }
     for row in flat_rows:
         identity = (str(row.get("domain") or ""), str(row.get("test") or ""), str(row.get("method") or ""))
         counts[identity] += 1
         if "r2" not in row or "rmse" not in row or "extrap_r2_far" not in row or "extrap_rmse_far" not in row:
             raise ValueError(f"flat row {identity} is missing ordinary or far-region score fields")
+        if row.get("extrap_prediction_audit") != expected_audits.get(identity):
+            raise ValueError(f"flat row {identity} does not preserve its protocol prediction audit")
     if set(counts) != expected or any(count != 1 for count in counts.values()):
         raise ValueError("flat extrap rows do not provide exactly one row per equation/method pair")
 
