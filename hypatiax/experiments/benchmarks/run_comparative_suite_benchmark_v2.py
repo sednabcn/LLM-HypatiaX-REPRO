@@ -3613,6 +3613,7 @@ class ProtocolBenchmarkSuite:
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
         extrap_diagnostics: Dict[str, Dict[str, str]] = {}
+        extrap_prediction_audit: Dict[str, Dict[str, Any]] = {}
         _do_extrap = (
             X_far is not None
             and y_far is not None
@@ -3765,6 +3766,7 @@ class ProtocolBenchmarkSuite:
                     X_far=X_far_aug,       # engineered columns for formula evaluation
                     X_far_predictor=X_far, # original schema for retained fitted predictors
                     diagnostics=extrap_diagnostics,
+                    prediction_audit=extrap_prediction_audit,
                     y_far=y_far,
                     var_names=aug_names,   # FIX-N3a: includes ratio_*/gm_* names
                     y_train=y,
@@ -3885,6 +3887,7 @@ class ProtocolBenchmarkSuite:
             record["extrap_rmse_far"]  = extrap_rmse_far
             record["extrap_error_pct"] = extrap_error_pct   # % degradation per method
             record["extrap_diagnostics"] = extrap_diagnostics
+            record["extrap_prediction_audit"] = extrap_prediction_audit
             # FIX: store extrap split context at the record level so that
             # print_summary()'s benchmark_results_extrap.json export can read
             # train_frac / n_train / n_test without searching MethodResult.metadata
@@ -4331,6 +4334,7 @@ class ProtocolBenchmarkSuite:
                         "residual_correction_applied": (_diag_map.get(_mname) or {}).get("residual_correction_applied"),
                         "final_predictor_composition": (_diag_map.get(_mname) or {}).get("final_predictor_composition"),
                         "extrap_diagnostic": _diag_map.get(_mname),
+                        "extrap_prediction_audit": (rec.get("extrap_prediction_audit") or {}).get(_mname),
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
                         "extrap_n_test":     _n_test,

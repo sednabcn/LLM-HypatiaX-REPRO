@@ -324,6 +324,7 @@ def compute_extrap_r2_far(
     diagnostics: Optional[Dict[str, Dict[str, str]]] = None,
     X_far_predictor: Optional[np.ndarray] = None,
     X_train_predictor: Optional[np.ndarray] = None,
+    prediction_audit: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Tuple[
     Dict[str, Optional[float]],   # extrap_r2_far
     Dict[str, Optional[float]],   # extrap_rmse_far
@@ -370,6 +371,7 @@ def compute_extrap_r2_far(
     extrap_rmse_far:  Dict[str, Optional[float]] = {}
     extrap_error_pct: Dict[str, Optional[float]] = {}
     _diag = diagnostics if diagnostics is not None else {}
+    _audit = prediction_audit if prediction_audit is not None else {}
     _X_predict = X_far if X_far_predictor is None else X_far_predictor
 
     # Guard: skip entirely when not in extrap mode or far region is degenerate.
@@ -473,6 +475,18 @@ def compute_extrap_r2_far(
 
         extrap_r2_far[mname] = r2f
         extrap_rmse_far[mname] = rmse_far
+        _audit[mname] = {
+            "verification_status": "recomputed_from_aligned_far_predictions",
+            "prediction_source": (
+                "retained_final_predictor" if callable(predictor)
+                else "symbolic_formula_fallback"
+            ),
+            "row_count": int(len(y_far)),
+            "y_true": np.asarray(y_far, dtype=float).reshape(-1).tolist(),
+            "y_pred": np.asarray(y_far_pred, dtype=float).reshape(-1).tolist(),
+            "r2": r2f,
+            "rmse": rmse_far,
+        }
         error_pct: Optional[float] = None
         error_pct_status = "training_targets_unavailable"
         predictor_route = (
@@ -618,6 +632,17 @@ def compute_extrap_r2_far(
             train_prediction_route == predictor_route
             if train_prediction_route is not None else False
         )
+
+    for _method_name in results:
+        _audit.setdefault(_method_name, {
+            "verification_status": "predictions_unavailable",
+            "prediction_source": None,
+            "row_count": 0,
+            "y_true": None,
+            "y_pred": None,
+            "r2": extrap_r2_far.get(_method_name),
+            "rmse": extrap_rmse_far.get(_method_name),
+        })
 
     if verbose and any(v is not None for v in extrap_r2_far.values()):
         print(

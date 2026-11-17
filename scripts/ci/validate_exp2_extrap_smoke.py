@@ -5,10 +5,14 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 def _reject_constant(token: str) -> None:
@@ -64,6 +68,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         far_rmse = test.get("extrap_rmse_far")
         far_error_pct = test.get("extrap_error_pct")
         diagnostics = test.get("extrap_diagnostics")
+        prediction_audit = test.get("extrap_prediction_audit")
         if not isinstance(results, dict) or set(results) != set(methods):
             raise ValueError(f"{description}: missing one or more of the six method results")
         if not isinstance(far_r2, dict) or set(far_r2) != set(methods):
@@ -74,6 +79,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             raise ValueError(f"{description}: extrapolation error-percent map does not cover all methods")
         if not isinstance(diagnostics, dict) or set(diagnostics) != set(methods):
             raise ValueError(f"{description}: far-region diagnostic map does not cover all methods")
+        if not isinstance(prediction_audit, dict) or set(prediction_audit) != set(methods):
+            raise ValueError(f"{description}: prediction-audit map does not cover all methods")
         if int(test.get("extrap_n_train") or 0) < 2 or int(test.get("extrap_n_test") or 0) < 2:
             raise ValueError(f"{description}: extrapolation split has fewer than two rows in a region")
         for method in methods:
@@ -87,6 +94,48 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             far_r2_available += far_r2[method] is not None
             far_rmse_available += far_rmse[method] is not None
             far_error_pct_available += far_error_pct[method] is not None
+            audit = prediction_audit[method]
+            if not isinstance(audit, dict) or not isinstance(audit.get("verification_status"), str):
+                raise ValueError(f"{description}/{method}: missing prediction-audit status")
+            if audit["verification_status"] == "recomputed_from_aligned_far_predictions":
+                y_true = audit.get("y_true")
+                y_pred = audit.get("y_pred")
+                row_count = int(test.get("extrap_n_test") or 0)
+                if (not isinstance(y_true, list) or not isinstance(y_pred, list)
+                        or len(y_true) != row_count or len(y_pred) != row_count
+                        or audit.get("row_count") != row_count):
+                    raise ValueError(f"{description}/{method}: prediction arrays are not aligned to the far split")
+                try:
+                    yt = [float(value) for value in y_true]
+                    yp = [float(value) for value in y_pred]
+                except (TypeError, ValueError):
+                    raise ValueError(f"{description}/{method}: prediction arrays contain non-numeric values")
+                if not all(math.isfinite(value) for value in yt + yp):
+                    raise ValueError(f"{description}/{method}: prediction arrays contain non-finite values")
+                recomputed_rmse = math.sqrt(sum((a - b) ** 2 for a, b in zip(yt, yp)) / row_count)
+                stored_rmse = audit.get("rmse")
+                if stored_rmse is None or not math.isclose(float(stored_rmse), recomputed_rmse, rel_tol=1e-9, abs_tol=1e-12):
+                    raise ValueError(f"{description}/{method}: audited RMSE does not match row-level predictions")
+                if far_rmse[method] is None or not math.isclose(float(far_rmse[method]), recomputed_rmse, rel_tol=1e-9, abs_tol=1e-12):
+                    raise ValueError(f"{description}/{method}: published far RMSE does not match row-level predictions")
+                from hypatiax.core.r2_canonical import r2_scored
+                recomputed_r2, _ = r2_scored(yt, yp)
+                expected_r2 = float(recomputed_r2) if math.isfinite(float(recomputed_r2)) else None
+                audited_r2 = audit.get("r2")
+                if expected_r2 is None:
+                    if audited_r2 is not None or far_r2[method] is not None:
+                        raise ValueError(f"{description}/{method}: undefined audited R² must remain null")
+                elif (audited_r2 is None or far_r2[method] is None
+                      or not math.isclose(float(audited_r2), expected_r2, rel_tol=1e-9, abs_tol=1e-12)
+                      or not math.isclose(float(far_r2[method]), expected_r2, rel_tol=1e-9, abs_tol=1e-12)):
+                    raise ValueError(f"{description}/{method}: published far R² does not match row-level predictions")
+                if not isinstance(audit.get("prediction_source"), str) or not audit["prediction_source"]:
+                    raise ValueError(f"{description}/{method}: prediction source is missing")
+            else:
+                if audit.get("y_true") is not None or audit.get("y_pred") is not None:
+                    raise ValueError(f"{description}/{method}: unavailable prediction audit must not contain partial arrays")
+                if audit["verification_status"] != "predictions_unavailable":
+                    raise ValueError(f"{description}/{method}: unsupported prediction-audit status")
             diagnostic = diagnostics[method]
             if not isinstance(diagnostic, dict) or not isinstance(diagnostic.get("status"), str):
                 raise ValueError(f"{description}/{method}: missing far-region diagnostic status")
@@ -109,11 +158,18 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         (str(test.get("domain") or ""), str(test.get("description") or ""), method)
         for test in tests for method in methods
     }
+    expected_audits = {
+        (str(test.get("domain") or ""), str(test.get("description") or ""), method):
+            (test.get("extrap_prediction_audit") or {}).get(method)
+        for test in tests for method in methods
+    }
     for row in flat_rows:
         identity = (str(row.get("domain") or ""), str(row.get("test") or ""), str(row.get("method") or ""))
         counts[identity] += 1
         if "r2" not in row or "rmse" not in row or "extrap_r2_far" not in row or "extrap_rmse_far" not in row:
             raise ValueError(f"flat row {identity} is missing ordinary or far-region score fields")
+        if row.get("extrap_prediction_audit") != expected_audits.get(identity):
+            raise ValueError(f"flat row {identity} does not preserve its protocol prediction audit")
     if set(counts) != expected or any(count != 1 for count in counts.values()):
         raise ValueError("flat extrap rows do not provide exactly one row per equation/method pair")
 
@@ -132,6 +188,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "far_rmse_non_null_count": far_rmse_available,
         "far_error_pct_non_null_count": far_error_pct_available,
         "far_diagnostic_status_counts": dict(sorted(diagnostic_status_counts.items())),
+        "prediction_audit_verified_count": sum(1 for test in tests for status in test["extrap_prediction_audit"].values() if status.get("verification_status") == "recomputed_from_aligned_far_predictions"),
+        "prediction_audit_unavailable_count": sum(1 for test in tests for status in test["extrap_prediction_audit"].values() if status.get("verification_status") == "predictions_unavailable"),
         "protocol_file": {"name": protocol_path.name, "sha256": hashlib.sha256(protocol_path.read_bytes()).hexdigest()},
         "flat_file": {"name": flat_files[0].name, "sha256": hashlib.sha256(flat_files[0].read_bytes()).hexdigest()},
         "note": "Null far scores are retained as explicit method outcomes; missing score fields or rows fail validation.",
@@ -151,6 +209,7 @@ def main() -> int:
     print(f"[exp2-extrap-smoke] far RMSE available: {summary['far_rmse_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] error-% available: {summary['far_error_pct_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] diagnostic statuses: {summary['far_diagnostic_status_counts']}")
+    print(f"[exp2-extrap-smoke] row-level prediction audits verified/unavailable: {summary['prediction_audit_verified_count']}/{summary['prediction_audit_unavailable_count']}")
     print(f"[exp2-extrap-smoke] summary: {target}")
     return 0
 

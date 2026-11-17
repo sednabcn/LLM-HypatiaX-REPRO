@@ -3247,6 +3247,8 @@ class ProtocolBenchmarkSuite:
         extrap_r2_far:    Dict[str, Optional[float]] = {}
         extrap_rmse_far:  Dict[str, Optional[float]] = {}
         extrap_error_pct: Dict[str, Optional[float]] = {}
+        extrap_diagnostics: Dict[str, Dict[str, str]] = {}
+        extrap_prediction_audit: Dict[str, Dict[str, Any]] = {}
         _do_extrap = (
             metadata.get("split_protocol") != "pca_40_60"
             and X_far is not None
@@ -3403,6 +3405,8 @@ class ProtocolBenchmarkSuite:
                     y_train=y,
                     y_pred_train=_y_pred_train if _y_pred_train else None,
                     X_far_predictor=X_far,
+                    diagnostics=extrap_diagnostics,
+                    prediction_audit=extrap_prediction_audit,
                     X_train_predictor=X,
                     verbose=verbose,
                 )
@@ -3428,6 +3432,7 @@ class ProtocolBenchmarkSuite:
             record["extrap_rmse_far"]  = extrap_rmse_far
             record["extrap_error_pct"] = extrap_error_pct   # NEW: % degradation per method
             record["extrap_diagnostics"] = extrap_diagnostics
+            record["extrap_prediction_audit"] = extrap_prediction_audit
             # FIX: store extrap split context at the record level so that
             # print_summary()'s benchmark_results_extrap.json export can read
             # train_frac / n_train / n_test without searching MethodResult.metadata
@@ -3945,6 +3950,7 @@ class ProtocolBenchmarkSuite:
                         "bypass_kind":       _mres.get("bypass_kind"),  # B2
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
+                        "extrap_prediction_audit": (rec.get("extrap_prediction_audit") or {}).get(_mname),
                         "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
