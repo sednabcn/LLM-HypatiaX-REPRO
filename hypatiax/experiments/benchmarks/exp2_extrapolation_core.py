@@ -27,6 +27,9 @@ class ExtrapolationRegime:
 
 #: Ordered from best to worst.  Each tier covers error_pct < threshold.
 #: The last entry (CATASTROPHIC) has threshold=inf so it catches everything ≥ 500 %.
+EXTRAP_TRAIN_RMSE_EPSILON = 1e-12  # relative to max(1, training-target scale)
+
+
 REGIMES: List[ExtrapolationRegime] = [
     ExtrapolationRegime("EXCELLENT",    50.0,       "< 50 %  EXCELLENT"),
     ExtrapolationRegime("GOOD",        100.0,       "< 100 % GOOD"),
@@ -488,6 +491,8 @@ def compute_extrap_r2_far(
             "rmse": rmse_far,
         }
         error_pct: Optional[float] = None
+        extrap_nrmse_far: Optional[float] = None
+        extrap_nrmse_status = "training_targets_unavailable"
         error_pct_status = "training_targets_unavailable"
         predictor_route = (
             "retained_final_predictor"
@@ -541,8 +546,20 @@ def compute_extrap_r2_far(
                 else:
                     try:
                         rmse_train = _far_rmse(train_targets, train_prediction)
+                        target_scale = float(np.std(train_targets))
+                        rmse_epsilon = EXTRAP_TRAIN_RMSE_EPSILON * max(1.0, target_scale)
+                        if math.isfinite(target_scale) and target_scale > 0.0 and math.isfinite(float(rmse_far)):
+                            extrap_nrmse_far = float(rmse_far / target_scale)
+                            extrap_nrmse_status = "available"
+                        elif not math.isfinite(target_scale):
+                            extrap_nrmse_status = "invalid_training_target_scale"
+                        else:
+                            extrap_nrmse_status = "zero_training_target_scale"
                         error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
-                        if error_pct is None:
+                        if float(rmse_train) < rmse_epsilon:
+                            error_pct = None
+                            error_pct_status = "below_training_rmse_epsilon"
+                        elif error_pct is None:
                             if not math.isfinite(float(rmse_train)):
                                 error_pct_status = "invalid_training_rmse"
                             elif float(rmse_train) == 0.0:
@@ -558,6 +575,12 @@ def compute_extrap_r2_far(
                         # scorer uses only the exact extrapolation training partition.
                         method_diag = _diag.setdefault(mname, {})
                         method_diag["extrap_rmse_train"] = float(rmse_train)
+                        method_diag["extrap_rmse_epsilon"] = float(rmse_epsilon)
+                        method_diag["extrap_target_scale_train"] = target_scale
+                        method_diag["extrap_nrmse_far"] = extrap_nrmse_far
+                        method_diag["extrap_nrmse_far_status"] = extrap_nrmse_status
+                        method_diag["extrapolation_score"] = extrap_nrmse_far
+                        method_diag["extrapolation_score_name"] = "training_scale_normalized_far_rmse"
                         result_metadata = getattr(res, "metadata", {}) or {}
                         provenance_fields = (
                             "evaluation_source_key",
