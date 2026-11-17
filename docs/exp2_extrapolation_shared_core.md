@@ -15,9 +15,9 @@ The module is intentionally safe to import from tests and experiment runners: it
 
 ## Training baseline and leakage boundary
 
-The RMSE-ratio denominator is computed on the exact training rows supplied to the runner. The runner passes `X` as `X_train_predictor` only after the outer extrapolation split has removed the far rows. For symbolic methods, the pre-evaluated training predictions can be supplied through `y_pred_train` so engineered feature columns are retained. For methods with a retained fitted `_predict_fn` but no symbolic training predictions, the shared scorer evaluates that same fitted predictor on `X_train_predictor`.
+The RMSE-ratio denominator is computed on the exact training rows supplied to the runner. The runner passes `X` as `X_train_predictor` only after the outer extrapolation split has removed the far rows. A retained `_predict_fn` is authoritative: the scorer uses that same final fitted predictor for both far and training predictions, even if `y_pred_train` also contains formula-derived values. This prevents a hybrid's far error from being divided by the error of only its symbolic base component. Only when no retained predictor exists does the symbolic-formula fallback use runner-supplied `y_pred_train` (which preserves engineered feature columns).
 
-The scorer does not use `X_far`, `y_far`, or external-holdout rows to construct the training baseline. It validates training prediction length and finiteness. When training RMSE is zero or invalid, the ratio remains null and the diagnostics report `zero_or_invalid_training_rmse`; other far metrics remain available.
+The scorer does not use `X_far`, `y_far`, or external-holdout rows to construct the training baseline. It validates training prediction length and finiteness, and records `predictor_route`, `training_prediction_route`, and `error_pct_route_consistent` in per-method diagnostics. When training RMSE is zero or invalid, the ratio remains null and the diagnostics report `zero_or_invalid_training_rmse`; other far metrics remain available.
 
 `error_pct` is the ratio `100 * RMSE_far / RMSE_train`, not conventional percentage prediction error. It is undefined when training RMSE is zero. Metric availability and predictive quality must be reported separately.
 
