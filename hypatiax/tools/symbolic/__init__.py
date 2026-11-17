@@ -20,6 +20,8 @@ __all__ = [
     "CandidateValidationSummary",
     "make_training_folds",
     "evaluate_candidate_on_training_folds",
+    "make_symbolic_refit_predictor",
+    "evaluate_symbolic_candidate_on_training_folds",
     "expression_stability",
 ]
 
@@ -40,6 +42,7 @@ def __getattr__(name: str):
     elif name in {
         "TrainingFold", "FoldMetric", "CandidateValidationSummary",
         "make_training_folds", "evaluate_candidate_on_training_folds",
+        "make_symbolic_refit_predictor", "evaluate_symbolic_candidate_on_training_folds",
         "expression_stability",
     }:
         module = import_module(".training_validation", __name__)
