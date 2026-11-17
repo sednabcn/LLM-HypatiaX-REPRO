@@ -1591,9 +1591,15 @@ class HybridDeFiMethod(BaseMethod):
             rmse_val = eval_.get("rmse")
             if rmse_val is None or not np.isfinite(float(rmse_val)):
                 mse = eval_.get("mse")
-                rmse_val = float(np.sqrt(mse)) if (mse is not None and np.isfinite(mse)) else float("nan")
+                if mse is not None and np.isfinite(mse):
+                    rmse_val = float(np.sqrt(mse))
+                    evaluation_metric_source = f"{eval_source_key}.sqrt_mse"
+                else:
+                    rmse_val = float("nan")
+                    evaluation_metric_source = f"{eval_source_key}.rmse_unavailable"
             else:
                 rmse_val = float(rmse_val)
+                evaluation_metric_source = f"{eval_source_key}.rmse"
 
             # r2==0.0: internal _safe_r2 may have misfired (tiny-scale eqs).
             # Reconstruct from y_pred or rmse algebraically.
@@ -1605,6 +1611,11 @@ class HybridDeFiMethod(BaseMethod):
                     y_pred_arr = np.asarray(y_pred_arr).flatten()
                     r2_val   = self._safe_r2(y, y_pred_arr)
                     rmse_val = self._safe_rmse(y, y_pred_arr)
+                    evaluation_metric_source = (
+                        f"{eval_source_key}.y_pred_recomputed"
+                        if eval_.get("y_pred") is not None
+                        else "top_level_result.y_pred_recomputed"
+                    )
                 else:
                     return self._unavailable(
                         "r2=0 and no y_pred: R2 cannot be verified (PHASE1-FIX-P10a: rmse-algebra fallback removed)",
@@ -1765,9 +1776,7 @@ class HybridDeFiMethod(BaseMethod):
                     "decision": decision,
                     "eval_source": eval_source_key,
                     "evaluation_source_key": eval_source_key,
-                    "evaluation_metric_source": (
-                        f"{eval_source_key}.rmse" if eval_source_key else "unknown"
-                    ),
+                    "evaluation_metric_source": evaluation_metric_source,
                     "benchmark_metric_row_scope": "full_input_dataset",
                     "benchmark_metric_row_count": int(len(y)),
                     "evaluation_prediction_source": _evaluation_prediction_source,
@@ -4245,6 +4254,17 @@ class ProtocolBenchmarkSuite:
                         "train_rmse_delta": (_diag_map.get(_mname) or {}).get("train_rmse_delta"),
                         "train_rmse_consistent": (_diag_map.get(_mname) or {}).get("train_rmse_consistent"),
                         "train_rmse_consistency_status": (_diag_map.get(_mname) or {}).get("train_rmse_consistency_status"),
+                        "benchmark_rmse_row_scope": (_diag_map.get(_mname) or {}).get("benchmark_rmse_row_scope"),
+                        "evaluation_source_key": (_diag_map.get(_mname) or {}).get("evaluation_source_key"),
+                        "evaluation_metric_source": (_diag_map.get(_mname) or {}).get("evaluation_metric_source"),
+                        "evaluation_prediction_source": (_diag_map.get(_mname) or {}).get("evaluation_prediction_source"),
+                        "evaluation_prediction_row_count": (_diag_map.get(_mname) or {}).get("evaluation_prediction_row_count"),
+                        "evaluation_feature_representation": (_diag_map.get(_mname) or {}).get("evaluation_feature_representation"),
+                        "formula_replay_status": (_diag_map.get(_mname) or {}).get("formula_replay_status"),
+                        "formula_replay_max_abs_error": (_diag_map.get(_mname) or {}).get("formula_replay_max_abs_error"),
+                        "residual_correction_attempted": (_diag_map.get(_mname) or {}).get("residual_correction_attempted"),
+                        "residual_correction_applied": (_diag_map.get(_mname) or {}).get("residual_correction_applied"),
+                        "final_predictor_composition": (_diag_map.get(_mname) or {}).get("final_predictor_composition"),
                         "extrap_diagnostic": _diag_map.get(_mname),
                         "extrap_train_frac": _train_frac,
                         "extrap_n_train":    _n_train,
