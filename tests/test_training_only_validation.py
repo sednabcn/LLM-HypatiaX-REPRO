@@ -151,3 +151,96 @@ def test_fold_preprocessor_rejects_schema_mismatch_and_unfitted_transform():
     preprocessor.fit(np.array([[1.0], [2.0]]))
     with pytest.raises(ValueError, match="feature schema"):
         preprocessor.transform(np.ones((2, 2)))
+
+
+def test_fold_feature_pipeline_selects_engineered_features_from_fit_rows_only():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePipeline
+
+    X_fit = np.array([
+        [1.0, 2.0, 5.0],
+        [2.0, 2.5, 7.0],
+        [4.0, 3.0, 11.0],
+        [8.0, 3.5, 13.0],
+        [16.0, 4.0, 17.0],
+    ])
+    pipeline = FoldFeaturePipeline(
+        ["a", "b", "c"],
+        include_geometric_means=True,
+        include_ratios=True,
+        max_ratio_features=2,
+    )
+    X_fit_augmented = pipeline.fit_transform(X_fit)
+    audit_before = pipeline.audit_state()
+    X_validation = pipeline.transform(np.array([[1e6, 5.0, 19.0]]))
+    audit_after = pipeline.audit_state()
+
+    assert audit_before == audit_after
+    assert audit_before["fit_scope"] == "fold_fitting_rows_only"
+    assert audit_before["validation_used_for_plan_selection"] is False
+    assert len(pipeline.plan_.geometric_mean_pairs) == 3
+    assert len(pipeline.plan_.ratio_pairs) == 2
+    assert X_fit_augmented.shape[1] == len(pipeline.get_feature_names_out())
+    assert X_validation.shape[1] == X_fit_augmented.shape[1]
+
+
+def test_fold_feature_pipeline_fails_closed_when_derived_feature_leaves_domain():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePipeline
+
+    X_fit = np.array([[1.0, 2.0], [2.0, 3.0], [3.0, 4.0]])
+    pipeline = FoldFeaturePipeline(
+        ["a", "b"], include_geometric_means=True, include_ratios=True
+    ).fit(X_fit)
+    with pytest.raises(ValueError, match="left its positive domain"):
+        pipeline.transform(np.array([[0.0, 2.0]]))
+
+
+def test_fold_target_scaler_fits_on_training_targets_and_inverts_predictions():
+    from hypatiax.tools.symbolic.training_validation import FoldTargetScaler
+
+    y_fit = np.array([1e-8, 2e-8, 3e-8, 4e-8])
+    scaler = FoldTargetScaler()
+    y_scaled = scaler.fit_transform(y_fit)
+    state_before = scaler.audit_state()
+    y_validation_scaled = scaler.transform(np.array([5e-8]))
+    y_validation = scaler.inverse_transform(y_validation_scaled)
+
+    assert state_before == scaler.audit_state()
+    assert state_before["fit_scope"] == "fold_fitting_targets_only"
+    assert state_before["scale"] == pytest.approx(np.std(y_fit))
+    np.testing.assert_allclose(y_scaled * state_before["scale"], y_fit)
+    np.testing.assert_allclose(y_validation, np.array([5e-8]))
+
+
+def test_preprocessed_symbolic_validation_refits_with_fold_local_feature_and_target_plans():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_preprocessed_symbolic_candidate_on_training_folds,
+    )
+
+    X = np.linspace(1.0, 8.0, 40).reshape(-1, 1)
+    y = 3e-8 * X[:, 0]
+    folds = make_training_folds(40, n_splits=4, n_repeats=2, seed=17)
+    summary = evaluate_preprocessed_symbolic_candidate_on_training_folds(
+        "2.0*x", ["x"], ["x"], X, y, folds, max_nfev=100
+    )
+    assert summary.valid_fold_count == len(folds)
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-12
+
+
+def test_preprocessed_symbolic_validation_supports_fold_local_geometric_mean_schema():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_preprocessed_symbolic_candidate_on_training_folds,
+    )
+
+    a = np.linspace(1.0, 5.0, 40)
+    b = np.linspace(2.0, 8.0, 40)
+    X = np.column_stack([a, b])
+    y = 2.5 * np.sqrt(a * b)
+    folds = make_training_folds(40, n_splits=4, n_repeats=1, seed=9)
+    summary = evaluate_preprocessed_symbolic_candidate_on_training_folds(
+        "1.0*gm_a_b", ["a", "b", "gm_a_b"], ["a", "b"], X, y, folds,
+        include_geometric_means=True, max_nfev=100,
+    )
+    assert summary.valid_fold_count == len(folds)
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-8
