@@ -14,7 +14,12 @@ from typing import Any
 import numpy as np
 
 from .symbolic_engine import DiscoveryConfig, SymbolicEngine
-from .training_validation import (\n    FoldFeaturePreprocessor,\n    evaluate_candidate_on_training_folds,\n    make_symbolic_refit_predictor,\n    make_training_folds,\n)
+from .training_validation import (
+    FoldFeaturePreprocessor,
+    evaluate_candidate_on_training_folds,
+    make_symbolic_refit_predictor,
+    make_training_folds,
+)
 from .pysr_strategy_selection import (
     TrainingOnlySearchSelection,
     select_pysr_search_strategy_on_training_folds,
