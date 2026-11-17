@@ -5,7 +5,7 @@
 **Intended base:** `hybrid/fix-llm-lifecycle-and-candidate-selection` (PR #177 head)  
 **Scope:** architecture, scientific requirements, interfaces, validation policy, rollout, and open decisions. This document does not claim that the proposed pipeline is implemented.
 
-![HybridDiscoverySystem architecture](../images/hybrid-discovery-physics-informed-architecture.svg)
+![HybridDiscoverySystem architecture](images/hybrid-discovery-physics-informed-architecture.svg)
 
 ## 1. Executive summary
 
