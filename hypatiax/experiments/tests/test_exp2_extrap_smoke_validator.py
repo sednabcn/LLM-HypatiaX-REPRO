@@ -91,6 +91,21 @@ def test_three_equation_six_method_smoke_artifacts_validate(tmp_path):
     assert summary["far_diagnostic_status_counts"] == {"scored": 18}
 
 
+def test_smoke_rejects_prediction_audit_metric_mismatch(tmp_path):
+    _write_fixture(tmp_path)
+    protocol_path = tmp_path / "protocol_core_extrap_smoke.json"
+    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
+    audit = protocol["tests"][0]["extrap_prediction_audit"][METHODS[0]]
+    audit["y_pred"][0] += 1.0
+    protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
+    try:
+        validator.validate_smoke_outputs(tmp_path)
+    except ValueError as exc:
+        assert "audited RMSE" in str(exc)
+    else:
+        raise AssertionError("validator accepted predictions inconsistent with published RMSE")
+
+
 def test_smoke_rejects_missing_far_metric_for_one_method(tmp_path):
     _write_fixture(tmp_path, omit_far_rmse=True)
     try:
