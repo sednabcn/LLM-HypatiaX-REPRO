@@ -2706,7 +2706,17 @@ try:
                 "llm_attempts": _llm_attempt_audit,
                 "training_r2": _discovery.get("r2_score"),
                 "selected_attempt": _discovery.get("attempt"),
+                "attempts_used": system.stats.get("symbolic_attempts", 0),
+                "retry_budget": system.max_retries,
                 "selection_metric": "training_r2",
+                "candidate_selection": "highest_training_r2_within_retry_budget",
+                "extrapolation_metric_used_for_selection": False,
+                "training_acceptance_threshold": 0.97,
+                "training_early_stop_threshold": (
+                    0.999999 if _disc_cfg.use_transcendental_compositions else 0.99
+                ),
+                "training_quality_check": _discovery.get("quality_check"),
+                "discovery_engine": _discovery.get("discovery_engine"),
                 "physics_fallback_enabled": system.enable_physics_fallback,
                 "discovery_config": {
                     "niterations": _disc_cfg.niterations,
