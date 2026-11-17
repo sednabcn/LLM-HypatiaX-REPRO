@@ -2686,7 +2686,6 @@ try:
                 for attempt in _attempts if isinstance(attempt, dict)
             ]
             _discovery = result.get("discovery", {}) or {}
-            _llm_engine = getattr(system.symbolic_engine, "llm_engine", None)
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
                 "engine_version": "5.4",
