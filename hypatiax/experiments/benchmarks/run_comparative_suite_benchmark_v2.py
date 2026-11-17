@@ -2707,8 +2707,21 @@ try:
                 "selected_attempt": _discovery.get("attempt"),
                 "attempts_used": system.stats.get("symbolic_attempts", 0),
                 "retry_budget": system.max_retries,
-                "selection_metric": "training_r2_with_complexity_gate",
+                "selection_metric": (
+                    "paired_training_fold_mean_normalized_rmse_then_final_training_r2"
+                    if getattr(system, "_training_only_search_selection", None) is not None
+                    else "training_r2_with_complexity_gate"
+                ),
                 "candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak",
+                "training_only_search_selection": getattr(
+                    system, "_training_only_search_selection", None
+                ),
+                "fold_search_llm_enabled": False,
+                "fold_search_timeout_seconds": (
+                    _meta.get("training_only_search_validation", {}).get(
+                        "fold_timeout_seconds"
+                    )
+                ),
                 "extrapolation_metric_used_for_selection": False,
                 "training_acceptance_threshold": 0.97,
                 "training_early_stop_threshold": (
@@ -3276,10 +3289,15 @@ class HybridSystemV50_2Method(BaseMethod):
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
         _reserved_overhead = 400
+        # Reserve a bounded 3-strategy × 2-fold validation budget before the
+        # final full-training retries. Fold searches use a shorter per-fit cap.
+        _fold_validation_reserve = 120
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
-        _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
-        # Respect the caller's PySR timeout while ensuring the retry budget
-        # fits inside the outer per-method deadline.
+        _budget_per_attempt = max(
+            60, (_t_available - _fold_validation_reserve) // _MAX_RETRIES_V50_2
+        )
+        # Respect the caller's PySR timeout while ensuring fold selection plus
+        # final retries fit inside the outer per-method deadline.
         _per_attempt_to = min(_budget_per_attempt, _PYSR_TIMEOUT)
 
         _tc_kwargs = {
@@ -3298,6 +3316,15 @@ class HybridSystemV50_2Method(BaseMethod):
             "maxsize": 30,
             "use_transcendental_compositions": True,
             "domain": metadata.get("domain", "general"),
+            # Compare configurations on identical internal training folds.
+            # Fold searches use pure PySR; the final full-training search keeps
+            # the configured LLM-guided HybridDiscovery arm.
+            "training_only_search_validation": {
+                "n_splits": 2,
+                "validation_fraction": 0.2,
+                "fold_iterations": 20,
+                "fold_timeout_seconds": 20,
+            },
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
@@ -3316,6 +3343,10 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta = dict(metadata)
         if not _meta.get("domain"):
             _meta["domain"] = "general"
+        _meta["training_only_search_validation"] = dict(
+            _tc_kwargs["training_only_search_validation"]
+        )
+        _meta.setdefault("random_seed", int(metadata.get("random_seed", 42)))
 
         print(
             f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
@@ -3331,7 +3362,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
         _subprocess_timeout = min(
             max(60, _METHOD_TIMEOUT_SECS - 100),
-            (2 * _per_attempt_to) + 280,
+            (2 * _per_attempt_to) + 280 + _fold_validation_reserve,
         )
         # FIX-ISSUE10B-OUTER-TIMEOUT: see matching comment in
         # SymbolicEngineMethod.run — same handoff pattern.
