@@ -21,7 +21,8 @@ The DeFi method result now records:
 - `evaluation_source_key`: which returned result branch supplied the selected
   evaluation dictionary (for example `evaluation`, `nn_result`, or
   `result`).
-- `evaluation_metric_source`: the branch and metric used for reported RMSE.
+- `evaluation_metric_source`: the exact `rmse`, `sqrt_mse`, or
+  prediction-recomputed route that supplied the reported metric.
 - `benchmark_metric_row_scope` and `benchmark_metric_row_count`: the full
   input dataset scope and row count passed to the adapter.
 - `evaluation_prediction_source` and row count: selected nested/top-level
