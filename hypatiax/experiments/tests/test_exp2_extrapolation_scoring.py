@@ -465,3 +465,102 @@ def test_hybrid_llm_engine_survives_discovery_retries_and_selection_is_complexit
     assert "all_candidates_flagged_by_complexity_screen" in retry_body
     assert "flagged_result" in retry_body
     assert "candidate_complexity < current_complexity" in retry_body
+
+
+def test_physics_informed_discovery_contracts_are_immutable_and_serializable():
+    from hypatiax.tools.symbolic.discovery_contracts import (
+        CandidateRecord,
+        ConstraintOutcome,
+        ConstraintSpec,
+        DiscoveryBudget,
+        DiscoveryProblem,
+        DiscoveryReport,
+    )
+
+    problem = DiscoveryProblem(
+        target_name="force",
+        variable_names=("mass", "acceleration"),
+        target_unit="N",
+        variable_units={"mass": "kg", "acceleration": "m/s^2"},
+        variable_domains={"mass": {"minimum": 0, "strict": True}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="force-dimensions",
+                kind="dimensional_consistency",
+                severity="hard",
+                source="declared_equation_contract",
+            ),
+        ),
+        budget=DiscoveryBudget(max_search_attempts=3, max_llm_calls=1, seed=17),
+        split_protocol={"selection_region": "training_only", "far_region": "sealed"},
+    )
+    with pytest.raises(TypeError):
+        problem.variable_units["mass"] = "g"
+
+    candidate = CandidateRecord(
+        expression="mass * acceleration",
+        source="pysr_search",
+        search_strategy="operator_constrained",
+        seed=17,
+        constraint_outcomes=(
+            ConstraintOutcome("force-dimensions", "pass", evidence={"unit": "N"}),
+        ),
+        eligible=True,
+    )
+    report = DiscoveryReport(
+        status="accepted",
+        candidates=(candidate,),
+        selected_candidate_id=candidate.candidate_id,
+        pareto_candidate_ids=(candidate.candidate_id,),
+        provenance={"selector": "phase-a-contract"},
+        far_evaluation={"rmse": 0.2},
+    )
+    payload = report.to_dict()
+    assert payload["schema_version"] == "1.0"
+    assert payload["candidates"][0]["candidate_id"] == candidate.candidate_id
+    assert payload["far_evaluation_used_for_selection"] is False
+    assert payload["far_evaluation"]["rmse"] == 0.2
+
+
+def test_discovery_contracts_reject_undeclared_or_invalid_states():
+    from hypatiax.tools.symbolic.discovery_contracts import (
+        CandidateRecord,
+        ConstraintOutcome,
+        DiscoveryProblem,
+        DiscoveryReport,
+    )
+
+    with pytest.raises(ValueError, match="unique"):
+        DiscoveryProblem(target_name="y", variable_names=("x", "x"))
+    with pytest.raises(ValueError, match="unknown variables"):
+        DiscoveryProblem(
+            target_name="y",
+            variable_names=("x",),
+            variable_units={"z": "m"},
+        )
+    with pytest.raises(ValueError, match="unsupported constraint status"):
+        ConstraintOutcome("positivity", "passed")
+    with pytest.raises(ValueError, match="unsupported candidate source"):
+        CandidateRecord(
+            expression="x",
+            source="magic",
+            search_strategy="test",
+            seed=1,
+        )
+
+
+def test_candidate_identity_is_stable_and_report_rejects_duplicate_candidates():
+    from hypatiax.tools.symbolic.discovery_contracts import CandidateRecord, DiscoveryReport
+
+    kwargs = {
+        "expression": "x + y",
+        "normalized_expression": "x+y",
+        "source": "pysr_search",
+        "search_strategy": "baseline",
+        "seed": 42,
+    }
+    first = CandidateRecord(**kwargs)
+    second = CandidateRecord(**kwargs)
+    assert first.candidate_id == second.candidate_id
+    with pytest.raises(ValueError, match="unique"):
+        DiscoveryReport(status="provisional", candidates=(first, second))
