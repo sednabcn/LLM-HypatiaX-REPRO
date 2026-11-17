@@ -561,3 +561,66 @@ Only after this adapter exists should repeated-validation evidence replace train
 - It adds a training-only validation module, public lazy exports, offline regression test source, and this implementation log.
 - The architecture diagram is unchanged because this step implements an already documented Stage 4 boundary and does not alter the target pipeline topology.
 - No test, CI, experiment, smoke, worker, benchmark, or LLM-backed workflow was run.
+
+
+---
+
+## 15. Implementation log — fold-local symbolic coefficient refitting
+
+This step advances Stage 4 from generic callbacks to a concrete restricted symbolic refit adapter. It deliberately does not wire the adapter into the production retry selector yet; the remaining preprocessing boundary must be made fold-local first.
+
+### 15.1 Step 1 — restricted expression compilation
+
+Added \`make_symbolic_refit_predictor(expression, variable_names)\` to \`training_validation.py\`.
+
+- Expressions are parsed with the repository's restricted \`parse_sympy_expression\` grammar; arbitrary Python evaluation, attribute access, imports, and unapproved calls are not accepted.
+- The adapter identifies numeric floating-point literals as candidate coefficients.
+- Integer constants and numeric exponents are retained as structure; floating-point exponents are also excluded from coefficient optimization.
+- SymPy compiles the parameterized expression to a NumPy evaluator.
+- The adapter requires a unique, explicit variable list and checks every fold matrix against that schema.
+
+### 15.2 Step 2 — independent fit inside each fold
+
+Each invocation of the predictor receives exactly \`X_fit\`, \`y_fit\`, and \`X_validation\`. It initializes coefficients from the original expression, then uses SciPy \`least_squares\` to estimate floating-point coefficients against \`X_fit/y_fit\` only. The fitted coefficients are used to predict \`X_validation\`. The validation targets are consumed only later by the metric aggregator, never by the coefficient optimizer.
+
+The new \`evaluate_symbolic_candidate_on_training_folds()\` helper connects this adapter to the deterministic fold evaluator. The per-fold fitted expression is retained in each \`FoldMetric\`; the serialized summary includes conservative expression recurrence across the fold-fitted forms.
+
+This is a refit of numeric coefficients for a fixed symbolic structure. It is not a fresh PySR search per fold, does not refit integer constants or exponents, and does not establish that the chosen symbolic structure would have been discovered independently in every fold.
+
+### 15.3 Step 3 — regression source
+
+Extended \`tests/test_training_only_validation.py\` with regression cases for:
+- recovery of a floating-point coefficient using only each fold's fitting rows;
+- rejection of an expression containing an attempted Python import;
+- extraction of fold-fitted expressions for stability reporting.
+
+The tests are source additions only and have not been run.
+
+### 15.4 Step 4 — why selector integration remains deferred
+
+The active HybridDiscovery path can apply signed-log scaling and the symbolic engine can add engineered/ratio/geometric-mean columns before PySR fitting. Some feature preparation may be data-dependent. The currently retained \`_last_X_aug\` matrix and its names describe the full discovery fit; reusing that matrix in internal folds would not prove that feature preparation was independent of each fold's held-out rows.
+
+Therefore this PR does not connect the adapter to \`_discover_with_retry()\`, does not replace training-R² selection, and does not claim leakage-free end-to-end validation of the current production pipeline. The next required work is a fold-aware preprocessing contract that:
+1. learns all data-dependent transformations from each fold's fitting rows only;
+2. applies the fitted transform unchanged to that fold's validation rows;
+3. preserves a verifiable mapping from raw feature names to engineered feature names;
+4. then invokes the coefficient-refit adapter with the fold-specific feature matrices;
+5. exposes only the aggregated training-region validation evidence to the selector.
+
+Until that boundary exists, the validation API is opt-in and isolated. No far/test data is accepted by the adapter or helper.
+
+### 15.5 Scientific and numerical limitations
+
+- Optimizing floating-point literals can be non-identifiable when terms are collinear or redundant.
+- Nonlinear least-squares can converge to a local minimum; a successful optimizer status is not proof of global optimality.
+- Repeated equal floating-point literals are represented as one SymPy atom and therefore share one fitted value in this initial implementation.
+- Integer coefficients/exponents are fixed; future support must distinguish structural exponents from fit-able integer coefficients safely.
+- The adapter uses unbounded least-squares for coefficients. Physically meaningful coefficient bounds should come from explicit typed scientific metadata, not guessed defaults.
+- Expression recurrence is syntactic after conservative formatting; it is not symbolic equivalence.
+
+### 15.6 Change provenance
+
+- Branch: \`hybrid/fold-local-symbolic-refit\`.
+- Base: \`hybrid/fix-llm-lifecycle-and-candidate-selection\` (PR #177); PR #182's training-only validation primitives are already present on that base branch.
+- Changes: safe symbolic coefficient-refit adapter, fold-specific fitted-expression audit, report stability summary, public exports, regression source, and this documentation update.
+- No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
