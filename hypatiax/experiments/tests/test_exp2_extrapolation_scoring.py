@@ -248,6 +248,47 @@ def test_retained_predictor_supplies_training_baseline_on_training_rows_only():
     assert diagnostics["retained"]["error_pct_status"] == "available"
 
 
+def test_far_prediction_audit_persists_aligned_targets_predictions_and_source():
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    y_far = np.array([4.0, 5.0, 6.0])
+    result = SimpleNamespace(
+        success=True,
+        formula="N/A",
+        _predict_fn=lambda X: np.asarray(X, dtype=float)[:, 0] + 1.0,
+    )
+    audit = {}
+    compute_extrap_r2_far(
+        {"retained": result},
+        X_far,
+        y_far,
+        ["x"],
+        verbose=False,
+        prediction_audit=audit,
+    )
+    assert audit["retained"]["verification_status"] == "recomputed_from_aligned_far_predictions"
+    assert audit["retained"]["prediction_source"] == "retained_final_predictor"
+    assert audit["retained"]["row_count"] == 3
+    assert audit["retained"]["y_true"] == [4.0, 5.0, 6.0]
+    assert audit["retained"]["y_pred"] == [4.0, 5.0, 6.0]
+    assert audit["retained"]["rmse"] == pytest.approx(0.0)
+
+
+def test_unavailable_far_prediction_audit_is_explicit():
+    result = SimpleNamespace(success=False, formula="N/A")
+    audit = {}
+    compute_extrap_r2_far(
+        {"failed": result},
+        np.array([[3.0], [4.0]]),
+        np.array([4.0, 5.0]),
+        ["x"],
+        verbose=False,
+        prediction_audit=audit,
+    )
+    assert audit["failed"]["verification_status"] == "predictions_unavailable"
+    assert audit["failed"]["y_true"] is None
+    assert audit["failed"]["y_pred"] is None
+
+
 def test_zero_training_rmse_keeps_ratio_undefined_with_explicit_status():
     X_train = np.array([[0.0], [1.0], [2.0]])
     X_far = np.array([[3.0], [4.0], [5.0]])
