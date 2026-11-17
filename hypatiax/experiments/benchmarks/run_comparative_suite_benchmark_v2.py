@@ -85,6 +85,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Ensure direct script execution can resolve the repository package.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 # Canonical shared implementation used by both Exp2 Feynman runners.
 from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     REGIMES,
