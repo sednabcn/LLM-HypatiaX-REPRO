@@ -15,6 +15,12 @@ __all__ = [
     "CandidateRecord",
     "DiscoveryReport",
     "CandidateValidator",
+    "TrainingFold",
+    "FoldMetric",
+    "CandidateValidationSummary",
+    "make_training_folds",
+    "evaluate_candidate_on_training_folds",
+    "expression_stability",
 ]
 
 
@@ -31,6 +37,12 @@ def __getattr__(name: str):
         module = import_module(".symbolic_engine", __name__)
     elif name == "CandidateValidator":
         module = import_module(".discovery_validation", __name__)
+    elif name in {
+        "TrainingFold", "FoldMetric", "CandidateValidationSummary",
+        "make_training_folds", "evaluate_candidate_on_training_folds",
+        "expression_stability",
+    }:
+        module = import_module(".training_validation", __name__)
     elif name in {
         "DiscoveryProblem",
         "DiscoveryBudget",
