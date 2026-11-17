@@ -334,10 +334,11 @@ def compute_extrap_r2_far(
 
     Notes
     -----
-    Methods that return NN architecture tags (``"ImprovedNN(…)"``,
-    ``"[NN fallback"``, ``"N/A"``, ``""``) are skipped — they have no evaluable
-    expression so all three values are null.  Only SymbolicEngineWithLLM and
-    HybridDiscoverySystem v50_2 produce formula strings and yield non-null values.
+    A retained fitted predictor is preferred for far and training predictions.
+    When no predictor is available, an evaluable symbolic formula is used for
+    far predictions and caller-supplied training predictions may provide the
+    RMSE baseline. Architecture labels without a retained predictor are
+    reported as unsupported rather than assigned fabricated scores.
     """
     extrap_r2_far:    Dict[str, Optional[float]] = {}
     extrap_rmse_far:  Dict[str, Optional[float]] = {}
