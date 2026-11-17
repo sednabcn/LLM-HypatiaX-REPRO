@@ -71,7 +71,11 @@ from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
 #   # --- assemble record ---
 #   record["extrap_r2_far"]      = extrap_r2_far
 #   record["extrap_rmse_far"]    = extrap_rmse_far
-#   record["extrap_error_pct"]   = extrap_error_pct
+#   record["extrapolation_score"] = {
+#       name: (diagnostics.get(name) or {}).get("extrapolation_score")
+#       for name in results
+#   }  # primary: RMSE_far / std(y_train)
+#   record["extrap_error_pct"]   = extrap_error_pct  # legacy compatibility
 #   record["extrap_train_frac"]  = metadata.get("extrap_train_frac")
 #   record["extrap_multiplier"]  = metadata.get("extrap_multiplier")
 #   record["extrap_n_train"]     = metadata.get("extrap_n_train")
