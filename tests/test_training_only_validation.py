@@ -25,6 +25,7 @@ def test_blocked_folds_hold_out_contiguous_ranges():
     for fold in folds:
         validation = list(fold.validation_indices)
         assert validation == list(range(validation[0], validation[-1] + 1))
+        assert len(validation) == 4
 
 
 def test_fold_metrics_are_aggregated_using_training_target_scale():
