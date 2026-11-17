@@ -2625,34 +2625,95 @@ try:
         # DiscoveryConfig from the kwargs forwarded by the runner so the per-attempt
         # PySR cap is actually respected.
         # Defaults aligned to paper-quality values (repro.yaml pysr block).
-        _n_iter    = kwargs.get("max_iterations", 1000)  # repro.yaml pysr.niterations=1000
-        _pysr_to   = kwargs.get("pysr_timeout", 1100)    # repro.yaml timeouts.feynman_pysr_seconds=1100
-        _n_retry   = kwargs.get("max_retries", 3)        # repro.yaml engine.max_retries=3
-        _pop_size  = kwargs.get("population_size", 33)   # repro.yaml pysr.population_size=33
-        _parsimony = kwargs.get("parsimony", 0.01)       # repro.yaml pysr.parsimony=0.01
-        _populations = kwargs.get("populations", 30)     # repro.yaml pysr.populations=30
-        _use_tc    = kwargs.get("use_transcendental_compositions", False)
+        _n_iter    = kwargs.get("max_iterations", 1000)
+        _pysr_to   = kwargs.get("pysr_timeout", 1100)
+        _n_retry   = kwargs.get("max_retries", 3)
+        _pop_size  = kwargs.get("population_size", 33)
+        _parsimony = kwargs.get("parsimony", 0.01)
+        _populations = kwargs.get("populations", 30)
+        _use_tc    = kwargs.get("use_transcendental_compositions", True)
+        _domain    = kwargs.get("domain", metadata.get("domain", "general"))
+        _use_llm   = bool(kwargs.get("use_llm", True))
+        _llm_mode  = kwargs.get("llm_mode", "hybrid")
+        _llm_n     = kwargs.get("llm_n_candidates", 3)
+        _llm_temp  = kwargs.get("llm_temperature", 0.25)
+        _binary_ops = kwargs.get("binary_operators", ["+", "-", "*", "/"])
+        _unary_ops  = kwargs.get("unary_operators", ["exp", "log", "sin", "cos", "sqrt"])
+        _maxsize    = kwargs.get("maxsize", 30)
         _disc_cfg_kwargs = dict(
             niterations=_n_iter,
             pysr_timeout=_pysr_to,
             population_size=_pop_size,
+            populations=_populations,
             parsimony=_parsimony,
+            binary_operators=_binary_ops,
+            unary_operators=_unary_ops,
+            maxsize=_maxsize,
             use_transcendental_compositions=_use_tc,
         )
-        if _populations is not None:
-            _disc_cfg_kwargs["populations"] = _populations
         _disc_cfg  = DiscoveryConfig(**_disc_cfg_kwargs)
+        _meta = dict(metadata)
+        _meta["domain"] = _domain
+        _meta["use_llm"] = _use_llm
+        _meta["llm_mode"] = _llm_mode
         system = HybridDiscoverySystem(
+            domain=_domain,
             discovery_config=_disc_cfg,
             max_retries=_n_retry,
+            use_llm=_use_llm,
+            llm_mode=_llm_mode,
+            llm_n_candidates=_llm_n,
+            llm_temperature=_llm_temp,
+            enable_physics_fallback=False,
         )
         result = system.discover(
             X=X, y=y,
             var_names=var_names,
             description=description,
-            metadata=metadata,
+            metadata=_meta,
             verbose=False,
         )
+        if isinstance(result, dict):
+            _attempts = getattr(system, "_llm_attempt_info", []) or []
+            _llm_audit_keys = (
+                "llm_mode", "llm_attempted", "llm_called",
+                "llm_proposal_generated", "llm_response_replayed",
+                "llm_temperature_requested", "llm_temperature_sent",
+                "llm_best_r2", "llm_time",
+            )
+            _llm_attempt_audit = [
+                {key: attempt.get(key) for key in _llm_audit_keys if key in attempt}
+                for attempt in _attempts if isinstance(attempt, dict)
+            ]
+            _discovery = result.get("discovery", {}) or {}
+            _llm_engine = getattr(system.symbolic_engine, "llm_engine", None)
+            result["benchmark_provenance"] = {
+                "engine": "HybridDiscoverySystem",
+                "engine_version": "5.4",
+                "engine_variant": "llm_hybrid" if _llm_engine is not None else "pysr_fallback",
+                "domain": _domain,
+                "llm_requested": _use_llm,
+                "llm_mode_requested": _llm_mode,
+                "llm_mode_active": system.llm_mode,
+                "llm_attempted": any(bool(a.get("llm_attempted")) for a in _llm_attempt_audit),
+                "llm_called": any(bool(a.get("llm_called")) for a in _llm_attempt_audit),
+                "llm_attempts": _llm_attempt_audit,
+                "training_r2": _discovery.get("r2_score"),
+                "selected_attempt": _discovery.get("attempt"),
+                "selection_metric": "training_r2",
+                "physics_fallback_enabled": system.enable_physics_fallback,
+                "discovery_config": {
+                    "niterations": _disc_cfg.niterations,
+                    "pysr_timeout": _disc_cfg.pysr_timeout,
+                    "populations": _disc_cfg.populations,
+                    "population_size": _disc_cfg.population_size,
+                    "parsimony": _disc_cfg.parsimony,
+                    "binary_operators": list(_disc_cfg.binary_operators),
+                    "unary_operators": list(_disc_cfg.unary_operators),
+                    "maxsize": _disc_cfg.maxsize,
+                    "use_transcendental_compositions": _disc_cfg.use_transcendental_compositions,
+                },
+            }
     else:
         result = {"success": False, "error": f"Unknown method: {method}"}
 except Exception as exc:
@@ -3206,8 +3267,20 @@ class HybridSystemV50_2Method(BaseMethod):
 
         _tc_kwargs = {
             "max_iterations": _n_iter_adaptive,
-            "pysr_timeout":   _per_attempt_to,     # FIX: was _PYSR_TIMEOUT (600s) — now per-attempt
-            "max_retries":    _MAX_RETRIES_V50_2,     # FIX: was not forwarded at all
+            "pysr_timeout":   _per_attempt_to,
+            "max_retries":    _MAX_RETRIES_V50_2,
+            # Exp2's HybridDiscovery arm is the actual LLM-guided hybrid,
+            # distinct from method 5's pure-PySR SymbolicEngine baseline.
+            "use_llm": True,
+            "llm_mode": "hybrid",
+            "llm_n_candidates": 3,
+            "llm_temperature": 0.25,
+            # Match config/repro.yaml's declared PySR operator search space.
+            "binary_operators": ["+", "-", "*", "/"],
+            "unary_operators": ["exp", "log", "sin", "cos", "sqrt"],
+            "maxsize": 30,
+            "use_transcendental_compositions": True,
+            "domain": metadata.get("domain", "general"),
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
@@ -3216,8 +3289,11 @@ class HybridSystemV50_2Method(BaseMethod):
                 _tc_kwargs["parsimony"] = _p
             if getattr(_active, "_populations", None) is not None:
                 _tc_kwargs["populations"] = _active._populations
-            if getattr(_active, "_use_transcendental_compositions", False):
-                _tc_kwargs["use_transcendental_compositions"] = True
+            # The repro.yaml default is True; the CLI flag can explicitly
+            # retain that setting for all active methods.
+            _tc_kwargs["use_transcendental_compositions"] = bool(
+                getattr(_active, "_use_transcendental_compositions", True)
+            )
 
         # Ensure domain is always in metadata so subprocess AUTO-TC check works.
         _meta = dict(metadata)
@@ -3271,6 +3347,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     **_provenance(result),
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
+                    "benchmark_provenance": result.get("benchmark_provenance", {}),
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
