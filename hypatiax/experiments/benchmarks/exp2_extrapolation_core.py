@@ -506,6 +506,37 @@ def compute_extrap_r2_far(
                             error_pct_status = "zero_or_invalid_training_rmse"
                         else:
                             error_pct_status = "available"
+
+                        # Compare the exact same training-row predictions used
+                        # for extrapolation with the method wrapper's reported
+                        # benchmark RMSE. A mismatch is a predictor-path
+                        # consistency diagnostic, not a reason to replace the
+                        # retained predictor or alter either metric.
+                        method_diag = _diag.setdefault(mname, {})
+                        method_diag["extrap_rmse_train"] = float(rmse_train)
+                        benchmark_rmse = getattr(res, "rmse", None)
+                        if (
+                            benchmark_rmse is not None
+                            and isinstance(benchmark_rmse, (int, float, np.number))
+                            and math.isfinite(float(benchmark_rmse))
+                            and float(benchmark_rmse) >= 0.0
+                        ):
+                            benchmark_rmse = float(benchmark_rmse)
+                            method_diag["benchmark_rmse"] = benchmark_rmse
+                            method_diag["train_rmse_delta"] = float(rmse_train - benchmark_rmse)
+                            method_diag["train_rmse_consistent"] = math.isclose(
+                                float(rmse_train), benchmark_rmse,
+                                rel_tol=1e-6, abs_tol=1e-15,
+                            )
+                            method_diag["train_rmse_consistency_status"] = (
+                                "matches" if method_diag["train_rmse_consistent"]
+                                else "mismatch"
+                            )
+                        else:
+                            method_diag["benchmark_rmse"] = None
+                            method_diag["train_rmse_delta"] = None
+                            method_diag["train_rmse_consistent"] = None
+                            method_diag["train_rmse_consistency_status"] = "benchmark_rmse_unavailable"
                     except Exception as exc:
                         error_pct_status = "training_metric_error"
                         _diag.setdefault(mname, {})["error_pct_reason"] = (
