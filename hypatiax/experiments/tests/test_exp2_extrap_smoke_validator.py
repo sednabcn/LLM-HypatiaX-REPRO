@@ -125,5 +125,6 @@ def test_smoke_validator_accepts_multiple_directions_per_equation(tmp_path):
     flat_path.write_text(json.dumps(flat), encoding="utf-8")
     summary = validator.validate_smoke_outputs(tmp_path)
     assert summary["equation_count"] == 3
-    assert summary["direction_count"] == 6
+    assert summary["direction_count"] == 2
+    assert summary["equation_direction_count"] == 6
     assert summary["method_equation_rows"] == 36
