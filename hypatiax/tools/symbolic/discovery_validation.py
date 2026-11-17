@@ -60,11 +60,11 @@ class CandidateValidator:
         normalized = expression.strip() if isinstance(expression, str) else ""
 
         try:
+            import sympy as sp
+
             parsed = parse_sympy_expression(normalized, list(problem.variable_names))
-            if parsed is None or parsed.has(getattr(__import__("sympy"), "zoo")):
-                raise ValueError("expression contains an invalid symbolic value")
-            if parsed.has(getattr(__import__("sympy"), "nan")):
-                raise ValueError("expression contains NaN")
+            if parsed is None or parsed.has(sp.zoo, sp.nan, sp.oo, -sp.oo):
+                raise ValueError("expression contains a non-finite symbolic value")
             outcomes.append(ConstraintOutcome(
                 self.BUILTIN_SYMBOLIC_ID, "pass", "hard",
                 "Expression parsed with the restricted mathematical grammar",
@@ -160,6 +160,13 @@ class CandidateValidator:
                 return
 
             inferred = report.get("inferred_output_unit")
+            if problem.target_unit and not inferred:
+                reason = "dimensional validator did not infer an output unit"
+                outcomes.append(ConstraintOutcome(
+                    self.BUILTIN_DIMENSIONAL_ID, "unknown", "hard", reason
+                ))
+                reasons.append(reason)
+                return
             if problem.target_unit and inferred:
                 actual = registry.parse_units(inferred)
                 if not actual.dimensionality == expected.dimensionality:
@@ -259,7 +266,9 @@ class CandidateValidator:
             stride = max(1, math.ceil(len(points) / self.sample_limit))
             points = points[::stride][:self.sample_limit]
 
-        symbols = {str(symbol): symbol for symbol in expression.free_symbols}
+        symbols = {
+            name: sp.Symbol(name, real=True) for name in problem.variable_names
+        }
         fn = sp.lambdify(
             [symbols[name] for name in problem.variable_names],
             expression, modules=["math"],
@@ -286,6 +295,9 @@ class CandidateValidator:
             if variable not in problem.variable_names:
                 return "unknown", "symmetry constraint requires a declared 'variable' parameter", {}
             index = problem.variable_names.index(variable)
+            low, high = axes[index][0], axes[index][-1]
+            if abs(low + high) > self.tolerance:
+                return "unknown", "symmetry checks require bounds symmetric about zero", {}
             comparisons = []
             for point in points:
                 mirrored = list(point)
