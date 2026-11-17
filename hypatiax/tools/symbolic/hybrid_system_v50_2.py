@@ -898,6 +898,10 @@ class HybridDiscoverySystem:
                 if (
                     _valid_expression and _valid_score and _candidate_gate_passed
                     and r2 >= _early_stop_r2 and not quality["is_overfit"]
+                    and not (
+                        getattr(self, "_active_discovery_problem", None) is not None
+                        and getattr(self, "_active_training_validation_settings", None)
+                    )
                 ):
                     logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
                     self.stats["symbolic_successes"] += 1
