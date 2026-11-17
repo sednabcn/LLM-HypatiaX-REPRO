@@ -2135,9 +2135,8 @@ class HybridAllDomainsMethod(BaseMethod):
             # ── Get y_pred: 3-strategy cascade ────────────────────────────────
             # Strategy 1: y_pred in result/eval dict
             # Strategy 2: re-evaluate the formula string
-            # Strategy 3: algebraic reconstruction from r2/rmse (last resort)
-            #   — guarantees NN residual correction always fires, eliminating
-            #     the structural duplicate with PureLLM Baseline (32 events/run).
+            # Strategy 3: direct input-to-target NN fit when actual predictions are absent.
+            # Never reconstruct row predictions from aggregate R²/RMSE.
             y_pred_llm = eval_d.get("y_pred")
             if y_pred_llm is None:
                 y_pred_llm = result.get("y_pred")
@@ -2326,8 +2325,8 @@ class HybridAllDomainsMethod(BaseMethod):
                                     y_pred_llm    = y_pred_s3
                                     _ypred_source = "direct_nn_log_fit"
                                     _base_predict_fn = _direct_nn_predictor
-                                    r2v  = r2_s3
-                                    rmse = self._safe_rmse(y, y_pred_llm)
+                                    r2v, rmse, _ = _recompute_prediction_metrics(y, y_pred_llm)
+                                    _metric_verification_status = "recomputed_from_direct_nn_predictions"
                                     self._log(
                                         f"direct log-space NN fit: R²={r2v:.4f} "
                                         f"(beats LLM — will skip residual correction)")
@@ -2377,43 +2376,42 @@ class HybridAllDomainsMethod(BaseMethod):
                         and np.all(np.isfinite(y_hybrid))
                     ):
                         r2_hybrid, rmse_hybrid, _ = _recompute_prediction_metrics(y, y_hybrid)
-                    # Accept if the NN doesn't degrade the LLM result by more
-                    # than a small tolerance (accounts for NN noise on easy eqs).
-                    if _finite(r2_hybrid) and r2_hybrid >= r2v - 0.002:
-                        r2v  = r2_hybrid
-                        rmse = rmse_hybrid
-                        _metric_verification_status = "recomputed_from_residual_corrected_predictions"
-                        nn_applied = True
-                        if callable(_base_predict_fn) and callable(_residual_predictor):
-                            def _hybrid_predictor(X_new, _base=_base_predict_fn, _residual=_residual_predictor):
-                                _base_pred = _base(X_new)
-                                if _base_pred is None:
-                                    raise ValueError("base hybrid predictor could not evaluate holdout features")
-                                _X_new = np.asarray(X_new, dtype=float)
-                                _base_pred = np.asarray(_base_pred, dtype=float).reshape(-1)
-                                if _X_new.ndim != 2 or _base_pred.shape != (_X_new.shape[0],):
-                                    raise ValueError(
-                                        f"base hybrid prediction shape={_base_pred.shape}; "
-                                        f"expected ({_X_new.shape[0]},)"
-                                    )
-                                if not np.all(np.isfinite(_base_pred)):
-                                    raise ValueError("base hybrid predictor returned non-finite values")
-                                _corrected = np.asarray(
-                                    _residual(_X_new, _base_pred), dtype=float
-                                ).reshape(-1)
-                                if _corrected.shape != _base_pred.shape or not np.all(np.isfinite(_corrected)):
-                                    raise ValueError("hybrid residual predictor returned invalid values")
-                                return _corrected
-                            _predict_fn = _hybrid_predictor
-                        self._log(
-                            f"NN residual correction applied  "
-                            f"R²={r2v:.4f}  RMSE={rmse:.4e}"
-                        )
-                    else:
-                        self._log(
-                            f"NN correction rejected (degraded R² from "
-                            f"{r2v:.4f} to {r2_hybrid:.4f})"
-                        )
+                        # Accept if the NN does not materially degrade the base result.
+                        if _finite(r2_hybrid) and r2_hybrid >= r2v - 0.002:
+                            r2v  = r2_hybrid
+                            rmse = rmse_hybrid
+                            _metric_verification_status = "recomputed_from_residual_corrected_predictions"
+                            nn_applied = True
+                            if callable(_base_predict_fn) and callable(_residual_predictor):
+                                def _hybrid_predictor(X_new, _base=_base_predict_fn, _residual=_residual_predictor):
+                                    _base_pred = _base(X_new)
+                                    if _base_pred is None:
+                                        raise ValueError("base hybrid predictor could not evaluate holdout features")
+                                    _X_new = np.asarray(X_new, dtype=float)
+                                    _base_pred = np.asarray(_base_pred, dtype=float).reshape(-1)
+                                    if _X_new.ndim != 2 or _base_pred.shape != (_X_new.shape[0],):
+                                        raise ValueError(
+                                            f"base hybrid prediction shape={_base_pred.shape}; "
+                                            f"expected ({_X_new.shape[0]},)"
+                                        )
+                                    if not np.all(np.isfinite(_base_pred)):
+                                        raise ValueError("base hybrid predictor returned non-finite values")
+                                    _corrected = np.asarray(
+                                        _residual(_X_new, _base_pred), dtype=float
+                                    ).reshape(-1)
+                                    if _corrected.shape != _base_pred.shape or not np.all(np.isfinite(_corrected)):
+                                        raise ValueError("hybrid residual predictor returned invalid values")
+                                    return _corrected
+                                _predict_fn = _hybrid_predictor
+                            self._log(
+                                f"NN residual correction applied  "
+                                f"R²={r2v:.4f}  RMSE={rmse:.4e}"
+                            )
+                        else:
+                            self._log(
+                                f"NN correction rejected (degraded R² from "
+                                f"{r2v:.4f} to {r2_hybrid:.4f})"
+                            )
 
             _fstr_2534 = _extract_formula(result)  # B2/B3: formula is nested under llm_result
             if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
