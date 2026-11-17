@@ -101,3 +101,53 @@ def test_fold_fitted_expressions_can_be_summarized_for_stability():
     ])
     assert stability["status"] == "measured"
     assert stability["expression_count"] == len(folds)
+
+
+def test_fold_preprocessor_learns_log_flags_and_scales_from_fit_rows_only():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePreprocessor
+
+    X_fit = np.array([
+        [1e2, 2.0],
+        [1e4, 4.0],
+        [1e6, 6.0],
+        [1e8, 8.0],
+    ])
+    preprocessor = FoldFeaturePreprocessor(["wide", "ordinary"])
+    X_fit_transformed = preprocessor.fit_transform(X_fit)
+    state_before = preprocessor.audit_state()
+
+    # The validation extreme is transformed with frozen fitting-row state.
+    X_validation = preprocessor.transform(np.array([[1e12, 10.0]]))
+    state_after = preprocessor.audit_state()
+
+    assert state_before == state_after
+    assert state_before["fit_scope"] == "fold_fitting_rows_only"
+    assert state_before["signed_log_columns"] == ["wide"]
+    assert X_fit_transformed.shape == X_fit.shape
+    assert X_validation.shape == (1, 2)
+
+
+def test_fold_preprocessor_preserves_deterministic_raw_feature_schema():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePreprocessor
+
+    X_fit = np.array([[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]])
+    first = FoldFeaturePreprocessor(["mass", "distance"])
+    second = FoldFeaturePreprocessor(["mass", "distance"])
+
+    first_out = first.fit_transform(X_fit)
+    second_out = second.fit_transform(X_fit)
+
+    assert first.get_feature_names_out() == ("mass", "distance")
+    assert first.get_feature_names_out() == second.get_feature_names_out()
+    np.testing.assert_allclose(first_out, second_out)
+
+
+def test_fold_preprocessor_rejects_schema_mismatch_and_unfitted_transform():
+    from hypatiax.tools.symbolic.training_validation import FoldFeaturePreprocessor
+
+    preprocessor = FoldFeaturePreprocessor(["x"])
+    with pytest.raises(RuntimeError, match="must be fitted"):
+        preprocessor.transform(np.ones((2, 1)))
+    preprocessor.fit(np.array([[1.0], [2.0]]))
+    with pytest.raises(ValueError, match="feature schema"):
+        preprocessor.transform(np.ones((2, 2)))

@@ -365,7 +365,135 @@ def expression_stability(expressions: list[str] | tuple[str, ...]) -> dict:
     }
 
 
+
+class FoldFeaturePreprocessor:
+    """Fit deterministic per-column transforms on one fold's fitting rows only.
+
+    This adapter handles raw input columns only. It does not create the
+    symbolic engine's data-selected ratio/geometric-mean features, infer target
+    transforms, or inspect validation rows during fit.
+    """
+
+    def __init__(
+        self,
+        feature_names: list[str] | tuple[str, ...],
+        *,
+        log_range_threshold: float = 4.0,
+        log_magnitude_threshold: float = 1e5,
+        scale_low: float = 1e-6,
+        scale_high: float = 1e6,
+    ) -> None:
+        self.feature_names = tuple(str(name) for name in feature_names)
+        if not self.feature_names or any(not name for name in self.feature_names):
+            raise ValueError("feature_names must be non-empty")
+        if len(set(self.feature_names)) != len(self.feature_names):
+            raise ValueError("feature_names must be unique")
+        if log_range_threshold <= 0 or log_magnitude_threshold <= 0:
+            raise ValueError("log thresholds must be positive")
+        if not 0 < scale_low < scale_high:
+            raise ValueError("scale thresholds must satisfy 0 < low < high")
+        self.log_range_threshold = float(log_range_threshold)
+        self.log_magnitude_threshold = float(log_magnitude_threshold)
+        self.scale_low = float(scale_low)
+        self.scale_high = float(scale_high)
+        self._fitted = False
+
+    @staticmethod
+    def _signed_log10(values: np.ndarray) -> np.ndarray:
+        return np.sign(values) * np.log10(np.abs(values) + 1.0)
+
+    def fit(self, X_fit: np.ndarray) -> "FoldFeaturePreprocessor":
+        """Learn log flags and scale factors from X_fit only."""
+        X = np.asarray(X_fit, dtype=float)
+        if X.ndim != 2 or X.shape[1] != len(self.feature_names) or X.shape[0] < 2:
+            raise ValueError("X_fit shape must match feature_names and contain >=2 rows")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X_fit must contain only finite values")
+
+        log_flags: list[bool] = []
+        for column in range(X.shape[1]):
+            nonzero = np.abs(X[:, column][X[:, column] != 0])
+            use_log = False
+            if nonzero.size >= 2:
+                span = float(np.log10(nonzero.max()) - np.log10(nonzero.min()))
+                median_abs = float(np.median(nonzero))
+                use_log = (
+                    span > self.log_range_threshold
+                    or median_abs > self.log_magnitude_threshold
+                )
+            log_flags.append(bool(use_log))
+
+        transformed = X.copy()
+        for index, use_log in enumerate(log_flags):
+            if use_log:
+                transformed[:, index] = self._signed_log10(transformed[:, index])
+
+        scales = np.ones(X.shape[1], dtype=float)
+        for index in range(X.shape[1]):
+            column_scale = max(
+                abs(float(np.mean(transformed[:, index]))),
+                float(np.std(transformed[:, index])),
+            )
+            if column_scale > 0 and (
+                column_scale < self.scale_low or column_scale > self.scale_high
+            ):
+                scales[index] = column_scale
+
+        self.log_flags_ = tuple(log_flags)
+        self.scales_ = scales
+        self.n_features_in_ = int(X.shape[1])
+        self._fitted = True
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        """Apply frozen fold parameters without updating learned state."""
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePreprocessor must be fitted before transform")
+        values = np.asarray(X, dtype=float)
+        if values.ndim != 2 or values.shape[1] != self.n_features_in_:
+            raise ValueError("X shape does not match the fitted feature schema")
+        if not np.all(np.isfinite(values)):
+            raise ValueError("X must contain only finite values")
+        result = values.copy()
+        for index, use_log in enumerate(self.log_flags_):
+            if use_log:
+                result[:, index] = self._signed_log10(result[:, index])
+        result = result / self.scales_[np.newaxis, :]
+        if not np.all(np.isfinite(result)):
+            raise ValueError("fold preprocessing produced non-finite features")
+        return result
+
+    def fit_transform(self, X_fit: np.ndarray) -> np.ndarray:
+        """Fit on the supplied fitting rows and transform those same rows."""
+        return self.fit(X_fit).transform(X_fit)
+
+    def get_feature_names_out(self) -> tuple[str, ...]:
+        """Return the unchanged raw-column schema used by this adapter."""
+        return self.feature_names
+
+    def audit_state(self) -> dict:
+        """Return JSON-friendly learned parameters for fold-level provenance."""
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePreprocessor is not fitted")
+        return {
+            "feature_names": list(self.feature_names),
+            "signed_log_columns": [
+                name for name, enabled in zip(self.feature_names, self.log_flags_)
+                if enabled
+            ],
+            "column_scales": {
+                name: float(scale)
+                for name, scale in zip(self.feature_names, self.scales_)
+            },
+            "fit_scope": "fold_fitting_rows_only",
+            "engineered_features": "not_generated",
+            "target_transform": "not_applied",
+        }
+
+
+
 __all__ = [
+    "FoldFeaturePreprocessor",
     "TrainingFold",
     "FoldMetric",
     "CandidateValidationSummary",

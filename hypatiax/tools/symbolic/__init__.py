@@ -15,6 +15,7 @@ __all__ = [
     "CandidateRecord",
     "DiscoveryReport",
     "CandidateValidator",
+    "FoldFeaturePreprocessor",
     "TrainingFold",
     "FoldMetric",
     "CandidateValidationSummary",
@@ -40,7 +41,7 @@ def __getattr__(name: str):
     elif name == "CandidateValidator":
         module = import_module(".discovery_validation", __name__)
     elif name in {
-        "TrainingFold", "FoldMetric", "CandidateValidationSummary",
+        "FoldFeaturePreprocessor", "TrainingFold", "FoldMetric", "CandidateValidationSummary",
         "make_training_folds", "evaluate_candidate_on_training_folds",
         "make_symbolic_refit_predictor", "evaluate_symbolic_candidate_on_training_folds",
         "expression_stability",
