@@ -413,3 +413,24 @@ def test_low_training_rmse_fallback_is_unavailable_for_constant_training_targets
     )
     assert diagnostics["retained"]["extrap_nrmse_far"] is None
     assert diagnostics["retained"]["extrap_nrmse_far_status"] == "zero_training_target_scale"
+
+
+def test_exp2_hybrid_discovery_uses_llm_hybrid_and_repro_search_config():
+    """Keep the Exp2 HybridDiscovery arm distinct from the pure-PySR baseline."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    source = (
+        root / "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    ).read_text(encoding="utf-8")
+
+    assert '"use_llm": True' in source
+    assert '"llm_mode": "hybrid"' in source
+    assert '"llm_temperature": 0.25' in source
+    assert '"use_transcendental_compositions": True' in source
+    assert 'kwargs.get("use_transcendental_compositions", True)' in source
+    assert 'kwargs.get("unary_operators", ["exp", "log", "sin", "cos", "sqrt"])' in source
+    assert 'domain=_domain' in source
+    assert '"llm_mode_active": system.llm_mode' in source
+    assert '"selection_metric": "training_r2"' in source
+    assert '"physics_fallback_enabled": system.enable_physics_fallback' in source
