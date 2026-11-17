@@ -28,10 +28,36 @@ unfitted PySRRegressor-compatible model. The required public interface is:
 - get_best(), returning an equation under the equation field
 - predict(X_validation)
 
-A typical integration factory can lazily import PySRRegressor and construct
-it with the project's declared niterations, operator grammar, maxsize,
-timeout, precision, and deterministic settings. Keeping construction in the
-factory avoids importing Julia/PySR merely by importing the validation module.
+A typical factory looks like this (use the same declared search configuration
+as the production arm; the example is intentionally not executed here):
+
+\`\`\`python
+def make_searcher(fold_seed):
+    from pysr import PySRRegressor
+
+    return PySRRegressor(
+        niterations=50,
+        binary_operators=["+", "-", "*", "/"],
+        unary_operators=["sqrt", "exp", "log"],
+        maxsize=20,
+        random_state=fold_seed,
+        deterministic=True,
+        parallelism="serial",
+    )
+
+folds = make_training_folds(
+    len(y_train), n_splits=4, n_repeats=2, seed=42
+)
+summary = evaluate_pysr_search_on_training_folds(
+    make_searcher, X_train, y_train, folds, seed=42
+)
+audit = summary.to_dict()
+\`\`\`
+
+The exact operator grammar, iteration count, population, timeout, and
+complexity budget must come from the declared domain/DiscoveryConfig rather
+than being copied blindly from this illustrative example. PySR construction
+is lazy, so importing the validation module does not initialize Julia.
 
 The evaluator rejects a factory that returns the same model object twice.
 Each successful fold records its seed, model class, selected equation,
