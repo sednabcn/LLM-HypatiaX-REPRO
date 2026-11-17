@@ -157,17 +157,6 @@ import numpy as np
 import math as _jmath
 import numbers as _jnum
 
-# Noise level is supplied by run_noise_sweep_benchmark.py through the environment.
-# Ordinary benchmark runs default to clean targets when the variable is absent.
-try:
-    _HYPATIAX_NOISE_LEVEL = float(os.environ.get("HYPATIAX_NOISE_LEVEL", "0.0"))
-except (TypeError, ValueError) as _noise_exc:
-    raise ValueError(
-        "HYPATIAX_NOISE_LEVEL must be a finite non-negative number"
-    ) from _noise_exc
-if not _jmath.isfinite(_HYPATIAX_NOISE_LEVEL) or _HYPATIAX_NOISE_LEVEL < 0.0:
-    raise ValueError("HYPATIAX_NOISE_LEVEL must be a finite non-negative number")
-
 def _status_of(v):
     """'ok' for a finite real number, 'failed' for None/nan/inf."""
     try:
@@ -195,6 +184,17 @@ def _dump_json_null(obj, fp, **kw):
     s = json.dumps(_nulls(obj), allow_nan=False, **kw)
     fp.write(s)
 # --- END null-json helpers -----------------------------------------------------
+
+# Noise level is supplied by run_noise_sweep_benchmark.py through the environment.
+# Ordinary benchmark runs default to clean targets when the variable is absent.
+try:
+    _HYPATIAX_NOISE_LEVEL = float(os.environ.get("HYPATIAX_NOISE_LEVEL", "0.0"))
+except (TypeError, ValueError) as _noise_exc:
+    raise ValueError(
+        "HYPATIAX_NOISE_LEVEL must be a finite non-negative number"
+    ) from _noise_exc
+if not _jmath.isfinite(_HYPATIAX_NOISE_LEVEL) or _HYPATIAX_NOISE_LEVEL < 0.0:
+    raise ValueError("HYPATIAX_NOISE_LEVEL must be a finite non-negative number")
 
 # ---------------------------------------------------------------------------
 # Shared Exp2 extrapolation helpers are imported from the lightweight core above.
