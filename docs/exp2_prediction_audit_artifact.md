@@ -61,3 +61,21 @@ artifact export, smoke validation, offline regression fixtures, and this
 documentation. It does not launch experiments, workers, benchmarks, model
 fitting, or LLM/API calls. No local tests were run while preparing this PR;
 CI is the verification mechanism.
+
+
+## Near-zero training-error fallback score
+
+The legacy ratio `error_pct = 100 * RMSE_far / RMSE_train` is suppressed
+when training RMSE is below the scale-aware threshold
+`epsilon_train = 1e-12 * max(1, std(y_train))`.
+
+In that case the scorer publishes the fallback
+`extrap_nrmse_far = RMSE_far / std(y_train)`. This is a dimensionless,
+lower-is-better score normalized by the variation of the training targets.
+It is also exported as `extrapolation_score`, with
+`extrap_nrmse_far_status` describing availability. If the training-target
+standard deviation is zero or non-finite, the fallback remains null with an
+explicit status; raw far RMSE and far R² remain independently available.
+Diagnostics record the epsilon and target scale. Both active Feynman runners
+export the score in their flat result rows. This is a scoring-only code change;
+no experiments or benchmarks are launched.
