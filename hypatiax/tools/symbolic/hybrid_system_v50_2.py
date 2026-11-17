@@ -957,11 +957,15 @@ class HybridDiscoverySystem:
                 "best_training_r2_simplicity_tiebreak_after_all_candidates_flagged"
             )
 
-        if best_result and best_r2 >= 0.97:
+        _pareto_report_enabled = (
+            getattr(self, "_active_discovery_problem", None) is not None
+            and bool(getattr(self, "_active_training_validation_settings", None))
+        )
+        if best_result and best_r2 >= 0.97 and not _pareto_report_enabled:
             logger.info(f"\n[SUCCESS] SymbolicEngine succeeded (R2={best_r2:.4f})")
             self.stats["symbolic_successes"] += 1
             return best_result
-        else:
+        elif not (best_result and best_r2 >= 0.97):
             logger.warning(f"\n[WARNING] SymbolicEngine best R2={best_r2:.4f}")
             self.stats["symbolic_failures"] += 1
 
