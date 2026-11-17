@@ -34,10 +34,18 @@ def test_shared_core_owns_each_extrapolation_helper_once():
     for name in FUNCTIONS:
         assert name in functions
     for runner in RUNNERS:
-        runner_functions = _top_level_functions(runner)
+        tree = ast.parse(runner.read_text(encoding="utf-8"))
+        runner_functions = {
+            node.name for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        runner_classes = {
+            node.name for node in tree.body if isinstance(node, ast.ClassDef)
+        }
         assert not (set(FUNCTIONS) & runner_functions), (
             f"{runner.name} still contains duplicated extrapolation helpers"
         )
+        assert "ExtrapolationRegime" not in runner_classes
         source = runner.read_text(encoding="utf-8")
         assert "from hypatiax.experiments.benchmarks.exp2_extrapolation_core import" in source
 
