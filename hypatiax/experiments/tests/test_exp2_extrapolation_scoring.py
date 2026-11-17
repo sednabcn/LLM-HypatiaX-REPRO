@@ -292,7 +292,7 @@ def test_joint_extrap_split_uses_all_feature_percentile_ranks():
     X = np.column_stack([
         np.arange(100, dtype=float),
         np.arange(100, dtype=float) * 10.0,
-        np.arange(100, dtype=float)[::-1],
+        np.arange(100, dtype=float) * 2.0,
     ])
     y = X.sum(axis=1)
     X_train, y_train, X_far, y_far, metadata = build_extrap_split(
