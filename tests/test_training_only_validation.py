@@ -4,6 +4,7 @@ import pytest
 
 from hypatiax.tools.symbolic.training_validation import (
     evaluate_candidate_on_training_folds,
+    evaluate_symbolic_candidate_on_training_folds,
     expression_stability,
     make_training_folds,
 )
@@ -62,3 +63,41 @@ def test_expression_stability_is_auditable_and_does_not_claim_equivalence():
     assert result["unique_expression_count"] == 2
     assert result["dominant_fraction"] == pytest.approx(2 / 3)
     assert "symbolic equivalence" not in result["normalization"]
+
+
+def test_symbolic_candidate_refits_float_coefficients_inside_each_fold():
+    X = np.linspace(1.0, 10.0, 40).reshape(-1, 1)
+    y = 3.0 * X[:, 0]
+    folds = make_training_folds(40, n_splits=4, n_repeats=2, seed=11)
+    summary = evaluate_symbolic_candidate_on_training_folds(
+        "2.0*x", ["x"], X, y, folds, max_nfev=100
+    )
+    assert summary.valid_fold_count == len(folds)
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-5
+    assert all(item.fitted_expression is not None for item in summary.fold_metrics)
+
+
+def test_symbolic_refit_uses_restricted_expression_parser():
+    X = np.arange(20, dtype=float).reshape(-1, 1)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=3)
+    with pytest.raises(ValueError):
+        evaluate_symbolic_candidate_on_training_folds(
+            "__import__('os')", ["x"], X, y, folds
+        )
+
+
+def test_fold_fitted_expressions_can_be_summarized_for_stability():
+    X = np.linspace(1.0, 8.0, 24).reshape(-1, 1)
+    y = 4.0 * X[:, 0]
+    folds = make_training_folds(24, n_splits=3, n_repeats=2, seed=5)
+    summary = evaluate_symbolic_candidate_on_training_folds(
+        "1.0*x", ["x"], X, y, folds
+    )
+    stability = expression_stability([
+        item.fitted_expression for item in summary.fold_metrics
+        if item.fitted_expression is not None
+    ])
+    assert stability["status"] == "measured"
+    assert stability["expression_count"] == len(folds)
