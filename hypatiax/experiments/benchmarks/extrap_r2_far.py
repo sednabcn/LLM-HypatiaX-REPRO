@@ -3,20 +3,12 @@ extrap_r2_far.py
 ================
 Extracted from run_comparative_suite_benchmark_v2.py
 
-Contains the two self-contained pieces that produce extrap_r2_far:
+Compatibility entry point for the Exp2 far-extrapolation helpers.
 
-  1. build_extrap_split()   — splits (X, y) into (X_train, y_train, X_far, y_far)
-                               given train_frac and multiplier.  Called once per
-                               test-case in the --extrap pre-processing loop.
-
-  2. compute_extrap_r2_far() — given the per-method MethodResult dict and the
-                               held-out (X_far, y_far), re-evaluates each method's
-                               formula string on the far region and returns
-                               extrap_r2_far / extrap_rmse_far dicts.
-                               Called inside run_test() after all methods have run.
-
-The helper _runner_eval_formula() that evaluates a formula string against X is
-also included verbatim, as compute_extrap_r2_far() depends on it.
+All split, formula-evaluation, metric, and diagnostic logic lives in the
+lightweight exp2_extrapolation_core module and is re-exported here for
+legacy callers. This module also retains the historical standalone runner
+configuration below; new code should import the shared core directly.
 """
 
 from __future__ import annotations
@@ -33,6 +25,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
+
+# Ensure direct script execution can resolve the repository package.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 # Canonical shared implementation used by both Exp2 Feynman runners.
 from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
