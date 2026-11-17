@@ -29,6 +29,11 @@ __all__ = [
     "make_symbolic_refit_predictor",
     "evaluate_symbolic_candidate_on_training_folds",
     "expression_stability",
+    "PySRFoldSearchSummary",
+    "evaluate_pysr_search_on_training_folds",
+    "SearchStrategyScore",
+    "TrainingOnlySearchSelection",
+    "select_pysr_search_strategy_on_training_folds",
 ]
 
 
@@ -46,12 +51,24 @@ def __getattr__(name: str):
     elif name == "CandidateValidator":
         module = import_module(".discovery_validation", __name__)
     elif name in {
-        "FoldFeaturePreprocessor", "FoldFeaturePlan", "FoldFeaturePipeline", "FoldTargetScaler", "make_fold_preprocessed_symbolic_predictor", "evaluate_preprocessed_symbolic_candidate_on_training_folds", "TrainingFold", "FoldMetric", "CandidateValidationSummary",
+        "FoldFeaturePreprocessor", "FoldFeaturePlan", "FoldFeaturePipeline",
+        "FoldTargetScaler", "make_fold_preprocessed_symbolic_predictor",
+        "evaluate_preprocessed_symbolic_candidate_on_training_folds",
+        "TrainingFold", "FoldMetric", "CandidateValidationSummary",
         "make_training_folds", "evaluate_candidate_on_training_folds",
         "make_symbolic_refit_predictor", "evaluate_symbolic_candidate_on_training_folds",
         "expression_stability",
     }:
         module = import_module(".training_validation", __name__)
+    elif name in {
+        "PySRFoldSearchSummary", "evaluate_pysr_search_on_training_folds",
+    }:
+        module = import_module(".pysr_training_search", __name__)
+    elif name in {
+        "SearchStrategyScore", "TrainingOnlySearchSelection",
+        "select_pysr_search_strategy_on_training_folds",
+    }:
+        module = import_module(".pysr_strategy_selection", __name__)
     elif name in {
         "DiscoveryProblem",
         "DiscoveryBudget",

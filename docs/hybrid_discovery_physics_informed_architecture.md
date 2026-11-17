@@ -763,3 +763,101 @@ The wrapper is an offline training-fold evaluator for a fixed symbolic structure
 
 Regression source now covers a raw-feature candidate and a geometric-mean candidate through the fold-local preprocessing/refit/target-inversion path. These tests were added but not run.
 
+---
+
+## 18. Implementation log — training-only selection of PySR search strategies
+
+PR #187 adds a selector above the fresh-per-fold PySR evaluator. It addresses
+an important distinction: the folds do not select a final equation. They select
+a **search configuration** (for example, an operator grammar, parsimony setting,
+or search budget) based on repeated held-out training-region evidence. After
+the configuration is selected, the caller must run one final PySR search on
+the complete training region to obtain the equation that will be evaluated on
+the untouched far/test region.
+
+### 18.1 Paired search-strategy comparison
+
+Added
+\`select_pysr_search_strategy_on_training_folds(searcher_factories, X_train, y_train, folds)\`.
+
+- Every named strategy receives exactly the same fold partitions and seed
+  schedule, so configuration comparisons are paired rather than confounded by
+  different random splits.
+- Each strategy factory must create a new PySR-compatible estimator for every
+  fold. Each estimator fits only that fold's fitting rows and predicts its
+  held-out training rows.
+- Primary ranking is mean fold normalized RMSE (normalized by the fitting
+  partition's target standard deviation).
+- Deterministic secondary ranking uses worst-fold normalized RMSE and the
+  dispersion of normalized RMSE. Median expression string length is only a
+  final descriptive tie-break; it is explicitly not treated as true symbolic
+  complexity.
+- Expression recurrence is recorded as a conservative stability diagnostic.
+  It uses exact normalized-string recurrence and does not claim algebraic
+  equivalence.
+- Strategies with too few valid folds, missing/non-finite normalized scores,
+  or an optional configured mean-NRMSE ceiling are rejected.
+- If all strategies are rejected, the result is
+  \`NO_CREDIBLE_CANDIDATE\`; there is no silent fallback to full-training R².
+
+### 18.2 Selected artifact and final refit
+
+The selected artifact is a **search configuration**, not a fold equation.
+The caller must:
+
+1. Take the selected strategy's declared PySR configuration.
+2. Construct a fresh PySR estimator using that configuration.
+3. Fit it once on the complete training region only.
+4. Preserve the resulting expression and search provenance.
+5. Evaluate the final equation on the far/test region once, after selection
+   and refitting are complete.
+
+Do not average fold equations, select the equation with the lowest single-fold
+error, or claim that a recurrent string is a proven physical law. Fold
+equations are evidence about search reproducibility; the final full-training
+search produces the deployable candidate.
+
+### 18.3 Public APIs and tests
+
+Added:
+- \`hypatiax/tools/symbolic/pysr_strategy_selection.py\`
+- lazy public exports for the fresh-fold evaluator and strategy selector;
+- \`tests/test_pysr_strategy_selection.py\`, covering paired strategy ranking,
+  fail-closed behavior when all strategies fail, and an explicit quality
+  ceiling;
+- this implementation log.
+
+The API accepts only \`X_train\` and \`y_train\`; there is no far/test-data
+parameter. Searcher factories are responsible for fold-local preprocessing
+and must not capture or inspect held-out/far/test data through external state.
+
+### 18.4 Production integration boundary
+
+This selector is a reusable training-only primitive, not yet wired into
+\`HybridDiscoverySystem._discover_with_retry()\` or the Exp2 runner. The
+production engine currently performs data-dependent transforms and feature
+engineering inside its discovery path, and its standard retry selector
+compares full-training candidates. A correct runner integration must provide
+a factory that reproduces the same domain/operator/preprocessing contract
+inside every fold and then reruns the selected configuration on the complete
+training region. Directly reusing the engine's globally augmented matrix
+would leak held-out fold information.
+
+Before enabling it in Exp2, the next integration should:
+- define a typed, immutable search-strategy configuration derived from the
+  actual \`DiscoveryConfig\` and domain settings;
+- provide a fold-local adapter that replays the exact preprocessing and
+  feature plan, including custom operators and target-space inversions;
+- ensure LLM proposal calls are either disabled for the fold-validation
+  search or explicitly budgeted, cached, and audited; this PR makes no LLM
+  calls and does not add LLM calls to the fold loop;
+- make the Exp2 selector choose a strategy from fold evidence and perform one
+  final full-training search with that strategy;
+- record the selected strategy, fold metrics, rejected alternatives, final
+  refit seed/config, and the strict separation of far/test evaluation.
+
+### 18.5 Execution status
+
+Regression test source was added but not run. No local tests, CI workflows,
+manual workflow dispatches, experiments, smoke runs, workers, benchmarks, or
+LLM API calls were launched. No far/test data was accessed.

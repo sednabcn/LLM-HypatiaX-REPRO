@@ -122,3 +122,23 @@ The next integration phase should:
 
 Regression tests were added but not run. No CI, manual workflow dispatch,
 experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
+
+## Selecting among PySR search configurations
+
+The companion API
+\`select_pysr_search_strategy_on_training_folds\` compares multiple named
+searcher factories using the same internal folds and seed schedule. It ranks
+them by mean normalized RMSE, then worst-fold normalized RMSE and score
+dispersion. Expression recurrence is retained as a diagnostic; expression
+length is only a final tie-break proxy, not symbolic complexity.
+
+This selector chooses a **search configuration**, not an equation. Once a
+configuration wins, perform a fresh final PySR fit on all available training
+rows. Do not choose one fold's equation as the final equation, and do not use
+far/test results to select the strategy or tune its settings.
+
+If every strategy fails the minimum fold-evidence requirement (or an optional
+quality ceiling), the selector returns \`NO_CREDIBLE_CANDIDATE\`. It never
+falls back to full-training R². See Section 18 of
+\`docs/hybrid_discovery_physics_informed_architecture.md\` for the design log
+and the remaining Exp2 integration requirements.
