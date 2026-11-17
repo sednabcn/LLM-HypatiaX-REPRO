@@ -264,6 +264,7 @@ def test_defi_composite_base_plus_residual_marks_full_dataset_rmse_not_comparabl
     assert method_diag["extrap_rmse_train"] == pytest.approx(0.0)
     assert method_diag["benchmark_rmse"] == pytest.approx(0.25)
     assert method_diag["benchmark_rmse_row_scope"] == "full_input_dataset"
+    assert method_diag["benchmark_metric_row_count"] == 4
     assert method_diag["train_rmse_delta"] is None
     assert method_diag["train_rmse_consistent"] is None
     assert method_diag["train_rmse_consistency_status"] == "not_comparable_different_row_scope"
