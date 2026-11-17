@@ -1771,6 +1771,7 @@ class HybridDiscoverySystem:
                 "r2": r2,
                 "rmse": rmse,
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
+                "training_only_search_selection": self._training_only_search_selection,
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 # FIX: a later pure-PySR retry can win the attempt loop and carries no
                 # llm_mode, which used to hide that the LLM WAS called in attempt 1
