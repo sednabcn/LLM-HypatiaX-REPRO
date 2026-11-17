@@ -90,6 +90,8 @@ def make_training_folds(
         raise ValueError("validation_fraction must be between 0 and 0.5")
     if strategy not in {"repeated_random", "blocked"}:
         raise ValueError("strategy must be 'repeated_random' or 'blocked'")
+    if strategy == "blocked" and n_repeats != 1:
+        raise ValueError("blocked strategy requires n_repeats=1; repeated blocked folds would be duplicates")
 
     validation_size = max(1, int(round(n_samples * validation_fraction)))
     if n_samples - validation_size < 2:
@@ -112,8 +114,8 @@ def make_training_folds(
                     tuple(int(i) for i in validation),
                 ))
         else:
-            # Each repeat rotates the contiguous partition boundaries. The
-            # chronological order is preserved; no random shuffle is applied.
+            # One deterministic contiguous partition; blocked mode is not
+            # repeated because repeating identical ranges adds no evidence.
             boundaries = np.linspace(0, n_samples, n_splits + 1, dtype=int)
             for fold_index in range(n_splits):
                 start, stop = int(boundaries[fold_index]), int(boundaries[fold_index + 1])
