@@ -293,6 +293,19 @@ except ImportError:
     print("⚠️  anthropic library not available — LLM-based methods will fall back")
 
 
+# ---------------------------------------------------------------------------
+# Optional PyTorch dependency
+# Keep this flag defined before the method-availability probes below.  The
+# neural method is disabled cleanly when PyTorch is absent or fails to import.
+# ---------------------------------------------------------------------------
+try:
+    import torch as _torch
+    TORCH_AVAILABLE = True
+except Exception as _torch_exc:
+    TORCH_AVAILABLE = False
+    print(f"⚠️  PyTorch unavailable — neural methods disabled: {_torch_exc}")
+
+
 # ============================================================================
 # CORE SCRIPT AVAILABILITY PROBES
 # All imports are lazy (inside each method's __init__) so that a missing
