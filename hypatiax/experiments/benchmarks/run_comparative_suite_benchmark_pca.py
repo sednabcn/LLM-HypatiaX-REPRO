@@ -275,7 +275,9 @@ def _require_matching_width(fitted: np.ndarray, incoming: np.ndarray, where: str
 # ---------------------------------------------------------------------------
 try:
     from dotenv import load_dotenv
-    for _env in [_HERE / ".env", _HERE.parent / ".env", _PKG_ROOT / ".env"]:
+    _SCRIPT_DIR = Path(__file__).resolve().parent
+    _PACKAGE_ROOT = _REPO_ROOT / "hypatiax"
+    for _env in [_SCRIPT_DIR / ".env", _SCRIPT_DIR.parent / ".env", _PACKAGE_ROOT / ".env"]:
         if _env.exists():
             load_dotenv(dotenv_path=_env, override=True)
             print(f"✅ Loaded .env from {_env}")
