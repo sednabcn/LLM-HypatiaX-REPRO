@@ -334,11 +334,11 @@ def compute_extrap_r2_far(
 
     Notes
     -----
-    A retained fitted predictor is preferred for far and training predictions.
-    When no predictor is available, an evaluable symbolic formula is used for
-    far predictions and caller-supplied training predictions may provide the
-    RMSE baseline. Architecture labels without a retained predictor are
-    reported as unsupported rather than assigned fabricated scores.
+    A retained final fitted predictor is authoritative for both far and
+    training predictions; caller-supplied arrays never override it. When no
+    retained predictor exists, an evaluable symbolic formula may be used for
+    far predictions and formula-derived training predictions may provide the
+    RMSE baseline. The selected route is recorded in diagnostics.
     """
     extrap_r2_far:    Dict[str, Optional[float]] = {}
     extrap_rmse_far:  Dict[str, Optional[float]] = {}
@@ -358,7 +358,12 @@ def compute_extrap_r2_far(
 
     for mname, res in results.items():
         def _mark(status: str, reason: str = "") -> None:
-            _diag[mname] = {"status": status, **({"reason": reason} if reason else {})}
+            # Preserve detailed training/prediction diagnostics collected
+            # before the final far-metric status is assigned.
+            method_diag = _diag.setdefault(mname, {})
+            method_diag["status"] = status
+            if reason:
+                method_diag["reason"] = reason
 
         if not getattr(res, "success", False):
             extrap_r2_far[mname] = None
