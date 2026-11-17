@@ -38,6 +38,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
 
     equation_names: list[str] = []
     direction_names: set[tuple[str, str]] = set()
+    direction_labels: set[str] = set()
     method_rows = 0
     far_r2_available = 0
     far_rmse_available = 0
@@ -55,6 +56,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         if not equation_name or not direction_name or (equation_name, direction_name) in direction_names:
             raise ValueError(f"equation/direction description missing or duplicated: {description!r}")
         direction_names.add((equation_name, direction_name))
+        direction_labels.add(direction_name)
         if equation_name not in equation_names:
             equation_names.append(equation_name)
         results = test.get("results")
@@ -120,7 +122,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "step": "exp2_feynman_extrap_smoke",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "equation_count": len(equation_names),
-        "direction_count": len(direction_names),
+        "direction_count": len(direction_labels),
+        "equation_direction_count": len(direction_names),
         "method_count": expected_methods,
         "method_equation_rows": method_rows,
         "equations": equation_names,
