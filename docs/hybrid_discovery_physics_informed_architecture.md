@@ -439,6 +439,8 @@ Added `tests/test_physics_informed_candidate_validation.py` with cases for:
 - An unevaluable hard constraint producing unknown and blocking eligibility.
 - An unsafe/untrusted expression being rejected by the restricted parser.
 
+Also added `tests/test_hybrid_candidate_gate_integration.py` to exercise the retry boundary with a controlled fake symbolic engine: a candidate passing a declared hard gate can be selected, while a candidate failing a hard gate cannot be returned as a discovery. These are offline unit tests; they do not instantiate PySR or call an LLM.
+
 These tests were added to the repository but were not run locally by the implementation agent. No CI run is implied by their presence.
 
 ### 13.4 Step 4 — connect gates to live retry selection
@@ -482,6 +484,6 @@ The existing complexity heuristic remains a secondary preference after scientifi
 ### 13.7 Change provenance
 
 - Candidate validation module and tests were introduced in PR #180, which GitHub reports merged into the #177 implementation branch.
-- Retry/fallback integration and this documentation update are being developed as the next stacked implementation change on the #177 branch.
+- Retry/fallback integration, integration regression tests, and this documentation update are being developed as the next stacked implementation change on the #177 branch.
 - PR #177 remains the implementation baseline until merged to `master`; PR #178 contains the original architecture specification and remains a separate documentation PR at the time of this update.
 - No experiment, smoke workflow, benchmark, worker, local test, CI workflow, or LLM API call was launched for these implementation changes.
