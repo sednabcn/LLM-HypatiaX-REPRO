@@ -624,3 +624,62 @@ Until that boundary exists, the validation API is opt-in and isolated. No far/te
 - Base: \`hybrid/fix-llm-lifecycle-and-candidate-selection\` (PR #177); PR #182's training-only validation primitives are already present on that base branch.
 - Changes: safe symbolic coefficient-refit adapter, fold-specific fitted-expression audit, report stability summary, public exports, regression source, and this documentation update.
 - No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
+
+
+---
+
+## 16. Implementation log — fold-aware raw-feature preprocessing
+
+This step adds a reusable preprocessing primitive for Stage 4. It addresses the first fold-local transformation boundary without claiming that the current symbolic engine's entire feature pipeline is already reproducible inside each fold.
+
+### 16.1 Source audit and leakage boundary
+
+The current symbolic engine performs several data-dependent operations before PySR fitting:
+
+- signed-log feature selection based on per-column range and magnitude;
+- extreme-column scaling based on column mean and standard deviation;
+- geometric-mean feature creation for selected positive columns;
+- ratio feature creation, with positive-column eligibility and a top-10 ranking by ratio variance;
+- separate target scaling/normalization and domain/operator heuristics.
+
+The engine stores its final augmented matrix and names after these operations. Reusing that full-discovery matrix in internal folds would carry feature-selection and transformation decisions made with rows that are held out in a fold. Rebuilding only the derived columns from raw inputs would also be insufficient: the ratio ranking and positivity decisions must be learned independently in each fitting partition, and fold-specific feature schemas may no longer match the fixed candidate expression.
+
+### 16.2 New fold-local preprocessor
+
+Added FoldFeaturePreprocessor to training_validation.py.
+
+- Accepts only explicit raw feature names and fitting/transform feature matrices.
+- Learns signed-log flags from each fitting column's nonzero range and median magnitude.
+- Learns extreme-column scale factors from the signed-log-transformed fitting rows.
+- Applies those frozen parameters unchanged to validation rows.
+- Preserves the raw feature names and column order; it does not silently add or reorder columns.
+- Exposes JSON-friendly audit_state() with selected log columns, scales, and the declared fitting-row scope.
+- Rejects non-finite arrays, shape/schema mismatches, and transform-before-fit.
+
+The implementation does not accept target values, validation targets, or far/test data. A validation extreme can be transformed, but cannot change fitted flags or scales.
+
+### 16.3 Regression source
+
+Added offline regression source for:
+- fold fitting-row-only transform selection and immutable state after validation transformation;
+- deterministic transformed values and stable raw feature-name order;
+- rejection of unfitted use and feature-width mismatch.
+
+These tests were added but not run.
+
+### 16.4 Deliberate non-integration and remaining boundaries
+
+This adapter is not yet wired into _discover_with_retry() or the symbolic coefficient-refit helper. The source audit found that production expressions may reference gm_* and ratio_* columns, and the engine also applies target scaling/normalization. The present adapter intentionally does not synthesize those engineered features or guess the target-space mapping. Passing a candidate that references those columns into a raw-feature-only fold matrix would be invalid; silently dropping or recreating them would overstate leakage safety.
+
+The next integration step must introduce a typed, per-fold feature-plan contract that either:
+1. makes engineered feature definitions and selection rules explicit and learns all data-dependent choices on each fitting partition, while preserving a valid expression-variable mapping; or
+2. marks candidates that depend on unsupported full-data engineered features as ineligible for this validation path.
+
+It must also capture the target transform and symbolic output normalization explicitly, fit those parameters on each fitting partition only, and invert predictions before comparing them with held-out training targets. Only then can fold-local preprocessing and coefficient refitting safely supply selector evidence.
+
+### 16.5 Current status and provenance
+
+- Implemented: fold-local signed-log flag learning, fold-local input scale learning, frozen transform application, stable raw feature schema, and preprocessing audit metadata.
+- Not implemented: geometric-mean/ratio feature-plan replay, fold-local target transforms, full engine/PySR refit per fold, retry-selector integration, or Pareto selection.
+- No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
+- No far/test data was accessed.
