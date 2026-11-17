@@ -374,6 +374,27 @@ HYBRID_V50_2_AVAILABLE  = _probe_pysr_method("hypatiax.tools.symbolic.hybrid_sys
 #  can be merged / compared directly)
 # ============================================================================
 
+def _recompute_prediction_metrics(y_true, y_pred):
+    """Compute canonical R² and RMSE from one validated prediction vector.
+
+    Aggregate backend metrics are not a substitute for row-aligned predictions.
+    This helper rejects shape/non-finite mismatches before either metric is
+    computed, so R² and RMSE always describe the same rows and predictions.
+    """
+    _yt = np.asarray(y_true, dtype=float).reshape(-1)
+    _yp = np.asarray(y_pred, dtype=float).reshape(-1)
+    if _yt.shape != _yp.shape:
+        raise ValueError(
+            f"prediction length mismatch: expected {_yt.size}, got {_yp.size}"
+        )
+    if not np.all(np.isfinite(_yt)) or not np.all(np.isfinite(_yp)):
+        raise ValueError("metric inputs contain non-finite values")
+    from hypatiax.core.r2_canonical import r2_scored
+    _r2, _status = r2_scored(_yt, _yp)
+    _rmse = float(np.sqrt(np.mean(np.square(_yt - _yp))))
+    return float(_r2), _rmse, _status
+
+
 def _provenance(d) -> dict:
     """Preserve live-LLM provenance, including the requested/accepted temperature.
 
