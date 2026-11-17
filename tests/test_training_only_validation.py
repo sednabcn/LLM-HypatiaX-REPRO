@@ -209,3 +209,38 @@ def test_fold_target_scaler_fits_on_training_targets_and_inverts_predictions():
     assert state_before["scale"] == pytest.approx(np.std(y_fit))
     np.testing.assert_allclose(y_scaled * state_before["scale"], y_fit)
     np.testing.assert_allclose(y_validation, np.array([5e-8]))
+
+
+def test_preprocessed_symbolic_validation_refits_with_fold_local_feature_and_target_plans():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_preprocessed_symbolic_candidate_on_training_folds,
+    )
+
+    X = np.linspace(1.0, 8.0, 40).reshape(-1, 1)
+    y = 3e-8 * X[:, 0]
+    folds = make_training_folds(40, n_splits=4, n_repeats=2, seed=17)
+    summary = evaluate_preprocessed_symbolic_candidate_on_training_folds(
+        "2.0*x", ["x"], ["x"], X, y, folds, max_nfev=100
+    )
+    assert summary.valid_fold_count == len(folds)
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-12
+
+
+def test_preprocessed_symbolic_validation_supports_fold_local_geometric_mean_schema():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_preprocessed_symbolic_candidate_on_training_folds,
+    )
+
+    a = np.linspace(1.0, 5.0, 40)
+    b = np.linspace(2.0, 8.0, 40)
+    X = np.column_stack([a, b])
+    y = 2.5 * np.sqrt(a * b)
+    folds = make_training_folds(40, n_splits=4, n_repeats=1, seed=9)
+    summary = evaluate_preprocessed_symbolic_candidate_on_training_folds(
+        "1.0*gm_a_b", ["a", "b", "gm_a_b"], ["a", "b"], X, y, folds,
+        include_geometric_means=True, max_nfev=100,
+    )
+    assert summary.valid_fold_count == len(folds)
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-8
