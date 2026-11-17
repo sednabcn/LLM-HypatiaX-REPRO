@@ -218,7 +218,23 @@ class CandidateValidator:
 
         for spec in problem.constraints:
             if spec.kind == "dimensional_consistency":
-                # Already checked through the shared dimensional validator.
+                dimensional = next(
+                    (item for item in outcomes if item.constraint_id == self.BUILTIN_DIMENSIONAL_ID),
+                    None,
+                )
+                if dimensional is None or dimensional.status != "pass":
+                    reason = "declared dimensional constraint lacks a passing unit check"
+                    outcomes.append(ConstraintOutcome(
+                        spec.constraint_id, "unknown", spec.severity, reason,
+                        {"builtin_status": dimensional.status if dimensional else "missing"},
+                    ))
+                    if spec.severity == "hard":
+                        reasons.append(f"{spec.constraint_id}: {reason}")
+                else:
+                    outcomes.append(ConstraintOutcome(
+                        spec.constraint_id, "pass", spec.severity,
+                        "declared dimensional constraint satisfied by shared unit analysis",
+                    ))
                 continue
             try:
                 status, reason, evidence = self._evaluate_constraint(problem, expression, spec)
