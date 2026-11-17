@@ -2686,6 +2686,9 @@ try:
                 for attempt in _attempts if isinstance(attempt, dict)
             ]
             _discovery = result.get("discovery", {}) or result
+            _training_selection_audit = getattr(
+                system, "_training_only_search_selection", None
+            )
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
                 "engine_version": "5.4",
@@ -2709,13 +2712,15 @@ try:
                 "retry_budget": system.max_retries,
                 "selection_metric": (
                     "paired_training_fold_mean_normalized_rmse_then_final_training_r2"
-                    if getattr(system, "_training_only_search_selection", None) is not None
-                    else "training_r2_with_complexity_gate"
+                    if (_training_selection_audit or {}).get("status") == "selected"
+                    else (
+                        "training_only_fold_validation_failed"
+                        if _training_selection_audit is not None
+                        else "training_r2_with_complexity_gate"
+                    )
                 ),
                 "candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak",
-                "training_only_search_selection": getattr(
-                    system, "_training_only_search_selection", None
-                ),
+                "training_only_search_selection": _training_selection_audit,
                 "fold_search_llm_enabled": False,
                 "fold_search_timeout_seconds": (
                     _meta.get("training_only_search_validation", {}).get(
