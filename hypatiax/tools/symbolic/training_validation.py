@@ -116,10 +116,15 @@ def make_training_folds(
         else:
             # One deterministic contiguous partition; blocked mode is not
             # repeated because repeating identical ranges adds no evidence.
-            boundaries = np.linspace(0, n_samples, n_splits + 1, dtype=int)
-            for fold_index in range(n_splits):
-                start, stop = int(boundaries[fold_index]), int(boundaries[fold_index + 1])
-                if stop - start < 1 or n_samples - (stop - start) < 2:
+            starts = np.linspace(
+                0, n_samples - validation_size, n_splits, dtype=int
+            )
+            if np.unique(starts).size != n_splits:
+                raise ValueError("blocked split requires distinct contiguous validation windows")
+            for fold_index, start_value in enumerate(starts):
+                start = int(start_value)
+                stop = start + validation_size
+                if n_samples - validation_size < 2:
                     raise ValueError("blocked split produced an invalid fold")
                 validation = all_indices[start:stop]
                 train = np.concatenate((all_indices[:start], all_indices[stop:]))
@@ -230,7 +235,7 @@ def expression_stability(expressions: list[str] | tuple[str, ...]) -> dict:
             "normalization": "whitespace_and_power_operator_only",
         }
     normalized = [
-        " ".join(str(item).replace("^", "**").split())
+        "".join(str(item).split()).replace("^", "**")
         for item in expressions
     ]
     counts: dict[str, int] = {}
