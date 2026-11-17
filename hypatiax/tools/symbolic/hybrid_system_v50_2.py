@@ -718,10 +718,26 @@ class HybridDiscoverySystem:
         __init__ based on use_llm and key availability.  All retry logic and
         physics fallback are unchanged from v4.1-PROD.
         """
+        # Keep a clean candidate pool separate from candidates flagged by the
+        # existing complexity heuristic.  A high training R² must not silently
+        # outrank a simpler, non-flagged expression.
         best_result = None
         best_r2 = -np.inf
+        best_complexity = np.inf
+        flagged_result = None
+        flagged_r2 = -np.inf
+        flagged_complexity = np.inf
         last_attempt_error: Exception | None = None
         _inv_injected = False
+        _selection_tolerance = 1e-3
+
+        def _prefer_candidate(candidate_r2, candidate_complexity, current_r2, current_complexity):
+            if current_r2 == -np.inf or candidate_r2 > current_r2 + _selection_tolerance:
+                return True
+            return (
+                abs(candidate_r2 - current_r2) <= _selection_tolerance
+                and candidate_complexity < current_complexity
+            )
 
         for attempt in range(self.max_retries):
             result = None
@@ -783,10 +799,12 @@ class HybridDiscoverySystem:
                 if result.get("llm_mode"):
                     logger.info(f"   LLM mode: {result['llm_mode']}")
 
-                if expr and expr not in (
+                _valid_expression = bool(expr) and expr not in (
                     "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED"
-                ):
-                    quality = self._check_expression_quality(expr, r2)
+                )
+                _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
+                if _valid_expression:
+                    quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
                         for w in quality["warnings"]:
@@ -794,16 +812,35 @@ class HybridDiscoverySystem:
                 else:
                     quality = {"is_overfit": False, "complexity": 0, "warnings": []}
 
-                # R2 gaps below the noise floor are ties: keep the earlier result.
-                # 1e-3 is about 0.4 x the 0.0025 gap implied by 5% noise (R2 ceiling ~0.9975).
-                _SEL_TOL = 1e-3
-                if best_result is None or r2 > best_r2 + _SEL_TOL:
-                    best_r2 = r2
-                    best_result = result
-                    best_result["discovery_engine"] = "symbolic"
-                    best_result["attempt"] = attempt + 1
-                    best_result["quality_check"] = quality
-                    logger.info("   [BEST] New best!")
+                # Never let an invalid/sentinel result win.  Prefer candidates
+                # that pass the existing complexity screen; retain the best
+                # flagged candidate only as an explicit last-resort fallback.
+                # Within each pool, training-R² differences <= 1e-3 are ties
+                # and the simpler expression wins.  No far/test metric is used.
+                if _valid_expression and _valid_score:
+                    _candidate_complexity = int(quality["complexity"])
+                    result["discovery_engine"] = "symbolic"
+                    result["attempt"] = attempt + 1
+                    result["quality_check"] = quality
+                    result["candidate_selection_policy"] = (
+                        "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak"
+                    )
+                    if quality["is_overfit"]:
+                        if _prefer_candidate(
+                            float(r2), _candidate_complexity,
+                            flagged_r2, flagged_complexity,
+                        ):
+                            flagged_result = result
+                            flagged_r2 = float(r2)
+                            flagged_complexity = _candidate_complexity
+                            logger.info("   [BEST FLAGGED] New fallback candidate")
+                    elif _prefer_candidate(
+                        float(r2), _candidate_complexity, best_r2, best_complexity
+                    ):
+                        best_r2 = float(r2)
+                        best_complexity = _candidate_complexity
+                        best_result = result
+                        logger.info("   [BEST] New eligible candidate!")
 
                 if attempt == 0 and r2 < 0.1 and not _inv_injected:
                     if self._detect_rational_pattern(X, y):
@@ -867,6 +904,17 @@ class HybridDiscoverySystem:
                         "not repeating the same expensive search."
                     )
                     break
+
+        if best_result is None and flagged_result is not None:
+            # Do not discard all discoveries when every candidate triggers the
+            # complexity screen, but make the exception visible to downstream
+            # audit consumers.
+            best_result = flagged_result
+            best_r2 = flagged_r2
+            best_result["candidate_selection_fallback"] = "all_candidates_flagged_by_complexity_screen"
+            best_result["candidate_selection_policy"] = (
+                "best_training_r2_simplicity_tiebreak_after_all_candidates_flagged"
+            )
 
         if best_result and best_r2 >= 0.97:
             logger.info(f"\n[SUCCESS] SymbolicEngine succeeded (R2={best_r2:.4f})")
