@@ -67,6 +67,10 @@ class CandidateValidationSummary:
             "valid_fold_count": self.valid_fold_count,
             "failed_fold_count": self.failed_fold_count,
             "selection_data_scope": "training_region_only",
+            "expression_stability": expression_stability([
+                item.fitted_expression for item in self.fold_metrics
+                if item.fitted_expression is not None
+            ]),
         }
 
 
