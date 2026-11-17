@@ -230,6 +230,21 @@ def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
         formula="[NN residual correction — final predictor]",
         rmse=0.25,
         _predict_fn=final_base_plus_residual,
+        metadata={
+            "benchmark_metric_row_scope": "full_input_dataset",
+            "evaluation_source_key": "evaluation",
+            "evaluation_metric_source": "evaluation.rmse",
+            "evaluation_prediction_source": "evaluation.y_pred",
+            "evaluation_prediction_row_count": 4,
+            "evaluation_feature_representation": {
+                "schema": "runner_input_X", "feature_names": ["x"],
+                "feature_count": 1, "row_count": 4,
+            },
+            "formula_replay_status": "matches_selected_prediction_array",
+            "residual_correction_attempted": True,
+            "residual_correction_applied": True,
+            "final_predictor_composition": "formula_base_plus_residual_nn",
+        },
     )
     diagnostics = {}
     _, far_rmse, error_pct = compute_extrap_r2_far(
@@ -248,9 +263,19 @@ def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
     assert error_pct["EnhancedHybridSystemDeFi (core)"] is None
     assert method_diag["extrap_rmse_train"] == pytest.approx(0.0)
     assert method_diag["benchmark_rmse"] == pytest.approx(0.25)
-    assert method_diag["train_rmse_delta"] == pytest.approx(-0.25)
-    assert method_diag["train_rmse_consistent"] is False
-    assert method_diag["train_rmse_consistency_status"] == "mismatch"
+    assert method_diag["benchmark_rmse_row_scope"] == "full_input_dataset"
+    assert method_diag["train_rmse_delta"] is None
+    assert method_diag["train_rmse_consistent"] is None
+    assert method_diag["train_rmse_consistency_status"] == "not_comparable_different_row_scope"
+    assert method_diag["evaluation_source_key"] == "evaluation"
+    assert method_diag["evaluation_metric_source"] == "evaluation.rmse"
+    assert method_diag["evaluation_prediction_source"] == "evaluation.y_pred"
+    assert method_diag["evaluation_prediction_row_count"] == 4
+    assert method_diag["evaluation_feature_representation"]["feature_names"] == ["x"]
+    assert method_diag["formula_replay_status"] == "matches_selected_prediction_array"
+    assert method_diag["residual_correction_attempted"] is True
+    assert method_diag["residual_correction_applied"] is True
+    assert method_diag["final_predictor_composition"] == "formula_base_plus_residual_nn"
 
 
 def test_llm_nn_retained_predictor_training_rmse_matches_reported_benchmark_rmse():
