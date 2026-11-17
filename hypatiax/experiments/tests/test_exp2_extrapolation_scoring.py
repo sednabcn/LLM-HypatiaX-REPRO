@@ -432,8 +432,36 @@ def test_exp2_hybrid_discovery_uses_llm_hybrid_and_repro_search_config():
     assert 'kwargs.get("unary_operators", ["exp", "log", "sin", "cos", "sqrt"])' in source
     assert 'domain=_domain' in source
     assert '"llm_mode_active": system.llm_mode' in source
-    assert '"selection_metric": "training_r2"' in source
-    assert '"candidate_selection": "highest_training_r2_within_retry_budget"' in source
+    assert '"selection_metric": "training_r2_with_complexity_gate"' in source
+    assert '"candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak"' in source
     assert '"extrapolation_metric_used_for_selection": False' in source
     assert '"training_acceptance_threshold": 0.97' in source
     assert '"physics_fallback_enabled": system.enable_physics_fallback' in source
+
+
+
+def test_hybrid_llm_engine_survives_discovery_retries_and_selection_is_complexity_aware():
+    """Guard the retry lifecycle and prevent flagged expressions winning by R² alone."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    symbolic_source = (
+        root / "hypatiax/tools/symbolic/symbolic_engine.py"
+    ).read_text(encoding="utf-8")
+    hybrid_source = (
+        root / "hypatiax/tools/symbolic/hybrid_system_v50_2.py"
+    ).read_text(encoding="utf-8")
+
+    discover_start = symbolic_source.index("    def discover(", symbolic_source.index("class SymbolicEngineWithLLM"))
+    discover_end = symbolic_source.index("    def _discover_with_llm_seed(", discover_start)
+    discover_body = symbolic_source[discover_start:discover_end]
+    assert "self.llm_engine = None" not in discover_body
+    assert "Keep the LLM client alive for the lifetime" in discover_body
+
+    retry_start = hybrid_source.index("    def _discover_with_retry(")
+    retry_end = hybrid_source.index("    @staticmethod", retry_start)
+    retry_body = hybrid_source[retry_start:retry_end]
+    assert "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak" in retry_body
+    assert "all_candidates_flagged_by_complexity_screen" in retry_body
+    assert "flagged_result" in retry_body
+    assert "candidate_complexity < current_complexity" in retry_body
