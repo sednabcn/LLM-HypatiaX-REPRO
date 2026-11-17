@@ -2685,7 +2685,7 @@ try:
                 {key: attempt.get(key) for key in _llm_audit_keys if key in attempt}
                 for attempt in _attempts if isinstance(attempt, dict)
             ]
-            _discovery = result.get("discovery", {}) or {}
+            _discovery = result.get("discovery", {}) or result
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
                 "engine_version": "5.4",
