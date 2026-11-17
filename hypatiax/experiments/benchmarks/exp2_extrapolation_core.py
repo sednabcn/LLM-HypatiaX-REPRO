@@ -297,6 +297,7 @@ def compute_extrap_r2_far(
     verbose: bool = True,
     diagnostics: Optional[Dict[str, Dict[str, str]]] = None,
     X_far_predictor: Optional[np.ndarray] = None,
+    X_train_predictor: Optional[np.ndarray] = None,
 ) -> Tuple[
     Dict[str, Optional[float]],   # extrap_r2_far
     Dict[str, Optional[float]],   # extrap_rmse_far
@@ -318,11 +319,11 @@ def compute_extrap_r2_far(
     var_names     : variable names matching X columns (e.g. ``["x0", "x1"]``).
     y_train       : training targets, used together with ``y_pred_train`` to
                     compute RMSE_train per method.
-    y_pred_train  : ``{method_name: np.ndarray}`` of per-method training
-                    predictions pre-evaluated by the caller (only symbolic
-                    methods included).  When provided, RMSE_train is derived
-                    from these; otherwise ``extrap_error_pct`` is null for all
-                    methods.
+    y_pred_train  : optional pre-evaluated training predictions, keyed by method.
+    X_train_predictor : original-schema training features for retained fitted
+                    predictors. Used only when a method has no entry in
+                    y_pred_train; these must be the exact training rows used
+                    for fitting, never the far or external holdout rows.
     verbose       : print per-method far-region R² / error-% summary table.
 
     Returns
@@ -441,15 +442,46 @@ def compute_extrap_r2_far(
         extrap_r2_far[mname] = r2f
         extrap_rmse_far[mname] = rmse_far
         error_pct: Optional[float] = None
-        if (
-            rmse_far is not None and y_pred_train is not None
-            and y_train is not None and mname in y_pred_train
-        ):
-            try:
-                rmse_train = _far_rmse(y_train, y_pred_train[mname])
-                error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
-            except Exception as exc:
-                _mark("metric_error", f"training RMSE: {type(exc).__name__}: {exc}")
+        error_pct_status = "training_targets_unavailable"
+        if y_train is not None and rmse_far is not None:
+            train_prediction = None
+            if y_pred_train is not None and mname in y_pred_train:
+                train_prediction = np.asarray(y_pred_train[mname], dtype=float).reshape(-1)
+                error_pct_status = "provided_training_predictions"
+            elif callable(predictor) and X_train_predictor is not None:
+                try:
+                    train_prediction = np.asarray(
+                        predictor(X_train_predictor), dtype=float
+                    ).reshape(-1)
+                    error_pct_status = "retained_predictor"
+                except Exception as exc:
+                    error_pct_status = "training_prediction_error"
+                    _diag.setdefault(mname, {})["error_pct_reason"] = (
+                        f"{type(exc).__name__}: {exc}"
+                    )
+            else:
+                error_pct_status = "training_predictor_unavailable"
+
+            if train_prediction is not None:
+                if train_prediction.shape != np.asarray(y_train).reshape(-1).shape:
+                    error_pct_status = "training_prediction_length_mismatch"
+                elif not np.all(np.isfinite(train_prediction)):
+                    error_pct_status = "nonfinite_training_prediction"
+                else:
+                    try:
+                        rmse_train = _far_rmse(y_train, train_prediction)
+                        error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
+                        if error_pct is None:
+                            error_pct_status = (
+                                "zero_or_invalid_training_rmse"
+                            )
+                        else:
+                            error_pct_status = "available"
+                    except Exception as exc:
+                        error_pct_status = "training_metric_error"
+                        _diag.setdefault(mname, {})["error_pct_reason"] = (
+                            f"{type(exc).__name__}: {exc}"
+                        )
         extrap_error_pct[mname] = error_pct
         if r2f is None:
             _mark("r2_metric_unavailable")
@@ -457,6 +489,7 @@ def compute_extrap_r2_far(
             _mark("rmse_metric_unavailable")
         else:
             _mark("scored")
+        _diag.setdefault(mname, {})["error_pct_status"] = error_pct_status
 
     if verbose and any(v is not None for v in extrap_r2_far.values()):
         print(
