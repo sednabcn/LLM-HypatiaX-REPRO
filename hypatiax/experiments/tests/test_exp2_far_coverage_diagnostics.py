@@ -40,3 +40,5 @@ def test_far_diagnostics_are_persisted_to_protocol_and_flat_rows():
         assert 'record["extrap_diagnostics"] = extrap_diagnostics' in source
         assert '"extrap_diagnostic": _diag_map.get(_mname)' in source
         assert '_row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)' in source
+        assert "X_far_predictor=X_far" in source
+        assert "X_train_predictor=X" in source
