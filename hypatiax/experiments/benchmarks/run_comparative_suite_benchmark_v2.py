@@ -4276,6 +4276,7 @@ class ProtocolBenchmarkSuite:
                         "benchmark_metric_row_count": (_diag_map.get(_mname) or {}).get("benchmark_metric_row_count"),
                         "evaluation_source_key": (_diag_map.get(_mname) or {}).get("evaluation_source_key"),
                         "evaluation_metric_source": (_diag_map.get(_mname) or {}).get("evaluation_metric_source"),
+                        "metric_verification_status": (_diag_map.get(_mname) or {}).get("metric_verification_status"),
                         "evaluation_prediction_source": (_diag_map.get(_mname) or {}).get("evaluation_prediction_source"),
                         "evaluation_prediction_row_count": (_diag_map.get(_mname) or {}).get("evaluation_prediction_row_count"),
                         "evaluation_feature_representation": (_diag_map.get(_mname) or {}).get("evaluation_feature_representation"),
