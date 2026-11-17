@@ -30,6 +30,7 @@ class FoldMetric:
     rmse: float
     normalized_rmse: float | None
     validation_size: int
+    fitted_expression: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +56,7 @@ class CandidateValidationSummary:
                     "rmse": item.rmse,
                     "normalized_rmse": item.normalized_rmse,
                     "validation_size": item.validation_size,
+                    "fitted_expression": item.fitted_expression,
                 }
                 for item in self.fold_metrics
             ],
@@ -183,16 +185,19 @@ def evaluate_candidate_on_training_folds(
 
         truth = y[valid_idx]
         try:
-            prediction = np.asarray(
-                predictor(X[train_idx], y[train_idx], X[valid_idx]), dtype=float
-            ).reshape(-1)
+            prediction_result = predictor(X[train_idx], y[train_idx], X[valid_idx])
+            fitted_expression = None
+            if isinstance(prediction_result, tuple) and len(prediction_result) == 2:
+                prediction_result, fitted_expression = prediction_result
+            prediction = np.asarray(prediction_result, dtype=float).reshape(-1)
             if prediction.shape != truth.shape or not np.all(np.isfinite(prediction)):
                 raise ValueError("predictor returned invalid or non-finite values")
             rmse = float(np.sqrt(np.mean(np.square(truth - prediction))))
             scale = float(np.std(y[train_idx]))
             nrmse = rmse / scale if np.isfinite(scale) and scale > 0 else None
             metrics.append(FoldMetric(
-                fold.repeat, fold.fold, rmse, nrmse, int(valid_idx.size)
+                fold.repeat, fold.fold, rmse, nrmse, int(valid_idx.size),
+                str(fitted_expression) if fitted_expression is not None else None
             ))
         except Exception:
             failures += 1
@@ -216,6 +221,110 @@ def evaluate_candidate_on_training_folds(
         ),
         valid_fold_count=len(metrics),
         failed_fold_count=failures,
+    )
+
+
+
+
+def make_symbolic_refit_predictor(
+    expression: str,
+    variable_names: list[str] | tuple[str, ...],
+    *,
+    max_nfev: int = 500,
+) -> Callable[[np.ndarray, np.ndarray, np.ndarray], tuple[np.ndarray, str]]:
+    """Build a restricted symbolic predictor that refits float coefficients per fold.
+
+    Only numeric floating-point coefficient literals are optimized; integer
+    powers and integer constants remain structural. Every invocation starts
+    from the original coefficients and estimates them using X_fit/y_fit only.
+    This is coefficient refitting, not a fresh symbolic-structure search.
+    """
+    if max_nfev < 1:
+        raise ValueError("max_nfev must be >= 1")
+    import sympy as sp
+    from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+
+    names = tuple(variable_names)
+    if not names or len(set(names)) != len(names):
+        raise ValueError("variable_names must be non-empty and unique")
+    parsed = parse_sympy_expression(expression, list(names))
+    symbols = [sp.Symbol(name, real=True) for name in names]
+    exponent_literals = {
+        power.exp for power in parsed.atoms(sp.Pow)
+        if isinstance(power.exp, sp.Float)
+    }
+    coefficients = sorted(
+        parsed.atoms(sp.Float) - exponent_literals,
+        key=lambda value: (float(value), str(value)),
+    )
+    coefficient_symbols = sp.symbols(f"_coef0:{len(coefficients)}") if coefficients else ()
+    parameterized = parsed.xreplace(dict(zip(coefficients, coefficient_symbols)))
+    initial = np.asarray([float(value) for value in coefficients], dtype=float)
+
+    def _evaluate(matrix: np.ndarray, params: np.ndarray) -> np.ndarray:
+        expr = parameterized.xreplace(dict(zip(coefficient_symbols, params)))
+        fn = sp.lambdify(symbols, expr, modules="numpy")
+        with np.errstate(all="ignore"):
+            values = np.asarray(fn(*[matrix[:, index] for index in range(len(names))]), dtype=float)
+        if values.ndim == 0:
+            values = np.full(matrix.shape[0], float(values))
+        return values.reshape(-1)
+
+    def _predict(
+        X_fit: np.ndarray, y_fit: np.ndarray, X_validation: np.ndarray
+    ) -> tuple[np.ndarray, str]:
+        Xf = np.asarray(X_fit, dtype=float)
+        yf = np.asarray(y_fit, dtype=float).reshape(-1)
+        Xv = np.asarray(X_validation, dtype=float)
+        if (Xf.ndim != 2 or Xv.ndim != 2 or Xf.shape[1] != len(names)
+                or Xv.shape[1] != len(names) or Xf.shape[0] != yf.size):
+            raise ValueError("fold arrays do not match the declared symbolic variables")
+        if not np.all(np.isfinite(Xf)) or not np.all(np.isfinite(yf)) or not np.all(np.isfinite(Xv)):
+            raise ValueError("fold arrays must be finite")
+
+        fitted = initial.copy()
+        if coefficients:
+            from scipy.optimize import least_squares
+
+            def residual(params: np.ndarray) -> np.ndarray:
+                predicted = _evaluate(Xf, params)
+                if predicted.shape != yf.shape or not np.all(np.isfinite(predicted)):
+                    return np.full(yf.shape, 1e100, dtype=float)
+                return predicted - yf
+
+            optimized = least_squares(
+                residual, initial.copy(), max_nfev=max_nfev,
+                method="trf", loss="linear",
+            )
+            if not optimized.success or not np.all(np.isfinite(optimized.x)):
+                raise ValueError("fold-local coefficient refit did not converge")
+            fitted = optimized.x
+        predictions = _evaluate(Xv, fitted)
+        if predictions.shape != (Xv.shape[0],) or not np.all(np.isfinite(predictions)):
+            raise ValueError("refitted symbolic candidate produced invalid predictions")
+        fitted_expr = str(parameterized.xreplace(dict(zip(coefficient_symbols, fitted))))
+        return predictions, fitted_expr
+
+    return _predict
+
+
+def evaluate_symbolic_candidate_on_training_folds(
+    expression: str,
+    variable_names: list[str] | tuple[str, ...],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    folds: tuple[TrainingFold, ...],
+    *,
+    minimum_valid_folds: int = 2,
+    max_nfev: int = 500,
+) -> CandidateValidationSummary:
+    """Refit numeric coefficients inside each training fold, then score its holdout."""
+    predictor = make_symbolic_refit_predictor(
+        expression, variable_names, max_nfev=max_nfev
+    )
+    return evaluate_candidate_on_training_folds(
+        expression, predictor, X_train, y_train, folds,
+        minimum_valid_folds=minimum_valid_folds,
     )
 
 
@@ -258,5 +367,7 @@ __all__ = [
     "CandidateValidationSummary",
     "make_training_folds",
     "evaluate_candidate_on_training_folds",
+    "make_symbolic_refit_predictor",
+    "evaluate_symbolic_candidate_on_training_folds",
     "expression_stability",
 ]
