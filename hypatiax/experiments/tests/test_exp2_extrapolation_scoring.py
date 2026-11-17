@@ -265,4 +265,4 @@ def test_zero_training_rmse_keeps_ratio_undefined_with_explicit_status():
         diagnostics=diagnostics,
     )
     assert error_pct["retained"] is None
-    assert diagnostics["retained"]["error_pct_status"] == "zero_or_invalid_training_rmse"
+    assert diagnostics["retained"]["error_pct_status"] == "zero_training_rmse"

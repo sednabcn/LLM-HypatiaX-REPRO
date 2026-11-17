@@ -503,7 +503,12 @@ def compute_extrap_r2_far(
                         rmse_train = _far_rmse(train_targets, train_prediction)
                         error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
                         if error_pct is None:
-                            error_pct_status = "zero_or_invalid_training_rmse"
+                            if not math.isfinite(float(rmse_train)):
+                                error_pct_status = "invalid_training_rmse"
+                            elif float(rmse_train) == 0.0:
+                                error_pct_status = "zero_training_rmse"
+                            else:
+                                error_pct_status = "invalid_far_rmse"
                         else:
                             error_pct_status = "available"
 
