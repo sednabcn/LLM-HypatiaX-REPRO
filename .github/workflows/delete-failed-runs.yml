@@ -1,0 +1,51 @@
+name: Delete failed workflow runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "List runs that would be deleted without deleting them"
+        type: boolean
+        default: false
+  # Optional: run automatically every Sunday at 03:00 UTC
+  # schedule:
+  #   - cron: "0 3 * * 0"
+
+permissions:
+  actions: write   # required to delete workflow runs
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete failed runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          # Statuses to clean up. Add "cancelled" or "timed_out" if you want those gone too.
+          for status in failure; do
+            echo "Collecting runs with conclusion: $status"
+            gh api --paginate \
+              "repos/$REPO/actions/runs?status=$status&per_page=100" \
+              --jq '.workflow_runs[].id' > "runs_$status.txt"
+
+            count=$(wc -l < "runs_$status.txt")
+            echo "Found $count run(s) with status '$status'"
+
+            while read -r run_id; do
+              [ -z "$run_id" ] && continue
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "[dry run] would delete run $run_id"
+              else
+                echo "Deleting run $run_id"
+                gh api -X DELETE "repos/$REPO/actions/runs/$run_id" || echo "Could not delete $run_id"
+              fi
+            done < "runs_$status.txt"
+          done
+
+          echo "Done."
