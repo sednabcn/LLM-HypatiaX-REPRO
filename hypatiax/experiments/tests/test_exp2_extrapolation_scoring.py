@@ -357,7 +357,7 @@ def test_low_training_rmse_uses_target_scale_normalized_far_rmse():
     X_train = np.array([[0.0], [1.0], [2.0]])
     X_far = np.array([[3.0], [4.0], [5.0]])
     y_train = np.array([1.0, 2.0, 3.0])
-    predict = lambda X: np.asarray(X)[:, 0] + 1.0
+    predict = lambda X: np.asarray(X)[:, 0] + 1.0 + 5e-13
     result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predict)
     diagnostics = {}
     _, far_rmse, error_pct = compute_extrap_r2_far(
