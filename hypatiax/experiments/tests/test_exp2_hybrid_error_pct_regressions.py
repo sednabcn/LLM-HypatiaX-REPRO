@@ -205,3 +205,82 @@ def test_training_prediction_failure_preserves_independent_far_metrics():
     assert diagnostics["hybrid"]["training_prediction_route"] == "retained_final_predictor"
     assert diagnostics["hybrid"]["error_pct_route_consistent"] is True
     assert "synthetic training prediction failure" in diagnostics["hybrid"]["error_pct_reason"]
+
+
+
+def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
+    X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
+    y_train = X_train[:, 0] + 1.0
+    X_far = np.array([[4.0], [5.0], [6.0]])
+    y_far = X_far[:, 0] + 1.25
+
+    def base_predictor(X):
+        return np.asarray(X, dtype=float)[:, 0] + 1.0
+
+    def residual_predictor(X, base_prediction):
+        return np.asarray(base_prediction, dtype=float) + 0.25
+
+    def final_base_plus_residual(X):
+        return residual_predictor(X, base_predictor(X))
+
+    # The wrapper's reported benchmark RMSE is deliberately inconsistent
+    # with this retained final composite predictor (which has RMSE 0.25).
+    result = SimpleNamespace(
+        success=True,
+        formula="[NN residual correction — final predictor]",
+        rmse=0.0,
+        _predict_fn=final_base_plus_residual,
+    )
+    diagnostics = {}
+    _, far_rmse, error_pct = compute_extrap_r2_far(
+        {"EnhancedHybridSystemDeFi (core)": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    method_diag = diagnostics["EnhancedHybridSystemDeFi (core)"]
+    assert far_rmse["EnhancedHybridSystemDeFi (core)"] == pytest.approx(0.0)
+    assert error_pct["EnhancedHybridSystemDeFi (core)"] is None
+    assert method_diag["extrap_rmse_train"] == pytest.approx(0.25)
+    assert method_diag["benchmark_rmse"] == pytest.approx(0.0)
+    assert method_diag["train_rmse_delta"] == pytest.approx(0.25)
+    assert method_diag["train_rmse_consistent"] is False
+    assert method_diag["train_rmse_consistency_status"] == "mismatch"
+
+
+def test_llm_nn_retained_predictor_training_rmse_matches_reported_benchmark_rmse():
+    X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
+    y_train = X_train[:, 0] + 1.2
+    X_far = np.array([[4.0], [5.0], [6.0]])
+    y_far = X_far[:, 0] + 1.0
+    predictor = lambda X: np.asarray(X, dtype=float)[:, 0] + 1.0
+    result = SimpleNamespace(
+        success=True,
+        formula="N/A",
+        rmse=0.2,
+        _predict_fn=predictor,
+    )
+    diagnostics = {}
+
+    compute_extrap_r2_far(
+        {"HybridSystemLLMNN all-domains (core)": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    method_diag = diagnostics["HybridSystemLLMNN all-domains (core)"]
+    assert method_diag["extrap_rmse_train"] == pytest.approx(0.2)
+    assert method_diag["benchmark_rmse"] == pytest.approx(0.2)
+    assert method_diag["train_rmse_delta"] == pytest.approx(0.0)
+    assert method_diag["train_rmse_consistent"] is True
+    assert method_diag["train_rmse_consistency_status"] == "matches"
