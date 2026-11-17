@@ -2267,10 +2267,17 @@ class SymbolicEngine:
             raise ValueError("invalid fold-fitted feature scales")
         transformed = values / scales[np.newaxis, :]
         for left, right in state["gm_pairs"]:
+            if np.any(transformed[:, left] <= 0.0) or np.any(transformed[:, right] <= 0.0):
+                raise ValueError("fold validation violates a fit-selected positive GM feature domain")
             with np.errstate(invalid="ignore", over="ignore"):
                 feature = np.sqrt(transformed[:, left] * transformed[:, right])
             transformed = np.column_stack((transformed, feature))
         for numerator, denominator in state["ratio_pairs"]:
+            if (
+                np.any(transformed[:, numerator] <= 0.0)
+                or np.any(transformed[:, denominator] <= 0.0)
+            ):
+                raise ValueError("fold validation violates a fit-selected positive ratio feature domain")
             with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
                 feature = transformed[:, numerator] / (transformed[:, denominator] + 1e-300)
             transformed = np.column_stack((transformed, feature))
