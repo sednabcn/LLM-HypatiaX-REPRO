@@ -502,6 +502,29 @@ def compute_extrap_r2_far(
         train_prediction_route = None
 
         if y_train is not None and rmse_far is not None:
+            # The normalized extrapolation score depends only on far RMSE and
+            # the training-target scale; it must not depend on whether a method
+            # exposes training predictions (those are needed only for legacy
+            # error_pct = RMSE_far / RMSE_train).
+            train_targets_for_score = np.asarray(y_train, dtype=float).reshape(-1)
+            score_diag = _diag.setdefault(mname, {})
+            if not np.all(np.isfinite(train_targets_for_score)):
+                extrap_nrmse_status = "invalid_training_targets"
+            else:
+                target_scale_for_score = float(np.std(train_targets_for_score))
+                score_diag["extrap_target_scale_train"] = target_scale_for_score
+                if math.isfinite(target_scale_for_score) and target_scale_for_score > 0.0:
+                    extrap_nrmse_far = float(rmse_far / target_scale_for_score)
+                    extrap_nrmse_status = "available"
+                elif not math.isfinite(target_scale_for_score):
+                    extrap_nrmse_status = "invalid_training_target_scale"
+                else:
+                    extrap_nrmse_status = "zero_training_target_scale"
+            score_diag["extrap_nrmse_far"] = extrap_nrmse_far
+            score_diag["extrap_nrmse_far_status"] = extrap_nrmse_status
+            score_diag["extrapolation_score"] = extrap_nrmse_far
+            score_diag["extrapolation_score_name"] = "training_scale_normalized_far_rmse"
+
             train_prediction = None
             # A retained callable is the authoritative representation of the
             # final fitted method. Never let a formula-only/precomputed array
@@ -670,18 +693,25 @@ def compute_extrap_r2_far(
             "rmse": extrap_rmse_far.get(_method_name),
         })
 
-    if verbose and any(v is not None for v in extrap_r2_far.values()):
+    if verbose and any(v is not None for v in extrap_rmse_far.values()):
         print(
-            f"\n  📐 Extrapolation R² on far region (n={len(X_far)} held-out samples):",
+            f"\n  📐 Far-region extrapolation metrics (n={len(X_far)} held-out samples):",
             flush=True,
         )
         for mn, r2f in extrap_r2_far.items():
-            r2s  = f"{r2f:.4f}" if (r2f is not None and math.isfinite(r2f)) else "null"
+            r2s = f"{r2f:.4f}" if (r2f is not None and math.isfinite(r2f)) else "null"
+            method_diag = _diag.get(mn, {})
+            score = method_diag.get("extrapolation_score")
+            score_status = method_diag.get(
+                "extrap_nrmse_far_status", "prediction_or_training_scale_unavailable"
+            )
+            score_s = f"{score:.6g}" if (score is not None and math.isfinite(score)) else "null"
             pctr = extrap_error_pct.get(mn)
             pcts = f"{pctr:.1f}%" if (pctr is not None and math.isfinite(pctr)) else "null"
-            tier = extrapolation_error_status(pctr)
             print(
-                f"     {mn:<42} extrap_r2_far={r2s}  error_pct={pcts}  [{tier}]",
+                f"     {mn:<42} extrap_r2_far={r2s}  "
+                f"extrapolation_score={score_s} [{score_status}]  "
+                f"legacy_error_pct={pcts}",
                 flush=True,
             )
 

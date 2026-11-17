@@ -374,6 +374,32 @@ def test_low_training_rmse_uses_target_scale_normalized_far_rmse():
     assert diag["extrap_nrmse_far_status"] == "available"
 
 
+def test_normalized_extrapolation_score_does_not_require_training_predictions():
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    y_far = np.array([10.0, 11.0, 12.0])
+    y_train = np.array([1.0, 2.0, 3.0])
+    result = SimpleNamespace(success=True, formula="x + 1")
+    diagnostics = {}
+
+    _, far_rmse, error_pct = compute_extrap_r2_far(
+        {"formula_only": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    diag = diagnostics["formula_only"]
+    assert error_pct["formula_only"] is None
+    assert diag["error_pct_status"] == "training_predictor_unavailable"
+    assert diag["extrapolation_score"] == pytest.approx(
+        far_rmse["formula_only"] / np.std(y_train)
+    )
+    assert diag["extrap_nrmse_far_status"] == "available"
+
+
 def test_low_training_rmse_fallback_is_unavailable_for_constant_training_targets():
     X_train = np.array([[0.0], [1.0], [2.0]])
     X_far = np.array([[3.0], [4.0], [5.0]])
