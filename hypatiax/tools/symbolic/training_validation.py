@@ -431,7 +431,7 @@ class FoldFeaturePreprocessor:
         scales = np.ones(X.shape[1], dtype=float)
         for index in range(X.shape[1]):
             column_scale = max(
-                abs(float(np.mean(transformed[:, index])),
+                abs(float(np.mean(transformed[:, index]))),
                 float(np.std(transformed[:, index])),
             )
             if column_scale > 0 and (
