@@ -522,6 +522,7 @@ def compute_extrap_r2_far(
                         provenance_fields = (
                             "evaluation_source_key",
                             "evaluation_metric_source",
+                            "metric_verification_status",
                             "evaluation_prediction_source",
                             "evaluation_prediction_row_count",
                             "evaluation_feature_representation",
