@@ -1338,9 +1338,81 @@ class HybridDiscoverySystem:
                 "metadata['discovery_problem'] must be a DiscoveryProblem instance; "
                 "construct it explicitly so units, domains, and constraints are typed."
             )
-        # Reset on every public call so one equation's scientific contract cannot
-        # leak into the next equation when a runner reuses this system instance.
+        # Reset per-call scientific and training-only selection state so no
+        # equation's validation result or contract can leak into the next call.
         self._active_discovery_problem = _problem
+        self._training_only_search_selection = None
+
+        _validation_settings = metadata.get("training_only_search_validation")
+        if _validation_settings:
+            if not isinstance(_validation_settings, dict):
+                raise TypeError(
+                    "metadata['training_only_search_validation'] must be a dict"
+                )
+            from hypatiax.tools.symbolic.hybrid_fold_search import (
+                select_hybrid_search_configuration,
+            )
+            _base_parsimony = float(self.symbolic_engine.config.parsimony)
+            _selection_seed = int(
+                metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+            )
+            try:
+                _selection, _parsimony_options = select_hybrid_search_configuration(
+                    X,
+                    y,
+                    variable_names=var_names,
+                    equation_name=str(metadata.get("equation_name", description or "unknown")),
+                    domain=str(_domain_from_meta or self.domain),
+                    base_config=self.symbolic_engine.config,
+                    seed=_selection_seed,
+                    n_splits=int(_validation_settings.get("n_splits", 2)),
+                    validation_fraction=float(
+                        _validation_settings.get("validation_fraction", 0.2)
+                    ),
+                    fold_iterations=int(_validation_settings.get("fold_iterations", 20)),
+                    fold_timeout_seconds=int(
+                        _validation_settings.get("fold_timeout_seconds", 20)
+                    ),
+                    allow_pow=metadata.get("allow_pow"),
+                    max_mean_normalized_rmse=_validation_settings.get(
+                        "max_mean_normalized_rmse"
+                    ),
+                )
+                self._training_only_search_selection = _selection.to_dict()
+                if _selection.status != "selected" or not _selection.selected_strategy:
+                    return {
+                        "success": False,
+                        "error": "NO_CREDIBLE_CANDIDATE",
+                        "message": (
+                            "No PySR search configuration met the training-only "
+                            "fold-validation requirements; full-training discovery "
+                            "was not run."
+                        ),
+                        "training_only_search_selection": self._training_only_search_selection,
+                    }
+                self._selected_training_search_strategy = _selection.selected_strategy
+                self._selected_training_search_parsimony = _parsimony_options[
+                    _selection.selected_strategy
+                ]
+                logger.info(
+                    "[TRAINING-VALIDATION] selected strategy=%s parsimony=%s",
+                    self._selected_training_search_strategy,
+                    self._selected_training_search_parsimony,
+                )
+            except Exception as _selection_error:
+                self._training_only_search_selection = {
+                    "status": "NO_CREDIBLE_CANDIDATE",
+                    "selected_strategy": None,
+                    "selection_scope": "training_region_only",
+                    "error": f"{type(_selection_error).__name__}: {_selection_error}"[:400],
+                    "far_test_data_used": False,
+                }
+                return {
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "message": "Training-only search configuration validation failed closed.",
+                    "training_only_search_selection": self._training_only_search_selection,
+                }
 
         _noise_level = metadata.get("noise_level", None)
         self._current_noise_level = _noise_level
@@ -1464,7 +1536,12 @@ class HybridDiscoverySystem:
         # Always assigned so a stale context can never leak into the next call.
         self.symbolic_engine._fixd_ctx = _fixd_ctx
 
+        _original_parsimony = self.symbolic_engine.config.parsimony
         try:
+            if self._training_only_search_selection is not None:
+                self.symbolic_engine.config.parsimony = (
+                    self._selected_training_search_parsimony
+                )
             full_result = self.discover_validate_interpret(
                 X=X,
                 y=y,
@@ -1476,7 +1553,17 @@ class HybridDiscoverySystem:
                 show_formatted=verbose,
                 use_llm=_meta_use_llm,
             )
+            if self._training_only_search_selection is not None:
+                full_result.setdefault("metadata", {})[
+                    "training_only_search_selection"
+                ] = self._training_only_search_selection
+                full_result["metadata"]["selected_search_strategy"] = (
+                    self._selected_training_search_strategy
+                )
+        finally:
+            self.symbolic_engine.config.parsimony = _original_parsimony
 
+        try:
             # FIX-POW: restore original binary_operators regardless of result
             self.symbolic_engine.config.binary_operators = _orig_binary_ops
 
