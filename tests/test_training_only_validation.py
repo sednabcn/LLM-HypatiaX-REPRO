@@ -108,9 +108,9 @@ def test_fold_preprocessor_learns_log_flags_and_scales_from_fit_rows_only():
 
     X_fit = np.array([
         [1e2, 2.0],
-        [1e3, 4.0],
-        [1e4, 6.0],
-        [1e5, 8.0],
+        [1e4, 4.0],
+        [1e6, 6.0],
+        [1e8, 8.0],
     ])
     preprocessor = FoldFeaturePreprocessor(["wide", "ordinary"])
     X_fit_transformed = preprocessor.fit_transform(X_fit)
