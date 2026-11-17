@@ -1563,9 +1563,8 @@ class HybridDiscoverySystem:
         finally:
             self.symbolic_engine.config.parsimony = _original_parsimony
 
-        try:
-            # FIX-POW: restore original binary_operators regardless of result
-            self.symbolic_engine.config.binary_operators = _orig_binary_ops
+        # FIX-POW: restore original binary_operators regardless of result
+        self.symbolic_engine.config.binary_operators = _orig_binary_ops
 
             if "error" in full_result and full_result["error"] == "discovery_failed":
                 raise RuntimeError(full_result.get("message", "Discovery failed"))
