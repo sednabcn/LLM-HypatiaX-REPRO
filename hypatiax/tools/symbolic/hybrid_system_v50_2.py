@@ -803,7 +803,7 @@ class HybridDiscoverySystem:
                     "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED"
                 )
                 _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
-                if _valid_expression:
+                if _valid_expression and _valid_score:
                     quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
@@ -857,7 +857,7 @@ class HybridDiscoverySystem:
                     if getattr(self.symbolic_engine.config, "use_transcendental_compositions", False)
                     else R2_STANDARD
                 )
-                if r2 >= _early_stop_r2 and not quality["is_overfit"]:
+                if _valid_expression and _valid_score and r2 >= _early_stop_r2 and not quality["is_overfit"]:
                     logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
                     self.stats["symbolic_successes"] += 1
                     return best_result
