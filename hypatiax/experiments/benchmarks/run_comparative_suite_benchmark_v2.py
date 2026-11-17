@@ -948,7 +948,7 @@ class ImprovedNNMethod(BaseMethod):
                              int(hashlib.sha256(description.encode()).hexdigest(), 16) % (2**31))
             ) % (2**31)
             if TORCH_AVAILABLE:
-                torch.manual_seed(_seed)
+                _torch.manual_seed(_seed)
             np.random.seed(_seed)
 
         try:
