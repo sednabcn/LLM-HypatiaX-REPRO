@@ -6,7 +6,7 @@ no far/test-data parameter or selector hook in this API.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable, Mapping
+from typing import Callable
 
 import numpy as np
 
@@ -168,9 +168,12 @@ def evaluate_candidate_on_training_folds(
                 or np.any(train_idx < 0) or np.any(valid_idx < 0)
                 or np.any(train_idx >= len(y)) or np.any(valid_idx >= len(y))):
             raise ValueError("fold indices are invalid for supplied training arrays")
+        if np.unique(train_idx).size != train_idx.size or np.unique(valid_idx).size != valid_idx.size:
+            raise ValueError("fold indices must not contain duplicates")
+        combined = np.concatenate((train_idx, valid_idx))
         if np.intersect1d(train_idx, valid_idx).size:
             raise ValueError("training and validation indices overlap")
-        if np.unique(np.concatenate((train_idx, valid_idx))).size != len(y):
+        if combined.size != len(y) or not np.array_equal(np.sort(combined), np.arange(len(y))):
             raise ValueError("each fold must partition all supplied training rows")
 
         truth = y[valid_idx]
