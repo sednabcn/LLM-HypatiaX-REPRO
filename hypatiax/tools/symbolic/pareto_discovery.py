@@ -113,7 +113,6 @@ def select_pareto_discovery_report(
     objectives: dict[str, dict[str, float]] = {}
     enriched: list[CandidateRecord] = []
     gate_eligible_count = 0
-    evidence_count = 0
     for candidate in records:
         metrics = dict(candidate.metrics)
         scores = _finite_fold_scores(candidate)
@@ -124,7 +123,6 @@ def select_pareto_discovery_report(
             gate_eligible_count += 1
         enough_evidence = len(scores) >= minimum_valid_folds
         if gate_ok and enough_evidence and node_count is not None:
-            evidence_count += 1
             objectives[candidate.candidate_id] = {
                 "mean_normalized_rmse": sum(scores) / len(scores),
                 "worst_normalized_rmse": max(scores),
@@ -175,18 +173,28 @@ def select_pareto_discovery_report(
     )
     # Deterministic recommendation among the Pareto set. Stability is a
     # diagnostic tie-break only; missing stability sorts after measured values.
+    selected_candidate = {
+        candidate.candidate_id: candidate for candidate in enriched
+    }
     selected_id = min(
         pareto_ids,
         key=lambda candidate_id: (
             objectives[candidate_id]["mean_normalized_rmse"],
             objectives[candidate_id]["worst_normalized_rmse"],
             objectives[candidate_id]["complexity"],
-            -(_stability(next(c for c in enriched if c.candidate_id == candidate_id)) or 0.0),
+            _stability(selected_candidate[candidate_id]) is None,
+            -(_stability(selected_candidate[candidate_id]) or 0.0),
             candidate_id,
         ),
     )
+    selected = selected_candidate[selected_id]
+    has_soft_warning = any(
+        outcome.severity == "soft"
+        and outcome.status not in {"pass", "not_applicable"}
+        for outcome in selected.constraint_outcomes
+    )
     return DiscoveryReport(
-        status="accepted",
+        status="accepted_with_warnings" if has_soft_warning else "accepted",
         candidates=tuple(enriched),
         selected_candidate_id=selected_id,
         pareto_candidate_ids=pareto_ids,
