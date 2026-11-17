@@ -88,7 +88,7 @@ def test_defi_formula_with_nonzero_training_error_has_defined_ratio():
     X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
     y_train = X_train[:, 0] + 1.0
     X_far = np.array([[4.0], [5.0], [6.0]])
-    y_far = X_far[:, 0] + 0.8
+    y_far = X_far[:, 0] + 1.0
     result = SimpleNamespace(
         success=True,
         formula="def formula(x):\n    return x + 0.8\n",
@@ -107,8 +107,8 @@ def test_defi_formula_with_nonzero_training_error_has_defined_ratio():
     )
 
     method = "EnhancedHybridSystemDeFi (core)"
-    assert rmse[method] == pytest.approx(0.0)
-    assert error_pct[method] == pytest.approx(0.0)
+    assert rmse[method] == pytest.approx(0.2)
+    assert error_pct[method] == pytest.approx(100.0)
     assert diagnostics[method]["error_pct_status"] == "available"
 
 
