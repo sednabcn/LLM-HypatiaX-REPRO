@@ -492,8 +492,230 @@ class FoldFeaturePreprocessor:
 
 
 
+
+@dataclass(frozen=True)
+class FoldFeaturePlan:
+    """Immutable engineered-feature schema selected from one fold's fit rows."""
+
+    raw_feature_names: tuple[str, ...]
+    geometric_mean_pairs: tuple[tuple[str, str], ...] = ()
+    ratio_pairs: tuple[tuple[str, str], ...] = ()
+    version: str = "1.0"
+
+    @property
+    def output_feature_names(self) -> tuple[str, ...]:
+        raw = self.raw_feature_names
+        geometric = tuple(f"gm_{left}_{right}" for left, right in self.geometric_mean_pairs)
+        ratios = tuple(f"ratio_{left}_{right}" for left, right in self.ratio_pairs)
+        return raw + geometric + ratios
+
+    def to_dict(self) -> dict:
+        return {
+            "version": self.version,
+            "raw_feature_names": list(self.raw_feature_names),
+            "geometric_mean_pairs": [list(pair) for pair in self.geometric_mean_pairs],
+            "ratio_pairs": [list(pair) for pair in self.ratio_pairs],
+            "output_feature_names": list(self.output_feature_names),
+            "selection_scope": "fold_fitting_rows_only",
+        }
+
+
+class FoldFeaturePipeline:
+    """Fit raw transforms and optional GM/ratio feature selection per fold.
+
+    The plan is learned exclusively from X_fit.  Validation rows are only
+    transformed with the frozen plan.  This is a fold-local analogue of the
+    repository's engineered input columns, not a claim that every domain
+    heuristic or operator-selection branch in SymbolicEngine is reproduced.
+    """
+
+    def __init__(
+        self,
+        feature_names: list[str] | tuple[str, ...],
+        *,
+        include_geometric_means: bool = False,
+        include_ratios: bool = False,
+        max_ratio_features: int = 10,
+        preprocessor: FoldFeaturePreprocessor | None = None,
+    ) -> None:
+        names = tuple(str(name) for name in feature_names)
+        if not names or any(not name for name in names) or len(set(names)) != len(names):
+            raise ValueError("feature_names must be non-empty and unique")
+        if max_ratio_features < 0:
+            raise ValueError("max_ratio_features must be >= 0")
+        self.feature_names = names
+        self.include_geometric_means = bool(include_geometric_means)
+        self.include_ratios = bool(include_ratios)
+        self.max_ratio_features = int(max_ratio_features)
+        self.preprocessor = preprocessor or FoldFeaturePreprocessor(names)
+        if self.preprocessor.get_feature_names_out() != names:
+            raise ValueError("preprocessor feature schema must match feature_names")
+        self._fitted = False
+
+    def fit(self, X_fit: np.ndarray) -> "FoldFeaturePipeline":
+        X = np.asarray(X_fit, dtype=float)
+        if X.ndim != 2 or X.shape[1] != len(self.feature_names) or X.shape[0] < 2:
+            raise ValueError("X_fit shape must match feature_names and contain >=2 rows")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X_fit must contain only finite values")
+
+        base = self.preprocessor.fit_transform(X)
+        positive_indices = [
+            index for index in range(base.shape[1])
+            if bool(np.all(base[:, index] > 0.0))
+        ]
+        gm_pairs: list[tuple[str, str]] = []
+        if self.include_geometric_means:
+            for offset, left_index in enumerate(positive_indices):
+                for right_index in positive_indices[offset + 1:]:
+                    gm_pairs.append((
+                        self.feature_names[left_index],
+                        self.feature_names[right_index],
+                    ))
+
+        ratio_candidates: list[tuple[float, str, str]] = []
+        if self.include_ratios:
+            for numerator in positive_indices:
+                for denominator in positive_indices:
+                    if numerator == denominator:
+                        continue
+                    ratio = base[:, numerator] / (base[:, denominator] + 1e-300)
+                    if not np.all(np.isfinite(ratio)):
+                        continue
+                    ratio_candidates.append((
+                        float(np.std(ratio)),
+                        self.feature_names[numerator],
+                        self.feature_names[denominator],
+                    ))
+        ratio_candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
+        ratio_pairs = tuple(
+            (left, right)
+            for _, left, right in ratio_candidates[:self.max_ratio_features]
+        )
+        self.plan_ = FoldFeaturePlan(
+            raw_feature_names=self.feature_names,
+            geometric_mean_pairs=tuple(gm_pairs),
+            ratio_pairs=ratio_pairs,
+        )
+        self._fitted = True
+        # Validate the fitting transform using the exact schema now frozen.
+        self.transform(X)
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePipeline must be fitted before transform")
+        base = self.preprocessor.transform(X)
+        columns = [base]
+        index_by_name = {name: index for index, name in enumerate(self.feature_names)}
+
+        for left, right in self.plan_.geometric_mean_pairs:
+            left_values = base[:, index_by_name[left]]
+            right_values = base[:, index_by_name[right]]
+            if np.any(left_values <= 0.0) or np.any(right_values <= 0.0):
+                raise ValueError(
+                    f"geometric-mean feature {left!r}/{right!r} left its positive domain"
+                )
+            values = np.sqrt(left_values * right_values)
+            if not np.all(np.isfinite(values)):
+                raise ValueError("geometric-mean feature produced non-finite values")
+            columns.append(values.reshape(-1, 1))
+
+        for numerator, denominator in self.plan_.ratio_pairs:
+            numerator_values = base[:, index_by_name[numerator]]
+            denominator_values = base[:, index_by_name[denominator]]
+            if np.any(numerator_values <= 0.0) or np.any(denominator_values <= 0.0):
+                raise ValueError(
+                    f"ratio feature {numerator!r}/{denominator!r} left its positive domain"
+                )
+            values = numerator_values / (denominator_values + 1e-300)
+            if not np.all(np.isfinite(values)):
+                raise ValueError("ratio feature produced non-finite values")
+            columns.append(values.reshape(-1, 1))
+
+        result = np.column_stack(columns) if len(columns) > 1 else base
+        if result.shape[1] != len(self.plan_.output_feature_names):
+            raise RuntimeError("fold feature plan and transformed matrix schema diverged")
+        return result
+
+    def fit_transform(self, X_fit: np.ndarray) -> np.ndarray:
+        return self.fit(X_fit).transform(X_fit)
+
+    def get_feature_names_out(self) -> tuple[str, ...]:
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePipeline must be fitted before feature names are available")
+        return self.plan_.output_feature_names
+
+    def audit_state(self) -> dict:
+        if not self._fitted:
+            raise RuntimeError("FoldFeaturePipeline is not fitted")
+        return {
+            "feature_plan": self.plan_.to_dict(),
+            "preprocessing": self.preprocessor.audit_state(),
+            "fit_scope": "fold_fitting_rows_only",
+            "validation_used_for_plan_selection": False,
+        }
+
+
+class FoldTargetScaler:
+    """Fit the symbolic engine's optional std-only target scale per fold."""
+
+    def __init__(self, *, scale_low: float = 1e-4, scale_high: float = 1e4) -> None:
+        if not 0 < scale_low < scale_high:
+            raise ValueError("target scale thresholds must satisfy 0 < low < high")
+        self.scale_low = float(scale_low)
+        self.scale_high = float(scale_high)
+        self._fitted = False
+
+    def fit(self, y_fit: np.ndarray) -> "FoldTargetScaler":
+        values = np.asarray(y_fit, dtype=float).reshape(-1)
+        if values.size < 2 or not np.all(np.isfinite(values)):
+            raise ValueError("y_fit must contain at least two finite values")
+        std = float(np.std(values))
+        self.scale_ = std if std > 0 and (std < self.scale_low or std > self.scale_high) else 1.0
+        self._fitted = True
+        return self
+
+    def transform(self, y: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetScaler must be fitted before transform")
+        values = np.asarray(y, dtype=float).reshape(-1)
+        if not np.all(np.isfinite(values)):
+            raise ValueError("target values must be finite")
+        result = values / self.scale_
+        if not np.all(np.isfinite(result)):
+            raise ValueError("target scaling produced non-finite values")
+        return result
+
+    def inverse_transform(self, y_scaled: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetScaler must be fitted before inverse_transform")
+        values = np.asarray(y_scaled, dtype=float).reshape(-1)
+        if not np.all(np.isfinite(values)):
+            raise ValueError("scaled target values must be finite")
+        result = values * self.scale_
+        if not np.all(np.isfinite(result)):
+            raise ValueError("inverse target scaling produced non-finite values")
+        return result
+
+    def fit_transform(self, y_fit: np.ndarray) -> np.ndarray:
+        return self.fit(y_fit).transform(y_fit)
+
+    def audit_state(self) -> dict:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetScaler is not fitted")
+        return {
+            "scale": float(self.scale_),
+            "fit_scope": "fold_fitting_targets_only",
+            "centering": "none",
+        }
+
+
 __all__ = [
     "FoldFeaturePreprocessor",
+    "FoldFeaturePlan",
+    "FoldFeaturePipeline",
+    "FoldTargetScaler",
     "TrainingFold",
     "FoldMetric",
     "CandidateValidationSummary",
