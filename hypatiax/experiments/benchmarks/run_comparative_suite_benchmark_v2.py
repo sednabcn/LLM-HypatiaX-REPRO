@@ -5147,7 +5147,7 @@ Examples
         _efrac = float(getattr(args, "extrap_train_frac", 0.8))
         _emult = float(getattr(args, "extrap_multiplier", 2.0))
         print(f"\nℹ️  --extrap mode: train_frac={_efrac}  multiplier={_emult}")
-        print(f"   Far region: X[:,0] ∈ (x_train_max, x_train_max + {_emult}×train_range]")
+        print("   Directions: each input feature independently, plus joint mean-percentile direction.")
         _extrap_tests = []
         for _desc, _X, _y, _vnames, _meta, _dom in all_tests:
             # Fit/evaluate a fresh method set for every input direction. The
