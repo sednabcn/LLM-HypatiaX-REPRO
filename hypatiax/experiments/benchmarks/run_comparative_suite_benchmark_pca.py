@@ -3386,6 +3386,7 @@ class ProtocolBenchmarkSuite:
                     var_names=aug_names,   # FIX-N3a: includes ratio_*/gm_* names
                     y_train=y,
                     y_pred_train=_y_pred_train if _y_pred_train else None,
+                    X_far_predictor=X_far,
                     X_train_predictor=X,
                     verbose=verbose,
                 )
