@@ -2690,13 +2690,19 @@ try:
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
                 "engine_version": "5.4",
-                "engine_variant": "llm_hybrid" if _llm_engine is not None else "pysr_fallback",
+                "engine_variant": "llm_hybrid" if system.llm_mode != "none" else "pysr_fallback",
                 "domain": _domain,
                 "llm_requested": _use_llm,
                 "llm_mode_requested": _llm_mode,
                 "llm_mode_active": system.llm_mode,
                 "llm_attempted": any(bool(a.get("llm_attempted")) for a in _llm_attempt_audit),
                 "llm_called": any(bool(a.get("llm_called")) for a in _llm_attempt_audit),
+                "bypass_kind": "none",
+                "llm_source": (
+                    "delegate"
+                    if any(bool(a.get("llm_called")) for a in _llm_attempt_audit)
+                    else "none"
+                ),
                 "llm_attempts": _llm_attempt_audit,
                 "training_r2": _discovery.get("r2_score"),
                 "selected_attempt": _discovery.get("attempt"),
@@ -3345,6 +3351,10 @@ class HybridSystemV50_2Method(BaseMethod):
                 formula=formula[:500], formula_hash=BaseMethod._make_formula_result(formula)[1], formula_full=formula,
                 metadata={
                     **_provenance(result),
+                    "llm_called": (result.get("benchmark_provenance") or {}).get("llm_called", False),
+                    "llm_attempted": (result.get("benchmark_provenance") or {}).get("llm_attempted", False),
+                    "bypass_kind": (result.get("benchmark_provenance") or {}).get("bypass_kind", "none"),
+                    "llm_source": (result.get("benchmark_provenance") or {}).get("llm_source", "none"),
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                     "benchmark_provenance": result.get("benchmark_provenance", {}),
