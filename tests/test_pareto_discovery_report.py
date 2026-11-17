@@ -85,3 +85,20 @@ def test_empty_candidate_set_has_explicit_status():
     report = select_pareto_discovery_report([], variable_names=["x"])
     assert report.status == "no_candidates_generated"
     assert report.selected_candidate_id is None
+
+
+def test_selected_candidate_soft_warning_is_preserved_in_report_status():
+    warning = ConstraintOutcome(
+        constraint_id="soft_monotonicity",
+        status="warning",
+        severity="soft",
+        reason="sampled slope changes sign",
+    )
+    candidate = _candidate("x", 4, [0.1, 0.2], outcomes=[warning])
+
+    report = select_pareto_discovery_report(
+        [candidate], variable_names=["x"]
+    )
+
+    assert report.status == "accepted_with_warnings"
+    assert report.selected_candidate_id == candidate.candidate_id
