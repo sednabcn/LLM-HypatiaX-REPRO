@@ -210,7 +210,7 @@ def test_training_prediction_failure_preserves_independent_far_metrics():
 
 def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
     X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
-    y_train = X_train[:, 0] + 1.0
+    y_train = X_train[:, 0] + 1.25
     X_far = np.array([[4.0], [5.0], [6.0]])
     y_far = X_far[:, 0] + 1.25
 
@@ -224,11 +224,11 @@ def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
         return residual_predictor(X, base_predictor(X))
 
     # The wrapper's reported benchmark RMSE is deliberately inconsistent
-    # with this retained final composite predictor (which has RMSE 0.25).
+    # with this retained final composite predictor (which has RMSE 0.0).
     result = SimpleNamespace(
         success=True,
         formula="[NN residual correction — final predictor]",
-        rmse=0.0,
+        rmse=0.25,
         _predict_fn=final_base_plus_residual,
     )
     diagnostics = {}
@@ -246,9 +246,9 @@ def test_defi_composite_base_plus_residual_records_benchmark_rmse_mismatch():
     method_diag = diagnostics["EnhancedHybridSystemDeFi (core)"]
     assert far_rmse["EnhancedHybridSystemDeFi (core)"] == pytest.approx(0.0)
     assert error_pct["EnhancedHybridSystemDeFi (core)"] is None
-    assert method_diag["extrap_rmse_train"] == pytest.approx(0.25)
-    assert method_diag["benchmark_rmse"] == pytest.approx(0.0)
-    assert method_diag["train_rmse_delta"] == pytest.approx(0.25)
+    assert method_diag["extrap_rmse_train"] == pytest.approx(0.0)
+    assert method_diag["benchmark_rmse"] == pytest.approx(0.25)
+    assert method_diag["train_rmse_delta"] == pytest.approx(-0.25)
     assert method_diag["train_rmse_consistent"] is False
     assert method_diag["train_rmse_consistency_status"] == "mismatch"
 
