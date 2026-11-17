@@ -432,7 +432,9 @@ def test_exp2_hybrid_discovery_uses_llm_hybrid_and_repro_search_config():
     assert 'kwargs.get("unary_operators", ["exp", "log", "sin", "cos", "sqrt"])' in source
     assert 'domain=_domain' in source
     assert '"llm_mode_active": system.llm_mode' in source
-    assert '"selection_metric": "training_r2_with_complexity_gate"' in source
+    assert '"paired_training_fold_mean_normalized_rmse_then_final_training_r2"' in source
+    assert '"training_only_search_selection": _training_selection_audit' in source
+    assert '"fold_search_llm_enabled": False' in source
     assert '"candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak"' in source
     assert '"extrapolation_metric_used_for_selection": False' in source
     assert '"training_acceptance_threshold": 0.97' in source
