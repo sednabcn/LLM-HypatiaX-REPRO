@@ -3346,7 +3346,7 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
         )
-        _meta.setdefault("random_seed", int(metadata.get("random_seed", 42)))
+        _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
 
         print(
             f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
