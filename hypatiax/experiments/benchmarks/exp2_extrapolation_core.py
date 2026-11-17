@@ -693,7 +693,7 @@ def compute_extrap_r2_far(
             "rmse": extrap_rmse_far.get(_method_name),
         })
 
-    if verbose and any(v is not None for v in extrap_r2_far.values()):
+    if verbose and any(v is not None for v in extrap_rmse_far.values()):
         print(
             f"\n  📐 Far-region extrapolation metrics (n={len(X_far)} held-out samples):",
             flush=True,
