@@ -502,6 +502,29 @@ def compute_extrap_r2_far(
         train_prediction_route = None
 
         if y_train is not None and rmse_far is not None:
+            # The normalized extrapolation score depends only on far RMSE and
+            # the training-target scale; it must not depend on whether a method
+            # exposes training predictions (those are needed only for legacy
+            # error_pct = RMSE_far / RMSE_train).
+            train_targets_for_score = np.asarray(y_train, dtype=float).reshape(-1)
+            score_diag = _diag.setdefault(mname, {})
+            if not np.all(np.isfinite(train_targets_for_score)):
+                extrap_nrmse_status = "invalid_training_targets"
+            else:
+                target_scale_for_score = float(np.std(train_targets_for_score))
+                score_diag["extrap_target_scale_train"] = target_scale_for_score
+                if math.isfinite(target_scale_for_score) and target_scale_for_score > 0.0:
+                    extrap_nrmse_far = float(rmse_far / target_scale_for_score)
+                    extrap_nrmse_status = "available"
+                elif not math.isfinite(target_scale_for_score):
+                    extrap_nrmse_status = "invalid_training_target_scale"
+                else:
+                    extrap_nrmse_status = "zero_training_target_scale"
+            score_diag["extrap_nrmse_far"] = extrap_nrmse_far
+            score_diag["extrap_nrmse_far_status"] = extrap_nrmse_status
+            score_diag["extrapolation_score"] = extrap_nrmse_far
+            score_diag["extrapolation_score_name"] = "training_scale_normalized_far_rmse"
+
             train_prediction = None
             # A retained callable is the authoritative representation of the
             # final fitted method. Never let a formula-only/precomputed array
