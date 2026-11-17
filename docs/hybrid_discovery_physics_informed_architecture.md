@@ -892,3 +892,49 @@ If no strategy yields the required finite fold evidence, the Hybrid worker retur
 The fold search is deliberately a bounded configuration comparison, not a proof of physical truth. Two random holdouts and short PySR budgets provide coarse evidence; they are not a substitute for broader repeated/blocked validation in a future budget-explicit study. The three configurations vary parsimony only; operator grammars and other settings remain fixed. Existing candidate validation gates run on the final full-training candidate, not on fold equations.
 
 Regression source was added in tests/test_hybrid_fold_search_adapter.py for fold-fitted outer transforms and validation-transform reuse. Tests were not run. No CI workflow or manual dispatch was triggered. No experiments, smoke runs, workers, benchmarks, or LLM API calls were launched during this implementation.
+
+
+## 20. Training-only Pareto report assembly
+
+This branch adds the first executable report-selection layer in
+`hypatiax/tools/symbolic/pareto_discovery.py`. It composes existing
+`CandidateRecord`, `CandidateValidationSummary` fold metrics, and the
+versioned `DiscoveryReport` envelope.
+
+### Eligibility and objectives
+
+- A candidate must already be marked eligible by scientific validation.
+- The report selector independently rechecks every recorded hard constraint:
+  only `pass` and `not_applicable` are accepted; `fail`, `unknown`, and
+  `not_checked` block selection.
+- At least the configured minimum number of finite, non-negative
+  training-fold normalized RMSE values is required (default: two).
+- Symbolic complexity is counted from the restricted parsed expression,
+  unless a non-negative `complexity.node_count` was explicitly supplied.
+- The Pareto objectives are mean normalized RMSE, worst-fold normalized RMSE,
+  and symbolic operation count; all are minimized.
+- Expression recurrence is retained as a diagnostic tie-break only. It is not
+  treated as algebraic equivalence or a physical-validity proof.
+- A deterministic lexicographic recommendation is chosen from the Pareto set;
+  the complete Pareto candidate ID set remains in the report.
+- A selected candidate with non-passing soft diagnostics is reported as
+  `accepted_with_warnings`.
+
+### Failure behavior and data boundary
+
+The report emits explicit statuses for an empty candidate set, hard-gate
+failure, and insufficient fold evidence. It does not silently fall back to
+training R². Its API accepts candidate records and declared variable names,
+not far/test arrays or far metrics. The report records that far evaluation was
+not used for selection; final far metrics remain a separate later-stage
+operation.
+
+### Scope and remaining integration
+
+This PR supplies a reusable report assembler and regression source. It does
+not yet replace the Exp2 final retry selector or claim that the complete
+HybridDiscovery execution path emits this report. The next integration step
+must carry every generated candidate's gate outcomes and candidate-specific
+fold evidence into this selector, preserve rejected-candidate reasons, and
+freeze the selected report before the sealed far evaluation. No experiment,
+benchmark, smoke workflow, worker, or LLM call is part of this change.
