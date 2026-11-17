@@ -294,7 +294,7 @@ def test_exact_predictor_reports_r2_one_rmse_zero_and_undefined_ratio():
     y_far = X_far[:, 0] + 1.0
     result = SimpleNamespace(
         success=True,
-        formula="def formula(x):\\n    return x + 1\\n",
+        formula="def formula(x):\n    return x + 1\n",
     )
     diagnostics = {}
 
