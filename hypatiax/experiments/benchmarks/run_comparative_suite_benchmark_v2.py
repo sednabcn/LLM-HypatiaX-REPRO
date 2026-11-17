@@ -2707,14 +2707,16 @@ try:
                 "selected_attempt": _discovery.get("attempt"),
                 "attempts_used": system.stats.get("symbolic_attempts", 0),
                 "retry_budget": system.max_retries,
-                "selection_metric": "training_r2",
-                "candidate_selection": "highest_training_r2_within_retry_budget",
+                "selection_metric": "training_r2_with_complexity_gate",
+                "candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak",
                 "extrapolation_metric_used_for_selection": False,
                 "training_acceptance_threshold": 0.97,
                 "training_early_stop_threshold": (
                     0.999999 if _disc_cfg.use_transcendental_compositions else 0.99
                 ),
                 "training_quality_check": _discovery.get("quality_check"),
+                "candidate_selection_policy": _discovery.get("candidate_selection_policy"),
+                "candidate_selection_fallback": _discovery.get("candidate_selection_fallback"),
                 "discovery_engine": _discovery.get("discovery_engine"),
                 "physics_fallback_enabled": system.enable_physics_fallback,
                 "discovery_config": {
