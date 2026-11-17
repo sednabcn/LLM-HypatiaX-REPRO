@@ -131,7 +131,7 @@ def make_training_folds(
 
 def evaluate_candidate_on_training_folds(
     expression: str,
-    predictor: Callable[[np.ndarray], np.ndarray],
+    predictor: Callable[[np.ndarray, np.ndarray, np.ndarray], np.ndarray],
     X_train: np.ndarray,
     y_train: np.ndarray,
     folds: tuple[TrainingFold, ...],
@@ -140,9 +140,9 @@ def evaluate_candidate_on_training_folds(
 ) -> CandidateValidationSummary:
     """Evaluate a fixed candidate on internal validation folds only.
 
-    The predictor receives only a fold's validation features.  Fitting or
-    parameter estimation must be completed using that fold's train indices
-    before this function is called (or encapsulated in a fold-aware adapter).
+    The predictor receives (X_fit, y_fit, X_validation) for one fold. It must
+    fit all candidate parameters using only X_fit/y_fit and return predictions
+    for X_validation. No far/test array can be supplied through this interface.
     """
     X = np.asarray(X_train, dtype=float)
     y = np.asarray(y_train, dtype=float).reshape(-1)
@@ -173,7 +173,9 @@ def evaluate_candidate_on_training_folds(
 
         truth = y[valid_idx]
         try:
-            prediction = np.asarray(predictor(X[valid_idx]), dtype=float).reshape(-1)
+            prediction = np.asarray(
+                predictor(X[train_idx], y[train_idx], X[valid_idx]), dtype=float
+            ).reshape(-1)
             if prediction.shape != truth.shape or not np.all(np.isfinite(prediction)):
                 raise ValueError("predictor returned invalid or non-finite values")
             rmse = float(np.sqrt(np.mean(np.square(truth - prediction))))
