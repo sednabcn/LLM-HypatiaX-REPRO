@@ -433,4 +433,7 @@ def test_exp2_hybrid_discovery_uses_llm_hybrid_and_repro_search_config():
     assert 'domain=_domain' in source
     assert '"llm_mode_active": system.llm_mode' in source
     assert '"selection_metric": "training_r2"' in source
+    assert '"candidate_selection": "highest_training_r2_within_retry_budget"' in source
+    assert '"extrapolation_metric_used_for_selection": False' in source
+    assert '"training_acceptance_threshold": 0.97' in source
     assert '"physics_fallback_enabled": system.enable_physics_fallback' in source
