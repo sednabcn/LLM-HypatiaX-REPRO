@@ -1514,6 +1514,7 @@ class HybridDeFiMethod(BaseMethod):
                 return None
 
             eval_ = None
+            eval_source_key = None
             # AUDIT L35: do not let a failed LLM/ensemble row inherit the *other* model's r2.
             _dec = str(decision).lower()
             if _dec == "llm":
@@ -1531,11 +1532,13 @@ class HybridDeFiMethod(BaseMethod):
                 if isinstance(_sub, dict):
                     eval_ = _extract_eval(_sub)
                     if eval_ is not None:
+                        eval_source_key = _key
                         break
 
             # Last resort: r2/rmse at the top level
             if eval_ is None and result.get("r2") is not None:
                 eval_ = result
+                eval_source_key = "top_level_result"
 
             if eval_ is None:
                 # DeFi returned a result but no numeric r2 anywhere.
@@ -1550,7 +1553,26 @@ class HybridDeFiMethod(BaseMethod):
                         method=self.name, success=True,
                         r2=r2_val, rmse=rmse_val,
                         formula=str(_formula)[:500], formula_hash=BaseMethod._make_formula_result(str(_formula))[1], formula_full=str(_formula),
-                        metadata={**_provenance(result), "decision": decision, "eval_source": "y_pred_recompute"},
+                        metadata={
+                            **_provenance(result),
+                            "decision": decision,
+                            "eval_source": "y_pred_recompute",
+                            "evaluation_source_key": "top_level_y_pred",
+                            "evaluation_metric_source": "recomputed_from_top_level_y_pred",
+                            "benchmark_metric_row_scope": "full_input_dataset",
+                            "evaluation_prediction_source": "top_level_y_pred",
+                            "evaluation_prediction_row_count": int(y_pred_arr.size),
+                            "evaluation_feature_representation": {
+                                "schema": "runner_input_X",
+                                "feature_names": list(var_names),
+                                "feature_count": int(X.shape[1]),
+                                "row_count": int(X.shape[0]),
+                            },
+                            "formula_replay_status": "not_attempted",
+                            "residual_correction_attempted": False,
+                            "residual_correction_applied": False,
+                            "final_predictor_composition": "unavailable",
+                        },
                     )
                 self._log(
                     f"hybrid_predict returned no usable evaluation "
@@ -1599,11 +1621,20 @@ class HybridDeFiMethod(BaseMethod):
             # PureLLM Baseline → flagged as duplicate.  Train a shallow MLP on
             # the real residuals so this method is always data-independent.
             _y_pred_defi = eval_.get("y_pred")
-            if _y_pred_defi is None:
+            if _y_pred_defi is not None:
+                _evaluation_prediction_source = f"{eval_source_key or 'evaluation'}.y_pred"
+            else:
                 _y_pred_defi = result.get("y_pred")
+                _evaluation_prediction_source = (
+                    "top_level_result.y_pred" if _y_pred_defi is not None else None
+                )
             _nn_applied_defi = False
             if _y_pred_defi is None and _llm_code:
                 _y_pred_defi = self._runner_eval_formula(_llm_code, X, var_names)
+                if _y_pred_defi is not None:
+                    _evaluation_prediction_source = "llm_formula_replay"
+            if _y_pred_defi is None and np.isfinite(r2_val) and r2_val > 0 and np.isfinite(rmse_val):
+                _evaluation_prediction_source = "synthetic_r2_rmse_reconstruction"
             if _y_pred_defi is not None:
                 _y_pred_defi = np.asarray(_y_pred_defi, dtype=float).flatten()
                 if not np.all(np.isfinite(_y_pred_defi)):
@@ -1629,26 +1660,42 @@ class HybridDeFiMethod(BaseMethod):
             # backend-supplied y_pred alone is not enough to reconstruct an
             # inference function for later far-region scoring.
             _base_predictor_defi = None
+            _formula_replay_status = "not_attempted"
+            _formula_replay_max_abs_error = None
+            _formula_train_pred = None
             if _llm_code and _y_pred_defi is not None:
                 _formula_train_pred = self._runner_eval_formula(
                     _llm_code, X, var_names
                 )
-                if (
-                    _formula_train_pred is not None
-                    and np.asarray(_formula_train_pred).shape == np.asarray(_y_pred_defi).shape
-                    and np.allclose(
+                if _formula_train_pred is None:
+                    _formula_replay_status = "unavailable"
+                elif np.asarray(_formula_train_pred).shape != np.asarray(_y_pred_defi).shape:
+                    _formula_replay_status = "shape_mismatch"
+                else:
+                    _formula_replay_max_abs_error = float(
+                        np.max(np.abs(
+                            np.asarray(_formula_train_pred, dtype=float)
+                            - np.asarray(_y_pred_defi, dtype=float)
+                        ))
+                    )
+                    if np.allclose(
                         _formula_train_pred, _y_pred_defi,
                         rtol=1e-7, atol=1e-15,
-                    )
-                ):
-                    _base_predictor_defi = lambda X_new, _code=_llm_code: self._runner_eval_formula(
-                        _code, np.asarray(X_new, dtype=float), var_names
-                    )
+                    ):
+                        _formula_replay_status = "matches_selected_prediction_array"
+                        _base_predictor_defi = lambda X_new, _code=_llm_code: self._runner_eval_formula(
+                            _code, np.asarray(X_new, dtype=float), var_names
+                        )
+                    else:
+                        _formula_replay_status = "differs_from_selected_prediction_array"
 
+            _residual_correction_attempted = bool(
+                TORCH_AVAILABLE and _y_pred_defi is not None
+                and np.all(np.isfinite(_y_pred_defi))
+                and _finite(r2_val) and r2_val > -1.0
+            )
             _residual_predictor_defi = None
-            if (TORCH_AVAILABLE and _y_pred_defi is not None
-                    and np.all(np.isfinite(_y_pred_defi))
-                    and _finite(r2_val) and r2_val > -1.0):
+            if _residual_correction_attempted:
                 if callable(_base_predictor_defi):
                     # This variant retains both the fitted residual model and
                     # its preprocessing, allowing the full composition to be
@@ -1716,6 +1763,34 @@ class HybridDeFiMethod(BaseMethod):
                 metadata={
                     **_provenance(result),
                     "decision": decision,
+                    "eval_source": eval_source_key,
+                    "evaluation_source_key": eval_source_key,
+                    "evaluation_metric_source": (
+                        f"{eval_source_key}.rmse" if eval_source_key else "unknown"
+                    ),
+                    "benchmark_metric_row_scope": "full_input_dataset",
+                    "benchmark_metric_row_count": int(len(y)),
+                    "evaluation_prediction_source": _evaluation_prediction_source,
+                    "evaluation_prediction_row_count": (
+                        int(np.asarray(_y_pred_defi).size) if _y_pred_defi is not None else None
+                    ),
+                    "evaluation_feature_representation": {
+                        "schema": "runner_input_X",
+                        "feature_names": list(var_names),
+                        "feature_count": int(X.shape[1]),
+                        "row_count": int(X.shape[0]),
+                    },
+                    "formula_replay_status": _formula_replay_status,
+                    "formula_replay_max_abs_error": _formula_replay_max_abs_error,
+                    "residual_correction_attempted": _residual_correction_attempted,
+                    "residual_correction_applied": _nn_applied_defi,
+                    "final_predictor_composition": (
+                        "formula_base_plus_residual_nn"
+                        if _nn_applied_defi and callable(_final_predictor_defi)
+                        else "formula_base"
+                        if callable(_final_predictor_defi)
+                        else "unavailable"
+                    ),
                     "nn_applied": _nn_applied_defi,
                     "external_predictor_available": callable(_final_predictor_defi),
                     "external_predictor_route": (
