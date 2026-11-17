@@ -14,7 +14,7 @@ This is a diagnosis of that smoke run, not a claim about all equations, seeds, o
 
 ## Finding
 
-All 11 null `extrap_error_pct` values are mathematically undefined zero-denominator cases, not missing far predictions or predictor-route failures.
+All 11 null `extrap_error_pct` values are mathematically undefined denominator cases, not missing far predictions or predictor-route failures.
 
 For every one of the 11 rows:
 
@@ -23,7 +23,7 @@ For every one of the 11 rows:
 - `extrap_diagnostic.error_pct_status` is `zero_or_invalid_training_rmse`;
 - `extrap_diagnostic.error_pct_route_consistent` is `true`.
 
-The shared scorer first validates the training targets and training predictions for shape and finiteness. It then calls `calculate_extrapolation_error`, which returns `None` when the training RMSE is non-finite or less than or equal to zero. Since the training inputs passed the finite-value checks and the far RMSE is finite, these rows correspond to a zero training RMSE. The ratio is therefore 0/0.
+The shared scorer first validates the training targets and training predictions for shape and finiteness. It then calls `calculate_extrapolation_error`, which returns `None` when the computed training RMSE is non-finite or less than or equal to zero. The persisted status combines these cases as `zero_or_invalid_training_rmse`; it does not distinguish exact zero from a non-finite RMSE caused during metric calculation. The exact numeric denominator is not persisted, so the artifact proves that the ratio is undefined but does not let us independently separate zero from non-finite for every row. Given the exact-fit methods and zero far RMSEs, zero is the likely case, but the raw denominator is needed to prove it row by row.
 
 The exact numeric `RMSE_train` used by the extrapolation ratio is not currently persisted as a separate field in `benchmark_results_extrap.json`. The diagnosis is established by the persisted status, finite-value checks, and scorer implementation; the raw denominator itself should be added to future diagnostics for direct auditability.
 
@@ -31,7 +31,7 @@ The exact numeric `RMSE_train` used by the extrapolation ratio is not currently 
 
 | Equation | Method | Far RMSE | Ratio status | Predictor route |
 |---|---|---:|---|---|
-| Newton gravity | PureLLM Baseline | 0.0 | zero training RMSE | symbolic formula fallback |
+| Newton gravity | PureLLM Baseline | 0.0 | zero/invalid training RMSE | symbolic formula fallback |
 | Newton gravity | EnhancedHybridSystemDeFi | 0.0 | zero training RMSE | retained final predictor |
 | Newton gravity | HybridSystemLLMNN | 0.0 | zero training RMSE | retained final predictor |
 | Kinetic energy | PureLLM Baseline | 0.0 | zero training RMSE | symbolic formula fallback |
@@ -58,10 +58,10 @@ The remaining seven rows have positive training RMSE and finite ratios:
 ## Important interpretation
 
 1. **Null does not mean failed.** All 11 rows have valid far R² and far RMSE, and their far RMSE is exactly zero.
-2. **Do not replace null with 0%.** A zero numerator divided by a zero denominator is undefined. Reporting 0% would incorrectly imply a positive training baseline and perfect relative stability.
+2. **Do not replace null with 0%.** A zero numerator divided by a zero denominator is undefined; a non-finite denominator is also invalid. Reporting 0% would incorrectly imply a positive training baseline and perfect relative stability.
 3. **The separate benchmark `rmse` field is not the ratio denominator.** It is the ordinary benchmark result RMSE, whereas the ratio denominator is recomputed by the extrapolation scorer on the exact 80% extrapolation-training partition. For example, EnhancedHybridSystemDeFi has a nonzero ordinary benchmark RMSE on Newton gravity and kinetic energy, while its extrapolation training baseline is zero.
 4. **Predictor consistency is not the cause.** All 18 rows record consistent train/far routes. The 11 null rows are not route mismatches or missing retained predictors.
-5. **The metric is uninformative for exact-fit rows.** When both training and far RMSE are zero, report the absolute metrics and a named zero-denominator status. Do not rank these methods by the ratio.
+5. **The metric is uninformative for exact-fit rows.** When the training RMSE is zero or invalid, report the absolute metrics and a precise denominator status. Do not rank these methods by the ratio.
 
 ## Reporting and instrumentation improvements
 
@@ -73,10 +73,10 @@ For future smoke artifacts, persist these fields per method/equation:
 - `error_pct_status`;
 - `predictor_route`, `training_prediction_route`, and route-consistency flag.
 
-Prefer distinct statuses such as `zero_training_rmse` and `nonfinite_training_rmse` if both can occur. Keep predictor-evaluation status separate from ratio-definedness. The current status `zero_or_invalid_training_rmse` is adequate for the observed rows but less informative than a persisted numeric denominator and a precise reason.
+Prefer distinct statuses such as `zero_training_rmse` and `nonfinite_training_rmse`. Keep predictor-evaluation status separate from ratio-definedness. The current `zero_or_invalid_training_rmse` status is not sufficiently granular to identify the exact arithmetic cause. Persist the numeric denominator and a precise reason.
 
 ## Overall result context
 
-The smoke validator passed with 18/18 far R² values, 18/18 far RMSE values, and 7/18 mathematically defined ratios. All six methods executed. The 11 null ratios should be counted as undefined metric outcomes, not missing predictions or method failures.
+The smoke validator passed with 18/18 far R² values, 18/18 far RMSE values, and 7/18 mathematically defined ratios. All six methods executed. The 11 null ratios should be counted as undefined metric outcomes, not missing predictions or method failures. The current artifact does not expose the raw denominator needed to distinguish zero from non-finite training RMSE for every row.
 
 This three-equation smoke is a narrow engineering/diagnostic check. It does not establish broad scientific generalization or comparative superiority.
