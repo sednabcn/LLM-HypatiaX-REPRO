@@ -3427,6 +3427,7 @@ class ProtocolBenchmarkSuite:
             record["extrap_r2_far"]    = extrap_r2_far
             record["extrap_rmse_far"]  = extrap_rmse_far
             record["extrap_error_pct"] = extrap_error_pct   # NEW: % degradation per method
+            record["extrap_diagnostics"] = extrap_diagnostics
             # FIX: store extrap split context at the record level so that
             # print_summary()'s benchmark_results_extrap.json export can read
             # train_frac / n_train / n_test without searching MethodResult.metadata
