@@ -142,3 +142,11 @@ quality ceiling), the selector returns \`NO_CREDIBLE_CANDIDATE\`. It never
 falls back to full-training R². See Section 18 of
 \`docs/hybrid_discovery_physics_informed_architecture.md\` for the design log
 and the remaining Exp2 integration requirements.
+
+## Exp2 Hybrid production adapter
+
+The fold-local PySR evaluator and strategy selector are now connected to the Exp2 Hybrid worker through hypatiax/tools/symbolic/hybrid_fold_search.py. Each fold uses a fresh pure-PySR SymbolicEngine, learns the Hybrid outer signed-log flags and engine-local feature transforms on fitting rows only, and applies the frozen transform plan to held-out training rows. The selector compares baseline, lower-parsimony, and higher-parsimony configurations on identical folds.
+
+The selected configuration is then used for one ordinary final full-training-region HybridDiscovery search. LLM guidance is disabled inside fold searches and remains enabled only for the final configured Hybrid arm. The Exp2 worker records the fold-selection audit and reserves a bounded time budget for it. If all configurations fail the required fold evidence, the worker returns NO_CREDIBLE_CANDIDATE rather than falling back to full-data training R².
+
+This is a bounded integration: two random holdouts, three parsimony settings, 20 search iterations, and a 20-second per-fold timeout. It does not claim continuous-domain physical proof, and it does not use far/test metrics for configuration selection. Regression source was added but not run; no CI or experiment was launched.
