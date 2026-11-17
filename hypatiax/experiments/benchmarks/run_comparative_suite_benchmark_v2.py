@@ -180,12 +180,10 @@ def _dump_json_null(obj, fp, **kw):
 # --- END null-json helpers -----------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# extrap_r2_far — inlined directly so no sys.path dependency is needed.
-# All functions (build_extrap_split, compute_extrap_r2_far,
-# calculate_extrapolation_error, extrapolation_error_status,
-# ExtrapolationRegime, REGIMES) are defined below and available globally.
+# Shared Exp2 extrapolation helpers are imported from the lightweight core above.
+# There is no inline fallback: a failed canonical split must fail closed.
 # ---------------------------------------------------------------------------
-_EXTRAP_MODULE_AVAILABLE = True  # always True — code is inlined
+_EXTRAP_MODULE_AVAILABLE = True
 
 import math
 from dataclasses import dataclass
@@ -4901,50 +4899,13 @@ Examples
         _extrap_tests = []
         for _desc, _X, _y, _vnames, _meta, _dom in all_tests:
             try:
-                if _EXTRAP_MODULE_AVAILABLE:
-                    # Delegate the split entirely to build_extrap_split() so that
-                    # the boundary logic stays in one place (extrap_r2_far.py).
-                    _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
-                        _X, _y,
-                        description=_desc,
-                        train_frac=_efrac,
-                        multiplier=_emult,
-                    )
-                    _meta_ext = {**_meta, **_extrap_meta}
-                else:
-                    # extrap_r2_far module unavailable — inline the split so the
-                    # run can still proceed (without extrapolation error %).
-                    _order   = np.argsort(_X[:, 0])
-                    _Xs, _ys = _X[_order], _y[_order]
-                    _n       = len(_Xs)
-                    _split   = max(1, int(_n * _efrac))
-                    _X_train, _y_train = _Xs[:_split], _ys[:_split]
-                    _x_train_min  = float(_Xs[0, 0])
-                    _x_train_max  = float(_Xs[_split - 1, 0])
-                    _train_range  = max(_x_train_max - _x_train_min, 1e-300)
-                    _far_ceiling  = _x_train_max + _emult * _train_range
-                    _far_all      = _Xs[_split:]
-                    _far_y_all    = _ys[_split:]
-                    _far_mask     = _far_all[:, 0] <= _far_ceiling
-                    _X_far        = _far_all[_far_mask]
-                    _y_far        = _far_y_all[_far_mask]
-                    _n_clipped    = int((~_far_mask).sum())
-                    if _n_clipped > 0:
-                        print(f"   ℹ️  '{_desc[:45]}': clipped {_n_clipped} far sample(s) "
-                              f"beyond {_emult}× boundary (x>{_far_ceiling:.3g})")
-                    if len(_X_far) == 0:
-                        print(f"  ⚠️  '{_desc[:45]}': no far samples within "
-                              f"multiplier={_emult}× — extrap_r2_far will be null")
-                    _meta_ext = {
-                        **_meta,
-                        "extrap":             True,
-                        "extrap_train_frac":  _efrac,
-                        "extrap_multiplier":  _emult,
-                        "extrap_n_train":     _split,
-                        "extrap_n_test":      len(_X_far),
-                        "extrap_x_train_max": _x_train_max,
-                        "extrap_far_ceiling": _far_ceiling,
-                    }
+                _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
+                    _X, _y,
+                    description=_desc,
+                    train_frac=_efrac,
+                    multiplier=_emult,
+                )
+                _meta_ext = {**_meta, **_extrap_meta}
                 _extrap_tests.append((_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
                                       _X_far, _y_far))
             except Exception as _esplit_exc:
