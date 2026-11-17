@@ -390,3 +390,39 @@ This guide extends, rather than replaces, the following repository material:
 The shared core establishes the split and metric rules. This document adds
 the missing method-level invariant: the training and far RMSEs used in a
 single ratio must be produced by the same final fitted prediction route.
+
+
+## Implementation status
+
+The first scorer-level implementation is in
+`hypatiax/experiments/benchmarks/exp2_extrapolation_core.py`:
+
+- A retained `_predict_fn` now takes precedence for both far and exact
+  training predictions. A supplied formula-derived `y_pred_train` array
+  cannot override the retained final predictor.
+- When no retained predictor exists, the symbolic-formula fallback can still
+  use the runner's pre-evaluated formula training predictions, preserving
+  engineered-feature compatibility.
+- Diagnostics record the far predictor route, training prediction route, and
+  whether the two routes agree. Detailed training prediction errors are
+  preserved alongside the final far-metric status.
+- A synthetic regression test supplies deliberately conflicting formula
+  predictions and verifies that the retained hybrid predictor controls the
+  ratio.
+- The v2 all-domains hybrid now labels a result as predictor-unavailable
+  instead of allowing an unverified formula to stand in for backend/NN
+  predictions. When its residual correction is accepted and a verified
+  formula base exists, it retains the complete base-plus-residual callable.
+- The v2 DeFi wrapper now retains the complete formula-plus-residual callable
+  when the formula reproduces the base predictions; otherwise, an accepted
+  learned correction is explicitly marked as not externally evaluable rather
+  than scoring the base formula as the final method.
+- The PCA DeFi path already constructs its selected inference route through
+  `compose_hybrid_predictor`; the scorer now uses that callable for both
+  partitions rather than a separate formula baseline.
+
+This implementation improves route consistency and rejects cases where a
+complete predictor cannot be reconstructed. It does not promise a non-null
+ratio for every method: an unavailable final predictor or zero training RMSE
+remains an explicit limitation. Offline tests are committed for CI and have
+not been run locally. No experiment or smoke workflow has been dispatched.

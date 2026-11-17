@@ -334,11 +334,11 @@ def compute_extrap_r2_far(
 
     Notes
     -----
-    A retained fitted predictor is preferred for far and training predictions.
-    When no predictor is available, an evaluable symbolic formula is used for
-    far predictions and caller-supplied training predictions may provide the
-    RMSE baseline. Architecture labels without a retained predictor are
-    reported as unsupported rather than assigned fabricated scores.
+    A retained final fitted predictor is authoritative for both far and
+    training predictions; caller-supplied arrays never override it. When no
+    retained predictor exists, an evaluable symbolic formula may be used for
+    far predictions and formula-derived training predictions may provide the
+    RMSE baseline. The selected route is recorded in diagnostics.
     """
     extrap_r2_far:    Dict[str, Optional[float]] = {}
     extrap_rmse_far:  Dict[str, Optional[float]] = {}
@@ -358,7 +358,12 @@ def compute_extrap_r2_far(
 
     for mname, res in results.items():
         def _mark(status: str, reason: str = "") -> None:
-            _diag[mname] = {"status": status, **({"reason": reason} if reason else {})}
+            # Preserve detailed training/prediction diagnostics collected
+            # before the final far-metric status is assigned.
+            method_diag = _diag.setdefault(mname, {})
+            method_diag["status"] = status
+            if reason:
+                method_diag["reason"] = reason
 
         if not getattr(res, "success", False):
             extrap_r2_far[mname] = None
@@ -444,38 +449,61 @@ def compute_extrap_r2_far(
         extrap_rmse_far[mname] = rmse_far
         error_pct: Optional[float] = None
         error_pct_status = "training_targets_unavailable"
+        predictor_route = (
+            "retained_final_predictor"
+            if callable(predictor)
+            else "symbolic_formula_fallback"
+        )
+        train_prediction_route = None
+
         if y_train is not None and rmse_far is not None:
             train_prediction = None
-            if y_pred_train is not None and mname in y_pred_train:
-                train_prediction = np.asarray(y_pred_train[mname], dtype=float).reshape(-1)
-                error_pct_status = "provided_training_predictions"
-            elif callable(predictor) and X_train_predictor is not None:
-                try:
-                    train_prediction = np.asarray(
-                        predictor(X_train_predictor), dtype=float
-                    ).reshape(-1)
-                    error_pct_status = "retained_predictor"
-                except Exception as exc:
-                    error_pct_status = "training_prediction_error"
-                    _diag.setdefault(mname, {})["error_pct_reason"] = (
-                        f"{type(exc).__name__}: {exc}"
-                    )
+            # A retained callable is the authoritative representation of the
+            # final fitted method. Never let a formula-only/precomputed array
+            # replace its training predictions: that would divide errors from
+            # two different predictors for a hybrid method.
+            if callable(predictor):
+                train_prediction_route = "retained_final_predictor"
+                if X_train_predictor is None:
+                    error_pct_status = "training_predictor_unavailable"
+                else:
+                    try:
+                        train_prediction = np.asarray(
+                            predictor(X_train_predictor), dtype=float
+                        ).reshape(-1)
+                        error_pct_status = "retained_predictor"
+                    except Exception as exc:
+                        error_pct_status = "training_prediction_error"
+                        _diag.setdefault(mname, {})["error_pct_reason"] = (
+                            f"{type(exc).__name__}: {exc}"
+                        )
+            elif y_pred_train is not None and mname in y_pred_train:
+                # In the formula fallback route, runners pre-evaluate formulas
+                # on the augmented training matrix. Keep that route only when
+                # no final fitted predictor exists; its provenance is recorded
+                # as assumed symbolic-formula fallback for auditability.
+                train_prediction = np.asarray(
+                    y_pred_train[mname], dtype=float
+                ).reshape(-1)
+                train_prediction_route = "symbolic_formula_fallback"
+                error_pct_status = "provided_formula_training_predictions"
             else:
                 error_pct_status = "training_predictor_unavailable"
 
             if train_prediction is not None:
-                if train_prediction.shape != np.asarray(y_train).reshape(-1).shape:
+                train_targets = np.asarray(y_train, dtype=float).reshape(-1)
+                if train_prediction.shape != train_targets.shape:
                     error_pct_status = "training_prediction_length_mismatch"
                 elif not np.all(np.isfinite(train_prediction)):
                     error_pct_status = "nonfinite_training_prediction"
+                elif not np.all(np.isfinite(train_targets)):
+                    error_pct_status = "training_targets_invalid"
                 else:
                     try:
-                        rmse_train = _far_rmse(y_train, train_prediction)
+                        rmse_train = _far_rmse(train_targets, train_prediction)
                         error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
                         if error_pct is None:
-                            error_pct_status = (
-                                "zero_or_invalid_training_rmse"
-                            )
+                            error_pct_status = "zero_or_invalid_training_rmse"
                         else:
                             error_pct_status = "available"
                     except Exception as exc:
@@ -483,6 +511,7 @@ def compute_extrap_r2_far(
                         _diag.setdefault(mname, {})["error_pct_reason"] = (
                             f"{type(exc).__name__}: {exc}"
                         )
+
         extrap_error_pct[mname] = error_pct
         if r2f is None:
             _mark("r2_metric_unavailable")
@@ -490,7 +519,14 @@ def compute_extrap_r2_far(
             _mark("rmse_metric_unavailable")
         else:
             _mark("scored")
-        _diag.setdefault(mname, {})["error_pct_status"] = error_pct_status
+        method_diag = _diag.setdefault(mname, {})
+        method_diag["error_pct_status"] = error_pct_status
+        method_diag["predictor_route"] = predictor_route
+        method_diag["training_prediction_route"] = train_prediction_route
+        method_diag["error_pct_route_consistent"] = (
+            train_prediction_route == predictor_route
+            if train_prediction_route is not None else False
+        )
 
     if verbose and any(v is not None for v in extrap_r2_far.values()):
         print(

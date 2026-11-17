@@ -1607,10 +1607,49 @@ class HybridDeFiMethod(BaseMethod):
                         _y_pred_defi = _y_pred_defi + _rng.normal(0, rmse_val * 0.01, size=len(y))
                 except Exception:
                     _y_pred_defi = None
+            # Retain a callable for the exact base route only when the
+            # candidate formula reproduces the predictions used above. A
+            # backend-supplied y_pred alone is not enough to reconstruct an
+            # inference function for later far-region scoring.
+            _base_predictor_defi = None
+            if _llm_code and _y_pred_defi is not None:
+                _formula_train_pred = self._runner_eval_formula(
+                    _llm_code, X, var_names
+                )
+                if (
+                    _formula_train_pred is not None
+                    and np.asarray(_formula_train_pred).shape == np.asarray(_y_pred_defi).shape
+                    and np.allclose(
+                        _formula_train_pred, _y_pred_defi,
+                        rtol=1e-7, atol=1e-15,
+                    )
+                ):
+                    _base_predictor_defi = lambda X_new, _code=_llm_code: self._runner_eval_formula(
+                        _code, np.asarray(X_new, dtype=float), var_names
+                    )
+
+            _residual_predictor_defi = None
             if (TORCH_AVAILABLE and _y_pred_defi is not None
                     and np.all(np.isfinite(_y_pred_defi))
                     and _finite(r2_val) and r2_val > -1.0):
-                _y_hybrid = self._nn_residual_fit(X, y, _y_pred_defi, description)
+                if callable(_base_predictor_defi):
+                    # This variant retains both the fitted residual model and
+                    # its preprocessing, allowing the full composition to be
+                    # replayed on exact training and far rows.
+                    _residual_fit = HybridAllDomainsMethod._nn_residual_fit(
+                        X, y, _y_pred_defi, description
+                    )
+                    if _residual_fit is not None:
+                        _y_hybrid, _residual_predictor_defi = _residual_fit
+                    else:
+                        _y_hybrid = None
+                else:
+                    # Preserve the legacy in-sample diagnostic, but do not
+                    # expose a formula as the final predictor when the learned
+                    # correction cannot be replayed on new inputs.
+                    _y_hybrid = self._nn_residual_fit(
+                        X, y, _y_pred_defi, description
+                    )
                 if _y_hybrid is not None and np.all(np.isfinite(_y_hybrid)):
                     _r2h  = self._safe_r2(y, _y_hybrid)
                     _rmh  = self._safe_rmse(y, _y_hybrid)
@@ -1620,13 +1659,57 @@ class HybridDeFiMethod(BaseMethod):
                         _nn_applied_defi = True
                         self._log(f"NN residual correction applied R²={r2_val:.4f}")
 
-            _fdisp, _fhash, _ffull = BaseMethod._make_formula_result(str(_formula))
+            _final_predictor_defi = None
+            if _nn_applied_defi and callable(_base_predictor_defi) and callable(_residual_predictor_defi):
+                def _final_predictor_defi(X_new, _base=_base_predictor_defi,
+                                          _residual=_residual_predictor_defi):
+                    _X_new = np.asarray(X_new, dtype=float)
+                    _base_values = _base(_X_new)
+                    if _base_values is None:
+                        raise ValueError("DeFi base formula could not evaluate inference features")
+                    _base_pred = np.asarray(_base_values, dtype=float).reshape(-1)
+                    if (
+                        _X_new.ndim != 2
+                        or _base_pred.shape != (_X_new.shape[0],)
+                        or not np.isfinite(_base_pred).all()
+                    ):
+                        raise ValueError("DeFi base predictor returned invalid predictions")
+                    _corrected = np.asarray(
+                        _residual(_X_new, _base_pred), dtype=float
+                    ).reshape(-1)
+                    if _corrected.shape != _base_pred.shape or not np.isfinite(_corrected).all():
+                        raise ValueError("DeFi hybrid predictor returned invalid predictions")
+                    return _corrected
+            elif not _nn_applied_defi and callable(_base_predictor_defi):
+                _final_predictor_defi = _base_predictor_defi
+
+            # If a learned correction changed the reported method but no
+            # complete inference callable could be retained, do not let the
+            # base symbolic formula masquerade as the final method.
+            _formula_for_result = (
+                "[NN residual correction — final predictor unavailable]"
+                if _nn_applied_defi and not callable(_final_predictor_defi)
+                else _formula
+            )
+            _fdisp, _fhash, _ffull = BaseMethod._make_formula_result(str(_formula_for_result))
             _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2_val, rmse=rmse_val,
                 formula=_fdisp, formula_hash=_fhash, formula_full=_ffull,
-                metadata={**_provenance(result), "decision": decision, "nn_applied": _nn_applied_defi},
+                metadata={
+                    **_provenance(result),
+                    "decision": decision,
+                    "nn_applied": _nn_applied_defi,
+                    "external_predictor_available": callable(_final_predictor_defi),
+                    "external_predictor_route": (
+                        "formula_plus_residual_nn" if _nn_applied_defi and callable(_final_predictor_defi)
+                        else "formula" if callable(_final_predictor_defi)
+                        else "unavailable"
+                    ),
+                },
             )
+            if callable(_final_predictor_defi):
+                _method_result._predict_fn = _final_predictor_defi
             return _method_result
 
         except Exception as exc:
@@ -2181,21 +2264,37 @@ class HybridAllDomainsMethod(BaseMethod):
                         )
 
             _fstr_2534 = _extract_formula(result)  # B2/B3: formula is nested under llm_result
+            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
+                _predict_fn = _base_predict_fn
+            # A formula is a valid fallback only if it is the actual prediction
+            # route. When backend predictions or an NN correction changed the
+            # method but no complete inference callable was retained, keep an
+            # architecture label rather than silently scoring the base formula.
+            _formula_for_result = (
+                _fstr_2534 if callable(_predict_fn)
+                else "[final hybrid predictor unavailable]"
+            )
             _method_result = MethodResult(
                 method=self.name, success=True,
                 r2=r2v,
                 rmse=rmse,
-                formula=_fstr_2534[:500], formula_hash=BaseMethod._make_formula_result(_fstr_2534)[1], formula_full=_fstr_2534,
+                formula=_formula_for_result[:500],
+                formula_hash=BaseMethod._make_formula_result(_formula_for_result)[1],
+                formula_full=_formula_for_result,
                 metadata={
                     **_provenance(result),
                     "decision":   result.get("decision", "unknown"),
                     "nn_applied": nn_applied,
+                    "external_predictor_available": callable(_predict_fn),
+                    "external_predictor_route": (
+                        "base_plus_residual_nn" if nn_applied and callable(_predict_fn)
+                        else "base_predictor" if callable(_predict_fn)
+                        else "unavailable"
+                    ),
                     "force_llm_domain_override": _force_llm_domain_override,
                     "forced_domain": _domain if _force_llm_domain_override else None,
                 },
             )
-            if _predict_fn is None and callable(_base_predict_fn) and not nn_applied:
-                _predict_fn = _base_predict_fn
             if callable(_predict_fn):
                 _method_result._predict_fn = _predict_fn
             return _method_result

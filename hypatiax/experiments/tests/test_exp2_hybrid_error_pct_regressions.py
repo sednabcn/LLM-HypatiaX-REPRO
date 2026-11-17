@@ -134,3 +134,74 @@ def test_defi_without_formula_or_retained_predictor_reports_missing_far_score():
     assert rmse[method] is None
     assert error_pct[method] is None
     assert diagnostics[method]["status"] == "formula_missing"
+
+
+
+def test_retained_final_predictor_overrides_conflicting_formula_training_predictions():
+    X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
+    # Keep a nonzero training RMSE so the ratio is mathematically defined;
+    # the far-region predictions remain exact.
+    y_train = np.array([1.1, 2.1, 3.1, 4.1])
+    X_far = np.array([[4.0], [5.0], [6.0]])
+    y_far = np.array([5.0, 6.0, 7.0])
+
+    # The retained method is exact on the far partition. The deliberately
+    # conflicting precomputed array represents only a symbolic base formula.
+    result = SimpleNamespace(
+        success=True,
+        formula="def formula(x):\n    return x + 100\n",
+        _predict_fn=lambda X: np.asarray(X, dtype=float)[:, 0] + 1.0,
+    )
+    diagnostics = {}
+
+    _, rmse, error_pct = compute_extrap_r2_far(
+        {"hybrid": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        y_pred_train={"hybrid": np.full(len(y_train), 101.0)},
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    assert rmse["hybrid"] == pytest.approx(0.0)
+    assert error_pct["hybrid"] == pytest.approx(0.0)
+    assert diagnostics["hybrid"]["predictor_route"] == "retained_final_predictor"
+    assert diagnostics["hybrid"]["training_prediction_route"] == "retained_final_predictor"
+    assert diagnostics["hybrid"]["error_pct_route_consistent"] is True
+
+
+
+def test_training_prediction_failure_preserves_independent_far_metrics():
+    X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
+    X_far = np.array([[4.0], [5.0], [6.0]])
+    y_far = np.array([5.0, 6.0, 7.0])
+
+    def predictor(X):
+        values = np.asarray(X, dtype=float)
+        if values[0, 0] < 4.0:
+            raise RuntimeError("synthetic training prediction failure")
+        return values[:, 0] + 1.0
+
+    result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predictor)
+    diagnostics = {}
+    _, rmse, error_pct = compute_extrap_r2_far(
+        {"hybrid": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=np.array([1.0, 2.0, 3.0, 4.0]),
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    assert rmse["hybrid"] == pytest.approx(0.0)
+    assert error_pct["hybrid"] is None
+    assert diagnostics["hybrid"]["error_pct_status"] == "training_prediction_error"
+    assert diagnostics["hybrid"]["predictor_route"] == "retained_final_predictor"
+    assert diagnostics["hybrid"]["training_prediction_route"] == "retained_final_predictor"
+    assert diagnostics["hybrid"]["error_pct_route_consistent"] is True
+    assert "synthetic training prediction failure" in diagnostics["hybrid"]["error_pct_reason"]
