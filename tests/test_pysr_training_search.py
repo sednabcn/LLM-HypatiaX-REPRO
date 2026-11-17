@@ -1,0 +1,74 @@
+"""Offline contract tests for fresh PySR search per training fold."""
+import numpy as np
+import pytest
+
+from hypatiax.tools.symbolic.training_validation import make_training_folds
+from hypatiax.tools.symbolic.pysr_training_search import (
+    evaluate_pysr_search_on_training_folds,
+)
+
+
+class FakePySR:
+    def __init__(self, seed):
+        self.seed = seed
+        self.fitted = False
+
+    def fit(self, X, y):
+        self.fitted = True
+        self.mean_ = float(np.mean(y))
+        return self
+
+    def get_best(self):
+        return {"equation": "x0"}
+
+    def predict(self, X):
+        assert self.fitted
+        return np.full(len(X), self.mean_)
+
+
+def test_runs_a_fresh_searcher_for_each_training_fold():
+    X = np.arange(60, dtype=float).reshape(30, 2)
+    y = 2.0 * X[:, 0] + 1.0
+    folds = make_training_folds(30, n_splits=3, n_repeats=2, seed=9)
+    created = []
+
+    def factory(seed):
+        model = FakePySR(seed)
+        created.append(model)
+        return model
+
+    result = evaluate_pysr_search_on_training_folds(factory, X, y, folds)
+
+    assert len(created) == len(folds)
+    assert len({id(model) for model in created}) == len(folds)
+    assert len(result.fold_searches) == len(folds)
+    assert result.validation.valid_fold_count == len(folds)
+    assert all(item["fit_scope"] == "fold_fitting_rows_only" for item in result.fold_searches)
+    assert result.to_dict()["far_test_data_used"] is False
+
+
+def test_rejects_factory_that_reuses_a_fitted_model():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=4)
+    shared = FakePySR(42)
+
+    with pytest.raises(ValueError, match="fresh PySR model"):
+        evaluate_pysr_search_on_training_folds(
+            lambda seed: shared, X, y, folds, minimum_valid_folds=2
+        )
+
+
+def test_invalid_held_out_predictions_fail_validation():
+    class BadPySR(FakePySR):
+        def predict(self, X):
+            return np.full(len(X), np.nan)
+
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=4)
+
+    with pytest.raises(ValueError, match="insufficient valid training folds"):
+        evaluate_pysr_search_on_training_folds(
+            BadPySR, X, y, folds, minimum_valid_folds=2
+        )
