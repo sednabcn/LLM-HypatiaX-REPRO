@@ -11,15 +11,26 @@ from hashlib import sha256
 import json
 import math
 from types import MappingProxyType
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 
 CONTRACT_VERSION = "1.0"
 
 
+def _freeze_value(value: Any) -> Any:
+    """Recursively freeze nested contract containers."""
+    if isinstance(value, Mapping):
+        return MappingProxyType({str(k): _freeze_value(v) for k, v in value.items()})
+    if isinstance(value, (tuple, list)):
+        return tuple(_freeze_value(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze_value(item) for item in value)
+    return value
+
+
 def _freeze_mapping(value: Mapping[str, Any] | None) -> Mapping[str, Any]:
     """Copy a mapping so callers cannot mutate a frozen contract indirectly."""
-    return MappingProxyType(dict(value or {}))
+    return _freeze_value(dict(value or {}))
 
 
 def _plain(value: Any) -> Any:
