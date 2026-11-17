@@ -85,6 +85,7 @@ def build_extrap_split(
     description: str = "",
     train_frac: float = 0.8,
     multiplier: float = 2.0,
+    feature_index: Optional[int] = 0,
 ) -> Tuple[
     np.ndarray,   # X_train
     np.ndarray,   # y_train
@@ -95,10 +96,11 @@ def build_extrap_split(
     """
     Re-partition (X, y) for OOD extrapolation evaluation.
 
-    Training covers the first `train_frac` of the sample range (sorted by
-    X[:,0]).  The far region is the remainder, clipped at
-    x_train_max + multiplier * train_range so the evaluation regime matches
-    repro.yaml benchmarks.feynman.extrap_mult=2.0.
+    Independent directions sort on X[:, feature_index] while retaining all
+    original columns. Set feature_index=None for a joint high-input direction:
+    rows are ranked by mean per-feature empirical percentile. The far region
+    is clipped at the selected score's training maximum plus multiplier times
+    its training range. The joint score is a protocol coordinate, not a feature.
 
     Returns (X_train, y_train, X_far, y_far, metadata).
     Raises ValueError when the requested split cannot provide at least two
@@ -117,11 +119,30 @@ def build_extrap_split(
     if not math.isfinite(float(multiplier)) or float(multiplier) <= 0.0:
         raise ValueError("multiplier must be finite and greater than zero")
 
-    # Sort by first variable to get a contiguous training region.
-    order    = np.argsort(X[:, 0])
-    Xs       = X[order]
-    ys       = y[order]
-    n        = len(Xs)
+    if feature_index is not None and (
+        isinstance(feature_index, bool)
+        or not isinstance(feature_index, (int, np.integer))
+        or feature_index < 0
+        or feature_index >= X.shape[1]
+    ):
+        raise ValueError(f"feature_index must be None or an index in [0, {X.shape[1]})")
+
+    if feature_index is None:
+        ranks = np.empty_like(X, dtype=float)
+        for column in range(X.shape[1]):
+            order_col = np.argsort(X[:, column], kind="mergesort")
+            ranks[order_col, column] = np.arange(X.shape[0], dtype=float) / max(X.shape[0] - 1, 1)
+        direction_score = np.mean(ranks, axis=1)
+        direction_name = "joint_mean_percentile"
+    else:
+        direction_score = X[:, int(feature_index)]
+        direction_name = f"feature_{int(feature_index)}"
+
+    order = np.argsort(direction_score, kind="mergesort")
+    Xs = X[order]
+    ys = y[order]
+    score_sorted = direction_score[order]
+    n = len(Xs)
     split    = int(n * train_frac)
     if split < 2 or n - split < 2:
         raise ValueError(f"split leaves too few train/far rows: train={split}, far={n - split}")
@@ -130,14 +151,14 @@ def build_extrap_split(
 
     # Multiplier-bounded far region.
     # far_ceiling = x_train_max + multiplier * train_range
-    x_train_min  = float(Xs[0, 0])
-    x_train_max  = float(Xs[split - 1, 0])
-    train_range  = max(x_train_max - x_train_min, 1e-300)
-    far_ceiling  = x_train_max + multiplier * train_range
+    x_train_min = float(score_sorted[0])
+    x_train_max = float(score_sorted[split - 1])
+    train_range = max(x_train_max - x_train_min, 1e-300)
+    far_ceiling = x_train_max + multiplier * train_range
 
-    far_all      = Xs[split:]
-    far_y_all    = ys[split:]
-    far_mask     = far_all[:, 0] <= far_ceiling
+    far_all = Xs[split:]
+    far_y_all = ys[split:]
+    far_mask = score_sorted[split:] <= far_ceiling
     X_far        = far_all[far_mask]
     y_far        = far_y_all[far_mask]
     if len(X_far) < 2:
@@ -158,6 +179,11 @@ def build_extrap_split(
         "extrap_n_test":     len(X_far),
         "extrap_x_train_max": x_train_max,
         "extrap_far_ceiling": far_ceiling,
+        "extrap_direction": direction_name,
+        "extrap_feature_index": feature_index,
+        "extrap_direction_score": (
+            "mean_empirical_percentile" if feature_index is None else "raw_feature_value"
+        ),
     }
 
     return X_train, y_train, X_far, y_far, metadata
