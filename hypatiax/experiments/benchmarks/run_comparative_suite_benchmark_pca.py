@@ -3428,9 +3428,22 @@ class ProtocolBenchmarkSuite:
             "timestamp":     datetime.now().isoformat(),
         }
         if _do_extrap:
+            # Primary Exp2 score: far-region RMSE normalized by the exact
+            # extrapolation-training target scale. Keep error_pct for legacy readers.
             record["extrap_r2_far"]    = extrap_r2_far
             record["extrap_rmse_far"]  = extrap_rmse_far
-            record["extrap_error_pct"] = extrap_error_pct   # NEW: % degradation per method
+            record["extrapolation_score"] = {
+                name: (extrap_diagnostics.get(name) or {}).get("extrapolation_score")
+                for name in results
+            }
+            record["extrapolation_score_status"] = {
+                name: (extrap_diagnostics.get(name) or {}).get(
+                    "extrap_nrmse_far_status", "prediction_or_training_scale_unavailable"
+                )
+                for name in results
+            }
+            record["extrapolation_score_name"] = "training_scale_normalized_far_rmse"
+            record["extrap_error_pct"] = extrap_error_pct   # legacy compatibility only
             record["extrap_diagnostics"] = extrap_diagnostics
             record["extrap_prediction_audit"] = extrap_prediction_audit
             # FIX: store extrap split context at the record level so that
@@ -3872,8 +3885,16 @@ class ProtocolBenchmarkSuite:
                     # (i.e. when the run used --extrap).  Absent means the column
                     # was never computed; null means it was computed but failed.
                     if _extrap_r2_map:
+                        _method_extrap_diag = _diag_map.get(_mname) or {}
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
+                        _row["extrapolation_score"] = _method_extrap_diag.get("extrapolation_score")
+                        _row["extrapolation_score_status"] = _method_extrap_diag.get(
+                            "extrap_nrmse_far_status", "prediction_or_training_scale_unavailable"
+                        )
+                        _row["extrapolation_score_name"] = _method_extrap_diag.get(
+                            "extrapolation_score_name", "training_scale_normalized_far_rmse"
+                        )
                         _row.update({"extrap_diagnostic": _diag_map.get(_mname)})
                         _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
