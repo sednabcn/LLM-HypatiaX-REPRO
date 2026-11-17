@@ -205,57 +205,6 @@ def _m5_record_failure(where, exc):
     return None
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 0.  EXTRAPOLATION REGIME — five-tier quality ladder
-#     Matches extrapolation_test_protocol.py and the comments in run_test()
-# ──────────────────────────────────────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class ExtrapolationRegime:
-    """A single tier in the extrapolation-quality ladder."""
-    name:      str    # e.g. "EXCELLENT"
-    threshold: float  # upper bound of this tier (exclusive), % units
-    label:     str    # human-readable label for display
-
-
-#: Ordered from best to worst.  Each tier covers error_pct < threshold.
-#: The last entry (CATASTROPHIC) has threshold=inf so it catches everything ≥ 500 %.
-REGIMES: List[ExtrapolationRegime] = [
-    ExtrapolationRegime("EXCELLENT",    50.0,       "< 50 %  EXCELLENT"),
-    ExtrapolationRegime("GOOD",        100.0,       "< 100 % GOOD"),
-    ExtrapolationRegime("MODERATE",    200.0,       "< 200 % MODERATE"),
-    ExtrapolationRegime("POOR",        500.0,       "< 500 % POOR"),
-    ExtrapolationRegime("CATASTROPHIC", float("inf"), "≥ 500 % CATASTROPHIC"),
-]
-
-
-def _select_formula_fn(exec_ns, safe_globals):
-    """
-    Pick the function a ``def`` snippet defined.
-
-    FIX (first-callable bug): the old selection took the first callable in
-    exec_ns. exec_ns starts as a copy of safe_globals, whose first callable
-    entries are the bare-name ufuncs (``exp`` is a clipping lambda), so every
-    ``def formula(...)`` snippet was silently scored as ``exp(first_arg)`` (one
-    variable) or raised (several variables) -> -inf / null far scores.
-
-    Order: (1) a callable literally named ``formula``; (2) the LAST callable
-    the snippet itself defined, i.e. whose value is not the same object as the
-    safe_globals entry of that name.
-    """
-    fn = exec_ns.get("formula")
-    if callable(fn) and safe_globals.get("formula") is not fn:
-        return fn
-    user_defined = [
-        v for k, v in exec_ns.items()
-        if callable(v)
-        and k != "__builtins__"
-        and not k.startswith("_")
-        and safe_globals.get(k) is not v
-    ]
-    return user_defined[-1] if user_defined else None
-
-
 def _finite(x) -> bool:
     """True only for a real, finite number; None-safe (np.isfinite(None) raises)."""
     try:
