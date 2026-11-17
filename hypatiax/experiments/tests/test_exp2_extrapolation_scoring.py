@@ -107,16 +107,19 @@ def test_both_active_feynman_runners_fail_closed_on_invalid_extrapolation_splits
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[3]
+    bench = root / "hypatiax" / "experiments" / "benchmarks"
+    core_source = (bench / "exp2_extrapolation_core.py").read_text()
+    assert "if split < 2 or n - split < 2:" in core_source
+    assert "if len(X_far) < 2:" in core_source
+    assert "rmse_far = _far_rmse(y_far, y_far_pred)" in core_source
     for filename in (
         "run_comparative_suite_benchmark_v2.py",
         "run_comparative_suite_benchmark_pca.py",
     ):
-        source = (root / "hypatiax/experiments/benchmarks" / filename).read_text()
+        source = (bench / filename).read_text()
         assert "raise RuntimeError(" in source
         assert "refusing an in-sample fallback" in source
-        assert "if split < 2 or n - split < 2:" in source
-        assert "if len(X_far) < 2:" in source
-        assert "rmse_far = _far_rmse(y_far, y_far_pred)" in source
+        assert "build_extrap_split(" in source
 
 
 def test_feynman_output_identity_includes_domain_and_timestamp_precision():
