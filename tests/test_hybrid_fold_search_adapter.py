@@ -84,3 +84,64 @@ def test_validation_range_does_not_change_fit_learned_log_flags(monkeypatch):
     np.testing.assert_allclose(engine.validation_X, X_validation)
     assert model.x_log_flags == [False]
     assert model.y_log is False
+
+
+
+class FakeParetoModel:
+    def __init__(self):
+        self.received_X = None
+        self.received_index = None
+
+    def predict(self, X, index=None):
+        self.received_X = np.asarray(X).copy()
+        self.received_index = index
+        return np.ones(X.shape[0], dtype=float)
+
+
+def test_engine_reuses_fold_fitted_scale_gm_and_ratio_plan():
+    from hypatiax.tools.symbolic.symbolic_engine import SymbolicEngine
+
+    engine = SymbolicEngine.__new__(SymbolicEngine)
+    engine.model = FakeParetoModel()
+    engine._last_fold_transform_state = {
+        "input_feature_count": 2,
+        "x_scales": [2.0, 1.0],
+        "gm_pairs": [[0, 1]],
+        "ratio_pairs": [[2, 1]],
+        "y_std": 3.0,
+        "best_index": 4,
+        "feature_names": ["a", "b", "gm_a_b", "ratio_gm_a_b_b"],
+    }
+    X_validation = np.array([[8.0, 2.0], [18.0, 8.0]])
+    prediction = engine.predict_fold_validation(X_validation)
+
+    scaled = X_validation / np.array([2.0, 1.0])
+    gm = np.sqrt(scaled[:, 0] * scaled[:, 1])
+    with_gm = np.column_stack((scaled, gm))
+    ratio = with_gm[:, 2] / (with_gm[:, 1] + 1e-300)
+    expected = np.column_stack((with_gm, ratio))
+    np.testing.assert_allclose(engine.model.received_X, expected)
+    np.testing.assert_allclose(prediction, np.full(2, 3.0))
+    assert engine.model.received_index == 4
+
+
+def test_engine_rejects_validation_outside_fit_selected_positive_domain():
+    from hypatiax.tools.symbolic.symbolic_engine import SymbolicEngine
+
+    engine = SymbolicEngine.__new__(SymbolicEngine)
+    engine.model = FakeParetoModel()
+    engine._last_fold_transform_state = {
+        "input_feature_count": 2,
+        "x_scales": [1.0, 1.0],
+        "gm_pairs": [[0, 1]],
+        "ratio_pairs": [],
+        "y_std": 1.0,
+        "best_index": 0,
+        "feature_names": ["a", "b", "gm_a_b"],
+    }
+    try:
+        engine.predict_fold_validation(np.array([[1.0, -1.0]]))
+    except ValueError as exc:
+        assert "positive GM feature domain" in str(exc)
+    else:
+        raise AssertionError("positive-domain violation must fail closed")
