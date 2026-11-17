@@ -1352,7 +1352,6 @@ class HybridDiscoverySystem:
             from hypatiax.tools.symbolic.hybrid_fold_search import (
                 select_hybrid_search_configuration,
             )
-            _base_parsimony = float(self.symbolic_engine.config.parsimony)
             _selection_seed = int(
                 metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
             )
@@ -1362,7 +1361,7 @@ class HybridDiscoverySystem:
                     y,
                     variable_names=var_names,
                     equation_name=str(metadata.get("equation_name", description or "unknown")),
-                    domain=str(_domain_from_meta or self.domain),
+                    domain=str(metadata.get("domain") or self.domain),
                     base_config=self.symbolic_engine.config,
                     seed=_selection_seed,
                     n_splits=int(_validation_settings.get("n_splits", 2)),
@@ -1536,35 +1535,36 @@ class HybridDiscoverySystem:
         # Always assigned so a stale context can never leak into the next call.
         self.symbolic_engine._fixd_ctx = _fixd_ctx
 
-        _original_parsimony = self.symbolic_engine.config.parsimony
         try:
-            if self._training_only_search_selection is not None:
-                self.symbolic_engine.config.parsimony = (
-                    self._selected_training_search_parsimony
+            _original_parsimony = self.symbolic_engine.config.parsimony
+            try:
+                if self._training_only_search_selection is not None:
+                    self.symbolic_engine.config.parsimony = (
+                        self._selected_training_search_parsimony
+                    )
+                full_result = self.discover_validate_interpret(
+                    X=X,
+                    y=y,
+                    variable_names=var_names,
+                    variable_descriptions=variable_descriptions,
+                    variable_units=variable_units,
+                    description=description,
+                    equation_name=equation_name,
+                    show_formatted=verbose,
+                    use_llm=_meta_use_llm,
                 )
-            full_result = self.discover_validate_interpret(
-                X=X,
-                y=y,
-                variable_names=var_names,
-                variable_descriptions=variable_descriptions,
-                variable_units=variable_units,
-                description=description,
-                equation_name=equation_name,
-                show_formatted=verbose,
-                use_llm=_meta_use_llm,
-            )
-            if self._training_only_search_selection is not None:
-                full_result.setdefault("metadata", {})[
-                    "training_only_search_selection"
-                ] = self._training_only_search_selection
-                full_result["metadata"]["selected_search_strategy"] = (
-                    self._selected_training_search_strategy
-                )
-        finally:
-            self.symbolic_engine.config.parsimony = _original_parsimony
+                if self._training_only_search_selection is not None:
+                    full_result.setdefault("metadata", {})[
+                        "training_only_search_selection"
+                    ] = self._training_only_search_selection
+                    full_result["metadata"]["selected_search_strategy"] = (
+                        self._selected_training_search_strategy
+                    )
+            finally:
+                self.symbolic_engine.config.parsimony = _original_parsimony
 
-        # FIX-POW: restore original binary_operators regardless of result
-        self.symbolic_engine.config.binary_operators = _orig_binary_ops
+            # FIX-POW: restore original binary_operators regardless of result
+            self.symbolic_engine.config.binary_operators = _orig_binary_ops
 
             if "error" in full_result and full_result["error"] == "discovery_failed":
                 raise RuntimeError(full_result.get("message", "Discovery failed"))
