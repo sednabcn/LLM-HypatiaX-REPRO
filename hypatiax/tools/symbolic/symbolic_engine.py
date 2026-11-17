@@ -2374,12 +2374,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 **kwargs,
             )
 
-        # ── Fix: LLM history memory leak (Step 3 from diagnosis) ─────────────
-        # IntegratedLLMEngine accumulates API response objects across calls.
-        # After each case, drop the engine so Python can GC the response history.
-        # A fresh engine will be created on the next SymbolicEngineWithLLM init.
-        if hasattr(self, 'llm_engine') and self.llm_engine is not None:
-            self.llm_engine = None
+        # Keep the LLM client alive for the lifetime of this discovery engine.
+        # HybridDiscoverySystem retries by calling discover() repeatedly; dropping
+        # llm_engine here silently turns every retry after the first into pure
+        # PySR.  IntegratedLLMEngine stores only per-call audit state (reset by
+        # generate_hypotheses), not an accumulating conversation history.
+        # PySR/Julia model memory is still released after each attempt.
         self.model = None  # release PySR/Julia model RSS too
         gc.collect()
 
