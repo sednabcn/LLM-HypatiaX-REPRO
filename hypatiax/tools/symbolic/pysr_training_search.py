@@ -71,19 +71,22 @@ def evaluate_pysr_search_on_training_folds(
         raise ValueError("at least one training fold is required")
 
     audits: list[dict] = []
-    model_ids: set[int] = set()
+    retained_models: list[Any] = []
+    invocation_index = 0
 
     def _search_and_predict(
         X_fit: np.ndarray, y_fit: np.ndarray, X_validation: np.ndarray
     ) -> tuple[np.ndarray, str]:
-        fold = folds[len(audits)]
+        nonlocal invocation_index
+        fold = folds[invocation_index]
+        invocation_index += 1
         fold_seed = int(seed + fold.repeat * 100_003 + fold.fold)
         model = searcher_factory(fold_seed)
         if model is None:
             raise ValueError("searcher_factory returned None")
-        if id(model) in model_ids:
+        if any(model is previous for previous in retained_models):
             raise ValueError("searcher_factory must return a fresh PySR model for every fold")
-        model_ids.add(id(model))
+        retained_models.append(model)
         if not callable(getattr(model, "fit", None)) or not callable(
             getattr(model, "predict", None)
         ):
