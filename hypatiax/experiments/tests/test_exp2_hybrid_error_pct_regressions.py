@@ -139,11 +139,13 @@ def test_defi_without_formula_or_retained_predictor_reports_missing_far_score():
 
 def test_retained_final_predictor_overrides_conflicting_formula_training_predictions():
     X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
-    y_train = np.array([1.0, 2.0, 3.0, 4.0])
+    # Keep a nonzero training RMSE so the ratio is mathematically defined;
+    # the far-region predictions remain exact.
+    y_train = np.array([1.1, 2.1, 3.1, 4.1])
     X_far = np.array([[4.0], [5.0], [6.0]])
     y_far = np.array([5.0, 6.0, 7.0])
 
-    # The retained method is exact on both partitions. The deliberately
+    # The retained method is exact on the far partition. The deliberately
     # conflicting precomputed array represents only a symbolic base formula.
     result = SimpleNamespace(
         success=True,
