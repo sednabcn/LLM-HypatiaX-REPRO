@@ -81,7 +81,7 @@ def test_defi_formula_scores_far_region_but_zero_train_rmse_makes_ratio_undefine
     assert r2[method] is not None
     assert rmse[method] == pytest.approx(0.1)
     assert error_pct[method] is None
-    assert diagnostics[method]["error_pct_status"] == "zero_or_invalid_training_rmse"
+    assert diagnostics[method]["error_pct_status"] == "zero_training_rmse"
 
 
 def test_defi_formula_with_nonzero_training_error_has_defined_ratio():
@@ -284,3 +284,33 @@ def test_llm_nn_retained_predictor_training_rmse_matches_reported_benchmark_rmse
     assert method_diag["train_rmse_delta"] == pytest.approx(0.0)
     assert method_diag["train_rmse_consistent"] is True
     assert method_diag["train_rmse_consistency_status"] == "matches"
+
+
+
+def test_exact_predictor_reports_r2_one_rmse_zero_and_undefined_ratio():
+    X_train = np.array([[0.0], [1.0], [2.0], [3.0]])
+    y_train = X_train[:, 0] + 1.0
+    X_far = np.array([[4.0], [5.0], [6.0]])
+    y_far = X_far[:, 0] + 1.0
+    result = SimpleNamespace(
+        success=True,
+        formula="def formula(x):\\n    return x + 1\\n",
+    )
+    diagnostics = {}
+
+    r2, rmse, error_pct = compute_extrap_r2_far(
+        {"exact_symbolic": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        y_pred_train={"exact_symbolic": y_train.copy()},
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    assert r2["exact_symbolic"] == pytest.approx(1.0)
+    assert rmse["exact_symbolic"] == pytest.approx(0.0)
+    assert error_pct["exact_symbolic"] is None
+    assert diagnostics["exact_symbolic"]["extrap_rmse_train"] == pytest.approx(0.0)
+    assert diagnostics["exact_symbolic"]["error_pct_status"] == "zero_training_rmse"
