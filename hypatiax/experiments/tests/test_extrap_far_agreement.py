@@ -48,3 +48,14 @@ def test_far_r2_uses_canonical_scorer():
     source = ast.unparse(fn)
     assert "_r2_scored" in source
     assert "ss_tot" not in source and "ss_res" not in source
+
+
+def test_shared_core_has_no_experiment_or_optional_backend_imports():
+    tree = ast.parse(CORE.read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    assert not ({"torch", "anthropic", "juliacall", "random", "os"} & imported)
