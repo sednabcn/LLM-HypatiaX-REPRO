@@ -1605,21 +1605,31 @@ class HybridDeFiMethod(BaseMethod):
                 )
 
             # ── Extract r2 / rmse from the located eval dict ──────────────
-            r2_val   = eval_.get("r2")
-            if r2_val is None:
-                return self._unavailable("evaluation has no r2", metadata=_provenance(result))
-            r2_val   = float(r2_val)
-            rmse_val = eval_.get("rmse")
-            if rmse_val is None or not np.isfinite(float(rmse_val)):
+            try:
+                r2_val = float(eval_.get("r2"))
+            except (TypeError, ValueError):
+                r2_val = float("nan")
+            rmse_raw = eval_.get("rmse")
+            try:
+                rmse_val = float(rmse_raw)
+            except (TypeError, ValueError):
+                rmse_val = float("nan")
+            if not np.isfinite(rmse_val):
                 mse = eval_.get("mse")
-                if mse is not None and np.isfinite(mse):
-                    rmse_val = float(np.sqrt(mse))
+                if mse is not None:
+                    try:
+                        mse_value = float(mse)
+                    except (TypeError, ValueError):
+                        mse_value = float("nan")
+                else:
+                    mse_value = float("nan")
+                if np.isfinite(mse_value) and mse_value >= 0.0:
+                    rmse_val = float(np.sqrt(mse_value))
                     evaluation_metric_source = f"{eval_source_key}.sqrt_mse"
                 else:
                     rmse_val = float("nan")
                     evaluation_metric_source = f"{eval_source_key}.rmse_unavailable"
             else:
-                rmse_val = float(rmse_val)
                 evaluation_metric_source = f"{eval_source_key}.rmse"
 
             # Do not infer prediction vectors or trust aggregate metrics when
@@ -1675,6 +1685,19 @@ class HybridDeFiMethod(BaseMethod):
                     evaluation_metric_source = (
                         f"{_evaluation_prediction_source}.recomputed"
                     )
+            if _y_pred_defi is None and (
+                not np.isfinite(r2_val) or not np.isfinite(rmse_val)
+            ):
+                return self._unavailable(
+                    "DeFi has neither aligned row predictions nor finite reported R²/RMSE",
+                    metadata={
+                        **_provenance(result),
+                        "metric_verification_status": _metric_verification_status,
+                        "evaluation_source_key": eval_source_key,
+                        "evaluation_metric_source": evaluation_metric_source,
+                        "evaluation_prediction_source": _evaluation_prediction_source,
+                    },
+                )
             # Retain a callable for the exact base route only when the
             # candidate formula reproduces the predictions used above. A
             # backend-supplied y_pred alone is not enough to reconstruct an
