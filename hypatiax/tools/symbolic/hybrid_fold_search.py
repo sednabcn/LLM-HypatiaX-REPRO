@@ -96,6 +96,7 @@ class HybridFoldPySRSearcher:
 
         cfg = copy.deepcopy(self.config)
         cfg.niterations = min(int(cfg.niterations), self.fold_iterations)
+        cfg.populations = min(int(cfg.populations), 5)
         cfg.pysr_timeout = self.fold_timeout_seconds
         cfg.parsimony = self.parsimony
         allow_pow = self.allow_pow
@@ -109,8 +110,11 @@ class HybridFoldPySRSearcher:
         cfg.binary_operators = binary
 
         self.engine = SymbolicEngine(config=cfg, domain=self.domain)
-        old_timeout = os.environ.get("PYSR_TIMEOUT")
+        env_keys = ("PYSR_TIMEOUT", "N_ITERATIONS", "POPULATIONS")
+        old_env = {key: os.environ.get(key) for key in env_keys}
         os.environ["PYSR_TIMEOUT"] = str(self.fold_timeout_seconds)
+        os.environ["N_ITERATIONS"] = str(cfg.niterations)
+        os.environ["POPULATIONS"] = str(cfg.populations)
         try:
             result = self.engine.discover(
                 X_engine,
@@ -120,10 +124,11 @@ class HybridFoldPySRSearcher:
                 random_state=self.seed,
             )
         finally:
-            if old_timeout is None:
-                os.environ.pop("PYSR_TIMEOUT", None)
-            else:
-                os.environ["PYSR_TIMEOUT"] = old_timeout
+            for key, value in old_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
         expression = str((result or {}).get("expression") or "").strip()
         if (
