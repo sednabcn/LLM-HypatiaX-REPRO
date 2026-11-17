@@ -3943,7 +3943,14 @@ jobs:
           if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
           pip install numpy scipy scikit-learn pysr juliacall pint \
               anthropic torch --index-url https://download.pytorch.org/whl/cpu \
-              python-dotenv psutil
+              python-dotenv psutil pytest
+
+      - name: Run Exp2 offline regression tests
+        if: steps.check_exp2.outputs.already_done != 'true'
+        run: |
+          python -m pytest -q \
+            hypatiax/experiments/tests/test_exp2_extrapolation_scoring.py \
+            hypatiax/experiments/tests/test_exp2_extrap_smoke_validator.py
 
       - name: Install Julia / SymbolicRegression
         if: steps.check_exp2.outputs.already_done != 'true'
