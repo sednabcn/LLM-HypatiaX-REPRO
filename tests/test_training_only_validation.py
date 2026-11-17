@@ -34,7 +34,7 @@ def test_fold_metrics_are_aggregated_using_training_target_scale():
     # Fixed candidate predictor is intentionally simple; the test validates
     # fold aggregation and that normalized error uses each fitting partition.
     summary = evaluate_candidate_on_training_folds(
-        "0.5*x", lambda X_valid: 0.5 * X_valid[:, 0] + 2.25,
+        "0.5*x", lambda X_fit, y_fit, X_valid: 0.5 * X_valid[:, 0] + 2.25,
         X, y, folds,
     )
     assert summary.valid_fold_count == len(folds)
@@ -50,7 +50,7 @@ def test_invalid_prediction_is_counted_and_insufficient_evidence_fails_closed():
     folds = make_training_folds(12, n_splits=3, n_repeats=1)
     with pytest.raises(ValueError, match="insufficient valid training folds"):
         evaluate_candidate_on_training_folds(
-            "x", lambda X_valid: np.full(len(X_valid), np.nan),
+            "x", lambda X_fit, y_fit, X_valid: np.full(len(X_valid), np.nan),
             X, y, folds, minimum_valid_folds=2,
         )
 
