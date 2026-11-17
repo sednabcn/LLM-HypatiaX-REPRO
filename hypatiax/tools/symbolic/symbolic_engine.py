@@ -988,6 +988,7 @@ class SymbolicEngine:
         Returns:
             Dictionary with discovery results
         """
+        self._last_fold_transform_state = None
         if variable_names is None:
             variable_names = [f"x{i}" for i in range(X.shape[1])]
 
@@ -1702,6 +1703,8 @@ class SymbolicEngine:
             # X-scaling is applied.
             _x_col_scales = np.ones(X.shape[1])
             _x_scaled_cols: list[tuple[int, str, float]] = []  # (col_idx, name, scale)
+            _gm_feature_pairs: list[tuple[int, int]] = []
+            _ratio_feature_pairs: list[tuple[int, int]] = []
             for _xi in range(X.shape[1]):
                 _col = X[:, _xi]
                 _col_scale = max(float(np.abs(np.mean(_col))), float(np.std(_col)))
@@ -1766,6 +1769,7 @@ class SymbolicEngine:
                         for _qi in range(_pi + 1, len(_pos_idx)):
                             _ci, _cj = _pos_idx[_pi], _pos_idx[_qi]
                             _gm_vec = np.sqrt(_X_fit[:, _ci] * _X_fit[:, _cj])
+                            _gm_feature_pairs.append((_ci, _cj))
                             _gm_nm  = f"gm_{safe_names[_ci]}_{safe_names[_cj]}"
                             _gm_cols.append(_gm_vec)
                             _gm_names.append(_gm_nm)
@@ -1821,13 +1825,14 @@ class SymbolicEngine:
                             _ratio_nm  = f"ratio_{safe_names[_ci]}_{safe_names[_cj]}"
                             # Score by variance (more varied ratio = more info)
                             _var_score = float(np.std(_ratio_vec))
-                            _ratio_candidates.append((_var_score, _ratio_vec, _ratio_nm))
+                            _ratio_candidates.append((_var_score, _ratio_vec, _ratio_nm, _ci, _cj))
                     # Sort by descending variance, take top 10
                     _ratio_candidates.sort(key=lambda x: x[0], reverse=True)
                     _MAX_RATIO_PAIRS = 10
-                    for _score, _rvec, _rnm in _ratio_candidates[:_MAX_RATIO_PAIRS]:
+                    for _score, _rvec, _rnm, _ri, _rj in _ratio_candidates[:_MAX_RATIO_PAIRS]:
                         _ratio_cols.append(_rvec)
                         _ratio_names.append(_rnm)
+                        _ratio_feature_pairs.append((_ri, _rj))
                     if len(_ratio_candidates) > _MAX_RATIO_PAIRS:
                         _trace.append(f"ratio_capped={len(_ratio_candidates)}→{_MAX_RATIO_PAIRS}")
                     if _ratio_cols:
@@ -2141,6 +2146,19 @@ class SymbolicEngine:
                         )
                         expression = f"[X-normalised: {_xscale_note}] {expression}"
 
+                    # Preserve the exact fold-fitted transforms and selected Pareto
+                    # equation so an internal held-out training fold can be predicted
+                    # without re-learning scales or engineered-feature eligibility.
+                    self._last_fold_transform_state = {
+                        "input_feature_count": int(X.shape[1]),
+                        "x_scales": np.asarray(_x_col_scales, dtype=float).tolist(),
+                        "gm_pairs": [list(pair) for pair in _gm_feature_pairs],
+                        "ratio_pairs": [list(pair) for pair in _ratio_feature_pairs],
+                        "y_std": float(_y_std),
+                        "best_index": int(best_idx),
+                        "feature_names": list(safe_names),
+                    }
+
                     # Make predictions with the best-R² equation (rescaled to original y)
                     # Reuse the exact finite prediction vector used to score
                     # this candidate; do not invoke Julia prediction a second time.
@@ -2230,6 +2248,40 @@ class SymbolicEngine:
                 from hypatiax.tools.symbolic import guess_sanitizer as _gs
                 _failed["guess_audit"] = _gs.summarize([_guess_rec])
             return _failed
+
+    def predict_fold_validation(self, X: np.ndarray) -> np.ndarray:
+        """Predict a held-out training fold using transforms learned on fit rows.
+
+        This method is intentionally separate from predict(): its input is the
+        raw feature matrix at the SymbolicEngine boundary, before engine-local
+        X scaling and GM/ratio augmentation.
+        """
+        state = getattr(self, "_last_fold_transform_state", None)
+        if self.model is None or state is None:
+            raise ValueError("No fitted fold-local preprocessing state is available")
+        values = np.asarray(X, dtype=float)
+        if values.ndim != 2 or values.shape[1] != state["input_feature_count"]:
+            raise ValueError("fold validation feature schema mismatch")
+        scales = np.asarray(state["x_scales"], dtype=float)
+        if scales.shape != (values.shape[1],) or not np.isfinite(scales).all():
+            raise ValueError("invalid fold-fitted feature scales")
+        transformed = values / scales[np.newaxis, :]
+        for left, right in state["gm_pairs"]:
+            with np.errstate(invalid="ignore", over="ignore"):
+                feature = np.sqrt(transformed[:, left] * transformed[:, right])
+            transformed = np.column_stack((transformed, feature))
+        for numerator, denominator in state["ratio_pairs"]:
+            with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                feature = transformed[:, numerator] / (transformed[:, denominator] + 1e-300)
+            transformed = np.column_stack((transformed, feature))
+        if not np.isfinite(transformed).all():
+            raise FloatingPointError("fold-frozen engineered features are non-finite")
+        prediction = np.asarray(
+            self.model.predict(transformed, index=state["best_index"]), dtype=float
+        ).reshape(-1) * float(state["y_std"])
+        if prediction.shape != (values.shape[0],) or not np.isfinite(prediction).all():
+            raise FloatingPointError("fold-local PySR predictions are invalid")
+        return prediction
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions using discovered equation."""
