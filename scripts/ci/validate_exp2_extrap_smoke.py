@@ -91,6 +91,11 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             diagnostic_status_counts[diagnostic["status"]] += 1
             method_rows += 1
 
+    if len(equation_names) != expected_equations:
+        raise ValueError(
+            f"expected {expected_equations} distinct equations; found {len(equation_names)}"
+        )
+
     flat_files = sorted(output_dir.glob("benchmark_results_extrap*.json"))
     if len(flat_files) != 1:
         raise ValueError(f"expected exactly one flat extrap benchmark JSON, found {len(flat_files)}")
