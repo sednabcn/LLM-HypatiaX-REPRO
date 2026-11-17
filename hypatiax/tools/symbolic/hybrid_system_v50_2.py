@@ -1006,6 +1006,11 @@ class HybridDiscoverySystem:
                         "eligible" if _physics_gate.eligible else "rejected"
                     )
                     if not _physics_gate.eligible:
+                        _rejected_physics_record = dataclass_replace(
+                            _physics_gate,
+                            metrics={"quality_check": {"complexity": physics_result["complexity"]}},
+                        )
+                        _candidate_attempts.append((_rejected_physics_record, physics_result))
                         logger.warning(
                             "[FALLBACK] PhysicsAware candidate rejected by declared gates: %s",
                             list(_physics_gate.rejection_reasons),
@@ -1040,6 +1045,11 @@ class HybridDiscoverySystem:
 
             _raw_X = np.asarray(getattr(self, "_discover_X_orig", X), dtype=float)
             _raw_y = np.asarray(getattr(self, "_discover_y_orig", y), dtype=float).reshape(-1)
+            if tuple(variable_names) != tuple(_problem.variable_names):
+                raise ValueError(
+                    "NO_CREDIBLE_CANDIDATE: DiscoveryProblem.variable_names must "
+                    "exactly match the raw training feature names and order"
+                )
             _n_splits = int(_validation_settings.get("n_splits", 2))
             _folds = make_training_folds(
                 _raw_X.shape[0],
@@ -1873,6 +1883,7 @@ class HybridDiscoverySystem:
                 "rmse": rmse,
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
                 "training_only_search_selection": self._training_only_search_selection,
+                "discovery_report": getattr(self, "_last_discovery_report", None),
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 # FIX: a later pure-PySR retry can win the attempt loop and carries no
                 # llm_mode, which used to hide that the LLM WAS called in attempt 1
