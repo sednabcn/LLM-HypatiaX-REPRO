@@ -4,11 +4,15 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-RUNNER = ROOT / "hypatiax" / "experiments" / "benchmarks" / "run_comparative_suite_benchmark_v2.py"
+CORE = ROOT / "hypatiax" / "experiments" / "benchmarks" / "exp2_extrapolation_core.py"
+RUNNERS = (
+    ROOT / "hypatiax" / "experiments" / "benchmarks" / "run_comparative_suite_benchmark_v2.py",
+    ROOT / "hypatiax" / "experiments" / "benchmarks" / "run_comparative_suite_benchmark_pca.py",
+)
 
 
-def test_far_evaluator_has_retained_predictor_and_reasoned_diagnostics():
-    source = RUNNER.read_text(encoding="utf-8")
+def test_shared_far_evaluator_has_retained_predictor_and_reasoned_diagnostics():
+    source = CORE.read_text(encoding="utf-8")
     tree = ast.parse(source)
     evaluator = next(
         node for node in tree.body
@@ -31,7 +35,10 @@ def test_far_evaluator_has_retained_predictor_and_reasoned_diagnostics():
 
 
 def test_far_diagnostics_are_persisted_to_protocol_and_flat_rows():
-    source = RUNNER.read_text(encoding="utf-8")
-    assert 'record["extrap_diagnostics"] = extrap_diagnostics' in source
-    assert '"extrap_diagnostic": _diag_map.get(_mname)' in source
-    assert '_row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)' in source
+    for runner in RUNNERS:
+        source = runner.read_text(encoding="utf-8")
+        assert 'record["extrap_diagnostics"] = extrap_diagnostics' in source
+        assert '"extrap_diagnostic": _diag_map.get(_mname)' in source
+        assert '_row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)' in source
+        assert "X_far_predictor=X_far" in source
+        assert "X_train_predictor=X" in source

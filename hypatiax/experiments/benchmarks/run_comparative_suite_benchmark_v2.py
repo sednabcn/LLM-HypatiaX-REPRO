@@ -85,6 +85,25 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Ensure direct script execution can resolve the repository package.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_PKG_ROOT = _REPO_ROOT / "hypatiax"
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+# Canonical shared implementation used by both Exp2 Feynman runners.
+from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
+    REGIMES,
+    ExtrapolationRegime,
+    calculate_extrapolation_error,
+    extrapolation_error_status,
+    build_extrap_split,
+    _runner_eval_formula,
+    _far_r2,
+    _far_rmse,
+    compute_extrap_r2_far,
+)
+
 
 os.environ.setdefault(
     "PYTHON_JULIACALL_HANDLE_SIGNALS",
@@ -167,12 +186,10 @@ def _dump_json_null(obj, fp, **kw):
 # --- END null-json helpers -----------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# extrap_r2_far — inlined directly so no sys.path dependency is needed.
-# All functions (build_extrap_split, compute_extrap_r2_far,
-# calculate_extrapolation_error, extrapolation_error_status,
-# ExtrapolationRegime, REGIMES) are defined below and available globally.
+# Shared Exp2 extrapolation helpers are imported from the lightweight core above.
+# There is no inline fallback: a failed canonical split must fail closed.
 # ---------------------------------------------------------------------------
-_EXTRAP_MODULE_AVAILABLE = True  # always True — code is inlined
+_EXTRAP_MODULE_AVAILABLE = True
 
 import math
 from dataclasses import dataclass
@@ -189,305 +206,6 @@ def _m5_record_failure(where, exc):
     return None
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 0.  EXTRAPOLATION REGIME — five-tier quality ladder
-#     Matches extrapolation_test_protocol.py and the comments in run_test()
-# ──────────────────────────────────────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class ExtrapolationRegime:
-    """A single tier in the extrapolation-quality ladder."""
-    name:      str    # e.g. "EXCELLENT"
-    threshold: float  # upper bound of this tier (exclusive), % units
-    label:     str    # human-readable label for display
-
-
-#: Ordered from best to worst.  Each tier covers error_pct < threshold.
-#: The last entry (CATASTROPHIC) has threshold=inf so it catches everything ≥ 500 %.
-REGIMES: List[ExtrapolationRegime] = [
-    ExtrapolationRegime("EXCELLENT",    50.0,       "< 50 %  EXCELLENT"),
-    ExtrapolationRegime("GOOD",        100.0,       "< 100 % GOOD"),
-    ExtrapolationRegime("MODERATE",    200.0,       "< 200 % MODERATE"),
-    ExtrapolationRegime("POOR",        500.0,       "< 500 % POOR"),
-    ExtrapolationRegime("CATASTROPHIC", float("inf"), "≥ 500 % CATASTROPHIC"),
-]
-
-
-def calculate_extrapolation_error(
-    rmse_far: float,
-    rmse_train: float,
-) -> Optional[float]:
-    """
-    Compute extrapolation error percentage:  (RMSE_far / RMSE_train) × 100.
-
-    Returns None when either argument is non-finite or rmse_train ≤ 0.
-    A value of 100 % means the far-region RMSE exactly equals the training RMSE
-    (GOOD tier boundary).
-    """
-    if (
-        rmse_train is None
-        or rmse_far is None
-        or not math.isfinite(rmse_train)
-        or not math.isfinite(rmse_far)
-        or rmse_train <= 0.0
-    ):
-        return None
-    return float(rmse_far / rmse_train * 100.0)
-
-
-def extrapolation_error_status(error_pct: Optional[float]) -> str:
-    """
-    Map an extrapolation error percentage to its five-tier status label.
-
-    Returns the regime *name* string (e.g. "EXCELLENT") so callers can
-    do equality comparisons.  Returns "UNKNOWN" when error_pct is None or
-    non-finite.
-    """
-    if error_pct is None or not math.isfinite(error_pct):
-        return "UNKNOWN"
-    for regime in REGIMES:
-        if error_pct < regime.threshold:
-            return regime.name
-    return "CATASTROPHIC"  # shouldn't be reached; last tier has threshold=inf
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 1.  BUILD EXTRAP SPLIT
-#     Source: main() pre-processing loop, lines ~3997-4071
-# ──────────────────────────────────────────────────────────────────────────────
-
-def build_extrap_split(
-    X: np.ndarray,
-    y: np.ndarray,
-    description: str = "",
-    train_frac: float = 0.8,
-    multiplier: float = 2.0,
-) -> Tuple[
-    np.ndarray,   # X_train
-    np.ndarray,   # y_train
-    np.ndarray,   # X_far  (at least two rows)
-    np.ndarray,   # y_far  (aligned with X_far)
-    Dict,         # extrap metadata dict (stored in record)
-]:
-    """
-    Re-partition (X, y) for OOD extrapolation evaluation.
-
-    Training covers the first `train_frac` of the sample range (sorted by
-    X[:,0]).  The far region is the remainder, clipped at
-    x_train_max + multiplier * train_range so the evaluation regime matches
-    repro.yaml benchmarks.feynman.extrap_mult=2.0.
-
-    Returns (X_train, y_train, X_far, y_far, metadata).
-    Raises ValueError when the requested split cannot provide at least two
-    training rows and two far-region rows after multiplier clipping.
-    """
-    X = np.asarray(X, dtype=float)
-    y = np.asarray(y, dtype=float).reshape(-1)
-    if X.ndim != 2 or X.shape[1] < 1 or X.shape[0] != y.shape[0]:
-        raise ValueError("extrapolation split requires aligned 2-D X and 1-D y arrays")
-    if X.shape[0] < 4:
-        raise ValueError("extrapolation split requires at least four samples")
-    if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
-        raise ValueError("extrapolation split inputs must be finite")
-    if not math.isfinite(float(train_frac)) or not 0.0 < float(train_frac) < 1.0:
-        raise ValueError("train_frac must be finite and strictly between 0 and 1")
-    if not math.isfinite(float(multiplier)) or float(multiplier) <= 0.0:
-        raise ValueError("multiplier must be finite and greater than zero")
-
-    # Sort by first variable to get a contiguous training region.
-    order    = np.argsort(X[:, 0])
-    Xs       = X[order]
-    ys       = y[order]
-    n        = len(Xs)
-    split    = int(n * train_frac)
-    if split < 2 or n - split < 2:
-        raise ValueError(f"split leaves too few train/far rows: train={split}, far={n - split}")
-    X_train  = Xs[:split]
-    y_train  = ys[:split]
-
-    # Multiplier-bounded far region.
-    # far_ceiling = x_train_max + multiplier * train_range
-    x_train_min  = float(Xs[0, 0])
-    x_train_max  = float(Xs[split - 1, 0])
-    train_range  = max(x_train_max - x_train_min, 1e-300)
-    far_ceiling  = x_train_max + multiplier * train_range
-
-    far_all      = Xs[split:]
-    far_y_all    = ys[split:]
-    far_mask     = far_all[:, 0] <= far_ceiling
-    X_far        = far_all[far_mask]
-    y_far        = far_y_all[far_mask]
-    if len(X_far) < 2:
-        raise ValueError(f"far region has only {len(X_far)} rows after multiplier clipping")
-    n_clipped    = int((~far_mask).sum())
-
-    if n_clipped > 0:
-        print(
-            f"   ℹ️  '{description[:45]}': clipped {n_clipped} far sample(s) "
-            f"beyond {multiplier}× boundary (x>{far_ceiling:.3g})"
-        )
-
-    metadata = {
-        "extrap":            True,
-        "extrap_train_frac": train_frac,
-        "extrap_multiplier": multiplier,
-        "extrap_n_train":    split,
-        "extrap_n_test":     len(X_far),
-        "extrap_x_train_max": x_train_max,
-        "extrap_far_ceiling": far_ceiling,
-    }
-
-    return X_train, y_train, X_far, y_far, metadata
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 2.  _RUNNER_EVAL_FORMULA  (dependency of compute_extrap_r2_far)
-#     Source: BaseMethod._runner_eval_formula(), lines ~776-887
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _select_formula_fn(exec_ns, safe_globals):
-    """
-    Pick the function a ``def`` snippet defined.
-
-    FIX (first-callable bug): the old selection took the first callable in
-    exec_ns. exec_ns starts as a copy of safe_globals, whose first callable
-    entries are the bare-name ufuncs (``exp`` is a clipping lambda), so every
-    ``def formula(...)`` snippet was silently scored as ``exp(first_arg)`` (one
-    variable) or raised (several variables) -> -inf / null far scores.
-
-    Order: (1) a callable literally named ``formula``; (2) the LAST callable
-    the snippet itself defined, i.e. whose value is not the same object as the
-    safe_globals entry of that name.
-    """
-    fn = exec_ns.get("formula")
-    if callable(fn) and safe_globals.get("formula") is not fn:
-        return fn
-    user_defined = [
-        v for k, v in exec_ns.items()
-        if callable(v)
-        and k != "__builtins__"
-        and not k.startswith("_")
-        and safe_globals.get(k) is not v
-    ]
-    return user_defined[-1] if user_defined else None
-
-
-def _runner_eval_formula(
-    python_code: str,
-    X: np.ndarray,
-    var_names: List[str],
-    diagnostics: Optional[List[str]] = None,
-) -> Optional[np.ndarray]:
-    """Evaluate generated formulas through restricted AST interpreters.
-
-    When diagnostics is supplied, retain why a formula could not be evaluated.
-    """
-    from hypatiax.safe_formula import parse_formula, evaluate_expression
-
-    try:
-        X = np.asarray(X, dtype=float)
-        if (
-            X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0
-            or len(var_names) != X.shape[1]
-            or len(set(var_names)) != len(var_names)
-            or not np.all(np.isfinite(X))
-        ):
-            raise ValueError(
-                f"invalid feature matrix/schema: shape={X.shape}, "
-                f"n_var_names={len(var_names)}, finite={bool(np.all(np.isfinite(X)))}"
-            )
-
-        code = str(python_code).strip()
-        _xscale_note = re.match(r"^\s*\[X-normalised:\s*([^\]]+)\]\s*", code)
-        if _xscale_note:
-            for _scale_item in _xscale_note.group(1).split(","):
-                _scale_match = re.fullmatch(
-                    r"\s*([A-Za-z_]\w*)\s*÷\s*([0-9.eE+-]+)\s*",
-                    _scale_item,
-                )
-                if _scale_match is None:
-                    raise ValueError(f"unparseable X-normalised annotation item: {_scale_item!r}")
-                _scale_name, _scale_text = _scale_match.groups()
-                _scale_value = float(_scale_text)
-                if not np.isfinite(_scale_value) or _scale_value <= 0:
-                    raise ValueError(f"invalid X scale for {_scale_name!r}: {_scale_text!r}")
-                if _scale_name not in var_names:
-                    raise ValueError(f"X-normalised feature {_scale_name!r} is absent from holdout schema")
-                X = X.copy()
-                X[:, var_names.index(_scale_name)] /= _scale_value
-            code = code[_xscale_note.end():]
-        code = re.sub(r"^\s*\[[^\]]*\]\s*", "", code)
-        code = code.replace("^", "**")
-        if not code:
-            raise ValueError("empty formula")
-
-        if code.startswith("def "):
-            func = parse_formula(code)
-            parameter_names = list(func.__signature__.parameters)
-            if all(name in var_names for name in parameter_names):
-                argument_columns = [var_names.index(name) for name in parameter_names]
-            elif len(parameter_names) == X.shape[1]:
-                # Preserve positional compatibility for older formulas whose
-                # parameter names do not match the dataset's feature labels.
-                argument_columns = list(range(X.shape[1]))
-            else:
-                missing = [name for name in parameter_names if name not in var_names]
-                raise ValueError(
-                    "formula parameters do not match holdout features: "
-                    f"missing={missing}, features={list(var_names)}"
-                )
-            y_pred = func(*(X[:, i] for i in argument_columns))
-        else:
-            assignment = re.fullmatch(
-                r"\s*(?:y|result|output|pred|f)\s*=\s*(.+)\s*",
-                code, flags=re.DOTALL,
-            )
-            expression = assignment.group(1) if assignment else code
-
-            namespace = {
-                name: X[:, i] for i, name in enumerate(var_names)
-            }
-            namespace.update({
-                "pi": np.pi, "e": np.e,
-                "exp": lambda x: np.exp(np.clip(x, -500.0, 500.0)),
-                "log": np.log, "log10": np.log10, "log2": np.log2,
-                "sqrt": np.sqrt, "sin": np.sin, "cos": np.cos,
-                "tan": np.tan,
-                "arcsin": lambda x: np.arcsin(np.clip(x, -1.0, 1.0)),
-                "arccos": lambda x: np.arccos(np.clip(x, -1.0, 1.0)),
-                "arctan": np.arctan, "arctan2": np.arctan2,
-                "abs": np.abs, "fabs": np.abs,
-                "floor": np.floor, "ceil": np.ceil,
-                "sign": np.sign, "power": np.power,
-                "minimum": np.minimum, "maximum": np.maximum,
-                "tanh": np.tanh, "sinh": np.sinh, "cosh": np.cosh,
-                "square": np.square, "clip": np.clip,
-                "erf": np.vectorize(math.erf),
-                "erfc": np.vectorize(math.erfc),
-            })
-
-            for prefix in ("np.", "numpy.", "math."):
-                expression = expression.replace(prefix, "")
-
-            y_pred = evaluate_expression(expression, namespace)
-
-        arr = np.asarray(y_pred, dtype=float)
-        if arr.ndim == 0:
-            arr = np.full(X.shape[0], float(arr))
-        if arr.ndim != 1 or arr.shape != (X.shape[0],):
-            raise ValueError(
-                f"prediction shape {arr.shape} does not match expected ({X.shape[0]},)"
-            )
-        if not np.all(np.isfinite(arr)):
-            raise ValueError("formula produced non-finite predictions")
-        return arr
-
-    except Exception as exc:
-        if diagnostics is not None:
-            diagnostics.append(f"{type(exc).__name__}: {exc}")
-        return None
-
-
 def _finite(x) -> bool:
     """True only for a real, finite number; None-safe (np.isfinite(None) raises)."""
     try:
@@ -496,412 +214,18 @@ def _finite(x) -> bool:
         return False
 
 
-def _far_r2(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
-    """
-    R² on the far region with the same sign-flip correction used throughout
-    the benchmark (BaseMethod._safe_r2).
-
-    Returns None when the prediction is degenerate (non-finite, near-constant,
-    or fewer than 2 samples).
-    Returns float("-inf") when R² < -100 (pathological divergence).
-    """
-    # R2-CANONICAL: single scoring policy, see hypatiax/core/r2_canonical.py.
-    # Legacy sign-flip credit is opt-in: HYPATIAX_R2_SIGN_FLIP=1.
-    # NOTE: any docstring above describes the pre-canonical contract.
-    try:
-        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
-    except ImportError:  # run as a bare script, package not on sys.path
-        import pathlib as _pl, sys as _sys
-        for _up in _pl.Path(__file__).resolve().parents:
-            if (_up / "hypatiax" / "core" / "r2_canonical.py").is_file():
-                _sys.path.insert(0, str(_up))
-                break
-        from hypatiax.core.r2_canonical import r2_scored as _r2_scored
-    _val, _status = _r2_scored(y_true, y_pred)
-    if _status == "catastrophic":
-        return None  # audit-M3: was float('-inf')
-    return _val if _status == "ok" else None
-
-
-def _far_rmse(y_true: np.ndarray, y_pred: np.ndarray) -> Optional[float]:
-    if not np.all(np.isfinite(y_pred)):
-        return None
-    return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
-
-
-def compute_extrap_r2_far(
-    results: Dict[str, Any],                                # {method_name: MethodResult}
-    X_far: Optional[np.ndarray],
-    y_far: Optional[np.ndarray],
-    var_names: List[str],
-    y_train: Optional[np.ndarray] = None,                   # training targets for RMSE_train
-    y_pred_train: Optional[Dict[str, np.ndarray]] = None,   # {method: train predictions}
-    verbose: bool = True,
-    diagnostics: Optional[Dict[str, Dict[str, str]]] = None,
-    X_far_predictor: Optional[np.ndarray] = None,
-) -> Tuple[
-    Dict[str, Optional[float]],   # extrap_r2_far
-    Dict[str, Optional[float]],   # extrap_rmse_far
-    Dict[str, Optional[float]],   # extrap_error_pct  (RMSE_far / RMSE_train × 100)
-]:
-    """
-    Re-evaluate each method's formula on the held-out far region and return
-    ``(extrap_r2_far, extrap_rmse_far, extrap_error_pct)`` dicts keyed by method name.
-
-    Called *after* all methods have run (results already populated), inside
-    run_test(), before the record is assembled.
-
-    Parameters
-    ----------
-    results       : ``{name: MethodResult}`` — each entry must expose ``.success``
-                    and ``.formula``.
-    X_far         : held-out far-region features, shape ``(n_far, n_vars)``.
-    y_far         : held-out far-region targets, shape ``(n_far,)``.
-    var_names     : variable names matching X columns (e.g. ``["x0", "x1"]``).
-    y_train       : training targets, used together with ``y_pred_train`` to
-                    compute RMSE_train per method.
-    y_pred_train  : ``{method_name: np.ndarray}`` of per-method training
-                    predictions pre-evaluated by the caller (only symbolic
-                    methods included).  When provided, RMSE_train is derived
-                    from these; otherwise ``extrap_error_pct`` is null for all
-                    methods.
-    verbose       : print per-method far-region R² / error-% summary table.
-
-    Returns
-    -------
-    extrap_r2_far    : ``{method_name: float | None}``
-    extrap_rmse_far  : ``{method_name: float | None}``
-    extrap_error_pct : ``{method_name: float | None}``  — (RMSE_far/RMSE_train)×100
-
-    Notes
-    -----
-    Methods that return NN architecture tags (``"ImprovedNN(…)"``,
-    ``"[NN fallback"``, ``"N/A"``, ``""``) are skipped — they have no evaluable
-    expression so all three values are null.  Only SymbolicEngineWithLLM and
-    HybridDiscoverySystem v50_2 produce formula strings and yield non-null values.
-    """
-    extrap_r2_far:    Dict[str, Optional[float]] = {}
-    extrap_rmse_far:  Dict[str, Optional[float]] = {}
-    extrap_error_pct: Dict[str, Optional[float]] = {}
-    _diag = diagnostics if diagnostics is not None else {}
-    _X_predict = X_far if X_far_predictor is None else X_far_predictor
-
-    # Guard: skip entirely when not in extrap mode or far region is degenerate.
-    _do_extrap = (
-        X_far is not None
-        and y_far is not None
-        and len(X_far) > 1
-        and len(y_far) > 1
-    )
-    if not _do_extrap:
-        return extrap_r2_far, extrap_rmse_far, extrap_error_pct
-
-    for mname, res in results.items():
-        def _mark(status: str, reason: str = "") -> None:
-            _diag[mname] = {"status": status, **({"reason": reason} if reason else {})}
-
-        if not getattr(res, "success", False):
-            extrap_r2_far[mname] = None
-            extrap_rmse_far[mname] = None
-            extrap_error_pct[mname] = None
-            _mark("method_failed")
-            continue
-
-        # Prefer the fitted inference callable retained by the method result.
-        # It receives the original feature schema, just as the independent
-        # external-holdout evaluator does; no fitting occurs on X_far.
-        predictor = getattr(res, "_predict_fn", None)
-        if callable(predictor):
-            try:
-                y_far_pred = np.asarray(predictor(_X_predict), dtype=float).reshape(-1)
-            except Exception as exc:
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("prediction_error", f"{type(exc).__name__}: {exc}")
-                continue
-            if y_far_pred.shape != (len(y_far),):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("prediction_length_mismatch", f"expected {len(y_far)}, got {y_far_pred.size}")
-                continue
-            if not np.all(np.isfinite(y_far_pred)):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("nonfinite_prediction")
-                continue
-        else:
-            formula = (getattr(res, "formula", None) or "").strip()
-            if formula in ("N/A", ""):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("formula_missing")
-                continue
-            if (
-                formula.startswith("ImprovedNN(")
-                or formula.startswith("[NN fallback")
-            ):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("unsupported_predictor", "architecture label has no retained _predict_fn")
-                continue
-            _formula_diagnostics: List[str] = []
-            y_far_pred = _runner_eval_formula(formula, X_far, var_names, diagnostics=_formula_diagnostics)
-            if y_far_pred is None:
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("formula_evaluation_failed", "; ".join(_formula_diagnostics) or "formula evaluator returned no prediction")
-                continue
-            if np.asarray(y_far_pred).shape != (len(y_far),):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("prediction_length_mismatch", f"expected {len(y_far)}, got {np.asarray(y_far_pred).size}")
-                continue
-            if not np.all(np.isfinite(y_far_pred)):
-                extrap_r2_far[mname] = None
-                extrap_rmse_far[mname] = None
-                extrap_error_pct[mname] = None
-                _mark("nonfinite_prediction")
-                continue
-
-        try:
-            r2f = _far_r2(y_far, y_far_pred)
-            rmse_far = _far_rmse(y_far, y_far_pred)
-        except Exception as exc:
-            extrap_r2_far[mname] = None
-            extrap_rmse_far[mname] = None
-            extrap_error_pct[mname] = None
-            _mark("metric_error", f"{type(exc).__name__}: {exc}")
-            continue
-
-        extrap_r2_far[mname] = r2f
-        extrap_rmse_far[mname] = rmse_far
-        error_pct: Optional[float] = None
-        if (
-            rmse_far is not None and y_pred_train is not None
-            and y_train is not None and mname in y_pred_train
-        ):
-            try:
-                rmse_train = _far_rmse(y_train, y_pred_train[mname])
-                error_pct = calculate_extrapolation_error(rmse_far, rmse_train)
-            except Exception as exc:
-                _mark("metric_error", f"training RMSE: {type(exc).__name__}: {exc}")
-        extrap_error_pct[mname] = error_pct
-        if r2f is None:
-            _mark("r2_metric_unavailable")
-        elif rmse_far is None:
-            _mark("rmse_metric_unavailable")
-        else:
-            _mark("scored")
-
-    if verbose and any(v is not None for v in extrap_r2_far.values()):
-        print(
-            f"\n  📐 Extrapolation R² on far region (n={len(X_far)} held-out samples):",
-            flush=True,
-        )
-        for mn, r2f in extrap_r2_far.items():
-            r2s  = f"{r2f:.4f}" if (r2f is not None and math.isfinite(r2f)) else "null"
-            pctr = extrap_error_pct.get(mn)
-            pcts = f"{pctr:.1f}%" if (pctr is not None and math.isfinite(pctr)) else "null"
-            tier = extrapolation_error_status(pctr)
-            print(
-                f"     {mn:<42} extrap_r2_far={r2s}  error_pct={pcts}  [{tier}]",
-                flush=True,
-            )
-
-    return extrap_r2_far, extrap_rmse_far, extrap_error_pct
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Usage example (matches how it is wired in the benchmark)
-# ──────────────────────────────────────────────────────────────────────────────
-#
-#   # --- pre-processing loop (before running methods) ---
-#   X_train, y_train, X_far, y_far, extrap_meta = build_extrap_split(
-#       X, y,
-#       description = description,
-#       train_frac  = args.extrap_train_frac,   # default 0.8
-#       multiplier  = args.extrap_multiplier,    # default 2.0
-#   )
-#   metadata = {**metadata, **extrap_meta}
-#
-#   # --- after all methods have run on (X_train, y_train) ---
-#   extrap_r2_far, extrap_rmse_far, extrap_error_pct = compute_extrap_r2_far(
-#       results      = results,           # {name: MethodResult}
-#       X_far        = X_far,
-#       y_far        = y_far,
-#       var_names    = var_names,
-#       y_train      = y_train,           # NEW: needed for error_%
-#       y_pred_train = y_pred_train_dict, # NEW: {method: train preds}
-#       verbose      = True,
-#   )
-#
-#   # --- assemble record ---
-#   record["extrap_r2_far"]      = extrap_r2_far
-#   record["extrap_rmse_far"]    = extrap_rmse_far
-#   record["extrap_error_pct"]   = extrap_error_pct
-#   record["extrap_train_frac"]  = metadata.get("extrap_train_frac")
-#   record["extrap_multiplier"]  = metadata.get("extrap_multiplier")
-#   record["extrap_n_train"]     = metadata.get("extrap_n_train")
-#   record["extrap_n_test"]      = metadata.get("extrap_n_test")
-#   record["extrap_x_train_max"] = metadata.get("extrap_x_train_max")
-#   record["extrap_far_ceiling"] = metadata.get("extrap_far_ceiling")
-
 # ---------------------------------------------------------------------------
-# Module-level reproducibility seeds (matches the rest of the project).
-# ---------------------------------------------------------------------------
-random.seed(42)
-np.random.seed(42)
-
-# ---------------------------------------------------------------------------
-# HYPATIAX_NOISE_LEVEL — injected by run_noise_sweep_benchmark.py orchestrator.
-# When present, real Gaussian noise scaled to σ * std(y) is added to every
-# test case's y values after load_test_data().  When absent (or 0.0), this
-# script runs in its usual noiseless-or-fixed-noisy mode.
-# ---------------------------------------------------------------------------
-_HYPATIAX_NOISE_LEVEL: float = 0.0
-_raw_noise_env = os.environ.get("HYPATIAX_NOISE_LEVEL", "").strip()
-if _raw_noise_env:
-    try:
-        _HYPATIAX_NOISE_LEVEL = float(_raw_noise_env)
-    except ValueError:
-        print(f"WARNING: Could not parse HYPATIAX_NOISE_LEVEL={_raw_noise_env!r} — defaulting to 0.0")
-
-# ---------------------------------------------------------------------------
-# FEATURE-NSHARDS-SUFFIX (corrected 2026-06-23) — injected by
-# run_noise_sweep_benchmark.py / run_sample_complexity_benchmark.py
-# orchestrators, forwarded from run_all.sh's per-shard SHARD_INDEX (1-based,
-# zero-padded), NOT the total shard count. When present, every output
-# filename this script writes (protocol_core_*.json, benchmark_results.json,
-# benchmark_results_extrap.json) gets "_nshardsNN" appended before the
-# extension, where NN distinguishes THIS shard from every other
-# concurrently-running shard in the same matrix run — necessary because all
-# shards share the same --output-dir and write second-granularity
-# timestamped filenames, so same-second saves from different shards would
-# otherwise collide. Empty string when unset (e.g. local runs, or any other
-# orchestrator that doesn't set it) — filenames are then unchanged from
-# before this feature.
-# ---------------------------------------------------------------------------
-_SHARD_ID = os.environ.get("HYPATIAX_SHARD_ID", "").strip()
-_SHARD_TAG = f"_shrd{_SHARD_ID}" if _SHARD_ID else ""
-
-# PySR subprocess timeout — overridden by --pysr-timeout at runtime.
-# Paper-quality default (repro.yaml timeouts.feynman_pysr_seconds = 1100).
-_PYSR_TIMEOUT: int = 1100
-
-# ---------------------------------------------------------------------------
-# Path setup.
-# This file lives at hypatiax/experiments/benchmarks/
-# Package root is three levels up.
-# ---------------------------------------------------------------------------
-_HERE = Path(__file__).resolve().parent        # …/experiments/benchmarks/
-_PKG_ROOT = _HERE.parent.parent                # …/hypatiax/
-sys.path.insert(0, str(_PKG_ROOT.parent))      # parent of hypatiax/ → import hypatiax.*
-
-# Checkpoint file stem — overridden at runtime via --checkpoint-name so the
-# orchestrator can give each condition (noisy/noiseless) its own file and
-# prevent the two passes from colliding on the same JSON.
-_CHECKPOINT_NAME: str = "protocol_core_checkpoint"
-_RESULTS_ROOT: Path = Path(
-    os.environ.get("RESULTS_DIR", str(_PKG_ROOT / "data/results"))
-).expanduser().resolve()
-_OUTPUT_DIR: Path = _RESULTS_ROOT / "comparison_results"
-# _FLAT_OUTPUT_DIR: always the configured comparison_results/ root — never overridden by
-# --output-dir.  benchmark_results.json lands here so it is NOT buried or
-# clobbered across multi-run sweeps (noise-sweep/, sample-complexity/).
-# Checkpoints also land here.
-# NOTE: benchmark_results_extrap.json no longer uses this — see the
-# FIX-EXTRAP-OUTPUT-DIR comment near its write site — it now uses
-# _OUTPUT_DIR (honors --output-dir) so it lands alongside
-# protocol_core_extrap_*.json in the per-experiment directory.
-_FLAT_OUTPUT_DIR: Path = _RESULTS_ROOT / "comparison_results"
-
-# ---------------------------------------------------------------------------
-# juliacall MUST be imported before torch to prevent a segfault when PySR
-# (which uses Julia via juliacall) and PyTorch are both present.
-# See https://github.com/pytorch/pytorch/issues/78829
-#
-# IMPORTANT: this import must happen before ANY call that could transitively
-# load torch — including the _probe() availability checks below.
-#
-# NOTE: PYTHON_JULIACALL_HANDLE_SIGNALS is set above (via os.environ) so
-# it is guaranteed to be in the environment when juliacall reads it here.
+# Optional PyTorch dependency
+# Define the flag before method-availability probes; neural methods are
+# disabled cleanly when PyTorch is absent or fails to import.
 # ---------------------------------------------------------------------------
 try:
-    import juliacall  # noqa: F401
-except ImportError:
-    pass
-
-# ---------------------------------------------------------------------------
-# Optional heavy imports — torch / sklearn.
-# Load torch NOW (eagerly, after juliacall) so that the _probe() calls below
-# do not trigger torch's first import after Julia is already initialised,
-# which is the sequence that causes the segfault.
-# ---------------------------------------------------------------------------
-try:
-    import torch
-    import torch.nn as nn
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.model_selection import train_test_split
+    import torch as _torch
     TORCH_AVAILABLE = True
-
-    # FIX-ISSUE2-DETERMINISM (follow-up to FIX-ISSUE2-UNSEEDED-NN): seeding
-    # via the sha256-derived-seed -> torch.manual_seed() pattern (see
-    # _nn_residual_fit, both copies) fixes *seed derivation*, but does not by itself make
-    # PyTorch's CPU kernels deterministic. Confirmed against a live CI run
-    # (workflow_dispatch 31256573694): after exporting OMP_NUM_THREADS=1 /
-    # MKL_NUM_THREADS=1 / OPENBLAS_NUM_THREADS=1 at the shell level (see
-    # run_issue2b_experiment.sh), HSL/M4 still showed a ~1e-6 R^2 spread on
-    # at least one equation. Two gaps: (1) env-var thread pinning at process
-    # start is not guaranteed to fully constrain ATen's own internal thread
-    # pool the way an explicit in-process call does; (2) without
-    # use_deterministic_algorithms, some CPU ops can still choose a
-    # non-deterministic reduction path independent of thread count. Setting
-    # both explicitly, in-process, right after import and before any model
-    # is constructed, closes both gaps. warn_only=True rather than the
-    # strict default: this codebase doesn't use any op lacking a
-    # deterministic CPU implementation (plain Linear/Tanh MLPs), so a hard
-    # RuntimeError isn't needed, but if that assumption ever breaks, warn
-    # mode still surfaces it in the log instead of the run silently
-    # continuing non-deterministic.
-    torch.set_num_threads(1)
-    torch.use_deterministic_algorithms(True, warn_only=True)
-except ImportError:
+except Exception as _torch_exc:
     TORCH_AVAILABLE = False
-    print("⚠️  torch / sklearn not available — NN-based methods will be skipped")
+    print(f"⚠️  PyTorch unavailable — neural methods disabled: {_torch_exc}")
 
-# ---------------------------------------------------------------------------
-# Anthropic client
-# ---------------------------------------------------------------------------
-try:
-    from dotenv import load_dotenv
-    for _env in [_HERE / ".env", _HERE.parent / ".env", _PKG_ROOT / ".env"]:
-        if _env.exists():
-            load_dotenv(dotenv_path=_env, override=True)
-            print(f"✅ Loaded .env from {_env}")
-            break
-except ImportError:
-    pass
-
-try:
-    from anthropic import Anthropic
-    ANTHROPIC_AVAILABLE = bool(os.getenv("ANTHROPIC_API_KEY"))
-except ImportError:
-    ANTHROPIC_AVAILABLE = False
-    print("⚠️  anthropic library not available — LLM-based methods will fall back")
-
-
-# ============================================================================
-# CORE SCRIPT AVAILABILITY PROBES
-# All imports are lazy (inside each method's __init__) so that a missing
-# optional core module only disables that method, not the whole script.
-# ============================================================================
 
 def _probe(module_path: str, class_name: str) -> bool:
     """Return True if a dotted module path exports the given class name.
@@ -4182,6 +3506,7 @@ class ProtocolBenchmarkSuite:
                     var_names=aug_names,   # FIX-N3a: includes ratio_*/gm_* names
                     y_train=y,
                     y_pred_train=_y_pred_train if _y_pred_train else None,
+                    X_train_predictor=X,
                     verbose=verbose,
                 )
             else:
@@ -4623,7 +3948,8 @@ class ProtocolBenchmarkSuite:
                 # on non-extrap runs (field simply omitted, not null).
                 _extrap_r2_map   = rec.get("extrap_r2_far",   {})
                 _extrap_rmse_map = rec.get("extrap_rmse_far", {})
-                _extrap_diag_map = rec.get("extrap_diagnostics", {})
+                _diag_map = rec.get("extrap_diagnostics", {})
+                _extrap_diag_map = _diag_map
                 for _mname, _mres in rec.get("results", {}).items():
                     _row = {
                         "test":           _desc,
@@ -4644,6 +3970,7 @@ class ProtocolBenchmarkSuite:
                     if _extrap_r2_map:
                         _row["extrap_r2_far"]   = _extrap_r2_map.get(_mname)
                         _row["extrap_rmse_far"] = _extrap_rmse_map.get(_mname)
+                        _row.update({"extrap_diagnostic": _diag_map.get(_mname)})
                         _row["extrap_diagnostic"] = _extrap_diag_map.get(_mname)
                     _flat_records.append(_row)
             _json_path = _FLAT_OUTPUT_DIR / f"benchmark_results{_SHARD_TAG}.json"
@@ -5543,50 +4870,13 @@ Examples
         _extrap_tests = []
         for _desc, _X, _y, _vnames, _meta, _dom in all_tests:
             try:
-                if _EXTRAP_MODULE_AVAILABLE:
-                    # Delegate the split entirely to build_extrap_split() so that
-                    # the boundary logic stays in one place (extrap_r2_far.py).
-                    _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
-                        _X, _y,
-                        description=_desc,
-                        train_frac=_efrac,
-                        multiplier=_emult,
-                    )
-                    _meta_ext = {**_meta, **_extrap_meta}
-                else:
-                    # extrap_r2_far module unavailable — inline the split so the
-                    # run can still proceed (without extrapolation error %).
-                    _order   = np.argsort(_X[:, 0])
-                    _Xs, _ys = _X[_order], _y[_order]
-                    _n       = len(_Xs)
-                    _split   = max(1, int(_n * _efrac))
-                    _X_train, _y_train = _Xs[:_split], _ys[:_split]
-                    _x_train_min  = float(_Xs[0, 0])
-                    _x_train_max  = float(_Xs[_split - 1, 0])
-                    _train_range  = max(_x_train_max - _x_train_min, 1e-300)
-                    _far_ceiling  = _x_train_max + _emult * _train_range
-                    _far_all      = _Xs[_split:]
-                    _far_y_all    = _ys[_split:]
-                    _far_mask     = _far_all[:, 0] <= _far_ceiling
-                    _X_far        = _far_all[_far_mask]
-                    _y_far        = _far_y_all[_far_mask]
-                    _n_clipped    = int((~_far_mask).sum())
-                    if _n_clipped > 0:
-                        print(f"   ℹ️  '{_desc[:45]}': clipped {_n_clipped} far sample(s) "
-                              f"beyond {_emult}× boundary (x>{_far_ceiling:.3g})")
-                    if len(_X_far) == 0:
-                        print(f"  ⚠️  '{_desc[:45]}': no far samples within "
-                              f"multiplier={_emult}× — extrap_r2_far will be null")
-                    _meta_ext = {
-                        **_meta,
-                        "extrap":             True,
-                        "extrap_train_frac":  _efrac,
-                        "extrap_multiplier":  _emult,
-                        "extrap_n_train":     _split,
-                        "extrap_n_test":      len(_X_far),
-                        "extrap_x_train_max": _x_train_max,
-                        "extrap_far_ceiling": _far_ceiling,
-                    }
+                _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
+                    _X, _y,
+                    description=_desc,
+                    train_frac=_efrac,
+                    multiplier=_emult,
+                )
+                _meta_ext = {**_meta, **_extrap_meta}
                 _extrap_tests.append((_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
                                       _X_far, _y_far))
             except Exception as _esplit_exc:

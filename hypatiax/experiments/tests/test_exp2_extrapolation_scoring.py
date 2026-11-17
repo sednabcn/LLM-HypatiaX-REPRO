@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from hypatiax.experiments.benchmarks.extrap_r2_far import (
+from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     _runner_eval_formula,
     build_extrap_split,
     compute_extrap_r2_far,
@@ -107,16 +107,19 @@ def test_both_active_feynman_runners_fail_closed_on_invalid_extrapolation_splits
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[3]
+    bench = root / "hypatiax" / "experiments" / "benchmarks"
+    core_source = (bench / "exp2_extrapolation_core.py").read_text()
+    assert "if split < 2 or n - split < 2:" in core_source
+    assert "if len(X_far) < 2:" in core_source
+    assert "rmse_far = _far_rmse(y_far, y_far_pred)" in core_source
     for filename in (
         "run_comparative_suite_benchmark_v2.py",
         "run_comparative_suite_benchmark_pca.py",
     ):
-        source = (root / "hypatiax/experiments/benchmarks" / filename).read_text()
+        source = (bench / filename).read_text()
         assert "raise RuntimeError(" in source
         assert "refusing an in-sample fallback" in source
-        assert "if split < 2 or n - split < 2:" in source
-        assert "if len(X_far) < 2:" in source
-        assert "rmse_far = _far_rmse(y_far, y_far_pred)" in source
+        assert "build_extrap_split(" in source
 
 
 def test_feynman_output_identity_includes_domain_and_timestamp_precision():
@@ -212,3 +215,54 @@ def test_exp2_worker_validator_rejects_missing_method_rows(tmp_path):
     os.utime(tmp_path / "benchmark_results_extrap.json", ns=(future_ns, future_ns))
     with pytest.raises(ValueError, match="missing"):
         module.validate_worker_outputs(tmp_path, marker, ["domain-A"])
+
+
+def test_retained_predictor_supplies_training_baseline_on_training_rows_only():
+    X_train = np.array([[0.0], [1.0], [2.0]])
+    y_train = np.array([1.1, 2.1, 3.1])
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    y_far = np.array([5.0, 6.0, 7.0])
+    seen = []
+
+    def predict(X):
+        values = np.asarray(X, dtype=float).copy()
+        seen.append(values)
+        return values[:, 0] + 1.0
+
+    result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predict)
+    diagnostics = {}
+    _, _, error_pct = compute_extrap_r2_far(
+        {"retained": result},
+        X_far,
+        y_far,
+        ["x"],
+        y_train=y_train,
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+
+    assert error_pct["retained"] == pytest.approx(1000.0)
+    np.testing.assert_array_equal(seen[0], X_far)
+    np.testing.assert_array_equal(seen[1], X_train)
+    assert diagnostics["retained"]["error_pct_status"] == "available"
+
+
+def test_zero_training_rmse_keeps_ratio_undefined_with_explicit_status():
+    X_train = np.array([[0.0], [1.0], [2.0]])
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    predict = lambda X: np.asarray(X)[:, 0] + 1.0
+    result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predict)
+    diagnostics = {}
+    _, _, error_pct = compute_extrap_r2_far(
+        {"retained": result},
+        X_far,
+        np.array([4.0, 5.0, 6.0]),
+        ["x"],
+        y_train=np.array([1.0, 2.0, 3.0]),
+        X_train_predictor=X_train,
+        verbose=False,
+        diagnostics=diagnostics,
+    )
+    assert error_pct["retained"] is None
+    assert diagnostics["retained"]["error_pct_status"] == "zero_or_invalid_training_rmse"
