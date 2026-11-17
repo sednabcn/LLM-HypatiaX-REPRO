@@ -980,8 +980,27 @@ class HybridDiscoverySystem:
                     "discovery_engine": "physics_aware",
                     "complexity": len(expression),
                 }
-                self.stats["physics_used"] += 1
-                if r2 > best_r2:
+                if self._active_discovery_problem is not None:
+                    _physics_gate = self._candidate_validator.validate(
+                        self._active_discovery_problem,
+                        expression,
+                        source="domain_template",
+                        search_strategy="physics_aware_fallback",
+                        seed=int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")),
+                    )
+                    physics_result["candidate_validation"] = _physics_gate.to_dict()
+                    physics_result["candidate_validation_status"] = (
+                        "eligible" if _physics_gate.eligible else "rejected"
+                    )
+                    if not _physics_gate.eligible:
+                        logger.warning(
+                            "[FALLBACK] PhysicsAware candidate rejected by declared gates: %s",
+                            list(_physics_gate.rejection_reasons),
+                        )
+                        physics_result = None
+                if physics_result is not None:
+                    self.stats["physics_used"] += 1
+                if physics_result is not None and r2 > best_r2:
                     logger.info("   [BEST] PhysicsAware better!")
                     best_result = physics_result
                     best_r2 = r2
