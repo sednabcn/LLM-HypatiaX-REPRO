@@ -844,7 +844,6 @@ class HybridDiscoverySystem:
                     _candidate_record = dataclass_replace(
                         _candidate_gate,
                         metrics={
-                            "complexity": {"node_count": int(quality["complexity"])},
                             "training_r2": float(r2),
                             "quality_check": quality,
                         },
@@ -1017,7 +1016,7 @@ class HybridDiscoverySystem:
                     if _physics_gate is not None:
                         _physics_record = dataclass_replace(
                             _physics_gate,
-                            metrics={"complexity": {"node_count": int(physics_result["complexity"])}},
+                            metrics={"quality_check": {"complexity": physics_result["complexity"]}},
                         )
                         _candidate_attempts.append((_physics_record, physics_result))
                 if physics_result is not None and r2 > best_r2:
