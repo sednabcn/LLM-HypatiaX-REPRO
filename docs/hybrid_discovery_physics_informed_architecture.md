@@ -861,3 +861,34 @@ Before enabling it in Exp2, the next integration should:
 Regression test source was added but not run. No local tests, CI workflows,
 manual workflow dispatches, experiments, smoke runs, workers, benchmarks, or
 LLM API calls were launched. No far/test data was accessed.
+---
+
+## 19. Exp2 production integration — fold-local Hybrid/PySR strategy selection
+
+The Exp2 HybridSystemV50_2Method now requests an explicit training-only search-validation phase through the isolated hybrid_v50_2 worker. The worker passes the option into HybridDiscoverySystem.discover(); the class performs the selector before its ordinary final discovery/retry path.
+
+### 19.1 Fold-local adapter
+
+Added hypatiax/tools/symbolic/hybrid_fold_search.py.
+
+- Uses only the X and y arrays supplied to the Exp2 Hybrid worker. These are the training-region arrays; far/test arrays are not passed to the worker or selector.
+- Relearns the Hybrid outer signed-log feature/target flags from each fold's fitting rows, then freezes those flags for held-out rows.
+- Constructs a fresh base SymbolicEngine for each strategy/fold. This is a pure-PySR path: fold validation makes no LLM API calls.
+- Uses fitting rows to learn SymbolicEngine X scales, positive-domain geometric-mean features, and variance-ranked directed ratio features.
+- The engine records the selected Pareto index and exact fold-fitted transform plan. predict_fold_validation() applies that plan without re-learning scales, feature eligibility, or ratio ranking from validation rows.
+- The three paired configurations vary only parsimony: baseline, lower, and higher. All configurations use identical fold partitions and seed schedules.
+- The selected parsimony is applied to the ordinary final full-training HybridDiscovery search. The system restores its original config afterward, preventing one equation's selected setting from leaking to the next.
+
+### 19.2 Exp2 budget and provenance
+
+The Exp2 runner enables two internal random holdouts (20% validation each), with three search configurations, a 20-iteration fold search cap, and a 20-second per-fold PySR timeout. The worker reserves 120 seconds for this selection phase and reduces the final retry budget accordingly. The existing outer subprocess deadline remains the hard ceiling.
+
+Benchmark provenance records the selected strategy, fold metrics, rejected strategies, fold timeout, and that fold search had LLM guidance disabled. The final full-training discovery remains the configured LLM-guided Hybrid arm. Its retry-level training-R²/complexity policy and declared scientific candidate gates still apply after strategy selection.
+
+### 19.3 Fail-closed behavior and boundaries
+
+If no strategy yields the required finite fold evidence, the Hybrid worker returns NO_CREDIBLE_CANDIDATE and does not run the final full-training search. There is no fallback to selecting a configuration by full-training R². Far/test metrics remain unavailable to the selector and are reserved for the benchmark's subsequent final evaluation.
+
+The fold search is deliberately a bounded configuration comparison, not a proof of physical truth. Two random holdouts and short PySR budgets provide coarse evidence; they are not a substitute for broader repeated/blocked validation in a future budget-explicit study. The three configurations vary parsimony only; operator grammars and other settings remain fixed. Existing candidate validation gates run on the final full-training candidate, not on fold equations.
+
+Regression source was added in tests/test_hybrid_fold_search_adapter.py for fold-fitted outer transforms and validation-transform reuse. Tests were not run. No CI workflow or manual dispatch was triggered. No experiments, smoke runs, workers, benchmarks, or LLM API calls were launched during this implementation.

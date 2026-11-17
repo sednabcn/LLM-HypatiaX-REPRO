@@ -34,6 +34,8 @@ __all__ = [
     "SearchStrategyScore",
     "TrainingOnlySearchSelection",
     "select_pysr_search_strategy_on_training_folds",
+    "HybridFoldPySRSearcher",
+    "select_hybrid_search_configuration",
 ]
 
 
@@ -69,6 +71,10 @@ def __getattr__(name: str):
         "select_pysr_search_strategy_on_training_folds",
     }:
         module = import_module(".pysr_strategy_selection", __name__)
+    elif name in {
+        "HybridFoldPySRSearcher", "select_hybrid_search_configuration",
+    }:
+        module = import_module(".hybrid_fold_search", __name__)
     elif name in {
         "DiscoveryProblem",
         "DiscoveryBudget",

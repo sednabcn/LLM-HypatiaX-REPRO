@@ -809,9 +809,9 @@ class HybridDiscoverySystem:
                 _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
                 _candidate_gate = None
                 _candidate_gate_passed = True
-                if _valid_expression and _valid_score and self._active_discovery_problem is not None:
+                if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
                     _candidate_gate = self._candidate_validator.validate(
-                        self._active_discovery_problem,
+                        getattr(self, "_active_discovery_problem", None),
                         expr,
                         source="pysr_search",
                         search_strategy="retry_search",
@@ -827,7 +827,7 @@ class HybridDiscoverySystem:
                             "   [REJECTED] Candidate failed declared scientific gates: %s",
                             list(_candidate_gate.rejection_reasons),
                         )
-                elif self._active_discovery_problem is None:
+                elif getattr(self, "_active_discovery_problem", None) is None:
                     result["candidate_validation_status"] = "not_configured"
                 if _valid_expression and _valid_score:
                     quality = self._check_expression_quality(expr, float(r2))
@@ -980,9 +980,9 @@ class HybridDiscoverySystem:
                     "discovery_engine": "physics_aware",
                     "complexity": len(expression),
                 }
-                if self._active_discovery_problem is not None:
+                if getattr(self, "_active_discovery_problem", None) is not None:
                     _physics_gate = self._candidate_validator.validate(
-                        self._active_discovery_problem,
+                        getattr(self, "_active_discovery_problem", None),
                         expression,
                         source="domain_template",
                         search_strategy="physics_aware_fallback",
@@ -1018,7 +1018,7 @@ class HybridDiscoverySystem:
             raise ValueError(
                 f"All {self.max_retries} discovery attempts failed"
                 + (f": {last_attempt_error}" if last_attempt_error else "")
-                + f"\n  Domain detected: '{self.domain}'."
+                + f"\n  Domain detected: '{getattr(self, 'domain', 'general')}'."
             ) from last_attempt_error
 
     @staticmethod
@@ -1338,9 +1338,80 @@ class HybridDiscoverySystem:
                 "metadata['discovery_problem'] must be a DiscoveryProblem instance; "
                 "construct it explicitly so units, domains, and constraints are typed."
             )
-        # Reset on every public call so one equation's scientific contract cannot
-        # leak into the next equation when a runner reuses this system instance.
+        # Reset per-call scientific and training-only selection state so no
+        # equation's validation result or contract can leak into the next call.
         self._active_discovery_problem = _problem
+        self._training_only_search_selection = None
+
+        _validation_settings = metadata.get("training_only_search_validation")
+        if _validation_settings:
+            if not isinstance(_validation_settings, dict):
+                raise TypeError(
+                    "metadata['training_only_search_validation'] must be a dict"
+                )
+            from hypatiax.tools.symbolic.hybrid_fold_search import (
+                select_hybrid_search_configuration,
+            )
+            _selection_seed = int(
+                metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+            )
+            try:
+                _selection, _parsimony_options = select_hybrid_search_configuration(
+                    X,
+                    y,
+                    variable_names=var_names,
+                    equation_name=str(metadata.get("equation_name", description or "unknown")),
+                    domain=str(metadata.get("domain") or self.domain),
+                    base_config=self.symbolic_engine.config,
+                    seed=_selection_seed,
+                    n_splits=int(_validation_settings.get("n_splits", 2)),
+                    validation_fraction=float(
+                        _validation_settings.get("validation_fraction", 0.2)
+                    ),
+                    fold_iterations=int(_validation_settings.get("fold_iterations", 20)),
+                    fold_timeout_seconds=int(
+                        _validation_settings.get("fold_timeout_seconds", 20)
+                    ),
+                    allow_pow=metadata.get("allow_pow"),
+                    max_mean_normalized_rmse=_validation_settings.get(
+                        "max_mean_normalized_rmse"
+                    ),
+                )
+                self._training_only_search_selection = _selection.to_dict()
+                if _selection.status != "selected" or not _selection.selected_strategy:
+                    return {
+                        "success": False,
+                        "error": "NO_CREDIBLE_CANDIDATE",
+                        "message": (
+                            "No PySR search configuration met the training-only "
+                            "fold-validation requirements; full-training discovery "
+                            "was not run."
+                        ),
+                        "training_only_search_selection": self._training_only_search_selection,
+                    }
+                self._selected_training_search_strategy = _selection.selected_strategy
+                self._selected_training_search_parsimony = _parsimony_options[
+                    _selection.selected_strategy
+                ]
+                logger.info(
+                    "[TRAINING-VALIDATION] selected strategy=%s parsimony=%s",
+                    self._selected_training_search_strategy,
+                    self._selected_training_search_parsimony,
+                )
+            except Exception as _selection_error:
+                self._training_only_search_selection = {
+                    "status": "NO_CREDIBLE_CANDIDATE",
+                    "selected_strategy": None,
+                    "selection_scope": "training_region_only",
+                    "error": f"{type(_selection_error).__name__}: {_selection_error}"[:400],
+                    "far_test_data_used": False,
+                }
+                return {
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "message": "Training-only search configuration validation failed closed.",
+                    "training_only_search_selection": self._training_only_search_selection,
+                }
 
         _noise_level = metadata.get("noise_level", None)
         self._current_noise_level = _noise_level
@@ -1465,17 +1536,32 @@ class HybridDiscoverySystem:
         self.symbolic_engine._fixd_ctx = _fixd_ctx
 
         try:
-            full_result = self.discover_validate_interpret(
-                X=X,
-                y=y,
-                variable_names=var_names,
-                variable_descriptions=variable_descriptions,
-                variable_units=variable_units,
-                description=description,
-                equation_name=equation_name,
-                show_formatted=verbose,
-                use_llm=_meta_use_llm,
-            )
+            _original_parsimony = self.symbolic_engine.config.parsimony
+            try:
+                if self._training_only_search_selection is not None:
+                    self.symbolic_engine.config.parsimony = (
+                        self._selected_training_search_parsimony
+                    )
+                full_result = self.discover_validate_interpret(
+                    X=X,
+                    y=y,
+                    variable_names=var_names,
+                    variable_descriptions=variable_descriptions,
+                    variable_units=variable_units,
+                    description=description,
+                    equation_name=equation_name,
+                    show_formatted=verbose,
+                    use_llm=_meta_use_llm,
+                )
+                if self._training_only_search_selection is not None:
+                    full_result.setdefault("metadata", {})[
+                        "training_only_search_selection"
+                    ] = self._training_only_search_selection
+                    full_result["metadata"]["selected_search_strategy"] = (
+                        self._selected_training_search_strategy
+                    )
+            finally:
+                self.symbolic_engine.config.parsimony = _original_parsimony
 
             # FIX-POW: restore original binary_operators regardless of result
             self.symbolic_engine.config.binary_operators = _orig_binary_ops
@@ -1685,6 +1771,7 @@ class HybridDiscoverySystem:
                 "r2": r2,
                 "rmse": rmse,
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
+                "training_only_search_selection": self._training_only_search_selection,
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 # FIX: a later pure-PySR retry can win the attempt loop and carries no
                 # llm_mode, which used to hide that the LLM WAS called in attempt 1
