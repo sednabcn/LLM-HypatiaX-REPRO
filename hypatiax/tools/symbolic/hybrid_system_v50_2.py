@@ -164,6 +164,8 @@ from hypatiax.tools.symbolic.symbolic_engine import (
     detect_collapsed_constants,
 )
 from hypatiax.tools.validation.ensemble_validator import EnsembleValidator
+from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem
+from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
 
 
 class DiscoveryMode(Enum):
@@ -467,6 +469,8 @@ class HybridDiscoverySystem:
         self.physics_generations = physics_generations
         self.max_retries = max_retries
         self.enable_auto_config = enable_auto_config
+        self._active_discovery_problem: DiscoveryProblem | None = None
+        self._candidate_validator = CandidateValidator()
         self.use_llm = use_llm
         self.requested_llm_mode = llm_mode if use_llm else "none"  # Issue-5: immutable intent
         self.llm_mode = self.requested_llm_mode                     # Issue-5: active mode (may degrade)
@@ -803,6 +807,28 @@ class HybridDiscoverySystem:
                     "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED"
                 )
                 _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
+                _candidate_gate = None
+                _candidate_gate_passed = True
+                if _valid_expression and _valid_score and self._active_discovery_problem is not None:
+                    _candidate_gate = self._candidate_validator.validate(
+                        self._active_discovery_problem,
+                        expr,
+                        source="pysr_search",
+                        search_strategy="retry_search",
+                        seed=seed,
+                    )
+                    _candidate_gate_passed = bool(_candidate_gate.eligible)
+                    result["candidate_validation"] = _candidate_gate.to_dict()
+                    result["candidate_validation_status"] = (
+                        "eligible" if _candidate_gate_passed else "rejected"
+                    )
+                    if not _candidate_gate_passed:
+                        logger.warning(
+                            "   [REJECTED] Candidate failed declared scientific gates: %s",
+                            list(_candidate_gate.rejection_reasons),
+                        )
+                elif self._active_discovery_problem is None:
+                    result["candidate_validation_status"] = "not_configured"
                 if _valid_expression and _valid_score:
                     quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
@@ -817,7 +843,7 @@ class HybridDiscoverySystem:
                 # flagged candidate only as an explicit last-resort fallback.
                 # Within each pool, training-R² differences <= 1e-3 are ties
                 # and the simpler expression wins.  No far/test metric is used.
-                if _valid_expression and _valid_score:
+                if _valid_expression and _valid_score and _candidate_gate_passed:
                     _candidate_complexity = int(quality["complexity"])
                     result["discovery_engine"] = "symbolic"
                     result["attempt"] = attempt + 1
@@ -857,7 +883,10 @@ class HybridDiscoverySystem:
                     if getattr(self.symbolic_engine.config, "use_transcendental_compositions", False)
                     else R2_STANDARD
                 )
-                if _valid_expression and _valid_score and r2 >= _early_stop_r2 and not quality["is_overfit"]:
+                if (
+                    _valid_expression and _valid_score and _candidate_gate_passed
+                    and r2 >= _early_stop_r2 and not quality["is_overfit"]
+                ):
                     logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
                     self.stats["symbolic_successes"] += 1
                     return best_result
@@ -1283,6 +1312,16 @@ class HybridDiscoverySystem:
         reinstantiating the system.
         """
         metadata = metadata or {}
+
+        _problem = metadata.get("discovery_problem")
+        if _problem is not None and not isinstance(_problem, DiscoveryProblem):
+            raise TypeError(
+                "metadata['discovery_problem'] must be a DiscoveryProblem instance; "
+                "construct it explicitly so units, domains, and constraints are typed."
+            )
+        # Reset on every public call so one equation's scientific contract cannot
+        # leak into the next equation when a runner reuses this system instance.
+        self._active_discovery_problem = _problem
 
         _noise_level = metadata.get("noise_level", None)
         self._current_noise_level = _noise_level
