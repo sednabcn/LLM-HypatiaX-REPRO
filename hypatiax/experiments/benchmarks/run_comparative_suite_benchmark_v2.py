@@ -387,6 +387,8 @@ def _recompute_prediction_metrics(y_true, y_pred):
         raise ValueError(
             f"prediction length mismatch: expected {_yt.size}, got {_yp.size}"
         )
+    if _yt.size == 0:
+        raise ValueError("metric inputs must contain at least one row")
     if not np.all(np.isfinite(_yt)) or not np.all(np.isfinite(_yp)):
         raise ValueError("metric inputs contain non-finite values")
     from hypatiax.core.r2_canonical import r2_scored
@@ -1567,8 +1569,7 @@ class HybridDeFiMethod(BaseMethod):
                 y_pred_arr = result.get("y_pred")
                 if y_pred_arr is not None:
                     y_pred_arr = np.asarray(y_pred_arr).flatten()
-                    r2_val   = self._safe_r2(y, y_pred_arr)
-                    rmse_val = self._safe_rmse(y, y_pred_arr)
+                    r2_val, rmse_val, _ = _recompute_prediction_metrics(y, y_pred_arr)
                     _formula = (result.get("llm_result") or {}).get("python_code", "N/A")
                     return MethodResult(
                         method=self.name, success=True,
@@ -1580,6 +1581,7 @@ class HybridDeFiMethod(BaseMethod):
                             "eval_source": "y_pred_recompute",
                             "evaluation_source_key": "top_level_y_pred",
                             "evaluation_metric_source": "recomputed_from_top_level_y_pred",
+                            "metric_verification_status": "recomputed_from_aligned_predictions",
                             "benchmark_metric_row_scope": "full_input_dataset",
                             "evaluation_prediction_source": "top_level_y_pred",
                             "evaluation_prediction_row_count": int(y_pred_arr.size),
