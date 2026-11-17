@@ -390,3 +390,28 @@ This guide extends, rather than replaces, the following repository material:
 The shared core establishes the split and metric rules. This document adds
 the missing method-level invariant: the training and far RMSEs used in a
 single ratio must be produced by the same final fitted prediction route.
+
+
+## Implementation status
+
+The first scorer-level implementation is in
+`hypatiax/experiments/benchmarks/exp2_extrapolation_core.py`:
+
+- A retained `_predict_fn` now takes precedence for both far and exact
+  training predictions. A supplied formula-derived `y_pred_train` array
+  cannot override the retained final predictor.
+- When no retained predictor exists, the symbolic-formula fallback can still
+  use the runner's pre-evaluated formula training predictions, preserving
+  engineered-feature compatibility.
+- Diagnostics record the far predictor route, training prediction route, and
+  whether the two routes agree. Detailed training prediction errors are
+  preserved alongside the final far-metric status.
+- A synthetic regression test supplies deliberately conflicting formula
+  predictions and verifies that the retained hybrid predictor controls the
+  ratio.
+
+This change repairs scorer precedence; it does not by itself guarantee that
+every method branch retains a complete predictor. The direct-NN, LLM-plus-
+residual, and PCA predictor lifecycle audit remains a separate follow-up
+within this implementation. Offline tests are committed for CI and have not
+been run locally. No experiment or smoke workflow has been dispatched.
