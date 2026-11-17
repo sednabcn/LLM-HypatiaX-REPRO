@@ -3950,6 +3950,9 @@ class ProtocolBenchmarkSuite:
                         "bypass_kind":       _mres.get("bypass_kind"),  # B2
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
+                        "extrap_nrmse_far": (_diag_map.get(_mname) or {}).get("extrap_nrmse_far"),
+                        "extrapolation_score": (_diag_map.get(_mname) or {}).get("extrapolation_score"),
+                        "extrap_nrmse_far_status": (_diag_map.get(_mname) or {}).get("extrap_nrmse_far_status"),
                         "extrap_prediction_audit": (rec.get("extrap_prediction_audit") or {}).get(_mname),
                         "extrap_error_pct":  _eep_map.get(_mname),  # NEW: % degradation
                         "extrap_train_frac": _train_frac,

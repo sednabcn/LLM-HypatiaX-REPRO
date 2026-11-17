@@ -139,6 +139,17 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             diagnostic = diagnostics[method]
             if not isinstance(diagnostic, dict) or not isinstance(diagnostic.get("status"), str):
                 raise ValueError(f"{description}/{method}: missing far-region diagnostic status")
+            if "extrap_nrmse_far" in diagnostic:
+                score = diagnostic.get("extrap_nrmse_far")
+                scale = diagnostic.get("extrap_target_scale_train")
+                if diagnostic.get("extrap_nrmse_far_status") == "available":
+                    if score is None or scale is None or float(scale) <= 0.0:
+                        raise ValueError(f"{description}/{method}: normalized far score has no positive training scale")
+                    expected_score = float(far_rmse[method]) / float(scale)
+                    if far_rmse[method] is None or not math.isclose(float(score), expected_score, rel_tol=1e-9, abs_tol=1e-12):
+                        raise ValueError(f"{description}/{method}: normalized far score does not match RMSE_far / training target scale")
+                elif score is not None:
+                    raise ValueError(f"{description}/{method}: unavailable normalized far score must be null")
             diagnostic_status_counts[diagnostic["status"]] += 1
             method_rows += 1
 
@@ -170,6 +181,11 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             raise ValueError(f"flat row {identity} is missing ordinary or far-region score fields")
         if row.get("extrap_prediction_audit") != expected_audits.get(identity):
             raise ValueError(f"flat row {identity} does not preserve its protocol prediction audit")
+        matching_test = next(test for test in tests if str(test.get("domain") or "") == identity[0] and str(test.get("description") or "") == identity[1])
+        diagnostic = (matching_test.get("extrap_diagnostics") or {}).get(identity[2], {})
+        for field in ("extrap_nrmse_far", "extrapolation_score", "extrap_nrmse_far_status"):
+            if row.get(field) != diagnostic.get(field):
+                raise ValueError(f"flat row {identity} does not preserve normalized extrapolation field {field}")
     if set(counts) != expected or any(count != 1 for count in counts.values()):
         raise ValueError("flat extrap rows do not provide exactly one row per equation/method pair")
 

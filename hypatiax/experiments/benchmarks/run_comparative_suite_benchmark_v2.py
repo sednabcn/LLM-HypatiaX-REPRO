@@ -4314,6 +4314,9 @@ class ProtocolBenchmarkSuite:
                         "llm_source":        _mres.get("llm_source"),
                         "extrap_r2_far":     _er_map.get(_mname),
                         "extrap_rmse_far":   _erm_map.get(_mname),
+                        "extrap_nrmse_far": (_diag_map.get(_mname) or {}).get("extrap_nrmse_far"),
+                        "extrapolation_score": (_diag_map.get(_mname) or {}).get("extrapolation_score"),
+                        "extrap_nrmse_far_status": (_diag_map.get(_mname) or {}).get("extrap_nrmse_far_status"),
                         "extrap_error_pct":  _eep_map.get(_mname),  # % degradation
                         "extrap_rmse_train": (_diag_map.get(_mname) or {}).get("extrap_rmse_train"),
                         "benchmark_rmse": (_diag_map.get(_mname) or {}).get("benchmark_rmse"),

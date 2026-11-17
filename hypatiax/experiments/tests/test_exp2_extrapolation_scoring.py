@@ -351,3 +351,39 @@ def test_extrap_split_rejects_out_of_range_feature_index():
     y = X.sum(axis=1)
     with pytest.raises(ValueError, match="feature_index"):
         build_extrap_split(X, y, feature_index=2)
+
+
+def test_low_training_rmse_uses_target_scale_normalized_far_rmse():
+    X_train = np.array([[0.0], [1.0], [2.0]])
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    y_train = np.array([1.0, 2.0, 3.0])
+    predict = lambda X: np.asarray(X)[:, 0] + 1.0 + 5e-13
+    result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predict)
+    diagnostics = {}
+    _, far_rmse, error_pct = compute_extrap_r2_far(
+        {"retained": result}, X_far,
+        np.array([4.0, 5.0, 6.0]) + 1e-14, ["x"],
+        y_train=y_train, X_train_predictor=X_train,
+        verbose=False, diagnostics=diagnostics,
+    )
+    diag = diagnostics["retained"]
+    assert error_pct["retained"] is None
+    assert diag["error_pct_status"] == "below_training_rmse_epsilon"
+    assert diag["extrap_nrmse_far"] == pytest.approx(far_rmse["retained"] / np.std(y_train))
+    assert diag["extrapolation_score"] == diag["extrap_nrmse_far"]
+    assert diag["extrap_nrmse_far_status"] == "available"
+
+
+def test_low_training_rmse_fallback_is_unavailable_for_constant_training_targets():
+    X_train = np.array([[0.0], [1.0], [2.0]])
+    X_far = np.array([[3.0], [4.0], [5.0]])
+    predict = lambda X: np.asarray(X)[:, 0] + 1.0
+    result = SimpleNamespace(success=True, formula="N/A", _predict_fn=predict)
+    diagnostics = {}
+    compute_extrap_r2_far(
+        {"retained": result}, X_far, np.array([4.0, 5.0, 6.0]), ["x"],
+        y_train=np.array([2.0, 2.0, 2.0]), X_train_predictor=X_train,
+        verbose=False, diagnostics=diagnostics,
+    )
+    assert diagnostics["retained"]["extrap_nrmse_far"] is None
+    assert diagnostics["retained"]["extrap_nrmse_far_status"] == "zero_training_target_scale"
