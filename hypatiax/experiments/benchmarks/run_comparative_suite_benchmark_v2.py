@@ -148,6 +148,7 @@ for _noisy_logger in ("httpx", "httpcore", "anthropic"):
     _l.propagate = False
 
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 # --- BEGIN null-json helpers (AUDIT L37; identical in v2 and pca suites) -------
 # In memory MethodResult keeps -inf/inf (comparisons and routing unchanged).
@@ -195,6 +196,9 @@ except (TypeError, ValueError) as _noise_exc:
     ) from _noise_exc
 if not _jmath.isfinite(_HYPATIAX_NOISE_LEVEL) or _HYPATIAX_NOISE_LEVEL < 0.0:
     raise ValueError("HYPATIAX_NOISE_LEVEL must be a finite non-negative number")
+
+# Single-run output suffix. Sharded orchestrators may override this module global.
+_SHARD_TAG = ""
 
 # ---------------------------------------------------------------------------
 # Shared Exp2 extrapolation helpers are imported from the lightweight core above.
