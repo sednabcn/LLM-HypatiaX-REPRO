@@ -429,6 +429,6 @@ not been run locally. No experiment or smoke workflow has been dispatched.
 
 ## Latest smoke evidence: run 44087232173
 
-The latest 3-equation × 6-method smoke run is documented in [the run-specific null-ratio diagnosis](exp2_smoke_run_44087232173_null_error_pct_diagnosis.md). Its 11 null `error_pct` values are not predictor failures: all 11 have finite far RMSE equal to zero, a consistent train/far predictor route, and `zero_or_invalid_training_rmse` status. The scorer's finite checks plus ratio helper establish a zero training-partition RMSE, so the ratio is 0/0 and must remain undefined.
+The latest 3-equation × 6-method smoke run is documented in [the run-specific null-ratio diagnosis](exp2_smoke_run_44087232173_null_error_pct_diagnosis.md). Its 11 null `error_pct` values are not predictor failures: all 11 have finite far RMSE equal to zero, a consistent train/far predictor route, and `zero_or_invalid_training_rmse` status. The scorer reports `zero_or_invalid_training_rmse`; its helper returns null for a non-finite or non-positive training RMSE. The artifact does not persist the numeric denominator, so it confirms an undefined ratio but does not distinguish zero from non-finite arithmetic for every row.
 
 Do not infer the denominator from the ordinary benchmark `rmse` field: that field is not the exact extrapolation-training-partition RMSE. The smoke artifact currently omits the latter as a numeric field; future reporting should persist `extrap_rmse_train` directly and separate zero from non-finite denominator statuses.
