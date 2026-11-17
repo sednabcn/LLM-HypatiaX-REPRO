@@ -683,3 +683,64 @@ It must also capture the target transform and symbolic output normalization expl
 - Not implemented: geometric-mean/ratio feature-plan replay, fold-local target transforms, full engine/PySR refit per fold, retry-selector integration, or Pareto selection.
 - No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
 - No far/test data was accessed.
+
+
+---
+
+## 17. Implementation log — fold-local engineered feature plans and target scaling
+
+This step advances the fold boundary from raw columns to the two explicit engineered-feature families used by the symbolic engine, and adds a fold-fitted target scale.
+
+### 17.1 Fold-fitted feature plan
+
+Added the immutable FoldFeaturePlan and FoldFeaturePipeline APIs.
+
+- The pipeline first fits FoldFeaturePreprocessor on the fold's fitting rows.
+- Strictly-positive input columns are identified from the transformed fitting partition only.
+- Optional geometric-mean features are enumerated as deterministic unordered pairs of eligible positive columns.
+- Optional directed ratio features are ranked by standard deviation computed only on fitting rows; ties are resolved by feature names for deterministic schemas, and the configured cap is applied after ranking.
+- The resulting plan freezes raw feature order, geometric-mean pairs, ratio pairs, and output names.
+- Validation transformation reuses the exact frozen plan and preprocessing parameters. It does not reselect features.
+- If a validation row leaves the positive domain required by a selected derived feature, transformation fails closed rather than generating a mathematically misleading feature.
+
+The feature-family switches are explicit inputs. The pipeline does not infer whether optics geometric means or exp-domain ratios should be enabled from the equation name or domain; callers must supply that decision from a declared discovery contract.
+
+### 17.2 Fold-local target scale
+
+Added FoldTargetScaler to reproduce the engine's optional standard-deviation-only target scaling:
+
+- Computes standard deviation from fold fitting targets only.
+- Uses that scale only outside the engine's configured magnitude interval; otherwise uses identity scale.
+- Does not center targets.
+- Applies the frozen scale to fitting/validation targets and provides an inverse transform for predictions.
+- Exposes the fitted scale and fitting-target-only provenance.
+
+### 17.3 Regression source
+
+Added offline test source for:
+- deterministic geometric-mean and top-ranked ratio schema selection from fitting rows;
+- validation transformation not mutating the selected plan;
+- fail-closed behavior when a selected positive-domain feature is invalid on validation rows;
+- target scale fit scope and inverse-transform round trip.
+
+Tests were added but not run.
+
+### 17.4 Remaining integration requirements
+
+These primitives now cover raw signed-log/scale preprocessing, optional fold-local GM/ratio selection, and the target std scale. They still do not make the existing engine's entire discovery path fold-reproducible:
+
+- The engine's feature-family activation includes domain, equation-name, configuration, and sometimes data-driven heuristics. The new pipeline requires explicit flags; a typed adapter must derive those flags from the same declared configuration without inspecting held-out fold rows.
+- The engine has other operator-selection and candidate-generation heuristics that are not feature transforms and must be frozen or recomputed using fitting rows only.
+- Symbolic expressions may have been produced using a full-training feature plan. Their gm_/ratio_ variable names may not exist in a particular fold's plan. Such a candidate must be marked ineligible for that fold; it must not be silently evaluated on a different feature schema.
+- Candidate coefficient refitting must receive the fold-specific feature names and target-scaled fitting targets, then predictions must be inverse-scaled before computing held-out RMSE.
+- Full PySR symbolic search per fold is still not implemented. The present fixed-expression refit remains conditional on an exact, compatible fold feature schema.
+
+Consequently, this PR adds fold-local primitives and contracts only. It does not connect them to the retry selector or claim leakage-safe end-to-end validation.
+
+### 17.5 Current status and provenance
+
+- Implemented: immutable fold feature plan, fitting-row-only GM/ratio eligibility and ranking, frozen transform schema, positive-domain fail-closed behavior, and fold-local target std scaling/inversion.
+- Not implemented: domain/config activation adapter, feature-expression compatibility gate, fold-local PySR refit, target-aware symbolic expression mapping, retry-selector integration, or Pareto selection.
+- Regression tests added but not run.
+- No tests, local execution, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
+- No far/test data was accessed.
