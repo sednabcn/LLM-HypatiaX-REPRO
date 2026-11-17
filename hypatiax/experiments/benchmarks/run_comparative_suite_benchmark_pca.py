@@ -229,30 +229,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 0.  EXTRAPOLATION REGIME — five-tier quality ladder
-#     Matches extrapolation_test_protocol.py and the comments in run_test()
-# ──────────────────────────────────────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class ExtrapolationRegime:
-    """A single tier in the extrapolation-quality ladder."""
-    name:      str    # e.g. "EXCELLENT"
-    threshold: float  # upper bound of this tier (exclusive), % units
-    label:     str    # human-readable label for display
-
-
-#: Ordered from best to worst.  Each tier covers error_pct < threshold.
-#: The last entry (CATASTROPHIC) has threshold=inf so it catches everything ≥ 500 %.
-REGIMES: List[ExtrapolationRegime] = [
-    ExtrapolationRegime("EXCELLENT",    50.0,       "< 50 %  EXCELLENT"),
-    ExtrapolationRegime("GOOD",        100.0,       "< 100 % GOOD"),
-    ExtrapolationRegime("MODERATE",    200.0,       "< 200 % MODERATE"),
-    ExtrapolationRegime("POOR",        500.0,       "< 500 % POOR"),
-    ExtrapolationRegime("CATASTROPHIC", float("inf"), "≥ 500 % CATASTROPHIC"),
-]
-
-
 def _finite(x) -> bool:
     """True only for a real, finite number. None-safe: np.isfinite(None) raises
     TypeError, which is what the M3/M5 codemods turn failed metrics into."""
