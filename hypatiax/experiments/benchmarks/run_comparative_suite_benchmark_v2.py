@@ -3597,10 +3597,10 @@ class ProtocolBenchmarkSuite:
         #
         # Evaluation is delegated to the internal compute_extrap_r2_far()
         # implementation defined earlier in this file.
-        # which also computes extrapolation_error_pct = (RMSE_far / RMSE_train) × 100%
-        # using the same five-tier status labels as extrapolation_test_protocol.py:
-        #   < 50 %  EXCELLENT  |  < 100 %  GOOD  |  < 200 %  MODERATE
-        #   < 500 %  POOR      |  ≥ 500 %  CATASTROPHIC
+        # which computes the primary training-scale normalized far RMSE:
+        # extrapolation_score = RMSE_far / std(y_train).
+        # The legacy RMSE_far / RMSE_train percentage remains available only
+        # for compatibility and is undefined when training RMSE is near zero.
         #
         # Evaluation strategy (unchanged from the inline version):
         #   • Symbolic / LLM methods return a Python formula string → evaluated on
