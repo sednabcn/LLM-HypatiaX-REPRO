@@ -515,7 +515,7 @@ This is a structural boundary for this API, not a security sandbox: a malicious 
 Added `make_training_folds()` with two declared strategies:
 
 - `repeated_random`: seeded repeated holdouts, deterministic for a fixed sample count and configuration.
-- `blocked`: contiguous held-out ranges, preserving the original row order and training on the complement. Use this only when row order represents the scientific/time/range ordering; do not assume ordinary row order is meaningful.
+- `blocked`: one set of contiguous held-out ranges, preserving the original row order and training on the complement. This mode requires `n_repeats=1`; repeating identical blocked ranges would add no evidence. Use this only when row order represents the scientific/time/range ordering; do not assume ordinary row order is meaningful.
 
 Each fold records repeat/fold identifiers and immutable train/validation index tuples. The implementation validates sample counts, split counts, validation fraction, and strategy. The split indices refer only to the caller's training-region arrays; the helper has no knowledge of the far boundary.
 
