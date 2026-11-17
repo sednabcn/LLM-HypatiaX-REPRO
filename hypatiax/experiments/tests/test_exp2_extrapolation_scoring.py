@@ -266,3 +266,47 @@ def test_zero_training_rmse_keeps_ratio_undefined_with_explicit_status():
     )
     assert error_pct["retained"] is None
     assert diagnostics["retained"]["error_pct_status"] == "zero_training_rmse"
+
+
+def test_extrap_split_supports_each_feature_without_dropping_other_columns():
+    X = np.column_stack([
+        np.arange(100, dtype=float),
+        np.arange(100, dtype=float)[::-1],
+        np.arange(100, dtype=float) * 3.0,
+    ])
+    y = X[:, 0] + X[:, 1]
+    for feature_index, feature_name in enumerate(("a", "b", "c")):
+        X_train, y_train, X_far, y_far, metadata = build_extrap_split(
+            X, y, train_frac=0.8, multiplier=2.0, feature_index=feature_index
+        )
+        assert X_train.shape[1] == X.shape[1]
+        assert X_far.shape[1] == X.shape[1]
+        assert metadata["extrap_direction"] == f"feature_{feature_index}"
+        assert metadata["extrap_feature_index"] == feature_index
+        assert X_train[:, feature_index].max() < X_far[:, feature_index].min()
+        assert len(y_train) == len(X_train)
+        assert len(y_far) == len(X_far)
+
+
+def test_joint_extrap_split_uses_all_feature_percentile_ranks():
+    X = np.column_stack([
+        np.arange(100, dtype=float),
+        np.arange(100, dtype=float) * 10.0,
+        np.arange(100, dtype=float) * 2.0,
+    ])
+    y = X.sum(axis=1)
+    X_train, y_train, X_far, y_far, metadata = build_extrap_split(
+        X, y, train_frac=0.8, multiplier=2.0, feature_index=None
+    )
+    assert metadata["extrap_direction"] == "joint_mean_percentile"
+    assert metadata["extrap_direction_score"] == "mean_empirical_percentile"
+    assert X_train.shape[1] == X.shape[1] == X_far.shape[1]
+    assert len(y_train) == len(X_train)
+    assert len(y_far) == len(X_far)
+
+
+def test_extrap_split_rejects_out_of_range_feature_index():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X.sum(axis=1)
+    with pytest.raises(ValueError, match="feature_index"):
+        build_extrap_split(X, y, feature_index=2)

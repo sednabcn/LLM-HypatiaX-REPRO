@@ -4617,24 +4617,32 @@ Examples
         _efrac = float(getattr(args, "extrap_train_frac", 0.8))
         _emult = float(getattr(args, "extrap_multiplier", 2.0))
         print(f"\nℹ️  --extrap mode: train_frac={_efrac}  multiplier={_emult}")
-        print(f"   Far region: X[:,0] ∈ (x_train_max, x_train_max + {_emult}×train_range]")
+        print("   Directions: each input feature independently, plus joint mean-percentile direction.")
         _extrap_tests = []
         for _desc, _X, _y, _vnames, _meta, _dom in all_tests:
-            try:
-                _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
-                    _X, _y,
-                    description=_desc,
-                    train_frac=_efrac,
-                    multiplier=_emult,
-                )
-                _meta_ext = {**_meta, **_extrap_meta}
-                _extrap_tests.append((_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
-                                      _X_far, _y_far))
-            except Exception as _esplit_exc:
-                raise RuntimeError(
-                    f"Extrapolation split failed for '{_desc[:80]}'; refusing an in-sample fallback: "
-                    f"{type(_esplit_exc).__name__}: {_esplit_exc}"
-                ) from _esplit_exc
+            # Fit/evaluate a fresh method set for every input direction. The
+            # joint direction uses mean empirical percentile across all columns.
+            _directions = [(i, str(_vnames[i])) for i in range(_X.shape[1])]
+            _directions.append((None, "joint"))
+            for _feature_index, _direction_label in _directions:
+                _direction_desc = f"{_desc} [extrap:{_direction_label}]"
+                try:
+                    _X_train, _y_train, _X_far, _y_far, _extrap_meta = build_extrap_split(
+                        _X, _y,
+                        description=_direction_desc,
+                        train_frac=_efrac,
+                        multiplier=_emult,
+                        feature_index=_feature_index,
+                    )
+                    _meta_ext = {**_meta, **_extrap_meta}
+                    _extrap_tests.append((_direction_desc, _X_train, _y_train, _vnames, _meta_ext, _dom,
+                                          _X_far, _y_far))
+                except Exception as _esplit_exc:
+                    raise RuntimeError(
+                        f"Extrapolation split failed for '{_direction_desc[:100]}'; "
+                        f"refusing an in-sample fallback: "
+                        f"{type(_esplit_exc).__name__}: {_esplit_exc}"
+                    ) from _esplit_exc
         all_tests = _extrap_tests
         print(f"   Applied extrap split to {len(all_tests)} test(s). "
               f"Each uses {int(_efrac*100)}% of samples for training.\n")
