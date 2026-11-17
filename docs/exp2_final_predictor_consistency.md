@@ -409,9 +409,20 @@ The first scorer-level implementation is in
 - A synthetic regression test supplies deliberately conflicting formula
   predictions and verifies that the retained hybrid predictor controls the
   ratio.
+- The v2 all-domains hybrid now labels a result as predictor-unavailable
+  instead of allowing an unverified formula to stand in for backend/NN
+  predictions. When its residual correction is accepted and a verified
+  formula base exists, it retains the complete base-plus-residual callable.
+- The v2 DeFi wrapper now retains the complete formula-plus-residual callable
+  when the formula reproduces the base predictions; otherwise, an accepted
+  learned correction is explicitly marked as not externally evaluable rather
+  than scoring the base formula as the final method.
+- The PCA DeFi path already constructs its selected inference route through
+  `compose_hybrid_predictor`; the scorer now uses that callable for both
+  partitions rather than a separate formula baseline.
 
-This change repairs scorer precedence; it does not by itself guarantee that
-every method branch retains a complete predictor. The direct-NN, LLM-plus-
-residual, and PCA predictor lifecycle audit remains a separate follow-up
-within this implementation. Offline tests are committed for CI and have not
-been run locally. No experiment or smoke workflow has been dispatched.
+This implementation improves route consistency and rejects cases where a
+complete predictor cannot be reconstructed. It does not promise a non-null
+ratio for every method: an unavailable final predictor or zero training RMSE
+remains an explicit limitation. Offline tests are committed for CI and have
+not been run locally. No experiment or smoke workflow has been dispatched.
