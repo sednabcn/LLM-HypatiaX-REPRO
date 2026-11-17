@@ -512,13 +512,34 @@ def compute_extrap_r2_far(
                         else:
                             error_pct_status = "available"
 
-                        # Compare the exact same training-row predictions used
-                        # for extrapolation with the method wrapper's reported
-                        # benchmark RMSE. A mismatch is a predictor-path
-                        # consistency diagnostic, not a reason to replace the
-                        # retained predictor or alter either metric.
+                        # Compare benchmark and extrapolation-training RMSE only
+                        # when they describe the same row scope. Some adapters (notably
+                        # DeFi) report metrics on the full input dataset, whereas this
+                        # scorer uses only the exact extrapolation training partition.
                         method_diag = _diag.setdefault(mname, {})
                         method_diag["extrap_rmse_train"] = float(rmse_train)
+                        result_metadata = getattr(res, "metadata", {}) or {}
+                        provenance_fields = (
+                            "evaluation_source_key",
+                            "evaluation_metric_source",
+                            "evaluation_prediction_source",
+                            "evaluation_prediction_row_count",
+                            "evaluation_feature_representation",
+                            "benchmark_metric_row_count",
+                            "formula_replay_status",
+                            "formula_replay_max_abs_error",
+                            "residual_correction_attempted",
+                            "residual_correction_applied",
+                            "final_predictor_composition",
+                            "external_predictor_route",
+                        )
+                        for field in provenance_fields:
+                            if field in result_metadata:
+                                method_diag[field] = result_metadata[field]
+                        benchmark_row_scope = result_metadata.get(
+                            "benchmark_metric_row_scope", "unspecified"
+                        )
+                        method_diag["benchmark_rmse_row_scope"] = benchmark_row_scope
                         benchmark_rmse = getattr(res, "rmse", None)
                         if (
                             benchmark_rmse is not None
@@ -528,15 +549,22 @@ def compute_extrap_r2_far(
                         ):
                             benchmark_rmse = float(benchmark_rmse)
                             method_diag["benchmark_rmse"] = benchmark_rmse
-                            method_diag["train_rmse_delta"] = float(rmse_train - benchmark_rmse)
-                            method_diag["train_rmse_consistent"] = math.isclose(
-                                float(rmse_train), benchmark_rmse,
-                                rel_tol=1e-6, abs_tol=1e-15,
-                            )
-                            method_diag["train_rmse_consistency_status"] = (
-                                "matches" if method_diag["train_rmse_consistent"]
-                                else "mismatch"
-                            )
+                            if benchmark_row_scope not in ("unspecified", "extrapolation_train"):
+                                method_diag["train_rmse_delta"] = None
+                                method_diag["train_rmse_consistent"] = None
+                                method_diag["train_rmse_consistency_status"] = (
+                                    "not_comparable_different_row_scope"
+                                )
+                            else:
+                                method_diag["train_rmse_delta"] = float(rmse_train - benchmark_rmse)
+                                method_diag["train_rmse_consistent"] = math.isclose(
+                                    float(rmse_train), benchmark_rmse,
+                                    rel_tol=1e-6, abs_tol=1e-15,
+                                )
+                                method_diag["train_rmse_consistency_status"] = (
+                                    "matches" if method_diag["train_rmse_consistent"]
+                                    else "mismatch"
+                                )
                         else:
                             method_diag["benchmark_rmse"] = None
                             method_diag["train_rmse_delta"] = None
