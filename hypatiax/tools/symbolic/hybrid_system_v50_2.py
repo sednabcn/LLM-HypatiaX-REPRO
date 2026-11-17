@@ -1962,6 +1962,7 @@ class HybridDiscoverySystem:
                 "expression": "N/A",
                 "final_formula": "N/A",
                 "variable_names": var_names,
+                "discovery_report": getattr(self, "_last_discovery_report", None),
                 "strategy": "error",
                 "llm_mode": (getattr(self, "_llm_attempt_modes", None) or ["none"])[0],
                 "llm_attempted": any(
