@@ -87,6 +87,7 @@ from typing import Any, Dict, List, Optional
 
 # Ensure direct script execution can resolve the repository package.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
+_PKG_ROOT = _REPO_ROOT / "hypatiax"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
