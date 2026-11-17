@@ -36,6 +36,7 @@ __all__ = [
     "select_pysr_search_strategy_on_training_folds",
     "HybridFoldPySRSearcher",
     "select_hybrid_search_configuration",
+    "select_pareto_discovery_report",
 ]
 
 
@@ -75,6 +76,8 @@ def __getattr__(name: str):
         "HybridFoldPySRSearcher", "select_hybrid_search_configuration",
     }:
         module = import_module(".hybrid_fold_search", __name__)
+    elif name == "select_pareto_discovery_report":
+        module = import_module(".pareto_discovery", __name__)
     elif name in {
         "DiscoveryProblem",
         "DiscoveryBudget",
