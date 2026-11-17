@@ -487,3 +487,77 @@ The existing complexity heuristic remains a secondary preference after scientifi
 - Retry/fallback integration, integration regression tests, and this documentation update are being developed as the next stacked implementation change on the #177 branch.
 - PR #177 remains the implementation baseline until merged to `master`; PR #178 contains the original architecture specification and remains a separate documentation PR at the time of this update.
 - No experiment, smoke workflow, benchmark, worker, local test, CI workflow, or LLM API call was launched for these implementation changes.
+
+
+---
+
+## 14. Implementation log — training-only repeated validation primitives
+
+This step implements the reusable validation substrate described in Stage 4. It does not yet replace the retry loop's transitional training-R² selector; integration is intentionally deferred until the symbolic engine can refit candidate constants independently inside each fold.
+
+### 14.1 Step 1 — sealed input boundary
+
+Added `hypatiax/tools/symbolic/training_validation.py`.
+
+The public evaluator accepts only:
+- `X_train` and `y_train`, representing the already isolated training region;
+- an explicit collection of fold indices relative to those arrays;
+- a fold-aware predictor callback with the signature `(X_fit, y_fit, X_validation) -> predictions`.
+
+There is no far/test argument, no far-data accessor, and no callback argument through which a caller can pass the far set. The callback receives only the current fitting partition and the corresponding held-out validation features. Candidate fitting/constant estimation must occur inside that callback using `X_fit` and `y_fit` only.
+
+The utility checks that fitting and validation indices are disjoint, in range, and partition the supplied training rows. It rejects non-finite training arrays and invalid prediction shapes/values. A failed fold is counted; insufficient valid folds raise an explicit error rather than silently producing a partial score.
+
+This is a structural boundary for this API, not a security sandbox: a malicious or incorrectly written closure could still capture external data. The caller contract and regression tests must therefore remain explicit.
+
+### 14.2 Step 2 — deterministic fold generation
+
+Added `make_training_folds()` with two declared strategies:
+
+- `repeated_random`: seeded repeated holdouts, deterministic for a fixed sample count and configuration.
+- `blocked`: one set of contiguous held-out windows of the configured `validation_fraction`, preserving original row order and training on the complement. This mode requires `n_repeats=1`; repeating identical blocked windows would add no evidence. Use this only when row order represents the scientific/time/range ordering; do not assume ordinary row order is meaningful.
+
+Each fold records repeat/fold identifiers and immutable train/validation index tuples. The implementation validates sample counts, split counts, validation fraction, and strategy. The split indices refer only to the caller's training-region arrays; the helper has no knowledge of the far boundary.
+
+### 14.3 Step 3 — fold metrics and stability evidence
+
+Added `evaluate_candidate_on_training_folds()`, which aggregates:
+- RMSE for each held-out training fold;
+- fold-normalized RMSE using the standard deviation of that fold's fitting-target values (null when that scale is zero);
+- mean RMSE, RMSE spread, worst-fold RMSE, mean available normalized RMSE;
+- valid and failed fold counts.
+
+Added `expression_stability()` as a conservative first stability diagnostic across expressions returned by separate folds/seeds. It normalizes whitespace and the `^`/ `**` power spelling only. It deliberately does not claim algebraic equivalence; expressions that are mathematically equivalent but syntactically different remain distinct until a sound canonical symbolic-equivalence policy is implemented.
+
+The public API is lazily exported from `hypatiax.tools.symbolic`.
+
+### 14.4 Step 4 — offline regression source
+
+Added `tests/test_training_only_validation.py` covering:
+- deterministic repeated random folds and complete, disjoint partitions;
+- contiguous blocked validation ranges;
+- fold metric aggregation and fitting-partition target normalization;
+- non-finite predictions and insufficient-valid-fold failure;
+- transparent expression-stability counting without an equivalence claim.
+
+These tests were added but not executed by this implementation. No local tests, CI workflows, experiments, smoke runs, workers, benchmarks, or LLM API calls were launched.
+
+### 14.5 Important limitation and next integration step
+
+The new utility is a reusable primitive, not yet the active HybridDiscovery selector. The existing PySR result is generally fitted on the complete training array; simply scoring that already-fitted expression on internal folds would leak each fold's held-out targets through fitted constants. This implementation therefore requires a fold-aware refit callback and does not pretend that post-hoc evaluation of a full-training fit is independent validation.
+
+Next, implement a fold-local symbolic refit adapter that:
+1. receives only `X_fit/y_fit` for each fold;
+2. fits or refits candidate constants without seeing that fold's validation targets;
+3. predicts the held-out training fold;
+4. returns fold-specific normalized expressions/metrics for stability analysis;
+5. supplies training-only validation summaries to candidate selection.
+
+Only after this adapter exists should repeated-validation evidence replace training R² in the retry selector. The far/test array must remain outside every function and object used by that selector. Keep the current selector explicitly transitional until then.
+
+### 14.6 Change provenance
+
+- This implementation is on branch `hybrid/training-only-repeated-validation`, stacked on PR #177's branch after PR #181 merged into that branch.
+- It adds a training-only validation module, public lazy exports, offline regression test source, and this implementation log.
+- The architecture diagram is unchanged because this step implements an already documented Stage 4 boundary and does not alter the target pipeline topology.
+- No test, CI, experiment, smoke, worker, benchmark, or LLM-backed workflow was run.
