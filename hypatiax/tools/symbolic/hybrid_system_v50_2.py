@@ -1055,20 +1055,27 @@ class HybridDiscoverySystem:
                     "exactly match the raw training feature names and order"
                 )
             _n_splits = int(_validation_settings.get("n_splits", 2))
-            _folds = make_training_folds(
-                _raw_X.shape[0],
-                n_splits=_n_splits,
-                n_repeats=1,
-                validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
-                seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
-                strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
+            _fold_creation_error = None
+            try:
+                _folds = make_training_folds(
+                    _raw_X.shape[0],
+                    n_splits=_n_splits,
+                    n_repeats=1,
+                    validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
+                    seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                    strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
+                )
+            except Exception as _fold_error:
+                _folds = ()
+                _fold_creation_error = f"{type(_fold_error).__name__}: {_fold_error}"[:500]
+            _minimum_folds = int(
+                _validation_settings.get("minimum_valid_folds", max(1, len(_folds) or _n_splits))
             )
-            _minimum_folds = int(_validation_settings.get("minimum_valid_folds", len(_folds)))
             _reported_candidates = []
             _candidate_result_by_id = {}
             for _record, _attempt_result in _candidate_attempts:
                 _metrics = dict(_record.metrics)
-                if _record.eligible:
+                if _record.eligible and _folds:
                     try:
                         _summary = evaluate_hybrid_candidate_on_training_folds(
                             _record.expression,
@@ -1098,6 +1105,7 @@ class HybridDiscoverySystem:
                     ),
                     "fold_strategy": str(_validation_settings.get("fold_strategy", "repeated_random")),
                     "fold_count": len(_folds),
+                    "fold_creation_error": _fold_creation_error,
                     "minimum_valid_folds": _minimum_folds,
                     "candidate_evaluation": "fold_local_signed_log_scale_and_coefficient_refit",
                 },
