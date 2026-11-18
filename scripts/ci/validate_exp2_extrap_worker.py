@@ -36,7 +36,7 @@ def _sha256(path: Path) -> str:
 
 
 
-DISCOVERY_REPORT_SCHEMA_VERSION = "1.0"
+DISCOVERY_REPORT_SCHEMA_VERSIONS = {"1.0", "discovery_contract_v1"}
 DISCOVERY_REPORT_STATUSES = {
     "accepted", "provisional", "no_credible_candidate",
     "invalid_problem_specification", "no_candidates_generated",
@@ -75,7 +75,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     missing = sorted(required - set(report))
     if missing:
         raise ValueError(f"discovery_report missing required fields: {missing}")
-    if report["schema_version"] != DISCOVERY_REPORT_SCHEMA_VERSION:
+    if report["schema_version"] not in DISCOVERY_REPORT_SCHEMA_VERSIONS:
         raise ValueError(
             f"unsupported discovery_report schema_version {report['schema_version']!r}"
         )
@@ -92,7 +92,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     if not isinstance(report["provenance"], dict) or not isinstance(report["far_evaluation"], dict):
         raise ValueError("discovery_report provenance/far_evaluation must be objects")
     if report["far_evaluation_used_for_selection"] is not False:
-        raise ValueError("discovery_report must explicitly mark far evaluation as unused for selection")
+        raise ValueError("discovery_report must declare far evaluation as unused for selection")
 
     ids: list[str] = []
     candidate_required = {
