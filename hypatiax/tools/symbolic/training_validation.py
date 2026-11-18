@@ -1023,6 +1023,7 @@ def evaluate_engine_candidate_on_training_folds(
     *,
     minimum_valid_folds: int = 2,
     max_nfev: int = 500,
+    budget_runtime: Any | None = None,
 ) -> CandidateValidationSummary:
     """Evaluate an engine-space candidate with fold-local features and target transforms.
 
@@ -1061,6 +1062,7 @@ def evaluate_engine_candidate_on_training_folds(
     return evaluate_candidate_on_training_folds(
         expression, predict, X_train, y_train, tuple(folds),
         minimum_valid_folds=minimum_valid_folds,
+        budget_runtime=budget_runtime,
     )
 
 
