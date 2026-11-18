@@ -87,6 +87,8 @@ pysr:
 engine:
   name: "hybrid_system_v50_2"
   version: "5.4"
+  # Explicit implementation selector; V50.2 remains the reproducibility default.
+  implementation: "v50_2"
   max_retries: 3
   allow_nondeterministic: false
 
