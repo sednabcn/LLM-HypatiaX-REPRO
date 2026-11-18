@@ -98,8 +98,6 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
 ## Remaining native V60 stages
 
-1. Bounded LLM/PySR producer adapters and native candidate fitting beyond the
-   current single-basis affine least-squares stage.
 1. Bounded LLM/PySR producer adapters and richer native candidate fitting
    beyond the current single-basis affine least-squares stage.
 2. Training-only residual diagnostics and structure stability.
