@@ -85,9 +85,38 @@ def _stability(
     return None
 
 
+
+def _soft_constraint_violation(candidate: CandidateRecord, constraint_ids: Sequence[str]) -> float | None:
+    """Equal-weight mean of complete declared soft-constraint violation fractions."""
+    if not constraint_ids:
+        return None
+    selected = [item for item in candidate.constraint_outcomes if item.constraint_id in set(constraint_ids)]
+    if len(selected) != len(constraint_ids):
+        return None
+    by_id = {item.constraint_id: item for item in selected}
+    if set(by_id) != set(constraint_ids):
+        return None
+    fractions: list[float] = []
+    for constraint_id in constraint_ids:
+        outcome = by_id[constraint_id]
+        if outcome.severity != "soft" or outcome.status not in {"pass", "fail"}:
+            return None
+        evidence = outcome.evidence
+        count, violations, fraction = evidence.get("evaluation_count"), evidence.get("violation_count"), evidence.get("violation_fraction")
+        if (isinstance(count, bool) or not isinstance(count, int) or count <= 0
+            or isinstance(violations, bool) or not isinstance(violations, int)
+            or not 0 <= violations <= count or isinstance(fraction, bool)
+            or not isinstance(fraction, (int, float)) or not math.isfinite(float(fraction))
+            or not 0.0 <= float(fraction) <= 1.0
+            or not math.isclose(float(fraction), violations / count, rel_tol=1e-9, abs_tol=1e-12)
+            or ((outcome.status == "pass") != (violations == 0))):
+            return None
+        fractions.append(float(fraction))
+    return sum(fractions) / len(fractions)
+
 def _dominates(left: Mapping[str, float], right: Mapping[str, float]) -> bool:
     """All objectives are minimized; require one strict improvement."""
-    keys = ("mean_normalized_rmse", "worst_normalized_rmse", "complexity", "negative_expression_stability")
+    keys = ("mean_normalized_rmse", "worst_normalized_rmse", "complexity", "negative_expression_stability", "mean_soft_constraint_violation_fraction")
     no_worse = all(left[key] <= right[key] for key in keys)
     strictly_better = any(left[key] < right[key] for key in keys)
     return no_worse and strictly_better
@@ -100,6 +129,7 @@ def select_pareto_discovery_report(
     provenance: Mapping[str, Any] | None = None,
     minimum_valid_folds: int = 2,
     require_nested_structure_evidence: bool = False,
+    soft_constraint_ids: Sequence[str] = (),
 ) -> DiscoveryReport:
     """Build a report and Pareto front using only declared gates and train folds.
 
@@ -116,6 +146,9 @@ def select_pareto_discovery_report(
     """
     if minimum_valid_folds < 1:
         raise ValueError("minimum_valid_folds must be >= 1")
+    declared_soft_ids = tuple(soft_constraint_ids)
+    if len(set(declared_soft_ids)) != len(declared_soft_ids) or any(not isinstance(item, str) or not item.strip() for item in declared_soft_ids):
+        raise ValueError("soft_constraint_ids must be unique non-empty strings")
     records = tuple(candidates)
     if len({item.candidate_id for item in records}) != len(records):
         raise ValueError("candidate IDs must be unique")
@@ -134,6 +167,7 @@ def select_pareto_discovery_report(
         scores = _finite_fold_scores(candidate)
         node_count = _complexity(candidate, variable_names)
         stable_fraction = _stability(candidate, minimum_valid_folds)
+        soft_violation = _soft_constraint_violation(candidate, declared_soft_ids)
         gate_ok = _hard_gates_pass(candidate)
         if gate_ok:
             gate_eligible_count += 1
@@ -167,6 +201,8 @@ def select_pareto_discovery_report(
             eligibility_reasons.append("symbolic_complexity_unavailable")
         if stable_fraction is None:
             eligibility_reasons.append("expression_stability_unavailable")
+        if declared_soft_ids and soft_violation is None:
+            eligibility_reasons.append("soft_constraint_evidence_incomplete")
         if require_nested_structure_evidence and not nested_ok:
             eligibility_reasons.append("required_nested_structure_evidence_not_matched")
         eligibility_reasons = list(dict.fromkeys(eligibility_reasons))
@@ -178,6 +214,7 @@ def select_pareto_discovery_report(
                 "complexity": float(node_count),
                 # Minimize the negative fraction, i.e. maximize recurrence.
                 "negative_expression_stability": -float(stable_fraction),
+                **({"mean_soft_constraint_violation_fraction": float(soft_violation)} if declared_soft_ids else {}),
             }
         metrics["pareto_selection"] = {
             "hard_gates_passed": gate_ok,
@@ -185,6 +222,8 @@ def select_pareto_discovery_report(
             "minimum_valid_folds": minimum_valid_folds,
             "complexity_node_count": node_count,
             "expression_stability_fraction": stable_fraction,
+            "declared_soft_constraint_ids": list(declared_soft_ids),
+            "mean_soft_constraint_violation_fraction": soft_violation,
             "nested_structure_evidence_required": require_nested_structure_evidence,
             "nested_structure_evidence_passed": nested_ok,
             "eligible_for_pareto": pareto_eligible,
@@ -211,9 +250,7 @@ def select_pareto_discovery_report(
             provenance={
                 **dict(provenance or {}),
                 "selection_policy": (
-                    "training_only_pareto_v4_nested_structure_stability"
-                    if require_nested_structure_evidence
-                    else "training_only_pareto_v3_stability"
+                    ("training_only_pareto_v6_nested_structure_soft_constraints" if require_nested_structure_evidence and declared_soft_ids else "training_only_pareto_v5_soft_constraints" if declared_soft_ids else "training_only_pareto_v4_nested_structure_stability" if require_nested_structure_evidence else "training_only_pareto_v3_stability")
                 ),
                 "selection_data_scope": "training_region_only",
             },
@@ -256,8 +293,7 @@ def select_pareto_discovery_report(
         provenance={
             **dict(provenance or {}),
             "selection_policy": (
-                "training_only_pareto_v4_nested_structure_stability"
-                if require_nested_structure_evidence else "training_only_pareto_v3_stability"
+                ("training_only_pareto_v6_nested_structure_soft_constraints" if require_nested_structure_evidence and declared_soft_ids else "training_only_pareto_v5_soft_constraints" if declared_soft_ids else "training_only_pareto_v4_nested_structure_stability" if require_nested_structure_evidence else "training_only_pareto_v3_stability")
             ),
             "selection_data_scope": "training_region_only",
             "objectives": [
@@ -265,6 +301,7 @@ def select_pareto_discovery_report(
                 "worst_normalized_rmse_min",
                 "symbolic_operation_count_min",
                 "expression_stability_fraction_max",
+                *(["mean_declared_soft_constraint_violation_fraction_min"] if declared_soft_ids else []),
             ],
             "tie_break": [
                 "mean_normalized_rmse",
@@ -275,6 +312,8 @@ def select_pareto_discovery_report(
             "far_test_data_used_for_selection": False,
             "nested_structure_evidence_required": require_nested_structure_evidence,
             "nested_structure_evidence_role": "candidate_specific_recurrence_gate" if require_nested_structure_evidence else "optional_audit",
+            "soft_constraint_ids": list(declared_soft_ids),
+            "soft_constraint_aggregation": "unweighted_mean_of_declared_violation_fractions" if declared_soft_ids else "disabled",
         },
     )
 
