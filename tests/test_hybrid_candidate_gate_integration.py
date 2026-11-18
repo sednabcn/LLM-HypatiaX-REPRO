@@ -360,3 +360,142 @@ def test_typed_retry_early_stop_waits_for_distinct_candidate_pool():
     coverage = result["discovery_report"]["provenance"]["candidate_pool_coverage"]
     assert coverage["distinct_eligible_expressions"] == 2
     assert coverage["minimum_for_early_stop"] == 2
+
+
+def test_typed_retry_consumes_each_inner_llm_and_pysr_candidate_independently():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2.0, "maximum": 2.0}},
+    )
+    system = _system("x**2", problem)
+    system.symbolic_engine._predict_from_equation = (
+        lambda expression, X, names: np.square(np.asarray(X)[:, 0])
+    )
+    identity = {
+        "input_feature_count": 1,
+        "x_scales": [1.0],
+        "gm_pairs": [],
+        "ratio_pairs": [],
+        "y_std": 1.0,
+        "feature_names": ["x"],
+        "transform_source": "test_identity",
+    }
+    system.symbolic_engine.discover = lambda *args, **kwargs: {
+        "expression": "x**2",
+        "r2_score": 0.999,
+        "llm_mode": "hybrid_pysr_better",
+        "discovery_candidates_schema": "discovery_candidates_v1",
+        "discovery_candidates": [
+            {
+                "candidate_id": "inner-llm-1",
+                "expression": "x**2",
+                "fit_expression": "x**2",
+                "fit_variable_names": ["x"],
+                "fit_transform_state": identity,
+                "source": "llm_proposal",
+                "source_provenance": [{"source": "llm_proposal", "strategy": "llm_hypothesis"}],
+                "search_strategy": "llm_hypothesis",
+                "seed": 42,
+            },
+            {
+                "candidate_id": "inner-pysr-1",
+                "expression": "x*x",
+                "fit_expression": "x*x",
+                "fit_variable_names": ["x"],
+                "fit_transform_state": identity,
+                "source": "pysr_search",
+                "source_provenance": [{"source": "pysr_search", "strategy": "pysr_refinement"}],
+                "search_strategy": "pysr_refinement",
+                "seed": 42,
+            },
+        ],
+        "discovery_candidate_generation": {
+            "llm_hypotheses_observed": 1,
+            "pysr_search_generated_candidate": True,
+            "pysr_skipped_by_llm_acceptance": False,
+        },
+    }
+    X = np.linspace(-2.0, 2.0, 30).reshape(-1, 1)
+    y = np.square(X[:, 0])
+    system._active_training_validation_settings = {
+        "n_splits": 2,
+        "validation_fraction": 0.2,
+        "minimum_valid_folds": 2,
+        "minimum_candidate_pool_size": 2,
+    }
+    system._active_training_validation_seed = 42
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    result = system._discover_with_retry(
+        X=X,
+        y=y,
+        variable_names=["x"],
+        variable_descriptions={"x": "input"},
+        variable_units={},
+    )
+
+    report = result["discovery_report"]
+    assert {candidate["source"] for candidate in report["candidates"]} == {
+        "llm_proposal", "pysr_search"
+    }
+    assert all(
+        candidate["metrics"]["training_validation"]["valid_fold_count"] == 2
+        for candidate in report["candidates"]
+    )
+    assert report["provenance"]["multi_candidate_handoff_consumed"] is True
+    assert report["provenance"]["candidate_source_counts"] == {
+        "llm_proposal": 1, "pysr_search": 1
+    }
+    assert result["training_r2_role"] == "post_selection_diagnostic_only"
+
+
+def test_hybrid_engine_emits_candidate_specific_llm_and_pysr_fit_contracts():
+    import numpy as np
+    from hypatiax.tools.symbolic.symbolic_engine import SymbolicEngineWithLLM
+
+    engine = SymbolicEngineWithLLM.__new__(SymbolicEngineWithLLM)
+    engine.llm_mode = "hybrid"
+    engine.llm_engine = SimpleNamespace(config=SimpleNamespace(enabled=True))
+    engine.model = None
+    engine._discover_hybrid = lambda *args, **kwargs: {
+        "expression": "x**2",
+        "r2_score": 0.99,
+        "variable_names": ["x"],
+        "llm_mode": "hybrid_llm_better",
+        "llm_hypotheses": ["x**2", "x*x"],
+        "pysr_candidate": {
+            "expression": "[X-normalised] x**3",
+            "fit_expression": "x**3",
+            "fit_variable_names": ["x"],
+            "fit_transform_state": {
+                "input_feature_count": 1,
+                "x_scales": [2.0],
+                "gm_pairs": [],
+                "ratio_pairs": [],
+                "y_std": 3.0,
+                "feature_names": ["x"],
+            },
+        },
+    }
+
+    result = engine.discover(
+        np.array([[1.0], [2.0], [3.0], [4.0]]),
+        np.array([1.0, 4.0, 9.0, 16.0]),
+        variable_names=["x"],
+        equation_name="quadratic response",
+        random_state=17,
+    )
+
+    candidates = result["discovery_candidates"]
+    assert result["discovery_candidates_schema"] == "discovery_candidates_v1"
+    assert [candidate["source"] for candidate in candidates] == [
+        "llm_proposal", "llm_proposal", "pysr_search"
+    ]
+    assert candidates[0]["fit_transform_state"]["x_scales"] == [1.0]
+    assert candidates[2]["fit_transform_state"]["x_scales"] == [2.0]
+    assert result["discovery_candidate_generation"]["pysr_search_generated_candidate"] is True
+    assert result["expression"] == "x**2"

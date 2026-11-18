@@ -2499,14 +2499,15 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             _candidate_items = []
             _seen_candidates = {}
             _llm_mode = str(result.get("llm_mode", ""))
-            _llm_only = _llm_mode.endswith(("_llm_only", "_llm_better"))
+            _llm_only = (
+                _llm_mode.endswith("_llm_only")
+                or _llm_mode == "hybrid_budget_exhausted_llm_better"
+            )
+            _pysr_candidate = result.get("pysr_candidate") or result
             _pysr_generated = (
                 not _llm_only
-                and _llm_mode not in (
-                    "hybrid_budget_exhausted_structural_risk",
-                    "hybrid_llm_failed",
-                )
-                and bool(result.get("fit_expression"))
+                and _llm_mode != "hybrid_budget_exhausted_structural_risk"
+                and bool(_pysr_candidate.get("fit_expression"))
             )
 
             def _add_candidate(expression, source, strategy, fit_expression,
@@ -2567,9 +2568,10 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             # PySR provenance; LLM seeding does not change its generating source.
             if _pysr_generated:
                 _add_candidate(
-                    result.get("expression"), "pysr_search", "pysr_refinement",
-                    result.get("fit_expression"), result.get("fit_variable_names"),
-                    result.get("fit_transform_state"), None,
+                    _pysr_candidate.get("expression"), "pysr_search", "pysr_refinement",
+                    _pysr_candidate.get("fit_expression"),
+                    _pysr_candidate.get("fit_variable_names"),
+                    _pysr_candidate.get("fit_transform_state"), None,
                 )
             result["discovery_candidates_schema"] = "discovery_candidates_v1"
             result["discovery_candidates"] = _candidate_items
@@ -2884,6 +2886,15 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
         pysr_time = time.time() - pysr_start
         _guess_audit = result.get("guess_audit")   # survives the rebuilt dict below
+        _pysr_candidate = (
+            {
+                "expression": result.get("expression"),
+                "fit_expression": result.get("fit_expression"),
+                "fit_variable_names": list(result.get("fit_variable_names") or []),
+                "fit_transform_state": dict(result.get("fit_transform_state") or {}),
+            }
+            if result.get("fit_expression") else None
+        )
 
         print(f"   PySR time: {pysr_time:.2f}s")
         print(f"   PySR R²: {result['r2_score']:.4f}")
@@ -2928,6 +2939,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "llm_hypotheses": [h.equation for h in hypotheses],
                 "llm_seed_used": _use_llm_seed,
                 "llm_suggested_operators": _llm_extra_ops,
+                "pysr_candidate": _pysr_candidate,
             }
 
         return result
