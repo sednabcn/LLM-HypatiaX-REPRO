@@ -116,7 +116,9 @@ def _soft_constraint_violation(candidate: CandidateRecord, constraint_ids: Seque
 
 def _dominates(left: Mapping[str, float], right: Mapping[str, float]) -> bool:
     """All objectives are minimized; require one strict improvement."""
-    keys = ("mean_normalized_rmse", "worst_normalized_rmse", "complexity", "negative_expression_stability", "mean_soft_constraint_violation_fraction")
+    keys = tuple(left.keys())
+    if set(keys) != set(right.keys()):
+        raise ValueError("Pareto candidates must expose the same objective vector")
     no_worse = all(left[key] <= right[key] for key in keys)
     strictly_better = any(left[key] < right[key] for key in keys)
     return no_worse and strictly_better
@@ -276,6 +278,7 @@ def select_pareto_discovery_report(
             objectives[candidate_id]["mean_normalized_rmse"],
             objectives[candidate_id]["worst_normalized_rmse"],
             objectives[candidate_id]["complexity"],
+            objectives[candidate_id].get("mean_soft_constraint_violation_fraction", 0.0),
             candidate_id,
         ),
     )
