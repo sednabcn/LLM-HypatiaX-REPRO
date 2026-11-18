@@ -547,6 +547,7 @@ def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record(
                 "seed": 42,
             },
             None,
+            None,
             {
                 "candidate_id": "inner-pysr-passes-gate",
                 "expression": "x*x",
@@ -595,4 +596,5 @@ def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record(
     assert envelope_audit["declared_item_count"] == 3
     assert envelope_audit["retained_item_count"] == 3
     assert envelope_audit["malformed_item_count"] == 1
+    assert envelope_audit["ingestion_failure_count"] == 1
     assert envelope_audit["ingestion_complete"] is False
