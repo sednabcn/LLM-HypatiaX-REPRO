@@ -88,6 +88,121 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
     )
     if model.get("fitted_expression") != expected_formula:
         raise ValueError("selected model fitted expression does not reproduce from its bases and coefficients")
+
+    # A valid checksum is not evidence that the serialized model metrics or
+    # cross-family decision are truthful. Reconstruct those contracts here,
+    # before either far evaluation or outward production handoff.
+    family = model.get("family")
+    candidate_id = model.get("candidate_id")
+    group_id = model.get("candidate_group_id")
+    if family == "single_basis":
+        if len(expressions) != 1 or not isinstance(candidate_id, str) or not candidate_id or group_id is not None or ids != [candidate_id]:
+            raise ValueError("single-basis final model identity is inconsistent")
+    elif family == "multi_basis":
+        if not 2 <= len(expressions) <= 3 or candidate_id is not None or not isinstance(group_id, str) or not group_id:
+            raise ValueError("multi-basis final model identity is inconsistent")
+    else:
+        raise ValueError("selected model family is unsupported")
+
+    row_count = model.get("training_row_count")
+    if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
+        raise ValueError("selected model training row count must be a positive integer")
+    for key in ("training_target_std", "training_rmse"):
+        value = model.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+            raise ValueError(f"selected model {key} must be finite and non-negative")
+    for key in ("training_nrmse", "training_r2", "training_design_condition_number"):
+        value = model.get(key)
+        if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
+            raise ValueError(f"selected model {key} must be finite or null")
+    target_std = float(model["training_target_std"])
+    training_rmse = float(model["training_rmse"])
+    training_nrmse = model.get("training_nrmse")
+    if target_std > 0:
+        expected_nrmse = training_rmse / target_std
+        if training_nrmse is None or float(training_nrmse) < 0 or not math.isclose(float(training_nrmse), expected_nrmse, rel_tol=1e-9, abs_tol=1e-12):
+            raise ValueError("selected model training NRMSE does not reproduce from RMSE and target standard deviation")
+    elif training_nrmse is not None:
+        raise ValueError("selected model training NRMSE must be null for a zero-variance target")
+    condition = model.get("training_design_condition_number")
+    if condition is not None and float(condition) < 0:
+        raise ValueError("selected model design condition number cannot be negative")
+    rank = model.get("training_design_rank")
+    if isinstance(rank, bool) or not isinstance(rank, int) or not 1 <= rank <= len(expressions) + 1:
+        raise ValueError("selected model design rank is invalid")
+
+    metric = model.get("selection_metric")
+    if metric not in {"cv_rmse", "cv_nrmse"}:
+        raise ValueError("selected model cross-validation objective is unsupported")
+    cv_metric = model.get("cross_validation_metric")
+    cv_std = model.get("cross_validation_metric_std")
+    for label, value in (("cross-validation metric", cv_metric), ("cross-validation metric std", cv_std)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+            raise ValueError(f"selected model {label} must be finite and non-negative")
+    if metric == "cv_nrmse" and (cv_metric is None or cv_std is None):
+        raise ValueError("selected model normalized CV objective cannot be null")
+
+    options = audit.get("candidate_options")
+    if not isinstance(options, list) or not 1 <= len(options) <= 2:
+        raise ValueError("final-model candidate_options must contain one or two family winners")
+    families = []
+    for option in options:
+        if not isinstance(option, Mapping):
+            raise ValueError("final-model candidate option must be a mapping")
+        option_family = option.get("family")
+        if option_family not in {"single_basis", "multi_basis"} or option_family in families:
+            raise ValueError("final-model candidate families must be unique and recognized")
+        families.append(option_family)
+        for key in ("cv_rmse", "cv_rmse_std"):
+            value = option.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                raise ValueError(f"final-model option {key} must be finite and non-negative")
+        for key in ("cv_nrmse", "cv_nrmse_std"):
+            value = option.get(key)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0):
+                raise ValueError(f"final-model option {key} must be finite, non-negative, or null")
+        if (option.get("cv_nrmse") is None) != (option.get("cv_nrmse_std") is None):
+            raise ValueError("final-model option NRMSE mean/std nullability must match")
+        complexity = option.get("complexity")
+        if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+            raise ValueError("final-model option complexity must be a non-negative integer")
+        option_expressions = option.get("expressions")
+        if not isinstance(option_expressions, list) or not 1 <= len(option_expressions) <= 3 or any(not isinstance(item, str) or not item for item in option_expressions):
+            raise ValueError("final-model option expressions are invalid")
+        for expression in option_expressions:
+            parse_sympy_expression(expression, names)
+        if option_family == "single_basis":
+            if (len(option_expressions) != 1 or not isinstance(option.get("candidate_id"), str)
+                    or not option.get("candidate_id") or option.get("candidate_group_id") is not None):
+                raise ValueError("single-basis candidate option identity is invalid")
+        else:
+            option_ids = option.get("candidate_ids")
+            if (not isinstance(option_ids, list) or len(option_ids) != len(option_expressions)
+                    or not 2 <= len(option_ids) <= 3 or len(option_ids) != len(set(option_ids))
+                    or any(not isinstance(item, str) or not item for item in option_ids)
+                    or option.get("candidate_id") is not None
+                    or not isinstance(option.get("candidate_group_id"), str) or not option.get("candidate_group_id")):
+                raise ValueError("multi-basis candidate option identity is invalid")
+
+    use_nrmse = all(option.get("cv_nrmse") is not None for option in options)
+    expected_metric = "cv_nrmse" if use_nrmse else "cv_rmse"
+    expected_variability = "cv_nrmse_std" if use_nrmse else "cv_rmse_std"
+    winner = min(options, key=lambda option: (
+        float(option[expected_metric]),
+        float(option[expected_variability]) if option.get(expected_variability) is not None else float("inf"),
+        int(option["complexity"]), option["family"],
+    ))
+    expected_ids = [winner["candidate_id"]] if winner["family"] == "single_basis" else list(winner["candidate_ids"])
+    expected_candidate_id = winner.get("candidate_id") if winner["family"] == "single_basis" else None
+    expected_group_id = winner.get("candidate_group_id") if winner["family"] == "multi_basis" else None
+    if (audit.get("objective_metric") != expected_metric or metric != expected_metric
+            or family != winner["family"] or candidate_id != expected_candidate_id
+            or group_id != expected_group_id or ids != expected_ids
+            or expressions != winner["expressions"]
+            or cv_metric != winner[expected_metric]
+            or cv_std != winner.get(expected_variability)
+            or model.get("symbolic_complexity") != winner["complexity"]):
+        raise ValueError("selected model does not match the reconstructed cross-family winner")
     return json.loads(json.dumps(dict(model), sort_keys=True, separators=(",", ":"), allow_nan=False))
 
 
