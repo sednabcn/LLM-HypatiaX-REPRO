@@ -224,7 +224,7 @@ def test_missing_expression_stability_excludes_candidate_with_reason():
 
 def test_stability_requires_a_measured_expression_for_each_required_fold():
     candidate = _candidate("x", 24, [0.1, 0.2])
-    metrics = candidate.metrics
+    metrics = candidate.to_dict()["metrics"]
     metrics["training_validation"]["expression_stability"]["expression_count"] = 1
     incomplete = CandidateRecord(
         expression=candidate.expression,
