@@ -125,6 +125,103 @@ def _validate_soft_constraint_pareto_contract(report: dict[str, Any]) -> None:
             ):
                 raise ValueError(f"soft-constraint candidate[{index}] Pareto objective differs from audited aggregate")
 
+
+def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
+    """Recompute the serialized Pareto front and deterministic winner."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+    policy = provenance.get("selection_policy")
+    policy_objectives = {
+        "training_only_pareto_v3_stability": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability",
+        ),
+        "training_only_pareto_v4_nested_structure_stability": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability",
+        ),
+        "training_only_pareto_v5_soft_constraints": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability", "mean_soft_constraint_violation_fraction",
+        ),
+        "training_only_pareto_v6_nested_structure_soft_constraints": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability", "mean_soft_constraint_violation_fraction",
+        ),
+    }
+    if policy not in policy_objectives:
+        return
+    expected_keys = policy_objectives[policy]
+    objective_names = [
+        "mean_normalized_rmse_min", "worst_normalized_rmse_min",
+        "symbolic_operation_count_min", "expression_stability_fraction_max",
+    ]
+    if len(expected_keys) == 5:
+        objective_names.append("mean_declared_soft_constraint_violation_fraction_min")
+    recorded_names = provenance.get("objectives")
+    candidates = report.get("candidates", [])
+    eligible_vectors: dict[str, dict[str, float]] = {}
+    for index, candidate in enumerate(candidates):
+        metrics = candidate.get("metrics", {})
+        selection = metrics.get("pareto_selection") if isinstance(metrics, dict) else None
+        if not isinstance(selection, dict):
+            raise ValueError(f"Pareto candidate[{index}] is missing selection audit")
+        reasons = selection.get("eligibility_reasons")
+        eligible = selection.get("eligible_for_pareto")
+        if (not isinstance(reasons, list) or any(not isinstance(item, str) for item in reasons)
+            or not isinstance(eligible, bool) or eligible != (len(reasons) == 0)):
+            raise ValueError(f"Pareto candidate[{index}] eligibility flag/reasons are inconsistent")
+        vector = selection.get("objectives")
+        if eligible:
+            if not isinstance(vector, dict) or set(vector) != set(expected_keys):
+                raise ValueError(f"Pareto candidate[{index}] has an incomplete objective vector")
+            normalized: dict[str, float] = {}
+            for key in expected_keys:
+                value = vector[key]
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))):
+                    raise ValueError(f"Pareto candidate[{index}] objective {key!r} is not finite")
+                normalized[key] = float(value)
+            eligible_vectors[candidate["candidate_id"]] = normalized
+        elif vector is not None:
+            raise ValueError(f"Pareto-ineligible candidate[{index}] must not carry an objective vector")
+
+    if not eligible_vectors:
+        if report.get("pareto_candidate_ids") or report.get("selected_candidate_id") is not None:
+            raise ValueError("empty eligible Pareto set must not declare Pareto or selected candidates")
+        return
+    if recorded_names != objective_names:
+        raise ValueError("Pareto provenance objective names do not match the selection policy")
+
+    ids = list(eligible_vectors)
+    expected_front = [
+        candidate_id for candidate_id in ids
+        if not any(
+            other_id != candidate_id
+            and all(eligible_vectors[other_id][key] <= eligible_vectors[candidate_id][key] for key in expected_keys)
+            and any(eligible_vectors[other_id][key] < eligible_vectors[candidate_id][key] for key in expected_keys)
+            for other_id in ids
+        )
+    ]
+    if report.get("pareto_candidate_ids") != expected_front:
+        raise ValueError("serialized Pareto candidate IDs do not match recomputed objective front")
+
+    def tie_break(candidate_id: str) -> tuple[Any, ...]:
+        vector = eligible_vectors[candidate_id]
+        return (
+            vector["mean_normalized_rmse"],
+            vector["worst_normalized_rmse"],
+            vector["complexity"],
+            vector.get("mean_soft_constraint_violation_fraction", 0.0),
+            candidate_id,
+        )
+
+    expected_selected = min(expected_front, key=tie_break)
+    if report.get("selected_candidate_id") != expected_selected:
+        raise ValueError("selected candidate does not match deterministic Pareto tie-break")
+
+
 def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     """Extract a typed report and validate its versioned, serialized contract."""
     if not isinstance(result, dict):
@@ -214,6 +311,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
                 raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
 
     _validate_soft_constraint_pareto_contract(report)
+    _validate_pareto_selection_consistency(report)
 
     if len(ids) != len(set(ids)):
         raise ValueError("discovery_report candidate records must have unique candidate IDs")

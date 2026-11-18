@@ -1650,3 +1650,31 @@ observations. Regression source covers consistent evidence, aggregate
 tampering, and incomplete evidence without a matching exclusion. Tests have
 not been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM
 API call was launched.
+
+## 42. Recompute serialized Pareto membership and selected-candidate consistency
+
+For the versioned training-only Pareto policies (v3–v6), the Exp2 worker
+validator now independently checks the selection audit carried by each
+candidate. It requires the eligibility boolean to agree with the presence or
+absence of eligibility reasons, requires eligible candidates to carry the
+policy's complete finite objective vector, and rejects objective vectors on
+ineligible candidates.
+
+The validator recomputes the nondominated front from the serialized objective
+vectors and requires the report's ordered `pareto_candidate_ids` to match.
+It also recomputes the documented deterministic tie-break and verifies
+`selected_candidate_id`. This detects internally inconsistent or tampered
+selection metadata before the report is retained as a worker artifact.
+The check is policy-version aware; older or unrelated policy identifiers are
+not reinterpreted as these objective sets. The existing soft-constraint
+evidence check remains an independent verification of the soft objective's
+source measurements.
+
+This validates consistency of the serialized decision record, not the
+scientific correctness of its inputs. It does not rerun symbolic search,
+fold evaluation, constraint sampling, or physical validation, and it does not
+read far/test metrics. Regression-test source covers a valid recomputed front,
+tampered membership, tampered objective values, a mismatched selected
+candidate, and inconsistent eligibility metadata. Tests have not been run;
+no CI, experiment, worker, benchmark, smoke workflow, or LLM API call was
+launched.
