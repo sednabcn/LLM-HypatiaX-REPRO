@@ -195,6 +195,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     self._last_v60_training_validation_audit,
                     self._last_v60_objective_selection_audit,
                     run_context=self._last_v60_run_context.to_dict(),
+                    multi_basis_selection_audit=self._last_v60_multi_basis_selection_audit,
                 )
             except Exception as exc:
                 annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
