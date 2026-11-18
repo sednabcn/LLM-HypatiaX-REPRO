@@ -2617,7 +2617,7 @@ try:
             verbose=False,
         )
     elif method == "hybrid_v50_2":
-        from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+        from hypatiax.tools.symbolic.hybrid_system_factory import create_hybrid_discovery_system
         from hypatiax.tools.symbolic.symbolic_engine import DiscoveryConfig
         # ── FIX: wire pysr_timeout + max_retries from kwargs into DiscoveryConfig ──
         # Previously HybridDiscoverySystem() was created with NO config, ignoring
@@ -2690,7 +2690,8 @@ try:
                 "budget": _typed_problem.budget.to_dict(),
             }
             _meta["discovery_problem"] = _typed_problem
-        system = HybridDiscoverySystem(
+        system = create_hybrid_discovery_system(
+            kwargs.get("hybrid_implementation", "v50_2"),
             domain=_domain,
             discovery_config=_disc_cfg,
             max_retries=_n_retry,
@@ -3176,6 +3177,9 @@ class SymbolicEngineMethod(BaseMethod):
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
+            _tc_kwargs["hybrid_implementation"] = getattr(
+                _active, "_hybrid_implementation", "v50_2"
+            )
             _p = getattr(_active, "_parsimony", None)
             if _p is not None:
                 _se_kwargs["parsimony"] = _p
@@ -5109,6 +5113,12 @@ Examples
         ),
     )
 
+    parser.add_argument(
+        "--hybrid-implementation", choices=["v50_2", "v60"],
+        default=os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION", "v50_2"),
+        help="HybridDiscovery implementation for method 6 (default: v50_2; v60 is an opt-in compatibility adapter).",
+    )
+
     args = parser.parse_args()
 
     # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
@@ -5281,6 +5291,8 @@ Examples
     # globals().get("_ACTIVE_SUITE").  Without this assignment those args are
     # silently dropped — PySR always used the subprocess defaults regardless
     # of --parsimony / --populations flags passed on the CLI.
+    suite._hybrid_implementation = args.hybrid_implementation
+    print(f"ℹ️  HybridDiscovery implementation: {suite._hybrid_implementation}")
     globals()["_ACTIVE_SUITE"] = suite
 
     # Propagate symbolic-engine tuning to suite so run_test() can pass
