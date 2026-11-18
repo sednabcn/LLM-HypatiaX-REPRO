@@ -49,6 +49,7 @@ __all__ = [
     "match_fold_discovered_structures",
     "crosswalk_full_training_candidate_to_fold_structure",
     "select_pareto_discovery_report",
+    "evaluate_selected_native_candidate_on_far_set",
 ]
 
 
@@ -101,6 +102,8 @@ def __getattr__(name: str):
         module = import_module(".structural_matching", __name__)
     elif name == "select_pareto_discovery_report":
         module = import_module(".pareto_discovery", __name__)
+    elif name == "evaluate_selected_native_candidate_on_far_set":
+        module = import_module(".v60_frozen_far_evaluation", __name__)
     elif name in {
         "DiscoveryProblem",
         "discovery_problem_from_dict",
