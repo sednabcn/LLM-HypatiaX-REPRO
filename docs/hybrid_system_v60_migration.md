@@ -481,3 +481,19 @@ from being included in a worker summary marked complete. The check is an
 offline artifact reconciliation; it does not execute the benchmark or any
 experiment. Regression-test source covers unexpected identities, duplicate
 rows, and metric disagreement. No tests or CI are run as part of this change.
+
+
+## Stage 28 — V60 worker and production-handoff option parity
+
+The worker-ingress verifier now applies the same candidate-option contract as
+the production-handoff verifier: normalized CV mean/std values must have
+matching nullability; every serialized option expression is parsed against
+the declared model variables; single-basis options require only a non-empty
+candidate ID; and multi-basis options require unique ordered basis IDs plus a
+non-empty group ID and no single-basis candidate ID.
+
+This closes a validation-boundary mismatch in which a checksummed worker
+envelope could pass weaker option validation than the production handoff.
+Regression-test source covers nullability, expression parsing, and both
+family-identity boundaries. No tests, CI, experiments, workers, benchmarks,
+or provider calls are run as part of this change.
