@@ -407,3 +407,22 @@ outer report, and retain a final model that no longer wins the declared
 cross-family comparison. This is evidence-consistency verification only: it
 does not refit a model, read training or far arrays, invoke providers, or run
 discovery.
+
+
+## Stage 24 — bind frozen far-evaluation evidence at worker ingress
+
+Worker verification now treats a completed far-evaluation record as evidence
+about one specific finalized model, not as a standalone metrics payload. The
+record's `selected_model_sha256` must exactly match the selected native
+final-model audit embedded in the same report. A completed evaluation must
+also declare the frozen-single-model scope, a positive integer far-row count,
+and the exact finite metric contract (RMSE, training-scale NRMSE, MAE, bias,
+and R², with nullable NRMSE/R² only where undefined). Incomplete evaluations
+cannot publish metrics, and unsupported evaluation states or schemas fail
+closed.
+
+This closes a worker-ingress consistency gap: resealing a report with a
+well-formed but unrelated model digest or fabricated/malformed metric fields
+can no longer make the far-evaluation section appear attached to the
+finalized result. The worker still performs no far-set computation, model
+refit, selection, retry, provider call, or discovery.

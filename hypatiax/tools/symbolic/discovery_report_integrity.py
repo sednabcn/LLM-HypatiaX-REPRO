@@ -379,8 +379,10 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         raise ValueError("unsupported native final-model execution status")
 
 
-def _verify_native_far_evaluation_audit(audit: Any) -> None:
-    """Reject any report claiming that frozen far evaluation influenced discovery."""
+def _verify_native_far_evaluation_audit(
+    audit: Any, final_model_audit: Any = None,
+) -> None:
+    """Verify the frozen evaluation contract and bind it to the selected model."""
     if not isinstance(audit, Mapping):
         raise TypeError("far_evaluation must be a mapping")
     if audit.get("used_for_selection", False) is not False:
@@ -395,11 +397,49 @@ def _verify_native_far_evaluation_audit(audit: Any) -> None:
         raise ValueError("frozen far evaluation cannot change selection")
     if audit.get("selection_performed", False) is not False:
         raise ValueError("far evaluation stage cannot perform selection")
-    if audit.get("evaluation_status") == "completed":
+    status = audit.get("evaluation_status")
+    if status is None:
+        if audit:
+            raise ValueError("non-empty far evaluation audit requires an evaluation_status")
+        return
+    if status not in {"completed", "stage_failed", "blocked_no_selected_model"}:
+        raise ValueError("unsupported frozen far-evaluation status")
+    if audit.get("schema") != "v60_native_frozen_model_evaluation_v1":
+        raise ValueError("unsupported frozen far-evaluation schema")
+    if status == "completed":
         digest = audit.get("selected_model_sha256")
         far_digest = audit.get("far_set_sha256")
         if not isinstance(digest, str) or len(digest) != 64 or not isinstance(far_digest, str) or len(far_digest) != 64:
             raise ValueError("completed far evaluation requires model and far-set digests")
+        if (not isinstance(final_model_audit, Mapping)
+                or final_model_audit.get("execution_status") != "selected"
+                or final_model_audit.get("selection_performed") is not True):
+            raise ValueError("completed far evaluation requires the selected final-model audit")
+        if digest != final_model_audit.get("selected_model_sha256"):
+            raise ValueError("far evaluation model digest does not match the finalized native model")
+        if audit.get("evaluation_scope") != "single_frozen_finalized_model":
+            raise ValueError("far evaluation must describe exactly one frozen finalized model")
+        row_count = audit.get("far_row_count")
+        if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
+            raise ValueError("completed far evaluation requires a positive integer far_row_count")
+        metrics = audit.get("far_metrics")
+        if not isinstance(metrics, Mapping) or set(metrics) != {
+            "rmse", "nrmse_by_training_target_std", "mae", "bias", "r2",
+        }:
+            raise ValueError("completed far evaluation metrics have an invalid schema")
+        for key in ("rmse", "mae"):
+            value = metrics.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                raise ValueError(f"far evaluation {key} must be finite and non-negative")
+        for key in ("nrmse_by_training_target_std", "r2"):
+            value = metrics.get(key)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
+                raise ValueError(f"far evaluation {key} must be finite or null")
+        bias = metrics.get("bias")
+        if isinstance(bias, bool) or not isinstance(bias, (int, float)) or not math.isfinite(float(bias)):
+            raise ValueError("far evaluation bias must be finite")
+    elif audit.get("far_metrics") is not None:
+        raise ValueError("incomplete far evaluation cannot publish far metrics")
 
 
 def _verify_native_residual_diagnostics(audit: Any) -> None:
@@ -452,11 +492,12 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
         raise TypeError("report provenance must be a mapping")
     if "native_multi_basis_selection" in provenance:
         _verify_multi_basis_selection_audit(provenance["native_multi_basis_selection"])
+    final_model_audit = provenance.get("native_final_model")
     if "native_final_model" in provenance:
-        _verify_native_final_model_audit(provenance["native_final_model"])
+        _verify_native_final_model_audit(final_model_audit)
     if "native_residual_diagnostics" in provenance:
         _verify_native_residual_diagnostics(provenance["native_residual_diagnostics"])
-    _verify_native_far_evaluation_audit(report["far_evaluation"])
+    _verify_native_far_evaluation_audit(report["far_evaluation"], final_model_audit)
     candidates = report["candidates"]
     if not isinstance(candidates, list):
         raise TypeError("candidates must be a list")

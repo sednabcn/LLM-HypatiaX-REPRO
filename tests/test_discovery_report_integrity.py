@@ -262,3 +262,69 @@ def test_worker_verifier_rejects_undeclared_final_model_variable():
     payload["provenance"]["native_final_model"] = audit
     with pytest.raises((ValueError, TypeError)):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def _native_far_evaluation_audit(model_sha256):
+    return {
+        "schema": "v60_native_frozen_model_evaluation_v1",
+        "evaluation_status": "completed",
+        "evaluation_scope": "single_frozen_finalized_model",
+        "selected_model_sha256": model_sha256,
+        "far_set_sha256": "f" * 64,
+        "far_row_count": 3,
+        "far_metrics": {
+            "rmse": 0.25,
+            "nrmse_by_training_target_std": 0.0625,
+            "mae": 0.2,
+            "bias": -0.01,
+            "r2": 0.99,
+        },
+        "selection_changed": False,
+        "selection_performed": False,
+        "far_or_evaluation_data_used_for_selection": False,
+        "far_or_evaluation_data_used_for_retry": False,
+        "candidate_ranking_performed": False,
+    }
+
+
+def test_worker_verifier_accepts_far_evaluation_bound_to_finalized_model():
+    payload = copy.deepcopy(_envelope()["report"])
+    final_model = _native_final_model_audit()
+    payload["provenance"]["native_final_model"] = final_model
+    payload["far_evaluation"] = _native_far_evaluation_audit(
+        final_model["selected_model_sha256"]
+    )
+    verified = verify_discovery_report_envelope(seal_discovery_report(payload))
+    assert verified["far_evaluation"]["selected_model_sha256"] == final_model["selected_model_sha256"]
+
+
+def test_worker_verifier_rejects_far_evaluation_for_another_model():
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["provenance"]["native_final_model"] = _native_final_model_audit()
+    payload["far_evaluation"] = _native_far_evaluation_audit("a" * 64)
+    with pytest.raises(ValueError, match="does not match the finalized native model"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_malformed_far_metrics_and_row_count():
+    payload = copy.deepcopy(_envelope()["report"])
+    final_model = _native_final_model_audit()
+    payload["provenance"]["native_final_model"] = final_model
+    far = _native_far_evaluation_audit(final_model["selected_model_sha256"])
+    far["far_metrics"]["rmse"] = float("nan")
+    payload["far_evaluation"] = far
+    with pytest.raises(ValueError, match="rmse must be finite"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+    far = _native_far_evaluation_audit(final_model["selected_model_sha256"])
+    far["far_row_count"] = True
+    payload["far_evaluation"] = far
+    with pytest.raises(ValueError, match="positive integer"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_completed_far_evaluation_without_final_model():
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["far_evaluation"] = _native_far_evaluation_audit("b" * 64)
+    with pytest.raises(ValueError, match="requires the selected final-model audit"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
