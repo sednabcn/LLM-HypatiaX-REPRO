@@ -382,6 +382,22 @@ def _candidate_envelope_audit():
         "malformed_item_count": 1,
         "ingestion_failure_count": 1,
         "generation_reported_candidate_count": 3,
+        "producer_generation": {
+            "llm_hypotheses_observed": 2,
+            "llm_hypotheses_admitted": 2,
+            "llm_hypotheses_missing_expression": 0,
+            "llm_hypotheses_deduplicated": 0,
+            "pysr_search_generated_candidate": True,
+            "pysr_candidate_missing_expression": False,
+            "pysr_candidate_deduplicated": False,
+            "pysr_search_attempted": True,
+            "pysr_skipped_by_llm_acceptance": False,
+            "raw_proposal_count": 3,
+            "deduplicated_candidate_count": 3,
+            "deduplication_count": 0,
+            "missing_expression_count": 0,
+            "selection_status": "generation_only_outer_validation_required",
+        },
         "count_matches_generation_metadata": True,
         "ingestion_complete": False,
     }
@@ -443,4 +459,22 @@ def test_candidate_envelope_audit_rejects_invalid_container_with_declared_count(
     }
     report["provenance"]["candidate_envelope_audit"] = audit
     with pytest.raises(ValueError, match="must not claim a declared item count"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("raw_proposal_count", 99, "raw proposal count is inconsistent"),
+        ("llm_hypotheses_admitted", 1, "LLM proposal accounting is inconsistent"),
+        ("deduplication_count", 1, "deduplication count is inconsistent"),
+        ("deduplicated_candidate_count", 2, "unique candidate count differs"),
+    ],
+)
+def test_candidate_envelope_audit_rejects_tampered_producer_generation(field, value, message):
+    report = _valid_report()
+    audit = _candidate_envelope_audit()
+    audit["producer_generation"][field] = value
+    report["provenance"]["candidate_envelope_audit"] = audit
+    with pytest.raises(ValueError, match=message):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
