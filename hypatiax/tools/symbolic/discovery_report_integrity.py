@@ -289,6 +289,69 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         )
         if model.get("fitted_expression") != expected_formula:
             raise ValueError("native final-model fitted expression does not reproduce from its bases and coefficients")
+        # Reconstruct the cross-family winner from the serialized, training-only
+        # objective options. A recomputed model digest must not let a producer
+        # substitute a different single-/multi-basis winner.
+        options = audit.get("candidate_options")
+        if not isinstance(options, list) or not 1 <= len(options) <= 2:
+            raise ValueError("native final-model candidate_options must contain one or two family winners")
+        families = []
+        checked_options = []
+        for option in options:
+            if not isinstance(option, Mapping):
+                raise ValueError("native final-model candidate option must be a mapping")
+            family = option.get("family")
+            if family not in {"single_basis", "multi_basis"} or family in families:
+                raise ValueError("native final-model candidate families must be unique and recognized")
+            families.append(family)
+            for key in ("cv_rmse", "cv_rmse_std"):
+                value = option.get(key)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                    raise ValueError(f"native final-model option {key} must be finite and non-negative")
+            for key in ("cv_nrmse", "cv_nrmse_std"):
+                value = option.get(key)
+                if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0):
+                    raise ValueError(f"native final-model option {key} must be finite, non-negative, or null")
+            complexity = option.get("complexity")
+            if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+                raise ValueError("native final-model option complexity must be a non-negative integer")
+            expressions_option = option.get("expressions")
+            if not isinstance(expressions_option, list) or not 1 <= len(expressions_option) <= 3:
+                raise ValueError("native final-model option expressions are invalid")
+            if any(not isinstance(value, str) or not value for value in expressions_option):
+                raise ValueError("native final-model option expressions must be non-empty strings")
+            if family == "single_basis":
+                if len(expressions_option) != 1 or not isinstance(option.get("candidate_id"), str):
+                    raise ValueError("single-basis final-model option has invalid identity")
+            else:
+                ids_option = option.get("candidate_ids")
+                if (not isinstance(ids_option, list) or len(ids_option) != len(expressions_option)
+                        or len(ids_option) != len(set(ids_option)) or not 2 <= len(ids_option) <= 3
+                        or any(not isinstance(value, str) or not value for value in ids_option)):
+                    raise ValueError("multi-basis final-model option has invalid basis lineage")
+            checked_options.append(option)
+        use_nrmse = all(option.get("cv_nrmse") is not None for option in checked_options)
+        expected_metric = "cv_nrmse" if use_nrmse else "cv_rmse"
+        expected_variability = "cv_nrmse_std" if use_nrmse else "cv_rmse_std"
+        expected_winner = min(checked_options, key=lambda option: (
+            float(option[expected_metric]),
+            float(option[expected_variability]) if option.get(expected_variability) is not None else float("inf"),
+            int(option["complexity"]), option["family"],
+        ))
+        expected_ids = (
+            [expected_winner["candidate_id"]]
+            if expected_winner["family"] == "single_basis"
+            else list(expected_winner["candidate_ids"])
+        )
+        if (audit.get("objective_metric") != expected_metric
+                or model.get("selection_metric") != expected_metric
+                or model.get("family") != expected_winner["family"]
+                or model.get("basis_candidate_ids") != expected_ids
+                or model.get("basis_expressions") != expected_winner["expressions"]
+                or model.get("cross_validation_metric") != expected_winner[expected_metric]
+                or model.get("cross_validation_metric_std") != expected_winner.get(expected_variability)
+                or model.get("symbolic_complexity") != expected_winner["complexity"]):
+            raise ValueError("native final model does not match the reconstructed cross-family selection winner")
         row_count = model.get("training_row_count")
         if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
             raise ValueError("native final-model training row count must be a positive integer")
