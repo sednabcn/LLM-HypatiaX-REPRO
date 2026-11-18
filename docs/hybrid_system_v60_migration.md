@@ -380,3 +380,15 @@ recomputes the outer report and model digests, or introduces an undeclared
 symbol. The worker also validates training row count and design-rank bounds.
 This remains offline verification: it does not run discovery, fit a model,
 read far/evaluation data, or invoke providers.
+
+
+## Stage 22 — bind frozen far evaluation to the finalized variable contract
+
+The frozen-model verifier now validates the declared variable names, unique
+basis IDs, restricted parsing of every basis expression, and exact
+reconstruction of the fitted formula from the ordered basis expressions and
+coefficients. The far evaluator additionally requires the caller's variable
+names to match the finalized model's variable names in exactly the same order.
+This prevents a valid model from being evaluated against a reordered feature
+matrix while retaining superficially valid dimensions. No model is refit or
+reselected, and far metrics remain isolated from selection and retry logic.
