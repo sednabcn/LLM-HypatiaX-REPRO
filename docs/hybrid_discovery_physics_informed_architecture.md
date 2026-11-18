@@ -1633,3 +1633,20 @@ Regression source covers objective ranking, fail-closed incomplete evidence,
 and unchanged behavior when no soft constraints are declared. Tests have not
 been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM API
 call was launched.
+
+## 41. Validate serialized soft-constraint Pareto evidence
+
+The Exp2 worker report validator now recognizes the versioned soft-constraint
+Pareto policies and verifies their serialized audit contract. It checks the
+declared constraint ID set, aggregation policy, objective declaration, and
+each candidate's corresponding soft outcomes. Counts, fractions, pass/fail
+status, recorded aggregate, and Pareto objective must agree. Missing or
+unknown evidence is valid only when the candidate is explicitly excluded
+with `soft_constraint_evidence_incomplete`; it cannot be marked Pareto-eligible.
+
+This is an artifact-integrity check, not a new selection rule. Legacy report
+policies remain unaffected, and the validator still does not use far/test
+observations. Regression source covers consistent evidence, aggregate
+tampering, and incomplete evidence without a matching exclusion. Tests have
+not been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM
+API call was launched.
