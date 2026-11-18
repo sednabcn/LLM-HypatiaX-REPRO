@@ -85,6 +85,7 @@ def normalize_candidate_proposals(
     duplicate_count = 0
 
     for index, item in enumerate(processed):
+        raw: dict[str, Any] = {}
         try:
             raw = _proposal_dict(item)
             expression = raw.get("expression")
@@ -127,8 +128,7 @@ def normalize_candidate_proposals(
             rejected.append({
                 "proposal_index": index,
                 "expression": (
-                    raw.get("expression") if "raw" in locals() and isinstance(raw, dict)
-                    else None
+                    raw.get("expression")
                 ),
                 "reason": f"{type(exc).__name__}: {exc}",
             })
