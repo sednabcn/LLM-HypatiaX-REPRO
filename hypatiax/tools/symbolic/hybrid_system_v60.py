@@ -19,6 +19,7 @@ from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discov
 from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_candidates
 from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
@@ -118,6 +119,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_training_validation_audit: dict[str, Any] = {}
         self._last_v60_objective_selection_audit: dict[str, Any] = {}
         self._last_v60_residual_stability_audit: dict[str, Any] = {}
+        self._last_v60_external_producer_audit: dict[str, Any] = {}
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -152,6 +154,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_pareto_candidate_ids": list(self._last_v60_objective_selection_audit.get("pareto_candidate_ids", [])),
             "native_v60_objective_selection_audit": dict(self._last_v60_objective_selection_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
+            "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
@@ -202,11 +205,34 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_training_validation_audit = {}
         self._last_v60_objective_selection_audit = {}
         self._last_v60_residual_stability_audit = {}
+        self._last_v60_external_producer_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
-            generated = generate_native_template_candidates(problem)
+            generated = list(generate_native_template_candidates(problem))
+            external_spec = prepared.get("v60_external_candidate_proposals", {})
+            if external_spec is None:
+                external_spec = {}
+            if not isinstance(external_spec, Mapping):
+                raise TypeError("v60_external_candidate_proposals must be a mapping")
+            unknown_producer_fields = set(external_spec) - {
+                "llm_proposals", "pysr_proposals", "llm_call_count",
+                "llm_token_count", "pysr_search_attempt_count",
+            }
+            if unknown_producer_fields:
+                raise ValueError(f"unknown external producer fields: {sorted(unknown_producer_fields)}")
+            external_audit = ingest_external_candidate_proposals(
+                problem,
+                llm_proposals=external_spec.get("llm_proposals", ()),
+                pysr_proposals=external_spec.get("pysr_proposals", ()),
+                llm_call_count=external_spec.get("llm_call_count", 0),
+                llm_token_count=external_spec.get("llm_token_count", 0),
+                pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
+            )
+            combined = [item.to_dict() for item in generated] + external_audit["proposals"]
+            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
+            self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
-                generated,
+                combined,
                 variable_names=problem.variable_names,
                 max_candidates=problem.budget.max_candidates,
             )
