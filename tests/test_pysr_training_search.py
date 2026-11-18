@@ -174,3 +174,32 @@ def test_expression_extraction_returned_after_deadline_is_rejected():
             budget_runtime=deadline,
         )
     assert calls == ["get_best"]
+
+
+
+def test_strategy_selector_propagates_deadline_instead_of_trying_next_strategy():
+    from hypatiax.tools.symbolic.pysr_strategy_selection import (
+        select_pysr_search_strategy_on_training_folds,
+    )
+
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=18)
+    deadline = FakeDeadline()
+    later_strategy_calls = []
+
+    class LateStrategyPySR(FakePySR):
+        def predict(self, X):
+            deadline.is_expired = True
+            return super().predict(X)
+
+    def later_factory(seed):
+        later_strategy_calls.append(seed)
+        return FakePySR(seed)
+
+    with pytest.raises(TimeoutError, match="validation prediction returned after"):
+        select_pysr_search_strategy_on_training_folds(
+            {"a_late_strategy": LateStrategyPySR, "z_must_not_start": later_factory},
+            X, y, folds, minimum_valid_folds=2, budget_runtime=deadline,
+        )
+    assert later_strategy_calls == []
