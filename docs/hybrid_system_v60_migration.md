@@ -441,3 +441,27 @@ Completed far-evaluation model and far-set identifiers must be lowercase
 64-character SHA-256 digests, rather than merely strings of the right length.
 These checks strengthen the serialized metric contract without recomputing
 training or far predictions, loading datasets, or changing model selection.
+
+
+
+## Stage 26 — semantic verification at native production handoff
+
+The production handoff verifier now treats the finalized-model digest as an
+integrity checksum, not as proof that the serialized audit is semantically
+consistent. Before building an outward native result or evaluating a frozen
+far set, it validates the selected family identity, basis IDs, training-row
+count, finite/non-negative training diagnostics, design-rank bounds, and the
+arithmetic relationship between training RMSE, target standard deviation,
+and NRMSE (including nullability for zero-variance targets).
+
+It also validates the serialized single-/multi-basis candidate options,
+reconstructs the common CV error metric and deterministic cross-family
+winner, and requires the frozen model's family, ordered basis lineage,
+expressions, objective values, and symbolic complexity to match that winner.
+A producer that changes metric metadata or candidate options and recomputes
+the model digest can no longer pass the production handoff verifier.
+
+This is offline contract verification only. It does not refit a model, read
+training or far arrays, run discovery, launch providers, or alter selection.
+Regression-test source covers self-rehashed inconsistent training NRMSE and
+candidate-option substitution; no tests or CI are run as part of this change.
