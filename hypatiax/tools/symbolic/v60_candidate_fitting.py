@@ -109,7 +109,7 @@ def fit_native_training_candidates(
         "fit_attempt_count": len(fitted) + len(rejected),
         "fitted_candidate_count": len(fitted),
         "rejected_candidate_count": len(rejected),
-        "budget_truncated_count": input_count - min(input_count, cap),
+        "budget_truncated_count": input_count - (len(fitted) + len(rejected)),
         "timed_out": timed_out, "training_row_count": int(targets.size),
         "fit_method": "training_only_affine_least_squares",
         "selection_performed": False,
