@@ -375,6 +375,69 @@ def _validate_multi_candidate_provenance(report: dict[str, Any]) -> None:
         raise ValueError("Pareto cross-source coverage flag does not match candidate provenance")
 
 
+
+def _validate_candidate_envelope_audit(report: dict[str, Any]) -> None:
+    """Recompute all arithmetic and completeness claims in the envelope audit."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise ValueError("discovery_report provenance must be an object")
+    if "candidate_envelope_audit" not in provenance:
+        return
+
+    audit = provenance["candidate_envelope_audit"]
+    if not isinstance(audit, dict):
+        raise ValueError("candidate_envelope_audit must be an object")
+    if audit.get("schema") != "discovery_candidates_v1":
+        raise ValueError("candidate_envelope_audit has unsupported schema")
+
+    container_valid = audit.get("container_valid")
+    if not isinstance(container_valid, bool):
+        raise ValueError("candidate envelope container_valid must be boolean")
+
+    def nonnegative_int(field: str, value: Any) -> int:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"candidate envelope {field} must be a nonnegative integer")
+        return value
+
+    retained = nonnegative_int("retained_item_count", audit.get("retained_item_count"))
+    malformed = nonnegative_int("malformed_item_count", audit.get("malformed_item_count"))
+    failures = nonnegative_int("ingestion_failure_count", audit.get("ingestion_failure_count"))
+    if malformed > retained:
+        raise ValueError("candidate envelope malformed count exceeds retained item count")
+
+    if container_valid:
+        declared = nonnegative_int("declared_item_count", audit.get("declared_item_count"))
+        if retained != declared:
+            raise ValueError("candidate envelope retained count differs from declared item count")
+        expected_failures = malformed
+    else:
+        if audit.get("declared_item_count") is not None:
+            raise ValueError("invalid candidate envelope container must not claim a declared item count")
+        expected_failures = 1 + malformed
+
+    if failures != expected_failures:
+        raise ValueError("candidate envelope ingestion failure count is inconsistent")
+
+    generation_count = audit.get("generation_reported_candidate_count")
+    if generation_count is not None:
+        generation_count = nonnegative_int("generation_reported_candidate_count", generation_count)
+    expected_count_match = (
+        retained == generation_count
+        if container_valid and generation_count is not None
+        else None
+    )
+    if audit.get("count_matches_generation_metadata") is not expected_count_match:
+        raise ValueError("candidate envelope generation count match flag is inconsistent")
+
+    expected_complete = (
+        container_valid
+        and malformed == 0
+        and (generation_count is None or retained == generation_count)
+    )
+    if audit.get("ingestion_complete") is not expected_complete:
+        raise ValueError("candidate envelope ingestion_complete flag is inconsistent")
+
+
 def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     """Extract a typed report and validate its versioned, serialized contract."""
     if not isinstance(result, dict):
@@ -464,6 +527,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
                 raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
 
     _validate_multi_candidate_provenance(report)
+    _validate_candidate_envelope_audit(report)
     _validate_soft_constraint_pareto_contract(report)
     _validate_pareto_selection_consistency(report)
 
