@@ -67,7 +67,8 @@ Result `implementation_provenance` records:
 - `native_v60_pipeline: false`
 - `native_v60_stages`: contract/run context, bounded template generation,
   expression normalization, semantic identity, deduplication, lineage,
-  declared scientific gates, bounded training-only affine fitting,
+  declared scientific gates, bounded training-only affine fitting and
+  bounded joint multi-basis fitting,
   bounded training-only refit cross-validation, and verified training-evidence
   objective/Pareto selection
 - `native_v60_candidate_proposals`: normalized proposals with stable IDs and
@@ -80,6 +81,10 @@ Result `implementation_provenance` records:
 - `native_v60_training_fit_audit`: bounded training-only affine-fit evidence,
   including coefficients, train metrics, rejection reasons, and budget status;
   `selection_performed` is always false
+- `native_v60_multi_basis_fit_audit`: bounded joint fits over small groups of
+  normalized basis candidates, with group IDs, term-level coefficients,
+  lineage, training metrics, design diagnostics, and budget/rejection audit;
+  audit-only, with `selection_performed` false and no far/evaluation data
 - `native_v60_training_validation_audit`: per-candidate fold metrics and
   fold-local coefficients, with candidate eligibility inherited from the
   native hard-gate audit; no far/evaluation data is accepted or consumed and
@@ -127,10 +132,24 @@ accurately reporting upstream usage. External proposal expressions pass
 through the same restricted parser, semantic deduplication, hard gates,
 training-only validation, and evidence-based selection as native templates.
 
-## Remaining native V60 stages
+## Native joint multi-basis fitting
 
-1. Richer native candidate fitting beyond the current single-basis affine
-   least-squares stage.
+The native pool also receives a bounded joint additive fit over groups of two
+or three normalized basis candidates. For each group, all basis functions are
+evaluated across every supplied training row and their coefficients plus an
+intercept are estimated together by deterministic least squares. Group IDs are
+stable hashes of the ordered basis candidate IDs; each record preserves the
+basis IDs, expressions, coefficients, producer lineage, design rank, condition
+number, training RMSE/NRMSE/R², and rejection reason where applicable. Group
+attempts are bounded by the shared candidate/search budget and optional wall
+clock budget. Non-finite or misaligned basis values reject the whole group;
+rows are never silently dropped. This is a separate audit-only fitting stage:
+its metrics do not influence the single-basis selector, do not rank groups,
+and are not passed to V50.2. It has no far/evaluation-data input.
+
+The remaining native V60 work is to define a separately verified fold-level
+validation and evidence-selection contract for joint basis groups before any
+such group can be eligible for native selection.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -142,8 +161,8 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
 - V50.2 remains the default and is not modified by this stage.
 - V60 is opt-in; no silent selector fallback is permitted.
 - V60 currently owns contract preflight, bounded template generation,
-  normalization/lineage, declared scientific gates, training-only affine fitting
-  and refit cross-validation, and independently recomputed training-evidence
+  normalization/lineage, declared scientific gates, training-only affine and
+  joint multi-basis fitting, refit cross-validation, and independently recomputed training-evidence
   Pareto selection. V50.2 still performs production discovery and final
   evaluation; V60 selection is opt-in and remains isolated from far data.
 - Candidate IDs identify canonical symbolic expressions; producer lineage is
