@@ -86,6 +86,7 @@ def select_pareto_discovery_report(
     variable_names: Sequence[str],
     provenance: Mapping[str, Any] | None = None,
     minimum_valid_folds: int = 2,
+    require_nested_structure_evidence: bool = False,
 ) -> DiscoveryReport:
     """Build a report and Pareto front using only declared gates and train folds.
 
@@ -96,7 +97,9 @@ def select_pareto_discovery_report(
 
     The selector never accepts far/test metrics. It ranks eligible candidates
     on mean and worst-fold normalized RMSE plus symbolic operation count.
-    Expression recurrence is reported as a diagnostic, not a gate/objective.
+    When require_nested_structure_evidence is true, a candidate must also have
+    a unique recurrent-structure crosswalk from fresh fold-local searches.
+    That crosswalk is a separate evidence gate, not a copied fixed-structure score.
     """
     if minimum_valid_folds < 1:
         raise ValueError("minimum_valid_folds must be >= 1")
@@ -122,7 +125,15 @@ def select_pareto_discovery_report(
         if gate_ok:
             gate_eligible_count += 1
         enough_evidence = len(scores) >= minimum_valid_folds
-        if gate_ok and enough_evidence and node_count is not None:
+        nested = metrics.get("nested_structure_evidence", {})
+        nested_ok = (
+            isinstance(nested, Mapping)
+            and nested.get("status") == "matched_candidate_structure"
+            and nested.get("candidate_specific_nested_evidence") is True
+            and nested.get("far_test_data_used") is False
+        )
+        nested_required_ok = (not require_nested_structure_evidence) or nested_ok
+        if gate_ok and enough_evidence and node_count is not None and nested_required_ok:
             objectives[candidate.candidate_id] = {
                 "mean_normalized_rmse": sum(scores) / len(scores),
                 "worst_normalized_rmse": max(scores),
@@ -134,8 +145,10 @@ def select_pareto_discovery_report(
             "minimum_valid_folds": minimum_valid_folds,
             "complexity_node_count": node_count,
             "expression_stability_fraction": stable_fraction,
+            "nested_structure_evidence_required": require_nested_structure_evidence,
+            "nested_structure_evidence_passed": nested_ok,
             "eligible_for_pareto": (
-                gate_ok and enough_evidence and node_count is not None
+                gate_ok and enough_evidence and node_count is not None and nested_required_ok
             ),
             "objectives": objectives.get(candidate.candidate_id),
         }
@@ -149,7 +162,8 @@ def select_pareto_discovery_report(
             status = "insufficient_validation_evidence"
             reason = (
                 "No hard-gate-eligible candidate had sufficient finite training-fold "
-                "normalized RMSE evidence and a valid complexity measure."
+                "normalized RMSE evidence, a valid complexity measure, and all "
+                "required nested-structure evidence."
             )
         return DiscoveryReport(
             status=status,
@@ -157,7 +171,7 @@ def select_pareto_discovery_report(
             failure_reasons=(reason,),
             provenance={
                 **dict(provenance or {}),
-                "selection_policy": "training_only_pareto_v1",
+                "selection_policy": "training_only_pareto_v2_nested_structure_gate" if require_nested_structure_evidence else "training_only_pareto_v1",
                 "selection_data_scope": "training_region_only",
             },
         )
@@ -215,6 +229,8 @@ def select_pareto_discovery_report(
                 "candidate_id",
             ],
             "far_test_data_used_for_selection": False,
+            "nested_structure_evidence_required": require_nested_structure_evidence,
+            "nested_structure_evidence_role": "candidate_specific_recurrence_gate" if require_nested_structure_evidence else "optional_audit",
         },
     )
 
