@@ -21,6 +21,7 @@ from .training_validation import (
     make_training_folds,
 )
 from .pysr_training_search import evaluate_pysr_search_on_training_folds
+from .structural_matching import match_fold_discovered_structures
 from .pysr_strategy_selection import (
     TrainingOnlySearchSelection,
     select_pysr_search_strategy_on_training_folds,
@@ -339,7 +340,16 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         minimum_valid_folds=minimum_valid_folds,
     )
     result = summary.to_dict()
+    structure_matching = match_fold_discovered_structures(
+        result.get("fold_searches", []),
+        (result.get("validation") or {}).get("fold_metrics", []),
+        variable_names,
+        minimum_recurrence=minimum_structure_recurrence,
+        minimum_recurrence_fraction=minimum_structure_recurrence_fraction,
+    )
     result.update({
+        "structure_matching": structure_matching,
+        "candidate_structures": structure_matching["structures"],
         "validation_design": "nested_fresh_symbolic_search_per_training_fold",
         "selection_role": "discovery_procedure_validation_only",
         "candidate_specific_score": False,
