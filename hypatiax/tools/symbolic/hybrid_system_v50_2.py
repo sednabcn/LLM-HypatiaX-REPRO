@@ -1197,10 +1197,10 @@ class HybridDiscoverySystem:
                 try:
                     _folds = make_training_folds(
                         _raw_X.shape[0],
-                    n_splits=_n_splits,
-                    n_repeats=1,
-                    validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
-                    seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                        n_splits=_n_splits,
+                        n_repeats=1,
+                        validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
+                        seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
                         strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
                     )
                 except Exception as _fold_error:
