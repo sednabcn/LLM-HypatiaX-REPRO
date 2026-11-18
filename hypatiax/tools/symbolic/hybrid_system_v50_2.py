@@ -1669,7 +1669,10 @@ class HybridDiscoverySystem:
             )
         )
         self._last_discovery_report = None
-        if _validation_settings:
+        if _validation_settings and not (
+            self._active_budget_runtime is not None
+            and self._active_budget_runtime.expired()
+        ):
             if not isinstance(_validation_settings, dict):
                 raise TypeError(
                     "metadata['training_only_search_validation'] must be a dict"
