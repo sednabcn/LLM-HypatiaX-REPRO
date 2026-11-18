@@ -53,6 +53,7 @@ def evaluate_pysr_search_on_training_folds(
     *,
     seed: int = 42,
     minimum_valid_folds: int = 2,
+    budget_runtime: Any | None = None,
 ) -> PySRFoldSearchSummary:
     """Run an independent PySR search and held-out prediction in every fold.
 
@@ -80,6 +81,8 @@ def evaluate_pysr_search_on_training_folds(
         nonlocal invocation_index
         fold = folds[invocation_index]
         invocation_index += 1
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("discovery wall-time budget expired before training-fold search")
         fold_seed = int(seed + fold.repeat * 100_003 + fold.fold)
         model = searcher_factory(fold_seed)
         if model is None:
@@ -92,6 +95,8 @@ def evaluate_pysr_search_on_training_folds(
         ):
             raise TypeError("searcher must expose fit(X, y) and predict(X)")
         model.fit(X_fit, y_fit)
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("training-fold search returned after discovery wall-time deadline")
         expression = _best_expression(model)
         predictions = np.asarray(model.predict(X_validation), dtype=float).reshape(-1)
         if predictions.shape != (X_validation.shape[0],):
