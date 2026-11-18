@@ -67,7 +67,7 @@ def test_candidate_with_unrecognized_engineered_symbol_fails_closed():
 
     with pytest.raises((ValueError, TypeError)):
         evaluate_hybrid_candidate_on_training_folds(
-            "1.0*gm_x_y",
+            "1.0*gm_x_z",
             ["x", "y", "gm_x_z"],
             ["x", "y"],
             X,
@@ -150,3 +150,27 @@ def test_candidate_target_signed_log_is_learned_and_inverted_per_fold():
     assert summary.valid_fold_count == 3
     assert summary.failed_fold_count == 0
     assert summary.mean_normalized_rmse < 1e-5
+
+
+def test_candidate_inner_target_std_scaling_is_refit_and_inverted_per_fold():
+    x = np.linspace(1.0, 10.0, 36)
+    X = x.reshape(-1, 1)
+    y = 3e-8 * x
+    folds = make_training_folds(
+        len(y), n_splits=3, n_repeats=1,
+        validation_fraction=0.2, seed=47,
+    )
+
+    summary = evaluate_hybrid_candidate_on_training_folds(
+        "1.0*x",
+        ["x"],
+        ["x"],
+        X,
+        y,
+        folds,
+        minimum_valid_folds=3,
+    )
+
+    assert summary.valid_fold_count == 3
+    assert summary.failed_fold_count == 0
+    assert summary.mean_rmse < 1e-12
