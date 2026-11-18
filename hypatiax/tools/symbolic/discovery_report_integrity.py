@@ -115,3 +115,101 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
 
 
 __all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope"]
+
+
+def build_native_discovery_report(
+    proposals: list[Mapping[str, Any]],
+    gate_audit: Mapping[str, Any],
+    validation_audit: Mapping[str, Any],
+    selection_audit: Mapping[str, Any],
+    *,
+    run_context: Mapping[str, Any],
+    compatibility_status: str = "provisional",
+) -> dict[str, Any]:
+    """Build a versioned report from native V60 evidence without promoting it
+    to the V50.2 production result.
+    """
+    from hypatiax.tools.symbolic.discovery_contracts import CandidateRecord, DiscoveryReport
+
+    gate_by_id = {
+        item.get("native_candidate_id"): item
+        for item in gate_audit.get("candidate_gates", [])
+        if isinstance(item, Mapping)
+    }
+    validation_by_id = {
+        item.get("native_candidate_id"): item
+        for item in validation_audit.get("candidate_validation", [])
+        if isinstance(item, Mapping)
+    }
+    objective_by_id = {
+        item.get("candidate_id"): item
+        for item in selection_audit.get("objective_evidence", [])
+        if isinstance(item, Mapping)
+    }
+    records = []
+    native_to_report = {}
+    for proposal in proposals:
+        native_id = proposal.get("candidate_id")
+        lineage = proposal.get("producer_provenance") or [{}]
+        producer = lineage[0] if isinstance(lineage, list) else {}
+        source = producer.get("source", "unknown")
+        if source not in {"llm_proposal", "domain_template", "pysr_search", "residual_search", "unknown"}:
+            source = "unknown"
+        strategy = producer.get("search_strategy", "native_template")
+        seed = producer.get("seed", 0)
+        if not isinstance(seed, int) or isinstance(seed, bool):
+            seed = 0
+        gate = gate_by_id.get(native_id, {})
+        validation = validation_by_id.get(native_id, {})
+        objective = objective_by_id.get(native_id, {})
+        metrics = {}
+        if isinstance(validation, Mapping):
+            metrics["training_validation"] = dict(validation)
+        if isinstance(objective, Mapping):
+            metrics["training_objectives"] = dict(objective)
+        record = CandidateRecord(
+            expression=str(proposal.get("expression") or proposal.get("normalized_expression") or ""),
+            normalized_expression=str(proposal.get("normalized_expression") or proposal.get("expression") or ""),
+            source=source,
+            search_strategy=str(strategy),
+            seed=seed,
+            metrics=metrics,
+            rejection_reasons=tuple(gate.get("rejection_reasons", ())) if isinstance(gate, Mapping) else (),
+            eligible=bool(gate.get("eligible", False)) if isinstance(gate, Mapping) else False,
+        )
+        records.append(record)
+        native_to_report[native_id] = record.candidate_id
+
+    selected_native = selection_audit.get("selected_candidate_id")
+    selected_report = native_to_report.get(selected_native)
+    pareto_report = [
+        native_to_report[item]
+        for item in selection_audit.get("pareto_candidate_ids", [])
+        if item in native_to_report
+    ]
+    selected = selection_audit.get("selection_status") == "selected" and selected_report is not None
+    status = "provisional" if selected else "no_credible_candidate"
+    failures = []
+    if not selected:
+        reason = selection_audit.get("reason") or selection_audit.get("selection_status") or "native selection produced no candidate"
+        failures.append(str(reason))
+    report = DiscoveryReport(
+        status=status,
+        candidates=tuple(records),
+        selected_candidate_id=selected_report if selected else None,
+        pareto_candidate_ids=tuple(pareto_report),
+        failure_reasons=tuple(failures),
+        provenance={
+            "engine_version": "6.0.0",
+            "implementation_mode": "native_v60_audit_with_v50_2_compatibility",
+            "native_v60_pipeline": False,
+            "run_context": dict(run_context),
+            "native_selection_status": selection_audit.get("selection_status"),
+            "compatibility_baseline": "hybrid_system_v50_2",
+        },
+        far_evaluation={},
+    )
+    return seal_discovery_report(report)
+
+
+__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report"]
