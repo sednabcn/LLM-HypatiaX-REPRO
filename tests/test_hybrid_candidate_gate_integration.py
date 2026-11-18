@@ -546,6 +546,7 @@ def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record(
                 "search_strategy": "llm_hypothesis",
                 "seed": 42,
             },
+            None,
             {
                 "candidate_id": "inner-pysr-passes-gate",
                 "expression": "x*x",
@@ -587,3 +588,11 @@ def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record(
     assert failed["metrics"]["validation_execution"] == "not_completed"
     assert "synthetic validator failure" in " ".join(failed["rejection_reasons"])
     assert any(item["source"] == "pysr_search" and item["eligible"] for item in report_candidates)
+    malformed = next(item for item in report_candidates if item["source"] == "unknown")
+    assert malformed["eligible"] is False
+    assert "malformed_candidate_envelope_item:1" in " ".join(malformed["rejection_reasons"])
+    envelope_audit = result["discovery_report"]["provenance"]["candidate_envelope_audit"]
+    assert envelope_audit["declared_item_count"] == 3
+    assert envelope_audit["retained_item_count"] == 3
+    assert envelope_audit["malformed_item_count"] == 1
+    assert envelope_audit["ingestion_complete"] is False
