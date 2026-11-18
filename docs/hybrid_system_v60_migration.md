@@ -266,3 +266,22 @@ selection or an explicit no-credible-candidate decision. It never changes or
 overrides the existing single-basis selected candidate and is exposed
 separately as `native_v60_multi_basis_selection_audit`. This stage remains
 opt-in/audit provenance and does not make V60 the production discovery path.
+
+
+## Joint multi-basis selection in reports and worker contracts
+
+Typed-contract V60 reports now embed the distinct group-selection audit at
+`provenance.native_multi_basis_selection`. The existing report schema,
+single-basis `selected_candidate_id`, and single-basis Pareto references remain
+unchanged. Joint-group selection is supplemental provenance and never
+replaces or overrides the single-basis result or V50.2 compatibility result.
+The outer report-envelope SHA-256 covers this complete audit.
+
+Worker verification validates the embedded group-selection schema and
+far-data exclusion, unique objective group IDs, each objective-evidence
+SHA-256, each independent fold-evidence fingerprint, Pareto references, and
+the selected group/basis IDs/expressions/objective digest. Inconsistent
+evidence rejects the report even if the outer envelope digest is recomputed.
+A no-credible-candidate decision remains explicit; a stage failure is marked
+incomplete and cannot claim selection. Workers must keep group selection in
+its separate namespace from single-basis selection.

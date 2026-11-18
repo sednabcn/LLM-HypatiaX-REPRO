@@ -65,3 +65,51 @@ def test_worker_verifier_rejects_unknown_envelope_fields():
     envelope["extra"] = "not allowed"
     with pytest.raises(ValueError, match="unknown fields"):
         verify_discovery_report_envelope(envelope)
+
+
+def _multi_basis_audit():
+    from hashlib import sha256
+    import json
+    objective = {
+        "candidate_group_id": "v60mb_group", "basis_candidate_ids": ["x-id", "y-id"],
+        "basis_expressions": ["x", "y"], "evidence_fingerprint": "a" * 64,
+        "mean_validation_rmse": 0.1, "std_validation_rmse": 0.01,
+        "symbolic_complexity": 2, "primary_error_objective": "mean_validation_rmse",
+        "objectives": {"mean_validation_rmse": 0.1, "std_validation_rmse": 0.01, "symbolic_complexity": 2},
+    }
+    objective["objective_evidence_sha256"] = sha256(
+        json.dumps(objective, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "v60_native_multi_basis_objective_selection_v1", "selection_status": "selected",
+        "selection_performed": True, "far_or_evaluation_data_used": False,
+        "objective_evidence": [objective], "pareto_candidate_group_ids": ["v60mb_group"],
+        "selected_candidate_group_id": "v60mb_group", "selected_basis_candidate_ids": ["x-id", "y-id"],
+        "selected_basis_expressions": ["x", "y"],
+        "selected_objective_evidence_sha256": objective["objective_evidence_sha256"],
+    }
+
+
+def test_worker_verifier_accepts_embedded_multi_basis_selection():
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["provenance"]["native_multi_basis_selection"] = _multi_basis_audit()
+    verified = verify_discovery_report_envelope(seal_discovery_report(payload))
+    assert verified["provenance"]["native_multi_basis_selection"]["selected_candidate_group_id"] == "v60mb_group"
+
+
+def test_worker_verifier_rejects_multi_basis_selected_reference_tampering():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _multi_basis_audit()
+    audit["selected_candidate_group_id"] = "missing-group"
+    payload["provenance"]["native_multi_basis_selection"] = audit
+    with pytest.raises(ValueError, match="selected multi-basis group"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_multi_basis_objective_digest_tampering():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _multi_basis_audit()
+    audit["objective_evidence"][0]["mean_validation_rmse"] = 9.0
+    payload["provenance"]["native_multi_basis_selection"] = audit
+    with pytest.raises(ValueError, match="objective evidence digest"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
