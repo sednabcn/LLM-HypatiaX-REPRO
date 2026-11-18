@@ -78,7 +78,8 @@ def match_fold_discovered_structures(
         fold_id = (int(search["repeat"]), int(search["fold"]))
         expression = str(search.get("expression") or "")
         try:
-            signature = canonicalize_symbolic_structure(expression, names)
+            fold_names = search.get("variable_names") or names
+            signature = canonicalize_symbolic_structure(expression, fold_names)
         except Exception as exc:
             unmatched.append({
                 "repeat": fold_id[0], "fold": fold_id[1],
