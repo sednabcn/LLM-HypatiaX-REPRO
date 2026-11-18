@@ -670,8 +670,12 @@ class IntegratedLLMEngine:
                 return []
             _request_max_tokens = _reserved_tokens
         self.last_call_attempted = True
+        if _budget_runtime is not None:
+            _budget_runtime.record_llm_request_started()
         try:
             response = self._call_llm(prompt, max_tokens=_request_max_tokens)
+            if _budget_runtime is not None:
+                _budget_runtime.record_llm_response_received()
             from hypatiax.core.llm_call import last_call_info
             self.last_call_info = last_call_info()
             self._note_llm_sample(response)
