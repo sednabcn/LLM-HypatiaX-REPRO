@@ -22,8 +22,8 @@ def test_affine_fit_recovers_scale_and_intercept_from_training_rows():
     fit = result["fitted_candidates"][0]
     assert fit["candidate_id"] == "c1"
     assert fit["training_rmse"] < 1e-12
-    assert fit["coefficients"]["scale"] == 3.0
-    assert fit["coefficients"]["intercept"] == 5.0
+    assert np.isclose(fit["coefficients"]["scale"], 3.0)
+    assert np.isclose(fit["coefficients"]["intercept"], 5.0)
     assert fit["training_row_count"] == 4
     assert result["selection_performed"] is False
 
