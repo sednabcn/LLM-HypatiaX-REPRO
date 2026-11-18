@@ -85,3 +85,46 @@ def test_duplicate_candidate_ids_are_rejected():
     report["candidates"].append(dict(report["candidates"][0]))
     with pytest.raises(ValueError, match="unique candidate IDs"):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_soft_constraint_pareto_report_requires_consistent_audited_objective():
+    report = _valid_report()
+    report["provenance"].update({
+        "selection_policy": "training_only_pareto_v5_soft_constraints",
+        "soft_constraint_ids": ["soft_positive"],
+        "soft_constraint_aggregation": "unweighted_mean_of_declared_violation_fractions",
+        "objectives": ["mean_declared_soft_constraint_violation_fraction_min"],
+    })
+    candidate = report["candidates"][0]
+    candidate["constraint_outcomes"].append({
+        "constraint_id": "soft_positive", "status": "fail", "severity": "soft",
+        "reason": "one sampled violation",
+        "evidence": {"evaluation_count": 4, "violation_count": 1, "violation_fraction": 0.25},
+    })
+    candidate["metrics"]["pareto_selection"] = {
+        "declared_soft_constraint_ids": ["soft_positive"],
+        "mean_soft_constraint_violation_fraction": 0.25,
+        "eligible_for_pareto": True, "eligibility_reasons": [],
+        "objectives": {"mean_soft_constraint_violation_fraction": 0.25},
+    }
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+    candidate["metrics"]["pareto_selection"]["mean_soft_constraint_violation_fraction"] = 0.5
+    with pytest.raises(ValueError, match="aggregate does not match"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_soft_constraint_pareto_report_rejects_missing_evidence_without_exclusion():
+    report = _valid_report()
+    report["provenance"].update({
+        "selection_policy": "training_only_pareto_v5_soft_constraints",
+        "soft_constraint_ids": ["soft_positive"],
+        "soft_constraint_aggregation": "unweighted_mean_of_declared_violation_fractions",
+        "objectives": ["mean_declared_soft_constraint_violation_fraction_min"],
+    })
+    report["candidates"][0]["metrics"]["pareto_selection"] = {
+        "declared_soft_constraint_ids": ["soft_positive"],
+        "mean_soft_constraint_violation_fraction": None,
+        "eligible_for_pareto": True, "eligibility_reasons": [], "objectives": None,
+    }
+    with pytest.raises(ValueError, match="incomplete evidence lacks exclusion reason"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})

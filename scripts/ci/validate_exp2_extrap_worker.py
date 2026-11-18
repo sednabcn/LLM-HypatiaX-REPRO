@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 from collections import Counter
 from datetime import datetime, timezone
@@ -52,6 +53,77 @@ DISCOVERY_CONSTRAINT_STATUSES = {
     "pass", "fail", "warning", "not_applicable", "unknown", "not_checked",
 }
 
+
+
+def _validate_soft_constraint_pareto_contract(report: dict[str, Any]) -> None:
+    """Validate serialized soft-constraint Pareto provenance and candidate audit."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+    policy = provenance.get("selection_policy")
+    supported = {
+        "training_only_pareto_v5_soft_constraints",
+        "training_only_pareto_v6_nested_structure_soft_constraints",
+    }
+    if policy not in supported:
+        return
+    constraint_ids = provenance.get("soft_constraint_ids")
+    if (not isinstance(constraint_ids, list) or not constraint_ids
+        or any(not isinstance(item, str) or not item for item in constraint_ids)
+        or len(constraint_ids) != len(set(constraint_ids))):
+        raise ValueError("soft-constraint Pareto policy requires unique declared soft_constraint_ids")
+    if provenance.get("soft_constraint_aggregation") != "unweighted_mean_of_declared_violation_fractions":
+        raise ValueError("soft-constraint Pareto policy has unsupported aggregation")
+    if "mean_declared_soft_constraint_violation_fraction_min" not in provenance.get("objectives", []):
+        raise ValueError("soft-constraint Pareto policy is missing its declared objective")
+    for index, candidate in enumerate(report["candidates"]):
+        metrics = candidate.get("metrics", {})
+        selection = metrics.get("pareto_selection") if isinstance(metrics, dict) else None
+        if not isinstance(selection, dict):
+            raise ValueError(f"soft-constraint candidate[{index}] is missing Pareto selection audit")
+        if selection.get("declared_soft_constraint_ids") != constraint_ids:
+            raise ValueError(f"soft-constraint candidate[{index}] declared IDs differ from report provenance")
+        matching = [
+            item for item in candidate["constraint_outcomes"]
+            if item["constraint_id"] in set(constraint_ids)
+        ]
+        complete = len(matching) == len(constraint_ids) and {item["constraint_id"] for item in matching} == set(constraint_ids)
+        fractions: list[float] = []
+        if complete:
+            by_id = {item["constraint_id"]: item for item in matching}
+            for constraint_id in constraint_ids:
+                outcome = by_id[constraint_id]
+                evidence = outcome["evidence"]
+                count, violations, fraction = evidence.get("evaluation_count"), evidence.get("violation_count"), evidence.get("violation_fraction")
+                if (outcome["severity"] != "soft" or outcome["status"] not in {"pass", "fail"}
+                    or isinstance(count, bool) or not isinstance(count, int) or count <= 0
+                    or isinstance(violations, bool) or not isinstance(violations, int)
+                    or not 0 <= violations <= count or isinstance(fraction, bool)
+                    or not isinstance(fraction, (int, float)) or not math.isfinite(float(fraction))
+                    or not 0.0 <= float(fraction) <= 1.0
+                    or not math.isclose(float(fraction), violations / count, rel_tol=1e-9, abs_tol=1e-12)
+                    or ((outcome["status"] == "pass") != (violations == 0))):
+                    complete = False
+                    break
+                fractions.append(float(fraction))
+        aggregate = sum(fractions) / len(fractions) if complete else None
+        recorded = selection.get("mean_soft_constraint_violation_fraction")
+        if aggregate is None:
+            if "soft_constraint_evidence_incomplete" not in selection.get("eligibility_reasons", []):
+                raise ValueError(f"soft-constraint candidate[{index}] incomplete evidence lacks exclusion reason")
+            if recorded is not None:
+                raise ValueError(f"soft-constraint candidate[{index}] records an aggregate without complete evidence")
+            if selection.get("eligible_for_pareto") is True:
+                raise ValueError(f"soft-constraint candidate[{index}] with incomplete evidence is Pareto-eligible")
+        else:
+            if isinstance(recorded, bool) or not isinstance(recorded, (int, float)) or not math.isclose(float(recorded), aggregate, rel_tol=1e-9, abs_tol=1e-12):
+                raise ValueError(f"soft-constraint candidate[{index}] aggregate does not match declared outcomes")
+            objectives = selection.get("objectives")
+            if selection.get("eligible_for_pareto") is True and (
+                not isinstance(objectives, dict)
+                or not math.isclose(float(objectives.get("mean_soft_constraint_violation_fraction", float("nan"))), aggregate, rel_tol=1e-9, abs_tol=1e-12)
+            ):
+                raise ValueError(f"soft-constraint candidate[{index}] Pareto objective differs from audited aggregate")
 
 def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     """Extract a typed report and validate its versioned, serialized contract."""
@@ -140,6 +212,8 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
                 raise ValueError("discovery_report constraint outcome has unsupported severity")
             if not isinstance(outcome.get("reason"), str) or not isinstance(outcome.get("evidence"), dict):
                 raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
+
+    _validate_soft_constraint_pareto_contract(report)
 
     if len(ids) != len(set(ids)):
         raise ValueError("discovery_report candidate records must have unique candidate IDs")
