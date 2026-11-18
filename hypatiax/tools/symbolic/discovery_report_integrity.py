@@ -101,8 +101,13 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
         if not isinstance(supplied, str) or _canonical_digest(unsigned) != supplied:
             raise ValueError("multi-basis objective evidence digest does not reproduce")
         ids, expressions = item.get("basis_candidate_ids"), item.get("basis_expressions")
-        if not isinstance(ids, list) or not 2 <= len(ids) <= 3 or len(set(ids)) != len(ids):
-            raise ValueError("multi-basis basis IDs must be two or three unique values")
+        if not isinstance(ids, list) or not 2 <= len(ids) <= 3 or any(not isinstance(value, str) or not value for value in ids) or len(set(ids)) != len(ids):
+            raise ValueError("multi-basis basis IDs must be two or three unique strings")
+        expected_group_id = "v60mb_" + sha256(json.dumps(ids, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+        if gid != expected_group_id:
+            raise ValueError("multi-basis group ID does not match its ordered basis IDs")
+        if not isinstance(item.get("source_provenance"), list):
+            raise ValueError("multi-basis producer lineage must be a list")
         if not isinstance(expressions, list) or len(expressions) != len(ids) or any(not isinstance(x, str) or not x for x in expressions):
             raise ValueError("multi-basis expressions must align with basis IDs")
         fingerprint = item.get("evidence_fingerprint")
@@ -134,7 +139,7 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
                 raise ValueError("embedded verified folds must be ordered and complete")
             for key in ("training_row_indices", "validation_row_indices"):
                 rows = fold.get(key)
-                if not isinstance(rows, list) or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 or v >= training_rows for v in rows):
+                if not isinstance(rows, list) or not rows or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 or v >= training_rows for v in rows):
                     raise ValueError("embedded fold row indices are invalid")
                 if len(rows) != len(set(rows)):
                     raise ValueError("embedded fold row indices must be unique")
@@ -189,11 +194,11 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
         normalized.append(item)
 
     if status == "stage_failed":
-        if evidence or pareto or audit.get("selected_candidate_group_id") is not None:
+        if evidence or pareto or audit.get("selected_candidate_group_id") is not None or audit.get("selected_basis_candidate_ids") not in ([], None) or audit.get("selected_basis_expressions") not in ([], None):
             raise ValueError("failed multi-basis selection cannot contain objective or selection evidence")
         return
     if status == "no_credible_candidate":
-        if evidence or pareto or audit.get("selected_candidate_group_id") is not None:
+        if evidence or pareto or audit.get("selected_candidate_group_id") is not None or audit.get("selected_basis_candidate_ids") not in ([], None) or audit.get("selected_basis_expressions") not in ([], None):
             raise ValueError("no-credible-candidate decision must have empty selection evidence")
         return
     if not normalized:
