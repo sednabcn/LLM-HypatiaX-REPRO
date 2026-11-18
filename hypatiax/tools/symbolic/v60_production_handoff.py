@@ -161,18 +161,27 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
             value = option.get(key)
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0):
                 raise ValueError(f"final-model option {key} must be finite, non-negative, or null")
+        if (option.get("cv_nrmse") is None) != (option.get("cv_nrmse_std") is None):
+            raise ValueError("final-model option NRMSE mean/std nullability must match")
         complexity = option.get("complexity")
         if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
             raise ValueError("final-model option complexity must be a non-negative integer")
         option_expressions = option.get("expressions")
         if not isinstance(option_expressions, list) or not 1 <= len(option_expressions) <= 3 or any(not isinstance(item, str) or not item for item in option_expressions):
             raise ValueError("final-model option expressions are invalid")
+        for expression in option_expressions:
+            parse_sympy_expression(expression, names)
         if option_family == "single_basis":
-            if len(option_expressions) != 1 or not isinstance(option.get("candidate_id"), str) or not option.get("candidate_id"):
+            if (len(option_expressions) != 1 or not isinstance(option.get("candidate_id"), str)
+                    or not option.get("candidate_id") or option.get("candidate_group_id") is not None):
                 raise ValueError("single-basis candidate option identity is invalid")
         else:
             option_ids = option.get("candidate_ids")
-            if not isinstance(option_ids, list) or len(option_ids) != len(option_expressions) or not 2 <= len(option_ids) <= 3 or len(option_ids) != len(set(option_ids)) or any(not isinstance(item, str) or not item for item in option_ids):
+            if (not isinstance(option_ids, list) or len(option_ids) != len(option_expressions)
+                    or not 2 <= len(option_ids) <= 3 or len(option_ids) != len(set(option_ids))
+                    or any(not isinstance(item, str) or not item for item in option_ids)
+                    or option.get("candidate_id") is not None
+                    or not isinstance(option.get("candidate_group_id"), str) or not option.get("candidate_group_id")):
                 raise ValueError("multi-basis candidate option identity is invalid")
 
     use_nrmse = all(option.get("cv_nrmse") is not None for option in options)
