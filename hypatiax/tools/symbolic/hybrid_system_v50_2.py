@@ -1653,7 +1653,9 @@ class HybridDiscoverySystem:
         self._active_budget_runtime = None
         if _problem is not None:
             from hypatiax.tools.symbolic.discovery_budget_runtime import DiscoveryBudgetRuntime
-            self._active_budget_runtime = DiscoveryBudgetRuntime(_problem.budget)
+            self._active_budget_runtime = DiscoveryBudgetRuntime(
+                _problem.budget, configured_search_attempts=self.max_retries
+            )
         _llm_runtime_engine = getattr(self.symbolic_engine, "llm_engine", None)
         if _llm_runtime_engine is not None:
             _llm_runtime_engine.budget_runtime = self._active_budget_runtime
