@@ -66,7 +66,9 @@ def test_unknown_hard_gate_blocks_candidate_even_if_marked_eligible():
     assert report.status == "all_candidates_failed_physical_gates"
     assert report.selected_candidate_id is None
     assert report.pareto_candidate_ids == ()
-    assert report.candidates[0].metrics["pareto_selection"]["hard_gates_passed"] is False
+    selection = report.candidates[0].metrics["pareto_selection"]
+    assert selection["hard_gates_passed"] is False
+    assert "hard_constraint_unknown:declared_physics" in selection["eligibility_reasons"]
 
 
 def test_insufficient_training_fold_evidence_fails_closed():
@@ -102,6 +104,7 @@ def test_selected_candidate_soft_warning_is_preserved_in_report_status():
 
     assert report.status == "accepted_with_warnings"
     assert report.selected_candidate_id == candidate.candidate_id
+    assert report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"] == []
 
 
 
