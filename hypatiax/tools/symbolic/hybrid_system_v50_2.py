@@ -915,7 +915,11 @@ class HybridDiscoverySystem:
                 elif getattr(self, "_active_discovery_problem", None) is None:
                     result["candidate_validation_status"] = "not_configured"
                 if _valid_expression and _valid_score:
-                    if _budget_runtime is not None and _budget_runtime.record_candidates(1) == 0:
+                    _result_is_llm_proposal = str(result.get("llm_mode", "")).endswith("_llm_better")
+                    if (
+                        _budget_runtime is not None and not _result_is_llm_proposal
+                        and _budget_runtime.record_candidates(1) == 0
+                    ):
                         _candidate_gate_passed = False
                         result["candidate_validation_status"] = "rejected_budget"
                     quality = self._check_expression_quality(expr, float(r2))
@@ -1100,7 +1104,10 @@ class HybridDiscoverySystem:
                         expression,
                         source="domain_template",
                         search_strategy="physics_aware_fallback",
-                        seed=int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")),
+                        seed=int(getattr(
+                            self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"),
+                        )),
                     )
                     physics_result["candidate_validation"] = _physics_gate.to_dict()
                     physics_result["candidate_validation_status"] = (
