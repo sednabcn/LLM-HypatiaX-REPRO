@@ -2552,6 +2552,22 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             # is what actually does the work.
             kwargs.setdefault("seed_expressions", [best_hyp.equation])
 
+        # Do not launch a PySR search when the LLM hypotheses have
+        # consumed the complete candidate allowance. The budget is enforced
+        # inside the discovery call, not only after the outer retry returns.
+        _budget_runtime = getattr(self.llm_engine, "budget_runtime", None)
+        if _budget_runtime is not None and _budget_runtime.remaining_candidates <= 0:
+            return {
+                "expression": "DISCOVERY_FAILED",
+                "r2_score": float("-inf"),
+                "variable_names": safe_names,
+                "original_variable_names": variable_names,
+                "variable_name_mapping": name_mapping,
+                "llm_mode": "seed_budget_exhausted",
+                "llm_hypotheses": [h.equation for h in hypotheses] if hypotheses else [],
+                "llm_error": "discovery_budget_exhausted:max_candidates_before_pysr",
+            }
+
         # Run PySR with LLM-informed config
         result = super().discover(
             X,
@@ -2691,6 +2707,44 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "bypassing pure-LLM acceptance and forcing PySR refinement.",
                 flush=True,
             )
+
+        # If the LLM hypotheses consumed all remaining candidate capacity,
+        # do not start a PySR refinement whose result could only be rejected
+        # after paying the full search cost. A structural-risk proposal cannot
+        # be promoted without its required PySR refinement.
+        _budget_runtime = getattr(self.llm_engine, "budget_runtime", None)
+        if _budget_runtime is not None and _budget_runtime.remaining_candidates <= 0:
+            if _structural_guard:
+                return {
+                    "expression": "DISCOVERY_FAILED",
+                    "r2_score": float("-inf"),
+                    "variable_names": safe_names,
+                    "original_variable_names": variable_names,
+                    "variable_name_mapping": name_mapping,
+                    "llm_mode": "hybrid_budget_exhausted_structural_risk",
+                    **_llm_info,
+                    "llm_time": llm_time,
+                    "llm_hypotheses": [h.equation for h in hypotheses],
+                    "llm_error": "discovery_budget_exhausted:required_pysr_refinement",
+                }
+            return {
+                "expression": best_hyp.equation,
+                "r2_score": best_hyp.r2_score,
+                "complexity": len(best_hyp.equation),
+                "variable_names": safe_names,
+                "original_variable_names": variable_names,
+                "variable_name_mapping": name_mapping,
+                "predictions": self._predict_from_equation(
+                    best_hyp.equation, X, safe_names
+                ),
+                "llm_mode": "hybrid_budget_exhausted_llm_better",
+                **_llm_info,
+                "llm_time": llm_time,
+                "validation": {"valid": True, "errors": [], "warnings": []},
+                "llm_hypotheses": [h.equation for h in hypotheses],
+                "llm_seed_used": False,
+                "llm_suggested_operators": None,
+            }
 
         # Discard LLM prior if it is too weak to be a useful seed for PySR
         _use_llm_seed = True
