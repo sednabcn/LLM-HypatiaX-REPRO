@@ -2515,7 +2515,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 _fit_expression = str(fit_expression or "").strip().replace("^", "**")
                 if not _expression or not _fit_expression:
                     return
-                _normal = re.sub(r"\\s+", "", _fit_expression).replace("^", "**")
+                _normal = re.sub(r"\s+", "", _fit_expression).replace("^", "**")
                 _dedup_key = _normal
                 _provenance = {
                     "source": source,
