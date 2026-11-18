@@ -432,8 +432,137 @@ def test_exp2_hybrid_discovery_uses_llm_hybrid_and_repro_search_config():
     assert 'kwargs.get("unary_operators", ["exp", "log", "sin", "cos", "sqrt"])' in source
     assert 'domain=_domain' in source
     assert '"llm_mode_active": system.llm_mode' in source
-    assert '"selection_metric": "training_r2"' in source
-    assert '"candidate_selection": "highest_training_r2_within_retry_budget"' in source
+    assert '"paired_training_fold_mean_normalized_rmse_then_final_training_r2"' in source
+    assert '"training_only_search_selection": _training_selection_audit' in source
+    assert '"fold_search_llm_enabled": False' in source
+    assert '"candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak"' in source
     assert '"extrapolation_metric_used_for_selection": False' in source
     assert '"training_acceptance_threshold": 0.97' in source
     assert '"physics_fallback_enabled": system.enable_physics_fallback' in source
+
+
+
+def test_hybrid_llm_engine_survives_discovery_retries_and_selection_is_complexity_aware():
+    """Guard the retry lifecycle and prevent flagged expressions winning by R² alone."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    symbolic_source = (
+        root / "hypatiax/tools/symbolic/symbolic_engine.py"
+    ).read_text(encoding="utf-8")
+    hybrid_source = (
+        root / "hypatiax/tools/symbolic/hybrid_system_v50_2.py"
+    ).read_text(encoding="utf-8")
+
+    discover_start = symbolic_source.index("    def discover(", symbolic_source.index("class SymbolicEngineWithLLM"))
+    discover_end = symbolic_source.index("    def _discover_with_llm_seed(", discover_start)
+    discover_body = symbolic_source[discover_start:discover_end]
+    assert "self.llm_engine = None" not in discover_body
+    assert "Keep the LLM client alive for the lifetime" in discover_body
+
+    retry_start = hybrid_source.index("    def _discover_with_retry(")
+    retry_end = hybrid_source.index("    @staticmethod", retry_start)
+    retry_body = hybrid_source[retry_start:retry_end]
+    assert "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak" in retry_body
+    assert "all_candidates_flagged_by_complexity_screen" in retry_body
+    assert "flagged_result" in retry_body
+    assert "candidate_complexity < current_complexity" in retry_body
+
+
+def test_physics_informed_discovery_contracts_are_immutable_and_serializable():
+    from hypatiax.tools.symbolic.discovery_contracts import (
+        CandidateRecord,
+        ConstraintOutcome,
+        ConstraintSpec,
+        DiscoveryBudget,
+        DiscoveryProblem,
+        DiscoveryReport,
+    )
+
+    problem = DiscoveryProblem(
+        target_name="force",
+        variable_names=("mass", "acceleration"),
+        target_unit="N",
+        variable_units={"mass": "kg", "acceleration": "m/s^2"},
+        variable_domains={"mass": {"minimum": 0, "strict": True}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="force-dimensions",
+                kind="dimensional_consistency",
+                severity="hard",
+                source="declared_equation_contract",
+            ),
+        ),
+        budget=DiscoveryBudget(max_search_attempts=3, max_llm_calls=1, seed=17),
+        split_protocol={"selection_region": "training_only", "far_region": "sealed"},
+    )
+    with pytest.raises(TypeError):
+        problem.variable_units["mass"] = "g"
+
+    candidate = CandidateRecord(
+        expression="mass * acceleration",
+        source="pysr_search",
+        search_strategy="operator_constrained",
+        seed=17,
+        constraint_outcomes=(
+            ConstraintOutcome("force-dimensions", "pass", evidence={"unit": "N"}),
+        ),
+        eligible=True,
+    )
+    report = DiscoveryReport(
+        status="accepted",
+        candidates=(candidate,),
+        selected_candidate_id=candidate.candidate_id,
+        pareto_candidate_ids=(candidate.candidate_id,),
+        provenance={"selector": "phase-a-contract"},
+        far_evaluation={"rmse": 0.2},
+    )
+    payload = report.to_dict()
+    assert payload["schema_version"] == "1.0"
+    assert payload["candidates"][0]["candidate_id"] == candidate.candidate_id
+    assert payload["far_evaluation_used_for_selection"] is False
+    assert payload["far_evaluation"]["rmse"] == 0.2
+
+
+def test_discovery_contracts_reject_undeclared_or_invalid_states():
+    from hypatiax.tools.symbolic.discovery_contracts import (
+        CandidateRecord,
+        ConstraintOutcome,
+        DiscoveryProblem,
+        DiscoveryReport,
+    )
+
+    with pytest.raises(ValueError, match="unique"):
+        DiscoveryProblem(target_name="y", variable_names=("x", "x"))
+    with pytest.raises(ValueError, match="unknown variables"):
+        DiscoveryProblem(
+            target_name="y",
+            variable_names=("x",),
+            variable_units={"z": "m"},
+        )
+    with pytest.raises(ValueError, match="unsupported constraint status"):
+        ConstraintOutcome("positivity", "passed")
+    with pytest.raises(ValueError, match="unsupported candidate source"):
+        CandidateRecord(
+            expression="x",
+            source="magic",
+            search_strategy="test",
+            seed=1,
+        )
+
+
+def test_candidate_identity_is_stable_and_report_rejects_duplicate_candidates():
+    from hypatiax.tools.symbolic.discovery_contracts import CandidateRecord, DiscoveryReport
+
+    kwargs = {
+        "expression": "x + y",
+        "normalized_expression": "x+y",
+        "source": "pysr_search",
+        "search_strategy": "baseline",
+        "seed": 42,
+    }
+    first = CandidateRecord(**kwargs)
+    second = CandidateRecord(**kwargs)
+    assert first.candidate_id == second.candidate_id
+    with pytest.raises(ValueError, match="unique"):
+        DiscoveryReport(status="provisional", candidates=(first, second))

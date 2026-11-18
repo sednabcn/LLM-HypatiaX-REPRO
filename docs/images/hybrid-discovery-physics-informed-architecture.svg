@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+<title id="title">HybridDiscoverySystem physics-informed equation discovery architecture</title>
+<desc id="desc">Flow diagram from scientific problem contract through LLM hypotheses and symbolic search, validation gates, training-only evaluation, Pareto selection, and discovery report. Far extrapolation data is sealed from selection.</desc>
+<defs>
+  <linearGradient id="navy" x1="0" x2="1"><stop stop-color="#102747"/><stop offset="1" stop-color="#1d4772"/></linearGradient>
+  <linearGradient id="blue" x1="0" x2="1"><stop stop-color="#e7f1ff"/><stop offset="1" stop-color="#c9e0ff"/></linearGradient>
+  <linearGradient id="green" x1="0" x2="1"><stop stop-color="#e1f6ed"/><stop offset="1" stop-color="#c5eadc"/></linearGradient>
+  <linearGradient id="amber" x1="0" x2="1"><stop stop-color="#fff0d7"/><stop offset="1" stop-color="#ffdfad"/></linearGradient>
+  <linearGradient id="purple" x1="0" x2="1"><stop stop-color="#eee5ff"/><stop offset="1" stop-color="#d9c9ff"/></linearGradient>
+  <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#29465f"/></marker>
+  <marker id="redarrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#c93d3d"/></marker>
+  <style>
+    text{font-family:Inter,Arial,sans-serif;fill:#15283d}
+    .h{font-size:25px;font-weight:700}.b{font-size:19px}.small{font-size:16px}.white{fill:#fff}.line{stroke:#29465f;stroke-width:4;fill:none;marker-end:url(#arrow)}
+    .panel{stroke-width:3;rx:18}.bullet{font-size:18px}
+  </style>
+</defs>
+<rect width="1600" height="1120" fill="#f7f9fc"/>
+<rect x="25" y="20" width="1550" height="78" rx="18" fill="url(#navy)"/>
+<text x="800" y="69" text-anchor="middle" class="white" font-size="34" font-weight="700">HybridDiscoverySystem — Physics-Informed Equation Discovery</text>
+
+<rect x="180" y="125" width="1240" height="112" rx="18" fill="url(#blue)" stroke="#3676bd" stroke-width="3"/>
+<rect x="180" y="125" width="190" height="112" rx="18" fill="#174b7c"/>
+<text x="275" y="171" text-anchor="middle" class="white h">INPUT</text><text x="275" y="201" text-anchor="middle" class="white small">Problem contract</text>
+<text x="405" y="160" class="h">0. Scientific problem specification</text>
+<text x="405" y="193" class="b">Training X/y • variables / units • domain • declared constraints &amp; invariants</text>
+<text x="405" y="220" class="b">Seeds • data boundaries • noise assumptions • compute and API budgets</text>
+
+<path d="M800 237 V265 H425 V286 M800 265 H1175 V286" class="line"/>
+<rect x="110" y="290" width="640" height="180" rx="18" fill="url(#green)" stroke="#14765c" class="panel"/>
+<rect x="110" y="290" width="640" height="48" rx="18" fill="#12624f"/>
+<text x="430" y="322" text-anchor="middle" class="white h">A. LLM Hypothesis Generator</text>
+<text x="155" y="380" class="bullet">• Structured equation/template proposals</text>
+<text x="155" y="414" class="bullet">• Transformations, assumptions, rationale</text>
+<text x="155" y="448" class="bullet">• Bounded calls, cache, audit trail</text>
+<rect x="850" y="290" width="640" height="180" rx="18" fill="url(#green)" stroke="#14765c" class="panel"/>
+<rect x="850" y="290" width="640" height="48" rx="18" fill="#12624f"/>
+<text x="1170" y="322" text-anchor="middle" class="white h">B. Symbolic Search Engine (PySR)</text>
+<text x="895" y="380" class="bullet">• Constrained operator grammar</text>
+<text x="895" y="414" class="bullet">• Diverse strategies / reproducible seeds</text>
+<text x="895" y="448" class="bullet">• Fitted candidates + search provenance</text>
+<path d="M430 470 V500 H800 V526 M1170 470 V500 H800" class="line"/>
+
+<rect x="145" y="530" width="1310" height="170" rx="18" fill="url(#amber)" stroke="#d58a12" class="panel"/>
+<rect x="145" y="530" width="1310" height="48" rx="18" fill="#c77b08"/>
+<text x="800" y="562" text-anchor="middle" class="white h">2–3. Candidate normalization and hard validation gates</text>
+<text x="190" y="620" class="bullet">• Parse / symbolic validity</text>
+<text x="190" y="654" class="bullet">• Dimensional and unit consistency</text>
+<text x="190" y="684" class="bullet">• Declared domain constraints</text>
+<text x="680" y="620" class="bullet">• Physical invariants, symmetry, limiting behavior</text>
+<text x="680" y="654" class="bullet">• Numerical domain and stability</text>
+<text x="680" y="684" class="bullet">• Pass / fail / warning / unknown outcomes</text>
+<path d="M1455 615 H1510" stroke="#c93d3d" stroke-width="4" fill="none" marker-end="url(#redarrow)"/>
+<rect x="1470" y="570" width="112" height="96" rx="14" fill="#ffe0e0" stroke="#c93d3d" stroke-width="2"/>
+<text x="1526" y="606" text-anchor="middle" font-size="17" font-weight="700" fill="#a32c2c">REJECT</text><text x="1526" y="632" text-anchor="middle" font-size="15" fill="#a32c2c">with reason</text>
+
+<path d="M800 700 V735" class="line"/>
+<rect x="145" y="740" width="1310" height="150" rx="18" fill="#e2f2e9" stroke="#25815b" class="panel"/>
+<rect x="145" y="740" width="1310" height="48" rx="18" fill="#176b50"/>
+<text x="800" y="772" text-anchor="middle" class="white h">4. Training-only independent evaluation</text>
+<text x="190" y="830" class="bullet">• Repeated seeded holdout / cross-validation</text>
+<text x="190" y="864" class="bullet">• Predictive error, spread, worst fold</text>
+<text x="710" y="830" class="bullet">• Residual and numerical diagnostics</text>
+<text x="710" y="864" class="bullet">• Expression stability across folds / seeds</text>
+<rect x="1110" y="800" width="315" height="72" rx="12" fill="#ffe2e2" stroke="#d65a5a" stroke-width="2"/>
+<text x="1267" y="829" text-anchor="middle" font-size="18" font-weight="700" fill="#a52b2b">FAR DATA SEALED</text>
+<text x="1267" y="854" text-anchor="middle" font-size="15" fill="#a52b2b">Never used for selection</text>
+
+<path d="M800 890 V920" class="line"/>
+<rect x="145" y="925" width="930" height="125" rx="18" fill="url(#purple)" stroke="#7650b5" class="panel"/>
+<rect x="145" y="925" width="930" height="46" rx="18" fill="#65409f"/>
+<text x="610" y="956" text-anchor="middle" class="white h">5. Multi-objective Pareto selection</text>
+<text x="190" y="1000" class="bullet">• Validation error and robustness</text>
+<text x="190" y="1030" class="bullet">• Complexity and physical consistency</text>
+<text x="640" y="1000" class="bullet">• Stability and uncertainty</text>
+<text x="640" y="1030" class="bullet">• Retain ranked credible alternatives</text>
+<path d="M1075 986 H1120" class="line"/>
+<rect x="1125" y="925" width="350" height="125" rx="18" fill="url(#blue)" stroke="#3676bd" class="panel"/>
+<text x="1300" y="970" text-anchor="middle" class="h">6. DiscoveryReport</text>
+<text x="1300" y="1002" text-anchor="middle" class="small">Equation • alternatives • evidence</text>
+<text x="1300" y="1028" text-anchor="middle" class="small">reasons • uncertainty • provenance</text>
+
+<rect x="25" y="1070" width="1550" height="38" rx="12" fill="url(#navy)"/>
+<text x="800" y="1096" text-anchor="middle" class="white" font-size="18" font-weight="600">LLM proposes • symbolic search fits • physics gates • held-out evidence selects • far data evaluates once</text>
+</svg>

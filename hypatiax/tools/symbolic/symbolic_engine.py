@@ -564,6 +564,7 @@ class IntegratedLLMEngine:
         self.last_proposal_generated = False
         self.last_error = None
         self.last_call_info = {}
+        self.budget_runtime = None
 
         if not config.enabled:
             return
@@ -622,6 +623,12 @@ class IntegratedLLMEngine:
             return []
 
         n_candidates = n_candidates or self.config.n_candidates
+        _budget_runtime = getattr(self, "budget_runtime", None)
+        if _budget_runtime is not None:
+            n_candidates = min(int(n_candidates), _budget_runtime.remaining_candidates)
+            if n_candidates <= 0:
+                self.last_error = "discovery_budget_exhausted:max_candidates"
+                return []
 
         prompt = self._build_prompt(
             domain, variables, description, data_patterns, n_candidates,
@@ -648,13 +655,27 @@ class IntegratedLLMEngine:
                 self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
+                if _budget_runtime is not None and hypotheses:
+                    _accepted_count = _budget_runtime.record_candidates(len(hypotheses))
+                    hypotheses = hypotheses[:_accepted_count]
                 self.last_proposal_generated = bool(hypotheses)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
+        _request_max_tokens = int(self.config.max_tokens)
+        if _budget_runtime is not None:
+            _reserved_tokens = _budget_runtime.reserve_llm_request(_request_max_tokens)
+            if _reserved_tokens is None:
+                self.last_error = "discovery_budget_exhausted:llm_call_or_token_or_wall_time"
+                return []
+            _request_max_tokens = _reserved_tokens
         self.last_call_attempted = True
+        if _budget_runtime is not None:
+            _budget_runtime.record_llm_request_started()
         try:
-            response = self._call_llm(prompt)
+            response = self._call_llm(prompt, max_tokens=_request_max_tokens)
+            if _budget_runtime is not None:
+                _budget_runtime.record_llm_response_received()
             from hypatiax.core.llm_call import last_call_info
             self.last_call_info = last_call_info()
             self._note_llm_sample(response)
@@ -674,6 +695,9 @@ class IntegratedLLMEngine:
                 raise
             return []
         hypotheses = self._parse_response(response)
+        if _budget_runtime is not None and hypotheses:
+            _accepted_count = _budget_runtime.record_candidates(len(hypotheses))
+            hypotheses = hypotheses[:_accepted_count]
         self.last_proposal_generated = bool(hypotheses)
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
@@ -759,14 +783,14 @@ JSON ARRAY:"""
 
         return prompt
 
-    def _call_llm(self, prompt: str) -> str:
-        """Call Anthropic API."""
+    def _call_llm(self, prompt: str, max_tokens: int | None = None) -> str:
+        """Call Anthropic API with an optional runtime-enforced token ceiling."""
         from hypatiax.core.llm_call import create_message
 
         message = create_message(
             self.client,
             model=self.config.model,
-            max_tokens=self.config.max_tokens,
+            max_tokens=int(max_tokens if max_tokens is not None else self.config.max_tokens),
             temperature=self.config.temperature,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -988,6 +1012,7 @@ class SymbolicEngine:
         Returns:
             Dictionary with discovery results
         """
+        self._last_fold_transform_state = None
         if variable_names is None:
             variable_names = [f"x{i}" for i in range(X.shape[1])]
 
@@ -1702,6 +1727,8 @@ class SymbolicEngine:
             # X-scaling is applied.
             _x_col_scales = np.ones(X.shape[1])
             _x_scaled_cols: list[tuple[int, str, float]] = []  # (col_idx, name, scale)
+            _gm_feature_pairs: list[tuple[int, int]] = []
+            _ratio_feature_pairs: list[tuple[int, int]] = []
             for _xi in range(X.shape[1]):
                 _col = X[:, _xi]
                 _col_scale = max(float(np.abs(np.mean(_col))), float(np.std(_col)))
@@ -1766,6 +1793,7 @@ class SymbolicEngine:
                         for _qi in range(_pi + 1, len(_pos_idx)):
                             _ci, _cj = _pos_idx[_pi], _pos_idx[_qi]
                             _gm_vec = np.sqrt(_X_fit[:, _ci] * _X_fit[:, _cj])
+                            _gm_feature_pairs.append((_ci, _cj))
                             _gm_nm  = f"gm_{safe_names[_ci]}_{safe_names[_cj]}"
                             _gm_cols.append(_gm_vec)
                             _gm_names.append(_gm_nm)
@@ -1821,13 +1849,14 @@ class SymbolicEngine:
                             _ratio_nm  = f"ratio_{safe_names[_ci]}_{safe_names[_cj]}"
                             # Score by variance (more varied ratio = more info)
                             _var_score = float(np.std(_ratio_vec))
-                            _ratio_candidates.append((_var_score, _ratio_vec, _ratio_nm))
+                            _ratio_candidates.append((_var_score, _ratio_vec, _ratio_nm, _ci, _cj))
                     # Sort by descending variance, take top 10
                     _ratio_candidates.sort(key=lambda x: x[0], reverse=True)
                     _MAX_RATIO_PAIRS = 10
-                    for _score, _rvec, _rnm in _ratio_candidates[:_MAX_RATIO_PAIRS]:
+                    for _score, _rvec, _rnm, _ri, _rj in _ratio_candidates[:_MAX_RATIO_PAIRS]:
                         _ratio_cols.append(_rvec)
                         _ratio_names.append(_rnm)
+                        _ratio_feature_pairs.append((_ri, _rj))
                     if len(_ratio_candidates) > _MAX_RATIO_PAIRS:
                         _trace.append(f"ratio_capped={len(_ratio_candidates)}→{_MAX_RATIO_PAIRS}")
                     if _ratio_cols:
@@ -2123,6 +2152,13 @@ class SymbolicEngine:
                     _trace.append(f"selection={_sel_rule}")
                     _trace.append(f"best_expr={expression[:80]}")
 
+                    # Keep the exact unannotated fit-space structure and feature
+                    # schema separately. Candidate-level fold validation must refit
+                    # this structure with transforms learned inside each fold; the
+                    # display expression below contains scale annotations.
+                    _fit_expression = str(expression)
+                    _fit_variable_names = list(safe_names)
+
                     # If y was scaled, fold the scale factor into the expression so
                     # the string represents the original (physical) equation.
                     if _y_std != 1.0:
@@ -2141,6 +2177,19 @@ class SymbolicEngine:
                         )
                         expression = f"[X-normalised: {_xscale_note}] {expression}"
 
+                    # Preserve the exact fold-fitted transforms and selected Pareto
+                    # equation so an internal held-out training fold can be predicted
+                    # without re-learning scales or engineered-feature eligibility.
+                    self._last_fold_transform_state = {
+                        "input_feature_count": int(X.shape[1]),
+                        "x_scales": np.asarray(_x_col_scales, dtype=float).tolist(),
+                        "gm_pairs": [list(pair) for pair in _gm_feature_pairs],
+                        "ratio_pairs": [list(pair) for pair in _ratio_feature_pairs],
+                        "y_std": float(_y_std),
+                        "best_index": int(best_idx),
+                        "feature_names": list(safe_names),
+                    }
+
                     # Make predictions with the best-R² equation (rescaled to original y)
                     # Reuse the exact finite prediction vector used to score
                     # this candidate; do not invoke Julia prediction a second time.
@@ -2153,6 +2202,9 @@ class SymbolicEngine:
                     _result = {
                         "expression": expression,
                         "equation": expression,
+                        "fit_expression": _fit_expression,
+                        "fit_variable_names": _fit_variable_names,
+                        "fit_transform_state": dict(self._last_fold_transform_state),
                         "r2_score": r2,
                         "complexity": _best_complexity,
                         "variable_names": safe_names,
@@ -2230,6 +2282,47 @@ class SymbolicEngine:
                 from hypatiax.tools.symbolic import guess_sanitizer as _gs
                 _failed["guess_audit"] = _gs.summarize([_guess_rec])
             return _failed
+
+    def predict_fold_validation(self, X: np.ndarray) -> np.ndarray:
+        """Predict a held-out training fold using transforms learned on fit rows.
+
+        This method is intentionally separate from predict(): its input is the
+        raw feature matrix at the SymbolicEngine boundary, before engine-local
+        X scaling and GM/ratio augmentation.
+        """
+        state = getattr(self, "_last_fold_transform_state", None)
+        if self.model is None or state is None:
+            raise ValueError("No fitted fold-local preprocessing state is available")
+        values = np.asarray(X, dtype=float)
+        if values.ndim != 2 or values.shape[1] != state["input_feature_count"]:
+            raise ValueError("fold validation feature schema mismatch")
+        scales = np.asarray(state["x_scales"], dtype=float)
+        if scales.shape != (values.shape[1],) or not np.isfinite(scales).all():
+            raise ValueError("invalid fold-fitted feature scales")
+        transformed = values / scales[np.newaxis, :]
+        for left, right in state["gm_pairs"]:
+            if np.any(transformed[:, left] <= 0.0) or np.any(transformed[:, right] <= 0.0):
+                raise ValueError("fold validation violates a fit-selected positive GM feature domain")
+            with np.errstate(invalid="ignore", over="ignore"):
+                feature = np.sqrt(transformed[:, left] * transformed[:, right])
+            transformed = np.column_stack((transformed, feature))
+        for numerator, denominator in state["ratio_pairs"]:
+            if (
+                np.any(transformed[:, numerator] <= 0.0)
+                or np.any(transformed[:, denominator] <= 0.0)
+            ):
+                raise ValueError("fold validation violates a fit-selected positive ratio feature domain")
+            with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                feature = transformed[:, numerator] / (transformed[:, denominator] + 1e-300)
+            transformed = np.column_stack((transformed, feature))
+        if not np.isfinite(transformed).all():
+            raise FloatingPointError("fold-frozen engineered features are non-finite")
+        prediction = np.asarray(
+            self.model.predict(transformed, index=state["best_index"]), dtype=float
+        ).reshape(-1) * float(state["y_std"])
+        if prediction.shape != (values.shape[0],) or not np.isfinite(prediction).all():
+            raise FloatingPointError("fold-local PySR predictions are invalid")
+        return prediction
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Make predictions using discovered equation."""
@@ -2374,12 +2467,35 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 **kwargs,
             )
 
-        # ── Fix: LLM history memory leak (Step 3 from diagnosis) ─────────────
-        # IntegratedLLMEngine accumulates API response objects across calls.
-        # After each case, drop the engine so Python can GC the response history.
-        # A fresh engine will be created on the next SymbolicEngineWithLLM init.
-        if hasattr(self, 'llm_engine') and self.llm_engine is not None:
-            self.llm_engine = None
+        # LLM-selected equations are expressed in the outer Hybrid fit space,
+        # but do not have PySR's inner X/y scaling or engineered-feature state.
+        # Publish an explicit identity inner-transform contract so the same
+        # candidate-level fold evaluator can replay the outer transforms learned
+        # independently inside each fold.
+        if (
+            isinstance(result, dict)
+            and "fit_expression" not in result
+            and str(result.get("llm_mode", "")).endswith("_llm_better")
+        ):
+            _llm_names = list(result.get("variable_names") or variable_names)
+            result["fit_expression"] = str(result.get("expression", "")).replace("^", "**")
+            result["fit_variable_names"] = _llm_names
+            result["fit_transform_state"] = {
+                "input_feature_count": len(_llm_names),
+                "x_scales": [1.0] * len(_llm_names),
+                "gm_pairs": [],
+                "ratio_pairs": [],
+                "y_std": 1.0,
+                "feature_names": list(_llm_names),
+                "transform_source": "llm_outer_fit_space_identity_inner_transform",
+            }
+
+        # Keep the LLM client alive for the lifetime of this discovery engine.
+        # HybridDiscoverySystem retries by calling discover() repeatedly; dropping
+        # llm_engine here silently turns every retry after the first into pure
+        # PySR.  IntegratedLLMEngine stores only per-call audit state (reset by
+        # generate_hypotheses), not an accumulating conversation history.
+        # PySR/Julia model memory is still released after each attempt.
         self.model = None  # release PySR/Julia model RSS too
         gc.collect()
 
@@ -2435,6 +2551,22 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             # base discover()'s probe); otherwise the operator-biasing above
             # is what actually does the work.
             kwargs.setdefault("seed_expressions", [best_hyp.equation])
+
+        # Do not launch a PySR search when the LLM hypotheses have
+        # consumed the complete candidate allowance. The budget is enforced
+        # inside the discovery call, not only after the outer retry returns.
+        _budget_runtime = getattr(self.llm_engine, "budget_runtime", None)
+        if _budget_runtime is not None and _budget_runtime.remaining_candidates <= 0:
+            return {
+                "expression": "DISCOVERY_FAILED",
+                "r2_score": float("-inf"),
+                "variable_names": safe_names,
+                "original_variable_names": variable_names,
+                "variable_name_mapping": name_mapping,
+                "llm_mode": "seed_budget_exhausted",
+                "llm_hypotheses": [h.equation for h in hypotheses] if hypotheses else [],
+                "llm_error": "discovery_budget_exhausted:max_candidates_before_pysr",
+            }
 
         # Run PySR with LLM-informed config
         result = super().discover(
@@ -2575,6 +2707,44 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "bypassing pure-LLM acceptance and forcing PySR refinement.",
                 flush=True,
             )
+
+        # If the LLM hypotheses consumed all remaining candidate capacity,
+        # do not start a PySR refinement whose result could only be rejected
+        # after paying the full search cost. A structural-risk proposal cannot
+        # be promoted without its required PySR refinement.
+        _budget_runtime = getattr(self.llm_engine, "budget_runtime", None)
+        if _budget_runtime is not None and _budget_runtime.remaining_candidates <= 0:
+            if _structural_guard:
+                return {
+                    "expression": "DISCOVERY_FAILED",
+                    "r2_score": float("-inf"),
+                    "variable_names": safe_names,
+                    "original_variable_names": variable_names,
+                    "variable_name_mapping": name_mapping,
+                    "llm_mode": "hybrid_budget_exhausted_structural_risk",
+                    **_llm_info,
+                    "llm_time": llm_time,
+                    "llm_hypotheses": [h.equation for h in hypotheses],
+                    "llm_error": "discovery_budget_exhausted:required_pysr_refinement",
+                }
+            return {
+                "expression": best_hyp.equation,
+                "r2_score": best_hyp.r2_score,
+                "complexity": len(best_hyp.equation),
+                "variable_names": safe_names,
+                "original_variable_names": variable_names,
+                "variable_name_mapping": name_mapping,
+                "predictions": self._predict_from_equation(
+                    best_hyp.equation, X, safe_names
+                ),
+                "llm_mode": "hybrid_budget_exhausted_llm_better",
+                **_llm_info,
+                "llm_time": llm_time,
+                "validation": {"valid": True, "errors": [], "warnings": []},
+                "llm_hypotheses": [h.equation for h in hypotheses],
+                "llm_seed_used": False,
+                "llm_suggested_operators": None,
+            }
 
         # Discard LLM prior if it is too weak to be a useful seed for PySR
         _use_llm_seed = True

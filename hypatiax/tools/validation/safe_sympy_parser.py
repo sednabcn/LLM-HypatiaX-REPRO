@@ -68,7 +68,7 @@ def parse_sympy_expression(source, variable_names=None):
         "exp": sp.exp, "log": sp.log, "ln": sp.log,
         "log10": lambda x: sp.log(x, 10),
         "sqrt": sp.sqrt, "sin": sp.sin, "cos": sp.cos,
-        "tan": sp.tan, "abs": sp.Abs,
+        "tan": sp.tan, "abs": sp.Abs, "Abs": sp.Abs, "sign": sp.sign,
         "safe_asin": sp.asin, "safe_acos": sp.acos,
         "asin": sp.asin, "acos": sp.acos, "atan": sp.atan,
         "arcsin": sp.asin, "arccos": sp.acos, "arctan": sp.atan,

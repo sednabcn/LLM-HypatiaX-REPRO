@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
+import math
 import os
 from collections import Counter
 from datetime import datetime, timezone
@@ -17,6 +19,7 @@ from typing import Any
 
 
 EXPECTED_METHOD_COUNT = 6
+REQUIRED_DISCOVERY_REPORT_METHOD = "HybridDiscoverySystem v50_2 (tools)"
 
 
 def _reject_nonfinite(token: str) -> None:
@@ -34,6 +37,382 @@ def _sha256(path: Path) -> str:
             digest.update(chunk)
     return digest.hexdigest()
 
+
+
+DISCOVERY_REPORT_SCHEMA_VERSIONS = {"1.0", "discovery_contract_v1"}
+DISCOVERY_REPORT_STATUSES = {
+    "accepted", "provisional", "no_credible_candidate",
+    "invalid_problem_specification", "no_candidates_generated",
+    "all_candidates_failed_symbolic_validation",
+    "all_candidates_failed_physical_gates", "insufficient_validation_evidence",
+    "search_budget_exhausted", "llm_unavailable_fallback_used",
+    "accepted_with_warnings",
+}
+DISCOVERY_CANDIDATE_SOURCES = {
+    "llm_proposal", "domain_template", "pysr_search", "residual_search", "unknown",
+}
+DISCOVERY_CONSTRAINT_STATUSES = {
+    "pass", "fail", "warning", "not_applicable", "unknown", "not_checked",
+}
+
+
+
+def _validate_soft_constraint_pareto_contract(report: dict[str, Any]) -> None:
+    """Validate serialized soft-constraint Pareto provenance and candidate audit."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+    policy = provenance.get("selection_policy")
+    supported = {
+        "training_only_pareto_v5_soft_constraints",
+        "training_only_pareto_v6_nested_structure_soft_constraints",
+    }
+    if policy not in supported:
+        return
+    constraint_ids = provenance.get("soft_constraint_ids")
+    if (not isinstance(constraint_ids, list) or not constraint_ids
+        or any(not isinstance(item, str) or not item for item in constraint_ids)
+        or len(constraint_ids) != len(set(constraint_ids))):
+        raise ValueError("soft-constraint Pareto policy requires unique declared soft_constraint_ids")
+    if provenance.get("soft_constraint_aggregation") != "unweighted_mean_of_declared_violation_fractions":
+        raise ValueError("soft-constraint Pareto policy has unsupported aggregation")
+    if "mean_declared_soft_constraint_violation_fraction_min" not in provenance.get("objectives", []):
+        raise ValueError("soft-constraint Pareto policy is missing its declared objective")
+    for index, candidate in enumerate(report["candidates"]):
+        metrics = candidate.get("metrics", {})
+        selection = metrics.get("pareto_selection") if isinstance(metrics, dict) else None
+        if not isinstance(selection, dict):
+            raise ValueError(f"soft-constraint candidate[{index}] is missing Pareto selection audit")
+        if selection.get("declared_soft_constraint_ids") != constraint_ids:
+            raise ValueError(f"soft-constraint candidate[{index}] declared IDs differ from report provenance")
+        matching = [
+            item for item in candidate["constraint_outcomes"]
+            if item["constraint_id"] in set(constraint_ids)
+        ]
+        complete = len(matching) == len(constraint_ids) and {item["constraint_id"] for item in matching} == set(constraint_ids)
+        fractions: list[float] = []
+        if complete:
+            by_id = {item["constraint_id"]: item for item in matching}
+            for constraint_id in constraint_ids:
+                outcome = by_id[constraint_id]
+                evidence = outcome["evidence"]
+                count, violations, fraction = evidence.get("evaluation_count"), evidence.get("violation_count"), evidence.get("violation_fraction")
+                if (outcome["severity"] != "soft" or outcome["status"] not in {"pass", "fail"}
+                    or isinstance(count, bool) or not isinstance(count, int) or count <= 0
+                    or isinstance(violations, bool) or not isinstance(violations, int)
+                    or not 0 <= violations <= count or isinstance(fraction, bool)
+                    or not isinstance(fraction, (int, float)) or not math.isfinite(float(fraction))
+                    or not 0.0 <= float(fraction) <= 1.0
+                    or not math.isclose(float(fraction), violations / count, rel_tol=1e-9, abs_tol=1e-12)
+                    or ((outcome["status"] == "pass") != (violations == 0))):
+                    complete = False
+                    break
+                fractions.append(float(fraction))
+        aggregate = sum(fractions) / len(fractions) if complete else None
+        recorded = selection.get("mean_soft_constraint_violation_fraction")
+        if aggregate is None:
+            if "soft_constraint_evidence_incomplete" not in selection.get("eligibility_reasons", []):
+                raise ValueError(f"soft-constraint candidate[{index}] incomplete evidence lacks exclusion reason")
+            if recorded is not None:
+                raise ValueError(f"soft-constraint candidate[{index}] records an aggregate without complete evidence")
+            if selection.get("eligible_for_pareto") is True:
+                raise ValueError(f"soft-constraint candidate[{index}] with incomplete evidence is Pareto-eligible")
+        else:
+            if isinstance(recorded, bool) or not isinstance(recorded, (int, float)) or not math.isclose(float(recorded), aggregate, rel_tol=1e-9, abs_tol=1e-12):
+                raise ValueError(f"soft-constraint candidate[{index}] aggregate does not match declared outcomes")
+            objectives = selection.get("objectives")
+            if selection.get("eligible_for_pareto") is True and (
+                not isinstance(objectives, dict)
+                or not math.isclose(float(objectives.get("mean_soft_constraint_violation_fraction", float("nan"))), aggregate, rel_tol=1e-9, abs_tol=1e-12)
+            ):
+                raise ValueError(f"soft-constraint candidate[{index}] Pareto objective differs from audited aggregate")
+
+
+def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
+    """Recompute the serialized Pareto front and deterministic winner."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        return
+    policy = provenance.get("selection_policy")
+    policy_objectives = {
+        "training_only_pareto_v3_stability": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability",
+        ),
+        "training_only_pareto_v4_nested_structure_stability": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability",
+        ),
+        "training_only_pareto_v5_soft_constraints": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability", "mean_soft_constraint_violation_fraction",
+        ),
+        "training_only_pareto_v6_nested_structure_soft_constraints": (
+            "mean_normalized_rmse", "worst_normalized_rmse", "complexity",
+            "negative_expression_stability", "mean_soft_constraint_violation_fraction",
+        ),
+    }
+    if policy not in policy_objectives:
+        return
+    expected_keys = policy_objectives[policy]
+    objective_names = [
+        "mean_normalized_rmse_min", "worst_normalized_rmse_min",
+        "symbolic_operation_count_min", "expression_stability_fraction_max",
+    ]
+    if len(expected_keys) == 5:
+        objective_names.append("mean_declared_soft_constraint_violation_fraction_min")
+    recorded_names = provenance.get("objectives")
+    candidates = report.get("candidates", [])
+    eligible_vectors: dict[str, dict[str, float]] = {}
+    for index, candidate in enumerate(candidates):
+        metrics = candidate.get("metrics", {})
+        selection = metrics.get("pareto_selection") if isinstance(metrics, dict) else None
+        if not isinstance(selection, dict):
+            raise ValueError(f"Pareto candidate[{index}] is missing selection audit")
+        reasons = selection.get("eligibility_reasons")
+        eligible = selection.get("eligible_for_pareto")
+        if (not isinstance(reasons, list) or any(not isinstance(item, str) for item in reasons)
+            or not isinstance(eligible, bool) or eligible != (len(reasons) == 0)):
+            raise ValueError(f"Pareto candidate[{index}] eligibility flag/reasons are inconsistent")
+        vector = selection.get("objectives")
+        if eligible:
+            if not isinstance(vector, dict) or set(vector) != set(expected_keys):
+                raise ValueError(f"Pareto candidate[{index}] has an incomplete objective vector")
+            normalized: dict[str, float] = {}
+            for key in expected_keys:
+                value = vector[key]
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))):
+                    raise ValueError(f"Pareto candidate[{index}] objective {key!r} is not finite")
+                normalized[key] = float(value)
+            validation = metrics.get("training_validation", {})
+            folds = validation.get("fold_metrics", []) if isinstance(validation, dict) else []
+            if not isinstance(folds, list):
+                raise ValueError(f"Pareto candidate[{index}] training fold metrics must be a list")
+            fold_scores = []
+            for fold in folds:
+                if not isinstance(fold, dict):
+                    continue
+                score = fold.get("normalized_rmse")
+                if (isinstance(score, (int, float)) and not isinstance(score, bool)
+                    and math.isfinite(float(score)) and float(score) >= 0):
+                    fold_scores.append(float(score))
+            if selection.get("valid_normalized_fold_count") != len(fold_scores):
+                raise ValueError(f"Pareto candidate[{index}] fold count audit does not match training evidence")
+            if not fold_scores:
+                raise ValueError(f"Pareto candidate[{index}] lacks finite training fold scores")
+            expected_training_values = {
+                "mean_normalized_rmse": sum(fold_scores) / len(fold_scores),
+                "worst_normalized_rmse": max(fold_scores),
+            }
+            complexity = selection.get("complexity_node_count")
+            stability = selection.get("expression_stability_fraction")
+            if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+                raise ValueError(f"Pareto candidate[{index}] complexity audit is invalid")
+            supplied_complexity = metrics.get("complexity")
+            if isinstance(supplied_complexity, dict) and "node_count" in supplied_complexity:
+                supplied_node_count = supplied_complexity.get("node_count")
+                if (isinstance(supplied_node_count, bool) or not isinstance(supplied_node_count, int)
+                    or supplied_node_count < 0 or supplied_node_count != complexity):
+                    raise ValueError(f"Pareto candidate[{index}] complexity objective does not match supplied complexity evidence")
+            else:
+                expression = candidate.get("normalized_expression") or candidate.get("expression")
+                parser_path = Path(__file__).resolve().parents[2] / "hypatiax" / "tools" / "validation" / "safe_sympy_parser.py"
+                spec = importlib.util.spec_from_file_location(
+                    "_exp2_safe_sympy_parser", parser_path
+                )
+                if spec is None or spec.loader is None:
+                    raise ValueError(f"Pareto candidate[{index}] safe expression parser is unavailable")
+                parser_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(parser_module)
+                try:
+                    import sympy as sp
+                    parsed = parser_module.parse_sympy_expression(expression)
+                    recomputed_complexity = int(sp.count_ops(parsed, visual=False))
+                except Exception as exc:
+                    raise ValueError(
+                        f"Pareto candidate[{index}] complexity cannot be recomputed from its expression"
+                    ) from exc
+                if complexity != recomputed_complexity:
+                    raise ValueError(
+                        f"Pareto candidate[{index}] complexity objective does not match parsed expression"
+                    )
+            if (isinstance(stability, bool) or not isinstance(stability, (int, float))
+                or not math.isfinite(float(stability)) or not 0.0 <= float(stability) <= 1.0):
+                raise ValueError(f"Pareto candidate[{index}] expression stability audit is invalid")
+            stability_evidence = validation.get("expression_stability")
+            if not isinstance(stability_evidence, dict) or stability_evidence.get("status") != "measured":
+                raise ValueError(f"Pareto candidate[{index}] lacks measured expression-stability evidence")
+            evidence_fraction = stability_evidence.get("dominant_fraction")
+            if (isinstance(evidence_fraction, bool) or not isinstance(evidence_fraction, (int, float))
+                or not math.isfinite(float(evidence_fraction)) or not 0.0 <= float(evidence_fraction) <= 1.0
+                or not math.isclose(float(stability), float(evidence_fraction), rel_tol=1e-9, abs_tol=1e-12)):
+                raise ValueError(f"Pareto candidate[{index}] stability objective does not match training evidence")
+            expected_training_values.update({
+                "complexity": float(complexity),
+                "negative_expression_stability": -float(stability),
+            })
+            if len(expected_keys) == 5:
+                soft_value = selection.get("mean_soft_constraint_violation_fraction")
+                if (isinstance(soft_value, bool) or not isinstance(soft_value, (int, float))
+                    or not math.isfinite(float(soft_value)) or not 0.0 <= float(soft_value) <= 1.0):
+                    raise ValueError(f"Pareto candidate[{index}] soft-constraint objective audit is invalid")
+                expected_training_values["mean_soft_constraint_violation_fraction"] = float(soft_value)
+            for key, expected_value in expected_training_values.items():
+                if not math.isclose(normalized[key], expected_value, rel_tol=1e-9, abs_tol=1e-12):
+                    raise ValueError(
+                        f"Pareto candidate[{index}] objective {key!r} does not match underlying training evidence"
+                    )
+            eligible_vectors[candidate["candidate_id"]] = normalized
+        elif vector is not None:
+            raise ValueError(f"Pareto-ineligible candidate[{index}] must not carry an objective vector")
+
+    if not eligible_vectors:
+        if report.get("pareto_candidate_ids") or report.get("selected_candidate_id") is not None:
+            raise ValueError("empty eligible Pareto set must not declare Pareto or selected candidates")
+        return
+    if recorded_names != objective_names:
+        raise ValueError("Pareto provenance objective names do not match the selection policy")
+
+    ids = list(eligible_vectors)
+    expected_front = [
+        candidate_id for candidate_id in ids
+        if not any(
+            other_id != candidate_id
+            and all(eligible_vectors[other_id][key] <= eligible_vectors[candidate_id][key] for key in expected_keys)
+            and any(eligible_vectors[other_id][key] < eligible_vectors[candidate_id][key] for key in expected_keys)
+            for other_id in ids
+        )
+    ]
+    if report.get("pareto_candidate_ids") != expected_front:
+        raise ValueError("serialized Pareto candidate IDs do not match recomputed objective front")
+
+    def tie_break(candidate_id: str) -> tuple[Any, ...]:
+        vector = eligible_vectors[candidate_id]
+        return (
+            vector["mean_normalized_rmse"],
+            vector["worst_normalized_rmse"],
+            vector["complexity"],
+            vector.get("mean_soft_constraint_violation_fraction", 0.0),
+            candidate_id,
+        )
+
+    expected_selected = min(expected_front, key=tie_break)
+    if report.get("selected_candidate_id") != expected_selected:
+        raise ValueError("selected candidate does not match deterministic Pareto tie-break")
+
+
+def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
+    """Extract a typed report and validate its versioned, serialized contract."""
+    if not isinstance(result, dict):
+        return None
+    report = result.get("discovery_report")
+    if report is None and isinstance(result.get("metadata"), dict):
+        report = result["metadata"].get("discovery_report")
+    if report is None and isinstance(result.get("discovery"), dict):
+        report = result["discovery"].get("discovery_report")
+    if report is None:
+        return None
+    if not isinstance(report, dict):
+        raise ValueError("discovery_report must be a JSON object when present")
+
+    required = {
+        "schema_version", "status", "candidates", "selected_candidate_id",
+        "pareto_candidate_ids", "failure_reasons", "provenance",
+        "far_evaluation", "far_evaluation_used_for_selection",
+    }
+    missing = sorted(required - set(report))
+    if missing:
+        raise ValueError(f"discovery_report missing required fields: {missing}")
+    if report["schema_version"] not in DISCOVERY_REPORT_SCHEMA_VERSIONS:
+        raise ValueError(
+            f"unsupported discovery_report schema_version {report['schema_version']!r}"
+        )
+    if report["status"] not in DISCOVERY_REPORT_STATUSES:
+        raise ValueError(f"unsupported discovery_report status {report['status']!r}")
+    if not isinstance(report["candidates"], list):
+        raise ValueError("discovery_report candidates must be a list")
+    if not isinstance(report["pareto_candidate_ids"], list):
+        raise ValueError("discovery_report Pareto IDs must be a list")
+    if not isinstance(report["failure_reasons"], list) or any(
+        not isinstance(reason, str) for reason in report["failure_reasons"]
+    ):
+        raise ValueError("discovery_report failure_reasons must be a list of strings")
+    if not isinstance(report["provenance"], dict) or not isinstance(report["far_evaluation"], dict):
+        raise ValueError("discovery_report provenance/far_evaluation must be objects")
+    if report["far_evaluation_used_for_selection"] is not False:
+        raise ValueError("discovery_report must declare far evaluation as unused for selection")
+
+    ids: list[str] = []
+    candidate_required = {
+        "candidate_id", "expression", "normalized_expression", "source",
+        "search_strategy", "seed", "constraint_outcomes", "metrics",
+        "rejection_reasons", "eligible",
+    }
+    for index, candidate in enumerate(report["candidates"]):
+        if not isinstance(candidate, dict):
+            raise ValueError(f"discovery_report candidate[{index}] must be an object")
+        absent = sorted(candidate_required - set(candidate))
+        if absent:
+            raise ValueError(f"discovery_report candidate[{index}] missing fields: {absent}")
+        candidate_id = candidate["candidate_id"]
+        if not isinstance(candidate_id, str) or not candidate_id.strip():
+            raise ValueError(f"discovery_report candidate[{index}] has invalid candidate_id")
+        ids.append(candidate_id)
+        for field in ("expression", "normalized_expression", "search_strategy"):
+            if not isinstance(candidate[field], str) or not candidate[field].strip():
+                raise ValueError(f"discovery_report candidate[{index}] {field} must be non-empty")
+        if candidate["source"] not in DISCOVERY_CANDIDATE_SOURCES:
+            raise ValueError(f"discovery_report candidate[{index}] has unsupported source")
+        if isinstance(candidate["seed"], bool) or not isinstance(candidate["seed"], int):
+            raise ValueError(f"discovery_report candidate[{index}] seed must be an integer")
+        if not isinstance(candidate["constraint_outcomes"], list):
+            raise ValueError(f"discovery_report candidate[{index}] constraint_outcomes must be a list")
+        if not isinstance(candidate["metrics"], dict):
+            raise ValueError(f"discovery_report candidate[{index}] metrics must be an object")
+        if not isinstance(candidate["rejection_reasons"], list) or any(
+            not isinstance(reason, str) for reason in candidate["rejection_reasons"]
+        ):
+            raise ValueError(f"discovery_report candidate[{index}] rejection_reasons must be strings")
+        if not isinstance(candidate["eligible"], bool):
+            raise ValueError(f"discovery_report candidate[{index}] eligible must be boolean")
+        for outcome_index, outcome in enumerate(candidate["constraint_outcomes"]):
+            if not isinstance(outcome, dict):
+                raise ValueError(
+                    f"discovery_report candidate[{index}] constraint_outcomes[{outcome_index}] must be an object"
+                )
+            if not isinstance(outcome.get("constraint_id"), str) or not outcome["constraint_id"]:
+                raise ValueError("discovery_report constraint outcome needs a constraint_id")
+            if outcome.get("status") not in DISCOVERY_CONSTRAINT_STATUSES:
+                raise ValueError("discovery_report constraint outcome has unsupported status")
+            if outcome.get("severity") not in {"hard", "soft"}:
+                raise ValueError("discovery_report constraint outcome has unsupported severity")
+            if not isinstance(outcome.get("reason"), str) or not isinstance(outcome.get("evidence"), dict):
+                raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
+
+    _validate_soft_constraint_pareto_contract(report)
+    _validate_pareto_selection_consistency(report)
+
+    if len(ids) != len(set(ids)):
+        raise ValueError("discovery_report candidate records must have unique candidate IDs")
+    selected_id = report["selected_candidate_id"]
+    if selected_id is not None and (not isinstance(selected_id, str) or selected_id not in ids):
+        raise ValueError("discovery_report selected candidate is absent from candidate records")
+    pareto_ids = report["pareto_candidate_ids"]
+    if any(not isinstance(item, str) for item in pareto_ids) or len(pareto_ids) != len(set(pareto_ids)):
+        raise ValueError("discovery_report Pareto IDs must be unique strings")
+    if not set(pareto_ids).issubset(set(ids)):
+        raise ValueError("discovery_report Pareto IDs are absent from candidate records")
+    if selected_id is not None and selected_id not in pareto_ids:
+        raise ValueError("discovery_report selected candidate must belong to the Pareto set")
+    if report["status"] in {
+        "no_credible_candidate", "invalid_problem_specification",
+        "no_candidates_generated", "all_candidates_failed_symbolic_validation",
+        "all_candidates_failed_physical_gates", "insufficient_validation_evidence",
+        "search_budget_exhausted",
+    } and selected_id is not None:
+        raise ValueError("discovery_report failure status cannot carry a selected candidate")
+    return report
 
 def validate_worker_outputs(
     output_dir: Path,
@@ -61,6 +440,9 @@ def validate_worker_outputs(
     methods_reference: list[str] | None = None
     equation_domains: set[str] = set()
     protocol_manifest: list[dict[str, Any]] = []
+    discovery_report_records: list[dict[str, Any]] = []
+    expected_discovery_report_identities: set[tuple[str, str, str]] = set()
+    hybrid_discovery_report_count = 0
 
     for protocol_path in protocol_files:
         protocol = _load_strict_json(protocol_path)
@@ -117,6 +499,38 @@ def validate_worker_outputs(
                         f"{protocol_path.name}: {description!r}/{method} missing success boolean"
                     )
                 expected_identities.add((domain, description, method))
+                report = _discovery_report_from_result(result)
+                if method == REQUIRED_DISCOVERY_REPORT_METHOD:
+                    identity = (domain, description, method)
+                    expected_discovery_report_identities.add(identity)
+                    if report is None:
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "completed without the required DiscoveryReport"
+                        )
+                    result_metadata = result.get("metadata", {})
+                    if not isinstance(result_metadata, dict):
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "has no structured result metadata"
+                        )
+                    contract_audit = result_metadata.get(
+                        "discovery_problem_contract", {}
+                    )
+                    if not isinstance(contract_audit, dict) or contract_audit.get("active") is not True:
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "did not activate the typed DiscoveryProblem contract"
+                        )
+                    hybrid_discovery_report_count += 1
+                if report is not None:
+                    discovery_report_records.append({
+                        "domain": domain,
+                        "equation": description,
+                        "method": method,
+                        "protocol_file": protocol_path.name,
+                        "discovery_report": report,
+                    })
 
         if len(file_domains) != 1:
             raise ValueError(
@@ -135,6 +549,13 @@ def validate_worker_outputs(
         raise ValueError(
             f"protocol domain coverage mismatch: expected {sorted(expected_domain_set)}, "
             f"found {sorted(equation_domains)}"
+        )
+
+    if len(expected_discovery_report_identities) != hybrid_discovery_report_count:
+        raise ValueError(
+            "required HybridDiscovery DiscoveryReport coverage mismatch: "
+            f"expected {len(expected_discovery_report_identities)}, "
+            f"found {hybrid_discovery_report_count} records"
         )
 
     benchmark_path = output_dir / "benchmark_results_extrap.json"
@@ -167,6 +588,21 @@ def validate_worker_outputs(
     if duplicated:
         raise ValueError(f"benchmark flat output duplicates {len(duplicated)} expected method/equation rows")
 
+    report_path = output_dir / "discovery_reports_extrap.json"
+    report_artifact = {
+        "schema_version": "exp2_discovery_report_artifact_v1",
+        "report_count": len(discovery_report_records),
+        "records": discovery_report_records,
+        "selection_boundary": {
+            "selection_data_scope": "training_region_only",
+            "far_evaluation_used_for_selection": False,
+        },
+    }
+    report_path.write_text(
+        json.dumps(report_artifact, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
     summary = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "step": "exp2_feynman_extrap",
@@ -182,6 +618,13 @@ def validate_worker_outputs(
         "expected_method_equation_rows": len(expected_identities),
         "benchmark_row_count": len(benchmark_rows),
         "protocol_files": protocol_manifest,
+        "discovery_report_artifact": {
+            "file": report_path.name,
+            "sha256": _sha256(report_path),
+            "bytes": report_path.stat().st_size,
+            "report_count": len(discovery_report_records),
+            "status": "present" if discovery_report_records else "no_typed_discovery_reports",
+        },
         "benchmark_file": {
             "file": benchmark_path.name,
             "sha256": _sha256(benchmark_path),
@@ -210,7 +653,7 @@ def main() -> int:
     print(
         f"[exp2-extrap-validation] complete: domains={len(summary['expected_domains'])}, "
         f"equations={summary['equation_count']}, methods={summary['method_count']}, "
-        f"method-equation rows={summary['expected_method_equation_rows']}"
+        f"method-equation rows={summary['expected_method_equation_rows']}, discovery reports={summary['discovery_report_artifact']['report_count']}"
     )
     print(f"[exp2-extrap-validation] manifest: {summary_path}")
     return 0

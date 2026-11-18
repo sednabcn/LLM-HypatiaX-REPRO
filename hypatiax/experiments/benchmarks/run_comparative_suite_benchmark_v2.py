@@ -2656,6 +2656,40 @@ try:
         _meta["domain"] = _domain
         _meta["use_llm"] = _use_llm
         _meta["llm_mode"] = _llm_mode
+        # Deserialize only an explicitly supplied scientific contract. JSON
+        # metadata cannot preserve frozen dataclass instances across workers.
+        _problem_spec = _meta.pop("discovery_problem_spec", None)
+        _contract_audit = {
+            "active": False,
+            "schema_version": None,
+            "sha256": None,
+            "variable_names": [],
+            "variable_name_match": None,
+            "worker_boundary": "isolated_subprocess",
+        }
+        if _problem_spec is not None:
+            from hypatiax.tools.symbolic.discovery_contracts import discovery_problem_from_dict
+            _typed_problem = discovery_problem_from_dict(_problem_spec)
+            if tuple(_typed_problem.variable_names) != tuple(var_names):
+                raise ValueError(
+                    "discovery_problem_spec.variable_names must exactly match "
+                    "subprocess var_names after reserved-name sanitization; "
+                    "no variable-name or unit mapping is inferred."
+                )
+            _canonical_contract = json.dumps(
+                _typed_problem.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+            )
+            _contract_audit = {
+                "active": True,
+                "schema_version": _typed_problem.schema_version,
+                "sha256": hashlib.sha256(_canonical_contract.encode("utf-8")).hexdigest(),
+                "variable_names": list(_typed_problem.variable_names),
+                "variable_name_match": True,
+                "worker_boundary": "isolated_subprocess",
+                "constraint_count": len(_typed_problem.constraints),
+                "budget": _typed_problem.budget.to_dict(),
+            }
+            _meta["discovery_problem"] = _typed_problem
         system = HybridDiscoverySystem(
             domain=_domain,
             discovery_config=_disc_cfg,
@@ -2685,12 +2719,16 @@ try:
                 {key: attempt.get(key) for key in _llm_audit_keys if key in attempt}
                 for attempt in _attempts if isinstance(attempt, dict)
             ]
-            _discovery = result.get("discovery", {}) or {}
+            _discovery = result.get("discovery", {}) or result
+            _training_selection_audit = getattr(
+                system, "_training_only_search_selection", None
+            )
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
                 "engine_version": "5.4",
                 "engine_variant": "llm_hybrid" if system.llm_mode != "none" else "pysr_fallback",
                 "domain": _domain,
+                "discovery_problem_contract": _contract_audit,
                 "llm_requested": _use_llm,
                 "llm_mode_requested": _llm_mode,
                 "llm_mode_active": system.llm_mode,
@@ -2707,14 +2745,35 @@ try:
                 "selected_attempt": _discovery.get("attempt"),
                 "attempts_used": system.stats.get("symbolic_attempts", 0),
                 "retry_budget": system.max_retries,
-                "selection_metric": "training_r2",
-                "candidate_selection": "highest_training_r2_within_retry_budget",
+                "selection_metric": (
+                    "paired_training_fold_mean_normalized_rmse_then_final_training_r2"
+                    if (_training_selection_audit or {}).get("status") == "selected"
+                    else (
+                        "training_only_fold_validation_failed"
+                        if _training_selection_audit is not None
+                        else "training_r2_with_complexity_gate"
+                    )
+                ),
+                "candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak",
+                "training_only_search_selection": _training_selection_audit,
+                # Copy the runtime's own counters into the worker-level
+                # benchmark provenance; contract limits alone do not prove
+                # which resources were actually reserved, started, or used.
+                "discovery_budget": _discovery.get("discovery_budget"),
+                "fold_search_llm_enabled": False,
+                "fold_search_timeout_seconds": (
+                    _meta.get("training_only_search_validation", {}).get(
+                        "fold_timeout_seconds"
+                    )
+                ),
                 "extrapolation_metric_used_for_selection": False,
                 "training_acceptance_threshold": 0.97,
                 "training_early_stop_threshold": (
                     0.999999 if _disc_cfg.use_transcendental_compositions else 0.99
                 ),
                 "training_quality_check": _discovery.get("quality_check"),
+                "candidate_selection_policy": _discovery.get("candidate_selection_policy"),
+                "candidate_selection_fallback": _discovery.get("candidate_selection_fallback"),
                 "discovery_engine": _discovery.get("discovery_engine"),
                 "physics_fallback_enabled": system.enable_physics_fallback,
                 "discovery_config": {
@@ -3274,10 +3333,15 @@ class HybridSystemV50_2Method(BaseMethod):
         # the worker has a chance to return its best result.
         _MAX_RETRIES_V50_2 = 2
         _reserved_overhead = 400
+        # Reserve a bounded 3-strategy × 2-fold validation budget before the
+        # final full-training retries. Fold searches use a shorter per-fit cap.
+        _fold_validation_reserve = 120
         _t_available = max(120, _METHOD_TIMEOUT_SECS - _reserved_overhead)
-        _budget_per_attempt = max(60, _t_available // _MAX_RETRIES_V50_2)
-        # Respect the caller's PySR timeout while ensuring the retry budget
-        # fits inside the outer per-method deadline.
+        _budget_per_attempt = max(
+            60, (_t_available - _fold_validation_reserve) // _MAX_RETRIES_V50_2
+        )
+        # Respect the caller's PySR timeout while ensuring fold selection plus
+        # final retries fit inside the outer per-method deadline.
         _per_attempt_to = min(_budget_per_attempt, _PYSR_TIMEOUT)
 
         _tc_kwargs = {
@@ -3296,6 +3360,15 @@ class HybridSystemV50_2Method(BaseMethod):
             "maxsize": 30,
             "use_transcendental_compositions": True,
             "domain": metadata.get("domain", "general"),
+            # Compare configurations on identical internal training folds.
+            # Fold searches use pure PySR; the final full-training search keeps
+            # the configured LLM-guided HybridDiscovery arm.
+            "training_only_search_validation": {
+                "n_splits": 2,
+                "validation_fraction": 0.2,
+                "fold_iterations": 20,
+                "fold_timeout_seconds": 20,
+            },
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
@@ -3315,6 +3388,84 @@ class HybridSystemV50_2Method(BaseMethod):
         if not _meta.get("domain"):
             _meta["domain"] = "general"
 
+        # Always activate the typed scientific contract for the Exp2
+        # HybridDiscovery arm. Only caller-declared units/domains/constraints
+        # are propagated; the adapter never infers physics from variable names.
+        _contract_spec = _meta.get("discovery_problem_spec")
+        if _contract_spec is None:
+            def _remap_declared_contract_mapping(value, field_name):
+                if value is None:
+                    return {}
+                if not isinstance(value, dict):
+                    raise TypeError(f"{field_name} must be a mapping")
+                remapped = {}
+                for declared_name, declared_value in value.items():
+                    if declared_name in var_names:
+                        safe_name = safe_names[var_names.index(declared_name)]
+                    elif declared_name in safe_names:
+                        safe_name = declared_name
+                    else:
+                        raise ValueError(
+                            f"{field_name} contains undeclared variable {declared_name!r}"
+                        )
+                    remapped[safe_name] = declared_value
+                return remapped
+
+            _declared_units = _remap_declared_contract_mapping(
+                _meta.get("variable_units"), "variable_units"
+            )
+            _declared_domains = _remap_declared_contract_mapping(
+                _meta.get("variable_domains"), "variable_domains"
+            )
+            _declared_constraints = _meta.get("discovery_constraints", [])
+            if not isinstance(_declared_constraints, list):
+                raise TypeError("discovery_constraints must be a list of declared constraint objects")
+            _target_unit = _meta.get("target_unit")
+            if _target_unit is not None and not isinstance(_target_unit, str):
+                raise TypeError("target_unit must be a string when declared")
+            _contract_spec = {
+                "schema_version": "1.0",
+                "target_name": str(
+                    _meta.get("target_name") or _meta.get("equation_name") or description or "target"
+                ),
+                "variable_names": list(safe_names),
+                "domain": str(_meta.get("domain") or "general"),
+                "target_unit": _target_unit,
+                "variable_units": _declared_units,
+                "variable_domains": _declared_domains,
+                "constraints": _declared_constraints,
+                "allowed_unary_operators": list(_tc_kwargs["unary_operators"]),
+                "allowed_binary_operators": list(_tc_kwargs["binary_operators"]),
+                "noise_model": _meta.get("noise_model"),
+                "split_protocol": dict(_tc_kwargs["training_only_search_validation"]),
+                "budget": {
+                    "max_search_attempts": _MAX_RETRIES_V50_2,
+                    "max_candidates": 100,
+                    "max_llm_calls": _MAX_RETRIES_V50_2,
+                    "seed": int(_meta.get("random_seed") or 42),
+                },
+                "metadata": {
+                    "contract_origin": "exp2_protocol_adapter",
+                    "physical_declarations_inferred": False,
+                },
+            }
+        if not isinstance(_contract_spec, dict):
+            raise TypeError("discovery_problem_spec must be a JSON object")
+        # The isolated worker validates the schema and exact sanitized variable
+        # names before constructing DiscoveryProblem.
+        _meta["discovery_problem_spec"] = _contract_spec
+        _meta["training_only_search_validation"] = dict(
+            _tc_kwargs["training_only_search_validation"]
+        )
+        # Preserve explicit nested-structure opt-in from caller metadata.
+        # It is absent from defaults because it adds fold-local symbolic fits.
+        _caller_validation = metadata.get("training_only_search_validation")
+        if isinstance(_caller_validation, dict) and "nested_structure_evidence" in _caller_validation:
+            _meta["training_only_search_validation"]["nested_structure_evidence"] = (
+                _caller_validation["nested_structure_evidence"]
+            )
+        _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
+
         print(
             f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
             f" (spread={_spread:.1f}dec, vars={_n_vars}, depth={_op_depth}, diff={_diff}, score={_score:.2f})"
@@ -3329,7 +3480,7 @@ class HybridSystemV50_2Method(BaseMethod):
         # budget, leaving orphaned subprocesses and guaranteeing a timeout.
         _subprocess_timeout = min(
             max(60, _METHOD_TIMEOUT_SECS - 100),
-            (2 * _per_attempt_to) + 280,
+            (2 * _per_attempt_to) + 280 + _fold_validation_reserve,
         )
         # FIX-ISSUE10B-OUTER-TIMEOUT: see matching comment in
         # SymbolicEngineMethod.run — same handoff pattern.
@@ -3367,13 +3518,34 @@ class HybridSystemV50_2Method(BaseMethod):
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                     "benchmark_provenance": result.get("benchmark_provenance", {}),
+                    # Preserve the scientific report and contract audit across
+                    # the MethodResult boundary into protocol JSON artifacts.
+                    "discovery_report": result.get("discovery_report"),
+                    "discovery_problem_contract": (
+                        result.get("benchmark_provenance") or {}
+                    ).get("discovery_problem_contract", {}),
+                    "training_only_search_selection": result.get(
+                        "training_only_search_selection"
+                    ),
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         self._log(f"run error: {err}")
+        _failure_metadata = _provenance(result) if isinstance(result, dict) else {}
+        if isinstance(result, dict):
+            _failure_metadata.update({
+                "discovery_report": result.get("discovery_report"),
+                "discovery_problem_contract": (
+                    result.get("benchmark_provenance") or {}
+                ).get("discovery_problem_contract", {}),
+                "training_only_search_selection": result.get(
+                    "training_only_search_selection"
+                ),
+                "benchmark_provenance": result.get("benchmark_provenance", {}),
+            })
         return self._unavailable(
             str(err)[:150],
-            metadata=_provenance(result) if isinstance(result, dict) else {},
+            metadata=_failure_metadata,
         )
 
 

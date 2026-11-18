@@ -128,6 +128,7 @@ import random
 import re
 from collections import deque
 from datetime import datetime
+from dataclasses import replace as dataclass_replace
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
@@ -164,6 +165,8 @@ from hypatiax.tools.symbolic.symbolic_engine import (
     detect_collapsed_constants,
 )
 from hypatiax.tools.validation.ensemble_validator import EnsembleValidator
+from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem
+from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
 
 
 class DiscoveryMode(Enum):
@@ -467,6 +470,9 @@ class HybridDiscoverySystem:
         self.physics_generations = physics_generations
         self.max_retries = max_retries
         self.enable_auto_config = enable_auto_config
+        self._active_discovery_problem: DiscoveryProblem | None = None
+        self._active_budget_runtime = None
+        self._candidate_validator = CandidateValidator()
         self.use_llm = use_llm
         self.requested_llm_mode = llm_mode if use_llm else "none"  # Issue-5: immutable intent
         self.llm_mode = self.requested_llm_mode                     # Issue-5: active mode (may degrade)
@@ -718,17 +724,111 @@ class HybridDiscoverySystem:
         __init__ based on use_llm and key availability.  All retry logic and
         physics fallback are unchanged from v4.1-PROD.
         """
+        # Keep a clean candidate pool separate from candidates flagged by the
+        # existing complexity heuristic.  A high training R² must not silently
+        # outrank a simpler, non-flagged expression.
         best_result = None
         best_r2 = -np.inf
+        _candidate_attempts: list[tuple[Any, dict[str, Any]]] = []
+        best_complexity = np.inf
+        flagged_result = None
+        flagged_r2 = -np.inf
+        flagged_complexity = np.inf
         last_attempt_error: Exception | None = None
         _inv_injected = False
+        _selection_tolerance = 1e-3
 
-        for attempt in range(self.max_retries):
+        def _prefer_candidate(candidate_r2, candidate_complexity, current_r2, current_complexity):
+            if current_r2 == -np.inf or candidate_r2 > current_r2 + _selection_tolerance:
+                return True
+            return (
+                abs(candidate_r2 - current_r2) <= _selection_tolerance
+                and candidate_complexity < current_complexity
+            )
+
+
+        def _candidate_gate_payload(candidate_result, fallback_expression):
+            """Map the engine's fit-space expression back to raw input variables."""
+            fit_expression = str(
+                candidate_result.get("fit_expression") or fallback_expression
+            ).strip().replace("^", "**")
+            fit_names = list(
+                candidate_result.get("fit_variable_names")
+                or candidate_result.get("variable_names")
+                or variable_names
+            )
+            state = candidate_result.get("fit_transform_state") or {}
+            if not state:
+                return fit_expression, fit_names, {}
+
+            raw_names = list(variable_names)
+            if len(fit_names) < len(raw_names):
+                raise ValueError("fit feature schema omits declared raw variables")
+            scales = list(state.get("x_scales", []))
+            if len(scales) != len(raw_names):
+                raise ValueError("fit transform state does not match raw feature count")
+            log_flags = list(
+                getattr(self, "_discover_x_log_flags", [False] * len(raw_names))
+            )
+            if len(log_flags) != len(raw_names):
+                raise ValueError("outer log flags do not match raw feature count")
+
+            substitutions = {}
+            for index, (raw_name, fit_name) in enumerate(zip(raw_names, fit_names)):
+                if log_flags[index]:
+                    base = f"(sign({raw_name})*log10(abs({raw_name})+1))"
+                else:
+                    base = raw_name
+                scale = float(scales[index])
+                if not np.isfinite(scale) or scale <= 0:
+                    raise ValueError("fit feature scale must be finite and positive")
+                substitutions[fit_name] = f"(({base})/{scale:.17g})"
+
+            for left, right in state.get("gm_pairs", []):
+                left_name, right_name = fit_names[int(left)], fit_names[int(right)]
+                engineered_name = f"gm_{left_name}_{right_name}"
+                substitutions[engineered_name] = (
+                    f"sqrt(({substitutions[left_name]})*({substitutions[right_name]}))"
+                )
+            for numerator, denominator in state.get("ratio_pairs", []):
+                numerator_name = fit_names[int(numerator)]
+                denominator_name = fit_names[int(denominator)]
+                engineered_name = f"ratio_{numerator_name}_{denominator_name}"
+                substitutions[engineered_name] = (
+                    f"({substitutions[numerator_name]}/"
+                    f"({substitutions[denominator_name]}+1e-300))"
+                )
+
+            y_scale = float(state.get("y_std", 1.0))
+            if not np.isfinite(y_scale) or y_scale <= 0:
+                raise ValueError("fit target scale must be finite and positive")
+            fit_output = f"({y_scale:.17g}*({fit_expression}))"
+            if bool(getattr(self, "_discover_y_log", False)):
+                physical_expression = (
+                    f"(sign({fit_output})*(10**abs({fit_output})-1))"
+                )
+            else:
+                physical_expression = fit_output
+            return physical_expression, fit_names, substitutions
+
+        _budget_runtime = getattr(self, "_active_budget_runtime", None)
+        _search_limit = (
+            min(self.max_retries, _budget_runtime.budget.max_search_attempts)
+            if _budget_runtime is not None else self.max_retries
+        )
+        for attempt in range(_search_limit):
+            if _budget_runtime is not None:
+                if not _budget_runtime.can_start_search(self.max_retries):
+                    break
+                _budget_runtime.record_search_attempt()
             result = None
             try:
                 # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
                 # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
-                seed = int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")) + attempt
+                seed = int(
+                    getattr(self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+                ) + attempt
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
 
@@ -748,6 +848,12 @@ class HybridDiscoverySystem:
                     # and forwards recognised keys to PySR via pysr_kwargs.
                     **({"deterministic": True, "parallelism": "serial"}
                        if self._pysr_deterministic else {}),
+                )
+                # A fit/provider request cannot be interrupted safely, but a
+                # result returned after the caller's deadline is not eligible
+                # for promotion into the selected discovery result.
+                _deadline_exhausted = bool(
+                    _budget_runtime is not None and _budget_runtime.expired()
                 )
 
                 r2 = result.get("r2_score", 0)
@@ -783,10 +889,62 @@ class HybridDiscoverySystem:
                 if result.get("llm_mode"):
                     logger.info(f"   LLM mode: {result['llm_mode']}")
 
-                if expr and expr not in (
+                _valid_expression = bool(expr) and expr not in (
                     "DISCOVERY_FAILED", "NO_VALID_EQUATIONS", "VALIDATION_FAILED"
-                ):
-                    quality = self._check_expression_quality(expr, r2)
+                )
+                _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
+                _candidate_gate = None
+                _candidate_gate_passed = True
+                if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
+                    _gate_expression, _gate_variable_names, _gate_substitutions = (
+                        _candidate_gate_payload(result, expr)
+                    )
+                    _candidate_gate = self._candidate_validator.validate(
+                        getattr(self, "_active_discovery_problem", None),
+                        _gate_expression,
+                        source="pysr_search",
+                        search_strategy="retry_search",
+                        seed=seed,
+                        candidate_variable_names=_gate_variable_names,
+                        feature_substitutions=_gate_substitutions,
+                    )
+                    _candidate_gate_passed = bool(_candidate_gate.eligible)
+                    result["candidate_validation"] = _candidate_gate.to_dict()
+                    result["candidate_validation_status"] = (
+                        "eligible" if _candidate_gate_passed else "rejected"
+                    )
+                    if not _candidate_gate_passed:
+                        logger.warning(
+                            "   [REJECTED] Candidate failed declared scientific gates: %s",
+                            list(_candidate_gate.rejection_reasons),
+                        )
+                elif getattr(self, "_active_discovery_problem", None) is None:
+                    result["candidate_validation_status"] = "not_configured"
+                # Validation itself may consume the remaining wall-time budget.
+                if _budget_runtime is not None and _budget_runtime.expired():
+                    _deadline_exhausted = True
+                if _deadline_exhausted:
+                    _candidate_gate_passed = False
+                    result["candidate_validation_status"] = "rejected_deadline"
+
+                _budget_candidate_rejected = False
+                if _valid_expression and _valid_score:
+                    _llm_mode_for_candidate = str(result.get("llm_mode", ""))
+                    _result_is_llm_proposal = _llm_mode_for_candidate.endswith(
+                        ("_llm_better", "_llm_only")
+                    )
+                    if (
+                        _budget_runtime is not None and not _result_is_llm_proposal
+                        and _budget_runtime.record_candidates(1) == 0
+                    ):
+                        _budget_candidate_rejected = True
+                        _candidate_gate_passed = False
+                        result["candidate_validation_status"] = "rejected_budget"
+                    if _budget_runtime is not None and _budget_runtime.expired():
+                        _deadline_exhausted = True
+                        _candidate_gate_passed = False
+                        result["candidate_validation_status"] = "rejected_deadline"
+                    quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
                         for w in quality["warnings"]:
@@ -794,16 +952,51 @@ class HybridDiscoverySystem:
                 else:
                     quality = {"is_overfit": False, "complexity": 0, "warnings": []}
 
-                # R2 gaps below the noise floor are ties: keep the earlier result.
-                # 1e-3 is about 0.4 x the 0.0025 gap implied by 5% noise (R2 ceiling ~0.9975).
-                _SEL_TOL = 1e-3
-                if best_result is None or r2 > best_r2 + _SEL_TOL:
-                    best_r2 = r2
-                    best_result = result
-                    best_result["discovery_engine"] = "symbolic"
-                    best_result["attempt"] = attempt + 1
-                    best_result["quality_check"] = quality
-                    logger.info("   [BEST] New best!")
+                if _candidate_gate is not None:
+                    _candidate_record = dataclass_replace(
+                        _candidate_gate,
+                        metrics={
+                            "training_r2": float(r2),
+                            "quality_check": quality,
+                        },
+                        eligible=bool(_candidate_gate.eligible and _candidate_gate_passed),
+                        rejection_reasons=(
+                            tuple(_candidate_gate.rejection_reasons)
+                            + (("discovery_candidate_budget_exhausted",) if _budget_candidate_rejected else ())
+                            + (("discovery_deadline_exhausted",) if _deadline_exhausted else ())
+                        ),
+                    )
+                    _candidate_attempts.append((_candidate_record, result))
+
+                # Never let an invalid/sentinel result win.  Prefer candidates
+                # that pass the existing complexity screen; retain the best
+                # flagged candidate only as an explicit last-resort fallback.
+                # Within each pool, training-R² differences <= 1e-3 are ties
+                # and the simpler expression wins.  No far/test metric is used.
+                if _valid_expression and _valid_score and _candidate_gate_passed:
+                    _candidate_complexity = int(quality["complexity"])
+                    result["discovery_engine"] = "symbolic"
+                    result["attempt"] = attempt + 1
+                    result["quality_check"] = quality
+                    result["candidate_selection_policy"] = (
+                        "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak"
+                    )
+                    if quality["is_overfit"]:
+                        if _prefer_candidate(
+                            float(r2), _candidate_complexity,
+                            flagged_r2, flagged_complexity,
+                        ):
+                            flagged_result = result
+                            flagged_r2 = float(r2)
+                            flagged_complexity = _candidate_complexity
+                            logger.info("   [BEST FLAGGED] New fallback candidate")
+                    elif _prefer_candidate(
+                        float(r2), _candidate_complexity, best_r2, best_complexity
+                    ):
+                        best_r2 = float(r2)
+                        best_complexity = _candidate_complexity
+                        best_result = result
+                        logger.info("   [BEST] New eligible candidate!")
 
                 if attempt == 0 and r2 < 0.1 and not _inv_injected:
                     if self._detect_rational_pattern(X, y):
@@ -820,10 +1013,13 @@ class HybridDiscoverySystem:
                     if getattr(self.symbolic_engine.config, "use_transcendental_compositions", False)
                     else R2_STANDARD
                 )
-                if r2 >= _early_stop_r2 and not quality["is_overfit"]:
+                if (
+                    _valid_expression and _valid_score and _candidate_gate_passed
+                    and r2 >= _early_stop_r2 and not quality["is_overfit"]
+                ):
                     logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
                     self.stats["symbolic_successes"] += 1
-                    return best_result
+                    break
 
             except Exception as e:
                 _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
@@ -868,16 +1064,38 @@ class HybridDiscoverySystem:
                     )
                     break
 
-        if best_result and best_r2 >= 0.97:
+        else:
+            if _budget_runtime is not None and _budget_runtime.search_attempts >= _search_limit:
+                _budget_runtime.stop_reason = _budget_runtime.stop_reason or "max_search_attempts"
+
+        if best_result is None and flagged_result is not None:
+            # Do not discard all discoveries when every candidate triggers the
+            # complexity screen, but make the exception visible to downstream
+            # audit consumers.
+            best_result = flagged_result
+            best_r2 = flagged_r2
+            best_result["candidate_selection_fallback"] = "all_candidates_flagged_by_complexity_screen"
+            best_result["candidate_selection_policy"] = (
+                "best_training_r2_simplicity_tiebreak_after_all_candidates_flagged"
+            )
+
+        _pareto_report_enabled = (
+            getattr(self, "_active_discovery_problem", None) is not None
+            and bool(getattr(self, "_active_training_validation_settings", None))
+        )
+        if best_result and best_r2 >= 0.97 and not _pareto_report_enabled:
             logger.info(f"\n[SUCCESS] SymbolicEngine succeeded (R2={best_r2:.4f})")
             self.stats["symbolic_successes"] += 1
             return best_result
-        else:
+        elif not (best_result and best_r2 >= 0.97):
             logger.warning(f"\n[WARNING] SymbolicEngine best R2={best_r2:.4f}")
             self.stats["symbolic_failures"] += 1
 
         if self.enable_physics_fallback and (
             not best_result or best_r2 < self.physics_fallback_threshold
+        ) and (
+            _budget_runtime is None
+            or (_budget_runtime.remaining_candidates > 0 and not _budget_runtime.expired())
         ):
             try:
                 logger.info("\n[FALLBACK] Using PhysicsAwareRegressor...")
@@ -897,14 +1115,50 @@ class HybridDiscoverySystem:
                 r2 = physics_regressor.best_fitness_
                 logger.info(f"   PhysicsAware: {expression}")
                 logger.info(f"   R2 = {r2:.4f}")
+                if _budget_runtime is not None and _budget_runtime.record_candidates(1) == 0:
+                    raise RuntimeError("discovery candidate budget exhausted before physics fallback")
                 physics_result = {
                     "expression": expression,
                     "r2_score": r2,
                     "discovery_engine": "physics_aware",
                     "complexity": len(expression),
                 }
-                self.stats["physics_used"] += 1
-                if r2 > best_r2:
+                _physics_gate = None
+                if getattr(self, "_active_discovery_problem", None) is not None:
+                    _physics_gate = self._candidate_validator.validate(
+                        getattr(self, "_active_discovery_problem", None),
+                        expression,
+                        source="domain_template",
+                        search_strategy="physics_aware_fallback",
+                        seed=int(getattr(
+                            self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"),
+                        )),
+                    )
+                    physics_result["candidate_validation"] = _physics_gate.to_dict()
+                    physics_result["candidate_validation_status"] = (
+                        "eligible" if _physics_gate.eligible else "rejected"
+                    )
+                    if not _physics_gate.eligible:
+                        _rejected_physics_record = dataclass_replace(
+                            _physics_gate,
+                            metrics={"quality_check": {"complexity": physics_result["complexity"]}},
+                        )
+                        _candidate_attempts.append((_rejected_physics_record, physics_result))
+                        logger.warning(
+                            "[FALLBACK] PhysicsAware candidate rejected by declared gates: %s",
+                            list(_physics_gate.rejection_reasons),
+                        )
+                        physics_result = None
+                if physics_result is not None:
+                    self.stats["physics_used"] += 1
+                    if _physics_gate is not None:
+                        _physics_record = dataclass_replace(
+                            _physics_gate,
+                            metrics={"quality_check": {"complexity": physics_result["complexity"]}},
+                        )
+                        _candidate_attempts.append((_physics_record, physics_result))
+                if physics_result is not None and r2 > best_r2:
                     logger.info("   [BEST] PhysicsAware better!")
                     best_result = physics_result
                     best_r2 = r2
@@ -912,17 +1166,198 @@ class HybridDiscoverySystem:
             except Exception as e:
                 logger.error(f"   [ERROR] PhysicsAware failed: {e}")
 
-        if best_result:
-            logger.warning(
-                f"[PARTIAL] Returning best result with R2={best_r2:.4f}. "
-                "If R2 is very low, check that the right unary operators are enabled."
+        _problem = getattr(self, "_active_discovery_problem", None)
+        _validation_settings = getattr(self, "_active_training_validation_settings", None)
+        if _problem is not None and _validation_settings:
+            from hypatiax.tools.symbolic.hybrid_fold_search import (
+                evaluate_hybrid_candidate_on_training_folds,
             )
+            from hypatiax.tools.symbolic.pareto_discovery import (
+                select_pareto_discovery_report,
+            )
+            from hypatiax.tools.symbolic.training_validation import make_training_folds
+
+            _raw_X = np.asarray(getattr(self, "_discover_X_orig", X), dtype=float)
+            _raw_y = np.asarray(getattr(self, "_discover_y_orig", y), dtype=float).reshape(-1)
+            if tuple(variable_names) != tuple(_problem.variable_names):
+                raise ValueError(
+                    "NO_CREDIBLE_CANDIDATE: DiscoveryProblem.variable_names must "
+                    "exactly match the raw training feature names and order"
+                )
+            _n_splits = int(_validation_settings.get("n_splits", 2))
+            _fold_creation_error = None
+            _budget_runtime = getattr(self, "_active_budget_runtime", None)
+            if _budget_runtime is not None and _budget_runtime.expired():
+                # A configured training-only validation stage is mandatory for
+                # this typed path. Never fall back to the retry-loop R2 winner
+                # when the shared deadline has already expired.
+                _folds = ()
+                _fold_creation_error = "discovery_deadline_exhausted_before_candidate_validation"
+            else:
+                try:
+                    _folds = make_training_folds(
+                        _raw_X.shape[0],
+                        n_splits=_n_splits,
+                        n_repeats=1,
+                        validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
+                        seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                        strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
+                    )
+                except Exception as _fold_error:
+                    _folds = ()
+                    _fold_creation_error = f"{type(_fold_error).__name__}: {_fold_error}"[:500]
+            _minimum_folds = int(
+                _validation_settings.get("minimum_valid_folds", max(1, len(_folds) or _n_splits))
+            )
+            # Optional nested structure search is opt-in because it adds
+            # fresh fold-local symbolic fits when the user runs an experiment.
+            _nested_cfg = _validation_settings.get("nested_structure_evidence", {})
+            if _nested_cfg is True:
+                _nested_cfg = {"enabled": True}
+            if not isinstance(_nested_cfg, dict):
+                raise TypeError("nested_structure_evidence must be a dict or bool")
+            _nested_enabled = bool(_nested_cfg.get("enabled", False)) and bool(_folds)
+            _require_nested = bool(_nested_cfg.get("require_for_selection", True)) if _nested_enabled else False
+            _nested_matching = None
+            _nested_error = None
+            if _nested_enabled:
+                try:
+                    from hypatiax.tools.symbolic.hybrid_fold_search import (
+                        evaluate_nested_hybrid_structure_search_on_training_folds,
+                    )
+                    _nested_result = evaluate_nested_hybrid_structure_search_on_training_folds(
+                        _raw_X,
+                        _raw_y,
+                        _folds,
+                        variable_names=list(_problem.variable_names),
+                        equation_name=str(equation_name or "unknown"),
+                        domain=str(self.domain),
+                        base_config=self.symbolic_engine.config,
+                        parsimony=getattr(self, "_selected_training_search_parsimony", None),
+                        seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                        fold_iterations=int(_nested_cfg.get("fold_iterations", _validation_settings.get("fold_iterations", 20))),
+                        fold_timeout_seconds=int(_nested_cfg.get("fold_timeout_seconds", _validation_settings.get("fold_timeout_seconds", 20))),
+                        allow_pow=None,
+                        minimum_valid_folds=_minimum_folds,
+                        minimum_structure_recurrence=int(_nested_cfg.get("minimum_recurrence", 2)),
+                        minimum_structure_recurrence_fraction=float(_nested_cfg.get("minimum_recurrence_fraction", 0.5)),
+                        budget_runtime=getattr(self, "_active_budget_runtime", None),
+                    )
+                    _nested_matching = _nested_result.get("structure_matching")
+                except Exception as _nested_exc:
+                    _nested_error = f"{type(_nested_exc).__name__}: {_nested_exc}"[:500]
+            _reported_candidates = []
+            _candidate_result_by_id = {}
+            for _record, _attempt_result in _candidate_attempts:
+                _metrics = dict(_record.metrics)
+                if _record.eligible and _folds:
+                    try:
+                        _fit_expression = str(
+                            _attempt_result.get("fit_expression")
+                            or _attempt_result.get("expression")
+                            or _record.expression
+                        )
+                        _fit_variable_names = list(
+                            _attempt_result.get("fit_variable_names")
+                            or _attempt_result.get("variable_names")
+                            or _problem.variable_names
+                        )
+                        _raw_safe_names = _fit_variable_names[:len(_problem.variable_names)]
+                        _summary = evaluate_hybrid_candidate_on_training_folds(
+                            _fit_expression,
+                            _fit_variable_names,
+                            _raw_safe_names,
+                            _raw_X,
+                            _raw_y,
+                            _folds,
+                            minimum_valid_folds=_minimum_folds,
+                            max_nfev=int(_validation_settings.get("coefficient_max_nfev", 500)),
+                            budget_runtime=getattr(self, "_active_budget_runtime", None),
+                        )
+                        _metrics["training_validation"] = _summary.to_dict()
+                        if _nested_enabled:
+                            from hypatiax.tools.symbolic.structural_matching import (
+                                crosswalk_full_training_candidate_to_fold_structure,
+                            )
+                            _metrics["nested_structure_evidence"] = (
+                                crosswalk_full_training_candidate_to_fold_structure(
+                                    _fit_expression,
+                                    _fit_variable_names,
+                                    _nested_matching or {},
+                                )
+                                if _nested_matching is not None
+                                else {
+                                    "status": "NO_CREDIBLE_CANDIDATE",
+                                    "reason": _nested_error or "nested_structure_matching_unavailable",
+                                    "candidate_specific_nested_evidence": False,
+                                    "far_test_data_used": False,
+                                }
+                            )
+                    except Exception as _fold_error:
+                        _metrics["training_validation_error"] = (
+                            f"{type(_fold_error).__name__}: {_fold_error}"[:500]
+                        )
+                _enriched = dataclass_replace(_record, metrics=_metrics)
+                _reported_candidates.append(_enriched)
+                _candidate_result_by_id[_enriched.candidate_id] = _attempt_result
+
+            _report = select_pareto_discovery_report(
+                _reported_candidates,
+                variable_names=list(_problem.variable_names),
+                provenance={
+                    "engine": "HybridDiscoverySystem",
+                    "training_search_selection": getattr(
+                        self, "_training_only_search_selection", None
+                    ),
+                    "fold_strategy": str(_validation_settings.get("fold_strategy", "repeated_random")),
+                    "fold_count": len(_folds),
+                    "fold_creation_error": _fold_creation_error,
+                    "minimum_valid_folds": _minimum_folds,
+                    "candidate_evaluation": (
+                        "fold_local_signed_log_x_scale_engineered_features_target_transform_and_coefficient_refit"
+                    ),
+                    "candidate_feature_support": ["raw", "geometric_mean", "directed_ratio"],
+                    "nested_structure_search_enabled": _nested_enabled,
+                    "nested_structure_evidence_required": _require_nested,
+                    "nested_structure_matching": _nested_matching,
+                    "nested_structure_search_error": _nested_error,
+                    "nested_structure_search_scope": "fresh_pure_pysr_per_training_fold",
+                },
+                minimum_valid_folds=_minimum_folds,
+                require_nested_structure_evidence=_require_nested,
+                soft_constraint_ids=[
+                    spec.constraint_id for spec in _problem.constraints
+                    if spec.severity == "soft"
+                ],
+            )
+            self._last_discovery_report = _report.to_dict()
+            if _report.selected_candidate_id is None:
+                raise ValueError(
+                    "NO_CREDIBLE_CANDIDATE: training-only candidate report "
+                    f"did not select an equation ({_report.status})"
+                )
+            best_result = _candidate_result_by_id[_report.selected_candidate_id]
+            best_r2 = float(best_result.get("r2_score", -np.inf))
+            best_result["discovery_report"] = self._last_discovery_report
+            best_result["candidate_selection_policy"] = "training_only_physics_gated_pareto"
+
+        if best_result:
+            if best_r2 >= 0.97:
+                logger.info(
+                    "[SUCCESS] Returning Pareto-selected candidate "
+                    f"with R2={best_r2:.4f}."
+                )
+            else:
+                logger.warning(
+                    f"[PARTIAL] Returning best result with R2={best_r2:.4f}. "
+                    "If R2 is very low, check that the right unary operators are enabled."
+                )
             return best_result
         else:
             raise ValueError(
                 f"All {self.max_retries} discovery attempts failed"
                 + (f": {last_attempt_error}" if last_attempt_error else "")
-                + f"\n  Domain detected: '{self.domain}'."
+                + f"\n  Domain detected: '{getattr(self, 'domain', 'general')}'."
             ) from last_attempt_error
 
     @staticmethod
@@ -1126,6 +1561,10 @@ class HybridDiscoverySystem:
                     logger.warning(f"   [WARM-START] Phase 2 failed ({_ws_err}) — keeping Phase 1.")
                     # Config is already restored by the inner try/finally above.
 
+            _budget_runtime = getattr(self, "_active_budget_runtime", None)
+            if _budget_runtime is not None:
+                discovery_result["discovery_budget"] = _budget_runtime.to_dict()
+
             engine = discovery_result.get("discovery_engine", "unknown")
             llm_info = discovery_result.get("llm_mode", "")
             print("\n[OK] Discovery complete")
@@ -1150,6 +1589,17 @@ class HybridDiscoverySystem:
                 "error": "discovery_failed",
                 "message": str(e),
                 "traceback": _tb_str,
+                # Keep a fail-closed scientific report observable when candidate
+                # validation/Pareto selection rejects every candidate.
+                "discovery_report": getattr(self, "_last_discovery_report", None),
+                "training_only_search_selection": getattr(
+                    self, "_training_only_search_selection", None
+                ),
+                "discovery_budget": (
+                    self._active_budget_runtime.to_dict()
+                    if getattr(self, "_active_budget_runtime", None) is not None
+                    else None
+                ),
             }
 
         print("\n[VALIDATE] Checking expression quality...")
@@ -1235,6 +1685,115 @@ class HybridDiscoverySystem:
         reinstantiating the system.
         """
         metadata = metadata or {}
+
+        _problem = metadata.get("discovery_problem")
+        if _problem is not None and not isinstance(_problem, DiscoveryProblem):
+            raise TypeError(
+                "metadata['discovery_problem'] must be a DiscoveryProblem instance; "
+                "construct it explicitly so units, domains, and constraints are typed."
+            )
+        # Reset per-call scientific and training-only selection state so no
+        # equation's validation result or contract can leak into the next call.
+        self._active_discovery_problem = _problem
+        self._active_budget_runtime = None
+        if _problem is not None:
+            from hypatiax.tools.symbolic.discovery_budget_runtime import DiscoveryBudgetRuntime
+            self._active_budget_runtime = DiscoveryBudgetRuntime(
+                _problem.budget, configured_search_attempts=self.max_retries
+            )
+        _llm_runtime_engine = getattr(self.symbolic_engine, "llm_engine", None)
+        if _llm_runtime_engine is not None:
+            _llm_runtime_engine.budget_runtime = self._active_budget_runtime
+        self._training_only_search_selection = None
+
+        _validation_settings = metadata.get("training_only_search_validation")
+        self._active_training_validation_settings = _validation_settings or None
+        self._active_training_validation_seed = int(
+            metadata.get(
+                "random_seed",
+                _problem.budget.seed if _problem is not None
+                else os.environ.get("HYPATIAX_ENGINE_SEED", "42"),
+            )
+        )
+        self._last_discovery_report = None
+        if _validation_settings and not (
+            self._active_budget_runtime is not None
+            and self._active_budget_runtime.expired()
+        ):
+            if not isinstance(_validation_settings, dict):
+                raise TypeError(
+                    "metadata['training_only_search_validation'] must be a dict"
+                )
+            from hypatiax.tools.symbolic.hybrid_fold_search import (
+                select_hybrid_search_configuration,
+            )
+            _selection_seed = self._active_training_validation_seed
+            try:
+                _selection, _parsimony_options = select_hybrid_search_configuration(
+                    X,
+                    y,
+                    variable_names=var_names,
+                    equation_name=str(metadata.get("equation_name", description or "unknown")),
+                    domain=str(metadata.get("domain") or self.domain),
+                    base_config=self.symbolic_engine.config,
+                    seed=_selection_seed,
+                    n_splits=int(_validation_settings.get("n_splits", 2)),
+                    validation_fraction=float(
+                        _validation_settings.get("validation_fraction", 0.2)
+                    ),
+                    fold_iterations=int(_validation_settings.get("fold_iterations", 20)),
+                    fold_timeout_seconds=int(
+                        _validation_settings.get("fold_timeout_seconds", 20)
+                    ),
+                    allow_pow=metadata.get("allow_pow"),
+                    max_mean_normalized_rmse=_validation_settings.get(
+                        "max_mean_normalized_rmse"
+                    ),
+                    budget_runtime=self._active_budget_runtime,
+                )
+                self._training_only_search_selection = _selection.to_dict()
+                if _selection.status != "selected" or not _selection.selected_strategy:
+                    return {
+                        "success": False,
+                        "error": "NO_CREDIBLE_CANDIDATE",
+                        "message": (
+                            "No PySR search configuration met the training-only "
+                            "fold-validation requirements; full-training discovery "
+                            "was not run."
+                        ),
+                        "training_only_search_selection": self._training_only_search_selection,
+                        "discovery_budget": (
+                            self._active_budget_runtime.to_dict()
+                            if self._active_budget_runtime is not None else None
+                        ),
+                    }
+                self._selected_training_search_strategy = _selection.selected_strategy
+                self._selected_training_search_parsimony = _parsimony_options[
+                    _selection.selected_strategy
+                ]
+                logger.info(
+                    "[TRAINING-VALIDATION] selected strategy=%s parsimony=%s",
+                    self._selected_training_search_strategy,
+                    self._selected_training_search_parsimony,
+                )
+            except Exception as _selection_error:
+                self._training_only_search_selection = {
+                    "status": "NO_CREDIBLE_CANDIDATE",
+                    "selected_strategy": None,
+                    "selection_scope": "training_region_only",
+                    "error": f"{type(_selection_error).__name__}: {_selection_error}"[:400],
+                    "far_test_data_used": False,
+                }
+                return {
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "message": "Training-only search configuration validation failed closed.",
+                    "training_only_search_selection": self._training_only_search_selection,
+                    "discovery_budget": (
+                        self._active_budget_runtime.to_dict()
+                        if self._active_budget_runtime is not None else None
+                    ),
+                }
 
         _noise_level = metadata.get("noise_level", None)
         self._current_noise_level = _noise_level
@@ -1359,17 +1918,36 @@ class HybridDiscoverySystem:
         self.symbolic_engine._fixd_ctx = _fixd_ctx
 
         try:
-            full_result = self.discover_validate_interpret(
-                X=X,
-                y=y,
-                variable_names=var_names,
-                variable_descriptions=variable_descriptions,
-                variable_units=variable_units,
-                description=description,
-                equation_name=equation_name,
-                show_formatted=verbose,
-                use_llm=_meta_use_llm,
-            )
+            _original_parsimony = self.symbolic_engine.config.parsimony
+            try:
+                if self._training_only_search_selection is not None:
+                    self.symbolic_engine.config.parsimony = (
+                        self._selected_training_search_parsimony
+                    )
+                full_result = self.discover_validate_interpret(
+                    X=X,
+                    y=y,
+                    variable_names=var_names,
+                    variable_descriptions=variable_descriptions,
+                    variable_units=variable_units,
+                    description=description,
+                    equation_name=equation_name,
+                    show_formatted=verbose,
+                    use_llm=_meta_use_llm,
+                )
+                if self._training_only_search_selection is not None:
+                    full_result.setdefault("metadata", {})[
+                        "training_only_search_selection"
+                    ] = self._training_only_search_selection
+                    full_result["metadata"]["selected_search_strategy"] = (
+                        self._selected_training_search_strategy
+                    )
+                if self._last_discovery_report is not None:
+                    full_result.setdefault("metadata", {})[
+                        "discovery_report"
+                    ] = self._last_discovery_report
+            finally:
+                self.symbolic_engine.config.parsimony = _original_parsimony
 
             # FIX-POW: restore original binary_operators regardless of result
             self.symbolic_engine.config.binary_operators = _orig_binary_ops
@@ -1579,6 +2157,8 @@ class HybridDiscoverySystem:
                 "r2": r2,
                 "rmse": rmse,
                 "nrmse": nrmse,   # RC-4: NRMSE = RMSE / std(y_true); nan if undefined
+                "training_only_search_selection": self._training_only_search_selection,
+                "discovery_report": getattr(self, "_last_discovery_report", None),
                 "strategy": discovery.get("discovery_engine", "symbolic"),
                 # FIX: a later pure-PySR retry can win the attempt loop and carries no
                 # llm_mode, which used to hide that the LLM WAS called in attempt 1
@@ -1657,6 +2237,7 @@ class HybridDiscoverySystem:
                 "expression": "N/A",
                 "final_formula": "N/A",
                 "variable_names": var_names,
+                "discovery_report": getattr(self, "_last_discovery_report", None),
                 "strategy": "error",
                 "llm_mode": (getattr(self, "_llm_attempt_modes", None) or ["none"])[0],
                 "llm_attempted": any(
