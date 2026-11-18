@@ -1775,6 +1775,7 @@ jobs:
         env:
           EXP:           ${{ needs.plan.outputs.exp_id }}
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SHARD: ${{ matrix.shard }}
         run: |
           python3 - <<'PYEOF'
           import glob, json, os, shutil
@@ -2234,6 +2235,11 @@ jobs:
         run: |
           set -euo pipefail
           TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          RUN_START_MARKER="${OUT_BASE}/.run_start_marker_shard${SHARD}"
+          python3 scripts/ci/validate_exp2_extrap_worker.py \
+            --output-dir "${TARGET}" \
+            --run-start-marker "${RUN_START_MARKER}" \
+            --expected-domains "feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2612,11 +2618,43 @@ jobs:
           TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
           COUNT_PROTO=$(find "${TARGET}" -name "protocol_core_extrap_*.json" 2>/dev/null | wc -l)
           COUNT_BENCH=$(find "${TARGET}" \( -name "benchmark_results_extrap_shard*.json" -o -name "benchmark_results_extrap.json" \) 2>/dev/null | wc -l)
+          COUNT_REPORT=$(find "${TARGET}" -maxdepth 1 -name "discovery_reports_extrap.json" -type f 2>/dev/null | wc -l)
           echo "=== exp2_feynman_extrap output verification ==="
           echo "  Target dir                                    : ${TARGET}"
           echo "  protocol_core_extrap_*.json                   : ${COUNT_PROTO}"
           echo "  benchmark_results_extrap[_shard*].json        : ${COUNT_BENCH}"
+          echo "  discovery_reports_extrap.json                  : ${COUNT_REPORT}"
           find "${TARGET}" -type f 2>/dev/null | sort || true
+          if [[ "${COUNT_REPORT}" -ne 1 ]]; then
+            echo "::error::Exp2 extrapolation worker must persist exactly one discovery_reports_extrap.json sidecar."
+            exit 1
+          fi
+          python3 - "${TARGET}/discovery_reports_extrap.json" "${TARGET}/exp2_extrap_summary.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          sidecar_path, summary_path = map(Path, sys.argv[1:])
+          sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+          summary = json.loads(summary_path.read_text(encoding="utf-8"))
+          audit = summary.get("discovery_report_artifact")
+          if not isinstance(audit, dict):
+              raise SystemExit("worker summary is missing discovery_report_artifact audit")
+          digest = hashlib.sha256(sidecar_path.read_bytes()).hexdigest()
+          if audit.get("file") != sidecar_path.name or audit.get("sha256") != digest:
+              raise SystemExit("discovery report sidecar SHA-256 does not match worker summary")
+          if audit.get("bytes") != sidecar_path.stat().st_size:
+              raise SystemExit("discovery report sidecar byte count does not match worker summary")
+          if sidecar.get("schema_version") != "exp2_discovery_report_artifact_v1":
+              raise SystemExit("unexpected discovery report sidecar schema")
+          records = sidecar.get("records")
+          if not isinstance(records, list) or audit.get("report_count") != len(records):
+              raise SystemExit("discovery report sidecar record count does not match worker summary")
+          expected_status = "present" if records else "no_typed_discovery_reports"
+          if audit.get("status") != expected_status or sidecar.get("report_count") != len(records):
+              raise SystemExit("discovery report sidecar status/count is inconsistent")
+          if sidecar.get("selection_boundary", {}).get("far_evaluation_used_for_selection") is not False:
+              raise SystemExit("discovery report sidecar does not seal the far-evaluation selection boundary")
+          print(f"Validated durable discovery report sidecar: {len(records)} report(s), status={expected_status}, sha256={digest}")
+          PY
           if [[ "${COUNT_PROTO}" -eq 0 ]]; then
             echo "::error::exp2_feynman_extrap produced NO protocol_core_extrap_*.json in '${TARGET}'."
             echo "  The --extrap run may have crashed before writing results."
