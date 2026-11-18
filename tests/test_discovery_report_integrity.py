@@ -71,6 +71,7 @@ def _multi_basis_audit():
     from hashlib import sha256
     import json
 
+    group_id = "v60mb_" + sha256(json.dumps(["x-id", "y-id"], separators=(",", ":")).encode()).hexdigest()[:20]
     folds = [
         {"fold": 0, "training_row_indices": [2, 3], "validation_row_indices": [0],
          "recomputed_rmse": 0.09, "recomputed_nrmse": None, "recomputed_r2": None,
@@ -88,14 +89,14 @@ def _multi_basis_audit():
         "variable_names": ["x", "y"], "split_strategy": "kfold",
     }
     fingerprint_payload = {
-        "candidate_group_id": "v60mb_group", "basis_candidate_ids": ["x-id", "y-id"],
+        "candidate_group_id": group_id, "basis_candidate_ids": ["x-id", "y-id"],
         "basis_expressions": ["x", "y"], "source_provenance": [],
         "folds": folds, "aggregates": aggregates, "training_row_count": 4,
         "variable_names": ["x", "y"], "split_strategy": "kfold",
     }
     digest = lambda value: sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
     objective = {
-        "candidate_group_id": "v60mb_group", "basis_candidate_ids": ["x-id", "y-id"],
+        "candidate_group_id": group_id, "basis_candidate_ids": ["x-id", "y-id"],
         "basis_expressions": ["x", "y"], "source_provenance": [],
         "evidence_fingerprint": digest(fingerprint_payload), "verified_evidence_snapshot": snapshot,
         "fold_count": 2, "mean_validation_rmse": 0.1, "std_validation_rmse": 0.01,
@@ -111,8 +112,8 @@ def _multi_basis_audit():
         "primary_error_objective": "mean_validation_rmse",
         "objective_directions": {"mean_validation_rmse": "minimize", "std_validation_rmse": "minimize", "symbolic_complexity": "minimize"},
         "selection_performed": True, "far_or_evaluation_data_used": False,
-        "objective_evidence": [objective], "pareto_candidate_group_ids": ["v60mb_group"],
-        "selected_candidate_group_id": "v60mb_group", "selected_basis_candidate_ids": ["x-id", "y-id"],
+        "objective_evidence": [objective], "pareto_candidate_group_ids": [group_id],
+        "selected_candidate_group_id": group_id, "selected_basis_candidate_ids": ["x-id", "y-id"],
         "selected_basis_expressions": ["x", "y"],
         "selected_objective_evidence_sha256": objective["objective_evidence_sha256"],
     }
