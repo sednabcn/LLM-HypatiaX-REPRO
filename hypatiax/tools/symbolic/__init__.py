@@ -87,7 +87,11 @@ def __getattr__(name: str):
         "evaluate_nested_hybrid_structure_search_on_training_folds",
     }:
         module = import_module(".hybrid_fold_search", __name__)
-    elif name in {"canonicalize_symbolic_structure", "match_fold_discovered_structures"}:
+    elif name in {
+        "canonicalize_symbolic_structure",
+        "match_fold_discovered_structures",
+        "crosswalk_full_training_candidate_to_fold_structure",
+    }:
         module = import_module(".structural_matching", __name__)
     elif name == "select_pareto_discovery_report":
         module = import_module(".pareto_discovery", __name__)
