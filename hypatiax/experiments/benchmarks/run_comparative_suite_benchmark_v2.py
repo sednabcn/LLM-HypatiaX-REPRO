@@ -3387,6 +3387,73 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta = dict(metadata)
         if not _meta.get("domain"):
             _meta["domain"] = "general"
+
+        # Always activate the typed scientific contract for the Exp2
+        # HybridDiscovery arm. Only caller-declared units/domains/constraints
+        # are propagated; the adapter never infers physics from variable names.
+        _contract_spec = _meta.get("discovery_problem_spec")
+        if _contract_spec is None:
+            def _remap_declared_contract_mapping(value, field_name):
+                if value is None:
+                    return {}
+                if not isinstance(value, dict):
+                    raise TypeError(f"{field_name} must be a mapping")
+                remapped = {}
+                for declared_name, declared_value in value.items():
+                    if declared_name in var_names:
+                        safe_name = safe_names[var_names.index(declared_name)]
+                    elif declared_name in safe_names:
+                        safe_name = declared_name
+                    else:
+                        raise ValueError(
+                            f"{field_name} contains undeclared variable {declared_name!r}"
+                        )
+                    remapped[safe_name] = declared_value
+                return remapped
+
+            _declared_units = _remap_declared_contract_mapping(
+                _meta.get("variable_units"), "variable_units"
+            )
+            _declared_domains = _remap_declared_contract_mapping(
+                _meta.get("variable_domains"), "variable_domains"
+            )
+            _declared_constraints = _meta.get("discovery_constraints", [])
+            if not isinstance(_declared_constraints, list):
+                raise TypeError("discovery_constraints must be a list of declared constraint objects")
+            _target_unit = _meta.get("target_unit")
+            if _target_unit is not None and not isinstance(_target_unit, str):
+                raise TypeError("target_unit must be a string when declared")
+            _contract_spec = {
+                "schema_version": "1.0",
+                "target_name": str(
+                    _meta.get("target_name") or _meta.get("equation_name") or description or "target"
+                ),
+                "variable_names": list(safe_names),
+                "domain": str(_meta.get("domain") or "general"),
+                "target_unit": _target_unit,
+                "variable_units": _declared_units,
+                "variable_domains": _declared_domains,
+                "constraints": _declared_constraints,
+                "allowed_unary_operators": list(_tc_kwargs["unary_operators"]),
+                "allowed_binary_operators": list(_tc_kwargs["binary_operators"]),
+                "noise_model": _meta.get("noise_model"),
+                "split_protocol": dict(_tc_kwargs["training_only_search_validation"]),
+                "budget": {
+                    "max_search_attempts": _MAX_RETRIES_V50_2,
+                    "max_candidates": 100,
+                    "max_llm_calls": _MAX_RETRIES_V50_2,
+                    "seed": int(_meta.get("random_seed") or 42),
+                },
+                "metadata": {
+                    "contract_origin": "exp2_protocol_adapter",
+                    "physical_declarations_inferred": False,
+                },
+            }
+        if not isinstance(_contract_spec, dict):
+            raise TypeError("discovery_problem_spec must be a JSON object")
+        # The isolated worker validates the schema and exact sanitized variable
+        # names before constructing DiscoveryProblem.
+        _meta["discovery_problem_spec"] = _contract_spec
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
         )
@@ -3451,6 +3518,15 @@ class HybridSystemV50_2Method(BaseMethod):
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                     "benchmark_provenance": result.get("benchmark_provenance", {}),
+                    # Preserve the scientific report and contract audit across
+                    # the MethodResult boundary into protocol JSON artifacts.
+                    "discovery_report": result.get("discovery_report"),
+                    "discovery_problem_contract": (
+                        result.get("benchmark_provenance") or {}
+                    ).get("discovery_problem_contract", {}),
+                    "training_only_search_selection": result.get(
+                        "training_only_search_selection"
+                    ),
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
