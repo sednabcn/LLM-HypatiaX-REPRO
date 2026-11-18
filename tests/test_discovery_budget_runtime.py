@@ -81,3 +81,20 @@ def test_llm_request_audit_separates_reservation_start_and_response():
     assert audit["llm_calls_reserved"] == 1
     assert audit["llm_requests_started"] == 1
     assert audit["llm_responses_received"] == 1
+
+
+
+def test_expired_deadline_is_recorded(monkeypatch):
+    import hypatiax.tools.symbolic.discovery_budget_runtime as budget_module
+
+    runtime = DiscoveryBudgetRuntime(
+        DiscoveryBudget(max_wall_time_seconds=1.0)
+    )
+    monkeypatch.setattr(
+        budget_module.time,
+        "monotonic",
+        lambda: runtime.started_at + 2.0,
+    )
+
+    assert runtime.expired() is True
+    assert runtime.to_dict()["stop_reason"] == "max_wall_time_seconds"
