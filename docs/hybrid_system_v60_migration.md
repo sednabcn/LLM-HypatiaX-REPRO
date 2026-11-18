@@ -337,9 +337,13 @@ The typed V60 path now verifies the stage-18 final-model digest and exposes a
 canonical native result. The default remains the V50.2 compatibility result.
 Callers must explicitly set `metadata["v60_activate_native_model"] = True` to
 promote the finalized native model to the outward `formula`, `expression`,
-`final_formula`, `r2`, `rmse`, and `nrmse` fields. The untouched V50.2
-result is retained under `v50_2_compatibility_result`. If V60 has no credible
-final model, the opt-in handoff fails closed rather than silently falling back.
+`final_formula`, `r2`, `rmse`, and `nrmse` fields. In this explicit native
+mode, the V50.2 discovery method is not invoked; this prevents an unrelated
+legacy PySR/LLM search from running before the native result is returned.
+Accordingly, `v50_2_compatibility_result` is marked `not_executed` rather than
+containing a second model. Without the opt-in flag, V50.2 remains the ordinary
+discovery path. If V60 has no credible final model, the opt-in handoff fails
+closed rather than silently falling back.
 
 An optional frozen far set is supplied only after native training-only
 selection and full-training refit using
