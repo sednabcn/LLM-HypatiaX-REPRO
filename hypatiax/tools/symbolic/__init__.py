@@ -42,6 +42,7 @@ __all__ = [
     "evaluate_hybrid_candidate_on_training_folds",
     "canonicalize_symbolic_structure",
     "match_fold_discovered_structures",
+    "crosswalk_full_training_candidate_to_fold_structure",
     "select_pareto_discovery_report",
 ]
 
