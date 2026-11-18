@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
-import json
 from typing import Any, Mapping, Sequence
 
 from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
