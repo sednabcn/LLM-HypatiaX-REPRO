@@ -465,3 +465,19 @@ This is offline contract verification only. It does not refit a model, read
 training or far arrays, run discovery, launch providers, or alter selection.
 Regression-test source covers self-rehashed inconsistent training NRMSE and
 candidate-option substitution; no tests or CI are run as part of this change.
+
+
+## Stage 27 — exact Exp2 worker flat-output reconciliation
+
+The Exp2 worker validator now requires the flat benchmark artifact to contain
+exactly the method/equation identities declared by the current protocol files.
+Unexpected rows, malformed identities, duplicates, and missing rows are
+rejected. For each expected identity, the flat row's success flag and far-R2
+and far-RMSE values must agree with the corresponding protocol record (with
+finite numeric comparison and explicit null matching).
+
+This prevents stale, foreign, duplicated, or independently altered flat rows
+from being included in a worker summary marked complete. The check is an
+offline artifact reconciliation; it does not execute the benchmark or any
+experiment. Regression-test source covers unexpected identities, duplicate
+rows, and metric disagreement. No tests or CI are run as part of this change.
