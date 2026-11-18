@@ -745,7 +745,7 @@ class HybridDiscoverySystem:
                 if bool(getattr(record, "eligible", False))
             ]
             _expressions = {
-                re.sub(r"\\s+", "", str(getattr(record, "expression", ""))).replace("^", "**")
+                re.sub(r"\s+", "", str(getattr(record, "expression", ""))).replace("^", "**")
                 for record in _eligible
                 if str(getattr(record, "expression", "")).strip()
             }
