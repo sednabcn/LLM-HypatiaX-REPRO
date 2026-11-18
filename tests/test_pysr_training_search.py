@@ -100,7 +100,7 @@ def test_expired_deadline_prevents_starting_fold_search():
             created.append(self)
             raise AssertionError("expired fold search must not start")
 
-    with pytest.raises(ValueError, match="insufficient valid training folds"):
+    with pytest.raises(TimeoutError, match="before fixed-candidate fold evaluation"):
         evaluate_pysr_search_on_training_folds(
             MustNotFit, X, y, folds, minimum_valid_folds=2,
             budget_runtime=deadline,
@@ -125,9 +125,52 @@ def test_fold_result_returned_after_deadline_is_rejected():
             calls.append("get_best")
             return super().get_best()
 
-    with pytest.raises(ValueError, match="insufficient valid training folds"):
+    with pytest.raises(TimeoutError, match="training-fold search returned after"):
         evaluate_pysr_search_on_training_folds(
             LatePySR, X, y, folds, minimum_valid_folds=2,
             budget_runtime=deadline,
         )
     assert calls == ["fit"]
+
+
+
+def test_validation_prediction_returned_after_deadline_is_rejected():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=12)
+    deadline = FakeDeadline()
+    calls = []
+
+    class LatePredictionPySR(FakePySR):
+        def predict(self, X):
+            calls.append("predict")
+            deadline.is_expired = True
+            return super().predict(X)
+
+    with pytest.raises(TimeoutError, match="validation prediction returned after"):
+        evaluate_pysr_search_on_training_folds(
+            LatePredictionPySR, X, y, folds, minimum_valid_folds=2,
+            budget_runtime=deadline,
+        )
+    assert calls == ["predict"]
+
+
+def test_expression_extraction_returned_after_deadline_is_rejected():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=15)
+    deadline = FakeDeadline()
+    calls = []
+
+    class LateExpressionPySR(FakePySR):
+        def get_best(self):
+            calls.append("get_best")
+            deadline.is_expired = True
+            return super().get_best()
+
+    with pytest.raises(TimeoutError, match="expression extraction returned after"):
+        evaluate_pysr_search_on_training_folds(
+            LateExpressionPySR, X, y, folds, minimum_valid_folds=2,
+            budget_runtime=deadline,
+        )
+    assert calls == ["get_best"]
