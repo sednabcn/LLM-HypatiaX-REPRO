@@ -933,9 +933,10 @@ class HybridDiscoverySystem:
                         _raw_inner_candidates = []
                     _envelope_item_count = len(_raw_inner_candidates)
                     _envelope_malformed_count = 0
-                    _generation_summary = result.get("discovery_candidate_generation", {})
+                    _generation_summary_raw = result.get("discovery_candidate_generation")
                     _generation_summary = (
-                        dict(_generation_summary) if isinstance(_generation_summary, dict) else {}
+                        dict(_generation_summary_raw)
+                        if isinstance(_generation_summary_raw, dict) else None
                     )
                     _generation_candidate_count = (
                         _generation_summary.get("deduplicated_candidate_count")
@@ -1158,8 +1159,8 @@ class HybridDiscoverySystem:
                         "ingestion_complete": (
                             _envelope_items_are_list
                             and _envelope_malformed_count == 0
-                            and _generation_summary.get("missing_expression_count", 0) == 0
-                            and _generation_summary.get("deduplication_count", 0) == 0
+                            and (_generation_summary or {}).get("missing_expression_count", 0) == 0
+                            and (_generation_summary or {}).get("deduplication_count", 0) == 0
                             and (
                                 _generation_candidate_count is None
                                 or (
