@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -213,6 +214,28 @@ def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
                 if (isinstance(supplied_node_count, bool) or not isinstance(supplied_node_count, int)
                     or supplied_node_count < 0 or supplied_node_count != complexity):
                     raise ValueError(f"Pareto candidate[{index}] complexity objective does not match supplied complexity evidence")
+            else:
+                expression = candidate.get("normalized_expression") or candidate.get("expression")
+                parser_path = Path(__file__).resolve().parents[2] / "hypatiax" / "tools" / "validation" / "safe_sympy_parser.py"
+                spec = importlib.util.spec_from_file_location(
+                    "_exp2_safe_sympy_parser", parser_path
+                )
+                if spec is None or spec.loader is None:
+                    raise ValueError(f"Pareto candidate[{index}] safe expression parser is unavailable")
+                parser_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(parser_module)
+                try:
+                    import sympy as sp
+                    parsed = parser_module.parse_sympy_expression(expression)
+                    recomputed_complexity = int(sp.count_ops(parsed, visual=False))
+                except Exception as exc:
+                    raise ValueError(
+                        f"Pareto candidate[{index}] complexity cannot be recomputed from its expression"
+                    ) from exc
+                if complexity != recomputed_complexity:
+                    raise ValueError(
+                        f"Pareto candidate[{index}] complexity objective does not match parsed expression"
+                    )
             if (isinstance(stability, bool) or not isinstance(stability, (int, float))
                 or not math.isfinite(float(stability)) or not 0.0 <= float(stability) <= 1.0):
                 raise ValueError(f"Pareto candidate[{index}] expression stability audit is invalid")
