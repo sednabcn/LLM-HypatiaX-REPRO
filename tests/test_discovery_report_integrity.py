@@ -328,3 +328,51 @@ def test_worker_verifier_rejects_completed_far_evaluation_without_final_model():
     payload["far_evaluation"] = _native_far_evaluation_audit("b" * 64)
     with pytest.raises(ValueError, match="requires the selected final-model audit"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+
+def _reseal_final_model_digest(audit):
+    from hashlib import sha256
+    import json
+    model = audit["selected_model"]
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(model, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+
+
+def test_worker_verifier_rejects_training_nrmse_inconsistent_with_rmse_and_target_scale():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["training_nrmse"] = 0.5
+    _reseal_final_model_digest(audit)
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="training NRMSE does not reproduce"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_requires_null_training_nrmse_for_zero_variance_target():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["training_target_std"] = 0.0
+    audit["selected_model"]["training_nrmse"] = 0.0
+    _reseal_final_model_digest(audit)
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="must be null for a zero-variance target"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_negative_far_nrmse_and_non_hex_digest():
+    payload = copy.deepcopy(_envelope()["report"])
+    final_model = _native_final_model_audit()
+    payload["provenance"]["native_final_model"] = final_model
+    far = _native_far_evaluation_audit(final_model["selected_model_sha256"])
+    far["far_metrics"]["nrmse_by_training_target_std"] = -0.1
+    payload["far_evaluation"] = far
+    with pytest.raises(ValueError, match="must be non-negative"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+    far = _native_far_evaluation_audit(final_model["selected_model_sha256"])
+    far["far_set_sha256"] = "g" * 64
+    payload["far_evaluation"] = far
+    with pytest.raises(ValueError, match="valid lowercase SHA-256"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
