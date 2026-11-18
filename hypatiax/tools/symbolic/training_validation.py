@@ -251,6 +251,9 @@ def make_symbolic_refit_predictor(
     names = tuple(variable_names)
     if not names or len(set(names)) != len(names):
         raise ValueError("variable_names must be non-empty and unique")
+    # PySR's printable equations use Julia-style '^' for powers; the
+    # restricted Python AST parser requires '**'. No other syntax is rewritten.
+    expression = str(expression).replace("^", "**")
     parsed = parse_sympy_expression(expression, list(names))
     symbols = [sp.Symbol(name, real=True) for name in names]
     exponent_literals = {
