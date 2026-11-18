@@ -345,6 +345,14 @@ containing a second model. Without the opt-in flag, V50.2 remains the ordinary
 discovery path. If V60 has no credible final model, the opt-in handoff fails
 closed rather than silently falling back.
 
+The historical `discover_validate_interpret()` signature remains a V50.2
+compatibility entry point because it has no typed `DiscoveryProblem` or
+per-call metadata parameter. It cannot activate native V60. Each invocation
+clears prior V60 audit and handoff state before delegating, so a previous
+native `discover()` call cannot leak its selected formula or provenance into
+the legacy result. Use `discover()` with a typed problem contract and explicit
+native-handoff metadata to invoke the native V60 pipeline.
+
 An optional frozen far set is supplied only after native training-only
 selection and full-training refit using
 `metadata["v60_far_evaluation"] = {"X_far": ..., "y_far": ...}`. The evaluator

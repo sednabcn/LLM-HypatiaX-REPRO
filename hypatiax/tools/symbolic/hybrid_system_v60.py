@@ -587,5 +587,29 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         return self._annotate_v60_result(result)
 
     def discover_validate_interpret(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Preserve the legacy entry point while exposing V60 provenance."""
-        return self._annotate_v60_result(super().discover_validate_interpret(*args, **kwargs))
+        """Run the legacy compatibility entry point without leaking V60 call state.
+
+        This historical signature has no typed DiscoveryProblem/metadata
+        channel, so it cannot activate the native V60 pipeline. Reset every
+        per-call V60 field before delegating; otherwise a prior discover()
+        call could cause stale native audits or even a stale native formula
+        to be attached to this unrelated legacy result.
+        """
+        self._last_v60_run_context = None
+        self._last_v60_candidate_proposals = ()
+        self._last_v60_normalization_audit = {}
+        self._last_v60_training_fit_audit = {}
+        self._last_v60_multi_basis_fit_audit = {}
+        self._last_v60_multi_basis_validation_audit = {}
+        self._last_v60_multi_basis_evidence_audit = {}
+        self._last_v60_multi_basis_selection_audit = {}
+        self._last_v60_gate_audit = {}
+        self._last_v60_training_validation_audit = {}
+        self._last_v60_objective_selection_audit = {}
+        self._last_v60_residual_stability_audit = {}
+        self._last_v60_external_producer_audit = {}
+        self._last_v60_final_model_audit = {}
+        self._last_v60_far_evaluation_audit = {}
+        self._last_v60_activate_native_result = False
+        result = super().discover_validate_interpret(*args, **kwargs)
+        return self._annotate_v60_result(result)
