@@ -2,57 +2,48 @@
 
 ## Status
 
-V60 is introduced as a separate, opt-in implementation name in
-`hypatiax/tools/symbolic/hybrid_system_v60.py`. The first increment is an
-explicit compatibility adapter over `HybridDiscoverySystem` in
-`hybrid_system_v50_2.py`; it is **not** the completed staged V60 architecture
-and makes no claim of improved scientific performance.
+V60 remains opt-in. Its first native stage now performs typed problem-contract
+preflight and captures an immutable, data-free run context in
+`hypatiax/tools/symbolic/hybrid_system_v60.py`. Candidate generation,
+normalization, scientific gates, validation, and selection still delegate to
+the V50.2 compatibility baseline. This is a staged migration, not a completed
+native V60 pipeline and not a claim of improved scientific performance.
 
-The adapter preserves the existing constructor and public discovery entry
-points. Its result includes `implementation_provenance` with:
+For calls carrying a typed contract, V60 accepts either:
+- `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
+- `metadata["discovery_problem_spec"]`: a strict JSON-safe mapping parsed by
+  `discovery_problem_from_dict()`.
 
+The preflight checks exact variable-name/order alignment, two-dimensional
+feature shape, feature width, and one target per feature row. It records a
+canonical SHA-256 contract digest plus target/variable identity and input
+shapes. It does not retain training values or accept far/evaluation data.
+Malformed or misaligned explicit contracts fail closed. Calls without a
+typed contract retain the compatibility path.
+
+Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: v50_2_compatibility_adapter`
+- `implementation_mode: native_contract_preflight_v50_2_discovery`
 - `native_v60_pipeline: false`
+- `native_v60_stages: [typed_problem_contract_and_immutable_run_context]`
+- `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
-
-This explicit marker prevents downstream reporting from mistaking the
-compatibility bridge for native V60 execution.
 
 ## Selection
 
-The reproducibility configuration keeps V50.2 as the default:
+The reproducibility configuration keeps V50.2 as the default. Callers may
+select V60 explicitly with `engine.implementation: "v60"` through the factory
+or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
-```yaml
-engine:
-  name: "hybrid_system_v50_2"
-  version: "5.4"
-  implementation: "v50_2"
-```
+## Remaining native V60 stages
 
-Callers that deliberately opt in can set `engine.implementation: "v60"`
-and construct through
-`create_hybrid_discovery_system_from_config(config, ...)`. Direct callers may
-use `create_hybrid_discovery_system("v60", ...)`. Unknown selectors fail
-closed; the factory does not silently fall back.
-
-This increment adds a version-selection API, not an automatic change to
-existing experiment runners. Existing direct V50.2 imports continue to use
-V50.2 until a runner explicitly adopts the factory.
-
-## Planned native V60 stages
-
-The compatibility boundary is intended to be replaced incrementally by
-independently versioned components:
-
-1. Typed problem-contract validation and immutable run context.
-2. Candidate generation with bounded LLM/PySR producer adapters.
-3. Candidate normalization, identity, deduplication, and lineage.
-4. Hard scientific gates and separately recorded soft diagnostics.
-5. Training-only fold evidence, residual diagnostics, and structure stability.
-6. Pareto selection with independently verifiable objective evidence.
-7. Frozen far-set evaluation after selection.
-8. Versioned discovery report and worker-side integrity verification.
+1. Bounded candidate generation with LLM/PySR producer adapters.
+2. Candidate normalization, identity, deduplication, and lineage.
+3. Hard scientific gates and separately recorded soft diagnostics.
+4. Training-only fold evidence, residual diagnostics, and structure stability.
+5. Pareto selection with independently verifiable objective evidence.
+6. Frozen far-set evaluation after selection.
+7. Versioned discovery report and worker-side integrity verification.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -61,12 +52,11 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
 
 ## Migration rules and limitations
 
-- V50.2 remains the default and must not be modified merely to introduce V60.
-- V60 is opt-in; no silent fallback from V60 to V50.2 is permitted.
-- The adapter currently executes V50.2 behavior. It does not yet provide native
-  V60 stage isolation, new selection semantics, or performance improvements.
-- The implementation should be migrated stage-by-stage with offline regression
-  source coverage and CI verification. No benchmark or scientific improvement
-  claim is valid until explicitly authorized evaluation provides evidence.
-- Do not launch experiments, workers, benchmarks, smoke workflows, or live LLM
-  calls as part of architecture implementation.
+- V50.2 remains the default and is not modified by this stage.
+- V60 is opt-in; no silent selector fallback is permitted.
+- V60 currently owns only contract preflight/run-context capture. Discovery
+  behavior after preflight remains V50.2.
+- No benchmark or scientific improvement claim is valid until explicitly
+  authorized evaluation provides evidence.
+- Do not launch experiments, workers, benchmarks, smoke workflows, or live
+  LLM calls as part of architecture implementation.
