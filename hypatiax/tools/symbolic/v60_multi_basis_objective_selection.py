@@ -146,6 +146,12 @@ def select_native_multi_basis_candidates_from_verified_evidence(
 
     input_count = len(validation_records)
     cap = min(input_count, max_groups, max_search_attempts)
+    if evidence_audit.get("input_group_count") != input_count:
+        raise ValueError("verifier input group count does not match validation evidence")
+    if evidence_audit.get("attempted_group_count") != cap:
+        raise ValueError("verifier attempted group count does not match the shared selection budget")
+    if evidence_audit.get("budget_truncated_count") != input_count - cap:
+        raise ValueError("verifier budget accounting does not reproduce")
     ordered_ids = [record.get("candidate_group_id") for record in validation_records[:cap]]
     raw_evidence: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
@@ -199,6 +205,8 @@ def select_native_multi_basis_candidates_from_verified_evidence(
                 raise ValueError("verified fold evidence is incomplete")
             if validation.get("fold_count") != fold_count:
                 raise ValueError("validation group fold count is incomplete")
+            if validation.get("split_strategy") != validation_audit.get("split_strategy"):
+                raise ValueError("validation group split strategy does not match the audit")
             validation_folds = validation.get("folds")
             if not isinstance(validation_folds, list) or len(validation_folds) != fold_count:
                 raise ValueError("serialized validation fold evidence is incomplete")
