@@ -157,7 +157,7 @@ def build_native_v60_result(final_model_audit: Mapping[str, Any]) -> dict[str, A
         "formula": model["fitted_expression"],
         "expression": model["fitted_expression"],
         "final_formula": model["fitted_expression"],
-        "variable_names": list(model.get("variable_names", [])),
+        "variable_names": list(model["variable_names"]),
         "r2": model.get("training_r2"),
         "rmse": model.get("training_rmse"),
         "nrmse": model.get("training_nrmse"),
