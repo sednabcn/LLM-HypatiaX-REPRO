@@ -40,6 +40,8 @@ __all__ = [
     "HybridFoldPySRSearcher",
     "select_hybrid_search_configuration",
     "evaluate_hybrid_candidate_on_training_folds",
+    "canonicalize_symbolic_structure",
+    "match_fold_discovered_structures",
     "select_pareto_discovery_report",
 ]
 
@@ -82,6 +84,8 @@ def __getattr__(name: str):
         "evaluate_hybrid_candidate_on_training_folds",
     }:
         module = import_module(".hybrid_fold_search", __name__)
+    elif name in {"canonicalize_symbolic_structure", "match_fold_discovered_structures"}:
+        module = import_module(".structural_matching", __name__)
     elif name == "select_pareto_discovery_report":
         module = import_module(".pareto_discovery", __name__)
     elif name in {
