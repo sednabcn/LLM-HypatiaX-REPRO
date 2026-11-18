@@ -249,3 +249,34 @@ def test_engine_candidate_with_engineered_feature_passes_gate_and_fold_report():
     assert "sqrt" in candidate["expression"]
     assert candidate["metrics"]["training_validation"]["valid_fold_count"] == 2
     assert result["candidate_selection_policy"] == "training_only_physics_gated_pareto"
+
+
+
+def test_llm_selected_candidate_exposes_identity_inner_transform_contract():
+    from hypatiax.tools.symbolic.symbolic_engine import SymbolicEngineWithLLM
+
+    engine = SymbolicEngineWithLLM.__new__(SymbolicEngineWithLLM)
+    engine.llm_mode = "hybrid"
+    engine.llm_engine = SimpleNamespace(config=SimpleNamespace(enabled=True))
+    engine.model = None
+    engine._discover_hybrid = lambda *args, **kwargs: {
+        "expression": "0.5*x",
+        "r2_score": 0.99,
+        "variable_names": ["x"],
+        "llm_mode": "hybrid_llm_better",
+    }
+
+    result = engine.discover(
+        np.array([[1.0], [2.0], [3.0], [4.0]]),
+        np.array([0.5, 1.0, 1.5, 2.0]),
+        variable_names=["x"],
+        equation_name="linear response",
+    )
+
+    assert result["fit_expression"] == "0.5*x"
+    assert result["fit_variable_names"] == ["x"]
+    assert result["fit_transform_state"]["x_scales"] == [1.0]
+    assert result["fit_transform_state"]["y_std"] == 1.0
+    assert result["fit_transform_state"]["transform_source"] == (
+        "llm_outer_fit_space_identity_inner_transform"
+    )
