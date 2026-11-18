@@ -55,6 +55,7 @@ __all__ = [
     "ingest_external_candidate_proposals",
     "fit_native_multi_basis_candidates",
     "validate_native_multi_basis_candidates",
+    "verify_native_multi_basis_validation_evidence",
 ]
 
 
@@ -117,6 +118,8 @@ def __getattr__(name: str):
         module = import_module(".v60_multi_basis_fitting", __name__)
     elif name == "validate_native_multi_basis_candidates":
         module = import_module(".v60_multi_basis_validation", __name__)
+    elif name == "verify_native_multi_basis_validation_evidence":
+        module = import_module(".v60_multi_basis_evidence", __name__)
     elif name in {
         "DiscoveryProblem",
         "discovery_problem_from_dict",
