@@ -207,6 +207,12 @@ def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
             stability = selection.get("expression_stability_fraction")
             if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
                 raise ValueError(f"Pareto candidate[{index}] complexity audit is invalid")
+            supplied_complexity = metrics.get("complexity")
+            if isinstance(supplied_complexity, dict) and "node_count" in supplied_complexity:
+                supplied_node_count = supplied_complexity.get("node_count")
+                if (isinstance(supplied_node_count, bool) or not isinstance(supplied_node_count, int)
+                    or supplied_node_count < 0 or supplied_node_count != complexity):
+                    raise ValueError(f"Pareto candidate[{index}] complexity objective does not match supplied complexity evidence")
             if (isinstance(stability, bool) or not isinstance(stability, (int, float))
                 or not math.isfinite(float(stability)) or not 0.0 <= float(stability) <= 1.0):
                 raise ValueError(f"Pareto candidate[{index}] expression stability audit is invalid")
