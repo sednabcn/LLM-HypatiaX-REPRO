@@ -20,6 +20,7 @@ from .training_validation import (
     make_symbolic_refit_predictor,
     make_training_folds,
 )
+from .pysr_training_search import evaluate_pysr_search_on_training_folds
 from .pysr_strategy_selection import (
     TrainingOnlySearchSelection,
     select_pysr_search_strategy_on_training_folds,
@@ -268,4 +269,86 @@ __all__ = [
     "HybridFoldPySRSearcher",
     "select_hybrid_search_configuration",
     "evaluate_hybrid_candidate_on_training_folds",
+    "evaluate_nested_hybrid_structure_search_on_training_folds",
 ]
+
+
+
+def evaluate_nested_hybrid_structure_search_on_training_folds(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    folds,
+    *,
+    variable_names: list[str],
+    equation_name: str,
+    domain: str,
+    base_config: DiscoveryConfig,
+    parsimony: float | None = None,
+    seed: int = 42,
+    fold_iterations: int = 20,
+    fold_timeout_seconds: int = 20,
+    allow_pow: bool | None = None,
+    minimum_valid_folds: int = 2,
+) -> dict:
+    """Run a fresh Hybrid/PySR structural search inside every training fold.
+
+    Unlike fixed-expression coefficient refitting, each fold independently
+    discovers its own symbolic structure using only that fold's fitting rows.
+    The held-out partition is passed only to the fitted fold searcher's
+    predict() method. This produces procedure-level nested validation evidence;
+    it is not a candidate-specific score for an equation discovered later on
+    the complete training region.
+    """
+    X = np.asarray(X_train, dtype=float)
+    y = np.asarray(y_train, dtype=float).reshape(-1)
+    fold_tuple = tuple(folds)
+    if X.ndim != 2 or X.shape[0] != y.size:
+        raise ValueError("X_train must be 2D and aligned with y_train")
+    if X.shape[1] != len(variable_names):
+        raise ValueError("variable_names do not match X_train columns")
+    if not fold_tuple:
+        raise ValueError("at least one training fold is required")
+    if not np.isfinite(X).all() or not np.isfinite(y).all():
+        raise ValueError("training arrays must contain only finite values")
+    if minimum_valid_folds < 1 or minimum_valid_folds > len(fold_tuple):
+        raise ValueError("minimum_valid_folds must be within the supplied fold count")
+
+    selected_parsimony = (
+        float(base_config.parsimony) if parsimony is None else float(parsimony)
+    )
+
+    def make_searcher(fold_seed: int):
+        return HybridFoldPySRSearcher(
+            config=base_config,
+            domain=domain,
+            variable_names=list(variable_names),
+            equation_name=equation_name,
+            seed=fold_seed,
+            parsimony=selected_parsimony,
+            fold_iterations=fold_iterations,
+            fold_timeout_seconds=fold_timeout_seconds,
+            allow_pow=allow_pow,
+        )
+
+    summary = evaluate_pysr_search_on_training_folds(
+        make_searcher,
+        X,
+        y,
+        fold_tuple,
+        seed=int(seed),
+        minimum_valid_folds=minimum_valid_folds,
+    )
+    result = summary.to_dict()
+    result.update({
+        "validation_design": "nested_fresh_symbolic_search_per_training_fold",
+        "selection_role": "discovery_procedure_validation_only",
+        "candidate_specific_score": False,
+        "fold_structures_are_not_averaged": True,
+        "structure_stability_is_diagnostic_only": True,
+        "far_test_data_used": False,
+        "llm_enabled_in_fold_search": False,
+        "final_full_training_discovery_required": True,
+    })
+    return result
+
+

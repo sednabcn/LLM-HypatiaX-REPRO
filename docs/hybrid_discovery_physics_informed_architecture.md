@@ -1075,3 +1075,53 @@ The production path now supports raw, geometric-mean, and directed-ratio
 candidate expressions, including extreme-scale X normalization and both
 outer signed-log and inner standard-deviation target transforms. All fold
 parameters are learned on fitting rows and frozen for validation rows.
+
+
+
+## 23. Nested fold-local structural-search evidence
+
+The fixed-structure evaluator in Section 22 remains useful for comparing a
+known full-training candidate, but its fold scores cannot be interpreted as
+unbiased validation of the discovery procedure: the candidate structure was
+already selected using all training rows.
+
+This section adds
+`evaluate_nested_hybrid_structure_search_on_training_folds(...)` in
+`hypatiax/tools/symbolic/hybrid_fold_search.py`. For every supplied internal
+training fold, it creates a fresh Hybrid/PySR searcher and discovers a new
+symbolic structure using only that fold's fitting rows. The fold's held-out
+training rows are used only for prediction and metric calculation. The adapter
+relearns the outer signed-log decisions and delegates inner feature scaling,
+GM/ratio construction, and target scaling to a fresh SymbolicEngine instance;
+the fitted transform state is frozen for held-out prediction.
+
+### Evidence contract
+
+- The API accepts only the training-region arrays and explicit fold indices;
+  there is no far/test input.
+- Every fold receives a fresh engine and a deterministic fold seed.
+- Fold search is pure PySR; no LLM proposal/API call is made.
+- The result records each fold's independently discovered expression,
+  fit/validation row counts, normalized error, and conservative expression
+  recurrence diagnostics.
+- Fold equations are not averaged or silently treated as one final equation.
+  Exact expression recurrence is descriptive only, not algebraic equivalence.
+- The result is explicitly marked
+  `selection_role=discovery_procedure_validation_only` and
+  `candidate_specific_score=false`. It must not be attached as though it
+  were validation evidence for a separate equation discovered on the complete
+  training region.
+- A final full-training discovery remains necessary after the procedure-level
+  assessment.
+
+### Remaining boundary
+
+This closes the gap for measuring how the symbolic discovery procedure
+behaves when structure search itself is confined to each fitting fold. It does
+not yet provide candidate-specific nested Pareto selection across folds:
+doing that safely requires a conservative structural identity/matching
+contract for independently discovered equations, plus a policy for candidates
+that appear in only some folds. Until that exists, the production
+candidate-level Pareto report continues to use the fixed-structure fold
+refit evidence from Section 22 and must retain its methodological caveat.
+No far/test values or metrics participate in either fold procedure.
