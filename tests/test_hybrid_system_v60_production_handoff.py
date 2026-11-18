@@ -16,12 +16,44 @@ from hypatiax.tools.symbolic.v60_production_handoff import (
 
 
 def _audit(model):
+    # Complete compact fixtures to the same semantic contract emitted by the
+    # native finalizer; callers below can then mutate/reseal individual fields.
+    expressions = model["basis_expressions"]
+    ids = model["basis_candidate_ids"]
+    model.setdefault("family", "single_basis" if len(expressions) == 1 else "multi_basis")
+    model.setdefault("candidate_id", ids[0] if len(expressions) == 1 else None)
+    model.setdefault("candidate_group_id", None if len(expressions) == 1 else "g1")
+    model.setdefault("training_row_count", 8)
+    model.setdefault("training_target_std", 1.0)
+    model.setdefault("training_rmse", 0.0)
+    model.setdefault("training_nrmse", 0.0)
+    model.setdefault("training_r2", 1.0)
+    model.setdefault("training_design_rank", len(expressions) + 1)
+    model.setdefault("training_design_condition_number", 1.0)
+    model.setdefault("selection_metric", "cv_nrmse")
+    model.setdefault("cross_validation_metric", 0.0)
+    model.setdefault("cross_validation_metric_std", 0.0)
+    model.setdefault("symbolic_complexity", 1 if len(expressions) == 1 else 3)
+    option = {
+        "family": model["family"],
+        "candidate_id": model["candidate_id"],
+        "candidate_group_id": model["candidate_group_id"],
+        "candidate_ids": ids if len(expressions) > 1 else None,
+        "expressions": expressions,
+        "cv_rmse": 0.0,
+        "cv_nrmse": 0.0,
+        "cv_rmse_std": 0.0,
+        "cv_nrmse_std": 0.0,
+        "complexity": model["symbolic_complexity"],
+    }
     encoded = json.dumps(model, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return {
         "schema": "v60_native_final_model_v1",
         "execution_status": "selected",
         "selection_performed": True,
         "far_or_evaluation_data_used": False,
+        "objective_metric": "cv_nrmse",
+        "candidate_options": [option],
         "selected_model": model,
         "selected_model_sha256": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
     }
@@ -126,6 +158,34 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "fitted expression"):
             verify_final_model_audit(_audit(model))
+
+    def test_self_rehashed_inconsistent_training_nrmse_is_rejected(self):
+        model = {
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "coefficients": [2.0, 1.0],
+            "fitted_expression": "(2)*(x) + (1)",
+        }
+        audit = _audit(model)
+        audit["selected_model"]["training_nrmse"] = 7.0
+        encoded = json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False)
+        audit["selected_model_sha256"] = hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+        with self.assertRaisesRegex(ValueError, "training NRMSE"):
+            verify_final_model_audit(audit)
+
+    def test_self_rehashed_cross_family_option_substitution_is_rejected(self):
+        model = {
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "coefficients": [2.0, 1.0],
+            "fitted_expression": "(2)*(x) + (1)",
+        }
+        audit = _audit(model)
+        audit["candidate_options"][0]["cv_nrmse"] = 0.5
+        with self.assertRaisesRegex(ValueError, "cross-family winner"):
+            verify_final_model_audit(audit)
 
     def test_tampered_final_model_is_rejected(self):
         audit = _audit({
