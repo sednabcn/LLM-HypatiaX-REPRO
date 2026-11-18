@@ -112,10 +112,25 @@ It does not rank candidates, retry, update the selection audit, or return any
 far metric to discovery/selection. It is not called by `discover()` and no far
 arrays are added to `DiscoveryProblem` or the selector interface.
 
+## Bounded external producer ingestion
+
+Typed-contract calls may provide completed external proposals in
+`metadata["v60_external_candidate_proposals"]`, with `llm_proposals`,
+`pysr_proposals`, and explicit usage counters (`llm_call_count`,
+`llm_token_count`, `pysr_search_attempt_count`). The ingestion boundary checks
+source attribution, expression/strategy/seed types, and declared LLM/PySR
+budgets, then applies a shared candidate/search-attempt ceiling before common
+normalization and scientific gates. It records rejected proposals and budget
+truncation. This is an adapter boundary only: it does not invoke providers,
+load credentials, or perform LLM/PySR searches. The caller is responsible for
+accurately reporting upstream usage. External proposal expressions pass
+through the same restricted parser, semantic deduplication, hard gates,
+training-only validation, and evidence-based selection as native templates.
+
 ## Remaining native V60 stages
 
-1. Bounded LLM/PySR producer adapters and richer native candidate fitting
-   beyond the current single-basis affine least-squares stage.
+1. Richer native candidate fitting beyond the current single-basis affine
+   least-squares stage.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -163,3 +178,8 @@ and any indication that far-evaluation evidence influenced selection.
 `seal_discovery_report()` is available for trusted report producers. The
 far-evaluation section remains a separate report field and is empty at
 discovery time; post-selection evaluation must not mutate selection evidence.
+
+
+The result provenance includes `native_v60_external_producer_audit`, including
+reported usage, producer-call status, accepted/rejected counts, and budget
+truncation. The audit explicitly records `producer_calls_performed: false`.
