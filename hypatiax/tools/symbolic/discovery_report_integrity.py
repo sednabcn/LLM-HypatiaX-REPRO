@@ -136,7 +136,7 @@ def build_native_discovery_report(
         if isinstance(item, Mapping)
     }
     validation_by_id = {
-        item.get("native_candidate_id"): item
+        item.get("candidate_id"): item
         for item in validation_audit.get("candidate_validation", [])
         if isinstance(item, Mapping)
     }
