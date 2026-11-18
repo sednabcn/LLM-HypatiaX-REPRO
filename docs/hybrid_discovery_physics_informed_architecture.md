@@ -1329,3 +1329,25 @@ after the deadline, or candidate validation consumes the remaining time, that
 new candidate is marked `rejected_deadline` and cannot become the selected
 result. Previously completed eligible candidates remain available; no
 incomplete or late-returning candidate is promoted.
+
+
+## 30. End-to-end deadline enforcement inside training-fold searches
+
+The wall-time limit is a single per-discovery monotonic deadline, not a fresh
+allowance for each stage. Training-only search configuration selection and
+optional nested structural validation now receive that same runtime deadline.
+Each fresh fold search checks the deadline before it starts and again
+immediately after the underlying symbolic fit returns. A fit that completes
+after the deadline is rejected and cannot contribute a validation score or
+structure-recurrence evidence.
+
+This remains cooperative enforcement: an in-flight PySR fit is not interrupted.
+The deadline prevents subsequent folds/strategies from starting and rejects
+late results. Consequently, an expired fold-search stage fails closed rather
+than selecting a strategy from partial or late evidence. The final full-training
+search remains separately guarded by the outer retry deadline checks.
+
+The search-attempt counter continues to mean outer HybridDiscovery retries;
+fold searches are not re-labelled as outer attempts. Fold-level work is bounded
+by the shared wall-time deadline and its existing explicit fold iteration and
+per-fit timeout settings. No far/test data is passed to these stages.
