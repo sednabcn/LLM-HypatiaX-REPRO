@@ -1252,3 +1252,29 @@ The nested searches use only the existing internal training folds, remain
 LLM-free, and do not accept far/test arrays. The feature defaults off for
 backward compatibility. Set `require_for_selection=False` only when the
 crosswalk is desired as an audit annotation rather than a selection gate.
+
+
+## 26. Serialized scientific contracts at the Exp2 subprocess boundary
+
+`HybridSystemV50_2Method` now accepts an optional JSON-safe `discovery_problem_spec` in task metadata. The isolated PySR worker reconstructs it as a typed `DiscoveryProblem` with `discovery_problem_from_dict()` before calling HybridDiscoverySystem. This allows the candidate validation, fold evidence, and Pareto path to operate across the subprocess boundary without weakening the engine's typed-contract requirement.
+
+Example metadata (all scientific assumptions must be supplied by the caller):
+
+```python
+"discovery_problem_spec": {
+    "schema_version": "1.0",
+    "target_name": "target",
+    "variable_names": ["x", "v"],
+    "domain": "mechanics",
+    "target_unit": "m",
+    "variable_units": {"x": "m", "v": "m/s"},
+    "variable_domains": {
+        "x": {"min": 0.0, "max": 10.0},
+        "v": {"min": 0.0, "max": 5.0},
+    },
+    "constraints": [],
+    "budget": {"seed": 42, "max_llm_calls": 1},
+}
+```
+
+The variable names must exactly match the worker's feature names after reserved-name sanitization. This version fails closed on mismatch rather than silently remapping units or constraint parameters. The deserializer rejects unknown fields and unsupported schema versions. It does not infer units, domains, constraints, target names, or physics from equation descriptions or variable labels. Omit the spec to retain the legacy discovery path. Nested structural evidence remains independently opt-in under `training_only_search_validation.nested_structure_evidence`.
