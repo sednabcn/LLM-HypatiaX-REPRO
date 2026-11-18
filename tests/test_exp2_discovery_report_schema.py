@@ -372,3 +372,75 @@ def test_deduplicated_candidate_retains_cross_source_provenance_for_worker_audit
         },
     })
     VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+def _candidate_envelope_audit():
+    return {
+        "schema": "discovery_candidates_v1",
+        "container_valid": True,
+        "declared_item_count": 3,
+        "retained_item_count": 3,
+        "malformed_item_count": 1,
+        "ingestion_failure_count": 1,
+        "generation_reported_candidate_count": 3,
+        "count_matches_generation_metadata": True,
+        "ingestion_complete": False,
+    }
+
+
+def test_candidate_envelope_audit_recomputes_counts_and_completeness():
+    report = _valid_report()
+    report["provenance"]["candidate_envelope_audit"] = _candidate_envelope_audit()
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("retained_item_count", 2, "retained count differs"),
+        ("malformed_item_count", 4, "malformed count exceeds"),
+        ("ingestion_failure_count", 0, "failure count is inconsistent"),
+        ("count_matches_generation_metadata", False, "generation count match flag"),
+        ("ingestion_complete", True, "ingestion_complete flag"),
+        ("generation_reported_candidate_count", True, "nonnegative integer"),
+    ],
+)
+def test_candidate_envelope_audit_rejects_tampered_counts(field, value, message):
+    report = _valid_report()
+    report["provenance"]["candidate_envelope_audit"] = _candidate_envelope_audit()
+    report["provenance"]["candidate_envelope_audit"][field] = value
+    with pytest.raises(ValueError, match=message):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_candidate_envelope_audit_accounts_for_invalid_container():
+    report = _valid_report()
+    report["provenance"]["candidate_envelope_audit"] = {
+        "schema": "discovery_candidates_v1",
+        "container_valid": False,
+        "declared_item_count": None,
+        "retained_item_count": 0,
+        "malformed_item_count": 0,
+        "ingestion_failure_count": 1,
+        "generation_reported_candidate_count": 2,
+        "count_matches_generation_metadata": None,
+        "ingestion_complete": False,
+    }
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_candidate_envelope_audit_rejects_invalid_container_with_declared_count():
+    report = _valid_report()
+    audit = {
+        "schema": "discovery_candidates_v1",
+        "container_valid": False,
+        "declared_item_count": 0,
+        "retained_item_count": 0,
+        "malformed_item_count": 0,
+        "ingestion_failure_count": 1,
+        "generation_reported_candidate_count": None,
+        "count_matches_generation_metadata": None,
+        "ingestion_complete": False,
+    }
+    report["provenance"]["candidate_envelope_audit"] = audit
+    with pytest.raises(ValueError, match="must not claim a declared item count"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
