@@ -738,6 +738,19 @@ class HybridDiscoverySystem:
         _inv_injected = False
         _selection_tolerance = 1e-3
 
+        def _pareto_pool_coverage():
+            """Count distinct eligible expressions available to typed Pareto selection."""
+            _eligible = [
+                record for record, _ in _candidate_attempts
+                if bool(getattr(record, "eligible", False))
+            ]
+            _expressions = {
+                re.sub(r"\s+", "", str(getattr(record, "expression", ""))).replace("^", "**")
+                for record in _eligible
+                if str(getattr(record, "expression", "")).strip()
+            }
+            return len(_eligible), len(_expressions)
+
         def _prefer_candidate(candidate_r2, candidate_complexity, current_r2, current_complexity):
             if current_r2 == -np.inf or candidate_r2 > current_r2 + _selection_tolerance:
                 return True
@@ -895,6 +908,13 @@ class HybridDiscoverySystem:
                 _valid_score = isinstance(r2, (int, float, np.integer, np.floating)) and np.isfinite(r2)
                 _candidate_gate = None
                 _candidate_gate_passed = True
+                _llm_mode_for_source = str(result.get("llm_mode", ""))
+                _candidate_source = (
+                    "llm_proposal"
+                    if _llm_mode_for_source.endswith(("_llm_better", "_llm_only"))
+                    else "pysr_search"
+                )
+                result["candidate_source"] = _candidate_source
                 if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
                     _gate_expression, _gate_variable_names, _gate_substitutions = (
                         _candidate_gate_payload(result, expr)
@@ -902,7 +922,7 @@ class HybridDiscoverySystem:
                     _candidate_gate = self._candidate_validator.validate(
                         getattr(self, "_active_discovery_problem", None),
                         _gate_expression,
-                        source="pysr_search",
+                        source=_candidate_source,
                         search_strategy="retry_search",
                         seed=seed,
                         candidate_variable_names=_gate_variable_names,
@@ -1013,13 +1033,40 @@ class HybridDiscoverySystem:
                     if getattr(self.symbolic_engine.config, "use_transcendental_compositions", False)
                     else R2_STANDARD
                 )
+                _typed_pareto_enabled = (
+                    getattr(self, "_active_discovery_problem", None) is not None
+                    and bool(getattr(self, "_active_training_validation_settings", None))
+                )
+                _minimum_candidate_pool = int(
+                    (getattr(self, "_active_training_validation_settings", None) or {}).get(
+                        "minimum_candidate_pool_size", 2
+                    )
+                )
+                _eligible_pool_size, _unique_pool_size = _pareto_pool_coverage()
+                _pareto_pool_ready = (
+                    not _typed_pareto_enabled
+                    or (
+                        _minimum_candidate_pool >= 1
+                        and _unique_pool_size >= _minimum_candidate_pool
+                    )
+                )
                 if (
                     _valid_expression and _valid_score and _candidate_gate_passed
                     and r2 >= _early_stop_r2 and not quality["is_overfit"]
+                    and _pareto_pool_ready
                 ):
-                    logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f})")
+                    logger.info(f"   [EARLY STOP] Excellent result (R²={r2:.6f}); candidate pool has {_unique_pool_size} distinct eligible expression(s)")
                     self.stats["symbolic_successes"] += 1
                     break
+                elif (
+                    _valid_expression and _valid_score and _candidate_gate_passed
+                    and r2 >= _early_stop_r2 and not quality["is_overfit"]
+                    and _typed_pareto_enabled and not _pareto_pool_ready
+                ):
+                    logger.info(
+                        "[EARLY STOP DEFERRED] Typed Pareto pool coverage "
+                        f"{_unique_pool_size}/{_minimum_candidate_pool} distinct eligible expressions"
+                    )
 
             except Exception as e:
                 _llm_engine = getattr(self.symbolic_engine, "llm_engine", None)
@@ -1312,6 +1359,14 @@ class HybridDiscoverySystem:
                     "fold_strategy": str(_validation_settings.get("fold_strategy", "repeated_random")),
                     "fold_count": len(_folds),
                     "fold_creation_error": _fold_creation_error,
+                    "candidate_pool_coverage": {
+                        "eligible_candidate_records": _pareto_pool_coverage()[0],
+                        "distinct_eligible_expressions": _pareto_pool_coverage()[1],
+                        "minimum_for_early_stop": int(
+                            _validation_settings.get("minimum_candidate_pool_size", 2)
+                        ),
+                        "early_stop_requires_pool_coverage": True,
+                    },
                     "minimum_valid_folds": _minimum_folds,
                     "candidate_evaluation": (
                         "fold_local_signed_log_x_scale_engineered_features_target_transform_and_coefficient_refit"

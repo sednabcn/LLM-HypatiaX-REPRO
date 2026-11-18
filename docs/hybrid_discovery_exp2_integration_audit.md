@@ -1,6 +1,6 @@
 # HybridDiscoverySystem Exp2 integration audit and remediation
 
-**Status:** integration PR in progress  
+**Status:** integrated into `master` by PR #218; follow-up candidate-pool hardening proposed in PR #219  
 **Audit baseline:** PR #217 merge commit `4d8f8e1be25a51745fb07fc86175ebbe2a216308`  
 **Target integration branch:** `master`  
 **Scope:** source/documentation integration only; no experiment, worker, benchmark, LLM, local test, or CI execution.
@@ -54,13 +54,13 @@ A report with a legitimate failure status (for example, `no_credible_candidate`)
 
 ### Candidate provenance and diversity
 
-The current inner LLM/PySR engine can choose a single best result before the outer candidate-level Pareto stage sees it. Some paths can therefore fail to preserve LLM proposals and PySR alternatives as distinct candidate records. The candidate-validation call in the retry loop also currently labels the source as `pysr_search`; source attribution should be derived from the actual result path (for example, `llm_proposal` for an LLM-only candidate).
+PR #219 derives the retry candidate's source from the actual result path: LLM-selected equations are recorded as `llm_proposal`, while PySR results (including LLM-seeded/refined searches) are recorded as `pysr_search`. The source is persisted in the candidate validation record. Regression source covers the LLM-selected path.
 
-These are follow-up algorithm changes, not part of the P0–P2 integration patch.
+**Still open:** the inner LLM/PySR engine can choose one result before the outer candidate-level Pareto stage sees it. This change corrects provenance for the candidate that survives that handoff; it does not yet retain every LLM hypothesis and PySR alternative as separate outer candidate records. A follow-up should expose bounded, deduplicated candidate records from both paths without bypassing validation or runtime budgets.
 
 ### Early stopping and candidate coverage
 
-Training-`R^2` early stopping can reduce the candidate pool available to Pareto selection. A future change should make stopping policy aware of the minimum candidate evidence required, or explicitly record that the Pareto comparison was performed on a restricted pool.
+PR #219 makes typed-path early stopping require a configurable minimum number of distinct eligible expressions in the retry candidate pool (default: two). If the pool is too small, a high training (R^2) defers early stopping and allows another bounded retry. The report records eligible record count, distinct expression count, and the threshold. This is a minimum coverage safeguard, not proof of broad structural diversity or an algebraic-equivalence check. If the retry budget expires before the threshold is reached, the final report still describes the pool actually observed.
 
 ### Physical completeness and uncertainty
 
