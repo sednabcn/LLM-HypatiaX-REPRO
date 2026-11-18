@@ -19,6 +19,9 @@ __all__ = [
     "FoldFeaturePlan",
     "FoldFeaturePipeline",
     "FoldTargetScaler",
+    "FoldCandidateFeaturePipeline",
+    "FoldTargetPreprocessor",
+    "evaluate_engine_candidate_on_training_folds",
     "make_fold_preprocessed_symbolic_predictor",
     "evaluate_preprocessed_symbolic_candidate_on_training_folds",
     "TrainingFold",
@@ -56,7 +59,8 @@ def __getattr__(name: str):
         module = import_module(".discovery_validation", __name__)
     elif name in {
         "FoldFeaturePreprocessor", "FoldFeaturePlan", "FoldFeaturePipeline",
-        "FoldTargetScaler", "make_fold_preprocessed_symbolic_predictor",
+        "FoldTargetScaler", "FoldCandidateFeaturePipeline", "FoldTargetPreprocessor",
+        "evaluate_engine_candidate_on_training_folds", "make_fold_preprocessed_symbolic_predictor",
         "evaluate_preprocessed_symbolic_candidate_on_training_folds",
         "TrainingFold", "FoldMetric", "CandidateValidationSummary",
         "make_training_folds", "evaluate_candidate_on_training_folds",
