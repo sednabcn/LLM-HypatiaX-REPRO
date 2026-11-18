@@ -107,7 +107,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_pipeline": False,
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
-            "native_v60_candidate_generation": bool(self._last_v60_candidate_proposals),
+            "native_v60_candidate_generation": self._last_v60_run_context is not None,
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
