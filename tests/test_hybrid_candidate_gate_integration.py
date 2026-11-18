@@ -498,6 +498,13 @@ def test_hybrid_engine_emits_candidate_specific_llm_and_pysr_fit_contracts():
     assert candidates[0]["fit_transform_state"]["x_scales"] == [1.0]
     assert candidates[2]["fit_transform_state"]["x_scales"] == [2.0]
     assert result["discovery_candidate_generation"]["pysr_search_generated_candidate"] is True
+    generation = result["discovery_candidate_generation"]
+    assert generation["llm_hypotheses_observed"] == 2
+    assert generation["llm_hypotheses_admitted"] == 1
+    assert generation["llm_hypotheses_deduplicated"] == 1
+    assert generation["deduplication_count"] == 1
+    assert generation["raw_proposal_count"] == 3
+    assert generation["deduplicated_candidate_count"] == 2
     assert result["expression"] == "x**2"
 
 
