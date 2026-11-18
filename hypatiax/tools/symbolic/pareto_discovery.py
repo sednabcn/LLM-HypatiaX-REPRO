@@ -310,6 +310,7 @@ def select_pareto_discovery_report(
                 "mean_normalized_rmse",
                 "worst_normalized_rmse",
                 "symbolic_operation_count",
+                "mean_declared_soft_constraint_violation_fraction",
                 "candidate_id",
             ],
             "far_test_data_used_for_selection": False,
