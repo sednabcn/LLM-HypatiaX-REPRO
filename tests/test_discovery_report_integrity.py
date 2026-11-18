@@ -177,3 +177,65 @@ def test_worker_verifier_rejects_forged_fold_evidence_fingerprint():
     payload["provenance"]["native_multi_basis_selection"] = audit
     with pytest.raises(ValueError, match="RMSE aggregates do not reproduce"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+
+def _native_final_model_audit():
+    from hashlib import sha256
+    import json
+
+    model = {
+        "family": "single_basis", "candidate_id": "candidate-x",
+        "candidate_group_id": None, "basis_candidate_ids": ["candidate-x"],
+        "basis_expressions": ["x"], "variable_names": ["x"],
+        "fitted_expression": "(2)*(x) + (1)", "coefficients": [2.0, 1.0],
+        "training_row_count": 8, "training_target_std": 4.0,
+        "training_rmse": 0.0, "training_nrmse": 0.0, "training_r2": 1.0,
+        "training_design_rank": 2, "training_design_condition_number": 3.0,
+        "selection_metric": "cv_nrmse", "cross_validation_metric": 0.0,
+        "cross_validation_metric_std": 0.0, "symbolic_complexity": 1,
+    }
+    digest = sha256(json.dumps(model, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    return {
+        "schema": "v60_native_final_model_v1", "execution_status": "selected",
+        "selection_performed": True, "far_or_evaluation_data_used": False,
+        "selected_model": model, "selected_model_sha256": digest,
+    }
+
+
+def test_worker_verifier_accepts_semantically_consistent_final_model():
+    payload = copy.deepcopy(_envelope()["report"])
+    payload["provenance"]["native_final_model"] = _native_final_model_audit()
+    verified = verify_discovery_report_envelope(seal_discovery_report(payload))
+    assert verified["provenance"]["native_final_model"]["execution_status"] == "selected"
+
+
+def test_worker_verifier_rejects_self_rehashed_formula_mismatch():
+    from hashlib import sha256
+    import json
+
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["fitted_expression"] = "999*x"
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="fitted expression does not reproduce"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_undeclared_final_model_variable():
+    from hashlib import sha256
+    import json
+
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["basis_expressions"] = ["z"]
+    audit["selected_model"]["fitted_expression"] = "(2)*(z) + (1)"
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises((ValueError, TypeError)):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
