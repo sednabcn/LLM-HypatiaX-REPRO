@@ -174,3 +174,68 @@ def test_candidate_inner_target_std_scaling_is_refit_and_inverted_per_fold():
     assert summary.valid_fold_count == 3
     assert summary.failed_fold_count == 0
     assert summary.mean_rmse < 1e-12
+
+
+def _pareto_candidate(nested_evidence=None):
+    from hypatiax.tools.symbolic.discovery_contracts import CandidateRecord
+
+    metrics = {
+        "training_validation": {
+            "fold_metrics": [
+                {"normalized_rmse": 0.1},
+                {"normalized_rmse": 0.12},
+            ],
+            "expression_stability": {"dominant_fraction": 1.0},
+        }
+    }
+    if nested_evidence is not None:
+        metrics["nested_structure_evidence"] = nested_evidence
+    return CandidateRecord(
+        expression="x + 1.0",
+        source="pysr_search",
+        search_strategy="test",
+        seed=7,
+        metrics=metrics,
+        eligible=True,
+    )
+
+
+def test_pareto_can_require_candidate_specific_nested_structure_evidence():
+    from hypatiax.tools.symbolic.pareto_discovery import select_pareto_discovery_report
+
+    report = select_pareto_discovery_report(
+        [_pareto_candidate()],
+        variable_names=["x"],
+        minimum_valid_folds=2,
+        require_nested_structure_evidence=True,
+    )
+
+    assert report.selected_candidate_id is None
+    assert report.status == "insufficient_validation_evidence"
+    audit = report.candidates[0].metrics["pareto_selection"]
+    assert audit["nested_structure_evidence_required"] is True
+    assert audit["nested_structure_evidence_passed"] is False
+
+
+def test_pareto_accepts_unique_recurrent_nested_structure_crosswalk():
+    from hypatiax.tools.symbolic.pareto_discovery import select_pareto_discovery_report
+
+    nested = {
+        "status": "matched_candidate_structure",
+        "candidate_specific_nested_evidence": True,
+        "far_test_data_used": False,
+        "structure_id": "abc123",
+        "recurrence_count": 2,
+        "recurrence_fraction": 1.0,
+    }
+    report = select_pareto_discovery_report(
+        [_pareto_candidate(nested)],
+        variable_names=["x"],
+        minimum_valid_folds=2,
+        require_nested_structure_evidence=True,
+    )
+
+    assert report.selected_candidate_id == report.candidates[0].candidate_id
+    audit = report.candidates[0].metrics["pareto_selection"]
+    assert audit["nested_structure_evidence_passed"] is True
+    assert report.provenance["nested_structure_evidence_required"] is True

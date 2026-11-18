@@ -1141,6 +1141,42 @@ class HybridDiscoverySystem:
             _minimum_folds = int(
                 _validation_settings.get("minimum_valid_folds", max(1, len(_folds) or _n_splits))
             )
+            # Optional nested structure search is opt-in because it adds
+            # fresh fold-local symbolic fits when the user runs an experiment.
+            _nested_cfg = _validation_settings.get("nested_structure_evidence", {})
+            if _nested_cfg is True:
+                _nested_cfg = {"enabled": True}
+            if not isinstance(_nested_cfg, dict):
+                raise TypeError("nested_structure_evidence must be a dict or bool")
+            _nested_enabled = bool(_nested_cfg.get("enabled", False)) and bool(_folds)
+            _require_nested = bool(_nested_cfg.get("require_for_selection", True)) if _nested_enabled else False
+            _nested_matching = None
+            _nested_error = None
+            if _nested_enabled:
+                try:
+                    from hypatiax.tools.symbolic.hybrid_fold_search import (
+                        evaluate_nested_hybrid_structure_search_on_training_folds,
+                    )
+                    _nested_result = evaluate_nested_hybrid_structure_search_on_training_folds(
+                        _raw_X,
+                        _raw_y,
+                        _folds,
+                        variable_names=list(_problem.variable_names),
+                        equation_name=str(equation_name or "unknown"),
+                        domain=str(self.domain),
+                        base_config=self.symbolic_engine.config,
+                        parsimony=getattr(self, "_selected_training_search_parsimony", None),
+                        seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                        fold_iterations=int(_nested_cfg.get("fold_iterations", _validation_settings.get("fold_iterations", 20))),
+                        fold_timeout_seconds=int(_nested_cfg.get("fold_timeout_seconds", _validation_settings.get("fold_timeout_seconds", 20))),
+                        allow_pow=None,
+                        minimum_valid_folds=_minimum_folds,
+                        minimum_structure_recurrence=int(_nested_cfg.get("minimum_recurrence", 2)),
+                        minimum_structure_recurrence_fraction=float(_nested_cfg.get("minimum_recurrence_fraction", 0.5)),
+                    )
+                    _nested_matching = _nested_result.get("structure_matching")
+                except Exception as _nested_exc:
+                    _nested_error = f"{type(_nested_exc).__name__}: {_nested_exc}"[:500]
             _reported_candidates = []
             _candidate_result_by_id = {}
             for _record, _attempt_result in _candidate_attempts:
@@ -1169,6 +1205,24 @@ class HybridDiscoverySystem:
                             max_nfev=int(_validation_settings.get("coefficient_max_nfev", 500)),
                         )
                         _metrics["training_validation"] = _summary.to_dict()
+                        if _nested_enabled:
+                            from hypatiax.tools.symbolic.structural_matching import (
+                                crosswalk_full_training_candidate_to_fold_structure,
+                            )
+                            _metrics["nested_structure_evidence"] = (
+                                crosswalk_full_training_candidate_to_fold_structure(
+                                    _fit_expression,
+                                    _fit_variable_names,
+                                    _nested_matching or {},
+                                )
+                                if _nested_matching is not None
+                                else {
+                                    "status": "NO_CREDIBLE_CANDIDATE",
+                                    "reason": _nested_error or "nested_structure_matching_unavailable",
+                                    "candidate_specific_nested_evidence": False,
+                                    "far_test_data_used": False,
+                                }
+                            )
                     except Exception as _fold_error:
                         _metrics["training_validation_error"] = (
                             f"{type(_fold_error).__name__}: {_fold_error}"[:500]
@@ -1193,8 +1247,14 @@ class HybridDiscoverySystem:
                         "fold_local_signed_log_x_scale_engineered_features_target_transform_and_coefficient_refit"
                     ),
                     "candidate_feature_support": ["raw", "geometric_mean", "directed_ratio"],
+                    "nested_structure_search_enabled": _nested_enabled,
+                    "nested_structure_evidence_required": _require_nested,
+                    "nested_structure_matching": _nested_matching,
+                    "nested_structure_search_error": _nested_error,
+                    "nested_structure_search_scope": "fresh_pure_pysr_per_training_fold",
                 },
                 minimum_valid_folds=_minimum_folds,
+                require_nested_structure_evidence=_require_nested,
             )
             self._last_discovery_report = _report.to_dict()
             if _report.selected_candidate_id is None:
