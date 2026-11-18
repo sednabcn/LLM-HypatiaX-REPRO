@@ -149,6 +149,23 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
                 raise ValueError("embedded fold coefficient vector is invalid")
             for coeff in coeffs:
                 number(coeff, "recomputed coefficient", nonnegative=False)
+        validation_rows = [row for fold in folds for row in fold["validation_row_indices"]]
+        if len(validation_rows) != len(set(validation_rows)):
+            raise ValueError("embedded validation rows must be disjoint across folds")
+        rmse_values = [float(fold["recomputed_rmse"]) for fold in folds]
+        rmse_mean = math.fsum(rmse_values) / len(rmse_values)
+        rmse_std = math.sqrt(math.fsum((value - rmse_mean) ** 2 for value in rmse_values) / len(rmse_values))
+        if not math.isclose(aggregates["validation_rmse_mean"], rmse_mean, rel_tol=1e-10, abs_tol=1e-12) or not math.isclose(aggregates["validation_rmse_std"], rmse_std, rel_tol=1e-10, abs_tol=1e-12):
+            raise ValueError("embedded RMSE aggregates do not reproduce from verified folds")
+        nrmse_values = [fold.get("recomputed_nrmse") for fold in folds]
+        if all(value is not None for value in nrmse_values):
+            numeric_nrmse = [float(value) for value in nrmse_values]
+            nrmse_mean = math.fsum(numeric_nrmse) / len(numeric_nrmse)
+            nrmse_std = math.sqrt(math.fsum((value - nrmse_mean) ** 2 for value in numeric_nrmse) / len(numeric_nrmse))
+            if not math.isclose(aggregates["validation_nrmse_mean"], nrmse_mean, rel_tol=1e-10, abs_tol=1e-12) or not math.isclose(aggregates["validation_nrmse_std"], nrmse_std, rel_tol=1e-10, abs_tol=1e-12):
+                raise ValueError("embedded NRMSE aggregates do not reproduce from verified folds")
+        elif aggregates["validation_nrmse_mean"] is not None or aggregates["validation_nrmse_std"] is not None:
+            raise ValueError("embedded NRMSE aggregate nullability does not reproduce from folds")
         fingerprint_payload = {
             "candidate_group_id": gid, "basis_candidate_ids": ids,
             "basis_expressions": expressions, "source_provenance": item.get("source_provenance"),
