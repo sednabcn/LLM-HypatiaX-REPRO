@@ -99,6 +99,7 @@ def validate_native_multi_basis_candidates(
     rejected: list[dict[str, Any]] = []
     attempted = 0
     timed_out = False
+    seen_group_ids: set[str] = set()
 
     for group in fitted_groups[:cap]:
         if max_wall_time_seconds is not None and monotonic() - started >= max_wall_time_seconds:
@@ -111,6 +112,9 @@ def validate_native_multi_basis_candidates(
         try:
             if group.get("fit_status") != "fitted":
                 raise ValueError("only successfully fitted candidate groups can be validated")
+            if not isinstance(group_id, str) or not group_id or group_id in seen_group_ids:
+                raise ValueError("candidate group IDs must be unique non-empty strings")
+            seen_group_ids.add(group_id)
             if not isinstance(ids, list) or not 2 <= len(ids) <= 3 or len(set(ids)) != len(ids):
                 raise ValueError("basis candidate IDs must be a unique list of two or three IDs")
             if not isinstance(expressions, list) or len(expressions) != len(ids):
@@ -122,6 +126,15 @@ def validate_native_multi_basis_candidates(
                 raise ValueError("candidate group ID does not match its ordered basis IDs")
             if any(proposal_by_id.get(cid) != expr for cid, expr in zip(ids, expressions)):
                 raise ValueError("basis candidate ID/expression lineage does not match normalized proposals")
+            expected_lineage = [
+                dict(record)
+                for candidate in candidates if candidate.get("candidate_id") in ids
+                for record in candidate.get("producer_provenance", [])
+                if isinstance(record, Mapping)
+            ]
+            supplied_lineage = group.get("source_provenance", [])
+            if supplied_lineage != expected_lineage:
+                raise ValueError("candidate group producer lineage does not match normalized proposals")
 
             import sympy as sp
             symbols = [sp.Symbol(name, real=True) for name in variable_names]
