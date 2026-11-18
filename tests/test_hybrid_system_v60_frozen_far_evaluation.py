@@ -1,4 +1,6 @@
 import copy
+from hashlib import sha256
+import json
 
 import numpy as np
 import pytest
@@ -18,8 +20,11 @@ def _inputs():
     objective = {
         "candidate_id": "candidate-x",
         "expression": "x",
-        "objective_evidence_sha256": "objective-fingerprint",
     }
+    objective_fingerprint = sha256(
+        json.dumps(objective, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
+    objective["objective_evidence_sha256"] = objective_fingerprint
     selection = {
         "schema": "v60_native_objective_selection_v1",
         "selection_status": "selected",
@@ -27,7 +32,7 @@ def _inputs():
         "far_or_evaluation_data_used": False,
         "selected_candidate_id": "candidate-x",
         "selected_expression": "x",
-        "selected_objective_evidence_sha256": "objective-fingerprint",
+        "selected_objective_evidence_sha256": objective_fingerprint,
         "pareto_candidate_ids": ["candidate-x"],
         "objective_evidence": [objective],
     }
