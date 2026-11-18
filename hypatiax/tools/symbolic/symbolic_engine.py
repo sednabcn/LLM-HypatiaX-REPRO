@@ -2507,6 +2507,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "pysr_candidate_missing_expression": False,
                 "pysr_candidate_deduplicated": False,
             }
+            _generation_counts["pysr_search_generated_candidate"] = bool(_pysr_generated)
             _llm_mode = str(result.get("llm_mode", ""))
             _llm_only = (
                 _llm_mode.endswith("_llm_only")
