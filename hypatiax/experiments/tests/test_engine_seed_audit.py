@@ -50,14 +50,15 @@ def test_replay_cache_one_sample_per_prompt(tmp_path, monkeypatch):
     eng = E.IntegratedLLMEngine.__new__(E.IntegratedLLMEngine)
     eng.config, eng.client, eng.last_call_attempted, eng.last_error = E.LLMConfig(enabled=True), object(), False, None
     calls = []
-    def fake_call(prompt):
-        calls.append(prompt)
+    def fake_call(prompt, *, max_tokens=None):
+        calls.append((prompt, max_tokens))
         return json.dumps([{"equation": f"x0*{len(calls)}", "confidence": .5, "reasoning": "r"}])
     eng._call_llm = fake_call
     kw = dict(domain="d", variables=["x0"], description="t", data_patterns={"a": 1})
     h1 = eng.generate_hypotheses(**kw)
     h2 = eng.generate_hypotheses(**kw)                       # second arm
-    assert len(calls) == 1 and h1[0].equation == h2[0].equation and eng.last_response_replayed
+    assert len(calls) == 1 and calls[0][1] is not None
+    assert h1[0].equation == h2[0].equation and eng.last_response_replayed
     assert eng.last_call_attempted is False                  # replay is not a live API attempt
     assert eng.last_response_received is True
     assert eng.last_response_replayed is True
@@ -70,7 +71,7 @@ def test_replay_off_by_default(monkeypatch):
     eng = E.IntegratedLLMEngine.__new__(E.IntegratedLLMEngine)
     eng.config, eng.client, eng.last_call_attempted, eng.last_error = E.LLMConfig(enabled=True), object(), False, None
     n = []
-    eng._call_llm = lambda p: (n.append(1), "[]")[1]
+    eng._call_llm = lambda p, *, max_tokens=None: (n.append(1), "[]")[1]
     eng.generate_hypotheses("d", ["x0"], "t", {}); eng.generate_hypotheses("d", ["x0"], "t", {})
     assert len(n) == 2
 

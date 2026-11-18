@@ -16,8 +16,12 @@ class DiscoveryBudgetRuntime:
         self.deadline = self.started_at + float(limit) if limit is not None else None
         self.search_attempts = 0
         self.llm_calls_reserved = 0
+        self.llm_requests_started = 0
+        self.llm_responses_received = 0
         self.llm_tokens_reserved = 0
         self.candidates_seen = 0
+        self.candidates_admitted = 0
+        self.candidate_budget_overrun = 0
         self.stop_reason = None
 
     def expired(self) -> bool:
@@ -32,10 +36,10 @@ class DiscoveryBudgetRuntime:
         if self.expired():
             return False
         if self.search_attempts >= min(int(configured_limit), self.budget.max_search_attempts):
-            self.stop_reason = "max_search_attempts"
+            self.stop_reason = self.stop_reason or "max_search_attempts"
             return False
-        if self.candidates_seen >= self.budget.max_candidates:
-            self.stop_reason = "max_candidates"
+        if self.candidates_admitted >= self.budget.max_candidates:
+            self.stop_reason = self.stop_reason or "max_candidates"
             return False
         return True
 
@@ -44,14 +48,27 @@ class DiscoveryBudgetRuntime:
 
     @property
     def remaining_candidates(self) -> int:
-        return max(0, int(self.budget.max_candidates) - self.candidates_seen)
+        return max(0, int(self.budget.max_candidates) - self.candidates_admitted)
 
     def record_candidates(self, count: int) -> int:
-        accepted = min(max(0, int(count)), self.remaining_candidates)
-        self.candidates_seen += accepted
-        if accepted < count and self.stop_reason is None:
+        """Record every surfaced candidate and return the subset admitted by budget."""
+        observed = max(0, int(count))
+        accepted = min(observed, self.remaining_candidates)
+        self.candidates_seen += observed
+        self.candidates_admitted += accepted
+        rejected = observed - accepted
+        self.candidate_budget_overrun += rejected
+        if rejected and self.stop_reason is None:
             self.stop_reason = "max_candidates"
         return accepted
+
+    def record_llm_request_started(self) -> None:
+        """Record a reserved request immediately before invoking the provider."""
+        self.llm_requests_started += 1
+
+    def record_llm_response_received(self) -> None:
+        """Record a provider response; failed requests remain visible as started only."""
+        self.llm_responses_received += 1
 
     def reserve_llm_request(self, configured_tokens: int) -> int | None:
         if self.expired():
@@ -90,8 +107,12 @@ class DiscoveryBudgetRuntime:
             "actual": {
                 "search_attempts": self.search_attempts,
                 "llm_calls_reserved": self.llm_calls_reserved,
+                "llm_requests_started": self.llm_requests_started,
+                "llm_responses_received": self.llm_responses_received,
                 "llm_tokens_reserved": self.llm_tokens_reserved,
                 "candidates_seen": self.candidates_seen,
+                "candidates_admitted": self.candidates_admitted,
+                "candidate_budget_overrun": self.candidate_budget_overrun,
                 "elapsed_wall_time_seconds": round(time.monotonic() - self.started_at, 6),
             },
             "stop_reason": self.stop_reason,

@@ -849,6 +849,12 @@ class HybridDiscoverySystem:
                     **({"deterministic": True, "parallelism": "serial"}
                        if self._pysr_deterministic else {}),
                 )
+                # A fit/provider request cannot be interrupted safely, but a
+                # result returned after the caller's deadline is not eligible
+                # for promotion into the selected discovery result.
+                _deadline_exhausted = bool(
+                    _budget_runtime is not None and _budget_runtime.expired()
+                )
 
                 r2 = result.get("r2_score", 0)
                 expr = result.get("expression", "")
@@ -914,14 +920,30 @@ class HybridDiscoverySystem:
                         )
                 elif getattr(self, "_active_discovery_problem", None) is None:
                     result["candidate_validation_status"] = "not_configured"
+                # Validation itself may consume the remaining wall-time budget.
+                if _budget_runtime is not None and _budget_runtime.expired():
+                    _deadline_exhausted = True
+                if _deadline_exhausted:
+                    _candidate_gate_passed = False
+                    result["candidate_validation_status"] = "rejected_deadline"
+
+                _budget_candidate_rejected = False
                 if _valid_expression and _valid_score:
-                    _result_is_llm_proposal = str(result.get("llm_mode", "")).endswith("_llm_better")
+                    _llm_mode_for_candidate = str(result.get("llm_mode", ""))
+                    _result_is_llm_proposal = _llm_mode_for_candidate.endswith(
+                        ("_llm_better", "_llm_only")
+                    )
                     if (
                         _budget_runtime is not None and not _result_is_llm_proposal
                         and _budget_runtime.record_candidates(1) == 0
                     ):
+                        _budget_candidate_rejected = True
                         _candidate_gate_passed = False
                         result["candidate_validation_status"] = "rejected_budget"
+                    if _budget_runtime is not None and _budget_runtime.expired():
+                        _deadline_exhausted = True
+                        _candidate_gate_passed = False
+                        result["candidate_validation_status"] = "rejected_deadline"
                     quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
@@ -940,8 +962,8 @@ class HybridDiscoverySystem:
                         eligible=bool(_candidate_gate.eligible and _candidate_gate_passed),
                         rejection_reasons=(
                             tuple(_candidate_gate.rejection_reasons)
-                            if _candidate_gate_passed else
-                            tuple(_candidate_gate.rejection_reasons) + ("discovery_candidate_budget_exhausted",)
+                            + (("discovery_candidate_budget_exhausted",) if _budget_candidate_rejected else ())
+                            + (("discovery_deadline_exhausted",) if _deadline_exhausted else ())
                         ),
                     )
                     _candidate_attempts.append((_candidate_record, result))
@@ -1720,6 +1742,10 @@ class HybridDiscoverySystem:
                             "was not run."
                         ),
                         "training_only_search_selection": self._training_only_search_selection,
+                        "discovery_budget": (
+                            self._active_budget_runtime.to_dict()
+                            if self._active_budget_runtime is not None else None
+                        ),
                     }
                 self._selected_training_search_strategy = _selection.selected_strategy
                 self._selected_training_search_parsimony = _parsimony_options[
@@ -1743,6 +1769,10 @@ class HybridDiscoverySystem:
                     "error": "NO_CREDIBLE_CANDIDATE",
                     "message": "Training-only search configuration validation failed closed.",
                     "training_only_search_selection": self._training_only_search_selection,
+                    "discovery_budget": (
+                        self._active_budget_runtime.to_dict()
+                        if self._active_budget_runtime is not None else None
+                    ),
                 }
 
         _noise_level = metadata.get("noise_level", None)
