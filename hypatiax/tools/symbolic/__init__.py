@@ -4,6 +4,9 @@ from importlib import import_module
 
 __all__ = [
     "PhysicsAwareRegressor",
+    "HybridDiscoverySystemV60",
+    "create_hybrid_discovery_system",
+    "create_hybrid_discovery_system_from_config",
     "SymbolicEngine",
     "SymbolicEngineWithLLM",
     "DiscoveryConfig",
@@ -51,7 +54,9 @@ __all__ = [
 
 def __getattr__(name: str):
     """Load symbolic implementations only when their public names are requested."""
-    if name == "PhysicsAwareRegressor":
+    if name in {"HybridDiscoverySystemV60", "create_hybrid_discovery_system", "create_hybrid_discovery_system_from_config"}:
+        module = import_module(".hybrid_system_factory", __name__) if name != "HybridDiscoverySystemV60" else import_module(".hybrid_system_v60", __name__)
+    elif name == "PhysicsAwareRegressor":
         module = import_module(".physics_aware_regressor", __name__)
     elif name in {
         "SymbolicEngine",
