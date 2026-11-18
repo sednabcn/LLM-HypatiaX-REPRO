@@ -22,6 +22,7 @@ from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_tem
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_candidates
+from hypatiax.tools.symbolic.v60_multi_basis_fitting import fit_native_multi_basis_candidates
 from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
 from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
 from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
@@ -103,6 +104,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "restricted_expression_normalization_semantic_identity_and_deduplication",
         "producer_lineage_preservation",
         "bounded_training_only_affine_candidate_fitting",
+        "bounded_training_only_joint_multi_basis_fitting",
         "declared_scientific_candidate_gates",
         "bounded_training_only_refit_cross_validation",
         "training_only_fold_residual_diagnostics_and_coefficient_stability",
@@ -115,6 +117,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_training_fit_audit: dict[str, Any] = {}
+        self._last_v60_multi_basis_fit_audit: dict[str, Any] = {}
         self._last_v60_gate_audit: dict[str, Any] = {}
         self._last_v60_training_validation_audit: dict[str, Any] = {}
         self._last_v60_objective_selection_audit: dict[str, Any] = {}
@@ -140,6 +143,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_fitted_candidate_count": self._last_v60_training_fit_audit.get("fitted_candidate_count", 0),
             "native_v60_fit_attempt_count": self._last_v60_training_fit_audit.get("fit_attempt_count", 0),
             "native_v60_training_fit_audit": dict(self._last_v60_training_fit_audit),
+            "native_v60_multi_basis_fitting": bool(self._last_v60_multi_basis_fit_audit) and self._last_v60_multi_basis_fit_audit.get("fit_status") != "stage_failed",
+            "native_v60_multi_basis_fit_audit": dict(self._last_v60_multi_basis_fit_audit),
             "native_v60_candidate_gating": bool(self._last_v60_gate_audit) and self._last_v60_gate_audit.get("gate_status") != "stage_failed",
             "native_v60_gate_eligible_count": self._last_v60_gate_audit.get("eligible_candidate_count", 0),
             "native_v60_gate_ineligible_count": self._last_v60_gate_audit.get("ineligible_candidate_count", 0),
@@ -201,6 +206,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_training_fit_audit = {}
+        self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_gate_audit = {}
         self._last_v60_training_validation_audit = {}
         self._last_v60_objective_selection_audit = {}
@@ -272,6 +278,27 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "selection_performed": False,
                     "fitted_candidates": [],
                     "rejected_candidates": [],
+                }
+            try:
+                self._last_v60_multi_basis_fit_audit = fit_native_multi_basis_candidates(
+                    self._last_v60_candidate_proposals,
+                    X,
+                    y,
+                    variable_names=problem.variable_names,
+                    max_candidates=problem.budget.max_candidates,
+                    max_search_attempts=problem.budget.max_search_attempts,
+                    max_basis_terms=3,
+                    max_wall_time_seconds=problem.budget.max_wall_time_seconds,
+                )
+            except Exception as exc:
+                self._last_v60_multi_basis_fit_audit = {
+                    "schema": "v60_native_multi_basis_fits_v1",
+                    "fit_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "fitted_candidate_groups": [],
+                    "rejected_candidate_groups": [],
                 }
             try:
                 eligible_ids = [
