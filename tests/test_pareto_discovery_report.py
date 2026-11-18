@@ -242,3 +242,45 @@ def test_stability_requires_a_measured_expression_for_each_required_fold():
     reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
     assert "expression_stability_unavailable" in reasons
     assert report.selected_candidate_id is None
+
+
+def test_declared_soft_constraint_violation_is_a_pareto_objective():
+    from hypatiax.tools.symbolic.discovery_contracts import ConstraintOutcome
+    low = ConstraintOutcome("soft_positive", "fail", "soft", "some samples fail", {
+        "evaluation_count": 3, "violation_count": 1, "violation_fraction": 1 / 3,
+    })
+    high = ConstraintOutcome("soft_positive", "fail", "soft", "more samples fail", {
+        "evaluation_count": 3, "violation_count": 2, "violation_fraction": 2 / 3,
+    })
+    better = _candidate("x + 1.0", 31, [0.1, 0.2], outcomes=[low])
+    worse = _candidate("x + 2.0", 32, [0.1, 0.2], outcomes=[high])
+    report = select_pareto_discovery_report(
+        [better, worse], variable_names=["x"], soft_constraint_ids=["soft_positive"]
+    )
+    assert report.pareto_candidate_ids == (better.candidate_id,)
+    assert report.selected_candidate_id == better.candidate_id
+    selection = report.candidates[0].metrics["pareto_selection"]
+    assert selection["mean_soft_constraint_violation_fraction"] == 1 / 3
+    assert report.provenance["selection_policy"] == "training_only_pareto_v5_soft_constraints"
+    assert report.provenance["soft_constraint_aggregation"] == "unweighted_mean_of_declared_violation_fractions"
+
+
+def test_missing_or_unknown_soft_constraint_evidence_fails_closed():
+    from hypatiax.tools.symbolic.discovery_contracts import ConstraintOutcome
+    candidate = _candidate("x", 33, [0.1, 0.2], outcomes=[
+        ConstraintOutcome("soft_positive", "unknown", "soft", "bounds unavailable"),
+    ])
+    report = select_pareto_discovery_report(
+        [candidate], variable_names=["x"], soft_constraint_ids=["soft_positive"]
+    )
+    assert report.selected_candidate_id is None
+    assert report.status == "insufficient_validation_evidence"
+    reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
+    assert "soft_constraint_evidence_incomplete" in reasons
+
+
+def test_soft_constraint_objective_is_disabled_without_declared_soft_ids():
+    candidate = _candidate("x", 34, [0.1, 0.2])
+    report = select_pareto_discovery_report([candidate], variable_names=["x"])
+    assert report.status == "accepted"
+    assert "mean_soft_constraint_violation_fraction" not in report.candidates[0].metrics["pareto_selection"]["objectives"]
