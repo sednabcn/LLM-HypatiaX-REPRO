@@ -343,9 +343,13 @@ def _verify_native_final_model_audit(audit: Any) -> None:
             if expected_winner["family"] == "single_basis"
             else list(expected_winner["candidate_ids"])
         )
+        expected_candidate_id = expected_winner.get("candidate_id") if expected_winner["family"] == "single_basis" else None
+        expected_group_id = expected_winner.get("candidate_group_id") if expected_winner["family"] == "multi_basis" else None
         if (audit.get("objective_metric") != expected_metric
                 or model.get("selection_metric") != expected_metric
                 or model.get("family") != expected_winner["family"]
+                or model.get("candidate_id") != expected_candidate_id
+                or model.get("candidate_group_id") != expected_group_id
                 or model.get("basis_candidate_ids") != expected_ids
                 or model.get("basis_expressions") != expected_winner["expressions"]
                 or model.get("cross_validation_metric") != expected_winner[expected_metric]
