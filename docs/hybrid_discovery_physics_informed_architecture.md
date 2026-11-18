@@ -1140,6 +1140,9 @@ The nested structural-search audit now includes a conservative matcher in
   functions remain part of the signature.
 - SymPy's rational normalization combines common arithmetic forms before a
   deterministic structural signature is produced.
+- Each fold audit carries its exact engine feature schema, including any
+  fold-specific geometric-mean and directed-ratio symbols. The matcher parses
+  against that schema rather than assuming every equation uses raw features.
 - A stable SHA-256-derived structure ID groups fold equations with the same
   signature. Original fold equations remain in the audit; they are never
   averaged into a synthetic equation.
