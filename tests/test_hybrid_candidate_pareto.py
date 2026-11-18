@@ -239,3 +239,59 @@ def test_pareto_accepts_unique_recurrent_nested_structure_crosswalk():
     audit = report.candidates[0].metrics["pareto_selection"]
     assert audit["nested_structure_evidence_passed"] is True
     assert report.provenance["nested_structure_evidence_required"] is True
+
+
+
+class _FakeDiscoveryDeadline:
+    def __init__(self, expired=False):
+        self.is_expired = expired
+
+    def expired(self):
+        return self.is_expired
+
+
+def test_fixed_candidate_fold_validation_does_not_start_after_deadline():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_candidate_on_training_folds,
+    )
+
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(
+        len(y), n_splits=2, n_repeats=1, validation_fraction=0.2, seed=53
+    )
+    deadline = _FakeDiscoveryDeadline(expired=True)
+    calls = []
+
+    with pytest.raises(TimeoutError, match="expired before fixed-candidate"):
+        evaluate_candidate_on_training_folds(
+            "x", lambda X_fit, y_fit, X_valid: calls.append(True),
+            X, y, folds, minimum_valid_folds=2, budget_runtime=deadline,
+        )
+    assert calls == []
+
+
+def test_fixed_candidate_fold_result_returned_after_deadline_is_rejected():
+    from hypatiax.tools.symbolic.training_validation import (
+        evaluate_candidate_on_training_folds,
+    )
+
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(
+        len(y), n_splits=2, n_repeats=1, validation_fraction=0.2, seed=59
+    )
+    deadline = _FakeDiscoveryDeadline()
+    calls = []
+
+    def late_predictor(X_fit, y_fit, X_valid):
+        calls.append("predict")
+        deadline.is_expired = True
+        return np.zeros(len(X_valid), dtype=float)
+
+    with pytest.raises(TimeoutError, match="returned after discovery"):
+        evaluate_candidate_on_training_folds(
+            "x", late_predictor, X, y, folds,
+            minimum_valid_folds=2, budget_runtime=deadline,
+        )
+    assert calls == ["predict"]

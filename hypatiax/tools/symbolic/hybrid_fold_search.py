@@ -251,6 +251,7 @@ def evaluate_hybrid_candidate_on_training_folds(
     *,
     minimum_valid_folds: int = 2,
     max_nfev: int = 500,
+    budget_runtime: Any | None = None,
 ):
     """Evaluate an engine-space candidate with all transforms learned per fold.
 
@@ -269,6 +270,7 @@ def evaluate_hybrid_candidate_on_training_folds(
         tuple(folds),
         minimum_valid_folds=minimum_valid_folds,
         max_nfev=max_nfev,
+        budget_runtime=budget_runtime,
     )
 
 

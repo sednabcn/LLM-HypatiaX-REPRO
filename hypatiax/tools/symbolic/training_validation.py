@@ -6,7 +6,7 @@ no far/test-data parameter or selector hook in this API.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 import numpy as np
 
@@ -150,6 +150,7 @@ def evaluate_candidate_on_training_folds(
     folds: tuple[TrainingFold, ...],
     *,
     minimum_valid_folds: int = 2,
+    budget_runtime: Any | None = None,
 ) -> CandidateValidationSummary:
     """Evaluate a fixed candidate on internal validation folds only.
 
@@ -173,6 +174,8 @@ def evaluate_candidate_on_training_folds(
     metrics: list[FoldMetric] = []
     failures = 0
     for fold in folds:
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("discovery wall-time budget expired before fixed-candidate fold evaluation")
         train_idx = np.asarray(fold.train_indices, dtype=int)
         valid_idx = np.asarray(fold.validation_indices, dtype=int)
         if (train_idx.size < 2 or valid_idx.size < 1
@@ -190,6 +193,8 @@ def evaluate_candidate_on_training_folds(
         truth = y[valid_idx]
         try:
             prediction_result = predictor(X[train_idx], y[train_idx], X[valid_idx])
+            if budget_runtime is not None and budget_runtime.expired():
+                raise TimeoutError("fixed-candidate fold evaluation returned after discovery wall-time deadline")
             fitted_expression = None
             if isinstance(prediction_result, tuple) and len(prediction_result) == 2:
                 prediction_result, fitted_expression = prediction_result
@@ -203,9 +208,13 @@ def evaluate_candidate_on_training_folds(
                 fold.repeat, fold.fold, rmse, nrmse, int(valid_idx.size),
                 str(fitted_expression) if fitted_expression is not None else None
             ))
+        except TimeoutError:
+            raise
         except Exception:
             failures += 1
 
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("discovery wall-time budget expired before fixed-candidate fold summary")
     if len(metrics) < minimum_valid_folds:
         raise ValueError(
             f"insufficient valid training folds: {len(metrics)} < {minimum_valid_folds}"
@@ -1014,6 +1023,7 @@ def evaluate_engine_candidate_on_training_folds(
     *,
     minimum_valid_folds: int = 2,
     max_nfev: int = 500,
+    budget_runtime: Any | None = None,
 ) -> CandidateValidationSummary:
     """Evaluate an engine-space candidate with fold-local features and target transforms.
 
@@ -1052,6 +1062,7 @@ def evaluate_engine_candidate_on_training_folds(
     return evaluate_candidate_on_training_folds(
         expression, predict, X_train, y_train, tuple(folds),
         minimum_valid_folds=minimum_valid_folds,
+        budget_runtime=budget_runtime,
     )
 
 

@@ -1168,13 +1168,7 @@ class HybridDiscoverySystem:
 
         _problem = getattr(self, "_active_discovery_problem", None)
         _validation_settings = getattr(self, "_active_training_validation_settings", None)
-        if (
-            _problem is not None and _validation_settings
-            and not (
-                getattr(self, "_active_budget_runtime", None) is not None
-                and self._active_budget_runtime.expired()
-            )
-        ):
+        if _problem is not None and _validation_settings:
             from hypatiax.tools.symbolic.hybrid_fold_search import (
                 evaluate_hybrid_candidate_on_training_folds,
             )
@@ -1192,18 +1186,26 @@ class HybridDiscoverySystem:
                 )
             _n_splits = int(_validation_settings.get("n_splits", 2))
             _fold_creation_error = None
-            try:
-                _folds = make_training_folds(
-                    _raw_X.shape[0],
-                    n_splits=_n_splits,
-                    n_repeats=1,
-                    validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
-                    seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
-                    strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
-                )
-            except Exception as _fold_error:
+            _budget_runtime = getattr(self, "_active_budget_runtime", None)
+            if _budget_runtime is not None and _budget_runtime.expired():
+                # A configured training-only validation stage is mandatory for
+                # this typed path. Never fall back to the retry-loop R2 winner
+                # when the shared deadline has already expired.
                 _folds = ()
-                _fold_creation_error = f"{type(_fold_error).__name__}: {_fold_error}"[:500]
+                _fold_creation_error = "discovery_deadline_exhausted_before_candidate_validation"
+            else:
+                try:
+                    _folds = make_training_folds(
+                        _raw_X.shape[0],
+                        n_splits=_n_splits,
+                        n_repeats=1,
+                        validation_fraction=float(_validation_settings.get("validation_fraction", 0.2)),
+                        seed=int(getattr(self, "_active_training_validation_seed", _problem.budget.seed)),
+                        strategy=str(_validation_settings.get("fold_strategy", "repeated_random")),
+                    )
+                except Exception as _fold_error:
+                    _folds = ()
+                    _fold_creation_error = f"{type(_fold_error).__name__}: {_fold_error}"[:500]
             _minimum_folds = int(
                 _validation_settings.get("minimum_valid_folds", max(1, len(_folds) or _n_splits))
             )
@@ -1270,6 +1272,7 @@ class HybridDiscoverySystem:
                             _folds,
                             minimum_valid_folds=_minimum_folds,
                             max_nfev=int(_validation_settings.get("coefficient_max_nfev", 500)),
+                            budget_runtime=getattr(self, "_active_budget_runtime", None),
                         )
                         _metrics["training_validation"] = _summary.to_dict()
                         if _nested_enabled:
