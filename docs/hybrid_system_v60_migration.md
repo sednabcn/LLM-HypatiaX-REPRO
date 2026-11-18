@@ -116,7 +116,6 @@ arrays are added to `DiscoveryProblem` or the selector interface.
 
 1. Bounded LLM/PySR producer adapters and richer native candidate fitting
    beyond the current single-basis affine least-squares stage.
-2. Bounded LLM/PySR producer adapters and richer native candidate fitting beyond the current single-basis affine least-squares stage.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
