@@ -214,6 +214,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     multi_basis_selection_audit=self._last_v60_multi_basis_selection_audit,
                     final_model_audit=self._last_v60_final_model_audit,
                     far_evaluation_audit=self._last_v60_far_evaluation_audit,
+                    residual_stability_audit=self._last_v60_residual_stability_audit,
                 )
             except Exception as exc:
                 annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
