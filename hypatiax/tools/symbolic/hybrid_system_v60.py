@@ -1,8 +1,8 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
-The first native stage validates an explicit immutable problem contract and
-captures a data-free run context before delegating discovery to the V50.2
-compatibility baseline. Candidate generation and selection remain V50.2.
+V60 validates an explicit immutable problem contract and generates a bounded,
+data-independent native template proposal pool. Candidate fitting, external
+LLM/PySR production, validation, and selection remain on the V50.2 baseline.
 """
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ import numpy as np
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
 
 
 @dataclass(frozen=True)
@@ -91,6 +92,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._last_v60_run_context: V60RunContext | None = None
+        self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -105,9 +107,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_pipeline": False,
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
+            "native_v60_candidate_generation": self._last_v60_run_context is not None,
+            "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
+            "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
             "compatibility_baseline": "hybrid_system_v50_2",
         })
+        annotated["native_v60_candidate_proposals"] = [
+            dict(item) for item in self._last_v60_candidate_proposals
+        ]
         annotated["implementation_provenance"] = provenance
         return annotated
 

@@ -2,12 +2,15 @@
 
 ## Status
 
-V60 remains opt-in. Its first native stage now performs typed problem-contract
-preflight and captures an immutable, data-free run context in
-`hypatiax/tools/symbolic/hybrid_system_v60.py`. Candidate generation,
-normalization, scientific gates, validation, and selection still delegate to
-the V50.2 compatibility baseline. This is a staged migration, not a completed
-native V60 pipeline and not a claim of improved scientific performance.
+V60 remains opt-in. It now performs typed problem-contract preflight, captures
+an immutable data-free run context, and generates a bounded, deterministic
+pool of algebraic template proposals in
+`hypatiax/tools/symbolic/v60_candidate_generation.py`. Candidate fitting,
+LLM/PySR production, normalization, scientific gates, validation, and
+selection still use the V50.2 compatibility baseline. The template pool is
+reported as generation evidence; it is not yet the selected/fit candidate pool.
+This is a staged migration, not a completed native V60 pipeline or a claim of
+improved scientific performance.
 
 For calls carrying a typed contract, V60 accepts either:
 - `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
@@ -23,9 +26,11 @@ typed contract retain the compatibility path.
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_preflight_v50_2_discovery`
+- `implementation_mode: native_bounded_templates_v50_2_compatibility`
 - `native_v60_pipeline: false`
-- `native_v60_stages: [typed_problem_contract_and_immutable_run_context]`
+- `native_v60_stages`: typed contract/run context plus bounded data-independent template generation
+- `native_v60_candidate_proposals`: generated proposal records with deterministic IDs, source, strategy, and seed
+- Candidate count and IDs in implementation provenance
 - `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
 
