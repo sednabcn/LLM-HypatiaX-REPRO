@@ -90,8 +90,8 @@ def fit_native_multi_basis_candidates(
             lineage = [
                 dict(record)
                 for _, _, records in group
-                for record in records
-                if isinstance(records, (list, tuple)) and isinstance(record, Mapping)
+                for record in (records if isinstance(records, (list, tuple)) else [])
+                if isinstance(record, Mapping)
             ]
             try:
                 import sympy as sp
@@ -170,6 +170,7 @@ def fit_native_multi_basis_candidates(
         "schema": "v60_native_multi_basis_fits_v1",
         "input_candidate_count": len(candidates),
         "usable_candidate_count": len(usable),
+        "candidate_budget_truncated_count": max(0, len(candidates) - max_candidates),
         "attempted_group_count": attempted,
         "fitted_group_count": len(fitted),
         "rejected_group_count": len(rejected),
