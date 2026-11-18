@@ -442,6 +442,7 @@ def validate_worker_outputs(
     protocol_manifest: list[dict[str, Any]] = []
     discovery_report_records: list[dict[str, Any]] = []
     expected_discovery_report_identities: set[tuple[str, str, str]] = set()
+    hybrid_discovery_report_count = 0
 
     for protocol_path in protocol_files:
         protocol = _load_strict_json(protocol_path)
@@ -521,6 +522,7 @@ def validate_worker_outputs(
                             f"{protocol_path.name}: {description!r}/{method} "
                             "did not activate the typed DiscoveryProblem contract"
                         )
+                    hybrid_discovery_report_count += 1
                 if report is not None:
                     discovery_report_records.append({
                         "domain": domain,
@@ -549,11 +551,11 @@ def validate_worker_outputs(
             f"found {sorted(equation_domains)}"
         )
 
-    if len(expected_discovery_report_identities) != len(discovery_report_records):
+    if len(expected_discovery_report_identities) != hybrid_discovery_report_count:
         raise ValueError(
             "required HybridDiscovery DiscoveryReport coverage mismatch: "
             f"expected {len(expected_discovery_report_identities)}, "
-            f"found {len(discovery_report_records)} records"
+            f"found {hybrid_discovery_report_count} records"
         )
 
     benchmark_path = output_dir / "benchmark_results_extrap.json"
