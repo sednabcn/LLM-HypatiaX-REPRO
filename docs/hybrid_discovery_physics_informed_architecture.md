@@ -1725,3 +1725,65 @@ physical correctness or use far/test observations. Regression-test source
 covers a valid expression-derived count and a tampered count. Tests have not
 been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM API
 call was launched.
+
+
+## 10. Multi-candidate handoff: required next implementation
+
+PR #219 corrects the source label for the candidate that survives the inner engine and prevents typed-path early stopping until a minimum number of distinct retry candidates has been observed. It does not solve the more fundamental handoff loss: SymbolicEngineWithLLM._discover_hybrid() evaluates multiple LLM hypotheses, but returns one LLM winner or one PySR winner. The outer HybridDiscoverySystem therefore cannot build a true cross-source Pareto set from hypotheses discarded inside that method.
+
+The next implementation must make candidate generation a first-class output without changing the legacy single-winner fields used by non-typed callers.
+
+### 10.1 Candidate envelope
+
+Add an optional, versioned discovery_candidates list to the engine result. Each item must carry:
+
+- candidate_id: deterministic identity from normalized expression, source, strategy, and seed.
+- expression and normalized_expression: auditable proposal and canonical form.
+- source: llm_proposal or pysr_search (and other declared sources only when genuinely generated).
+- search_strategy, seed, and generation-attempt provenance.
+- fit_expression, fit_variable_names, and a complete fit_transform_state sufficient to replay the candidate through the existing fold-local evaluator.
+- training_fit_metrics only as descriptive diagnostics; never as the outer selector's validation evidence.
+- LLM proposal ID and sanitized provenance where applicable; never raw prompts, secrets, or provider credentials.
+
+The existing top-level expression, r2_score, and prediction fields remain the compatibility winner. Typed callers consume discovery_candidates; legacy callers may ignore it.
+
+### 10.2 Candidate construction rules
+
+- Preserve each successfully parsed/evaluated LLM hypothesis, not just best_hyp. Invalid hypotheses remain auditable as rejected proposals or are excluded with an explicit rejection count.
+- Preserve the PySR result as a separate candidate when a PySR search actually ran.
+- Do not label a PySR-refined result as an LLM proposal merely because LLM operators or guesses seeded the search.
+- If the LLM-only acceptance branch skips PySR, report that no PySR candidate was generated; do not fabricate a second candidate.
+- Deduplicate deterministically after normalization while retaining all source/strategy provenance links.
+- Candidate generation must respect the shared candidate and time budgets. Reserve budget before admitting each candidate; record observed, admitted, rejected, and overrun counts using the existing budget ledger.
+- Do not add hidden LLM calls or trigger another model request to manufacture diversity.
+
+### 10.3 Outer integration and selection
+
+The retry adapter must iterate the envelope and send every candidate through the same existing path:
+
+1. Safe parsing and CandidateValidator hard gates.
+2. Fold-local transformation fitting and coefficient refitting on training-only partitions.
+3. Candidate-specific repeated-fold evidence and optional nested structure evidence.
+4. Stability and soft-constraint evidence validation.
+5. Existing Pareto objective construction and deterministic tie-break.
+
+A candidate failing a hard gate or lacking required fold evidence is excluded with a reason. The compatibility winner must not bypass this path on typed discovery. The final report must preserve candidate source and per-source counts, and identify whether the front contains both LLM and PySR candidates.
+
+### 10.4 Transform and leakage invariants
+
+LLM proposals may be scored in an outer raw-variable space while PySR expressions may use inner scaled or engineered features. These are not interchangeable strings. Every envelope item must carry its own replayable transform contract; no consumer may infer a transform from the source label or borrow the winner's transform state for an alternative candidate.
+
+All transforms and coefficients are re-fit within each training fold. Full-training fit scores, LLM confidence, and far/test metrics cannot decide outer candidate admission or selection. Far/test data remains sealed until the selected report is frozen.
+
+### 10.5 Required regression coverage (source only; do not run as part of implementation)
+
+- Two valid LLM hypotheses and one PySR result reach the outer report as three independently validated candidates.
+- LLM-only acceptance yields the LLM candidate set and explicitly records that PySR did not run.
+- Structural-risk routing preserves LLM proposals for audit while requiring the PySR-refined candidate to pass the normal gates.
+- Duplicate expressions collapse deterministically without losing provenance.
+- Candidate-budget exhaustion admits no over-budget candidates and records exclusions.
+- Each candidate's own transform state is used during fold evaluation.
+- A malformed/unsupported candidate cannot contaminate or suppress valid alternatives.
+- The selected winner and Pareto front are reproducible under fixed seeds and independent of far/test values.
+
+Acceptance criterion: a typed HybridDiscovery report can contain independently gated, fold-evaluated candidates from both LLM and PySR paths when both were actually generated. A report containing only one source must explain why the other source was not run or produced no admissible candidate.
