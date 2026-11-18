@@ -323,14 +323,25 @@ class CandidateValidator:
             values.append(value)
 
         finite = all(math.isfinite(value) for value in values)
+        evaluation_count = len(points)
         if spec.kind == "finite_output":
-            passed = finite
+            violation_count = sum(not math.isfinite(value) for value in values)
+            passed = violation_count == 0
         elif not finite:
+            violation_count = sum(
+                (not math.isfinite(value)) or (
+                    value <= self.tolerance if spec.kind == "positive_output"
+                    else value < -self.tolerance
+                )
+                for value in values
+            )
             passed = False
         elif spec.kind == "positive_output":
-            passed = all(value > self.tolerance for value in values)
+            violation_count = sum(value <= self.tolerance for value in values)
+            passed = violation_count == 0
         elif spec.kind == "nonnegative_output":
-            passed = all(value >= -self.tolerance for value in values)
+            violation_count = sum(value < -self.tolerance for value in values)
+            passed = violation_count == 0
         else:
             variable = spec.parameters.get("variable")
             if variable not in problem.variable_names:
@@ -353,12 +364,19 @@ class CandidateValidator:
                     math.isfinite(left) and math.isfinite(right)
                     and abs(left - expected) <= self.tolerance * max(1.0, abs(left), abs(expected))
                 )
-            passed = all(comparisons)
+            evaluation_count = len(comparisons)
+            violation_count = sum(not passed_pair for passed_pair in comparisons)
+            passed = violation_count == 0
         evidence = {
             "sample_count": len(points),
             "finite_sample_count": sum(math.isfinite(value) for value in values),
-            "sample_min": min(values) if finite and values else None,
-            "sample_max": max(values) if finite and values else None,
+            "sample_min": min((value for value in values if math.isfinite(value)), default=None),
+            "sample_max": max((value for value in values if math.isfinite(value)), default=None),
+            "evaluation_count": evaluation_count,
+            "violation_count": int(violation_count),
+            "violation_fraction": (
+                float(violation_count / evaluation_count) if evaluation_count else None
+            ),
             "sampling": "deterministic_cartesian_bounds_grid",
         }
         return (

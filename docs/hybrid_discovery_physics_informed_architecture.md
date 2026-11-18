@@ -1568,3 +1568,34 @@ protocol and remain future work. Regression-test source covers bias, spread,
 maximum residual, and the constant-target null case; it has not been run.
 No CI, experiment, worker, benchmark, smoke workflow, or LLM API call was
 launched for this change.
+
+
+## 39. Quantify declared-domain constraint violations
+
+The candidate validator now records quantitative evidence for supported
+sampled domain constraints. For positive-output, nonnegative-output, and
+finite-output checks, evidence includes the number of evaluated domain points,
+the number of violations, and the observed violation fraction. Even/odd
+symmetry checks report the corresponding counts over mirrored point pairs.
+Non-finite evaluations count as violations; an unevaluable constraint remains
+unknown rather than receiving a fabricated score.
+
+This evidence is retained in each typed candidate's existing
+constraint_outcomes record and therefore travels with the DiscoveryReport and
+Exp2 report sidecar. It does not change hard-gate behavior: a failed or unknown
+hard constraint still blocks eligibility. A failed soft constraint remains a
+warning and does not reject the candidate. No soft-constraint penalty is
+currently added to the Pareto objectives; these measurements are an auditable
+basis for a separately reviewed selection-policy change, not an implicit
+ranking change.
+
+The fraction is conditional on the validator's deterministic Cartesian
+three-point-per-variable grid (subject to the existing sample cap), not a
+probability over the physical domain and not an estimate of real-world failure
+frequency. It can miss narrow violations between grid points. Symmetry
+fractions count tested mirrored pairs, and the selected grid is not a proof of
+global invariance. The validator still evaluates only explicitly declared
+constraints and never infers physical laws from variable names. Regression
+source covers soft positive-output, odd-symmetry, and non-finite-output
+violations; it has not been run. No CI, experiment, worker, benchmark, smoke
+workflow, or LLM API call was launched.
