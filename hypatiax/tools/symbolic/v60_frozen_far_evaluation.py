@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
-import math
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -51,6 +50,11 @@ def _selection_snapshot(selection_audit: Mapping[str, Any]) -> str:
         raise ValueError("selected expression does not match frozen objective evidence")
     if selected[0].get("objective_evidence_sha256") != selected_hash:
         raise ValueError("selected objective fingerprint does not match its evidence")
+    objective_payload = dict(selected[0])
+    objective_payload.pop("objective_evidence_sha256", None)
+    objective_canonical = json.dumps(objective_payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    if sha256(objective_canonical.encode("utf-8")).hexdigest() != selected_hash:
+        raise ValueError("selected objective evidence fingerprint verification failed")
     payload = {
         "schema": selection_audit.get("schema"),
         "selection_status": selection_audit.get("selection_status"),
