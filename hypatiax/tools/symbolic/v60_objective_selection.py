@@ -116,6 +116,9 @@ def select_native_candidates_from_training_evidence(
         proposal_by_id[candidate_id] = item
 
     expected_folds = validation_audit.get("fold_count")
+    training_row_count = validation_audit.get("training_row_count")
+    if isinstance(training_row_count, bool) or not isinstance(training_row_count, int) or training_row_count < 1:
+        raise ValueError("validation audit must declare its training row count")
     if isinstance(expected_folds, bool) or not isinstance(expected_folds, int) or expected_folds < 2:
         raise ValueError("validation audit must declare at least two folds")
     validation_by_id: dict[str, Mapping[str, Any]] = {}
@@ -130,7 +133,8 @@ def select_native_candidates_from_training_evidence(
         if candidate_id in eligible_ids and candidate_id in proposal_by_id
         and validation_by_id[candidate_id].get("validation_status") == "validated"
     ]
-    cap = min(len(eligible_validated), max_candidates, max_search_attempts)
+    eligible_validated_count = len(eligible_validated)
+    cap = min(eligible_validated_count, max_candidates, max_search_attempts)
     eligible_validated = eligible_validated[:cap]
     raw_evidence: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
@@ -145,6 +149,9 @@ def select_native_candidates_from_training_evidence(
             parsed = parse_sympy_expression(expression, list(variable_names))
             complexity = int(sp.count_ops(parsed))
             rmse_scores, nrmse_scores = _verify_fold(validation, expected_folds)
+            for fold in validation["folds"]:
+                if any(index >= training_row_count for index in fold["training_row_indices"] + fold["validation_row_indices"]):
+                    raise ValueError("fold row index exceeds declared training row count")
             raw_evidence.append({
                 "candidate_id": candidate_id, "expression": expression,
                 "producer_provenance": [dict(x) for x in proposal.get("producer_provenance", []) if isinstance(x, Mapping)],
@@ -172,7 +179,7 @@ def select_native_candidates_from_training_evidence(
             "selection_performed": True, "far_or_evaluation_data_used": False,
             "objective_evidence": [], "rejected_candidates": rejected,
             "pareto_candidate_ids": [], "selected_candidate_id": None,
-            "budget_truncated_count": len(eligible_validated) - cap,
+            "budget_truncated_count": eligible_validated_count - cap,
         }
 
     metric = "mean_validation_nrmse" if all(item["mean_validation_nrmse"] is not None for item in raw_evidence) else "mean_validation_rmse"
@@ -209,10 +216,10 @@ def select_native_candidates_from_training_evidence(
         "objective_directions": {metric: "minimize", variability: "minimize", "symbolic_complexity": "minimize"},
         "selection_performed": True,
         "far_or_evaluation_data_used": False,
-        "input_eligible_validated_candidate_count": len(eligible_validated),
+        "input_eligible_validated_candidate_count": eligible_validated_count,
         "objective_candidate_count": len(raw_evidence),
         "rejected_candidate_count": len(rejected),
-        "budget_truncated_count": len(validation_by_id) - len(eligible_validated),
+        "budget_truncated_count": eligible_validated_count - cap,
         "objective_evidence": raw_evidence,
         "rejected_candidates": rejected,
         "pareto_candidate_ids": [item["candidate_id"] for item in pareto],
