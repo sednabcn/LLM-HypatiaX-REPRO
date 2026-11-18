@@ -242,10 +242,14 @@ def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
         raise TypeError("discovery problem variable_names must be a list of strings")
     if any(not isinstance(name, str) for name in names_spec):
         raise TypeError("discovery problem variable_names must contain only strings")
-    for field_name in ("domain", "target_unit", "noise_model", "schema_version"):
-        value = spec.get(field_name, CONTRACT_VERSION if field_name == "schema_version" else None)
+    if "domain" in spec and not isinstance(spec["domain"], str):
+        raise TypeError("discovery problem domain must be a string")
+    for field_name in ("target_unit", "noise_model"):
+        value = spec.get(field_name)
         if value is not None and not isinstance(value, str):
             raise TypeError(f"discovery problem {field_name} must be a string or null")
+    if "schema_version" in spec and not isinstance(spec["schema_version"], str):
+        raise TypeError("discovery problem schema_version must be a string")
     version = spec.get("schema_version", CONTRACT_VERSION)
     if version != CONTRACT_VERSION:
         raise ValueError(f"unsupported discovery contract schema_version {version!r}")
@@ -254,6 +258,10 @@ def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
         value = spec.get(field_name, {})
         if not isinstance(value, Mapping):
             raise TypeError(f"discovery problem {field_name} must be a mapping")
+    if any(not isinstance(unit, str) for unit in spec.get("variable_units", {}).values()):
+        raise TypeError("discovery problem variable_units values must be strings")
+    if any(not isinstance(bounds, Mapping) for bounds in spec.get("variable_domains", {}).values()):
+        raise TypeError("discovery problem variable_domains values must be mappings")
     for field_name in ("allowed_unary_operators", "allowed_binary_operators"):
         value = spec.get(field_name, ())
         if not isinstance(value, (list, tuple)) or any(not isinstance(item, str) for item in value):
