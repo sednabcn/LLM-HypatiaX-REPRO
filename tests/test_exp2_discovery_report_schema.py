@@ -161,6 +161,7 @@ def _valid_pareto_report():
         ],
     })
     first = report["candidates"][0]
+    first["metrics"]["complexity"] = {"node_count": 4}
     first["metrics"]["training_validation"] = {
         "fold_metrics": [{"normalized_rmse": 0.1}, {"normalized_rmse": 0.3}],
         "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 1.0},
@@ -181,6 +182,7 @@ def _valid_pareto_report():
     second = dict(first)
     second["candidate_id"] = "candidate-2"
     second["metrics"] = {
+        "complexity": {"node_count": 6},
         "training_validation": {
             "fold_metrics": [{"normalized_rmse": 0.3}, {"normalized_rmse": 0.5}],
             "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 0.5},
@@ -244,6 +246,10 @@ def test_pareto_report_recomputes_front_and_deterministic_selected_candidate():
                 dominant_fraction=0.25
             ),
             "stability objective does not match training evidence",
+        ),
+        (
+            lambda report: report["candidates"][0]["metrics"]["complexity"].update(node_count=99),
+            "complexity objective does not match supplied complexity evidence",
         ),
     ],
 )
