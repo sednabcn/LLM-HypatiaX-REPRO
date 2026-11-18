@@ -2498,27 +2498,29 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
             _candidate_items = []
             _seen_candidates = {}
-            _generation_counts = {
-                "llm_hypotheses_observed": len(result.get("llm_hypotheses") or []),
-                "llm_hypotheses_admitted": 0,
-                "llm_hypotheses_missing_expression": 0,
-                "llm_hypotheses_deduplicated": 0,
-                "pysr_search_generated_candidate": False,
-                "pysr_candidate_missing_expression": False,
-                "pysr_candidate_deduplicated": False,
-            }
-            _generation_counts["pysr_search_generated_candidate"] = bool(_pysr_generated)
             _llm_mode = str(result.get("llm_mode", ""))
             _llm_only = (
                 _llm_mode.endswith("_llm_only")
                 or _llm_mode == "hybrid_budget_exhausted_llm_better"
             )
             _pysr_candidate = result.get("pysr_candidate") or result
+            # Derive this from the completed discovery result before constructing
+            # the producer audit. In particular, the LLM-better result path may
+            # rebuild the result dict without a PySR candidate.
             _pysr_generated = (
                 not _llm_only
                 and _llm_mode != "hybrid_budget_exhausted_structural_risk"
                 and bool(_pysr_candidate.get("fit_expression"))
             )
+            _generation_counts = {
+                "llm_hypotheses_observed": len(result.get("llm_hypotheses") or []),
+                "llm_hypotheses_admitted": 0,
+                "llm_hypotheses_missing_expression": 0,
+                "llm_hypotheses_deduplicated": 0,
+                "pysr_search_generated_candidate": bool(_pysr_generated),
+                "pysr_candidate_missing_expression": False,
+                "pysr_candidate_deduplicated": False,
+            }
 
             def _add_candidate(expression, source, strategy, fit_expression,
                                fit_names, transform_state, proposal_index=None):
