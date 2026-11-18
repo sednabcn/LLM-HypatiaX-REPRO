@@ -1,6 +1,7 @@
 """Regression coverage for training-only residual diagnostics."""
 
 import numpy as np
+import pytest
 
 from hypatiax.tools.symbolic.training_validation import (
     evaluate_candidate_on_training_folds,
@@ -25,6 +26,8 @@ def test_fold_residual_diagnostics_are_normalized_on_fit_target_scale():
     )
 
     assert summary.valid_fold_count == 2
+    serialized = summary.to_dict()["fold_metrics"]
+    assert all("normalized_residual_bias" in item for item in serialized)
     for metric in summary.fold_metrics:
         fit_scale = np.std(y[list(next(
             fold.train_indices for fold in folds
@@ -36,8 +39,6 @@ def test_fold_residual_diagnostics_are_normalized_on_fit_target_scale():
 
 
 def test_residual_diagnostics_are_unavailable_for_constant_fit_target():
-    import pytest
-
     X = np.arange(8, dtype=float).reshape(-1, 1)
     y = np.ones(8, dtype=float)
     folds = make_training_folds(
