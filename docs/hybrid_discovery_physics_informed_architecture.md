@@ -1469,7 +1469,7 @@ promote an equation; post-run comparative analysis remains in DEV.
 
 The Exp2 worker boundary now validates the serialized `DiscoveryReport` as a
 versioned contract before retaining it in `discovery_reports_extrap.json`.
-The validator requires the supported discovery schema version (`1.0`), a
+The validator requires the supported discovery schema versions (`1.0` and the producer's `discovery_contract_v1` identifier), a
 known discovery status, the complete report envelope, object-valued
 provenance/far-evaluation fields, and the explicit
 `far_evaluation_used_for_selection: false` declaration.
