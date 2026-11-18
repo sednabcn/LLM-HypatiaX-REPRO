@@ -2827,7 +2827,8 @@ class HybridSystemV50_2Method(BaseMethod):
     """
 
     def __init__(self, verbose=False):
-        super().__init__("HybridDiscoverySystem v50_2 (tools)", verbose)
+        self.engine_implementation = _resolve_hybrid_implementation()
+        super().__init__(f"HybridDiscoverySystem {self.engine_implementation} (tools)", verbose)
         # NOTE: do NOT import hybrid_system_v50_2 or symbolic_engine here.
         # Same reason as SymbolicEngineMethod: top-level pysr/juliacall import in the
         # main process (torch already loaded) → juliacall/torch signal collision → segfault.
@@ -2923,7 +2924,7 @@ class HybridSystemV50_2Method(BaseMethod):
             "population_size": 33,
             "binary_operators": ["+", "-", "*", "/", "^"],
             "unary_operators": ["sqrt"],
-            "engine_implementation": _resolve_hybrid_implementation(),
+            "engine_implementation": self.engine_implementation,
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
@@ -2941,7 +2942,7 @@ class HybridSystemV50_2Method(BaseMethod):
             _meta["domain"] = "general"
 
         print(
-            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+            f"[ADAPTIVE-{self.engine_implementation.upper()}] {_n_iter_adaptive} iters"
             f" (spread={_spread:.1f}dec, vars={_n_vars}, depth={_op_depth}, diff={_diff}, score={_score:.2f})"
             f" — eq='{_eq_name_lower or _domain_lower}'",
             flush=True,
