@@ -319,6 +319,8 @@ def _verify_native_final_model_audit(audit: Any) -> None:
                 value = option.get(key)
                 if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0):
                     raise ValueError(f"native final-model option {key} must be finite, non-negative, or null")
+            if (option.get("cv_nrmse") is None) != (option.get("cv_nrmse_std") is None):
+                raise ValueError("native final-model option NRMSE mean/std nullability must match")
             complexity = option.get("complexity")
             if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
                 raise ValueError("native final-model option complexity must be a non-negative integer")
@@ -327,14 +329,21 @@ def _verify_native_final_model_audit(audit: Any) -> None:
                 raise ValueError("native final-model option expressions are invalid")
             if any(not isinstance(value, str) or not value for value in expressions_option):
                 raise ValueError("native final-model option expressions must be non-empty strings")
+            for expression in expressions_option:
+                parse_sympy_expression(expression, names)
             if family == "single_basis":
-                if len(expressions_option) != 1 or not isinstance(option.get("candidate_id"), str):
+                if (len(expressions_option) != 1 or not isinstance(option.get("candidate_id"), str)
+                        or not option.get("candidate_id") or option.get("candidate_group_id") is not None):
                     raise ValueError("single-basis final-model option has invalid identity")
             else:
                 ids_option = option.get("candidate_ids")
                 if (not isinstance(ids_option, list) or len(ids_option) != len(expressions_option)
-                        or len(ids_option) != len(set(ids_option)) or not 2 <= len(ids_option) <= 3
-                        or any(not isinstance(value, str) or not value for value in ids_option)):
+                        or not 2 <= len(ids_option) <= 3
+                        or any(not isinstance(value, str) or not value for value in ids_option)
+                        or len(ids_option) != len(set(ids_option))
+                        or option.get("candidate_id") is not None
+                        or not isinstance(option.get("candidate_group_id"), str)
+                        or not option.get("candidate_group_id")):
                     raise ValueError("multi-basis final-model option has invalid basis lineage")
             checked_options.append(option)
         use_nrmse = all(option.get("cv_nrmse") is not None for option in checked_options)
