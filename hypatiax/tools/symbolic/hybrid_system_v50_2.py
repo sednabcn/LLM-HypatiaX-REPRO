@@ -1325,6 +1325,10 @@ class HybridDiscoverySystem:
                 },
                 minimum_valid_folds=_minimum_folds,
                 require_nested_structure_evidence=_require_nested,
+                soft_constraint_ids=[
+                    spec.constraint_id for spec in _problem.constraints
+                    if spec.severity == "soft"
+                ],
             )
             self._last_discovery_report = _report.to_dict()
             if _report.selected_candidate_id is None:
