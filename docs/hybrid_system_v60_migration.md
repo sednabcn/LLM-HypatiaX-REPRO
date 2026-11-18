@@ -26,7 +26,7 @@ typed contract retain the compatibility path.
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_preflight_v50_2_discovery`
+- `implementation_mode: native_bounded_templates_v50_2_compatibility`
 - `native_v60_pipeline: false`
 - `native_v60_stages`: typed contract/run context plus bounded data-independent template generation
 - `native_v60_candidate_proposals`: generated proposal records with deterministic IDs, source, strategy, and seed
