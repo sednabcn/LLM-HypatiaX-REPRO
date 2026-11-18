@@ -8,8 +8,9 @@ from typing import Any
 class DiscoveryBudgetRuntime:
     """Per-discovery, monotonic resource accounting for a typed contract."""
 
-    def __init__(self, budget: Any):
+    def __init__(self, budget: Any, configured_search_attempts: int | None = None):
         self.budget = budget
+        self.configured_search_attempts = configured_search_attempts
         self.started_at = time.monotonic()
         limit = budget.max_wall_time_seconds
         self.deadline = self.started_at + float(limit) if limit is not None else None
@@ -76,7 +77,11 @@ class DiscoveryBudgetRuntime:
             "enforced": True,
             "requested": self.budget.to_dict(),
             "effective": {
-                "max_search_attempts": self.budget.max_search_attempts,
+                "max_search_attempts": (
+                    min(self.budget.max_search_attempts, self.configured_search_attempts)
+                    if self.configured_search_attempts is not None
+                    else self.budget.max_search_attempts
+                ),
                 "max_candidates": self.budget.max_candidates,
                 "max_llm_calls": self.budget.max_llm_calls,
                 "max_llm_tokens": self.budget.max_llm_tokens,
