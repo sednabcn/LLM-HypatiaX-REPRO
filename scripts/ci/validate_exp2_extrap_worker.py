@@ -458,8 +458,8 @@ def _validate_candidate_envelope_audit(report: dict[str, Any]) -> None:
             raise ValueError("producer deduplication count is inconsistent")
         if missing_total != missing_llm + int(pysr_missing):
             raise ValueError("producer missing-expression count is inconsistent")
-        if pysr_generated and (pysr_missing or pysr_dedup):
-            raise ValueError("producer PySR candidate has contradictory generation states")
+        if pysr_missing and pysr_dedup:
+            raise ValueError("producer PySR candidate cannot be both missing and deduplicated")
         if not pysr_generated and (pysr_dedup or pysr_missing):
             raise ValueError("producer PySR candidate accounting lacks a generated proposal")
 
