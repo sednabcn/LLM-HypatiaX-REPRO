@@ -135,6 +135,36 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["formula"], "x")
 
+    def test_legacy_entrypoint_clears_stale_native_handoff_state(self):
+        engine = HybridDiscoverySystemV60(use_llm=False)
+        engine._last_v60_activate_native_result = True
+        engine._last_v60_run_context = object()
+        engine._last_v60_candidate_proposals = ({"candidate_id": "stale"},)
+        engine._last_v60_final_model_audit = {
+            "execution_status": "selected",
+            "selected_model": {"fitted_expression": "stale_native"},
+        }
+        expected = {"success": True, "formula": "legacy_formula"}
+        with patch.object(
+            HybridDiscoverySystem,
+            "discover_validate_interpret",
+            return_value=expected,
+        ) as legacy:
+            result = engine.discover_validate_interpret(
+                np.arange(1.0, 5.0).reshape(-1, 1),
+                np.arange(1.0, 5.0),
+                ["x"],
+                {"x": "input"},
+                {"x": "dimensionless"},
+            )
+        legacy.assert_called_once()
+        self.assertEqual(result["formula"], "legacy_formula")
+        self.assertFalse(result["implementation_provenance"]["native_v60_pipeline"])
+        self.assertFalse(result["implementation_provenance"]["native_v60_production_handoff_enabled"])
+        self.assertIsNone(result["implementation_provenance"]["v60_run_context"])
+        self.assertEqual(result["native_v60_candidate_proposals"], [])
+        self.assertNotIn("native_v60_production_handoff", result)
+
 
 if __name__ == "__main__":
     unittest.main()
