@@ -1042,6 +1042,10 @@ class HybridDiscoverySystem:
                     )
                     break
 
+        else:
+            if _budget_runtime is not None and _budget_runtime.search_attempts >= _search_limit:
+                _budget_runtime.stop_reason = _budget_runtime.stop_reason or "max_search_attempts"
+
         if best_result is None and flagged_result is not None:
             # Do not discard all discoveries when every candidate triggers the
             # complexity screen, but make the exception visible to downstream
