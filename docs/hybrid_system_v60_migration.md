@@ -116,7 +116,7 @@ arrays are added to `DiscoveryProblem` or the selector interface.
 
 1. Bounded LLM/PySR producer adapters and richer native candidate fitting
    beyond the current single-basis affine least-squares stage.
-2. Versioned discovery report and worker-side integrity verification.
+2. Bounded LLM/PySR producer adapters and richer native candidate fitting beyond the current single-basis affine least-squares stage.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -145,3 +145,22 @@ call. Callers must invoke it only after selection has completed and must keep
 its output downstream of all selection and retry decisions. Its report marks
 selection and candidate ranking as not performed and records
 `far_or_evaluation_data_used_for_selection: false`.
+
+
+## Versioned discovery reports and worker integrity
+
+Typed-contract V60 results now include `discovery_report_envelope`, built from
+the native candidate pool, declared-gate audit, training-fold validation, and
+training-only objective-selection audit. The report is explicitly marked
+provisional: it describes the isolated native selection and does not replace
+or promote the V50.2 production result.
+
+The envelope uses schema `v60_discovery_report_envelope_v1` and contains a
+canonical SHA-256 integrity digest over the complete versioned report payload.
+Workers should call `verify_discovery_report_envelope()` before consuming the
+report. Verification rejects unsupported schemas, missing or unknown fields,
+tampered payloads, duplicate candidate IDs, invalid selected/Pareto references,
+and any indication that far-evaluation evidence influenced selection.
+`seal_discovery_report()` is available for trusted report producers. The
+far-evaluation section remains a separate report field and is empty at
+discovery time; post-selection evaluation must not mutate selection evidence.
