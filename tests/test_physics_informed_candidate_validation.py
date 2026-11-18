@@ -140,3 +140,74 @@ def test_candidate_validator_supports_expanded_fold_log_transform_safely():
     assert candidate.eligible is True
     assert "sign" in candidate.expression
     assert candidate.constraint_outcomes[-1].status == "pass"
+
+
+def test_soft_constraint_reports_quantitative_violation_fraction_without_rejecting():
+    problem = DiscoveryProblem(
+        target_name="response",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -1.0, "maximum": 1.0}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="soft-positive-output",
+                kind="positive_output",
+                severity="soft",
+            ),
+        ),
+    )
+
+    candidate = CandidateValidator().validate(problem, "x")
+
+    outcome = candidate.constraint_outcomes[-1]
+    assert candidate.eligible is True
+    assert outcome.status == "fail"
+    assert outcome.evidence["evaluation_count"] == 3
+    assert outcome.evidence["violation_count"] == 2
+    assert outcome.evidence["violation_fraction"] == pytest.approx(2.0 / 3.0)
+
+
+def test_symmetry_constraint_reports_fraction_of_failed_mirrored_pairs():
+    problem = DiscoveryProblem(
+        target_name="response",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2.0, "maximum": 2.0}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="soft-odd-symmetry",
+                kind="odd_in",
+                severity="soft",
+                parameters={"variable": "x"},
+            ),
+        ),
+    )
+
+    candidate = CandidateValidator().validate(problem, "x**2")
+
+    outcome = candidate.constraint_outcomes[-1]
+    assert candidate.eligible is True
+    assert outcome.status == "fail"
+    assert outcome.evidence["evaluation_count"] == 3
+    assert outcome.evidence["violation_count"] == 2
+    assert outcome.evidence["violation_fraction"] == pytest.approx(2.0 / 3.0)
+
+
+def test_finite_output_violation_count_includes_nonfinite_samples():
+    problem = DiscoveryProblem(
+        target_name="response",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -1.0, "maximum": 1.0}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="finite-output",
+                kind="finite_output",
+                severity="soft",
+            ),
+        ),
+    )
+
+    candidate = CandidateValidator().validate(problem, "1/x")
+
+    outcome = candidate.constraint_outcomes[-1]
+    assert outcome.evidence["evaluation_count"] == 3
+    assert outcome.evidence["violation_count"] == 1
+    assert outcome.evidence["violation_fraction"] == pytest.approx(1.0 / 3.0)
