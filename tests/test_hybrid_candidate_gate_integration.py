@@ -102,3 +102,86 @@ def test_retry_selector_never_returns_candidate_failing_hard_gate():
             variable_descriptions={"x": "position"},
             variable_units={},
         )
+
+
+
+def test_training_only_report_selects_candidate_from_candidate_specific_fold_evidence():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2, "maximum": 2}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="energy-nonnegative",
+                kind="nonnegative_output",
+                severity="hard",
+            ),
+        ),
+    )
+    system = _system("x**2", problem)
+    X = np.linspace(-2.0, 2.0, 20).reshape(-1, 1)
+    y = np.square(X[:, 0])
+    system._active_training_validation_settings = {
+        "n_splits": 2,
+        "validation_fraction": 0.2,
+        "minimum_valid_folds": 2,
+    }
+    system._active_training_validation_seed = 42
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    result = system._discover_with_retry(
+        X=X,
+        y=y,
+        variable_names=["x"],
+        variable_descriptions={"x": "position"},
+        variable_units={},
+    )
+
+    report = result["discovery_report"]
+    assert report["status"] == "accepted"
+    assert report["selected_candidate_id"] == report["candidates"][0]["candidate_id"]
+    candidate = report["candidates"][0]
+    assert candidate["metrics"]["training_validation"]["valid_fold_count"] == 2
+    assert candidate["metrics"]["training_validation"]["selection_data_scope"] == "training_region_only"
+    assert report["far_evaluation_used_for_selection"] is False
+    assert result["candidate_selection_policy"] == "training_only_physics_gated_pareto"
+
+
+
+def test_candidate_report_fails_closed_when_training_folds_cannot_be_built():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2, "maximum": 2}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="energy-nonnegative",
+                kind="nonnegative_output",
+                severity="hard",
+            ),
+        ),
+    )
+    system = _system("x**2", problem)
+    X = np.array([[-1.0], [0.0], [1.0]])
+    y = np.square(X[:, 0])
+    system._active_training_validation_settings = {"n_splits": 2}
+    system._active_training_validation_seed = 42
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    with pytest.raises(ValueError, match="NO_CREDIBLE_CANDIDATE"):
+        system._discover_with_retry(
+            X=X,
+            y=y,
+            variable_names=["x"],
+            variable_descriptions={"x": "position"},
+            variable_units={},
+        )
+
+    assert system._last_discovery_report["status"] == "insufficient_validation_evidence"
+    assert system._last_discovery_report["selected_candidate_id"] is None

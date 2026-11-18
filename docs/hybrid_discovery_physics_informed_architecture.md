@@ -938,3 +938,67 @@ must carry every generated candidate's gate outcomes and candidate-specific
 fold evidence into this selector, preserve rejected-candidate reasons, and
 freeze the selected report before the sealed far evaluation. No experiment,
 benchmark, smoke workflow, worker, or LLM call is part of this change.
+
+
+## 21. Candidate-specific fold evidence and production Pareto selection
+
+The next integration layer connects the report selector to
+`HybridDiscoverySystem._discover_with_retry()`, but only when both a typed
+`DiscoveryProblem` and `training_only_search_validation` settings are
+provided.
+
+### Candidate capture and evaluation
+
+- Each finite, non-sentinel retry candidate receives its own
+  `CandidateRecord`, including hard/soft gate outcomes, rejection reasons,
+  source, strategy, and seed. Physics-aware fallback candidates are captured
+  through the same contract, including rejected fallback candidates.
+- Every hard-gate-eligible candidate is evaluated on the same deterministic
+  internal folds drawn exclusively from the raw training region.
+- The fixed expression structure is retained while floating coefficients are
+  refitted on each fold's fitting rows only.
+- Fold preprocessing learns signed-log feature flags and feature scales from
+  each fitting partition; the optional signed-log target transform is likewise
+  learned from fitting rows only. Validation rows only receive frozen transforms.
+- Fold metrics are attached to that candidate's record. They are never copied
+  from the preceding PySR strategy-selection audit: configuration-selection
+  evidence and equation-selection evidence remain distinct.
+- The Pareto report selects among candidate records; the selected candidate's
+  already-generated full-training result is returned with the complete report
+  attached in both the discovery result and top-level metadata.
+- If no candidate has sufficient fold evidence and passing hard gates, the
+  typed/validated path returns `NO_CREDIBLE_CANDIDATE`; it does not fall back
+  to training R² or the legacy retry winner.
+
+### Explicit scope restrictions
+
+This first production adapter supports candidates expressed only in the
+declared raw input variables. Candidates that rely on globally engineered
+GM/ratio symbols or an expression annotated with full-training X-normalisation
+are rejected by the restricted candidate gate or fail fold evaluation. They
+are not evaluated using a feature plan learned from the full training matrix.
+A later adapter must reconstruct the exact domain-specific engineered-feature
+plan independently in each fold before those expressions can be eligible.
+
+Coefficient refitting is for fixed symbolic structure, not fresh PySR search
+inside every fold. Integer constants/exponents remain structural; only parsed
+floating-point literals are refitted. This gives leakage-safe evidence for the
+supported subset, not proof of physical truth or universal validation of all
+candidate families.
+
+The legacy compatibility path remains unchanged when the typed problem or
+training-only validation settings are absent. Fold evaluation does not call
+the LLM; the final full-training discovery retains its configured LLM policy.
+No far/test values or metrics enter candidate evaluation or Pareto selection.
+No experiment, benchmark, smoke workflow, worker, or LLM API call is part of
+this implementation.
+
+
+### Retry and LLM budget interaction
+
+The existing early-stop rule is preserved. Therefore the Pareto front contains
+the candidates actually generated before early-stop or the existing retry
+budget/timeout boundary; it does not force extra retries merely to enlarge the
+front. Candidate fold refits do not call the LLM. The number and policy of
+LLM proposal calls remain governed by the existing HybridDiscovery retry
+lifecycle and are not silently increased by this report integration.
