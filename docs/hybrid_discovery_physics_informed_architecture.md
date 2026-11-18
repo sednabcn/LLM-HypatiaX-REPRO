@@ -1518,8 +1518,9 @@ The objective vector is therefore:
 - Dominant normalized expression fraction across fold-local coefficient
   refits (maximize).
 
-A candidate without a finite stability fraction in [0, 1] is not silently
-assigned a neutral or favorable value. It receives the explicit
+A candidate without a measured status, at least the configured minimum number
+of fold-local expressions, or a finite stability fraction in [0, 1] is not
+silently assigned a neutral or favorable value. It receives the explicit
 `expression_stability_unavailable` eligibility reason and is excluded from
 the Pareto front. If no candidate has complete required evidence, the report
 returns `insufficient_validation_evidence` without promoting a candidate.
