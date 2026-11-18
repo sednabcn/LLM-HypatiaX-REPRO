@@ -91,6 +91,33 @@ _PKG_ROOT = _REPO_ROOT / "hypatiax"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+def _resolve_hybrid_implementation() -> str:
+    """Read the explicit engine selector without changing the V50.2 default.
+
+    HYPATIAX_ENGINE_IMPLEMENTATION is an intentional per-run override; otherwise
+    the selector is read from REPRO_CFG (or config/repro.yaml).
+    """
+    import yaml
+
+    config_path = Path(os.environ.get("REPRO_CFG", _REPO_ROOT / "config" / "repro.yaml"))
+    if not config_path.is_absolute():
+        config_path = _REPO_ROOT / config_path
+    with config_path.open("r", encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file) or {}
+    engine = config.get("engine", {})
+    if not isinstance(engine, dict):
+        raise TypeError("repro config 'engine' section must be a mapping")
+    configured = engine.get("implementation", "v50_2")
+    selected = os.environ.get("HYPATIAX_ENGINE_IMPLEMENTATION", configured)
+    selected = str(selected).strip().lower()
+    if selected not in {"v50_2", "hybrid_system_v50_2", "v60", "hybrid_system_v60"}:
+        raise ValueError(
+            f"Unsupported HYPATIAX engine implementation {selected!r}; "
+            "expected 'v50_2' or 'v60'."
+        )
+    return selected
+
+
 # Canonical shared implementation used by both Exp2 Feynman runners.
 from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     REGIMES,
@@ -2617,7 +2644,7 @@ try:
             verbose=False,
         )
     elif method == "hybrid_v50_2":
-        from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+        from hypatiax.tools.symbolic.hybrid_system_factory import create_hybrid_discovery_system
         from hypatiax.tools.symbolic.symbolic_engine import DiscoveryConfig
         # ── FIX: wire pysr_timeout + max_retries from kwargs into DiscoveryConfig ──
         # Previously HybridDiscoverySystem() was created with NO config, ignoring
@@ -2690,7 +2717,8 @@ try:
                 "budget": _typed_problem.budget.to_dict(),
             }
             _meta["discovery_problem"] = _typed_problem
-        system = HybridDiscoverySystem(
+        system = create_hybrid_discovery_system(
+            implementation=kwargs.get("engine_implementation", "v50_2"),
             domain=_domain,
             discovery_config=_disc_cfg,
             max_retries=_n_retry,
@@ -3363,6 +3391,7 @@ class HybridSystemV50_2Method(BaseMethod):
             # Compare configurations on identical internal training folds.
             # Fold searches use pure PySR; the final full-training search keeps
             # the configured LLM-guided HybridDiscovery arm.
+            "engine_implementation": _resolve_hybrid_implementation(),
             "training_only_search_validation": {
                 "n_splits": 2,
                 "validation_fraction": 0.2,
