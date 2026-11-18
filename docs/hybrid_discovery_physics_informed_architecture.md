@@ -1297,3 +1297,32 @@ A typed `DiscoveryProblem` budget is enforced by a per-discovery runtime ledger.
 `max_wall_time_seconds` uses a monotonic deadline and is checked before new search attempts, LLM requests, and training-fold report evaluation. This is cooperative enforcement: it prevents starting another bounded stage after expiry but cannot interrupt an already-running PySR fit or an in-flight provider request. The audit attached to the discovery result records requested limits, actual attempts/calls/candidates, reserved tokens, elapsed time, and the stop reason. The contract's seed is used as the training-validation and outer retry seed when the caller does not explicitly supply one. `max_search_attempts` caps outer HybridDiscovery retry calls; fold-local strategy-selection and nested structural searches retain their own explicit fold budgets and are not charged as outer retries. The wall-time deadline is checked before those fold-search stages begin.
 
 When no typed contract is supplied, the legacy path and its existing limits remain unchanged. The runtime budget only reduces existing configured limits; it never raises them. No far/test data enters the budget ledger or selection process.
+
+
+
+## 29. Observed-versus-admitted budget accounting and late-result handling
+
+The runtime audit distinguishes candidates observed from candidates admitted under
+`max_candidates`. Every surfaced LLM hypothesis or outer symbolic candidate
+increments `candidates_seen`; only the subset within the remaining ceiling
+increments `candidates_admitted`. Any excess is reported as
+`candidate_budget_overrun` and is not passed onward from the LLM hypothesis
+list. This makes a provider response containing more hypotheses than requested
+visible rather than silently reporting only the truncated count. An LLM-only
+selected result is not counted a second time as a new outer candidate because
+it is already represented among the hypotheses.
+
+LLM accounting separates `llm_calls_reserved`, `llm_requests_started`, and
+`llm_responses_received`. A reservation is made before the request, a started
+request is recorded immediately before invoking the provider, and a response
+is counted only after a response is returned. Token accounting remains a
+conservative reservation of requested maximum output tokens; provider-reported
+actual token usage is not currently exposed by the shared call wrapper and is
+therefore not claimed by this audit.
+
+A search or provider request already in flight cannot be forcibly interrupted
+when the monotonic deadline expires. However, if symbolic discovery returns
+after the deadline, or candidate validation consumes the remaining time, that
+new candidate is marked `rejected_deadline` and cannot become the selected
+result. Previously completed eligible candidates remain available; no
+incomplete or late-returning candidate is promoted.
