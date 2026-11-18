@@ -21,7 +21,8 @@ def _candidate(expression, seed, scores, *, eligible=True, outcomes=(), stabilit
                     {"normalized_rmse": score} for score in scores
                 ],
                 "expression_stability": {
-                    "status": "measured",
+                    "status": "measured" if stability is not None else "insufficient_evidence",
+                    "expression_count": len(scores) if stability is not None else 0,
                     "dominant_fraction": stability,
                 },
             }
@@ -218,3 +219,26 @@ def test_missing_expression_stability_excludes_candidate_with_reason():
     assert report.selected_candidate_id is None
     reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
     assert "expression_stability_unavailable" in reasons
+
+
+
+def test_stability_requires_a_measured_expression_for_each_required_fold():
+    candidate = _candidate("x", 24, [0.1, 0.2])
+    metrics = candidate.metrics
+    metrics["training_validation"]["expression_stability"]["expression_count"] = 1
+    incomplete = CandidateRecord(
+        expression=candidate.expression,
+        source=candidate.source,
+        search_strategy=candidate.search_strategy,
+        seed=candidate.seed,
+        metrics=metrics,
+        eligible=True,
+    )
+
+    report = select_pareto_discovery_report(
+        [incomplete], variable_names=["x"], minimum_valid_folds=2
+    )
+
+    reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
+    assert "expression_stability_unavailable" in reasons
+    assert report.selected_candidate_id is None
