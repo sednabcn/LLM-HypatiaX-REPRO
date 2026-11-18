@@ -62,6 +62,55 @@ def seal_discovery_report(report: DiscoveryReport | Mapping[str, Any]) -> dict[s
     return envelope
 
 
+
+def _verify_multi_basis_selection_audit(audit: Any) -> None:
+    """Validate the report-embedded joint-basis selection references/digests."""
+    if not isinstance(audit, Mapping):
+        raise TypeError("native multi-basis selection provenance must be a mapping")
+    if audit.get("schema") != "v60_native_multi_basis_objective_selection_v1":
+        raise ValueError("unsupported native multi-basis selection schema")
+    if audit.get("far_or_evaluation_data_used") is not False:
+        raise ValueError("multi-basis selection report must exclude far/evaluation data")
+    if audit.get("selection_status") not in {"selected", "no_credible_candidate", "stage_failed"}:
+        raise ValueError("unsupported multi-basis selection status")
+    if audit.get("selection_performed") is not (audit.get("selection_status") != "stage_failed"):
+        raise ValueError("multi-basis selection completion flag is inconsistent")
+    evidence = audit.get("objective_evidence")
+    pareto = audit.get("pareto_candidate_group_ids")
+    if not isinstance(evidence, list) or not isinstance(pareto, list):
+        raise TypeError("multi-basis objective evidence and Pareto IDs must be lists")
+    by_id = {}
+    for item in evidence:
+        if not isinstance(item, Mapping):
+            raise TypeError("multi-basis objective records must be mappings")
+        group_id = item.get("candidate_group_id")
+        if not isinstance(group_id, str) or not group_id or group_id in by_id:
+            raise ValueError("multi-basis objective group IDs must be unique strings")
+        supplied = item.get("objective_evidence_sha256")
+        unsigned = {key: value for key, value in item.items() if key != "objective_evidence_sha256"}
+        if not isinstance(supplied, str) or _canonical_digest(unsigned) != supplied:
+            raise ValueError("multi-basis objective evidence digest does not reproduce")
+        fingerprint = item.get("evidence_fingerprint")
+        if not isinstance(fingerprint, str) or len(fingerprint) != 64:
+            raise ValueError("multi-basis evidence fingerprint is missing or invalid")
+        by_id[group_id] = item
+    if len(pareto) != len(set(pareto)) or not set(pareto).issubset(by_id):
+        raise ValueError("multi-basis Pareto IDs must uniquely reference objective evidence")
+    selected_id = audit.get("selected_candidate_group_id")
+    selected_ids = audit.get("selected_basis_candidate_ids")
+    selected_exprs = audit.get("selected_basis_expressions")
+    if audit.get("selection_status") == "selected":
+        if selected_id not in by_id or selected_id not in pareto:
+            raise ValueError("selected multi-basis group must be in objective evidence and Pareto set")
+        selected = by_id[selected_id]
+        if selected_ids != selected.get("basis_candidate_ids") or selected_exprs != selected.get("basis_expressions"):
+            raise ValueError("selected multi-basis expressions do not match objective evidence")
+        if audit.get("selected_objective_evidence_sha256") != selected.get("objective_evidence_sha256"):
+            raise ValueError("selected multi-basis objective digest does not match")
+    elif selected_id is not None or selected_ids not in ([], None) or selected_exprs not in ([], None):
+        raise ValueError("non-selected multi-basis audit cannot reference a selected group")
+
+
 def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Strictly verify worker input; return a detached JSON-compatible report."""
     if not isinstance(envelope, Mapping):
@@ -95,6 +144,11 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
         raise TypeError("far_evaluation must be a mapping")
     if report["far_evaluation"].get("used_for_selection", False) is not False:
         raise ValueError("far evaluation cannot influence selection")
+    provenance = report["provenance"]
+    if not isinstance(provenance, Mapping):
+        raise TypeError("report provenance must be a mapping")
+    if "native_multi_basis_selection" in provenance:
+        _verify_multi_basis_selection_audit(provenance["native_multi_basis_selection"])
     candidates = report["candidates"]
     if not isinstance(candidates, list):
         raise TypeError("candidates must be a list")
@@ -124,6 +178,7 @@ def build_native_discovery_report(
     selection_audit: Mapping[str, Any],
     *,
     run_context: Mapping[str, Any],
+    multi_basis_selection_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a versioned report from native V60 evidence without promoting it
     to the V50.2 production result.
@@ -204,6 +259,13 @@ def build_native_discovery_report(
             "native_v60_pipeline": False,
             "run_context": dict(run_context),
             "native_selection_status": selection_audit.get("selection_status"),
+            "native_multi_basis_selection": dict(multi_basis_selection_audit or {
+                "schema": "v60_native_multi_basis_objective_selection_v1",
+                "selection_status": "stage_failed", "selection_performed": False,
+                "far_or_evaluation_data_used": False, "objective_evidence": [],
+                "pareto_candidate_group_ids": [], "selected_candidate_group_id": None,
+                "selected_basis_candidate_ids": [], "selected_basis_expressions": [],
+            }),
             "compatibility_baseline": "hybrid_system_v50_2",
         },
         far_evaluation={},
