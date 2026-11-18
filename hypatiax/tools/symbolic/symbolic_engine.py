@@ -2443,6 +2443,29 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 **kwargs,
             )
 
+        # LLM-selected equations are expressed in the outer Hybrid fit space,
+        # but do not have PySR's inner X/y scaling or engineered-feature state.
+        # Publish an explicit identity inner-transform contract so the same
+        # candidate-level fold evaluator can replay the outer transforms learned
+        # independently inside each fold.
+        if (
+            isinstance(result, dict)
+            and "fit_expression" not in result
+            and str(result.get("llm_mode", "")).endswith("_llm_better")
+        ):
+            _llm_names = list(result.get("variable_names") or variable_names)
+            result["fit_expression"] = str(result.get("expression", "")).replace("^", "**")
+            result["fit_variable_names"] = _llm_names
+            result["fit_transform_state"] = {
+                "input_feature_count": len(_llm_names),
+                "x_scales": [1.0] * len(_llm_names),
+                "gm_pairs": [],
+                "ratio_pairs": [],
+                "y_std": 1.0,
+                "feature_names": list(_llm_names),
+                "transform_source": "llm_outer_fit_space_identity_inner_transform",
+            }
+
         # Keep the LLM client alive for the lifetime of this discovery engine.
         # HybridDiscoverySystem retries by calling discover() repeatedly; dropping
         # llm_engine here silently turns every retry after the first into pure
