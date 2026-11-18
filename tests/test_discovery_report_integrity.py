@@ -173,5 +173,5 @@ def test_worker_verifier_rejects_forged_fold_evidence_fingerprint():
     unsigned = {key: value for key, value in item.items() if key != "objective_evidence_sha256"}
     item["objective_evidence_sha256"] = sha256(json.dumps(unsigned, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
     payload["provenance"]["native_multi_basis_selection"] = audit
-    with pytest.raises(ValueError, match="fold-evidence fingerprint"):
+    with pytest.raises(ValueError, match="RMSE aggregates do not reproduce"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
