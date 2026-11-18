@@ -1407,7 +1407,7 @@ Every candidate's `metrics.pareto_selection` now includes an ordered, deduplicat
 
 `eligible_for_pareto` is derived from that complete reason list, so the boolean and explanation cannot drift independently. These reasons describe selection eligibility; they do not imply that a rejected equation is scientifically false. The full candidate record and constraint outcomes remain available for review, including soft warnings that do not constitute hard rejection.
 
-Report provenance now labels the nested-evidence policy consistently in both accepted and no-selection outcomes: `training_only_pareto_v2_nested_structure_gate` when nested recurrence is required, otherwise `training_only_pareto_v1`. This is audit metadata only; the objective set remains mean normalized training-fold RMSE, worst-fold normalized RMSE, and symbolic operation count. No far/test score enters eligibility, Pareto ranking, or tie-breaking.
+Report provenance now labels the nested-evidence policy consistently in both accepted and no-selection outcomes: `training_only_pareto_v2_nested_structure_gate` when nested recurrence is required, otherwise `training_only_pareto_v1`. This is audit metadata; the objective set is extended in Section 37 to include measured expression stability. No far/test score enters eligibility, Pareto ranking, or tie-breaking.
 
 
 ## 34. Persist complete discovery reports in Exp2 worker artifacts
@@ -1498,3 +1498,45 @@ and statuses, invalid selection references, malformed candidate and
 constraint fields, duplicate IDs, far-selection boundary violations, and the
 legacy no-report path. The tests were added but not run. No CI workflow,
 experiment, worker, benchmark, smoke run, or LLM API call was launched.
+
+
+
+## 37. Promote measured expression stability to a Pareto objective
+
+The candidate-level Pareto selector now treats fold-to-fold expression stability
+as a first-class objective rather than only a deterministic tie-break. For each
+candidate, the selector reads the existing training-fold
+`expression_stability.dominant_fraction` diagnostic, records it in the
+selection audit, and adds `negative_expression_stability` to the objective
+vector. Minimizing this value is equivalent to maximizing the observed
+dominant-expression recurrence fraction.
+
+The objective vector is therefore:
+
+- Mean normalized RMSE across valid held-out training folds (minimize).
+- Worst-fold normalized RMSE (minimize).
+- Symbolic operation count (minimize).
+- Dominant normalized expression fraction across fold-local coefficient
+  refits (maximize).
+
+A candidate without a finite stability fraction in [0, 1] is not silently
+assigned a neutral or favorable value. It receives the explicit
+`expression_stability_unavailable` eligibility reason and is excluded from
+the Pareto front. If no candidate has complete required evidence, the report
+returns `insufficient_validation_evidence` without promoting a candidate.
+
+The policy identifiers are versioned in provenance:
+`training_only_pareto_v3_stability` for the standard selector and
+`training_only_pareto_v4_nested_structure_stability` when the optional
+candidate-specific nested-structure gate is also required. The recorded
+objective list and per-candidate objective values make the change auditable.
+
+This stability measure is deliberately conservative: it is exact normalized
+expression-string recurrence after whitespace and power-operator
+normalization. It does not establish algebraic equivalence, physical truth,
+or robustness to measurement noise. Coefficients are refitted within each
+training fold, but the underlying candidate structure may have been proposed
+using the full training region; the nested fresh-search evidence remains a
+separate optional gate. The objective uses only training-fold expressions and
+metrics. Far/test observations are not accepted by the selector and remain
+sealed for final evaluation.
