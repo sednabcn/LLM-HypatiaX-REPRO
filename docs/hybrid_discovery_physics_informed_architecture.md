@@ -1706,3 +1706,22 @@ re-run fitting, coefficient refitting, symbolic search, or constraint
 sampling. Regression-test source includes a tampered-fold-score case and
 valid training-evidence fixtures. Tests have not been run; no CI, experiment,
 worker, benchmark, smoke workflow, or LLM API call was launched.
+
+
+## 44. Recompute expression-derived Pareto complexity when source metadata is absent
+
+For training-only Pareto policies v3–v6, the worker artifact validator now
+independently recomputes symbolic operation count when a candidate does not
+supply `metrics.complexity.node_count`. It uses the repository's restricted
+AST-to-SymPy parser and the same SymPy `count_ops` measure used by the producer,
+then compares the result with the serialized `complexity_node_count` audit.
+Malformed or unparseable expressions fail closed.
+
+When a source node-count metric is supplied, the existing strict type and
+equality cross-check remains in force. This closes the fallback gap without
+changing the producer's complexity definition or Pareto selection behavior.
+The check verifies expression-to-audit consistency; it does not establish
+physical correctness or use far/test observations. Regression-test source
+covers a valid expression-derived count and a tampered count. Tests have not
+been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM API
+call was launched.
