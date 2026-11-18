@@ -192,6 +192,7 @@ def select_hybrid_search_configuration(
     fold_timeout_seconds: int = 20,
     allow_pow: bool | None = None,
     max_mean_normalized_rmse: float | None = None,
+    budget_runtime: Any | None = None,
 ) -> tuple[TrainingOnlySearchSelection, dict[str, float]]:
     """Choose a PySR parsimony configuration using only internal training folds."""
     X = np.asarray(X_train, dtype=float)
@@ -235,6 +236,7 @@ def select_hybrid_search_configuration(
         seed=int(seed),
         minimum_valid_folds=len(folds),
         max_mean_normalized_rmse=max_mean_normalized_rmse,
+        budget_runtime=budget_runtime,
     )
     return selection, parsimony_by_strategy
 
@@ -297,6 +299,7 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
     minimum_valid_folds: int = 2,
     minimum_structure_recurrence: int = 2,
     minimum_structure_recurrence_fraction: float = 0.5,
+    budget_runtime: Any | None = None,
 ) -> dict:
     """Run a fresh Hybrid/PySR structural search inside every training fold.
 
@@ -345,6 +348,7 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         fold_tuple,
         seed=int(seed),
         minimum_valid_folds=minimum_valid_folds,
+        budget_runtime=budget_runtime,
     )
     result = summary.to_dict()
     structure_matching = match_fold_discovered_structures(
