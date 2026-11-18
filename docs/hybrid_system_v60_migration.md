@@ -392,3 +392,18 @@ names to match the finalized model's variable names in exactly the same order.
 This prevents a valid model from being evaluated against a reordered feature
 matrix while retaining superficially valid dimensions. No model is refit or
 reselected, and far metrics remain isolated from selection and retry logic.
+
+
+## Stage 23 — worker reconstruction of cross-family finalization
+
+Worker ingress now reconstructs the deterministic comparison between the
+single-basis and joint multi-basis family winners recorded by native final
+selection. It validates each serialized family option, derives the common
+NRMSE-versus-RMSE objective rule, rebuilds the error/variability/complexity/
+family tie-break, and checks that the frozen final model's family, ordered
+basis IDs and expressions, objective values, and complexity match the
+reconstructed winner. A producer cannot change the family options, reseal the
+outer report, and retain a final model that no longer wins the declared
+cross-family comparison. This is evidence-consistency verification only: it
+does not refit a model, read training or far arrays, invoke providers, or run
+discovery.

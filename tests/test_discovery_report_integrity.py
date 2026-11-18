@@ -200,6 +200,12 @@ def _native_final_model_audit():
         "schema": "v60_native_final_model_v1", "execution_status": "selected",
         "selection_performed": True, "far_or_evaluation_data_used": False,
         "selected_model": model, "selected_model_sha256": digest,
+        "objective_metric": "cv_nrmse",
+        "candidate_options": [{
+            "family": "single_basis", "candidate_id": "candidate-x",
+            "expressions": ["x"], "cv_rmse": 0.0, "cv_nrmse": 0.0,
+            "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 1,
+        }],
     }
 
 
@@ -208,6 +214,23 @@ def test_worker_verifier_accepts_semantically_consistent_final_model():
     payload["provenance"]["native_final_model"] = _native_final_model_audit()
     verified = verify_discovery_report_envelope(seal_discovery_report(payload))
     assert verified["provenance"]["native_final_model"]["execution_status"] == "selected"
+
+
+def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"].append({
+        "family": "multi_basis", "candidate_group_id": "group-y",
+        "candidate_ids": ["candidate-x", "candidate-y"],
+        "expressions": ["x", "x**2"],
+        "cv_rmse": 0.0, "cv_nrmse": 0.0,
+        "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 0,
+    })
+    # A re-sealed report must not be able to retain the old winner after the
+    # serialized options now make the multi-basis family the deterministic winner.
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="cross-family selection winner"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
 
 
 def test_worker_verifier_rejects_self_rehashed_formula_mismatch():
