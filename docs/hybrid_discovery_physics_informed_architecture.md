@@ -1035,3 +1035,43 @@ budget/timeout boundary; it does not force extra retries merely to enlarge the
 front. Candidate fold refits do not call the LLM. The number and policy of
 LLM proposal calls remain governed by the existing HybridDiscovery retry
 lifecycle and are not silently increased by this report integration.
+
+
+## 22. Engine-space provenance and engineered candidate support
+
+The symbolic engine now returns three additional machine-readable fields for a
+successful PySR candidate:
+
+- `fit_expression`: the unannotated expression before display-only scale
+  annotations are added.
+- `fit_variable_names`: the exact ordered raw/GM/ratio schema passed to PySR.
+- `fit_transform_state`: the fitting run's X scales, engineered pair indices,
+  target standard-deviation scale, and feature names.
+
+LLM-selected equations receive an explicit identity inner-transform state:
+they have no PySR inner X scaling, GM/ratio augmentation, or inner target
+standard-deviation scale. Their outer Hybrid signed-log fit-space mapping is
+still recorded by the Hybrid discovery context and replayed independently
+inside each validation fold.
+
+The scientific gate expands the fit-space expression back into the declared
+raw input variables using the recorded full-training transform parameters.
+It expands GM and directed-ratio symbols algebraically and reverses the target
+signed-log transform where configured. The restricted parser now explicitly
+supports the safe `sign` and `Abs` functions needed for these expressions.
+Unitful logarithmic expressions remain ineligible when the scientific contract
+does not supply a dimensionless reference scale; the validator does not guess
+one.
+
+Candidate fold evaluation parses the unannotated expression, identifies only
+the symbols actually used by that equation, and reconstructs those symbols
+from raw fold data. It does not require the fold's ratio top-k ranking to match
+the full-training ranking: a candidate's requested directed pair is rebuilt
+directly from fold-fitted columns, in the original numerator/denominator
+order. Unused engineered columns do not cause a candidate to fail merely
+because their domains differ.
+
+The production path now supports raw, geometric-mean, and directed-ratio
+candidate expressions, including extreme-scale X normalization and both
+outer signed-log and inner standard-deviation target transforms. All fold
+parameters are learned on fitting rows and frozen for validation rows.
