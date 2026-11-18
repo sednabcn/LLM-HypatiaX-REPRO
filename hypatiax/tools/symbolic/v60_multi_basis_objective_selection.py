@@ -194,7 +194,9 @@ def select_native_multi_basis_candidates_from_verified_evidence(
                 producer_records = proposal.get("producer_provenance", [])
                 if not isinstance(producer_records, (list, tuple)):
                     raise ValueError("candidate producer provenance must be a sequence")
-                expected_lineage.extend(dict(item) for item in producer_records if isinstance(item, Mapping))
+                if any(not isinstance(item, Mapping) for item in producer_records):
+                    raise ValueError("candidate producer provenance entries must be mappings")
+                expected_lineage.extend(dict(item) for item in producer_records)
             if validation.get("source_provenance") != expected_lineage:
                 raise ValueError("validation producer lineage does not match normalized proposals")
             if fit.get("source_provenance") != expected_lineage or verified.get("source_provenance") != expected_lineage:
