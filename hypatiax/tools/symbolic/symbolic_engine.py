@@ -655,6 +655,9 @@ class IntegratedLLMEngine:
                 self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
+                if _budget_runtime is not None and hypotheses:
+                    _accepted_count = _budget_runtime.record_candidates(len(hypotheses))
+                    hypotheses = hypotheses[:_accepted_count]
                 self.last_proposal_generated = bool(hypotheses)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
