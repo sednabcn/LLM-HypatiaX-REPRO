@@ -2503,7 +2503,12 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 _llm_mode.endswith("_llm_only")
                 or _llm_mode == "hybrid_budget_exhausted_llm_better"
             )
-            _pysr_candidate = result.get("pysr_candidate") or result
+            _pysr_candidate = result.get("pysr_candidate")
+            if not isinstance(_pysr_candidate, dict):
+                # The compatibility result may already carry an identity
+                # fit_expression added for the LLM candidate. Do not mistake
+                # that field for a PySR-generated proposal on an LLM-winner path.
+                _pysr_candidate = {} if _llm_mode.endswith("_llm_better") else result
             # Derive this from the completed discovery result before constructing
             # the producer audit. In particular, the LLM-better result path may
             # rebuild the result dict without a PySR candidate.
