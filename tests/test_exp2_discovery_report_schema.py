@@ -101,12 +101,28 @@ def test_soft_constraint_pareto_report_requires_consistent_audited_objective():
         "reason": "one sampled violation",
         "evidence": {"evaluation_count": 4, "violation_count": 1, "violation_fraction": 0.25},
     })
+    candidate["metrics"]["training_validation"] = {
+        "fold_metrics": [{"normalized_rmse": 1.0}, {"normalized_rmse": 2.0}],
+        "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 0.75},
+    }
     candidate["metrics"]["pareto_selection"] = {
         "declared_soft_constraint_ids": ["soft_positive"],
         "mean_soft_constraint_violation_fraction": 0.25,
         "eligible_for_pareto": True, "eligibility_reasons": [],
-        "objectives": {"mean_soft_constraint_violation_fraction": 0.25},
+        "nested_structure_evidence_required": False,
+        "valid_normalized_fold_count": 2, "minimum_valid_folds": 2,
+        "complexity_node_count": 3, "expression_stability_fraction": 0.75,
+        "objectives": {
+            "mean_normalized_rmse": 1.5, "worst_normalized_rmse": 2.0,
+            "complexity": 3.0, "negative_expression_stability": -0.75,
+            "mean_soft_constraint_violation_fraction": 0.25,
+        },
     }
+    report["provenance"]["objectives"] = [
+        "mean_normalized_rmse_min", "worst_normalized_rmse_min",
+        "symbolic_operation_count_min", "expression_stability_fraction_max",
+        "mean_declared_soft_constraint_violation_fraction_min",
+    ]
     VALIDATOR._discovery_report_from_result({"discovery_report": report})
     candidate["metrics"]["pareto_selection"]["mean_soft_constraint_violation_fraction"] = 0.5
     with pytest.raises(ValueError, match="aggregate does not match"):
@@ -127,4 +143,80 @@ def test_soft_constraint_pareto_report_rejects_missing_evidence_without_exclusio
         "eligible_for_pareto": True, "eligibility_reasons": [], "objectives": None,
     }
     with pytest.raises(ValueError, match="incomplete evidence lacks exclusion reason"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+def _attach_training_pareto_evidence(candidate, *, folds, complexity, stability):
+    candidate["metrics"]["training_validation"] = {
+        "fold_metrics": [{"normalized_rmse": value} for value in folds],
+        "expression_stability": {
+            "status": "measured", "expression_count": len(folds),
+            "dominant_fraction": stability,
+        },
+    }
+    selection = candidate["metrics"].setdefault("pareto_selection", {})
+    selection.update({
+        "nested_structure_evidence_required": False,
+        "valid_normalized_fold_count": len(folds),
+        "minimum_valid_folds": 2,
+        "complexity_node_count": complexity,
+        "expression_stability_fraction": stability,
+        "eligible_for_pareto": True,
+        "eligibility_reasons": [],
+        "objectives": {
+            "mean_normalized_rmse": sum(folds) / len(folds),
+            "worst_normalized_rmse": max(folds),
+            "complexity": float(complexity),
+            "negative_expression_stability": -float(stability),
+        },
+    })
+
+
+def _valid_stability_pareto_report():
+    report = _valid_report()
+    report["provenance"].update({
+        "selection_policy": "training_only_pareto_v3_stability",
+        "selection_data_scope": "training_region_only",
+        "far_test_data_used_for_selection": False,
+        "objectives": [
+            "mean_normalized_rmse_min", "worst_normalized_rmse_min",
+            "symbolic_operation_count_min", "expression_stability_fraction_max",
+        ],
+    })
+    first = report["candidates"][0]
+    _attach_training_pareto_evidence(first, folds=[1.0, 2.0], complexity=3, stability=0.75)
+    second = dict(first)
+    second["candidate_id"] = "candidate-2"
+    second["metrics"] = {
+        "training_validation": {}, "pareto_selection": {},
+    }
+    _attach_training_pareto_evidence(second, folds=[2.0, 3.0], complexity=4, stability=0.5)
+    report["candidates"].append(second)
+    report["pareto_candidate_ids"] = ["candidate-1"]
+    report["selected_candidate_id"] = "candidate-1"
+    return report
+
+
+def test_training_pareto_report_recomputes_front_and_selected_candidate():
+    report = _valid_stability_pareto_report()
+    assert VALIDATOR._discovery_report_from_result({"discovery_report": report}) == report
+
+
+def test_training_pareto_report_rejects_tampered_objective_vector():
+    report = _valid_stability_pareto_report()
+    report["candidates"][0]["metrics"]["pareto_selection"]["objectives"]["mean_normalized_rmse"] = 99.0
+    with pytest.raises(ValueError, match="does not match audited evidence"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_training_pareto_report_rejects_incorrect_front_membership():
+    report = _valid_stability_pareto_report()
+    report["pareto_candidate_ids"] = ["candidate-1", "candidate-2"]
+    with pytest.raises(ValueError, match="recomputed objective front"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_training_pareto_report_rejects_wrong_deterministic_selection():
+    report = _valid_stability_pareto_report()
+    report["selected_candidate_id"] = "candidate-2"
+    with pytest.raises(ValueError, match="deterministic Pareto tie-break"):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
