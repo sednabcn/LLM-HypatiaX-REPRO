@@ -185,3 +185,67 @@ def test_candidate_report_fails_closed_when_training_folds_cannot_be_built():
 
     assert system._last_discovery_report["status"] == "insufficient_validation_evidence"
     assert system._last_discovery_report["selected_candidate_id"] is None
+
+
+
+def test_engine_candidate_with_engineered_feature_passes_gate_and_fold_report():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="amplitude",
+        variable_names=("a", "b"),
+        variable_domains={
+            "a": {"minimum": 1.0, "maximum": 5.0},
+            "b": {"minimum": 2.0, "maximum": 8.0},
+        },
+        constraints=(
+            ConstraintSpec(
+                constraint_id="amplitude-nonnegative",
+                kind="nonnegative_output",
+                severity="hard",
+            ),
+        ),
+    )
+    system = _system("annotated display only", problem)
+    system.symbolic_engine.discover = lambda *args, **kwargs: {
+        "expression": "[X-normalised: none] 1.0*gm_a_b",
+        "fit_expression": "1.0*gm_a_b",
+        "fit_variable_names": ["a", "b", "gm_a_b"],
+        "fit_transform_state": {
+            "x_scales": [1.0, 1.0],
+            "gm_pairs": [[0, 1]],
+            "ratio_pairs": [],
+            "y_std": 1.0,
+        },
+        "variable_names": ["a", "b", "gm_a_b"],
+        "r2_score": 0.999999,
+        "llm_mode": "none",
+    }
+    a = np.linspace(1.0, 5.0, 30)
+    b = np.linspace(2.0, 8.0, 30)
+    X = np.column_stack((a, b))
+    y = 2.5 * np.sqrt(a * b)
+    system._active_training_validation_settings = {
+        "n_splits": 2,
+        "validation_fraction": 0.2,
+        "minimum_valid_folds": 2,
+    }
+    system._active_training_validation_seed = 43
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    result = system._discover_with_retry(
+        X=X,
+        y=y,
+        variable_names=["a", "b"],
+        variable_descriptions={"a": "first amplitude", "b": "second amplitude"},
+        variable_units={},
+    )
+
+    report = result["discovery_report"]
+    assert report["status"] == "accepted"
+    candidate = report["candidates"][0]
+    assert candidate["eligible"] is True
+    assert "sqrt" in candidate["expression"]
+    assert candidate["metrics"]["training_validation"]["valid_fold_count"] == 2
+    assert result["candidate_selection_policy"] == "training_only_physics_gated_pareto"
