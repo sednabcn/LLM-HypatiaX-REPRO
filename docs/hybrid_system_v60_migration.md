@@ -366,3 +366,17 @@ evaluation audit. Worker verification checks the model digest, basis/parameter
 dimensions, and explicit far-data isolation flags. Regression-test source was
 added for the handoff boundary; no tests, CI, experiments, workers, benchmarks,
 smoke workflows, or LLM/provider calls were run for this change.
+
+
+## Stage 21 — semantic verification of frozen native models at worker ingress
+
+Worker report verification now treats the final-model SHA-256 as an integrity
+checksum rather than proof of semantic correctness. It validates unique basis
+IDs and declared variable names, reparses every basis with the restricted
+expression parser, checks finite coefficient and training-diagnostic values,
+and reconstructs the exact fitted formula from the ordered bases and
+coefficients. A report is rejected if a caller changes the formula and simply
+recomputes the outer report and model digests, or introduces an undeclared
+symbol. The worker also validates training row count and design-rank bounds.
+This remains offline verification: it does not run discovery, fit a model,
+read far/evaluation data, or invoke providers.
