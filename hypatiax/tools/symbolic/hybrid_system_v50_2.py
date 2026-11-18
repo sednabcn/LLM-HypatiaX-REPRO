@@ -1483,11 +1483,15 @@ class HybridDiscoverySystem:
                 _candidate_result_by_id[_enriched.candidate_id] = _attempt_result
 
             _candidate_source_counts = {}
-            for _record, _attempt_result in _candidate_attempts:
+            for _record in _reported_candidates:
                 _sources_for_record = {str(_record.source)}
+                _record_source_provenance = (
+                    _record.metrics.get("source_provenance", [])
+                    if isinstance(_record.metrics, dict) else []
+                )
                 _sources_for_record.update(
                     str(_item["source"])
-                    for _item in (_attempt_result.get("source_provenance") or [])
+                    for _item in _record_source_provenance
                     if isinstance(_item, dict) and _item.get("source")
                 )
                 for _source in _sources_for_record:
