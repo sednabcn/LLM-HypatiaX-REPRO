@@ -235,6 +235,64 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
     if audit.get("selected_objective_evidence_sha256") != winner["objective_evidence_sha256"]:
         raise ValueError("selected multi-basis objective digest does not match")
 
+def _verify_native_final_model_audit(audit: Any) -> None:
+    """Verify the final-model identity and ensure far evidence is post-selection only."""
+    if not isinstance(audit, Mapping):
+        raise TypeError("native final-model provenance must be a mapping")
+    if audit.get("schema") != "v60_native_final_model_v1":
+        raise ValueError("unsupported native final-model schema")
+    if audit.get("far_or_evaluation_data_used") is not False:
+        raise ValueError("native final model must certify training-only selection")
+    status = audit.get("execution_status")
+    if status == "selected":
+        if audit.get("selection_performed") is not True:
+            raise ValueError("selected native final model must mark selection_performed=true")
+        model = audit.get("selected_model")
+        supplied = audit.get("selected_model_sha256")
+        if not isinstance(model, Mapping) or not isinstance(supplied, str) or len(supplied) != 64:
+            raise ValueError("selected native final model is missing its identity digest")
+        canonical = json.dumps(dict(model), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        if sha256(canonical.encode("utf-8")).hexdigest() != supplied:
+            raise ValueError("native final-model digest verification failed")
+        expressions = model.get("basis_expressions")
+        ids = model.get("basis_candidate_ids")
+        coefficients = model.get("coefficients")
+        if (not isinstance(expressions, list) or not 1 <= len(expressions) <= 3
+                or not isinstance(ids, list) or len(ids) != len(expressions)
+                or not isinstance(coefficients, list) or len(coefficients) != len(expressions) + 1):
+            raise ValueError("native final-model basis/coefficients dimensions are inconsistent")
+    elif status in {"no_credible_candidate", "stage_failed", "not_run"}:
+        if audit.get("selection_performed") is not False:
+            raise ValueError("unselected native final model cannot claim selection")
+        if audit.get("selected_model") is not None:
+            raise ValueError("unselected native final model cannot carry a selected model")
+    else:
+        raise ValueError("unsupported native final-model execution status")
+
+
+def _verify_native_far_evaluation_audit(audit: Any) -> None:
+    """Reject any report claiming that frozen far evaluation influenced discovery."""
+    if not isinstance(audit, Mapping):
+        raise TypeError("far_evaluation must be a mapping")
+    if audit.get("used_for_selection", False) is not False:
+        raise ValueError("far evaluation cannot be used for selection")
+    if audit.get("far_or_evaluation_data_used_for_selection", False) is not False:
+        raise ValueError("far evaluation contamination flag must be false")
+    if audit.get("far_or_evaluation_data_used_for_retry", False) is not False:
+        raise ValueError("far evaluation cannot influence retries")
+    if audit.get("candidate_ranking_performed", False) is not False:
+        raise ValueError("far evaluation cannot rank candidates")
+    if audit.get("selection_changed", False) is not False:
+        raise ValueError("frozen far evaluation cannot change selection")
+    if audit.get("selection_performed", False) is not False:
+        raise ValueError("far evaluation stage cannot perform selection")
+    if audit.get("evaluation_status") == "completed":
+        digest = audit.get("selected_model_sha256")
+        far_digest = audit.get("far_set_sha256")
+        if not isinstance(digest, str) or len(digest) != 64 or not isinstance(far_digest, str) or len(far_digest) != 64:
+            raise ValueError("completed far evaluation requires model and far-set digests")
+
+
 def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Strictly verify worker input; return a detached JSON-compatible report."""
     if not isinstance(envelope, Mapping):
@@ -273,6 +331,9 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
         raise TypeError("report provenance must be a mapping")
     if "native_multi_basis_selection" in provenance:
         _verify_multi_basis_selection_audit(provenance["native_multi_basis_selection"])
+    if "native_final_model" in provenance:
+        _verify_native_final_model_audit(provenance["native_final_model"])
+    _verify_native_far_evaluation_audit(report["far_evaluation"])
     candidates = report["candidates"]
     if not isinstance(candidates, list):
         raise TypeError("candidates must be a list")
@@ -303,6 +364,8 @@ def build_native_discovery_report(
     *,
     run_context: Mapping[str, Any],
     multi_basis_selection_audit: Mapping[str, Any] | None = None,
+    final_model_audit: Mapping[str, Any] | None = None,
+    far_evaluation_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a versioned report from native V60 evidence without promoting it
     to the V50.2 production result.
@@ -390,9 +453,14 @@ def build_native_discovery_report(
                 "pareto_candidate_group_ids": [], "selected_candidate_group_id": None,
                 "selected_basis_candidate_ids": [], "selected_basis_expressions": [],
             }),
+            "native_final_model": dict(final_model_audit or {
+                "schema": "v60_native_final_model_v1", "execution_status": "not_run",
+                "selection_performed": False, "far_or_evaluation_data_used": False,
+                "selected_model": None,
+            }),
             "compatibility_baseline": "hybrid_system_v50_2",
         },
-        far_evaluation={},
+        far_evaluation={**dict(far_evaluation_audit or {}), "used_for_selection": False},
     )
     return seal_discovery_report(report)
 
