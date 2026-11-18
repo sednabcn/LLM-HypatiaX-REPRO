@@ -1171,11 +1171,39 @@ Missing or non-finite fold scores make that structure ineligible.
   fold score is not copied into that candidate's existing Pareto record.
 - No far/test data enters matching or scoring. Fold searches remain LLM-free.
 
-This supplies a recurrence policy for independently discovered fold
-structures, but it does not yet replace the production candidate-level Pareto
-selector. Integrating these groups as candidate-level Pareto records requires
-an explicit crosswalk between a fold-recurrent structural signature and the
-final full-training equation, including a fail-closed rule when the final
-equation does not match. Until that crosswalk is implemented, the report keeps
-fixed-structure candidate evidence and procedure-level nested evidence in
-separate fields and does not claim nested candidate-level selection.
+### Crosswalk to a final full-training candidate
+
+The module also provides
+`crosswalk_full_training_candidate_to_fold_structure(...)`. After the final
+equation has been discovered on the complete training region, the caller can
+compare its coefficient-abstracted structure signature with the eligible
+recurrent fold groups:
+
+- A unique recurrent match returns
+  `status=matched_candidate_structure` and carries only the matched group's
+  fold metrics and recurrence evidence.
+- A parse failure, no match, or ambiguous match returns
+  `NO_CREDIBLE_CANDIDATE`; no candidate-specific nested evidence is attached.
+- The crosswalk explicitly reports `equivalence_claim=false`; it matches
+  conservative syntax-normalized structure, not arbitrary algebraic identity.
+- The final equation's numeric coefficients are not used to select or alter
+  the fold metrics. The matched fold metrics remain independently generated.
+
+This makes candidate-specific nested evidence available to a caller that
+performs the crosswalk after full-training discovery. It does not silently
+change the existing production Pareto selector or overwrite its fixed-
+structure evidence. Until that caller integration is made, both evidence
+families remain separately labeled and no claim of production nested
+candidate-level selection is made.
+
+
+
+### Candidate crosswalk contract
+
+The final-equation crosswalk is deliberately a separate operation because the
+full-training equation does not exist when the fold-local searches run. It
+must be called only after that equation is available. A recurrent fold
+structure that does not match the final equation cannot lend its validation
+scores to the final equation. This fail-closed boundary prevents a strong but
+different fold-discovered equation from being presented as validation of the
+final selected model.
