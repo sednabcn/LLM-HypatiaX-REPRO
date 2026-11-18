@@ -85,6 +85,10 @@ Result `implementation_provenance` records:
   normalized basis candidates, with group IDs, term-level coefficients,
   lineage, training metrics, design diagnostics, and budget/rejection audit;
   audit-only, with `selection_performed` false and no far/evaluation data
+- `native_v60_multi_basis_evidence_audit`: independently recomputed fold
+  coefficients, metrics, rank/condition diagnostics, verified row indices,
+  producer lineage, and canonical evidence fingerprints; rejected/tampered
+  groups fail closed; audit-only and far-data-free
 - `native_v60_multi_basis_validation_audit`: per-group fold metrics,
   independent fold-local joint coefficients, row-index evidence, lineage
   checks, and budget/rejection accounting; audit-only, with
@@ -163,8 +167,16 @@ non-finite data, invalid basis outputs, mismatched lineage, and folds with too
 few training rows; no rows are silently dropped. The validator has no far-set
 argument and always reports `selection_performed: false`. This evidence is
 not yet accepted by the single-basis objective selector or discovery-report
-candidate schema; joint groups remain ineligible for selection until a
-dedicated verifier and group-level objective-selection contract are added.
+candidate schema. A separate evidence verifier now reconstructs every fold's
+joint least-squares coefficients, held-out predictions, RMSE/NRMSE/R², rank,
+condition number, and aggregate metrics directly from the supplied training
+arrays. It checks fold row-index integrity, basis expression identity, producer
+lineage, and the validation audit's far-data exclusion declaration. Verified
+group evidence receives a canonical SHA-256 fingerprint. Tampered, incomplete,
+or non-reproducible groups fail closed. Verification remains audit-only:
+`selection_performed` is false, no far/evaluation arrays are accepted, and
+groups remain ineligible for selection until a dedicated group-level
+objective-selection contract is added.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -218,3 +230,127 @@ discovery time; post-selection evaluation must not mutate selection evidence.
 The result provenance includes `native_v60_external_producer_audit`, including
 reported usage, producer-call status, accepted/rejected counts, and budget
 truncation. The audit explicitly records `producer_calls_performed: false`.
+
+
+## Verified native joint multi-basis selection
+
+Joint basis groups now have a dedicated objective selector in
+`v60_multi_basis_objective_selection.py`. It is intentionally separate from
+the single-basis selector and consumes only normalized proposals, completed
+candidate-level hard-gate outcomes, the bounded joint-fit audit, the
+joint-fold validation audit, and the independent verifier's output. It accepts
+no training arrays and no far/evaluation arrays.
+
+A group is eligible only when its fit and validation records are complete,
+every basis candidate passed its completed hard gates, the candidate IDs and
+normalized expressions match across all stages, producer lineage matches, and
+the verifier marked every fold as verified. The selector reconstructs the
+verifier's canonical SHA-256 payload and rejects mismatched fingerprints,
+altered fold rows/metrics, missing groups, or incomplete evidence. Fold row
+indices must be actual integers (booleans and floats are rejected).
+
+The three minimized Pareto objectives are:
+- mean fold NRMSE when every eligible group has defined NRMSE; otherwise mean
+  fold RMSE is used consistently for the entire eligible pool;
+- the corresponding population standard deviation across fold errors;
+- symbolic complexity, defined as the sum of SymPy operator counts in each
+  basis expression plus one additive-model term per basis (including the
+  intercept).
+
+Pareto membership uses componentwise dominance; deterministic tie-breaking
+orders by primary error, symbolic complexity, error variability, then stable
+group ID. The result records each group's verified-evidence fingerprint,
+objective evidence, Pareto group IDs, and selected ordered basis IDs and
+expressions. It reports `selection_performed: true` only for a completed
+selection or an explicit no-credible-candidate decision. It never changes or
+overrides the existing single-basis selected candidate and is exposed
+separately as `native_v60_multi_basis_selection_audit`. This stage remains
+opt-in/audit provenance and does not make V60 the production discovery path.
+
+
+## Joint multi-basis selection in reports and worker contracts
+
+Typed-contract V60 reports now embed the distinct group-selection audit at
+`provenance.native_multi_basis_selection`. The existing report schema,
+single-basis `selected_candidate_id`, and single-basis Pareto references remain
+unchanged. Joint-group selection is supplemental provenance and never
+replaces or overrides the single-basis result or V50.2 compatibility result.
+The outer report-envelope SHA-256 covers this complete audit.
+
+Worker verification reconstructs the embedded group-selection decision:
+it validates the schema and far-data exclusion, objective-record digests,
+and the embedded verified-fold snapshot against its independent evidence
+fingerprint. It recomputes symbolic complexity from restricted expressions,
+checks that objective metrics match the verified fold aggregates, derives the
+pool-wide NRMSE-versus-RMSE objective consistently, and rebuilds the complete
+componentwise-minimization Pareto frontier and deterministic tie-break. The
+serialized Pareto order and selected group/basis references must exactly match
+that reconstruction. Inconsistent evidence rejects the report even if both
+the outer envelope and an objective-record digest are recomputed. A
+no-credible-candidate decision remains explicit; a stage failure is marked
+incomplete and cannot claim selection. Workers keep group selection in its
+separate namespace from single-basis selection.
+
+
+
+## Worker reconstruction of joint multi-basis selection
+
+Each joint-basis objective record carries the independently verified fold
+snapshot and its context (training row count, variable names, split strategy,
+and recomputed fold metrics/coefficients). The worker recomputes the snapshot
+fingerprint rather than treating a 64-character digest as proof. It then
+reconstructs the error and variability objective from verified aggregates,
+recomputes symbolic complexity from the restricted parser, validates objective
+directions, derives the exact Pareto frontier, and applies the selector's
+deterministic tie-break tuple: primary error, symbolic complexity, variability,
+then stable group ID. A report is rejected if the frontier membership/order or
+selected group differs. This is report-integrity verification only: it does
+not invoke data providers, rerun discovery, or evaluate the far set.
+
+
+## Stage 18 — native final model selection and training refit
+
+The typed-contract V60 path now adds a native finalization step after the
+independent single-basis and joint multi-basis training-evidence selectors.
+It resolves each selector's winner back to the normalized proposal pool,
+compares the family winners using a common CV error scale (NRMSE only when
+available for every option, otherwise RMSE), and applies deterministic
+fold-variability, symbolic-complexity, and family tie-breaks.
+
+The winning basis or ordered basis group is then refit on all supplied training
+rows with least squares, producing a final symbolic expression, coefficients,
+training RMSE/NRMSE/R², design rank/condition diagnostics, and a canonical
+model digest. The stage rejects non-finite/misaligned training values and never
+drops rows. It accepts no far/evaluation arrays and does not invoke LLM or PySR
+providers.
+
+This is the native training-side finalization boundary, not yet the complete
+production handoff: the legacy V50.2 result remains the outward discovery
+result, and the selected native model is exposed as
+`native_v60_final_model_audit`. Frozen far-set evaluation and replacement of
+the outward production result are reserved for the next integration stage.
+
+
+## Stage 19 — frozen-model production handoff
+
+The typed V60 path now verifies the stage-18 final-model digest and exposes a
+canonical native result. The default remains the V50.2 compatibility result.
+Callers must explicitly set `metadata["v60_activate_native_model"] = True` to
+promote the finalized native model to the outward `formula`, `expression`,
+`final_formula`, `r2`, `rmse`, and `nrmse` fields. The untouched V50.2
+result is retained under `v50_2_compatibility_result`. If V60 has no credible
+final model, the opt-in handoff fails closed rather than silently falling back.
+
+An optional frozen far set is supplied only after native training-only
+selection and full-training refit using
+`metadata["v60_far_evaluation"] = {"X_far": ..., "y_far": ...}`. The evaluator
+supports the selected one-, two-, or three-basis model, verifies the final
+model digest, fingerprints the far arrays, and reports metrics without
+changing selection, retrying, or ranking candidates. Far evaluation is not
+required to produce the native model result.
+
+The versioned worker report now includes the final-model audit and frozen far
+evaluation audit. Worker verification checks the model digest, basis/parameter
+dimensions, and explicit far-data isolation flags. Regression-test source was
+added for the handoff boundary; no tests, CI, experiments, workers, benchmarks,
+smoke workflows, or LLM/provider calls were run for this change.

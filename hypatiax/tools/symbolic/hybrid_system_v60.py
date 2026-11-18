@@ -1,10 +1,11 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
-V60 validates an explicit immutable problem contract, generates and normalizes
-bounded native templates, applies declared scientific gates, fits and validates
-candidates on training folds, and computes an isolated native Pareto selection
-from verified training evidence. V50.2 remains the production discovery and
-final-evaluation compatibility baseline.
+V60 validates an immutable problem contract, builds a bounded candidate pool,
+performs scientific gating and training-only fitting/validation, verifies
+single- and multi-basis Pareto evidence, refits one frozen native model, and
+can explicitly hand that model to callers with isolated post-selection far
+evaluation. V50.2 remains the default compatibility path unless native
+production handoff is explicitly enabled in call metadata.
 """
 from __future__ import annotations
 
@@ -24,10 +25,16 @@ from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candid
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_candidates
 from hypatiax.tools.symbolic.v60_multi_basis_fitting import fit_native_multi_basis_candidates
 from hypatiax.tools.symbolic.v60_multi_basis_validation import validate_native_multi_basis_candidates
+from hypatiax.tools.symbolic.v60_multi_basis_evidence import verify_native_multi_basis_validation_evidence
+from hypatiax.tools.symbolic.v60_multi_basis_objective_selection import select_native_multi_basis_candidates_from_verified_evidence
 from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
 from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
 from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
 from hypatiax.tools.symbolic.v60_residual_stability import diagnose_native_training_residuals
+from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
+from hypatiax.tools.symbolic.v60_production_handoff import (
+    build_native_v60_result, evaluate_frozen_native_v60_model,
+)
 
 
 @dataclass(frozen=True)
@@ -98,7 +105,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_multi_basis_fold_validation_gates_training_validation_residual_stability_objective_selection_v50_2_final_evaluation"
+    IMPLEMENTATION_MODE = "native_contract_candidate_pool_training_evidence_single_multi_basis_pareto_final_refit_frozen_evaluation_explicit_production_handoff"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -107,10 +114,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "bounded_training_only_affine_candidate_fitting",
         "bounded_training_only_joint_multi_basis_fitting",
         "bounded_training_only_joint_multi_basis_refit_cross_validation",
+        "independent_joint_multi_basis_fold_evidence_verification",
+        "verified_joint_multi_basis_objectives_and_pareto_selection",
         "declared_scientific_candidate_gates",
         "bounded_training_only_refit_cross_validation",
         "training_only_fold_residual_diagnostics_and_coefficient_stability",
         "verified_training_evidence_objectives_and_pareto_selection",
+        "cross_family_native_final_model_selection_and_full_training_refit",
+        "frozen_final_model_far_evaluation_after_selection",
+        "explicit_native_result_handoff_and_worker_integrity",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -121,11 +133,16 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_training_fit_audit: dict[str, Any] = {}
         self._last_v60_multi_basis_fit_audit: dict[str, Any] = {}
         self._last_v60_multi_basis_validation_audit: dict[str, Any] = {}
+        self._last_v60_multi_basis_evidence_audit: dict[str, Any] = {}
+        self._last_v60_multi_basis_selection_audit: dict[str, Any] = {}
         self._last_v60_gate_audit: dict[str, Any] = {}
         self._last_v60_training_validation_audit: dict[str, Any] = {}
         self._last_v60_objective_selection_audit: dict[str, Any] = {}
         self._last_v60_residual_stability_audit: dict[str, Any] = {}
         self._last_v60_external_producer_audit: dict[str, Any] = {}
+        self._last_v60_final_model_audit: dict[str, Any] = {}
+        self._last_v60_far_evaluation_audit: dict[str, Any] = {}
+        self._last_v60_activate_native_result = False
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -137,7 +154,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "engine_family": "hybrid_discovery",
             "engine_version": self.VERSION,
             "implementation_mode": self.IMPLEMENTATION_MODE,
-            "native_v60_pipeline": False,
+            "native_v60_pipeline": bool(self._last_v60_activate_native_result and self._last_v60_final_model_audit.get("execution_status") == "selected"),
+            "native_v60_production_handoff_enabled": self._last_v60_activate_native_result,
+            "native_v60_far_evaluation_status": self._last_v60_far_evaluation_audit.get("evaluation_status", "not_requested"),
+            "native_v60_far_evaluation_audit": dict(self._last_v60_far_evaluation_audit),
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
             "native_v60_candidate_generation": self._last_v60_run_context is not None,
@@ -151,6 +171,13 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_multi_basis_validation": bool(self._last_v60_multi_basis_validation_audit) and self._last_v60_multi_basis_validation_audit.get("validation_status") not in {"stage_failed", "insufficient_rows"},
             "native_v60_multi_basis_validated_group_count": self._last_v60_multi_basis_validation_audit.get("validated_group_count", 0),
             "native_v60_multi_basis_validation_audit": dict(self._last_v60_multi_basis_validation_audit),
+            "native_v60_multi_basis_evidence_verification": bool(self._last_v60_multi_basis_evidence_audit) and self._last_v60_multi_basis_evidence_audit.get("verification_status") == "completed",
+            "native_v60_multi_basis_verified_group_count": self._last_v60_multi_basis_evidence_audit.get("verified_group_count", 0),
+            "native_v60_multi_basis_evidence_audit": dict(self._last_v60_multi_basis_evidence_audit),
+            "native_v60_multi_basis_objective_selection": bool(self._last_v60_multi_basis_selection_audit) and self._last_v60_multi_basis_selection_audit.get("selection_status") != "stage_failed",
+            "native_v60_multi_basis_selected_group_id": self._last_v60_multi_basis_selection_audit.get("selected_candidate_group_id"),
+            "native_v60_multi_basis_pareto_group_ids": list(self._last_v60_multi_basis_selection_audit.get("pareto_candidate_group_ids", [])),
+            "native_v60_multi_basis_selection_audit": dict(self._last_v60_multi_basis_selection_audit),
             "native_v60_candidate_gating": bool(self._last_v60_gate_audit) and self._last_v60_gate_audit.get("gate_status") != "stage_failed",
             "native_v60_gate_eligible_count": self._last_v60_gate_audit.get("eligible_candidate_count", 0),
             "native_v60_gate_ineligible_count": self._last_v60_gate_audit.get("ineligible_candidate_count", 0),
@@ -164,6 +191,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_selected_candidate_id": self._last_v60_objective_selection_audit.get("selected_candidate_id"),
             "native_v60_pareto_candidate_ids": list(self._last_v60_objective_selection_audit.get("pareto_candidate_ids", [])),
             "native_v60_objective_selection_audit": dict(self._last_v60_objective_selection_audit),
+            "native_v60_final_model_status": self._last_v60_final_model_audit.get("execution_status", "not_run"),
+            "native_v60_final_model_audit": dict(self._last_v60_final_model_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
@@ -182,14 +211,45 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     self._last_v60_training_validation_audit,
                     self._last_v60_objective_selection_audit,
                     run_context=self._last_v60_run_context.to_dict(),
+                    multi_basis_selection_audit=self._last_v60_multi_basis_selection_audit,
+                    final_model_audit=self._last_v60_final_model_audit,
+                    far_evaluation_audit=self._last_v60_far_evaluation_audit,
+                    residual_stability_audit=self._last_v60_residual_stability_audit,
                 )
             except Exception as exc:
                 annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
+        if self._last_v60_final_model_audit:
+            annotated["native_v60_final_model"] = dict(self._last_v60_final_model_audit)
+        if self._last_v60_far_evaluation_audit:
+            annotated["native_v60_far_evaluation"] = dict(self._last_v60_far_evaluation_audit)
+        if self._last_v60_activate_native_result:
+            if self._last_v60_final_model_audit.get("execution_status") == "selected":
+                compatibility = dict(annotated)
+                native = build_native_v60_result(self._last_v60_final_model_audit)
+                annotated.update(native)
+                annotated["v50_2_compatibility_result"] = compatibility
+                annotated["native_v60_production_handoff"] = {
+                    "status": "active",
+                    "selection_source": "verified_training_only_single_multi_basis_pareto",
+                    "far_evaluation_attached": self._last_v60_far_evaluation_audit.get("evaluation_status") == "completed",
+                }
+            else:
+                annotated.update({
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "formula": "N/A",
+                    "expression": "N/A",
+                    "final_formula": "N/A",
+                    "native_v60_production_handoff": {
+                        "status": "blocked_no_credible_native_model",
+                        "final_model_status": self._last_v60_final_model_audit.get("execution_status", "not_run"),
+                    },
+                })
         annotated["implementation_provenance"] = provenance
         return annotated
 
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Run native contract preflight, then the V50.2 compatibility pipeline."""
+        """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         if args:
             if len(args) < 3:
                 raise TypeError("discover requires X, y, and var_names")
@@ -214,11 +274,23 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_training_fit_audit = {}
         self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_multi_basis_validation_audit = {}
+        self._last_v60_multi_basis_evidence_audit = {}
+        self._last_v60_multi_basis_selection_audit = {}
         self._last_v60_gate_audit = {}
         self._last_v60_training_validation_audit = {}
         self._last_v60_objective_selection_audit = {}
         self._last_v60_residual_stability_audit = {}
         self._last_v60_external_producer_audit = {}
+        self._last_v60_final_model_audit = {}
+        self._last_v60_far_evaluation_audit = {}
+        self._last_v60_activate_native_result = prepared.get("v60_activate_native_model", False)
+        if not isinstance(self._last_v60_activate_native_result, bool):
+            raise TypeError("metadata['v60_activate_native_model'] must be a bool")
+        far_spec = prepared.get("v60_far_evaluation")
+        if far_spec is not None and not isinstance(far_spec, Mapping):
+            raise TypeError("metadata['v60_far_evaluation'] must be a mapping")
+        if isinstance(far_spec, Mapping) and set(far_spec) != {"X_far", "y_far"}:
+            raise ValueError("metadata['v60_far_evaluation'] accepts exactly X_far and y_far")
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
             generated = list(generate_native_template_candidates(problem))
@@ -331,6 +403,50 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "rejected_candidate_groups": [],
                 }
             try:
+                self._last_v60_multi_basis_evidence_audit = verify_native_multi_basis_validation_evidence(
+                    self._last_v60_multi_basis_validation_audit,
+                    self._last_v60_candidate_proposals,
+                    X,
+                    y,
+                    variable_names=problem.variable_names,
+                    max_groups=problem.budget.max_candidates,
+                    max_search_attempts=problem.budget.max_search_attempts,
+                )
+            except Exception as exc:
+                self._last_v60_multi_basis_evidence_audit = {
+                    "schema": "v60_native_multi_basis_evidence_verification_v1",
+                    "verification_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "verified_candidate_groups": [],
+                    "rejected_candidate_groups": [],
+                }
+            try:
+                self._last_v60_multi_basis_selection_audit = select_native_multi_basis_candidates_from_verified_evidence(
+                    self._last_v60_candidate_proposals,
+                    self._last_v60_gate_audit,
+                    self._last_v60_multi_basis_fit_audit,
+                    self._last_v60_multi_basis_validation_audit,
+                    self._last_v60_multi_basis_evidence_audit,
+                    variable_names=problem.variable_names,
+                    max_groups=problem.budget.max_candidates,
+                    max_search_attempts=problem.budget.max_search_attempts,
+                )
+            except Exception as exc:
+                self._last_v60_multi_basis_selection_audit = {
+                    "schema": "v60_native_multi_basis_objective_selection_v1",
+                    "selection_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "objective_evidence": [],
+                    "pareto_candidate_group_ids": [],
+                    "selected_candidate_group_id": None,
+                    "selected_basis_candidate_ids": [],
+                    "selected_basis_expressions": [],
+                }
+            try:
                 eligible_ids = [
                     item.get("native_candidate_id")
                     for item in self._last_v60_gate_audit.get("candidate_gates", [])
@@ -397,6 +513,54 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "objective_evidence": [],
                     "pareto_candidate_ids": [],
                     "selected_candidate_id": None,
+                }
+            try:
+                self._last_v60_final_model_audit = finalize_native_v60_model(
+                    self._last_v60_candidate_proposals,
+                    self._last_v60_objective_selection_audit,
+                    self._last_v60_multi_basis_selection_audit,
+                    X,
+                    y,
+                    variable_names=problem.variable_names,
+                )
+            except Exception as exc:
+                self._last_v60_final_model_audit = {
+                    "schema": "v60_native_final_model_v1",
+                    "execution_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "candidate_options": [],
+                    "selected_model": None,
+                }
+            if isinstance(far_spec, Mapping) and self._last_v60_final_model_audit.get("execution_status") == "selected":
+                try:
+                    self._last_v60_far_evaluation_audit = evaluate_frozen_native_v60_model(
+                        self._last_v60_final_model_audit,
+                        far_spec["X_far"],
+                        far_spec["y_far"],
+                        variable_names=problem.variable_names,
+                    )
+                except Exception as exc:
+                    self._last_v60_far_evaluation_audit = {
+                        "schema": "v60_native_frozen_model_evaluation_v1",
+                        "evaluation_status": "stage_failed",
+                        "reason": f"{type(exc).__name__}: {exc}",
+                        "selection_changed": False,
+                        "selection_performed": False,
+                        "far_or_evaluation_data_used_for_selection": False,
+                        "far_or_evaluation_data_used_for_retry": False,
+                        "candidate_ranking_performed": False,
+                    }
+            elif isinstance(far_spec, Mapping):
+                self._last_v60_far_evaluation_audit = {
+                    "schema": "v60_native_frozen_model_evaluation_v1",
+                    "evaluation_status": "blocked_no_selected_model",
+                    "selection_changed": False,
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used_for_selection": False,
+                    "far_or_evaluation_data_used_for_retry": False,
+                    "candidate_ranking_performed": False,
                 }
         if forwarded is not None:
             if len(forwarded) > 4:

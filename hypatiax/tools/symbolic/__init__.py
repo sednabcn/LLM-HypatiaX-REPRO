@@ -55,6 +55,11 @@ __all__ = [
     "ingest_external_candidate_proposals",
     "fit_native_multi_basis_candidates",
     "validate_native_multi_basis_candidates",
+    "verify_native_multi_basis_validation_evidence",
+    "select_native_multi_basis_candidates_from_verified_evidence",
+    "verify_final_model_audit",
+    "evaluate_frozen_native_v60_model",
+    "build_native_v60_result",
 ]
 
 
@@ -111,12 +116,18 @@ def __getattr__(name: str):
         module = import_module(".v60_frozen_far_evaluation", __name__)
     elif name in {"seal_discovery_report", "verify_discovery_report_envelope"}:
         module = import_module(".discovery_report_integrity", __name__)
+    elif name in {"verify_final_model_audit", "evaluate_frozen_native_v60_model", "build_native_v60_result"}:
+        module = import_module(".v60_production_handoff", __name__)
     elif name == "ingest_external_candidate_proposals":
         module = import_module(".v60_external_producers", __name__)
     elif name == "fit_native_multi_basis_candidates":
         module = import_module(".v60_multi_basis_fitting", __name__)
     elif name == "validate_native_multi_basis_candidates":
         module = import_module(".v60_multi_basis_validation", __name__)
+    elif name == "verify_native_multi_basis_validation_evidence":
+        module = import_module(".v60_multi_basis_evidence", __name__)
+    elif name == "select_native_multi_basis_candidates_from_verified_evidence":
+        module = import_module(".v60_multi_basis_objective_selection", __name__)
     elif name in {
         "DiscoveryProblem",
         "discovery_problem_from_dict",
