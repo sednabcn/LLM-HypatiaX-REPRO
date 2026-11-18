@@ -1373,3 +1373,29 @@ This is cooperative enforcement: a coefficient optimizer or prediction
 callback already in progress is not interrupted. Its result is discarded if
 it returns after the shared deadline. No far/test data is introduced, and the
 outer search-attempt counter remains distinct from fold-level work.
+
+
+## 32. Deadline coverage across training-only search diagnostics
+
+The shared monotonic deadline covers the complete fold-search evidence path,
+not only the expensive symbolic fit. Fresh PySR fold evaluation checks the
+deadline after expression extraction and after held-out prediction, passes the
+runtime into the fold-summary evaluator, and rejects a summary that completes
+after expiry. A late prediction cannot be admitted as a valid fold metric.
+
+Search-strategy comparison treats deadline expiry as a terminal control-flow
+condition rather than an ordinary rejected strategy. It propagates the timeout
+immediately and does not start later strategies after the shared deadline.
+This avoids spending the remaining configured strategy budget after the
+caller-declared wall-time has expired.
+
+Nested structural evidence applies the same rule to the post-search matching
+stage: matching starts only while the deadline remains, and a matching result
+returned after expiry is discarded. This includes recurrence/crosswalk
+construction; no partial or late nested evidence is attached to candidates.
+
+These checks remain cooperative. An in-flight model prediction or structural
+matching operation is not forcibly interrupted, but its result is rejected if
+it returns after the deadline. All fold fitting, validation prediction, and
+structure matching continue to use training-region data only; far/test data
+remains reserved for final evaluation.

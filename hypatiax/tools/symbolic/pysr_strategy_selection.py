@@ -95,6 +95,8 @@ def select_pysr_search_strategy_on_training_folds(
     ranked: list[SearchStrategyScore] = []
     rejected: list[dict] = []
     for name in sorted(searcher_factories):
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("discovery wall-time budget expired before next search strategy")
         factory = searcher_factories[name]
         try:
             summary = evaluate_pysr_search_on_training_folds(
@@ -106,6 +108,8 @@ def select_pysr_search_strategy_on_training_folds(
                 minimum_valid_folds=minimum_valid_folds,
                 budget_runtime=budget_runtime,
             )
+            if budget_runtime is not None and budget_runtime.expired():
+                raise TimeoutError("search strategy returned after discovery wall-time deadline")
             metrics = summary.validation.fold_metrics
             normalized = np.asarray(
                 [item.normalized_rmse for item in metrics], dtype=float
@@ -126,6 +130,8 @@ def select_pysr_search_strategy_on_training_folds(
             if expressions:
                 from .training_validation import expression_stability
                 stability = expression_stability(expressions)["dominant_fraction"]
+            if budget_runtime is not None and budget_runtime.expired():
+                raise TimeoutError("search strategy diagnostics returned after discovery wall-time deadline")
             lengths = [len(value) for value in expressions]
             median_length = float(np.median(lengths)) if lengths else float("inf")
             if (
@@ -147,6 +153,8 @@ def select_pysr_search_strategy_on_training_folds(
                 ),
                 median_expression_length=median_length,
             ))
+        except TimeoutError:
+            raise
         except Exception as exc:
             rejected.append({
                 "strategy_name": name,
@@ -154,6 +162,8 @@ def select_pysr_search_strategy_on_training_folds(
                 "eligible": False,
             })
 
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("search strategy ranking returned after discovery wall-time deadline")
     ranked.sort(key=lambda item: (
         item.mean_normalized_rmse,
         item.worst_normalized_rmse,

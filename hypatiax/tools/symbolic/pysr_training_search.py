@@ -98,7 +98,11 @@ def evaluate_pysr_search_on_training_folds(
         if budget_runtime is not None and budget_runtime.expired():
             raise TimeoutError("training-fold search returned after discovery wall-time deadline")
         expression = _best_expression(model)
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("training-fold expression extraction returned after discovery wall-time deadline")
         predictions = np.asarray(model.predict(X_validation), dtype=float).reshape(-1)
+        if budget_runtime is not None and budget_runtime.expired():
+            raise TimeoutError("training-fold validation prediction returned after discovery wall-time deadline")
         if predictions.shape != (X_validation.shape[0],):
             raise ValueError("PySR returned a prediction array with the wrong shape")
         if not np.all(np.isfinite(predictions)):
@@ -123,7 +127,10 @@ def evaluate_pysr_search_on_training_folds(
         y_train=y,
         folds=folds,
         minimum_valid_folds=minimum_valid_folds,
+        budget_runtime=budget_runtime,
     )
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("training-fold validation summary returned after discovery wall-time deadline")
     return PySRFoldSearchSummary(validation=validation, fold_searches=tuple(audits))
 
 

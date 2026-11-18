@@ -343,6 +343,8 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
             allow_pow=allow_pow,
         )
 
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("discovery wall-time budget expired before nested structure search")
     summary = evaluate_pysr_search_on_training_folds(
         make_searcher,
         X,
@@ -352,6 +354,8 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         minimum_valid_folds=minimum_valid_folds,
         budget_runtime=budget_runtime,
     )
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("nested fold searches returned after discovery wall-time deadline")
     result = summary.to_dict()
     structure_matching = match_fold_discovered_structures(
         result.get("fold_searches", []),
@@ -361,6 +365,8 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         minimum_recurrence_fraction=minimum_structure_recurrence_fraction,
         total_fold_count=len(fold_tuple),
     )
+    if budget_runtime is not None and budget_runtime.expired():
+        raise TimeoutError("nested structure matching returned after discovery wall-time deadline")
     result.update({
         "structure_matching": structure_matching,
         "candidate_structures": structure_matching["structures"],
