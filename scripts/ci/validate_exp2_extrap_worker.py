@@ -19,6 +19,7 @@ from typing import Any
 
 
 EXPECTED_METHOD_COUNT = 6
+REQUIRED_DISCOVERY_REPORT_METHOD = "HybridDiscoverySystem v50_2 (tools)"
 
 
 def _reject_nonfinite(token: str) -> None:
@@ -440,6 +441,7 @@ def validate_worker_outputs(
     equation_domains: set[str] = set()
     protocol_manifest: list[dict[str, Any]] = []
     discovery_report_records: list[dict[str, Any]] = []
+    expected_discovery_report_identities: set[tuple[str, str, str]] = set()
 
     for protocol_path in protocol_files:
         protocol = _load_strict_json(protocol_path)
@@ -497,6 +499,28 @@ def validate_worker_outputs(
                     )
                 expected_identities.add((domain, description, method))
                 report = _discovery_report_from_result(result)
+                if method == REQUIRED_DISCOVERY_REPORT_METHOD:
+                    identity = (domain, description, method)
+                    expected_discovery_report_identities.add(identity)
+                    if report is None:
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "completed without the required DiscoveryReport"
+                        )
+                    result_metadata = result.get("metadata", {})
+                    if not isinstance(result_metadata, dict):
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "has no structured result metadata"
+                        )
+                    contract_audit = result_metadata.get(
+                        "discovery_problem_contract", {}
+                    )
+                    if not isinstance(contract_audit, dict) or contract_audit.get("active") is not True:
+                        raise ValueError(
+                            f"{protocol_path.name}: {description!r}/{method} "
+                            "did not activate the typed DiscoveryProblem contract"
+                        )
                 if report is not None:
                     discovery_report_records.append({
                         "domain": domain,
@@ -523,6 +547,13 @@ def validate_worker_outputs(
         raise ValueError(
             f"protocol domain coverage mismatch: expected {sorted(expected_domain_set)}, "
             f"found {sorted(equation_domains)}"
+        )
+
+    if len(expected_discovery_report_identities) != len(discovery_report_records):
+        raise ValueError(
+            "required HybridDiscovery DiscoveryReport coverage mismatch: "
+            f"expected {len(expected_discovery_report_identities)}, "
+            f"found {len(discovery_report_records)} records"
         )
 
     benchmark_path = output_dir / "benchmark_results_extrap.json"
