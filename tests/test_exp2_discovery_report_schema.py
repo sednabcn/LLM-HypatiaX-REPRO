@@ -101,12 +101,30 @@ def test_soft_constraint_pareto_report_requires_consistent_audited_objective():
         "reason": "one sampled violation",
         "evidence": {"evaluation_count": 4, "violation_count": 1, "violation_fraction": 0.25},
     })
+    candidate["metrics"]["training_validation"] = {
+        "fold_metrics": [{"normalized_rmse": 0.2}, {"normalized_rmse": 0.3}],
+        "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 1.0},
+    }
     candidate["metrics"]["pareto_selection"] = {
         "declared_soft_constraint_ids": ["soft_positive"],
         "mean_soft_constraint_violation_fraction": 0.25,
+        "valid_normalized_fold_count": 2,
+        "complexity_node_count": 4,
+        "expression_stability_fraction": 1.0,
         "eligible_for_pareto": True, "eligibility_reasons": [],
-        "objectives": {"mean_soft_constraint_violation_fraction": 0.25},
+        "objectives": {
+            "mean_normalized_rmse": 0.25,
+            "worst_normalized_rmse": 0.3,
+            "complexity": 4.0,
+            "negative_expression_stability": -1.0,
+            "mean_soft_constraint_violation_fraction": 0.25,
+        },
     }
+    report["provenance"]["objectives"] = [
+        "mean_normalized_rmse_min", "worst_normalized_rmse_min",
+        "symbolic_operation_count_min", "expression_stability_fraction_max",
+        "mean_declared_soft_constraint_violation_fraction_min",
+    ]
     VALIDATOR._discovery_report_from_result({"discovery_report": report})
     candidate["metrics"]["pareto_selection"]["mean_soft_constraint_violation_fraction"] = 0.5
     with pytest.raises(ValueError, match="aggregate does not match"):
@@ -143,7 +161,14 @@ def _valid_pareto_report():
         ],
     })
     first = report["candidates"][0]
+    first["metrics"]["training_validation"] = {
+        "fold_metrics": [{"normalized_rmse": 0.1}, {"normalized_rmse": 0.3}],
+        "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 1.0},
+    }
     first["metrics"]["pareto_selection"] = {
+        "valid_normalized_fold_count": 2,
+        "complexity_node_count": 4,
+        "expression_stability_fraction": 1.0,
         "eligible_for_pareto": True,
         "eligibility_reasons": [],
         "objectives": {
@@ -156,7 +181,14 @@ def _valid_pareto_report():
     second = dict(first)
     second["candidate_id"] = "candidate-2"
     second["metrics"] = {
+        "training_validation": {
+            "fold_metrics": [{"normalized_rmse": 0.3}, {"normalized_rmse": 0.5}],
+            "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 0.5},
+        },
         "pareto_selection": {
+            "valid_normalized_fold_count": 2,
+            "complexity_node_count": 6,
+            "expression_stability_fraction": 0.5,
             "eligible_for_pareto": True,
             "eligibility_reasons": [],
             "objectives": {
@@ -200,6 +232,12 @@ def test_pareto_report_recomputes_front_and_deterministic_selected_candidate():
                 eligible_for_pareto=False
             ),
             "eligibility flag/reasons",
+        ),
+        (
+            lambda report: report["candidates"][0]["metrics"]["training_validation"]["fold_metrics"][0].update(
+                normalized_rmse=0.9
+            ),
+            "underlying training evidence",
         ),
     ],
 )
