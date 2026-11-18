@@ -224,10 +224,12 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             annotated["native_v60_far_evaluation"] = dict(self._last_v60_far_evaluation_audit)
         if self._last_v60_activate_native_result:
             if self._last_v60_final_model_audit.get("execution_status") == "selected":
-                compatibility = dict(annotated)
                 native = build_native_v60_result(self._last_v60_final_model_audit)
                 annotated.update(native)
-                annotated["v50_2_compatibility_result"] = compatibility
+                annotated["v50_2_compatibility_result"] = {
+                    "status": "not_executed",
+                    "reason": "native_v60_production_handoff_enabled",
+                }
                 annotated["native_v60_production_handoff"] = {
                     "status": "active",
                     "selection_source": "verified_training_only_single_multi_basis_pareto",
@@ -562,7 +564,13 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "far_or_evaluation_data_used_for_retry": False,
                     "candidate_ranking_performed": False,
                 }
-        if forwarded is not None:
+        if self._last_v60_activate_native_result:
+            # Native production mode must not execute the V50.2 discovery
+            # pipeline as a side effect. That legacy path can invoke PySR/LLM
+            # providers and produce a second, unrelated model. The native
+            # result is assembled solely from the completed V60 evidence.
+            result = {}
+        elif forwarded is not None:
             if len(forwarded) > 4:
                 forwarded[4] = prepared
             elif len(forwarded) == 4:

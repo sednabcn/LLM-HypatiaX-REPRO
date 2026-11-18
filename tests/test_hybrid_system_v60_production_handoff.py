@@ -2,9 +2,12 @@
 import hashlib
 import json
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
+from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
+from hypatiax.tools.symbolic.hybrid_system_v60 import HybridDiscoverySystemV60
 from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
 from hypatiax.tools.symbolic.v60_production_handoff import (
     evaluate_frozen_native_v60_model,
@@ -98,6 +101,39 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         audit["selected_model"]["coefficients"][0] = 99.0
         with self.assertRaisesRegex(ValueError, "digest"):
             verify_final_model_audit(audit)
+
+    def test_native_handoff_does_not_call_legacy_discovery(self):
+        engine = HybridDiscoverySystemV60(use_llm=False)
+        X = np.arange(1.0, 5.0).reshape(-1, 1)
+        y = 2.0 * X[:, 0]
+        with patch.object(
+            HybridDiscoverySystem,
+            "discover",
+            side_effect=AssertionError("legacy discovery must not run"),
+        ):
+            result = engine.discover(
+                X, y, ["x"],
+                metadata={"v60_activate_native_model": True},
+            )
+        self.assertFalse(result["success"])
+        self.assertEqual(result["error"], "NO_CREDIBLE_CANDIDATE")
+        self.assertEqual(
+            result["native_v60_production_handoff"]["status"],
+            "blocked_no_credible_native_model",
+        )
+
+    def test_default_mode_still_delegates_to_v50_2(self):
+        engine = HybridDiscoverySystemV60(use_llm=False)
+        expected = {"success": True, "formula": "x"}
+        with patch.object(HybridDiscoverySystem, "discover", return_value=expected) as legacy:
+            result = engine.discover(
+                np.arange(1.0, 5.0).reshape(-1, 1),
+                np.arange(1.0, 5.0),
+                ["x"],
+            )
+        legacy.assert_called_once()
+        self.assertTrue(result["success"])
+        self.assertEqual(result["formula"], "x")
 
 
 if __name__ == "__main__":
