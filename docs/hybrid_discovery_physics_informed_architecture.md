@@ -1463,3 +1463,38 @@ whole-directory upload and shard-result persistence retain the complete
 directory. A legacy empty report sidecar remains mandatory and is not treated
 as missing output. This transport check does not interpret report quality or
 promote an equation; post-run comparative analysis remains in DEV.
+
+
+## 36. Validate the complete serialized DiscoveryReport contract
+
+The Exp2 worker boundary now validates the serialized `DiscoveryReport` as a
+versioned contract before retaining it in `discovery_reports_extrap.json`.
+The validator requires the supported discovery schema versions (`1.0` and the producer's `discovery_contract_v1` identifier), a
+known discovery status, the complete report envelope, object-valued
+provenance/far-evaluation fields, and the explicit
+`far_evaluation_used_for_selection: false` declaration.
+
+Each candidate record is checked for its stable identity, non-empty original
+and normalized expressions, supported source kind, search strategy, integer
+seed, constraint-outcome list, metrics object, string rejection reasons, and
+boolean eligibility. Every constraint outcome must carry a non-empty
+constraint ID, a recognized status and severity, a string reason, and an
+object-valued evidence record. Candidate IDs and Pareto IDs must be unique;
+selected and Pareto references must resolve to retained candidate records;
+and a selected candidate must belong to the declared Pareto set. Failure
+statuses cannot carry a selected candidate.
+
+The check is intentionally structural. It does not recompute candidate
+metrics, re-run scientific validators, infer missing provenance, or decide
+whether a selected equation is scientifically correct. It also does not
+require a report to be present: legacy method results without a typed report
+continue to be represented by the explicit empty-sidecar status introduced
+in Sections 34–35. When a typed report is present but malformed or uses an
+unsupported schema version, worker output qualification fails closed rather
+than persisting a partial or ambiguous record.
+
+Offline regression-test source covers valid extraction, unsupported versions
+and statuses, invalid selection references, malformed candidate and
+constraint fields, duplicate IDs, far-selection boundary violations, and the
+legacy no-report path. The tests were added but not run. No CI workflow,
+experiment, worker, benchmark, smoke run, or LLM API call was launched.
