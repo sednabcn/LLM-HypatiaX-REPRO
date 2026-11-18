@@ -1,10 +1,10 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
-V60 validates an explicit immutable problem contract, generates and normalizes
-bounded native templates, applies declared scientific gates, fits and validates
-candidates on training folds, and computes an isolated native Pareto selection
-from verified training evidence. V50.2 remains the production discovery and
-final-evaluation compatibility baseline.
+V60 validates an immutable problem contract, builds a bounded candidate pool,
+performs scientific gating and training-only fitting/validation, verifies
+single- and multi-basis Pareto evidence, and refits the final native model on
+all training rows. V50.2 remains the outward production compatibility result
+until the subsequent frozen-evaluation and production-handoff integration.
 """
 from __future__ import annotations
 
@@ -101,7 +101,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_multi_basis_fold_validation_verified_multi_basis_pareto_gates_training_validation_residual_stability_objective_selection_v50_2_final_evaluation"
+    IMPLEMENTATION_MODE = "native_contract_candidate_pool_training_evidence_single_multi_basis_pareto_final_refit_v50_2_outward_compatibility"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -116,6 +116,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "bounded_training_only_refit_cross_validation",
         "training_only_fold_residual_diagnostics_and_coefficient_stability",
         "verified_training_evidence_objectives_and_pareto_selection",
+        "cross_family_native_final_model_selection_and_full_training_refit",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
