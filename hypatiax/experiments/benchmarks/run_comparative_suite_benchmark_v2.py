@@ -3531,9 +3531,21 @@ class HybridSystemV50_2Method(BaseMethod):
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
         self._log(f"run error: {err}")
+        _failure_metadata = _provenance(result) if isinstance(result, dict) else {}
+        if isinstance(result, dict):
+            _failure_metadata.update({
+                "discovery_report": result.get("discovery_report"),
+                "discovery_problem_contract": (
+                    result.get("benchmark_provenance") or {}
+                ).get("discovery_problem_contract", {}),
+                "training_only_search_selection": result.get(
+                    "training_only_search_selection"
+                ),
+                "benchmark_provenance": result.get("benchmark_provenance", {}),
+            })
         return self._unavailable(
             str(err)[:150],
-            metadata=_provenance(result) if isinstance(result, dict) else {},
+            metadata=_failure_metadata,
         )
 
 
