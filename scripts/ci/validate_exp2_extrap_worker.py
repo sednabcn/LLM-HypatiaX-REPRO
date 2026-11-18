@@ -36,8 +36,25 @@ def _sha256(path: Path) -> str:
 
 
 
+DISCOVERY_REPORT_SCHEMA_VERSION = "1.0"
+DISCOVERY_REPORT_STATUSES = {
+    "accepted", "provisional", "no_credible_candidate",
+    "invalid_problem_specification", "no_candidates_generated",
+    "all_candidates_failed_symbolic_validation",
+    "all_candidates_failed_physical_gates", "insufficient_validation_evidence",
+    "search_budget_exhausted", "llm_unavailable_fallback_used",
+    "accepted_with_warnings",
+}
+DISCOVERY_CANDIDATE_SOURCES = {
+    "llm_proposal", "domain_template", "pysr_search", "residual_search", "unknown",
+}
+DISCOVERY_CONSTRAINT_STATUSES = {
+    "pass", "fail", "warning", "not_applicable", "unknown", "not_checked",
+}
+
+
 def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
-    """Extract and validate a typed report without unrelated runtime payloads."""
+    """Extract a typed report and validate its versioned, serialized contract."""
     if not isinstance(result, dict):
         return None
     report = result.get("discovery_report")
@@ -49,24 +66,100 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
         return None
     if not isinstance(report, dict):
         raise ValueError("discovery_report must be a JSON object when present")
-    required = {"schema_version", "status", "candidates", "selected_candidate_id",
-                "pareto_candidate_ids", "failure_reasons", "provenance"}
+
+    required = {
+        "schema_version", "status", "candidates", "selected_candidate_id",
+        "pareto_candidate_ids", "failure_reasons", "provenance",
+        "far_evaluation", "far_evaluation_used_for_selection",
+    }
     missing = sorted(required - set(report))
     if missing:
         raise ValueError(f"discovery_report missing required fields: {missing}")
-    if not isinstance(report["candidates"], list) or not isinstance(report["pareto_candidate_ids"], list):
-        raise ValueError("discovery_report candidates and Pareto IDs must be lists")
-    if not isinstance(report["failure_reasons"], list) or not isinstance(report["provenance"], dict):
-        raise ValueError("discovery_report failure_reasons/provenance have invalid types")
-    if report.get("far_evaluation_used_for_selection") is not False:
+    if report["schema_version"] != DISCOVERY_REPORT_SCHEMA_VERSION:
+        raise ValueError(
+            f"unsupported discovery_report schema_version {report['schema_version']!r}"
+        )
+    if report["status"] not in DISCOVERY_REPORT_STATUSES:
+        raise ValueError(f"unsupported discovery_report status {report['status']!r}")
+    if not isinstance(report["candidates"], list):
+        raise ValueError("discovery_report candidates must be a list")
+    if not isinstance(report["pareto_candidate_ids"], list):
+        raise ValueError("discovery_report Pareto IDs must be a list")
+    if not isinstance(report["failure_reasons"], list) or any(
+        not isinstance(reason, str) for reason in report["failure_reasons"]
+    ):
+        raise ValueError("discovery_report failure_reasons must be a list of strings")
+    if not isinstance(report["provenance"], dict) or not isinstance(report["far_evaluation"], dict):
+        raise ValueError("discovery_report provenance/far_evaluation must be objects")
+    if report["far_evaluation_used_for_selection"] is not False:
         raise ValueError("discovery_report must explicitly mark far evaluation as unused for selection")
-    ids = [item.get("candidate_id") for item in report["candidates"] if isinstance(item, dict)]
-    if len(ids) != len(report["candidates"]) or len(ids) != len(set(ids)):
+
+    ids: list[str] = []
+    candidate_required = {
+        "candidate_id", "expression", "normalized_expression", "source",
+        "search_strategy", "seed", "constraint_outcomes", "metrics",
+        "rejection_reasons", "eligible",
+    }
+    for index, candidate in enumerate(report["candidates"]):
+        if not isinstance(candidate, dict):
+            raise ValueError(f"discovery_report candidate[{index}] must be an object")
+        absent = sorted(candidate_required - set(candidate))
+        if absent:
+            raise ValueError(f"discovery_report candidate[{index}] missing fields: {absent}")
+        candidate_id = candidate["candidate_id"]
+        if not isinstance(candidate_id, str) or not candidate_id.strip():
+            raise ValueError(f"discovery_report candidate[{index}] has invalid candidate_id")
+        ids.append(candidate_id)
+        for field in ("expression", "normalized_expression", "search_strategy"):
+            if not isinstance(candidate[field], str) or not candidate[field].strip():
+                raise ValueError(f"discovery_report candidate[{index}] {field} must be non-empty")
+        if candidate["source"] not in DISCOVERY_CANDIDATE_SOURCES:
+            raise ValueError(f"discovery_report candidate[{index}] has unsupported source")
+        if isinstance(candidate["seed"], bool) or not isinstance(candidate["seed"], int):
+            raise ValueError(f"discovery_report candidate[{index}] seed must be an integer")
+        if not isinstance(candidate["constraint_outcomes"], list):
+            raise ValueError(f"discovery_report candidate[{index}] constraint_outcomes must be a list")
+        if not isinstance(candidate["metrics"], dict):
+            raise ValueError(f"discovery_report candidate[{index}] metrics must be an object")
+        if not isinstance(candidate["rejection_reasons"], list) or any(
+            not isinstance(reason, str) for reason in candidate["rejection_reasons"]
+        ):
+            raise ValueError(f"discovery_report candidate[{index}] rejection_reasons must be strings")
+        if not isinstance(candidate["eligible"], bool):
+            raise ValueError(f"discovery_report candidate[{index}] eligible must be boolean")
+        for outcome_index, outcome in enumerate(candidate["constraint_outcomes"]):
+            if not isinstance(outcome, dict):
+                raise ValueError(
+                    f"discovery_report candidate[{index}] constraint_outcomes[{outcome_index}] must be an object"
+                )
+            if not isinstance(outcome.get("constraint_id"), str) or not outcome["constraint_id"]:
+                raise ValueError("discovery_report constraint outcome needs a constraint_id")
+            if outcome.get("status") not in DISCOVERY_CONSTRAINT_STATUSES:
+                raise ValueError("discovery_report constraint outcome has unsupported status")
+            if outcome.get("severity") not in {"hard", "soft"}:
+                raise ValueError("discovery_report constraint outcome has unsupported severity")
+            if not isinstance(outcome.get("reason"), str) or not isinstance(outcome.get("evidence"), dict):
+                raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
+
+    if len(ids) != len(set(ids)):
         raise ValueError("discovery_report candidate records must have unique candidate IDs")
-    if report["selected_candidate_id"] is not None and report["selected_candidate_id"] not in ids:
+    selected_id = report["selected_candidate_id"]
+    if selected_id is not None and (not isinstance(selected_id, str) or selected_id not in ids):
         raise ValueError("discovery_report selected candidate is absent from candidate records")
-    if not set(report["pareto_candidate_ids"]).issubset(set(ids)):
+    pareto_ids = report["pareto_candidate_ids"]
+    if any(not isinstance(item, str) for item in pareto_ids) or len(pareto_ids) != len(set(pareto_ids)):
+        raise ValueError("discovery_report Pareto IDs must be unique strings")
+    if not set(pareto_ids).issubset(set(ids)):
         raise ValueError("discovery_report Pareto IDs are absent from candidate records")
+    if selected_id is not None and selected_id not in pareto_ids:
+        raise ValueError("discovery_report selected candidate must belong to the Pareto set")
+    if report["status"] in {
+        "no_credible_candidate", "invalid_problem_specification",
+        "no_candidates_generated", "all_candidates_failed_symbolic_validation",
+        "all_candidates_failed_physical_gates", "insufficient_validation_evidence",
+        "search_budget_exhausted",
+    } and selected_id is not None:
+        raise ValueError("discovery_report failure status cannot carry a selected candidate")
     return report
 
 def validate_worker_outputs(
