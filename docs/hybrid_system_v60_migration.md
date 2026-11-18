@@ -15,13 +15,20 @@ least-squares fit against the supplied training arrays. Each candidate is
 fitted as scale times its symbolic basis plus an intercept; the stage records
 training RMSE/NRMSE/R², coefficients, fit status, and producer lineage. It
 rejects candidates that cannot produce finite predictions over every training
-row. This fit evidence is audit-only: V50.2 still owns candidate fitting,
+row. This fit evidence is audit-only: V50.2 still owns production candidate fitting,
 external LLM/PySR production, scientific gates, validation, Pareto selection,
 and final evaluation. Native fit metrics do not rank candidates or influence
 V50.2 selection. The native V60 gate audit uses only declared constraints and
 candidate expressions; unknown hard constraints block eligibility, while soft
-failures remain visible without blocking. This is a staged migration, not a
-completed native V60 pipeline or a claim of improved scientific performance.
+failures remain visible without blocking. Candidates that pass hard gates now
+receive bounded training-only refit cross-validation: affine coefficients are
+re-estimated inside each fold, and held-in fold rows are used only for that
+fold's validation metrics. The split strategy can be `kfold` (seeded),
+`blocked_kfold`, or expanding-window `time_series`, configured through the
+problem's `split_protocol`. This evidence is audit-only and does not rank or
+select candidates. V50.2 still owns production validation and selection. This
+is a staged migration, not a completed native V60 pipeline or a claim of
+improved scientific performance.
 
 For calls carrying a typed contract, V60 accepts either:
 - `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
@@ -50,11 +57,12 @@ The normalization stage:
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_generation_normalization_fit_gates_v50_2_discovery`
+- `implementation_mode: native_contract_generation_normalization_fit_gates_training_validation_v50_2_selection`
 - `native_v60_pipeline: false`
 - `native_v60_stages`: contract/run context, bounded template generation,
   expression normalization, semantic identity, deduplication, lineage,
-  declared scientific gates, and bounded training-only affine fitting
+  declared scientific gates, bounded training-only affine fitting, and
+  bounded training-only refit cross-validation
 - `native_v60_candidate_proposals`: normalized proposals with stable IDs and
   complete producer lineage
 - `native_v60_normalization_audit`: rejection and budget accounting
@@ -64,6 +72,10 @@ Result `implementation_provenance` records:
   no training or far data is consumed and `selection_performed` is false
 - `native_v60_training_fit_audit`: bounded training-only affine-fit evidence,
   including coefficients, train metrics, rejection reasons, and budget status;
+  `selection_performed` is always false
+- `native_v60_training_validation_audit`: per-candidate fold metrics and
+  fold-local coefficients, with candidate eligibility inherited from the
+  native hard-gate audit; no far/evaluation data is accepted or consumed and
   `selection_performed` is always false
 - `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
@@ -77,10 +89,10 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 ## Remaining native V60 stages
 
 1. Bounded LLM/PySR producer adapters and native candidate fitting beyond the
-   current single-basis affine least-squares audit stage.
-2. Native gates are audit-only; promote eligible native candidates through a
-   fully native training-validation and selection path.
-3. Training-only fold evidence, residual diagnostics, and structure stability.
+   current single-basis affine least-squares stage.
+2. Independently verifiable native objective evidence and candidate selection,
+   using only gate and training-fold evidence.
+3. Training-only residual diagnostics and structure stability.
 4. Pareto selection with independently verifiable objective evidence.
 5. Frozen far-set evaluation after selection.
 6. Versioned discovery report and worker-side integrity verification.
@@ -96,8 +108,8 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
 - V60 is opt-in; no silent selector fallback is permitted.
 - V60 currently owns contract preflight, bounded template generation,
   normalization/lineage, declared scientific gates, and an audit-only training
-  affine-fit stage. The production discovery, validation, and selection behavior
-  remains V50.2.
+  affine-fit and refit cross-validation stages. The production discovery,
+  validation, and selection behavior remains V50.2.
 - Candidate IDs identify canonical symbolic expressions; producer lineage is
   stored separately so deduplication never erases source attribution.
 - No benchmark or scientific improvement claim is valid until explicitly
