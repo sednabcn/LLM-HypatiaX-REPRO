@@ -1278,3 +1278,13 @@ Example metadata (all scientific assumptions must be supplied by the caller):
 ```
 
 The variable names must exactly match the worker's feature names after reserved-name sanitization. This version fails closed on mismatch rather than silently remapping units or constraint parameters. The deserializer rejects unknown fields and unsupported schema versions. It does not infer units, domains, constraints, target names, or physics from equation descriptions or variable labels. Omit the spec to retain the legacy discovery path. Nested structural evidence remains independently opt-in under `training_only_search_validation.nested_structure_evidence`.
+
+
+
+## 27. Hardened contract serialization and worker provenance
+
+The worker-boundary deserializer validates JSON-compatible values and field types before constructing a `DiscoveryProblem`. It rejects string-to-sequence coercion, non-string variable names, boolean values where integer budgets are required, non-finite numbers, opaque Python objects, unknown keys, and unsupported schema versions. No scientific field is inferred or silently coerced.
+
+When a contract is supplied to the Exp2 HybridDiscovery worker, benchmark provenance records whether the contract was active, its schema version, a SHA-256 digest of its canonical JSON representation, the exact feature-name match, declared constraint count, and the caller-provided discovery budget. The digest is an identity/audit aid, not a signature or proof that the assumptions are scientifically correct. When no contract is supplied, provenance explicitly records `active: false`.
+
+The contract remains opt-in. Legacy tasks without `discovery_problem_spec` retain the legacy discovery path. A mismatch between declared and worker feature names fails closed before discovery begins.
