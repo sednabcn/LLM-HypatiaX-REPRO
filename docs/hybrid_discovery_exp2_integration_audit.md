@@ -48,7 +48,7 @@ For each expected method/equation row whose method name is exactly `HybridDiscov
 - The report's `far_evaluation_used_for_selection` must remain exactly `false`.
 - The number of validated HybridDiscovery reports must equal the number of expected HybridDiscovery rows.
 
-A report with a legitimate failure status (for example, `no_credible_candidate`) is still an auditable report. The worker's job is to reject missing or malformed evidence, not to force an equation to be accepted.
+A report with a legitimate failure status (for example, `no_credible_candidate`) is still an auditable report. The discovery exception path retains the last report and training-only selection summary, and the parent adapter preserves them even when the equation result is unsuccessful. The worker rejects missing or malformed evidence; it does not force an equation to be accepted.
 
 ## Remaining follow-up work (not silently claimed as solved)
 
