@@ -1310,7 +1310,10 @@ increments `candidates_admitted`. Any excess is reported as
 list. This makes a provider response containing more hypotheses than requested
 visible rather than silently reporting only the truncated count. An LLM-only
 selected result is not counted a second time as a new outer candidate because
-it is already represented among the hypotheses.
+it is already represented among the hypotheses. When those hypotheses consume
+all remaining candidate capacity, hybrid/seed modes do not launch a subsequent
+PySR refinement that could only be rejected after the search; structural-risk
+LLM proposals fail closed if their required PySR refinement cannot be funded.
 
 LLM accounting separates `llm_calls_reserved`, `llm_requests_started`, and
 `llm_responses_received`. A reservation is made before the request, a started
