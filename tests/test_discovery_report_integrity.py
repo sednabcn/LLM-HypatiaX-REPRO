@@ -376,3 +376,46 @@ def test_worker_verifier_rejects_negative_far_nrmse_and_non_hex_digest():
     payload["far_evaluation"] = far
     with pytest.raises(ValueError, match="valid lowercase SHA-256"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_mismatched_candidate_option_nrmse_nullability():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"][0]["cv_nrmse_std"] = None
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="NRMSE mean/std nullability must match"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_unparseable_candidate_option_expression():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"][0]["expressions"] = ["z"]
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises((ValueError, TypeError)):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_single_basis_option_with_group_identity():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"][0]["candidate_group_id"] = "unexpected-group"
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="single-basis final-model option has invalid identity"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_multi_basis_option_with_single_candidate_identity():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"].append({
+        "family": "multi_basis", "candidate_group_id": "group-y",
+        "candidate_ids": ["candidate-x", "candidate-y"],
+        "expressions": ["x", "x**2"],
+        "cv_rmse": 1.0, "cv_nrmse": 1.0,
+        "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 2,
+        "candidate_id": "stray-single-id",
+    })
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="multi-basis final-model option has invalid basis lineage"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
