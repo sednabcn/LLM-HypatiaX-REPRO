@@ -2656,6 +2656,19 @@ try:
         _meta["domain"] = _domain
         _meta["use_llm"] = _use_llm
         _meta["llm_mode"] = _llm_mode
+        # Deserialize only an explicitly supplied scientific contract. JSON
+        # metadata cannot preserve frozen dataclass instances across workers.
+        _problem_spec = _meta.pop("discovery_problem_spec", None)
+        if _problem_spec is not None:
+            from hypatiax.tools.symbolic.discovery_contracts import discovery_problem_from_dict
+            _typed_problem = discovery_problem_from_dict(_problem_spec)
+            if tuple(_typed_problem.variable_names) != tuple(var_names):
+                raise ValueError(
+                    "discovery_problem_spec.variable_names must exactly match "
+                    "subprocess var_names after reserved-name sanitization; "
+                    "no variable-name or unit mapping is inferred."
+                )
+            _meta["discovery_problem"] = _typed_problem
         system = HybridDiscoverySystem(
             domain=_domain,
             discovery_config=_disc_cfg,
