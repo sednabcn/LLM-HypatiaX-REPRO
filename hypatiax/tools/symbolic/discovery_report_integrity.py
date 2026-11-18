@@ -257,10 +257,52 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         expressions = model.get("basis_expressions")
         ids = model.get("basis_candidate_ids")
         coefficients = model.get("coefficients")
+        names = model.get("variable_names")
         if (not isinstance(expressions, list) or not 1 <= len(expressions) <= 3
                 or not isinstance(ids, list) or len(ids) != len(expressions)
                 or not isinstance(coefficients, list) or len(coefficients) != len(expressions) + 1):
             raise ValueError("native final-model basis/coefficients dimensions are inconsistent")
+        if (any(not isinstance(value, str) or not value for value in ids)
+                or len(ids) != len(set(ids))):
+            raise ValueError("native final-model basis IDs must be unique non-empty strings")
+        if (not isinstance(names, list) or not names
+                or any(not isinstance(value, str) or not value for value in names)
+                or len(names) != len(set(names))):
+            raise ValueError("native final-model variable names must be unique non-empty strings")
+        numeric_coefficients = []
+        for value in coefficients:
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+                raise ValueError("native final-model coefficients must be finite numbers")
+            numeric_coefficients.append(float(value))
+        if any(not isinstance(value, str) or not value for value in expressions):
+            raise ValueError("native final-model expressions must be non-empty strings")
+        # The digest only detects accidental mutation: it is not a signature.
+        # Re-parse every basis and reconstruct the outward formula so a worker
+        # also rejects a self-consistently re-hashed but semantically altered model.
+        from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+        for expression in expressions:
+            parse_sympy_expression(expression, names)
+        expected_formula = " + ".join(
+            [f"({coefficient:.17g})*({expression})"
+             for coefficient, expression in zip(numeric_coefficients[:-1], expressions)]
+            + [f"({numeric_coefficients[-1]:.17g})"]
+        )
+        if model.get("fitted_expression") != expected_formula:
+            raise ValueError("native final-model fitted expression does not reproduce from its bases and coefficients")
+        row_count = model.get("training_row_count")
+        if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
+            raise ValueError("native final-model training row count must be a positive integer")
+        for key in ("training_target_std", "training_rmse"):
+            value = model.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+                raise ValueError(f"native final-model {key} must be finite and non-negative")
+        for key in ("training_nrmse", "training_r2", "training_design_condition_number"):
+            value = model.get(key)
+            if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
+                raise ValueError(f"native final-model {key} must be finite or null")
+        rank = model.get("training_design_rank")
+        if isinstance(rank, bool) or not isinstance(rank, int) or rank < 1 or rank > len(expressions) + 1:
+            raise ValueError("native final-model design rank is invalid")
     elif status in {"no_credible_candidate", "stage_failed", "not_run"}:
         if audit.get("selection_performed") is not False:
             raise ValueError("unselected native final model cannot claim selection")
