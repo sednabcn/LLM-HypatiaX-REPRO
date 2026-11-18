@@ -52,6 +52,7 @@ __all__ = [
     "evaluate_selected_native_candidate_on_far_set",
     "seal_discovery_report",
     "verify_discovery_report_envelope",
+    "ingest_external_candidate_proposals",
 ]
 
 
@@ -108,6 +109,8 @@ def __getattr__(name: str):
         module = import_module(".v60_frozen_far_evaluation", __name__)
     elif name in {"seal_discovery_report", "verify_discovery_report_envelope"}:
         module = import_module(".discovery_report_integrity", __name__)
+    elif name == "ingest_external_candidate_proposals":
+        module = import_module(".v60_external_producers", __name__)
     elif name in {
         "DiscoveryProblem",
         "discovery_problem_from_dict",
