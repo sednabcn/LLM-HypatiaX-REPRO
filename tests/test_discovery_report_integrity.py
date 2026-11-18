@@ -224,9 +224,10 @@ def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
         "candidate_ids": ["candidate-x", "candidate-y"],
         "expressions": ["x", "x**2"],
         "cv_rmse": 0.0, "cv_nrmse": 0.0,
-        "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 2,
+        "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 0,
     })
-    # A re-sealed report must not be able to claim the worse family winner.
+    # A re-sealed report must not be able to retain the old winner after the
+    # serialized options now make the multi-basis family the deterministic winner.
     payload["provenance"]["native_final_model"] = audit
     with pytest.raises(ValueError, match="cross-family selection winner"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
