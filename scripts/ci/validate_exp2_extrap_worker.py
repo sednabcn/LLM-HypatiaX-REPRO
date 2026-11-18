@@ -35,6 +35,40 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+
+def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
+    """Extract and validate a typed report without unrelated runtime payloads."""
+    if not isinstance(result, dict):
+        return None
+    report = result.get("discovery_report")
+    if report is None and isinstance(result.get("metadata"), dict):
+        report = result["metadata"].get("discovery_report")
+    if report is None and isinstance(result.get("discovery"), dict):
+        report = result["discovery"].get("discovery_report")
+    if report is None:
+        return None
+    if not isinstance(report, dict):
+        raise ValueError("discovery_report must be a JSON object when present")
+    required = {"schema_version", "status", "candidates", "selected_candidate_id",
+                "pareto_candidate_ids", "failure_reasons", "provenance"}
+    missing = sorted(required - set(report))
+    if missing:
+        raise ValueError(f"discovery_report missing required fields: {missing}")
+    if not isinstance(report["candidates"], list) or not isinstance(report["pareto_candidate_ids"], list):
+        raise ValueError("discovery_report candidates and Pareto IDs must be lists")
+    if not isinstance(report["failure_reasons"], list) or not isinstance(report["provenance"], dict):
+        raise ValueError("discovery_report failure_reasons/provenance have invalid types")
+    if report.get("far_evaluation_used_for_selection") is not False:
+        raise ValueError("discovery_report must explicitly mark far evaluation as unused for selection")
+    ids = [item.get("candidate_id") for item in report["candidates"] if isinstance(item, dict)]
+    if len(ids) != len(report["candidates"]) or len(ids) != len(set(ids)):
+        raise ValueError("discovery_report candidate records must have unique candidate IDs")
+    if report["selected_candidate_id"] is not None and report["selected_candidate_id"] not in ids:
+        raise ValueError("discovery_report selected candidate is absent from candidate records")
+    if not set(report["pareto_candidate_ids"]).issubset(set(ids)):
+        raise ValueError("discovery_report Pareto IDs are absent from candidate records")
+    return report
+
 def validate_worker_outputs(
     output_dir: Path,
     run_start_marker: Path,
@@ -61,6 +95,7 @@ def validate_worker_outputs(
     methods_reference: list[str] | None = None
     equation_domains: set[str] = set()
     protocol_manifest: list[dict[str, Any]] = []
+    discovery_report_records: list[dict[str, Any]] = []
 
     for protocol_path in protocol_files:
         protocol = _load_strict_json(protocol_path)
@@ -117,6 +152,15 @@ def validate_worker_outputs(
                         f"{protocol_path.name}: {description!r}/{method} missing success boolean"
                     )
                 expected_identities.add((domain, description, method))
+                report = _discovery_report_from_result(result)
+                if report is not None:
+                    discovery_report_records.append({
+                        "domain": domain,
+                        "equation": description,
+                        "method": method,
+                        "protocol_file": protocol_path.name,
+                        "discovery_report": report,
+                    })
 
         if len(file_domains) != 1:
             raise ValueError(
@@ -167,6 +211,21 @@ def validate_worker_outputs(
     if duplicated:
         raise ValueError(f"benchmark flat output duplicates {len(duplicated)} expected method/equation rows")
 
+    report_path = output_dir / "discovery_reports_extrap.json"
+    report_artifact = {
+        "schema_version": "exp2_discovery_report_artifact_v1",
+        "report_count": len(discovery_report_records),
+        "records": discovery_report_records,
+        "selection_boundary": {
+            "selection_data_scope": "training_region_only",
+            "far_evaluation_used_for_selection": False,
+        },
+    }
+    report_path.write_text(
+        json.dumps(report_artifact, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+
     summary = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "step": "exp2_feynman_extrap",
@@ -182,6 +241,13 @@ def validate_worker_outputs(
         "expected_method_equation_rows": len(expected_identities),
         "benchmark_row_count": len(benchmark_rows),
         "protocol_files": protocol_manifest,
+        "discovery_report_artifact": {
+            "file": report_path.name,
+            "sha256": _sha256(report_path),
+            "bytes": report_path.stat().st_size,
+            "report_count": len(discovery_report_records),
+            "status": "present" if discovery_report_records else "no_typed_discovery_reports",
+        },
         "benchmark_file": {
             "file": benchmark_path.name,
             "sha256": _sha256(benchmark_path),
@@ -210,7 +276,7 @@ def main() -> int:
     print(
         f"[exp2-extrap-validation] complete: domains={len(summary['expected_domains'])}, "
         f"equations={summary['equation_count']}, methods={summary['method_count']}, "
-        f"method-equation rows={summary['expected_method_equation_rows']}"
+        f"method-equation rows={summary['expected_method_equation_rows']}, discovery reports={summary['discovery_report_artifact']['report_count']}"
     )
     print(f"[exp2-extrap-validation] manifest: {summary_path}")
     return 0
