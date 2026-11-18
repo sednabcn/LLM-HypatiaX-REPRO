@@ -132,7 +132,11 @@ def validate_native_training_candidates(
                 train_basis, validation_basis = basis[train_idx], basis[validation_idx]
                 design_train = np.column_stack((train_basis, np.ones(train_idx.size)))
                 coefficients, _, rank, _ = np.linalg.lstsq(design_train, targets[train_idx], rcond=None)
+                if not np.all(np.isfinite(coefficients)):
+                    raise ValueError("fold fit produced non-finite coefficients")
                 predictions = validation_basis * coefficients[0] + coefficients[1]
+                if not np.all(np.isfinite(predictions)):
+                    raise ValueError("fold produced non-finite validation predictions")
                 residual = targets[validation_idx] - predictions
                 rmse = float(np.sqrt(np.mean(np.square(residual))))
                 train_std = float(np.std(targets[train_idx]))
@@ -143,7 +147,10 @@ def validate_native_training_candidates(
                     if validation_var > 0 else None
                 )
                 fold_records.append({
-                    "fold": fold_index, "training_row_count": int(train_idx.size),
+                    "fold": fold_index,
+                    "training_row_indices": [int(index) for index in train_idx],
+                    "validation_row_indices": [int(index) for index in validation_idx],
+                    "training_row_count": int(train_idx.size),
                     "validation_row_count": int(validation_idx.size),
                     "validation_rmse": rmse,
                     "validation_nrmse": rmse / train_std if train_std > 0 else None,
