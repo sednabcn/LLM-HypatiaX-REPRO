@@ -1,9 +1,8 @@
 # HybridDiscoverySystem: Physics-Informed Architecture Redesign
 
-**Status:** design proposal; documentation only  
-**Related implementation:** [PR #177](https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/177)  
-**Intended base:** `hybrid/fix-llm-lifecycle-and-candidate-selection` (PR #177 head)  
-**Scope:** architecture, scientific requirements, interfaces, validation policy, rollout, and open decisions. This document does not claim that the proposed pipeline is implemented.
+**Status:** living architecture and implementation record; the target pipeline is partially implemented.  
+**Related implementation:** [PR #177](https://github.com/sednabcn/LLM-HypatiaX-REPRO/pull/177) and subsequent HybridDiscovery implementation PRs through the stability-aware Pareto work.  
+**Scope:** architecture, scientific requirements, interfaces, validation policy, implementation status, rollout, and open decisions. Target behavior is distinguished from the implementation record below.
 
 ![HybridDiscoverySystem architecture](images/hybrid-discovery-physics-informed-architecture.svg)
 
