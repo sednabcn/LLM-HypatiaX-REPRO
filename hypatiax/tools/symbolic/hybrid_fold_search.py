@@ -234,7 +234,8 @@ def select_hybrid_search_configuration(
 
 def evaluate_hybrid_candidate_on_training_folds(
     expression: str,
-    variable_names: list[str],
+    candidate_variable_names: list[str],
+    raw_feature_names: list[str],
     X_train: np.ndarray,
     y_train: np.ndarray,
     folds,
@@ -242,52 +243,23 @@ def evaluate_hybrid_candidate_on_training_folds(
     minimum_valid_folds: int = 2,
     max_nfev: int = 500,
 ):
-    """Evaluate one fixed, raw-feature candidate with fold-local transforms.
+    """Evaluate an engine-space candidate with all transforms learned per fold.
 
-    The scientific candidate gate currently permits only declared raw input
-    symbols. This adapter therefore fails closed on engineered/unknown names
-    rather than reusing globally selected GM/ratio features. Every fold learns
-    signed-log flags, X scales, and optional signed-log target transform from
-    its fitting partition, then refits floating coefficients on that partition.
+    Supports candidate schemas containing raw, geometric-mean, and directed
+    ratio symbols. Feature pairs are reconstructed from the candidate schema;
+    signed-log/scaling and target transforms are learned from each fit partition.
     """
-    names = tuple(variable_names)
-    if not names or len(set(names)) != len(names):
-        raise ValueError("variable_names must be non-empty and unique")
-    refit_predictor = make_symbolic_refit_predictor(
-        expression, names, max_nfev=max_nfev
-    )
+    from .training_validation import evaluate_engine_candidate_on_training_folds
 
-    def _predict(X_fit, y_fit, X_validation):
-        Xf = np.asarray(X_fit, dtype=float)
-        yf = np.asarray(y_fit, dtype=float).reshape(-1)
-        Xv = np.asarray(X_validation, dtype=float)
-        preprocessor = FoldFeaturePreprocessor(names).fit(Xf)
-        Xf_transformed = preprocessor.transform(Xf)
-        Xv_transformed = preprocessor.transform(Xv)
-
-        y_abs = np.abs(yf[np.isfinite(yf) & (yf != 0)])
-        y_log = bool(
-            y_abs.size >= 2
-            and np.log10(float(y_abs.max())) - np.log10(float(y_abs.min())) > 4
-        )
-        y_fit_transformed = _signed_log10(yf) if y_log else yf.copy()
-        prediction, fitted_expression = refit_predictor(
-            Xf_transformed, y_fit_transformed, Xv_transformed
-        )
-        if y_log:
-            exponent = np.clip(np.abs(prediction), 0.0, 308.0)
-            prediction = np.sign(prediction) * (np.power(10.0, exponent) - 1.0)
-        if not np.isfinite(prediction).all():
-            raise FloatingPointError("candidate inverse target transform is non-finite")
-        return prediction, fitted_expression
-
-    return evaluate_candidate_on_training_folds(
+    return evaluate_engine_candidate_on_training_folds(
         expression,
-        _predict,
+        candidate_variable_names,
+        raw_feature_names,
         X_train,
         y_train,
         tuple(folds),
         minimum_valid_folds=minimum_valid_folds,
+        max_nfev=max_nfev,
     )
 
 
