@@ -293,6 +293,18 @@ def _verify_native_far_evaluation_audit(audit: Any) -> None:
             raise ValueError("completed far evaluation requires model and far-set digests")
 
 
+def _verify_native_residual_diagnostics(audit: Any) -> None:
+    """Ensure residual diagnostics remain descriptive, training-only evidence."""
+    if not isinstance(audit, Mapping):
+        raise TypeError("native residual diagnostics must be a mapping")
+    if audit.get("schema") != "v60_native_residual_stability_v1":
+        raise ValueError("unsupported native residual diagnostics schema")
+    if audit.get("selection_performed") is not False:
+        raise ValueError("residual diagnostics cannot perform selection")
+    if audit.get("far_or_evaluation_data_used") is not False:
+        raise ValueError("residual diagnostics must be training-only")
+
+
 def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Strictly verify worker input; return a detached JSON-compatible report."""
     if not isinstance(envelope, Mapping):
@@ -333,6 +345,8 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
         _verify_multi_basis_selection_audit(provenance["native_multi_basis_selection"])
     if "native_final_model" in provenance:
         _verify_native_final_model_audit(provenance["native_final_model"])
+    if "native_residual_diagnostics" in provenance:
+        _verify_native_residual_diagnostics(provenance["native_residual_diagnostics"])
     _verify_native_far_evaluation_audit(report["far_evaluation"])
     candidates = report["candidates"]
     if not isinstance(candidates, list):
@@ -366,6 +380,7 @@ def build_native_discovery_report(
     multi_basis_selection_audit: Mapping[str, Any] | None = None,
     final_model_audit: Mapping[str, Any] | None = None,
     far_evaluation_audit: Mapping[str, Any] | None = None,
+    residual_stability_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a versioned report from native V60 evidence without promoting it
     to the V50.2 production result.
@@ -452,6 +467,10 @@ def build_native_discovery_report(
                 "far_or_evaluation_data_used": False, "objective_evidence": [],
                 "pareto_candidate_group_ids": [], "selected_candidate_group_id": None,
                 "selected_basis_candidate_ids": [], "selected_basis_expressions": [],
+            }),
+            "native_residual_diagnostics": dict(residual_stability_audit or {
+                "schema": "v60_native_residual_stability_v1", "diagnostic_status": "not_run",
+                "selection_performed": False, "far_or_evaluation_data_used": False,
             }),
             "native_final_model": dict(final_model_audit or {
                 "schema": "v60_native_final_model_v1", "execution_status": "not_run",
