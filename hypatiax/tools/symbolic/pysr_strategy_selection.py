@@ -70,6 +70,7 @@ def select_pysr_search_strategy_on_training_folds(
     seed: int = 42,
     minimum_valid_folds: int = 2,
     max_mean_normalized_rmse: float | None = None,
+    budget_runtime: Any | None = None,
 ) -> TrainingOnlySearchSelection:
     """Rank alternative PySR configurations using paired internal folds.
 
@@ -103,6 +104,7 @@ def select_pysr_search_strategy_on_training_folds(
                 folds,
                 seed=seed,
                 minimum_valid_folds=minimum_valid_folds,
+                budget_runtime=budget_runtime,
             )
             metrics = summary.validation.fold_metrics
             normalized = np.asarray(
