@@ -133,7 +133,30 @@ def select_pareto_discovery_report(
             and nested.get("far_test_data_used") is False
         )
         nested_required_ok = (not require_nested_structure_evidence) or nested_ok
-        if gate_ok and enough_evidence and node_count is not None and nested_required_ok:
+        eligibility_reasons = list(candidate.rejection_reasons)
+        if not candidate.eligible and not eligibility_reasons:
+            eligibility_reasons.append("candidate_marked_ineligible")
+        for outcome in candidate.constraint_outcomes:
+            if outcome.severity == "hard" and outcome.status not in {"pass", "not_applicable"}:
+                eligibility_reasons.append(
+                    f"hard_constraint_{outcome.status}:{outcome.constraint_id}"
+                )
+        if not enough_evidence:
+            eligibility_reasons.append("insufficient_valid_training_folds")
+        validation = metrics.get("training_validation", {})
+        raw_fold_metrics = (
+            validation.get("fold_metrics", ())
+            if isinstance(validation, Mapping) else ()
+        )
+        if isinstance(raw_fold_metrics, (tuple, list)) and len(scores) < len(raw_fold_metrics):
+            eligibility_reasons.append("missing_or_nonfinite_normalized_fold_scores")
+        if node_count is None:
+            eligibility_reasons.append("symbolic_complexity_unavailable")
+        if require_nested_structure_evidence and not nested_ok:
+            eligibility_reasons.append("required_nested_structure_evidence_not_matched")
+        eligibility_reasons = list(dict.fromkeys(eligibility_reasons))
+        pareto_eligible = not eligibility_reasons
+        if pareto_eligible:
             objectives[candidate.candidate_id] = {
                 "mean_normalized_rmse": sum(scores) / len(scores),
                 "worst_normalized_rmse": max(scores),
@@ -147,9 +170,8 @@ def select_pareto_discovery_report(
             "expression_stability_fraction": stable_fraction,
             "nested_structure_evidence_required": require_nested_structure_evidence,
             "nested_structure_evidence_passed": nested_ok,
-            "eligible_for_pareto": (
-                gate_ok and enough_evidence and node_count is not None and nested_required_ok
-            ),
+            "eligible_for_pareto": pareto_eligible,
+            "eligibility_reasons": eligibility_reasons,
             "objectives": objectives.get(candidate.candidate_id),
         }
         enriched.append(replace(candidate, metrics=metrics))
@@ -214,7 +236,10 @@ def select_pareto_discovery_report(
         pareto_candidate_ids=pareto_ids,
         provenance={
             **dict(provenance or {}),
-            "selection_policy": "training_only_pareto_v1",
+            "selection_policy": (
+                "training_only_pareto_v2_nested_structure_gate"
+                if require_nested_structure_evidence else "training_only_pareto_v1"
+            ),
             "selection_data_scope": "training_region_only",
             "objectives": [
                 "mean_normalized_rmse_min",

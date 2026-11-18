@@ -66,7 +66,9 @@ def test_unknown_hard_gate_blocks_candidate_even_if_marked_eligible():
     assert report.status == "all_candidates_failed_physical_gates"
     assert report.selected_candidate_id is None
     assert report.pareto_candidate_ids == ()
-    assert report.candidates[0].metrics["pareto_selection"]["hard_gates_passed"] is False
+    selection = report.candidates[0].metrics["pareto_selection"]
+    assert selection["hard_gates_passed"] is False
+    assert "hard_constraint_unknown:declared_physics" in selection["eligibility_reasons"]
 
 
 def test_insufficient_training_fold_evidence_fails_closed():
@@ -102,3 +104,89 @@ def test_selected_candidate_soft_warning_is_preserved_in_report_status():
 
     assert report.status == "accepted_with_warnings"
     assert report.selected_candidate_id == candidate.candidate_id
+    assert report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"] == []
+
+
+
+def test_candidate_report_explains_each_pareto_exclusion():
+    insufficient = _candidate("x", 10, [0.1])
+    insufficient = CandidateRecord(
+        expression=insufficient.expression,
+        source=insufficient.source,
+        search_strategy=insufficient.search_strategy,
+        seed=insufficient.seed,
+        metrics=insufficient.metrics,
+        eligible=True,
+    )
+    invalid_complexity = CandidateRecord(
+        expression="not valid !!!",
+        source="pysr_search",
+        search_strategy="test_strategy",
+        seed=11,
+        metrics={"training_validation": {
+            "fold_metrics": [
+                {"normalized_rmse": 0.1},
+                {"normalized_rmse": 0.2},
+            ]
+        }},
+        eligible=True,
+    )
+
+    report = select_pareto_discovery_report(
+        [insufficient, invalid_complexity], variable_names=["x"],
+        minimum_valid_folds=2,
+    )
+    by_id = {item.candidate_id: item for item in report.candidates}
+
+    insufficient_reasons = by_id[insufficient.candidate_id].metrics[
+        "pareto_selection"
+    ]["eligibility_reasons"]
+    complexity_reasons = by_id[invalid_complexity.candidate_id].metrics[
+        "pareto_selection"
+    ]["eligibility_reasons"]
+
+    assert "insufficient_valid_training_folds" in insufficient_reasons
+    assert "symbolic_complexity_unavailable" in complexity_reasons
+    assert all(
+        item.metrics["pareto_selection"]["eligible_for_pareto"] is False
+        for item in report.candidates
+    )
+
+
+def test_required_nested_evidence_has_explicit_exclusion_reason_and_policy():
+    candidate = _candidate("x", 12, [0.1, 0.2])
+    report = select_pareto_discovery_report(
+        [candidate], variable_names=["x"],
+        require_nested_structure_evidence=True,
+    )
+
+    selection = report.candidates[0].metrics["pareto_selection"]
+    assert selection["eligible_for_pareto"] is False
+    assert "required_nested_structure_evidence_not_matched" in selection[
+        "eligibility_reasons"
+    ]
+    assert report.provenance["selection_policy"] == (
+        "training_only_pareto_v2_nested_structure_gate"
+    )
+
+
+def test_candidate_declared_rejection_reason_is_retained_in_pareto_audit():
+    rejected = CandidateRecord(
+        expression="x",
+        source="pysr_search",
+        search_strategy="test_strategy",
+        seed=13,
+        metrics={"training_validation": {
+            "fold_metrics": [
+                {"normalized_rmse": 0.1},
+                {"normalized_rmse": 0.2},
+            ]
+        }},
+        rejection_reasons=("candidate_failed_domain_gate",),
+        eligible=False,
+    )
+    report = select_pareto_discovery_report(
+        [rejected], variable_names=["x"],
+    )
+    reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
+    assert "candidate_failed_domain_gate" in reasons
