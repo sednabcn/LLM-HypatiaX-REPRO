@@ -165,7 +165,11 @@ from hypatiax.tools.symbolic.symbolic_engine import (
     detect_collapsed_constants,
 )
 from hypatiax.tools.validation.ensemble_validator import EnsembleValidator
-from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem
+from hypatiax.tools.symbolic.discovery_contracts import (
+    CandidateRecord,
+    ConstraintOutcome,
+    DiscoveryProblem,
+)
 from hypatiax.tools.symbolic.discovery_validation import CandidateValidator
 
 
@@ -1037,8 +1041,60 @@ class HybridDiscoverySystem:
                             )
                             _candidate_attempts.append((_inner_record, _inner_result))
                         else:
+                            # Preserve every generated inner candidate in the report,
+                            # even when transform reconstruction or the scientific
+                            # validator itself fails. Unknown hard evidence is
+                            # deliberately ineligible rather than silently omitted.
+                            _audit_expression = str(
+                                _inner_candidate.get("fit_expression")
+                                or _inner_candidate.get("expression")
+                                or "<invalid>"
+                            ).strip() or "<invalid>"
+                            _audit_source = (
+                                _inner_source if _inner_source in {
+                                    "llm_proposal", "domain_template", "pysr_search",
+                                    "residual_search", "unknown",
+                                } else "unknown"
+                            )
+                            _audit_strategy = str(
+                                _inner_candidate.get("search_strategy")
+                                or "inner_candidate_validation_error"
+                            ).strip() or "inner_candidate_validation_error"
+                            try:
+                                _audit_seed = int(_inner_candidate.get("seed", seed))
+                            except (TypeError, ValueError, OverflowError):
+                                _audit_seed = int(seed)
+                            _audit_reason = "; ".join(_inner_reasons) or (
+                                "candidate scientific validation could not be completed"
+                            )
+                            _audit_record = CandidateRecord(
+                                expression=_audit_expression,
+                                normalized_expression=_audit_expression,
+                                source=_audit_source,
+                                search_strategy=_audit_strategy,
+                                seed=_audit_seed,
+                                metrics={
+                                    "inner_candidate_id": _inner_candidate.get("candidate_id"),
+                                    "source_provenance": list(
+                                        _inner_candidate.get("source_provenance") or []
+                                    ),
+                                    "validation_execution": "not_completed",
+                                },
+                                rejection_reasons=(_audit_reason,),
+                                eligible=False,
+                                constraint_outcomes=(
+                                    ConstraintOutcome(
+                                        "builtin.candidate_validation_execution",
+                                        "unknown",
+                                        "hard",
+                                        _audit_reason,
+                                        {"validation_completed": False},
+                                    ),
+                                ),
+                            )
+                            _candidate_attempts.append((_audit_record, _inner_result))
                             logger.warning(
-                                "   [REJECTED] Inner candidate %s could not enter validation: %s",
+                                "   [REJECTED] Inner candidate %s retained as ineligible audit record: %s",
                                 _inner_candidate.get("candidate_id"),
                                 _inner_reasons,
                             )
