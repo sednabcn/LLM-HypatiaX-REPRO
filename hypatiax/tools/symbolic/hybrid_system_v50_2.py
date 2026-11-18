@@ -1239,6 +1239,7 @@ class HybridDiscoverySystem:
                         minimum_valid_folds=_minimum_folds,
                         minimum_structure_recurrence=int(_nested_cfg.get("minimum_recurrence", 2)),
                         minimum_structure_recurrence_fraction=float(_nested_cfg.get("minimum_recurrence_fraction", 0.5)),
+                        budget_runtime=getattr(self, "_active_budget_runtime", None),
                     )
                     _nested_matching = _nested_result.get("structure_matching")
                 except Exception as _nested_exc:
@@ -1730,6 +1731,7 @@ class HybridDiscoverySystem:
                     max_mean_normalized_rmse=_validation_settings.get(
                         "max_mean_normalized_rmse"
                     ),
+                    budget_runtime=self._active_budget_runtime,
                 )
                 self._training_only_search_selection = _selection.to_dict()
                 if _selection.status != "selected" or not _selection.selected_strategy:
