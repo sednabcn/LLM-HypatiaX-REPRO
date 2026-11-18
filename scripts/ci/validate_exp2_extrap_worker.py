@@ -183,6 +183,48 @@ def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
                     or not math.isfinite(float(value))):
                     raise ValueError(f"Pareto candidate[{index}] objective {key!r} is not finite")
                 normalized[key] = float(value)
+            validation = metrics.get("training_validation", {})
+            folds = validation.get("fold_metrics", []) if isinstance(validation, dict) else []
+            if not isinstance(folds, list):
+                raise ValueError(f"Pareto candidate[{index}] training fold metrics must be a list")
+            fold_scores = []
+            for fold in folds:
+                if not isinstance(fold, dict):
+                    continue
+                score = fold.get("normalized_rmse")
+                if (isinstance(score, (int, float)) and not isinstance(score, bool)
+                    and math.isfinite(float(score)) and float(score) >= 0):
+                    fold_scores.append(float(score))
+            if selection.get("valid_normalized_fold_count") != len(fold_scores):
+                raise ValueError(f"Pareto candidate[{index}] fold count audit does not match training evidence")
+            if not fold_scores:
+                raise ValueError(f"Pareto candidate[{index}] lacks finite training fold scores")
+            expected_training_values = {
+                "mean_normalized_rmse": sum(fold_scores) / len(fold_scores),
+                "worst_normalized_rmse": max(fold_scores),
+            }
+            complexity = selection.get("complexity_node_count")
+            stability = selection.get("expression_stability_fraction")
+            if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+                raise ValueError(f"Pareto candidate[{index}] complexity audit is invalid")
+            if (isinstance(stability, bool) or not isinstance(stability, (int, float))
+                or not math.isfinite(float(stability)) or not 0.0 <= float(stability) <= 1.0):
+                raise ValueError(f"Pareto candidate[{index}] expression stability audit is invalid")
+            expected_training_values.update({
+                "complexity": float(complexity),
+                "negative_expression_stability": -float(stability),
+            })
+            if len(expected_keys) == 5:
+                soft_value = selection.get("mean_soft_constraint_violation_fraction")
+                if (isinstance(soft_value, bool) or not isinstance(soft_value, (int, float))
+                    or not math.isfinite(float(soft_value)) or not 0.0 <= float(soft_value) <= 1.0):
+                    raise ValueError(f"Pareto candidate[{index}] soft-constraint objective audit is invalid")
+                expected_training_values["mean_soft_constraint_violation_fraction"] = float(soft_value)
+            for key, expected_value in expected_training_values.items():
+                if not math.isclose(normalized[key], expected_value, rel_tol=1e-9, abs_tol=1e-12):
+                    raise ValueError(
+                        f"Pareto candidate[{index}] objective {key!r} does not match underlying training evidence"
+                    )
             eligible_vectors[candidate["candidate_id"]] = normalized
         elif vector is not None:
             raise ValueError(f"Pareto-ineligible candidate[{index}] must not carry an objective vector")
