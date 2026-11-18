@@ -28,7 +28,9 @@ Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
 - `implementation_mode: native_contract_preflight_v50_2_discovery`
 - `native_v60_pipeline: false`
-- `native_v60_stages`: typed contract/run context plus bounded data-independent template generation\n- `native_v60_candidate_proposals`: generated proposal records with deterministic IDs, source, strategy, and seed\n- Candidate count and IDs in implementation provenance
+- `native_v60_stages`: typed contract/run context plus bounded data-independent template generation
+- `native_v60_candidate_proposals`: generated proposal records with deterministic IDs, source, strategy, and seed
+- Candidate count and IDs in implementation provenance
 - `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
 
