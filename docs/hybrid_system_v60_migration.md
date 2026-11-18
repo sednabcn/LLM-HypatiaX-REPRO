@@ -15,7 +15,7 @@ least-squares fit against the supplied training arrays. Each candidate is
 fitted as scale times its symbolic basis plus an intercept; the stage records
 training RMSE/NRMSE/R², coefficients, fit status, and producer lineage. It
 rejects candidates that cannot produce finite predictions over every training
-row. This fit evidence is audit-only: V50.2 still owns candidate fitting,
+row. This fit evidence is audit-only: V50.2 still owns production candidate fitting,
 external LLM/PySR production, scientific gates, validation, Pareto selection,
 and final evaluation. Native fit metrics do not rank candidates or influence
 V50.2 selection. The native V60 gate audit uses only declared constraints and
@@ -89,10 +89,10 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 ## Remaining native V60 stages
 
 1. Bounded LLM/PySR producer adapters and native candidate fitting beyond the
-   current single-basis affine least-squares audit stage.
-1. Native gates and fold evidence remain audit-only; implement independently
-   verifiable native objective evidence and selection without far-data access.
-2. Training-only residual diagnostics and structure stability.
+   current single-basis affine least-squares stage.
+2. Independently verifiable native objective evidence and candidate selection,
+   using only gate and training-fold evidence.
+3. Training-only residual diagnostics and structure stability.
 4. Pareto selection with independently verifiable objective evidence.
 5. Frozen far-set evaluation after selection.
 6. Versioned discovery report and worker-side integrity verification.
