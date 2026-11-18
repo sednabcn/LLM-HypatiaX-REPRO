@@ -99,7 +99,9 @@ def verify_native_multi_basis_validation_evidence(
                 records = candidate.get("producer_provenance", [])
                 if not isinstance(records, (list, tuple)):
                     raise ValueError("candidate producer provenance must be a list")
-                expected_lineage.extend(dict(item) for item in records if isinstance(item, Mapping))
+                if any(not isinstance(item, Mapping) for item in records):
+                    raise ValueError("candidate producer provenance entries must be mappings")
+                expected_lineage.extend(dict(item) for item in records)
             if record.get("source_provenance", []) != expected_lineage:
                 raise ValueError("producer lineage does not match normalized basis proposals")
 
@@ -130,8 +132,14 @@ def verify_native_multi_basis_validation_evidence(
             for expected_fold_index, fold in enumerate(folds):
                 if fold.get("fold") != expected_fold_index:
                     raise ValueError("fold IDs must be contiguous and ordered")
-                train_idx = np.asarray(fold.get("training_row_indices"), dtype=int)
-                valid_idx = np.asarray(fold.get("validation_row_indices"), dtype=int)
+                raw_train_idx = fold.get("training_row_indices")
+                raw_valid_idx = fold.get("validation_row_indices")
+                if not isinstance(raw_train_idx, list) or not isinstance(raw_valid_idx, list):
+                    raise ValueError("fold row indices must be lists of integers")
+                if any(isinstance(index, bool) or not isinstance(index, int) for index in raw_train_idx + raw_valid_idx):
+                    raise ValueError("fold row indices must be integers, not booleans or floats")
+                train_idx = np.asarray(raw_train_idx, dtype=int)
+                valid_idx = np.asarray(raw_valid_idx, dtype=int)
                 if train_idx.ndim != 1 or valid_idx.ndim != 1 or not train_idx.size or not valid_idx.size:
                     raise ValueError("fold row indices must be non-empty one-dimensional lists")
                 if len(set(train_idx.tolist())) != train_idx.size or len(set(valid_idx.tolist())) != valid_idx.size:

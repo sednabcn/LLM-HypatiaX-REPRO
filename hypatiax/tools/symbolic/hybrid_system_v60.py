@@ -25,6 +25,7 @@ from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_ca
 from hypatiax.tools.symbolic.v60_multi_basis_fitting import fit_native_multi_basis_candidates
 from hypatiax.tools.symbolic.v60_multi_basis_validation import validate_native_multi_basis_candidates
 from hypatiax.tools.symbolic.v60_multi_basis_evidence import verify_native_multi_basis_validation_evidence
+from hypatiax.tools.symbolic.v60_multi_basis_objective_selection import select_native_multi_basis_candidates_from_verified_evidence
 from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
 from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
 from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
@@ -99,7 +100,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_multi_basis_fold_validation_gates_training_validation_residual_stability_objective_selection_v50_2_final_evaluation"
+    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_multi_basis_fold_validation_verified_multi_basis_pareto_gates_training_validation_residual_stability_objective_selection_v50_2_final_evaluation"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -108,6 +109,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "bounded_training_only_affine_candidate_fitting",
         "bounded_training_only_joint_multi_basis_fitting",
         "bounded_training_only_joint_multi_basis_refit_cross_validation",
+        "independent_joint_multi_basis_fold_evidence_verification",
+        "verified_joint_multi_basis_objectives_and_pareto_selection",
         "declared_scientific_candidate_gates",
         "bounded_training_only_refit_cross_validation",
         "training_only_fold_residual_diagnostics_and_coefficient_stability",
@@ -123,6 +126,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_multi_basis_fit_audit: dict[str, Any] = {}
         self._last_v60_multi_basis_validation_audit: dict[str, Any] = {}
         self._last_v60_multi_basis_evidence_audit: dict[str, Any] = {}
+        self._last_v60_multi_basis_selection_audit: dict[str, Any] = {}
         self._last_v60_gate_audit: dict[str, Any] = {}
         self._last_v60_training_validation_audit: dict[str, Any] = {}
         self._last_v60_objective_selection_audit: dict[str, Any] = {}
@@ -156,6 +160,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_multi_basis_evidence_verification": bool(self._last_v60_multi_basis_evidence_audit) and self._last_v60_multi_basis_evidence_audit.get("verification_status") == "completed",
             "native_v60_multi_basis_verified_group_count": self._last_v60_multi_basis_evidence_audit.get("verified_group_count", 0),
             "native_v60_multi_basis_evidence_audit": dict(self._last_v60_multi_basis_evidence_audit),
+            "native_v60_multi_basis_objective_selection": bool(self._last_v60_multi_basis_selection_audit) and self._last_v60_multi_basis_selection_audit.get("selection_status") != "stage_failed",
+            "native_v60_multi_basis_selected_group_id": self._last_v60_multi_basis_selection_audit.get("selected_candidate_group_id"),
+            "native_v60_multi_basis_pareto_group_ids": list(self._last_v60_multi_basis_selection_audit.get("pareto_candidate_group_ids", [])),
+            "native_v60_multi_basis_selection_audit": dict(self._last_v60_multi_basis_selection_audit),
             "native_v60_candidate_gating": bool(self._last_v60_gate_audit) and self._last_v60_gate_audit.get("gate_status") != "stage_failed",
             "native_v60_gate_eligible_count": self._last_v60_gate_audit.get("eligible_candidate_count", 0),
             "native_v60_gate_ineligible_count": self._last_v60_gate_audit.get("ineligible_candidate_count", 0),
@@ -220,6 +228,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_multi_basis_validation_audit = {}
         self._last_v60_multi_basis_evidence_audit = {}
+        self._last_v60_multi_basis_selection_audit = {}
         self._last_v60_gate_audit = {}
         self._last_v60_training_validation_audit = {}
         self._last_v60_objective_selection_audit = {}
@@ -355,6 +364,30 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "far_or_evaluation_data_used": False,
                     "verified_candidate_groups": [],
                     "rejected_candidate_groups": [],
+                }
+            try:
+                self._last_v60_multi_basis_selection_audit = select_native_multi_basis_candidates_from_verified_evidence(
+                    self._last_v60_candidate_proposals,
+                    self._last_v60_gate_audit,
+                    self._last_v60_multi_basis_fit_audit,
+                    self._last_v60_multi_basis_validation_audit,
+                    self._last_v60_multi_basis_evidence_audit,
+                    variable_names=problem.variable_names,
+                    max_groups=problem.budget.max_candidates,
+                    max_search_attempts=problem.budget.max_search_attempts,
+                )
+            except Exception as exc:
+                self._last_v60_multi_basis_selection_audit = {
+                    "schema": "v60_native_multi_basis_objective_selection_v1",
+                    "selection_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "objective_evidence": [],
+                    "pareto_candidate_group_ids": [],
+                    "selected_candidate_group_id": None,
+                    "selected_basis_candidate_ids": [],
+                    "selected_basis_expressions": [],
                 }
             try:
                 eligible_ids = [
