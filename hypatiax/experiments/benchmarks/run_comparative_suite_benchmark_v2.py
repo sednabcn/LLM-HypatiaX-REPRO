@@ -3364,6 +3364,13 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
         )
+        # Preserve explicit nested-structure opt-in from caller metadata.
+        # It is absent from defaults because it adds fold-local symbolic fits.
+        _caller_validation = metadata.get("training_only_search_validation")
+        if isinstance(_caller_validation, dict) and "nested_structure_evidence" in _caller_validation:
+            _meta["training_only_search_validation"]["nested_structure_evidence"] = (
+                _caller_validation["nested_structure_evidence"]
+            )
         _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
 
         print(
