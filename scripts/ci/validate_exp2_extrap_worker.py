@@ -429,10 +429,47 @@ def _validate_candidate_envelope_audit(report: dict[str, Any]) -> None:
     if audit.get("count_matches_generation_metadata") is not expected_count_match:
         raise ValueError("candidate envelope generation count match flag is inconsistent")
 
+    generation = audit.get("producer_generation")
+    if generation is not None:
+        if not isinstance(generation, dict):
+            raise ValueError("candidate envelope producer_generation must be an object")
+        def count(field: str) -> int:
+            return nonnegative_int(field, generation.get(field))
+        observed = count("llm_hypotheses_observed")
+        admitted = count("llm_hypotheses_admitted")
+        missing_llm = count("llm_hypotheses_missing_expression")
+        dedup_llm = count("llm_hypotheses_deduplicated")
+        raw = count("raw_proposal_count")
+        unique = count("deduplicated_candidate_count")
+        dedup_total = count("deduplication_count")
+        missing_total = count("missing_expression_count")
+        if observed != admitted + missing_llm + dedup_llm:
+            raise ValueError("producer LLM proposal accounting is inconsistent")
+        pysr_generated = generation.get("pysr_search_generated_candidate")
+        pysr_missing = generation.get("pysr_candidate_missing_expression")
+        pysr_dedup = generation.get("pysr_candidate_deduplicated")
+        if not all(isinstance(value, bool) for value in (pysr_generated, pysr_missing, pysr_dedup)):
+            raise ValueError("producer PySR generation flags must be boolean")
+        if raw != observed + int(pysr_generated):
+            raise ValueError("producer raw proposal count is inconsistent")
+        if unique != retained or (generation_count is not None and unique != generation_count):
+            raise ValueError("producer unique candidate count differs from retained envelope count")
+        if dedup_total != dedup_llm + int(pysr_dedup):
+            raise ValueError("producer deduplication count is inconsistent")
+        if missing_total != missing_llm + int(pysr_missing):
+            raise ValueError("producer missing-expression count is inconsistent")
+        if pysr_missing and pysr_dedup:
+            raise ValueError("producer PySR candidate cannot be both missing and deduplicated")
+        if not pysr_generated and (pysr_dedup or pysr_missing):
+            raise ValueError("producer PySR candidate accounting lacks a generated proposal")
+
     expected_complete = (
-        container_valid
-        and malformed == 0
+        container_valid and malformed == 0
         and (generation_count is None or retained == generation_count)
+        and (generation is None or (
+            generation.get("missing_expression_count") == 0
+            and generation.get("deduplication_count") == 0
+        ))
     )
     if audit.get("ingestion_complete") is not expected_complete:
         raise ValueError("candidate envelope ingestion_complete flag is inconsistent")

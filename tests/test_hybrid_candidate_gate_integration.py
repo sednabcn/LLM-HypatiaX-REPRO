@@ -466,7 +466,7 @@ def test_hybrid_engine_emits_candidate_specific_llm_and_pysr_fit_contracts():
         "r2_score": 0.99,
         "variable_names": ["x"],
         "llm_mode": "hybrid_llm_better",
-        "llm_hypotheses": ["x**2", "x*x"],
+        "llm_hypotheses": ["x**2", "x**2"],
         "pysr_candidate": {
             "expression": "[X-normalised] x**3",
             "fit_expression": "x**3",
@@ -493,11 +493,18 @@ def test_hybrid_engine_emits_candidate_specific_llm_and_pysr_fit_contracts():
     candidates = result["discovery_candidates"]
     assert result["discovery_candidates_schema"] == "discovery_candidates_v1"
     assert [candidate["source"] for candidate in candidates] == [
-        "llm_proposal", "llm_proposal", "pysr_search"
+        "llm_proposal", "pysr_search"
     ]
     assert candidates[0]["fit_transform_state"]["x_scales"] == [1.0]
-    assert candidates[2]["fit_transform_state"]["x_scales"] == [2.0]
+    assert candidates[1]["fit_transform_state"]["x_scales"] == [2.0]
     assert result["discovery_candidate_generation"]["pysr_search_generated_candidate"] is True
+    generation = result["discovery_candidate_generation"]
+    assert generation["llm_hypotheses_observed"] == 2
+    assert generation["llm_hypotheses_admitted"] == 1
+    assert generation["llm_hypotheses_deduplicated"] == 1
+    assert generation["deduplication_count"] == 1
+    assert generation["raw_proposal_count"] == 3
+    assert generation["deduplicated_candidate_count"] == 2
     assert result["expression"] == "x**2"
 
 
