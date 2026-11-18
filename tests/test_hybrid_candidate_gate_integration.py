@@ -281,3 +281,82 @@ def test_llm_selected_candidate_exposes_identity_inner_transform_contract():
     assert result["fit_transform_state"]["transform_source"] == (
         "llm_outer_fit_space_identity_inner_transform"
     )
+
+
+
+def test_llm_selected_retry_candidate_is_attributed_to_llm_proposal():
+    import numpy as np
+
+    problem = DiscoveryProblem(target_name="energy", variable_names=("x",))
+    system = _system("0.5*x", problem)
+    system.symbolic_engine.discover = lambda *args, **kwargs: {
+        "expression": "0.5*x",
+        "r2_score": 0.999999,
+        "llm_mode": "hybrid_llm_better",
+    }
+    observed_sources = []
+    original_validate = system._candidate_validator.validate
+
+    def capture_source(problem, expression, **kwargs):
+        observed_sources.append(kwargs.get("source"))
+        return original_validate(problem, expression, **kwargs)
+
+    system._candidate_validator.validate = capture_source
+    result = system._discover_with_retry(
+        X=np.array([[1.0], [2.0], [3.0]]),
+        y=np.array([0.5, 1.0, 1.5]),
+        variable_names=["x"],
+        variable_descriptions={"x": "input"},
+        variable_units={},
+    )
+
+    assert result["candidate_source"] == "llm_proposal"
+    assert observed_sources == ["llm_proposal"]
+
+
+def test_typed_retry_early_stop_waits_for_distinct_candidate_pool():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2.0, "maximum": 2.0}},
+    )
+    system = _system("x**2", problem)
+    system.max_retries = 3
+    expressions = iter(("x**2", "x**2 + 0", "x**2"))
+    calls = []
+
+    def discover(*args, **kwargs):
+        calls.append(True)
+        return {
+            "expression": next(expressions),
+            "r2_score": 0.999999,
+            "llm_mode": "none",
+        }
+
+    system.symbolic_engine.discover = discover
+    X = np.linspace(-2.0, 2.0, 30).reshape(-1, 1)
+    y = np.square(X[:, 0])
+    system._active_training_validation_settings = {
+        "n_splits": 2,
+        "validation_fraction": 0.2,
+        "minimum_valid_folds": 2,
+        "minimum_candidate_pool_size": 2,
+    }
+    system._active_training_validation_seed = 42
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    result = system._discover_with_retry(
+        X=X,
+        y=y,
+        variable_names=["x"],
+        variable_descriptions={"x": "position"},
+        variable_units={},
+    )
+
+    assert len(calls) == 2
+    coverage = result["discovery_report"]["provenance"]["candidate_pool_coverage"]
+    assert coverage["distinct_eligible_expressions"] == 2
+    assert coverage["minimum_for_early_stop"] == 2
