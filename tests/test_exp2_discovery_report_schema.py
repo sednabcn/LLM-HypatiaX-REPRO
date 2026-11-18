@@ -260,3 +260,20 @@ def test_pareto_report_rejects_inconsistent_membership_objectives_or_winner(muta
     mutate(report)
     with pytest.raises(ValueError, match=message):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_pareto_complexity_is_recomputed_when_source_metric_is_absent():
+    report = _valid_pareto_report()
+    report["pareto_candidate_ids"] = ["candidate-1", "candidate-2"]
+    report["selected_candidate_id"] = "candidate-1"
+    first = report["candidates"][0]
+    del first["metrics"]["complexity"]
+    first["metrics"]["pareto_selection"]["complexity_node_count"] = 1
+    first["metrics"]["pareto_selection"]["objectives"]["complexity"] = 1.0
+
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+    first["metrics"]["pareto_selection"]["complexity_node_count"] = 4
+    first["metrics"]["pareto_selection"]["objectives"]["complexity"] = 4.0
+    with pytest.raises(ValueError, match="complexity objective does not match parsed expression"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
