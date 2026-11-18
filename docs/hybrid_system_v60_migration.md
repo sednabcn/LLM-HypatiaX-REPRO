@@ -18,8 +18,7 @@ rejects candidates that cannot produce finite predictions over every training
 row. This fit evidence is audit-only: V50.2 still owns candidate fitting,
 external LLM/PySR production, scientific gates, validation, Pareto selection,
 and final evaluation. Native fit metrics do not rank candidates or influence
-V50.2 selection. This is a
-staged migration, not a completed native V60 pipeline or a claim of improved
+V50.2 selection. This is a staged migration, not a completed native V60 pipeline or a claim of improved
 scientific performance.
 
 For calls carrying a typed contract, V60 accepts either:
@@ -44,14 +43,16 @@ The normalization stage:
 - Retains original expression, producer-supplied ID, source, strategy, and seed
   for every proposal merged into a deduplicated candidate.
 - Records rejected proposal reasons and input-budget truncation counts.
-- Does not inspect targets, training residuals, validation folds, or far data.
+- The normalization operation itself does not inspect targets, training residuals,
+  validation folds, or far data.
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_generation_normalization_v50_2_discovery`
+- `implementation_mode: native_contract_generation_normalization_training_fit_v50_2_discovery`
 - `native_v60_pipeline: false`
 - `native_v60_stages`: contract/run context, bounded template generation,
-  expression normalization, semantic identity, deduplication, and lineage
+  expression normalization, semantic identity, deduplication, lineage, and
+  bounded training-only affine fitting
 - `native_v60_candidate_proposals`: normalized proposals with stable IDs and
   complete producer lineage
 - `native_v60_normalization_audit`: rejection and budget accounting
