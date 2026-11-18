@@ -64,7 +64,7 @@ def seal_discovery_report(report: DiscoveryReport | Mapping[str, Any]) -> dict[s
 
 
 def _verify_multi_basis_selection_audit(audit: Any) -> None:
-    """Validate report-embedded joint-basis selection references and digests."""
+    """Reconstruct the joint-basis objective, Pareto set, and winner at the worker boundary."""
     if not isinstance(audit, Mapping):
         raise TypeError("native multi-basis selection provenance must be a mapping")
     if audit.get("schema") != "v60_native_multi_basis_objective_selection_v1":
@@ -79,7 +79,17 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
     evidence, pareto = audit.get("objective_evidence"), audit.get("pareto_candidate_group_ids")
     if not isinstance(evidence, list) or not isinstance(pareto, list):
         raise TypeError("multi-basis objective evidence and Pareto IDs must be lists")
+
+    def number(value: Any, label: str, *, nonnegative: bool = True) -> float:
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            raise ValueError(f"{label} must be a finite numeric value")
+        result = float(value)
+        if nonnegative and result < 0:
+            raise ValueError(f"{label} cannot be negative")
+        return result
+
     by_id = {}
+    normalized = []
     for item in evidence:
         if not isinstance(item, Mapping):
             raise TypeError("multi-basis objective records must be mappings")
@@ -90,25 +100,140 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
         unsigned = {key: value for key, value in item.items() if key != "objective_evidence_sha256"}
         if not isinstance(supplied, str) or _canonical_digest(unsigned) != supplied:
             raise ValueError("multi-basis objective evidence digest does not reproduce")
+        ids, expressions = item.get("basis_candidate_ids"), item.get("basis_expressions")
+        if not isinstance(ids, list) or not 2 <= len(ids) <= 3 or any(not isinstance(value, str) or not value for value in ids) or len(set(ids)) != len(ids):
+            raise ValueError("multi-basis basis IDs must be two or three unique strings")
+        expected_group_id = "v60mb_" + sha256(json.dumps(ids, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+        if gid != expected_group_id:
+            raise ValueError("multi-basis group ID does not match its ordered basis IDs")
+        if not isinstance(item.get("source_provenance"), list):
+            raise ValueError("multi-basis producer lineage must be a list")
+        if not isinstance(expressions, list) or len(expressions) != len(ids) or any(not isinstance(x, str) or not x for x in expressions):
+            raise ValueError("multi-basis expressions must align with basis IDs")
         fingerprint = item.get("evidence_fingerprint")
-        if not isinstance(fingerprint, str) or len(fingerprint) != 64:
-            raise ValueError("multi-basis evidence fingerprint is missing or invalid")
+        snapshot = item.get("verified_evidence_snapshot")
+        if not isinstance(fingerprint, str) or len(fingerprint) != 64 or not isinstance(snapshot, Mapping):
+            raise ValueError("multi-basis verified evidence snapshot or fingerprint is missing")
+        folds, aggregates = snapshot.get("folds"), snapshot.get("aggregates")
+        training_rows, variable_names, split_strategy = snapshot.get("training_row_count"), snapshot.get("variable_names"), snapshot.get("split_strategy")
+        if not isinstance(folds, list) or len(folds) != item.get("fold_count") or len(folds) < 2:
+            raise ValueError("embedded verified fold evidence is incomplete")
+        if isinstance(training_rows, bool) or not isinstance(training_rows, int) or training_rows < 1:
+            raise ValueError("embedded training row count is invalid")
+        if not isinstance(variable_names, list) or not variable_names or any(not isinstance(v, str) or not v for v in variable_names):
+            raise ValueError("embedded variable names are invalid")
+        if not isinstance(split_strategy, str) or not split_strategy or not isinstance(aggregates, Mapping):
+            raise ValueError("embedded evidence context or aggregates are invalid")
+        aggregate_keys = {"validation_rmse_mean", "validation_rmse_std", "validation_nrmse_mean", "validation_nrmse_std"}
+        if set(aggregates) != aggregate_keys:
+            raise ValueError("embedded verified aggregate fields are incomplete")
+        for key in ("validation_rmse_mean", "validation_rmse_std"):
+            number(aggregates[key], key)
+        for key in ("validation_nrmse_mean", "validation_nrmse_std"):
+            if aggregates[key] is not None:
+                number(aggregates[key], key)
+        if (aggregates["validation_nrmse_mean"] is None) != (aggregates["validation_nrmse_std"] is None):
+            raise ValueError("embedded normalized aggregate nullability is inconsistent")
+        for index, fold in enumerate(folds):
+            if not isinstance(fold, Mapping) or fold.get("fold") != index:
+                raise ValueError("embedded verified folds must be ordered and complete")
+            for key in ("training_row_indices", "validation_row_indices"):
+                rows = fold.get(key)
+                if not isinstance(rows, list) or not rows or any(isinstance(v, bool) or not isinstance(v, int) or v < 0 or v >= training_rows for v in rows):
+                    raise ValueError("embedded fold row indices are invalid")
+                if len(rows) != len(set(rows)):
+                    raise ValueError("embedded fold row indices must be unique")
+            if set(fold["training_row_indices"]).intersection(fold["validation_row_indices"]):
+                raise ValueError("embedded fold training and validation rows overlap")
+            number(fold.get("recomputed_rmse"), "recomputed fold RMSE")
+            for key in ("recomputed_nrmse", "recomputed_r2", "recomputed_condition_number"):
+                if fold.get(key) is not None:
+                    number(fold[key], key, nonnegative=(key != "recomputed_r2"))
+            coeffs = fold.get("recomputed_coefficients")
+            if not isinstance(coeffs, list) or len(coeffs) != len(ids) + 1:
+                raise ValueError("embedded fold coefficient vector is invalid")
+            for coeff in coeffs:
+                number(coeff, "recomputed coefficient", nonnegative=False)
+        validation_rows = [row for fold in folds for row in fold["validation_row_indices"]]
+        if len(validation_rows) != len(set(validation_rows)):
+            raise ValueError("embedded validation rows must be disjoint across folds")
+        rmse_values = [float(fold["recomputed_rmse"]) for fold in folds]
+        rmse_mean = math.fsum(rmse_values) / len(rmse_values)
+        rmse_std = math.sqrt(math.fsum((value - rmse_mean) ** 2 for value in rmse_values) / len(rmse_values))
+        if not math.isclose(aggregates["validation_rmse_mean"], rmse_mean, rel_tol=1e-10, abs_tol=1e-12) or not math.isclose(aggregates["validation_rmse_std"], rmse_std, rel_tol=1e-10, abs_tol=1e-12):
+            raise ValueError("embedded RMSE aggregates do not reproduce from verified folds")
+        nrmse_values = [fold.get("recomputed_nrmse") for fold in folds]
+        if all(value is not None for value in nrmse_values):
+            numeric_nrmse = [float(value) for value in nrmse_values]
+            nrmse_mean = math.fsum(numeric_nrmse) / len(numeric_nrmse)
+            nrmse_std = math.sqrt(math.fsum((value - nrmse_mean) ** 2 for value in numeric_nrmse) / len(numeric_nrmse))
+            if not math.isclose(aggregates["validation_nrmse_mean"], nrmse_mean, rel_tol=1e-10, abs_tol=1e-12) or not math.isclose(aggregates["validation_nrmse_std"], nrmse_std, rel_tol=1e-10, abs_tol=1e-12):
+                raise ValueError("embedded NRMSE aggregates do not reproduce from verified folds")
+        elif aggregates["validation_nrmse_mean"] is not None or aggregates["validation_nrmse_std"] is not None:
+            raise ValueError("embedded NRMSE aggregate nullability does not reproduce from folds")
+        fingerprint_payload = {
+            "candidate_group_id": gid, "basis_candidate_ids": ids,
+            "basis_expressions": expressions, "source_provenance": item.get("source_provenance"),
+            "folds": folds, "aggregates": dict(aggregates),
+            "training_row_count": training_rows, "variable_names": variable_names,
+            "split_strategy": split_strategy,
+        }
+        if _canonical_digest(fingerprint_payload) != fingerprint:
+            raise ValueError("embedded independent fold-evidence fingerprint does not reproduce")
+        # Recompute symbolic complexity from the restricted expression parser.
+        import sympy as sp
+        from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+        complexity = int(sum(sp.count_ops(parse_sympy_expression(expr, variable_names)) for expr in expressions) + len(expressions))
+        if item.get("symbolic_complexity") != complexity:
+            raise ValueError("multi-basis symbolic complexity does not reproduce from expressions")
+        if item.get("mean_validation_rmse") != aggregates["validation_rmse_mean"] or item.get("std_validation_rmse") != aggregates["validation_rmse_std"]:
+            raise ValueError("multi-basis RMSE objectives differ from verified fold aggregates")
+        if item.get("mean_validation_nrmse") != aggregates["validation_nrmse_mean"] or item.get("std_validation_nrmse") != aggregates["validation_nrmse_std"]:
+            raise ValueError("multi-basis NRMSE objectives differ from verified fold aggregates")
         by_id[gid] = item
-    if len(pareto) != len(set(pareto)) or not set(pareto).issubset(by_id):
-        raise ValueError("multi-basis Pareto IDs must uniquely reference objective evidence")
-    selected_id = audit.get("selected_candidate_group_id")
-    selected_ids, selected_exprs = audit.get("selected_basis_candidate_ids"), audit.get("selected_basis_expressions")
-    if status == "selected":
-        if selected_id not in by_id or selected_id not in pareto:
-            raise ValueError("selected multi-basis group must be in objective evidence and Pareto set")
-        selected = by_id[selected_id]
-        if selected_ids != selected.get("basis_candidate_ids") or selected_exprs != selected.get("basis_expressions"):
-            raise ValueError("selected multi-basis expressions do not match objective evidence")
-        if audit.get("selected_objective_evidence_sha256") != selected.get("objective_evidence_sha256"):
-            raise ValueError("selected multi-basis objective digest does not match")
-    elif selected_id is not None or selected_ids not in ([], None) or selected_exprs not in ([], None):
-        raise ValueError("non-selected multi-basis audit cannot reference a selected group")
+        normalized.append(item)
 
+    if status == "stage_failed":
+        if evidence or pareto or audit.get("selected_candidate_group_id") is not None or audit.get("selected_basis_candidate_ids") not in ([], None) or audit.get("selected_basis_expressions") not in ([], None):
+            raise ValueError("failed multi-basis selection cannot contain objective or selection evidence")
+        return
+    if status == "no_credible_candidate":
+        if evidence or pareto or audit.get("selected_candidate_group_id") is not None or audit.get("selected_basis_candidate_ids") not in ([], None) or audit.get("selected_basis_expressions") not in ([], None):
+            raise ValueError("no-credible-candidate decision must have empty selection evidence")
+        return
+    if not normalized:
+        raise ValueError("selected multi-basis decision requires objective evidence")
+
+    metric = "mean_validation_nrmse" if all(x.get("mean_validation_nrmse") is not None for x in normalized) else "mean_validation_rmse"
+    variability = "std_validation_nrmse" if metric.endswith("nrmse") else "std_validation_rmse"
+    if audit.get("primary_error_objective") != metric:
+        raise ValueError("multi-basis primary error objective does not match the complete evidence pool")
+    directions = {metric: "minimize", variability: "minimize", "symbolic_complexity": "minimize"}
+    if audit.get("objective_directions") != directions:
+        raise ValueError("multi-basis objective directions are inconsistent")
+    for item in normalized:
+        expected = {metric: number(item[metric], metric), variability: number(item[variability], variability), "symbolic_complexity": number(item["symbolic_complexity"], "symbolic_complexity")}
+        if item.get("primary_error_objective") != metric or item.get("objectives") != expected:
+            raise ValueError("multi-basis objective vector does not reproduce from verified metrics")
+
+    def dominates(left: Mapping[str, Any], right: Mapping[str, Any]) -> bool:
+        a, b = left["objectives"], right["objectives"]
+        keys = (metric, variability, "symbolic_complexity")
+        return all(a[k] <= b[k] for k in keys) and any(a[k] < b[k] for k in keys)
+
+    frontier = [item for item in normalized if not any(other["candidate_group_id"] != item["candidate_group_id"] and dominates(other, item) for other in normalized)]
+    frontier.sort(key=lambda item: (item["objectives"][metric], item["objectives"]["symbolic_complexity"], item["objectives"][variability], item["candidate_group_id"]))
+    expected_ids = [item["candidate_group_id"] for item in frontier]
+    if pareto != expected_ids:
+        raise ValueError("serialized Pareto membership/order does not reproduce from objective evidence")
+    winner = frontier[0]
+    selected_id = audit.get("selected_candidate_group_id")
+    if selected_id != winner["candidate_group_id"]:
+        raise ValueError("selected multi-basis group does not match deterministic Pareto tie-break")
+    if audit.get("selected_basis_candidate_ids") != winner["basis_candidate_ids"] or audit.get("selected_basis_expressions") != winner["basis_expressions"]:
+        raise ValueError("selected multi-basis basis references do not match the deterministic winner")
+    if audit.get("selected_objective_evidence_sha256") != winner["objective_evidence_sha256"]:
+        raise ValueError("selected multi-basis objective digest does not match")
 
 def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, Any]:
     """Strictly verify worker input; return a detached JSON-compatible report."""
