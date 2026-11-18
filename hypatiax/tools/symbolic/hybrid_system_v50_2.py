@@ -1158,6 +1158,8 @@ class HybridDiscoverySystem:
                         "ingestion_complete": (
                             _envelope_items_are_list
                             and _envelope_malformed_count == 0
+                            and _generation_summary.get("missing_expression_count", 0) == 0
+                            and _generation_summary.get("deduplication_count", 0) == 0
                             and (
                                 _generation_candidate_count is None
                                 or (
