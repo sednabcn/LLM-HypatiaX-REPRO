@@ -68,7 +68,7 @@ Result `implementation_provenance` records:
 - `native_v60_stages`: contract/run context, bounded template generation,
   expression normalization, semantic identity, deduplication, lineage,
   declared scientific gates, bounded training-only affine fitting and
-  bounded joint multi-basis fitting,
+  bounded joint multi-basis fitting and fold-local joint refit validation,
   bounded training-only refit cross-validation, and verified training-evidence
   objective/Pareto selection
 - `native_v60_candidate_proposals`: normalized proposals with stable IDs and
@@ -85,6 +85,10 @@ Result `implementation_provenance` records:
   normalized basis candidates, with group IDs, term-level coefficients,
   lineage, training metrics, design diagnostics, and budget/rejection audit;
   audit-only, with `selection_performed` false and no far/evaluation data
+- `native_v60_multi_basis_validation_audit`: per-group fold metrics,
+  independent fold-local joint coefficients, row-index evidence, lineage
+  checks, and budget/rejection accounting; audit-only, with
+  `selection_performed` false and no far/evaluation data
 - `native_v60_training_validation_audit`: per-candidate fold metrics and
   fold-local coefficients, with candidate eligibility inherited from the
   native hard-gate audit; no far/evaluation data is accepted or consumed and
@@ -147,9 +151,20 @@ rows are never silently dropped. This is a separate audit-only fitting stage:
 its metrics do not influence the single-basis selector, do not rank groups,
 and are not passed to V50.2. It has no far/evaluation-data input.
 
-The remaining native V60 work is to define a separately verified fold-level
-validation and evidence-selection contract for joint basis groups before any
-such group can be eligible for native selection.
+Joint basis groups now receive a separate bounded fold-validation audit. For
+each fitted group, the validator verifies the stable group ID and exact
+candidate-ID/expression lineage against the normalized proposal pool, then
+evaluates every basis over the training rows. In each fold it independently
+refits all basis coefficients and the intercept using only that fold's
+training rows, and scores only the held-out rows. The audit preserves fold
+row indices, fold-local coefficients, rank/condition diagnostics, RMSE/NRMSE/R²,
+split protocol, and group-level budget/rejection accounting. It rejects
+non-finite data, invalid basis outputs, mismatched lineage, and folds with too
+few training rows; no rows are silently dropped. The validator has no far-set
+argument and always reports `selection_performed: false`. This evidence is
+not yet accepted by the single-basis objective selector or discovery-report
+candidate schema; joint groups remain ineligible for selection until a
+dedicated verifier and group-level objective-selection contract are added.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -162,7 +177,8 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
 - V60 is opt-in; no silent selector fallback is permitted.
 - V60 currently owns contract preflight, bounded template generation,
   normalization/lineage, declared scientific gates, training-only affine and
-  joint multi-basis fitting, refit cross-validation, and independently recomputed training-evidence
+  joint multi-basis fitting and fold-local joint refit validation, single-basis
+  refit cross-validation, and independently recomputed training-evidence
   Pareto selection. V50.2 still performs production discovery and final
   evaluation; V60 selection is opt-in and remains isolated from far data.
 - Candidate IDs identify canonical symbolic expressions; producer lineage is
