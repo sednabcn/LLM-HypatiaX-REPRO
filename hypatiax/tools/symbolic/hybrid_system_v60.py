@@ -1,9 +1,9 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
 V60 validates an explicit immutable problem contract, generates and normalizes
-bounded native templates, and records audit-only affine fits on training data.
-Production discovery, external LLM/PySR production, validation, and selection
-remain on the V50.2 baseline.
+bounded native templates, applies declared scientific gates, and records
+audit-only affine fits on training data. Production discovery, external
+LLM/PySR production, validation, and selection remain on the V50.2 baseline.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_candidates
+from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
 
 
 @dataclass(frozen=True)
@@ -89,13 +90,14 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_training_fit_v50_2_discovery"
+    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_gates_v50_2_discovery"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
         "restricted_expression_normalization_semantic_identity_and_deduplication",
         "producer_lineage_preservation",
         "bounded_training_only_affine_candidate_fitting",
+        "declared_scientific_candidate_gates",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -104,6 +106,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_training_fit_audit: dict[str, Any] = {}
+        self._last_v60_gate_audit: dict[str, Any] = {}
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -124,6 +127,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_fitted_candidate_count": self._last_v60_training_fit_audit.get("fitted_candidate_count", 0),
             "native_v60_fit_attempt_count": self._last_v60_training_fit_audit.get("fit_attempt_count", 0),
             "native_v60_training_fit_audit": dict(self._last_v60_training_fit_audit),
+            "native_v60_candidate_gating": bool(self._last_v60_gate_audit) and self._last_v60_gate_audit.get("gate_status") != "stage_failed",
+            "native_v60_gate_eligible_count": self._last_v60_gate_audit.get("eligible_candidate_count", 0),
+            "native_v60_gate_ineligible_count": self._last_v60_gate_audit.get("ineligible_candidate_count", 0),
+            "native_v60_gate_audit": dict(self._last_v60_gate_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
@@ -160,6 +167,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_training_fit_audit = {}
+        self._last_v60_gate_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
             generated = generate_native_template_candidates(problem)
@@ -173,6 +181,19 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             )
             self._last_v60_normalization_audit = normalized.to_dict()
             self._last_v60_normalization_audit.pop("candidates", None)
+            try:
+                self._last_v60_gate_audit = validate_native_candidate_pool(
+                    self._last_v60_candidate_proposals, problem
+                )
+            except Exception as exc:
+                self._last_v60_gate_audit = {
+                    "schema": "v60_native_scientific_gates_v1",
+                    "gate_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "training_or_far_data_used": False,
+                    "candidate_gates": [],
+                }
             try:
                 self._last_v60_training_fit_audit = fit_native_training_candidates(
                     self._last_v60_candidate_proposals,
