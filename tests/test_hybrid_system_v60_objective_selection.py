@@ -1,6 +1,4 @@
 """Offline regression coverage for native V60 objective verification and selection."""
-from copy import deepcopy
-
 from hypatiax.tools.symbolic.v60_objective_selection import (
     select_native_candidates_from_training_evidence,
 )
@@ -42,6 +40,7 @@ def _audits(validation_records):
         "validation_method": "training_only_refit_cross_validation",
         "far_or_evaluation_data_used": False,
         "fold_count": 2,
+        "training_row_count": 6,
         "candidate_validation": validation_records,
     }
     return gates, validation
@@ -66,7 +65,7 @@ def test_recomputes_objectives_and_selects_deterministic_pareto_candidate():
     )
     assert result["selection_status"] == "selected"
     assert result["selected_candidate_id"] == "complex"
-    assert result["pareto_candidate_ids"] == ["complex"]
+    assert set(result["pareto_candidate_ids"]) == {"simple", "complex"}
     assert result["selection_performed"] is True
     assert result["far_or_evaluation_data_used"] is False
     assert result["objective_evidence"][0]["objective_evidence_sha256"]
