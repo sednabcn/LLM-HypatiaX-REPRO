@@ -77,6 +77,7 @@ def validate_native_candidate_pool(
         records.append(record)
     return {
         "schema": "v60_native_scientific_gates_v1",
+        "gate_status": "completed",
         "candidate_count": len(candidates),
         "eligible_candidate_count": eligible_count,
         "ineligible_candidate_count": failed_count,
