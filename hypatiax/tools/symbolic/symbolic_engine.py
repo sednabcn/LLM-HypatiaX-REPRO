@@ -2490,6 +2490,97 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 "transform_source": "llm_outer_fit_space_identity_inner_transform",
             }
 
+        # Typed HybridDiscovery needs the complete inner proposal pool, not only
+        # the compatibility winner. Each item carries its own fit-space contract;
+        # outer consumers must never borrow the winner's transform for alternatives.
+        if isinstance(result, dict) and self.llm_mode == "hybrid":
+            import hashlib as _hashlib
+
+            _candidate_items = []
+            _seen_candidates = {}
+            _llm_mode = str(result.get("llm_mode", ""))
+            _llm_only = _llm_mode.endswith(("_llm_only", "_llm_better"))
+            _pysr_generated = (
+                not _llm_only
+                and _llm_mode not in (
+                    "hybrid_budget_exhausted_structural_risk",
+                    "hybrid_llm_failed",
+                )
+                and bool(result.get("fit_expression"))
+            )
+
+            def _add_candidate(expression, source, strategy, fit_expression,
+                               fit_names, transform_state, proposal_index=None):
+                _expression = str(expression or "").strip()
+                _fit_expression = str(fit_expression or "").strip().replace("^", "**")
+                if not _expression or not _fit_expression:
+                    return
+                _normal = re.sub(r"\s+", "", _fit_expression).replace("^", "**")
+                _dedup_key = _normal
+                _provenance = {
+                    "source": source,
+                    "strategy": strategy,
+                    "proposal_index": proposal_index,
+                }
+                if _dedup_key in _seen_candidates:
+                    _seen_candidates[_dedup_key]["source_provenance"].append(_provenance)
+                    return
+                _identity = "|".join((_normal, source, strategy, str(random_state)))
+                _candidate_id = _hashlib.sha256(_identity.encode("utf-8")).hexdigest()[:20]
+                _record = {
+                    "candidate_id": _candidate_id,
+                    "expression": _expression,
+                    "normalized_expression": _normal,
+                    "source": source,
+                    "source_provenance": [_provenance],
+                    "search_strategy": strategy,
+                    "seed": int(random_state),
+                    "generation_attempt": 1,
+                    "fit_expression": _fit_expression,
+                    "fit_variable_names": list(fit_names or variable_names),
+                    "fit_transform_state": dict(transform_state or {}),
+                    "training_fit_metrics": None,
+                }
+                _seen_candidates[_dedup_key] = _record
+                _candidate_items.append(_record)
+
+            # LLM equations have already been mapped to this engine call's fit
+            # space by _evaluate_hypotheses. They use an explicit identity inner
+            # transform; the outer fold evaluator still learns its own transforms.
+            _llm_names = list(result.get("variable_names") or variable_names)
+            _llm_identity_state = {
+                "input_feature_count": len(_llm_names),
+                "x_scales": [1.0] * len(_llm_names),
+                "gm_pairs": [],
+                "ratio_pairs": [],
+                "y_std": 1.0,
+                "feature_names": list(_llm_names),
+                "transform_source": "llm_outer_fit_space_identity_inner_transform",
+            }
+            for _index, _hypothesis in enumerate(result.get("llm_hypotheses") or []):
+                _add_candidate(
+                    _hypothesis, "llm_proposal", "llm_hypothesis",
+                    _hypothesis, _llm_names, _llm_identity_state, _index,
+                )
+
+            # Preserve a real PySR result separately. A seeded PySR result remains
+            # PySR provenance; LLM seeding does not change its generating source.
+            if _pysr_generated:
+                _add_candidate(
+                    result.get("expression"), "pysr_search", "pysr_refinement",
+                    result.get("fit_expression"), result.get("fit_variable_names"),
+                    result.get("fit_transform_state"), None,
+                )
+            result["discovery_candidates_schema"] = "discovery_candidates_v1"
+            result["discovery_candidates"] = _candidate_items
+            result["discovery_candidate_generation"] = {
+                "llm_hypotheses_observed": len(result.get("llm_hypotheses") or []),
+                "pysr_search_generated_candidate": bool(_pysr_generated),
+                "pysr_skipped_by_llm_acceptance": bool(_llm_only),
+                "deduplicated_candidate_count": len(_candidate_items),
+                "selection_status": "generation_only_outer_validation_required",
+            }
+
         # Keep the LLM client alive for the lifetime of this discovery engine.
         # HybridDiscoverySystem retries by calling discover() repeatedly; dropping
         # llm_engine here silently turns every retry after the first into pure
