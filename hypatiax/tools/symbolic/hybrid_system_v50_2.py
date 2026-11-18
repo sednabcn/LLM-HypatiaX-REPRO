@@ -1742,6 +1742,10 @@ class HybridDiscoverySystem:
                             "was not run."
                         ),
                         "training_only_search_selection": self._training_only_search_selection,
+                        "discovery_budget": (
+                            self._active_budget_runtime.to_dict()
+                            if self._active_budget_runtime is not None else None
+                        ),
                     }
                 self._selected_training_search_strategy = _selection.selected_strategy
                 self._selected_training_search_parsimony = _parsimony_options[
@@ -1765,6 +1769,10 @@ class HybridDiscoverySystem:
                     "error": "NO_CREDIBLE_CANDIDATE",
                     "message": "Training-only search configuration validation failed closed.",
                     "training_only_search_selection": self._training_only_search_selection,
+                    "discovery_budget": (
+                        self._active_budget_runtime.to_dict()
+                        if self._active_budget_runtime is not None else None
+                    ),
                 }
 
         _noise_level = metadata.get("noise_level", None)
