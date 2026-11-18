@@ -1540,3 +1540,31 @@ using the full training region; the nested fresh-search evidence remains a
 separate optional gate. The objective uses only training-fold expressions and
 metrics. Far/test observations are not accepted by the selector and remain
 sealed for final evaluation.
+
+
+## 38. Record normalized residual diagnostics on training folds
+
+Each fixed-candidate training-fold evaluation now records three descriptive
+residual diagnostics alongside its RMSE: signed mean residual (bias), residual
+standard deviation, and maximum absolute residual. Each is normalized by the
+standard deviation of the target values in that fold's fitting partition, not
+by the held-out target distribution. If the fitting target is constant or its
+scale is otherwise unavailable, these normalized diagnostics are explicitly
+null rather than divided by an arbitrary epsilon.
+
+The diagnostics are serialized in each fold metric and therefore remain
+available in the candidate's training_validation record and durable
+DiscoveryReport artifact. They are audit/interpretation evidence only: they do
+not alter candidate eligibility, the Pareto objective vector, retry decisions,
+or equation selection. This avoids turning descriptive residual summaries
+into undocumented scientific assumptions. They use only the held-out rows
+inside the supplied training region; no far/test observations are accepted.
+
+These values do not constitute calibrated predictive uncertainty, confidence
+intervals, or a noise-model fit. They also do not replace residual plots or
+domain-specific checks for heteroscedasticity, autocorrelation, or structured
+model misspecification. Those require an explicitly declared evaluation
+protocol and remain future work. Regression-test source covers bias, spread,
+maximum residual, and the constant-target null case; it has not been run.
+No CI, experiment, worker, benchmark, smoke workflow, or LLM API call was
+launched for this change.
