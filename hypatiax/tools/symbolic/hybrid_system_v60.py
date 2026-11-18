@@ -1,9 +1,10 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
 V60 validates an explicit immutable problem contract, generates and normalizes
-bounded native templates, applies declared scientific gates, and records
-audit-only affine fits on training data. Production discovery, external
-LLM/PySR production, validation, and selection remain on the V50.2 baseline.
+bounded native templates, applies declared scientific gates, fits and validates
+candidates on training folds, and computes an isolated native Pareto selection
+from verified training evidence. V50.2 remains the production discovery and
+final-evaluation compatibility baseline.
 """
 from __future__ import annotations
 
