@@ -20,6 +20,7 @@ from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_tem
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_training_candidates
 from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
+from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
 
 
 @dataclass(frozen=True)
@@ -90,7 +91,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_gates_v50_2_discovery"
+    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fit_gates_training_validation_v50_2_selection"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -98,6 +99,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "producer_lineage_preservation",
         "bounded_training_only_affine_candidate_fitting",
         "declared_scientific_candidate_gates",
+        "bounded_training_only_refit_cross_validation",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -107,6 +109,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_training_fit_audit: dict[str, Any] = {}
         self._last_v60_gate_audit: dict[str, Any] = {}
+        self._last_v60_training_validation_audit: dict[str, Any] = {}
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -131,6 +134,9 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_gate_eligible_count": self._last_v60_gate_audit.get("eligible_candidate_count", 0),
             "native_v60_gate_ineligible_count": self._last_v60_gate_audit.get("ineligible_candidate_count", 0),
             "native_v60_gate_audit": dict(self._last_v60_gate_audit),
+            "native_v60_training_validation": bool(self._last_v60_training_validation_audit) and self._last_v60_training_validation_audit.get("validation_status") not in {"stage_failed", "insufficient_rows"},
+            "native_v60_validated_candidate_count": self._last_v60_training_validation_audit.get("validated_candidate_count", 0),
+            "native_v60_training_validation_audit": dict(self._last_v60_training_validation_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
@@ -168,6 +174,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit = {}
         self._last_v60_training_fit_audit = {}
         self._last_v60_gate_audit = {}
+        self._last_v60_training_validation_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
             generated = generate_native_template_candidates(problem)
@@ -211,6 +218,35 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "reason": f"{type(exc).__name__}: {exc}",
                     "selection_performed": False,
                     "fitted_candidates": [],
+                    "rejected_candidates": [],
+                }
+            try:
+                eligible_ids = [
+                    item.get("native_candidate_id")
+                    for item in self._last_v60_gate_audit.get("candidate_gates", [])
+                    if item.get("eligible") is True
+                    and isinstance(item.get("native_candidate_id"), str)
+                ]
+                self._last_v60_training_validation_audit = validate_native_training_candidates(
+                    self._last_v60_candidate_proposals,
+                    X,
+                    y,
+                    variable_names=problem.variable_names,
+                    eligible_candidate_ids=eligible_ids,
+                    split_protocol=problem.split_protocol,
+                    seed=problem.budget.seed,
+                    max_candidates=problem.budget.max_candidates,
+                    max_search_attempts=problem.budget.max_search_attempts,
+                    max_wall_time_seconds=problem.budget.max_wall_time_seconds,
+                )
+            except Exception as exc:
+                self._last_v60_training_validation_audit = {
+                    "schema": "v60_native_training_validation_v1",
+                    "validation_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "candidate_validation": [],
                     "rejected_candidates": [],
                 }
         if forwarded is not None:
