@@ -1439,3 +1439,27 @@ engine. Existing protocol and flat benchmark outputs remain unchanged, and
 post-run comparative analysis remains the responsibility of the DEV
 repository. No experiments, workers, smoke workflows, benchmarks, CI jobs,
 or LLM API calls are launched by this implementation.
+
+
+## 35. Retain and qualify Exp2 discovery-report artifacts
+
+The Exp2 Feynman extrapolation worker runs the report-sidecar validator during
+post-run output verification. This creates `discovery_reports_extrap.json`
+for both typed-report runs and legacy runs without typed reports, alongside
+`exp2_extrap_summary.json` with the sidecar SHA-256, byte count, report count,
+and explicit status.
+
+Before upload, the worker verifies that the sidecar and summary agree on the
+digest, byte count, record count, schema, status, and far-evaluation selection
+boundary. The generic shard artifact upload includes the complete result
+directory, so the sidecar and summary travel with the protocol and benchmark
+outputs. `exp2_feynman_extrap` is configured as a single-shard job, so no
+cross-shard merge is required; retaining the sidecar as its own file avoids
+flattening or overwriting report records.
+
+Both pipeline artifact-qualification glob tables include the sidecar, ensuring
+it is recognized as a primary output when results are qualified. The existing
+whole-directory upload and shard-result persistence retain the complete
+directory. A legacy empty report sidecar remains mandatory and is not treated
+as missing output. This transport check does not interpret report quality or
+promote an equation; post-run comparative analysis remains in DEV.
