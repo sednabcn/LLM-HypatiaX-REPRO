@@ -277,11 +277,32 @@ unchanged. Joint-group selection is supplemental provenance and never
 replaces or overrides the single-basis result or V50.2 compatibility result.
 The outer report-envelope SHA-256 covers this complete audit.
 
-Worker verification validates the embedded group-selection schema and
-far-data exclusion, unique objective group IDs, each objective-evidence
-SHA-256, each independent fold-evidence fingerprint, Pareto references, and
-the selected group/basis IDs/expressions/objective digest. Inconsistent
-evidence rejects the report even if the outer envelope digest is recomputed.
-A no-credible-candidate decision remains explicit; a stage failure is marked
-incomplete and cannot claim selection. Workers must keep group selection in
-its separate namespace from single-basis selection.
+Worker verification reconstructs the embedded group-selection decision:
+it validates the schema and far-data exclusion, objective-record digests,
+and the embedded verified-fold snapshot against its independent evidence
+fingerprint. It recomputes symbolic complexity from restricted expressions,
+checks that objective metrics match the verified fold aggregates, derives the
+pool-wide NRMSE-versus-RMSE objective consistently, and rebuilds the complete
+componentwise-minimization Pareto frontier and deterministic tie-break. The
+serialized Pareto order and selected group/basis references must exactly match
+that reconstruction. Inconsistent evidence rejects the report even if both
+the outer envelope and an objective-record digest are recomputed. A
+no-credible-candidate decision remains explicit; a stage failure is marked
+incomplete and cannot claim selection. Workers keep group selection in its
+separate namespace from single-basis selection.
+
+
+
+## Worker reconstruction of joint multi-basis selection
+
+Each joint-basis objective record carries the independently verified fold
+snapshot and its context (training row count, variable names, split strategy,
+and recomputed fold metrics/coefficients). The worker recomputes the snapshot
+fingerprint rather than treating a 64-character digest as proof. It then
+reconstructs the error and variability objective from verified aggregates,
+recomputes symbolic complexity from the restricted parser, validates objective
+directions, derives the exact Pareto frontier, and applies the selector's
+deterministic tie-break tuple: primary error, symbolic complexity, variability,
+then stable group ID. A report is rejected if the frontier membership/order or
+selected group differs. This is report-integrity verification only: it does
+not invoke data providers, rerun discovery, or evaluate the far set.
