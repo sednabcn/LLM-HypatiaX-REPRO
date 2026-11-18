@@ -329,3 +329,28 @@ production handoff: the legacy V50.2 result remains the outward discovery
 result, and the selected native model is exposed as
 `native_v60_final_model_audit`. Frozen far-set evaluation and replacement of
 the outward production result are reserved for the next integration stage.
+
+
+## Stage 19 — frozen-model production handoff
+
+The typed V60 path now verifies the stage-18 final-model digest and exposes a
+canonical native result. The default remains the V50.2 compatibility result.
+Callers must explicitly set `metadata["v60_activate_native_model"] = True` to
+promote the finalized native model to the outward `formula`, `expression`,
+`final_formula`, `r2`, `rmse`, and `nrmse` fields. The untouched V50.2
+result is retained under `v50_2_compatibility_result`. If V60 has no credible
+final model, the opt-in handoff fails closed rather than silently falling back.
+
+An optional frozen far set is supplied only after native training-only
+selection and full-training refit using
+`metadata["v60_far_evaluation"] = {"X_far": ..., "y_far": ...}`. The evaluator
+supports the selected one-, two-, or three-basis model, verifies the final
+model digest, fingerprints the far arrays, and reports metrics without
+changing selection, retrying, or ranking candidates. Far evaluation is not
+required to produce the native model result.
+
+The versioned worker report now includes the final-model audit and frozen far
+evaluation audit. Worker verification checks the model digest, basis/parameter
+dimensions, and explicit far-data isolation flags. Regression-test source was
+added for the handoff boundary; no tests, CI, experiments, workers, benchmarks,
+smoke workflows, or LLM/provider calls were run for this change.

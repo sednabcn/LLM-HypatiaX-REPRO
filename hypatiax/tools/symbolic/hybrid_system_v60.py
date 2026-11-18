@@ -2,9 +2,10 @@
 
 V60 validates an immutable problem contract, builds a bounded candidate pool,
 performs scientific gating and training-only fitting/validation, verifies
-single- and multi-basis Pareto evidence, and refits the final native model on
-all training rows. V50.2 remains the outward production compatibility result
-until the subsequent frozen-evaluation and production-handoff integration.
+single- and multi-basis Pareto evidence, refits one frozen native model, and
+can explicitly hand that model to callers with isolated post-selection far
+evaluation. V50.2 remains the default compatibility path unless native
+production handoff is explicitly enabled in call metadata.
 """
 from __future__ import annotations
 
@@ -31,6 +32,9 @@ from hypatiax.tools.symbolic.v60_training_validation import validate_native_trai
 from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
 from hypatiax.tools.symbolic.v60_residual_stability import diagnose_native_training_residuals
 from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
+from hypatiax.tools.symbolic.v60_production_handoff import (
+    build_native_v60_result, evaluate_frozen_native_v60_model,
+)
 
 
 @dataclass(frozen=True)
@@ -101,7 +105,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_candidate_pool_training_evidence_single_multi_basis_pareto_final_refit_v50_2_outward_compatibility"
+    IMPLEMENTATION_MODE = "native_contract_candidate_pool_training_evidence_single_multi_basis_pareto_final_refit_frozen_evaluation_explicit_production_handoff"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -117,6 +121,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "training_only_fold_residual_diagnostics_and_coefficient_stability",
         "verified_training_evidence_objectives_and_pareto_selection",
         "cross_family_native_final_model_selection_and_full_training_refit",
+        "frozen_final_model_far_evaluation_after_selection",
+        "explicit_native_result_handoff_and_worker_integrity",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -135,6 +141,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_residual_stability_audit: dict[str, Any] = {}
         self._last_v60_external_producer_audit: dict[str, Any] = {}
         self._last_v60_final_model_audit: dict[str, Any] = {}
+        self._last_v60_far_evaluation_audit: dict[str, Any] = {}
+        self._last_v60_activate_native_result = False
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -146,7 +154,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "engine_family": "hybrid_discovery",
             "engine_version": self.VERSION,
             "implementation_mode": self.IMPLEMENTATION_MODE,
-            "native_v60_pipeline": False,
+            "native_v60_pipeline": bool(self._last_v60_activate_native_result and self._last_v60_final_model_audit.get("execution_status") == "selected"),
+            "native_v60_production_handoff_enabled": self._last_v60_activate_native_result,
+            "native_v60_far_evaluation_status": self._last_v60_far_evaluation_audit.get("evaluation_status", "not_requested"),
+            "native_v60_far_evaluation_audit": dict(self._last_v60_far_evaluation_audit),
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
             "native_v60_candidate_generation": self._last_v60_run_context is not None,
@@ -201,14 +212,44 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     self._last_v60_objective_selection_audit,
                     run_context=self._last_v60_run_context.to_dict(),
                     multi_basis_selection_audit=self._last_v60_multi_basis_selection_audit,
+                    final_model_audit=self._last_v60_final_model_audit,
+                    far_evaluation_audit=self._last_v60_far_evaluation_audit,
+                    residual_stability_audit=self._last_v60_residual_stability_audit,
                 )
             except Exception as exc:
                 annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
+        if self._last_v60_final_model_audit:
+            annotated["native_v60_final_model"] = dict(self._last_v60_final_model_audit)
+        if self._last_v60_far_evaluation_audit:
+            annotated["native_v60_far_evaluation"] = dict(self._last_v60_far_evaluation_audit)
+        if self._last_v60_activate_native_result:
+            if self._last_v60_final_model_audit.get("execution_status") == "selected":
+                compatibility = dict(annotated)
+                native = build_native_v60_result(self._last_v60_final_model_audit)
+                annotated.update(native)
+                annotated["v50_2_compatibility_result"] = compatibility
+                annotated["native_v60_production_handoff"] = {
+                    "status": "active",
+                    "selection_source": "verified_training_only_single_multi_basis_pareto",
+                    "far_evaluation_attached": self._last_v60_far_evaluation_audit.get("evaluation_status") == "completed",
+                }
+            else:
+                annotated.update({
+                    "success": False,
+                    "error": "NO_CREDIBLE_CANDIDATE",
+                    "formula": "N/A",
+                    "expression": "N/A",
+                    "final_formula": "N/A",
+                    "native_v60_production_handoff": {
+                        "status": "blocked_no_credible_native_model",
+                        "final_model_status": self._last_v60_final_model_audit.get("execution_status", "not_run"),
+                    },
+                })
         annotated["implementation_provenance"] = provenance
         return annotated
 
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Run native contract preflight, then the V50.2 compatibility pipeline."""
+        """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         if args:
             if len(args) < 3:
                 raise TypeError("discover requires X, y, and var_names")
@@ -241,6 +282,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_residual_stability_audit = {}
         self._last_v60_external_producer_audit = {}
         self._last_v60_final_model_audit = {}
+        self._last_v60_far_evaluation_audit = {}
+        self._last_v60_activate_native_result = prepared.get("v60_activate_native_model", False)
+        if not isinstance(self._last_v60_activate_native_result, bool):
+            raise TypeError("metadata['v60_activate_native_model'] must be a bool")
+        far_spec = prepared.get("v60_far_evaluation")
+        if far_spec is not None and not isinstance(far_spec, Mapping):
+            raise TypeError("metadata['v60_far_evaluation'] must be a mapping")
+        if isinstance(far_spec, Mapping) and set(far_spec) != {"X_far", "y_far"}:
+            raise ValueError("metadata['v60_far_evaluation'] accepts exactly X_far and y_far")
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
             generated = list(generate_native_template_candidates(problem))
@@ -482,6 +532,35 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "far_or_evaluation_data_used": False,
                     "candidate_options": [],
                     "selected_model": None,
+                }
+            if isinstance(far_spec, Mapping) and self._last_v60_final_model_audit.get("execution_status") == "selected":
+                try:
+                    self._last_v60_far_evaluation_audit = evaluate_frozen_native_v60_model(
+                        self._last_v60_final_model_audit,
+                        far_spec["X_far"],
+                        far_spec["y_far"],
+                        variable_names=problem.variable_names,
+                    )
+                except Exception as exc:
+                    self._last_v60_far_evaluation_audit = {
+                        "schema": "v60_native_frozen_model_evaluation_v1",
+                        "evaluation_status": "stage_failed",
+                        "reason": f"{type(exc).__name__}: {exc}",
+                        "selection_changed": False,
+                        "selection_performed": False,
+                        "far_or_evaluation_data_used_for_selection": False,
+                        "far_or_evaluation_data_used_for_retry": False,
+                        "candidate_ranking_performed": False,
+                    }
+            elif isinstance(far_spec, Mapping):
+                self._last_v60_far_evaluation_audit = {
+                    "schema": "v60_native_frozen_model_evaluation_v1",
+                    "evaluation_status": "blocked_no_selected_model",
+                    "selection_changed": False,
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used_for_selection": False,
+                    "far_or_evaluation_data_used_for_retry": False,
+                    "candidate_ranking_performed": False,
                 }
         if forwarded is not None:
             if len(forwarded) > 4:
