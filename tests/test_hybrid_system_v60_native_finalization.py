@@ -1,0 +1,107 @@
+"""Offline regression tests for native V60 final model selection/refit."""
+import unittest
+
+import numpy as np
+
+from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
+
+
+class NativeV60FinalizationTests(unittest.TestCase):
+    def setUp(self):
+        self.X = np.arange(1.0, 9.0).reshape(-1, 1)
+        self.y = 3.0 * self.X[:, 0] + 2.0
+
+    def test_single_basis_winner_is_refit_on_all_training_rows(self):
+        candidates = [{
+            "candidate_id": "c1",
+            "expression": "x",
+            "normalized_expression": "x",
+            "producer_provenance": [],
+        }]
+        single = {
+            "selection_status": "selected",
+            "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
+                "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
+                "complexity": 1,
+            }],
+        }
+        multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
+        result = finalize_native_v60_model(
+            candidates, single, multi, self.X, self.y, variable_names=["x"]
+        )
+        self.assertEqual(result["execution_status"], "selected")
+        self.assertEqual(result["selected_model"]["family"], "single_basis")
+        self.assertAlmostEqual(result["selected_model"]["training_rmse"], 0.0, places=10)
+        self.assertFalse(result["far_or_evaluation_data_used"])
+
+    def test_multi_basis_winner_preserves_ordered_basis_identity(self):
+        candidates = [
+            {"candidate_id": "c1", "normalized_expression": "x", "producer_provenance": []},
+            {"candidate_id": "c2", "normalized_expression": "x**2", "producer_provenance": []},
+        ]
+        single = {"selection_status": "no_credible_candidate", "objective_evidence": []}
+        multi = {
+            "selection_status": "selected",
+            "selected_candidate_group_id": "g1",
+            "objective_evidence": [{
+                "candidate_group_id": "g1",
+                "basis_candidate_ids": ["c1", "c2"],
+                "basis_expressions": ["x", "x**2"],
+                "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
+                "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
+                "symbolic_complexity": 3,
+            }],
+        }
+        result = finalize_native_v60_model(
+            candidates, single, multi, self.X, self.y, variable_names=["x"]
+        )
+        self.assertEqual(result["execution_status"], "selected")
+        self.assertEqual(result["selected_model"]["family"], "multi_basis")
+        self.assertEqual(result["selected_model"]["basis_candidate_ids"], ["c1", "c2"])
+        self.assertAlmostEqual(result["selected_model"]["training_rmse"], 0.0, places=10)
+
+    def test_no_selector_winner_returns_explicit_no_candidate(self):
+        result = finalize_native_v60_model(
+            [], {"selection_status": "no_credible_candidate", "objective_evidence": []},
+            {"selection_status": "no_credible_candidate", "objective_evidence": []},
+            self.X, self.y, variable_names=["x"]
+        )
+        self.assertEqual(result["execution_status"], "no_credible_candidate")
+        self.assertIsNone(result["selected_model"])
+
+    def test_cross_family_comparison_uses_common_error_metric(self):
+        candidates = [
+            {"candidate_id": "c1", "normalized_expression": "x", "producer_provenance": []},
+            {"candidate_id": "c2", "normalized_expression": "x**2", "producer_provenance": []},
+        ]
+        single = {
+            "selection_status": "selected", "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 0.1, "mean_validation_nrmse": None,
+                "std_validation_rmse": 0.01, "std_validation_nrmse": None,
+                "complexity": 1,
+            }],
+        }
+        multi = {
+            "selection_status": "selected", "selected_candidate_group_id": "g2",
+            "objective_evidence": [{
+                "candidate_group_id": "g2", "basis_candidate_ids": ["c1", "c2"],
+                "basis_expressions": ["x", "x**2"],
+                "mean_validation_rmse": 0.2, "mean_validation_nrmse": 0.001,
+                "std_validation_rmse": 0.02, "std_validation_nrmse": 0.0001,
+                "symbolic_complexity": 3,
+            }],
+        }
+        result = finalize_native_v60_model(
+            candidates, single, multi, self.X, self.y, variable_names=["x"]
+        )
+        self.assertEqual(result["objective_metric"], "cv_rmse")
+        self.assertEqual(result["selected_model"]["family"], "single_basis")
+
+
+if __name__ == "__main__":
+    unittest.main()
