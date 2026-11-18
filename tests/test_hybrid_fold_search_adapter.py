@@ -177,6 +177,9 @@ def test_nested_structure_search_fits_a_fresh_engine_inside_each_fold(monkeypatc
     assert result["candidate_specific_score"] is False
     assert result["far_test_data_used"] is False
     assert result["llm_enabled_in_fold_search"] is False
+    assert result["structure_matching"]["status"] == "matched_structures"
+    assert result["candidate_structures"][0]["eligible"] is True
+    assert result["candidate_structures"][0]["recurrence_count"] == len(folds)
     assert len(result["fold_searches"]) == len(folds)
     assert len(FakeEngine.instances) == len(folds)
     for engine, fold in zip(FakeEngine.instances, folds):

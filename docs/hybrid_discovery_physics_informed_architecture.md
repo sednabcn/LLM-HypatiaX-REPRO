@@ -1125,3 +1125,88 @@ that appear in only some folds. Until that exists, the production
 candidate-level Pareto report continues to use the fixed-structure fold
 refit evidence from Section 22 and must retain its methodological caveat.
 No far/test values or metrics participate in either fold procedure.
+
+
+
+## 24. Conservative structural matching and recurrence across folds
+
+The nested structural-search audit now includes a conservative matcher in
+`hypatiax/tools/symbolic/structural_matching.py`:
+
+- `canonicalize_symbolic_structure(expression, variable_names)` parses each
+  fold equation through the restricted AST-to-SymPy parser.
+- Numeric literals outside exponents are abstracted as fitted coefficients;
+  numeric exponents, declared variable identities, operators, and approved
+  functions remain part of the signature.
+- SymPy's rational normalization combines common arithmetic forms before a
+  deterministic structural signature is produced.
+- Each fold audit carries its exact engine feature schema, including any
+  fold-specific geometric-mean and directed-ratio symbols. The matcher parses
+  against that schema rather than assuming every equation uses raw features.
+- A stable SHA-256-derived structure ID groups fold equations with the same
+  signature. Original fold equations remain in the audit; they are never
+  averaged into a synthetic equation.
+
+The nested evaluator calls
+`match_fold_discovered_structures(...)` and attaches
+`structure_matching` plus `candidate_structures` to its output. A structure
+is eligible for recurrence evidence only when it appears in at least two
+independent folds (configurable) and meets the configured recurrence fraction
+(default 50%). The denominator is the total requested fold count, including
+folds where search or prediction failed, so failed folds cannot inflate
+stability. A structure's mean, worst, and spread of normalized RMSE are
+computed only from folds that independently rediscovered that same structure.
+Missing or non-finite fold scores make that structure ineligible.
+
+### Interpretation and safeguards
+
+- This is conservative structural recurrence, not a proof of algebraic or
+  functional equivalence. The normalization handles common arithmetic
+  rewrites but intentionally does not attempt unrestricted theorem proving.
+- Coefficients are abstracted for matching, but exponents remain structural;
+  linear and quadratic forms therefore do not collapse into one group.
+- Invalid syntax, undeclared variables, missing metrics, and failed folds do
+  not silently join a structure group.
+- A structure discovered in only one fold is retained as descriptive audit
+  evidence but cannot become a recurrent candidate.
+- The result is still procedure-level evidence. A fold-recurrent structure
+  is not automatically the same object as a full-training candidate, and its
+  fold score is not copied into that candidate's existing Pareto record.
+- No far/test data enters matching or scoring. Fold searches remain LLM-free.
+
+### Crosswalk to a final full-training candidate
+
+The module also provides
+`crosswalk_full_training_candidate_to_fold_structure(...)`. After the final
+equation has been discovered on the complete training region, the caller can
+compare its coefficient-abstracted structure signature with the eligible
+recurrent fold groups:
+
+- A unique recurrent match returns
+  `status=matched_candidate_structure` and carries only the matched group's
+  fold metrics and recurrence evidence.
+- A parse failure, no match, or ambiguous match returns
+  `NO_CREDIBLE_CANDIDATE`; no candidate-specific nested evidence is attached.
+- The crosswalk explicitly reports `equivalence_claim=false`; it matches
+  conservative syntax-normalized structure, not arbitrary algebraic identity.
+- The final equation's numeric coefficients are not used to select or alter
+  the fold metrics. The matched fold metrics remain independently generated.
+
+This makes candidate-specific nested evidence available to a caller that
+performs the crosswalk after full-training discovery. It does not silently
+change the existing production Pareto selector or overwrite its fixed-
+structure evidence. Until that caller integration is made, both evidence
+families remain separately labeled and no claim of production nested
+candidate-level selection is made.
+
+
+
+### Candidate crosswalk contract
+
+The final-equation crosswalk is deliberately a separate operation because the
+full-training equation does not exist when the fold-local searches run. It
+must be called only after that equation is available. A recurrent fold
+structure that does not match the final equation cannot lend its validation
+scores to the final equation. This fail-closed boundary prevents a strong but
+different fold-discovered equation from being presented as validation of the
+final selected model.

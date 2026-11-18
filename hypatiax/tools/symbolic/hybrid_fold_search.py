@@ -21,6 +21,7 @@ from .training_validation import (
     make_training_folds,
 )
 from .pysr_training_search import evaluate_pysr_search_on_training_folds
+from .structural_matching import match_fold_discovered_structures
 from .pysr_strategy_selection import (
     TrainingOnlySearchSelection,
     select_pysr_search_strategy_on_training_folds,
@@ -82,6 +83,7 @@ class HybridFoldPySRSearcher:
         self.expression: str | None = None
         self.x_log_flags: list[bool] = []
         self.y_log = False
+        self.fit_variable_names = list(self.variable_names)
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         X_fit = np.asarray(X, dtype=float)
@@ -144,6 +146,10 @@ class HybridFoldPySRSearcher:
         ):
             raise RuntimeError("fold-local SymbolicEngine search produced no usable model")
         self.expression = expression
+        _fit_state = getattr(self.engine, "_last_fold_transform_state", None) or {}
+        _feature_names = _fit_state.get("feature_names")
+        if isinstance(_feature_names, (list, tuple)) and _feature_names:
+            self.fit_variable_names = [str(name) for name in _feature_names]
         return self
 
     def get_best(self) -> dict[str, str]:
@@ -289,6 +295,8 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
     fold_timeout_seconds: int = 20,
     allow_pow: bool | None = None,
     minimum_valid_folds: int = 2,
+    minimum_structure_recurrence: int = 2,
+    minimum_structure_recurrence_fraction: float = 0.5,
 ) -> dict:
     """Run a fresh Hybrid/PySR structural search inside every training fold.
 
@@ -339,7 +347,17 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         minimum_valid_folds=minimum_valid_folds,
     )
     result = summary.to_dict()
+    structure_matching = match_fold_discovered_structures(
+        result.get("fold_searches", []),
+        (result.get("validation") or {}).get("fold_metrics", []),
+        variable_names,
+        minimum_recurrence=minimum_structure_recurrence,
+        minimum_recurrence_fraction=minimum_structure_recurrence_fraction,
+        total_fold_count=len(fold_tuple),
+    )
     result.update({
+        "structure_matching": structure_matching,
+        "candidate_structures": structure_matching["structures"],
         "validation_design": "nested_fresh_symbolic_search_per_training_fold",
         "selection_role": "discovery_procedure_validation_only",
         "candidate_specific_score": False,

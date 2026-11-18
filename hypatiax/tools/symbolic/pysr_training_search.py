@@ -104,6 +104,7 @@ def evaluate_pysr_search_on_training_folds(
             "seed": fold_seed,
             "model_class": type(model).__name__,
             "expression": expression,
+            "variable_names": list(getattr(model, "fit_variable_names", []) or []),
             "fit_rows": int(X_fit.shape[0]),
             "validation_rows": int(X_validation.shape[0]),
             "fit_scope": "fold_fitting_rows_only",
