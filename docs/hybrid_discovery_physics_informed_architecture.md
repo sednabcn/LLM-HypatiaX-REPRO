@@ -1399,3 +1399,12 @@ matching operation is not forcibly interrupted, but its result is rejected if
 it returns after the deadline. All fold fitting, validation prediction, and
 structure matching continue to use training-region data only; far/test data
 remains reserved for final evaluation.
+
+
+## 33. Explicit candidate-level Pareto exclusion audit
+
+Every candidate's `metrics.pareto_selection` now includes an ordered, deduplicated `eligibility_reasons` list. The audit preserves upstream candidate rejection reasons and adds machine-readable reasons when a candidate is marked ineligible, a hard declared constraint fails or is unknown, too few finite normalized training-fold scores remain, a fold score is missing or non-finite, symbolic complexity cannot be established, or required nested structure evidence does not uniquely match. The list is empty for a candidate that is eligible for the Pareto front.
+
+`eligible_for_pareto` is derived from that complete reason list, so the boolean and explanation cannot drift independently. These reasons describe selection eligibility; they do not imply that a rejected equation is scientifically false. The full candidate record and constraint outcomes remain available for review, including soft warnings that do not constitute hard rejection.
+
+Report provenance now labels the nested-evidence policy consistently in both accepted and no-selection outcomes: `training_only_pareto_v2_nested_structure_gate` when nested recurrence is required, otherwise `training_only_pareto_v1`. This is audit metadata only; the objective set remains mean normalized training-fold RMSE, worst-fold normalized RMSE, and symbolic operation count. No far/test score enters eligibility, Pareto ranking, or tie-breaking.
