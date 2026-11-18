@@ -1,8 +1,9 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
-V60 validates an explicit immutable problem contract and generates a bounded,
-data-independent native template proposal pool. Candidate fitting, external
-LLM/PySR production, validation, and selection remain on the V50.2 baseline.
+V60 validates an explicit immutable problem contract, generates and normalizes
+bounded native templates, and records audit-only affine fits on training data.
+Production discovery, external LLM/PySR production, validation, and selection
+remain on the V50.2 baseline.
 """
 from __future__ import annotations
 
@@ -88,7 +89,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_v50_2_discovery"
+    IMPLEMENTATION_MODE = "native_contract_generation_normalization_training_fit_v50_2_discovery"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
@@ -119,7 +120,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
             "native_v60_candidate_generation": self._last_v60_run_context is not None,
             "native_v60_candidate_normalization": self._last_v60_run_context is not None,
-            "native_v60_candidate_fitting": bool(self._last_v60_training_fit_audit),
+            "native_v60_candidate_fitting": bool(self._last_v60_training_fit_audit) and self._last_v60_training_fit_audit.get("fit_status") != "stage_failed",
             "native_v60_fitted_candidate_count": self._last_v60_training_fit_audit.get("fitted_candidate_count", 0),
             "native_v60_fit_attempt_count": self._last_v60_training_fit_audit.get("fit_attempt_count", 0),
             "native_v60_training_fit_audit": dict(self._last_v60_training_fit_audit),
