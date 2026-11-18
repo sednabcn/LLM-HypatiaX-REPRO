@@ -1599,3 +1599,37 @@ constraints and never infers physical laws from variable names. Regression
 source covers soft positive-output, odd-symmetry, and non-finite-output
 violations; it has not been run. No CI, experiment, worker, benchmark, smoke
 workflow, or LLM API call was launched.
+
+
+## 40. Include declared soft-constraint violations in Pareto selection
+
+When a typed `DiscoveryProblem` declares one or more soft constraints, the
+production selector now adds the equal-weight mean of their sampled
+`violation_fraction` values as a minimized Pareto objective. The objective
+uses only the exact soft-constraint IDs declared by the problem contract;
+hard constraints remain eligibility gates and are never converted into
+trade-off penalties. With no declared soft constraints, the previous
+objective vector and selection behavior are unchanged.
+
+For comparability, every candidate must provide exactly one measured
+`pass`/`fail` outcome for every declared soft constraint. Each outcome must
+contain a positive evaluation count, an integer violation count within that
+count, and a finite fraction in [0, 1] consistent with the counts and status.
+Missing, duplicate, unknown, not-applicable, or malformed evidence excludes
+that candidate with `soft_constraint_evidence_incomplete`; no neutral value
+is imputed. The aggregate is an unweighted mean because the contract does
+not yet define per-constraint weights. This policy does not infer weights or
+physical priorities from constraint names or descriptions.
+
+Policy provenance is versioned as `training_only_pareto_v5_soft_constraints`
+or `training_only_pareto_v6_nested_structure_soft_constraints` when the
+optional nested-structure gate is also required. Per-candidate audit data
+records the declared IDs and aggregate violation fraction; report provenance
+records the aggregation rule. Soft violation fractions are conditional on
+the validator's deterministic coarse domain grid, not probabilities or
+global validity guarantees. Far/test observations remain excluded from
+eligibility, objective calculation, Pareto ranking, and tie-breaking.
+Regression source covers objective ranking, fail-closed incomplete evidence,
+and unchanged behavior when no soft constraints are declared. Tests have not
+been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM API
+call was launched.
