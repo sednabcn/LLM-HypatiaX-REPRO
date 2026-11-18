@@ -279,6 +279,13 @@ def select_native_multi_basis_candidates_from_verified_evidence(
                 "basis_expressions": list(expressions),
                 "source_provenance": expected_lineage,
                 "evidence_fingerprint": verified["evidence_fingerprint"],
+                "verified_evidence_snapshot": {
+                    "folds": folds,
+                    "aggregates": dict(objective),
+                    "training_row_count": training_rows,
+                    "variable_names": list(variable_names),
+                    "split_strategy": validation.get("split_strategy"),
+                },
                 "fold_count": fold_count,
                 "mean_validation_rmse": rmse_mean,
                 "std_validation_rmse": rmse_std,
