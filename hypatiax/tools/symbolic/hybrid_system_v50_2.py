@@ -1589,6 +1589,17 @@ class HybridDiscoverySystem:
                 "error": "discovery_failed",
                 "message": str(e),
                 "traceback": _tb_str,
+                # Keep a fail-closed scientific report observable when candidate
+                # validation/Pareto selection rejects every candidate.
+                "discovery_report": getattr(self, "_last_discovery_report", None),
+                "training_only_search_selection": getattr(
+                    self, "_training_only_search_selection", None
+                ),
+                "discovery_budget": (
+                    self._active_budget_runtime.to_dict()
+                    if getattr(self, "_active_budget_runtime", None) is not None
+                    else None
+                ),
             }
 
         print("\n[VALIDATE] Checking expression quality...")
