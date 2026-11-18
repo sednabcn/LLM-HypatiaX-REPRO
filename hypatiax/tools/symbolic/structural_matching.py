@@ -153,4 +153,55 @@ def match_fold_discovered_structures(
     }
 
 
-__all__ = ["canonicalize_symbolic_structure", "match_fold_discovered_structures"]
+def crosswalk_full_training_candidate_to_fold_structure(
+    expression: str,
+    variable_names: Iterable[str],
+    structure_matching: dict,
+) -> dict:
+    """Attach nested fold evidence only when the final equation matches a recurrent structure."""
+    try:
+        signature = canonicalize_symbolic_structure(expression, variable_names)
+    except Exception as exc:
+        return {
+            "status": "NO_CREDIBLE_CANDIDATE",
+            "reason": f"final_candidate_parse_failed: {type(exc).__name__}: {exc}"[:300],
+            "candidate_specific_nested_evidence": False,
+            "far_test_data_used": False,
+        }
+
+    matches = [
+        item for item in structure_matching.get("structures", [])
+        if item.get("canonical_structure") == signature and item.get("eligible") is True
+    ]
+    if len(matches) != 1:
+        return {
+            "status": "NO_CREDIBLE_CANDIDATE",
+            "reason": "final_candidate_structure_not_recurrently_matched",
+            "candidate_specific_nested_evidence": False,
+            "matching_structure_count": len(matches),
+            "far_test_data_used": False,
+        }
+
+    matched = matches[0]
+    return {
+        "status": "matched_candidate_structure",
+        "candidate_specific_nested_evidence": True,
+        "structure_id": matched["structure_id"],
+        "canonical_structure": signature,
+        "recurrence_count": matched["recurrence_count"],
+        "recurrence_fraction": matched["recurrence_fraction"],
+        "mean_normalized_rmse": matched["mean_normalized_rmse"],
+        "worst_normalized_rmse": matched["worst_normalized_rmse"],
+        "normalized_rmse_std": matched["normalized_rmse_std"],
+        "folds": matched["folds"],
+        "matching_policy": structure_matching.get("matching_policy"),
+        "equivalence_claim": False,
+        "far_test_data_used": False,
+    }
+
+
+__all__ = [
+    "canonicalize_symbolic_structure",
+    "match_fold_discovered_structures",
+    "crosswalk_full_training_candidate_to_fold_structure",
+]
