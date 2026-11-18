@@ -306,3 +306,26 @@ deterministic tie-break tuple: primary error, symbolic complexity, variability,
 then stable group ID. A report is rejected if the frontier membership/order or
 selected group differs. This is report-integrity verification only: it does
 not invoke data providers, rerun discovery, or evaluate the far set.
+
+
+## Stage 18 — native final model selection and training refit
+
+The typed-contract V60 path now adds a native finalization step after the
+independent single-basis and joint multi-basis training-evidence selectors.
+It resolves each selector's winner back to the normalized proposal pool,
+compares the family winners using a common CV error scale (NRMSE only when
+available for every option, otherwise RMSE), and applies deterministic
+fold-variability, symbolic-complexity, and family tie-breaks.
+
+The winning basis or ordered basis group is then refit on all supplied training
+rows with least squares, producing a final symbolic expression, coefficients,
+training RMSE/NRMSE/R², design rank/condition diagnostics, and a canonical
+model digest. The stage rejects non-finite/misaligned training values and never
+drops rows. It accepts no far/evaluation arrays and does not invoke LLM or PySR
+providers.
+
+This is the native training-side finalization boundary, not yet the complete
+production handoff: the legacy V50.2 result remains the outward discovery
+result, and the selected native model is exposed as
+`native_v60_final_model_audit`. Frozen far-set evaluation and replacement of
+the outward production result are reserved for the next integration stage.
