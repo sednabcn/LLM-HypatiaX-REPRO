@@ -1,8 +1,9 @@
 """Opt-in HybridDiscovery V60 migration boundary.
 
-V60 validates an explicit immutable problem contract and generates a bounded,
-data-independent native template proposal pool. Candidate fitting, external
-LLM/PySR production, validation, and selection remain on the V50.2 baseline.
+V60 validates an explicit immutable problem contract, generates and normalizes
+a bounded data-independent template pool, and records bounded affine fitting
+evidence from training data. External LLM/PySR production, scientific gates,
+validation, and selection remain on the V50.2 baseline.
 """
 from __future__ import annotations
 
