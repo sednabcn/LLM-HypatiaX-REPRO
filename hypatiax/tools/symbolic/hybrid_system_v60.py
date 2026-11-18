@@ -30,6 +30,7 @@ from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candida
 from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
 from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
 from hypatiax.tools.symbolic.v60_residual_stability import diagnose_native_training_residuals
+from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_objective_selection_audit: dict[str, Any] = {}
         self._last_v60_residual_stability_audit: dict[str, Any] = {}
         self._last_v60_external_producer_audit: dict[str, Any] = {}
+        self._last_v60_final_model_audit: dict[str, Any] = {}
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -177,6 +179,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_selected_candidate_id": self._last_v60_objective_selection_audit.get("selected_candidate_id"),
             "native_v60_pareto_candidate_ids": list(self._last_v60_objective_selection_audit.get("pareto_candidate_ids", [])),
             "native_v60_objective_selection_audit": dict(self._last_v60_objective_selection_audit),
+            "native_v60_final_model_status": self._last_v60_final_model_audit.get("execution_status", "not_run"),
+            "native_v60_final_model_audit": dict(self._last_v60_final_model_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
@@ -235,6 +239,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_objective_selection_audit = {}
         self._last_v60_residual_stability_audit = {}
         self._last_v60_external_producer_audit = {}
+        self._last_v60_final_model_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
             generated = list(generate_native_template_candidates(problem))
@@ -457,6 +462,25 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "objective_evidence": [],
                     "pareto_candidate_ids": [],
                     "selected_candidate_id": None,
+                }
+            try:
+                self._last_v60_final_model_audit = finalize_native_v60_model(
+                    self._last_v60_candidate_proposals,
+                    self._last_v60_objective_selection_audit,
+                    self._last_v60_multi_basis_selection_audit,
+                    X,
+                    y,
+                    variable_names=problem.variable_names,
+                )
+            except Exception as exc:
+                self._last_v60_final_model_audit = {
+                    "schema": "v60_native_final_model_v1",
+                    "execution_status": "stage_failed",
+                    "reason": f"{type(exc).__name__}: {exc}",
+                    "selection_performed": False,
+                    "far_or_evaluation_data_used": False,
+                    "candidate_options": [],
+                    "selected_model": None,
                 }
         if forwarded is not None:
             if len(forwarded) > 4:
