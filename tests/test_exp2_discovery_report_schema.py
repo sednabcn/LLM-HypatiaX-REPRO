@@ -128,3 +128,85 @@ def test_soft_constraint_pareto_report_rejects_missing_evidence_without_exclusio
     }
     with pytest.raises(ValueError, match="incomplete evidence lacks exclusion reason"):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def _valid_pareto_report():
+    report = _valid_report()
+    report["provenance"].update({
+        "selection_policy": "training_only_pareto_v3_stability",
+        "selection_data_scope": "training_region_only",
+        "objectives": [
+            "mean_normalized_rmse_min",
+            "worst_normalized_rmse_min",
+            "symbolic_operation_count_min",
+            "expression_stability_fraction_max",
+        ],
+    })
+    first = report["candidates"][0]
+    first["metrics"]["pareto_selection"] = {
+        "eligible_for_pareto": True,
+        "eligibility_reasons": [],
+        "objectives": {
+            "mean_normalized_rmse": 0.2,
+            "worst_normalized_rmse": 0.3,
+            "complexity": 4.0,
+            "negative_expression_stability": -1.0,
+        },
+    }
+    second = dict(first)
+    second["candidate_id"] = "candidate-2"
+    second["metrics"] = {
+        "pareto_selection": {
+            "eligible_for_pareto": True,
+            "eligibility_reasons": [],
+            "objectives": {
+                "mean_normalized_rmse": 0.4,
+                "worst_normalized_rmse": 0.5,
+                "complexity": 6.0,
+                "negative_expression_stability": -0.5,
+            },
+        }
+    }
+    report["candidates"].append(second)
+    return report
+
+
+def test_pareto_report_recomputes_front_and_deterministic_selected_candidate():
+    report = _valid_pareto_report()
+    report["pareto_candidate_ids"] = ["candidate-1"]
+    report["selected_candidate_id"] = "candidate-1"
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (
+            lambda report: report.update(pareto_candidate_ids=["candidate-1", "candidate-2"]),
+            "recomputed objective front",
+        ),
+        (
+            lambda report: report.update(selected_candidate_id="candidate-2"),
+            "deterministic Pareto tie-break",
+        ),
+        (
+            lambda report: report["candidates"][0]["metrics"]["pareto_selection"]["objectives"].update(
+                mean_normalized_rmse=9.0
+            ),
+            "recomputed objective front",
+        ),
+        (
+            lambda report: report["candidates"][0]["metrics"]["pareto_selection"].update(
+                eligible_for_pareto=False
+            ),
+            "eligibility flag/reasons",
+        ),
+    ],
+)
+def test_pareto_report_rejects_inconsistent_membership_objectives_or_winner(mutate, message):
+    report = _valid_pareto_report()
+    report["pareto_candidate_ids"] = ["candidate-1"]
+    report["selected_candidate_id"] = "candidate-1"
+    mutate(report)
+    with pytest.raises(ValueError, match=message):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
