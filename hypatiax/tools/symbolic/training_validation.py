@@ -249,8 +249,8 @@ def make_symbolic_refit_predictor(
     from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
 
     names = tuple(variable_names)
-    if not names or len(set(names)) != len(names):
-        raise ValueError("variable_names must be non-empty and unique")
+    if len(set(names)) != len(names):
+        raise ValueError("variable_names must be unique")
     # PySR's printable equations use Julia-style '^' for powers; the
     # restricted Python AST parser requires '**'. No other syntax is rewritten.
     expression = str(expression).replace("^", "**")
@@ -842,8 +842,8 @@ class FoldCandidateFeaturePipeline:
         self.candidate_variable_names = tuple(str(name) for name in candidate_variable_names)
         if not self.raw_feature_names or len(set(self.raw_feature_names)) != len(self.raw_feature_names):
             raise ValueError("raw_feature_names must be non-empty and unique")
-        if not self.candidate_variable_names or len(set(self.candidate_variable_names)) != len(self.candidate_variable_names):
-            raise ValueError("candidate_variable_names must be non-empty and unique")
+        if len(set(self.candidate_variable_names)) != len(self.candidate_variable_names):
+            raise ValueError("candidate_variable_names must be unique")
         self.preprocessor = FoldFeaturePreprocessor(self.raw_feature_names)
         self._fitted = False
 
@@ -903,7 +903,10 @@ class FoldCandidateFeaturePipeline:
             if not np.isfinite(feature).all():
                 raise FloatingPointError("candidate engineered feature is non-finite")
             columns.append(np.asarray(feature, dtype=float).reshape(-1, 1))
-        result = np.column_stack(columns)
+        result = (
+            np.column_stack(columns)
+            if columns else np.empty((values.shape[0], 0), dtype=float)
+        )
         if result.shape != (values.shape[0], len(self.candidate_variable_names)):
             raise RuntimeError("candidate fold feature matrix has an invalid schema")
         return result
@@ -1016,10 +1019,21 @@ def evaluate_engine_candidate_on_training_folds(
     """
     names = tuple(candidate_variable_names)
     raw_names = tuple(raw_feature_names)
-    refit = make_symbolic_refit_predictor(expression, names, max_nfev=max_nfev)
+    import sympy as sp
+    from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+
+    normalized_expression = str(expression).replace("^", "**")
+    parsed = parse_sympy_expression(normalized_expression, list(names))
+    used_names = tuple(
+        name for name in names
+        if sp.Symbol(name, real=True) in parsed.free_symbols
+    )
+    refit = make_symbolic_refit_predictor(
+        normalized_expression, used_names, max_nfev=max_nfev
+    )
 
     def predict(X_fit, y_fit, X_validation):
-        feature_pipeline = FoldCandidateFeaturePipeline(raw_names, names).fit(X_fit)
+        feature_pipeline = FoldCandidateFeaturePipeline(raw_names, used_names).fit(X_fit)
         X_fit_features = feature_pipeline.transform(X_fit)
         X_validation_features = feature_pipeline.transform(X_validation)
         target_pipeline = FoldTargetPreprocessor().fit(y_fit)
