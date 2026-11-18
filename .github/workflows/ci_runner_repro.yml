@@ -2235,11 +2235,6 @@ jobs:
         run: |
           set -euo pipefail
           TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
-          RUN_START_MARKER="${OUT_BASE}/.run_start_marker_shard${SHARD}"
-          python3 scripts/ci/validate_exp2_extrap_worker.py \
-            --output-dir "${TARGET}" \
-            --run-start-marker "${RUN_START_MARKER}" \
-            --expected-domains "feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
           python3 - "${TARGET}" <<'PYEOF'
           import glob, json, os, re, sys
 
@@ -2614,8 +2609,14 @@ jobs:
         if: ${{ needs.plan.outputs.exp_id == 'exp2_feynman_extrap' && steps.resolve_ids.outputs.has_work == 'true' }}
         env:
           RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+          SHARD: ${{ matrix.shard }}
         run: |
           TARGET="${OUT_BASE}/${RESULT_SUBDIR}"
+          RUN_START_MARKER="${OUT_BASE}/.run_start_marker_shard${SHARD}"
+          python3 scripts/ci/validate_exp2_extrap_worker.py \
+            --output-dir "${TARGET}" \
+            --run-start-marker "${RUN_START_MARKER}" \
+            --expected-domains "feynman_biology feynman_chemistry feynman_electrochemistry feynman_electromagnetism feynman_electrostatics feynman_magnetism feynman_mechanics feynman_optics feynman_probability feynman_quantum feynman_thermodynamics"
           COUNT_PROTO=$(find "${TARGET}" -name "protocol_core_extrap_*.json" 2>/dev/null | wc -l)
           COUNT_BENCH=$(find "${TARGET}" \( -name "benchmark_results_extrap_shard*.json" -o -name "benchmark_results_extrap.json" \) 2>/dev/null | wc -l)
           COUNT_REPORT=$(find "${TARGET}" -maxdepth 1 -name "discovery_reports_extrap.json" -type f 2>/dev/null | wc -l)
