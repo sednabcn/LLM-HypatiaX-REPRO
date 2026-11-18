@@ -3279,7 +3279,8 @@ class HybridSystemV50_2Method(BaseMethod):
     """
 
     def __init__(self, verbose=False):
-        super().__init__("HybridDiscoverySystem v50_2 (tools)", verbose)
+        self.engine_implementation = _resolve_hybrid_implementation()
+        super().__init__(f"HybridDiscoverySystem {self.engine_implementation} (tools)", verbose)
         # NOTE: do NOT import hybrid_system_v50_2 or symbolic_engine here.
         # Same reason as SymbolicEngineMethod: top-level pysr/juliacall import in the
         # main process (torch already loaded) → juliacall/torch signal collision → segfault.
@@ -3391,7 +3392,7 @@ class HybridSystemV50_2Method(BaseMethod):
             # Compare configurations on identical internal training folds.
             # Fold searches use pure PySR; the final full-training search keeps
             # the configured LLM-guided HybridDiscovery arm.
-            "engine_implementation": _resolve_hybrid_implementation(),
+            "engine_implementation": self.engine_implementation,
             "training_only_search_validation": {
                 "n_splits": 2,
                 "validation_fraction": 0.2,
@@ -3496,7 +3497,7 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
 
         print(
-            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+            f"[ADAPTIVE-{self.engine_implementation.upper()}] {_n_iter_adaptive} iters"
             f" (spread={_spread:.1f}dec, vars={_n_vars}, depth={_op_depth}, diff={_diff}, score={_score:.2f})"
             f" — eq='{_eq_name_lower or _domain_lower}'",
             flush=True,
