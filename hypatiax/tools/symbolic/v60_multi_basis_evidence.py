@@ -99,7 +99,9 @@ def verify_native_multi_basis_validation_evidence(
                 records = candidate.get("producer_provenance", [])
                 if not isinstance(records, (list, tuple)):
                     raise ValueError("candidate producer provenance must be a list")
-                expected_lineage.extend(dict(item) for item in records if isinstance(item, Mapping))
+                if any(not isinstance(item, Mapping) for item in records):
+                    raise ValueError("candidate producer provenance entries must be mappings")
+                expected_lineage.extend(dict(item) for item in records)
             if record.get("source_provenance", []) != expected_lineage:
                 raise ValueError("producer lineage does not match normalized basis proposals")
 
