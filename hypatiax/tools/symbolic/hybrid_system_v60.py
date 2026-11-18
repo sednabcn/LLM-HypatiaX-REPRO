@@ -228,7 +228,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 llm_token_count=external_spec.get("llm_token_count", 0),
                 pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
             )
-            combined = [item.to_dict() for item in generated] + external_audit["proposals"]
+            combined = external_audit["proposals"] + [item.to_dict() for item in generated]
             combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
             self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
