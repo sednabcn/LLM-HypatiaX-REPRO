@@ -63,7 +63,7 @@ The normalization stage:
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_generation_normalization_fit_gates_training_validation_objective_selection_v50_2_final_evaluation`
+- `implementation_mode: native_contract_generation_normalization_fit_gates_training_validation_residual_stability_objective_selection_v50_2_final_evaluation`
 - `native_v60_pipeline: false`
 - `native_v60_stages`: contract/run context, bounded template generation,
   expression normalization, semantic identity, deduplication, lineage,
@@ -99,12 +99,24 @@ The reproducibility configuration keeps V50.2 as the default. Callers may
 select V60 explicitly with `engine.implementation: "v60"` through the factory
 or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
+## Frozen far-set evaluation boundary
+
+`evaluate_selected_native_candidate_on_far_set()` is a separate, explicit
+post-selection API in `v60_frozen_far_evaluation.py`. It requires a completed
+training-only selection audit and verifies the selected candidate ID,
+expression, and objective-evidence fingerprint before reading the far arrays.
+It refits only that frozen expression on all training rows, then computes far
+RMSE, NRMSE normalized by the training-target standard deviation, MAE, bias,
+and R². The evaluator fingerprints the selection snapshot and far-set arrays.
+It does not rank candidates, retry, update the selection audit, or return any
+far metric to discovery/selection. It is not called by `discover()` and no far
+arrays are added to `DiscoveryProblem` or the selector interface.
+
 ## Remaining native V60 stages
 
 1. Bounded LLM/PySR producer adapters and richer native candidate fitting
    beyond the current single-basis affine least-squares stage.
-2. Frozen far-set evaluation after selection, through a separate evaluator.
-3. Versioned discovery report and worker-side integrity verification.
+2. Versioned discovery report and worker-side integrity verification.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -126,3 +138,10 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
   authorized evaluation provides evidence.
 - Do not launch experiments, workers, benchmarks, smoke workflows, or live
   LLM calls as part of architecture implementation.
+
+
+The frozen evaluator is deliberately opt-in and separate from the discovery
+call. Callers must invoke it only after selection has completed and must keep
+its output downstream of all selection and retry decisions. Its report marks
+selection and candidate ranking as not performed and records
+`far_or_evaluation_data_used_for_selection: false`.
