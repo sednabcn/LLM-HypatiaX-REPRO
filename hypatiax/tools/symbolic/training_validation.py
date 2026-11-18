@@ -860,6 +860,11 @@ class FoldCandidateFeaturePipeline:
                 if left_index != right_index:
                     engineered[f"ratio_{left}_{right}"] = ("ratio", left_index, right_index)
 
+        collisions = set(raw_index).intersection(engineered)
+        if collisions:
+            raise ValueError(
+                f"raw and engineered feature names collide: {sorted(collisions)}"
+            )
         missing = [
             name for name in self.candidate_variable_names
             if name not in raw_index and name not in engineered
