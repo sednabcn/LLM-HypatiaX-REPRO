@@ -44,6 +44,7 @@ def test_candidate_fold_preprocessing_learns_extreme_scale_log_from_fit_rows():
     summary = evaluate_hybrid_candidate_on_training_folds(
         "1.0*x",
         ["x"],
+        ["x"],
         X,
         y,
         folds,
