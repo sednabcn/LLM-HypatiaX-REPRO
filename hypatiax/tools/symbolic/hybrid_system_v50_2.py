@@ -934,6 +934,9 @@ class HybridDiscoverySystem:
                     _envelope_item_count = len(_raw_inner_candidates)
                     _envelope_malformed_count = 0
                     _generation_summary = result.get("discovery_candidate_generation", {})
+                    _generation_summary = (
+                        dict(_generation_summary) if isinstance(_generation_summary, dict) else {}
+                    )
                     _generation_candidate_count = (
                         _generation_summary.get("deduplicated_candidate_count")
                         if isinstance(_generation_summary, dict) else None
@@ -983,12 +986,12 @@ class HybridDiscoverySystem:
                                 "VALIDATION_FAILED", "N/A",
                             )
                         )
+                        _inner_gate = None
+                        _inner_reasons = []
                         if _inner_item_malformed:
                             _inner_reasons.append(
                                 f"malformed_candidate_envelope_item:{_inner_index}"
                             )
-                        _inner_gate = None
-                        _inner_reasons = []
                         if not _inner_valid:
                             _inner_reasons.append("invalid_or_empty_candidate_expression")
                         _inner_budget_rejected = False
@@ -1145,6 +1148,7 @@ class HybridDiscoverySystem:
                             + _envelope_malformed_count
                         ),
                         "generation_reported_candidate_count": _generation_candidate_count,
+                        "producer_generation": _generation_summary,
                         "count_matches_generation_metadata": (
                             _envelope_item_count == _generation_candidate_count
                             if isinstance(_generation_candidate_count, int)
