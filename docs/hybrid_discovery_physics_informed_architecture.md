@@ -1678,3 +1678,31 @@ tampered membership, tampered objective values, a mismatched selected
 candidate, and inconsistent eligibility metadata. Tests have not been run;
 no CI, experiment, worker, benchmark, smoke workflow, or LLM API call was
 launched.
+
+
+## 43. Verify Pareto objective values against their training evidence
+
+The Exp2 worker artifact validator now checks more than the internal consistency
+of a serialized Pareto front. For eligible candidates under policies v3–v6,
+it independently recomputes mean and worst normalized RMSE from the finite
+`training_validation.fold_metrics` values, then compares those values with
+the objective vector. It also cross-checks the complexity objective against
+the recorded complexity audit, expression-stability objective against the
+recorded measured stability fraction, and (when active) the soft-constraint
+objective against the separately validated soft-constraint aggregate.
+
+The validator checks that the audited valid-fold count matches the finite
+training-fold evidence count. These comparisons are strict about finite values,
+boolean-vs-numeric types, and numerical agreement within a small floating-point
+tolerance. This closes a gap where a report could have internally consistent
+Pareto membership while its objective vector disagreed with the supporting
+training-only evidence.
+
+This is an artifact-integrity check, not a second scientific evaluation:
+complexity and stability are cross-checked against their candidate audit
+records, while fold RMSE and soft-constraint aggregation are recomputed from
+their serialized evidence. No far/test metrics are consumed. It does not
+re-run fitting, coefficient refitting, symbolic search, or constraint
+sampling. Regression-test source includes a tampered-fold-score case and
+valid training-evidence fixtures. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or LLM API call was launched.
