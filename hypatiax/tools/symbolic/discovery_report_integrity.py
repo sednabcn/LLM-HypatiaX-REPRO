@@ -181,6 +181,7 @@ def _verify_multi_basis_selection_audit(audit: Any) -> None:
         if _canonical_digest(fingerprint_payload) != fingerprint:
             raise ValueError("embedded independent fold-evidence fingerprint does not reproduce")
         # Recompute symbolic complexity from the restricted expression parser.
+        import sympy as sp
         from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
         complexity = int(sum(sp.count_ops(parse_sympy_expression(expr, variable_names)) for expr in expressions) + len(expressions))
         if item.get("symbolic_complexity") != complexity:
@@ -278,7 +279,6 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         # The digest only detects accidental mutation: it is not a signature.
         # Re-parse every basis and reconstruct the outward formula so a worker
         # also rejects a self-consistently re-hashed but semantically altered model.
-        import sympy as sp
         from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
         for expression in expressions:
             parse_sympy_expression(expression, names)
