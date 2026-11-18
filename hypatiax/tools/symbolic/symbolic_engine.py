@@ -2498,6 +2498,15 @@ class SymbolicEngineWithLLM(SymbolicEngine):
 
             _candidate_items = []
             _seen_candidates = {}
+            _generation_counts = {
+                "llm_hypotheses_observed": len(result.get("llm_hypotheses") or []),
+                "llm_hypotheses_admitted": 0,
+                "llm_hypotheses_missing_expression": 0,
+                "llm_hypotheses_deduplicated": 0,
+                "pysr_search_generated_candidate": False,
+                "pysr_candidate_missing_expression": False,
+                "pysr_candidate_deduplicated": False,
+            }
             _llm_mode = str(result.get("llm_mode", ""))
             _llm_only = (
                 _llm_mode.endswith("_llm_only")
@@ -2515,7 +2524,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 _expression = str(expression or "").strip()
                 _fit_expression = str(fit_expression or "").strip().replace("^", "**")
                 if not _expression or not _fit_expression:
-                    return
+                    if source == "llm_proposal":
+                        _generation_counts["llm_hypotheses_missing_expression"] += 1
+                    elif source == "pysr_search":
+                        _generation_counts["pysr_candidate_missing_expression"] = True
+                    return "missing_expression"
                 _normal = re.sub(r"\s+", "", _fit_expression).replace("^", "**")
                 _dedup_key = _normal
                 _provenance = {
@@ -2525,7 +2538,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 }
                 if _dedup_key in _seen_candidates:
                     _seen_candidates[_dedup_key]["source_provenance"].append(_provenance)
-                    return
+                    if source == "llm_proposal":
+                        _generation_counts["llm_hypotheses_deduplicated"] += 1
+                    elif source == "pysr_search":
+                        _generation_counts["pysr_candidate_deduplicated"] = True
+                    return "deduplicated"
                 _identity = "|".join((_normal, source, strategy, str(random_state)))
                 _candidate_id = _hashlib.sha256(_identity.encode("utf-8")).hexdigest()[:20]
                 _record = {
@@ -2544,6 +2561,11 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 }
                 _seen_candidates[_dedup_key] = _record
                 _candidate_items.append(_record)
+                if source == "llm_proposal":
+                    _generation_counts["llm_hypotheses_admitted"] += 1
+                elif source == "pysr_search":
+                    _generation_counts["pysr_search_generated_candidate"] = True
+                return "admitted"
 
             # LLM equations have already been mapped to this engine call's fit
             # space by _evaluate_hypotheses. They use an explicit identity inner
@@ -2575,13 +2597,24 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 )
             result["discovery_candidates_schema"] = "discovery_candidates_v1"
             result["discovery_candidates"] = _candidate_items
-            result["discovery_candidate_generation"] = {
-                "llm_hypotheses_observed": len(result.get("llm_hypotheses") or []),
-                "pysr_search_generated_candidate": bool(_pysr_generated),
+            _generation_counts.update({
+                "pysr_search_attempted": not bool(_llm_only),
                 "pysr_skipped_by_llm_acceptance": bool(_llm_only),
+                "raw_proposal_count": (
+                    _generation_counts["llm_hypotheses_observed"] + int(bool(_pysr_generated))
+                ),
                 "deduplicated_candidate_count": len(_candidate_items),
+                "deduplication_count": (
+                    _generation_counts["llm_hypotheses_deduplicated"]
+                    + int(_generation_counts["pysr_candidate_deduplicated"])
+                ),
+                "missing_expression_count": (
+                    _generation_counts["llm_hypotheses_missing_expression"]
+                    + int(_generation_counts["pysr_candidate_missing_expression"])
+                ),
                 "selection_status": "generation_only_outer_validation_required",
-            }
+            })
+            result["discovery_candidate_generation"] = dict(_generation_counts)
 
         # Keep the LLM client alive for the lifetime of this discovery engine.
         # HybridDiscoverySystem retries by calling discover() repeatedly; dropping
