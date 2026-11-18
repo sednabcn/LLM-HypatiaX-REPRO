@@ -4,6 +4,7 @@ import pytest
 from hypatiax.tools.symbolic.structural_matching import (
     canonicalize_symbolic_structure,
     match_fold_discovered_structures,
+    crosswalk_full_training_candidate_to_fold_structure,
 )
 
 
@@ -75,3 +76,31 @@ def test_failed_fold_counts_against_recurrence_fraction():
     assert result["status"] == "NO_RECURRENT_CANDIDATE"
     assert result["structures"][0]["recurrence_fraction"] == pytest.approx(2 / 3)
     assert result["structures"][0]["eligible"] is False
+
+
+
+def test_final_candidate_crosswalk_requires_recurrent_structure_match():
+    searches = [
+        {"repeat": 0, "fold": 0, "expression": "2.0*x0 + 1.0"},
+        {"repeat": 0, "fold": 1, "expression": "8.0*x0 + 4.0"},
+    ]
+    metrics = [
+        {"repeat": 0, "fold": 0, "normalized_rmse": 0.2},
+        {"repeat": 0, "fold": 1, "normalized_rmse": 0.3},
+    ]
+    matching = match_fold_discovered_structures(
+        searches, metrics, ["x0"], total_fold_count=2
+    )
+
+    matched = crosswalk_full_training_candidate_to_fold_structure(
+        "12.0*x0 + 5.0", ["x0"], matching
+    )
+    assert matched["status"] == "matched_candidate_structure"
+    assert matched["candidate_specific_nested_evidence"] is True
+    assert matched["mean_normalized_rmse"] == pytest.approx(0.25)
+
+    rejected = crosswalk_full_training_candidate_to_fold_structure(
+        "x0**2", ["x0"], matching
+    )
+    assert rejected["status"] == "NO_CREDIBLE_CANDIDATE"
+    assert rejected["candidate_specific_nested_evidence"] is False
