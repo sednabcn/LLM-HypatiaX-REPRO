@@ -31,6 +31,9 @@ class FoldMetric:
     normalized_rmse: float | None
     validation_size: int
     fitted_expression: str | None = None
+    normalized_residual_bias: float | None = None
+    normalized_residual_std: float | None = None
+    max_abs_normalized_residual: float | None = None
 
 
 @dataclass(frozen=True)
@@ -57,6 +60,9 @@ class CandidateValidationSummary:
                     "normalized_rmse": item.normalized_rmse,
                     "validation_size": item.validation_size,
                     "fitted_expression": item.fitted_expression,
+                    "normalized_residual_bias": item.normalized_residual_bias,
+                    "normalized_residual_std": item.normalized_residual_std,
+                    "max_abs_normalized_residual": item.max_abs_normalized_residual,
                 }
                 for item in self.fold_metrics
             ],
@@ -201,12 +207,20 @@ def evaluate_candidate_on_training_folds(
             prediction = np.asarray(prediction_result, dtype=float).reshape(-1)
             if prediction.shape != truth.shape or not np.all(np.isfinite(prediction)):
                 raise ValueError("predictor returned invalid or non-finite values")
-            rmse = float(np.sqrt(np.mean(np.square(truth - prediction))))
+            residuals = truth - prediction
+            rmse = float(np.sqrt(np.mean(np.square(residuals))))
             scale = float(np.std(y[train_idx]))
-            nrmse = rmse / scale if np.isfinite(scale) and scale > 0 else None
+            has_scale = np.isfinite(scale) and scale > 0
+            nrmse = rmse / scale if has_scale else None
+            # Residual diagnostics are descriptive evidence only. They are
+            # normalized by the fitting-target scale and never feed selection.
+            residual_bias = float(np.mean(residuals) / scale) if has_scale else None
+            residual_std = float(np.std(residuals) / scale) if has_scale else None
+            max_abs_residual = float(np.max(np.abs(residuals)) / scale) if has_scale else None
             metrics.append(FoldMetric(
                 fold.repeat, fold.fold, rmse, nrmse, int(valid_idx.size),
-                str(fitted_expression) if fitted_expression is not None else None
+                str(fitted_expression) if fitted_expression is not None else None,
+                residual_bias, residual_std, max_abs_residual,
             ))
         except TimeoutError:
             raise
