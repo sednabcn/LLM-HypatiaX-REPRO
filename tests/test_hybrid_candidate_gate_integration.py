@@ -499,3 +499,91 @@ def test_hybrid_engine_emits_candidate_specific_llm_and_pysr_fit_contracts():
     assert candidates[2]["fit_transform_state"]["x_scales"] == [2.0]
     assert result["discovery_candidate_generation"]["pysr_search_generated_candidate"] is True
     assert result["expression"] == "x**2"
+
+
+def test_inner_candidate_gate_exception_is_retained_as_ineligible_report_record():
+    import numpy as np
+
+    problem = DiscoveryProblem(
+        target_name="energy",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -2.0, "maximum": 2.0}},
+    )
+    system = _system("x**2", problem)
+    original_validate = system._candidate_validator.validate
+
+    def fail_llm_gate(problem, expression, **kwargs):
+        if kwargs.get("source") == "llm_proposal":
+            raise RuntimeError("synthetic validator failure")
+        return original_validate(problem, expression, **kwargs)
+
+    system._candidate_validator.validate = fail_llm_gate
+    identity = {
+        "input_feature_count": 1,
+        "x_scales": [1.0],
+        "gm_pairs": [],
+        "ratio_pairs": [],
+        "y_std": 1.0,
+        "feature_names": ["x"],
+        "transform_source": "test_identity",
+    }
+    system.symbolic_engine.discover = lambda *args, **kwargs: {
+        "expression": "x**2",
+        "r2_score": 0.999,
+        "llm_mode": "hybrid_pysr_better",
+        "discovery_candidates_schema": "discovery_candidates_v1",
+        "discovery_candidates": [
+            {
+                "candidate_id": "inner-llm-fails-gate",
+                "expression": "x**2",
+                "fit_expression": "x**2",
+                "fit_variable_names": ["x"],
+                "fit_transform_state": identity,
+                "source": "llm_proposal",
+                "source_provenance": [
+                    {"source": "llm_proposal", "strategy": "llm_hypothesis"}
+                ],
+                "search_strategy": "llm_hypothesis",
+                "seed": 42,
+            },
+            {
+                "candidate_id": "inner-pysr-passes-gate",
+                "expression": "x*x",
+                "fit_expression": "x*x",
+                "fit_variable_names": ["x"],
+                "fit_transform_state": identity,
+                "source": "pysr_search",
+                "source_provenance": [
+                    {"source": "pysr_search", "strategy": "pysr_refinement"}
+                ],
+                "search_strategy": "pysr_refinement",
+                "seed": 42,
+            },
+        ],
+    }
+    X = np.linspace(-2.0, 2.0, 30).reshape(-1, 1)
+    y = np.square(X[:, 0])
+    system._active_training_validation_settings = {
+        "n_splits": 2,
+        "validation_fraction": 0.2,
+        "minimum_valid_folds": 2,
+        "minimum_candidate_pool_size": 2,
+    }
+    system._active_training_validation_seed = 42
+    system._discover_X_orig = X
+    system._discover_y_orig = y
+
+    result = system._discover_with_retry(
+        X=X,
+        y=y,
+        variable_names=["x"],
+        variable_descriptions={"x": "input"},
+        variable_units={},
+    )
+
+    report_candidates = result["discovery_report"]["candidates"]
+    failed = next(item for item in report_candidates if item["source"] == "llm_proposal")
+    assert failed["eligible"] is False
+    assert failed["metrics"]["validation_execution"] == "not_completed"
+    assert "synthetic validator failure" in " ".join(failed["rejection_reasons"])
+    assert any(item["source"] == "pysr_search" and item["eligible"] for item in report_candidates)
