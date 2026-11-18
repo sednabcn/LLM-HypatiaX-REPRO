@@ -196,14 +196,36 @@ class DiscoveryProblem:
 
 
 
+def _validate_json_value(value: Any, path: str) -> None:
+    """Reject values that cannot cross a strict JSON worker boundary losslessly."""
+    if value is None or isinstance(value, (str, bool, int)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError(f"{path} must contain only finite numbers")
+        return
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError(f"{path} mapping keys must be strings")
+            _validate_json_value(item, f"{path}.{key}")
+        return
+    if isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _validate_json_value(item, f"{path}[{index}]")
+        return
+    raise TypeError(f"{path} contains non-JSON value of type {type(value).__name__}")
+
+
 def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
     """Strictly deserialize a JSON-safe scientific contract at a worker boundary.
 
-    Unknown keys and implicit variable-name coercion are rejected. This helper
-    reconstructs typed contracts; it never invents units, domains, or constraints.
+    This function validates types before constructing the immutable contract.
+    It deliberately performs no string/number coercion and never infers physics.
     """
     if not isinstance(spec, Mapping):
         raise TypeError("discovery_problem_spec must be a mapping")
+    _validate_json_value(spec, "discovery_problem_spec")
     allowed = {
         "schema_version", "target_name", "variable_names", "domain",
         "target_unit", "variable_units", "variable_domains", "constraints",
@@ -213,9 +235,38 @@ def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
     unknown = set(spec) - allowed
     if unknown:
         raise ValueError(f"unknown discovery problem fields: {sorted(unknown)}")
+    if "target_name" not in spec or not isinstance(spec["target_name"], str):
+        raise TypeError("discovery problem target_name must be a string")
+    names_spec = spec.get("variable_names")
+    if not isinstance(names_spec, (list, tuple)) or isinstance(names_spec, str):
+        raise TypeError("discovery problem variable_names must be a list of strings")
+    if any(not isinstance(name, str) for name in names_spec):
+        raise TypeError("discovery problem variable_names must contain only strings")
+    if "domain" in spec and not isinstance(spec["domain"], str):
+        raise TypeError("discovery problem domain must be a string")
+    for field_name in ("target_unit", "noise_model"):
+        value = spec.get(field_name)
+        if value is not None and not isinstance(value, str):
+            raise TypeError(f"discovery problem {field_name} must be a string or null")
+    if "schema_version" in spec and not isinstance(spec["schema_version"], str):
+        raise TypeError("discovery problem schema_version must be a string")
     version = spec.get("schema_version", CONTRACT_VERSION)
     if version != CONTRACT_VERSION:
         raise ValueError(f"unsupported discovery contract schema_version {version!r}")
+
+    for field_name in ("variable_units", "variable_domains", "split_protocol", "metadata"):
+        value = spec.get(field_name, {})
+        if not isinstance(value, Mapping):
+            raise TypeError(f"discovery problem {field_name} must be a mapping")
+    if any(not isinstance(unit, str) for unit in spec.get("variable_units", {}).values()):
+        raise TypeError("discovery problem variable_units values must be strings")
+    if any(not isinstance(bounds, Mapping) for bounds in spec.get("variable_domains", {}).values()):
+        raise TypeError("discovery problem variable_domains values must be mappings")
+    for field_name in ("allowed_unary_operators", "allowed_binary_operators"):
+        value = spec.get(field_name, ())
+        if not isinstance(value, (list, tuple)) or any(not isinstance(item, str) for item in value):
+            raise TypeError(f"discovery problem {field_name} must be a list of strings")
+
     budget_spec = spec.get("budget", {})
     if not isinstance(budget_spec, Mapping):
         raise TypeError("discovery problem budget must be a mapping")
@@ -226,6 +277,20 @@ def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
     budget_unknown = set(budget_spec) - budget_allowed
     if budget_unknown:
         raise ValueError(f"unknown discovery budget fields: {sorted(budget_unknown)}")
+    for field_name in ("max_search_attempts", "max_candidates", "max_llm_calls", "seed"):
+        if field_name in budget_spec and (
+            isinstance(budget_spec[field_name], bool) or not isinstance(budget_spec[field_name], int)
+        ):
+            raise TypeError(f"discovery budget {field_name} must be an integer")
+    if "max_llm_tokens" in budget_spec and budget_spec["max_llm_tokens"] is not None:
+        value = budget_spec["max_llm_tokens"]
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError("discovery budget max_llm_tokens must be an integer or null")
+    if "max_wall_time_seconds" in budget_spec and budget_spec["max_wall_time_seconds"] is not None:
+        value = budget_spec["max_wall_time_seconds"]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise TypeError("discovery budget max_wall_time_seconds must be numeric or null")
+
     constraints_spec = spec.get("constraints", ())
     if not isinstance(constraints_spec, (list, tuple)):
         raise TypeError("discovery problem constraints must be a list")
@@ -240,11 +305,17 @@ def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
         extra = set(item) - constraint_allowed
         if extra:
             raise ValueError(f"unknown constraint fields at index {index}: {sorted(extra)}")
+        for field_name in ("constraint_id", "kind", "severity", "source", "applicability", "description"):
+            if field_name in item and not isinstance(item[field_name], str):
+                raise TypeError(f"constraint {field_name} at index {index} must be a string")
+        if "parameters" in item and not isinstance(item["parameters"], Mapping):
+            raise TypeError(f"constraint parameters at index {index} must be a mapping")
         constraints.append(ConstraintSpec(**dict(item)))
+
     return DiscoveryProblem(
-        target_name=str(spec["target_name"]),
-        variable_names=tuple(spec["variable_names"]),
-        domain=str(spec.get("domain", "general")),
+        target_name=spec["target_name"],
+        variable_names=tuple(names_spec),
+        domain=spec.get("domain", "general"),
         target_unit=spec.get("target_unit"),
         variable_units=spec.get("variable_units", {}),
         variable_domains=spec.get("variable_domains", {}),

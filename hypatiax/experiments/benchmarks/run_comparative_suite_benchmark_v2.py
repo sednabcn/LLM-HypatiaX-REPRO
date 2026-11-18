@@ -2659,6 +2659,14 @@ try:
         # Deserialize only an explicitly supplied scientific contract. JSON
         # metadata cannot preserve frozen dataclass instances across workers.
         _problem_spec = _meta.pop("discovery_problem_spec", None)
+        _contract_audit = {
+            "active": False,
+            "schema_version": None,
+            "sha256": None,
+            "variable_names": [],
+            "variable_name_match": None,
+            "worker_boundary": "isolated_subprocess",
+        }
         if _problem_spec is not None:
             from hypatiax.tools.symbolic.discovery_contracts import discovery_problem_from_dict
             _typed_problem = discovery_problem_from_dict(_problem_spec)
@@ -2668,6 +2676,19 @@ try:
                     "subprocess var_names after reserved-name sanitization; "
                     "no variable-name or unit mapping is inferred."
                 )
+            _canonical_contract = json.dumps(
+                _typed_problem.to_dict(), sort_keys=True, separators=(",", ":"), allow_nan=False
+            )
+            _contract_audit = {
+                "active": True,
+                "schema_version": _typed_problem.schema_version,
+                "sha256": hashlib.sha256(_canonical_contract.encode("utf-8")).hexdigest(),
+                "variable_names": list(_typed_problem.variable_names),
+                "variable_name_match": True,
+                "worker_boundary": "isolated_subprocess",
+                "constraint_count": len(_typed_problem.constraints),
+                "budget": _typed_problem.budget.to_dict(),
+            }
             _meta["discovery_problem"] = _typed_problem
         system = HybridDiscoverySystem(
             domain=_domain,
@@ -2707,6 +2728,7 @@ try:
                 "engine_version": "5.4",
                 "engine_variant": "llm_hybrid" if system.llm_mode != "none" else "pysr_fallback",
                 "domain": _domain,
+                "discovery_problem_contract": _contract_audit,
                 "llm_requested": _use_llm,
                 "llm_mode_requested": _llm_mode,
                 "llm_mode_active": system.llm_mode,
