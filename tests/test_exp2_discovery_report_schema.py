@@ -277,3 +277,82 @@ def test_pareto_complexity_is_recomputed_when_source_metric_is_absent():
     first["metrics"]["pareto_selection"]["objectives"]["complexity"] = 4.0
     with pytest.raises(ValueError, match="complexity objective does not match parsed expression"):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def _multi_source_report():
+    report = _valid_report()
+    first = report["candidates"][0]
+    first["source"] = "llm_proposal"
+    first["search_strategy"] = "llm_hypothesis"
+    first["metrics"]["source_provenance"] = [
+        {"source": "llm_proposal", "strategy": "llm_hypothesis"}
+    ]
+    second = dict(first)
+    second["candidate_id"] = "candidate-2"
+    second["expression"] = "x*x"
+    second["normalized_expression"] = "x*x"
+    second["source"] = "pysr_search"
+    second["search_strategy"] = "pysr_refinement"
+    second["metrics"] = {
+        "source_provenance": [
+            {"source": "pysr_search", "strategy": "pysr_refinement"}
+        ]
+    }
+    report["candidates"].append(second)
+    report["pareto_candidate_ids"] = ["candidate-1", "candidate-2"]
+    report["provenance"].update({
+        "candidate_source_counts": {"llm_proposal": 1, "pysr_search": 1},
+        "pareto_source_coverage": {
+            "sources": ["llm_proposal", "pysr_search"],
+            "contains_llm_and_pysr": True,
+        },
+    })
+    return report
+
+
+def test_multi_candidate_source_counts_and_pareto_coverage_are_recomputed():
+    report = _multi_source_report()
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    [
+        (
+            lambda report: report["provenance"]["candidate_source_counts"].update(
+                pysr_search=2
+            ),
+            "candidate_source_counts do not match",
+        ),
+        (
+            lambda report: report["provenance"]["pareto_source_coverage"].update(
+                sources=["llm_proposal"]
+            ),
+            "Pareto source coverage does not match",
+        ),
+        (
+            lambda report: report["provenance"]["pareto_source_coverage"].update(
+                contains_llm_and_pysr=False
+            ),
+            "cross-source coverage flag",
+        ),
+        (
+            lambda report: report["candidates"][0]["metrics"].update(
+                source_provenance=[{"source": "unknown_source", "strategy": "bad"}]
+            ),
+            "source_provenance.*invalid source",
+        ),
+    ],
+)
+def test_multi_candidate_provenance_tampering_is_rejected(mutate, message):
+    report = _multi_source_report()
+    mutate(report)
+    with pytest.raises(ValueError, match=message):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_multi_candidate_provenance_requires_both_audit_fields():
+    report = _multi_source_report()
+    del report["provenance"]["pareto_source_coverage"]
+    with pytest.raises(ValueError, match="must include both source counts"):
+        VALIDATOR._discovery_report_from_result({"discovery_report": report})
