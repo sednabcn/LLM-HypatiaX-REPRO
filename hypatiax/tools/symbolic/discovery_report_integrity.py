@@ -114,7 +114,7 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
     return json.loads(json.dumps(report, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
 
 
-__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope"]
+__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report"]
 
 
 def build_native_discovery_report(
@@ -124,7 +124,6 @@ def build_native_discovery_report(
     selection_audit: Mapping[str, Any],
     *,
     run_context: Mapping[str, Any],
-    compatibility_status: str = "provisional",
 ) -> dict[str, Any]:
     """Build a versioned report from native V60 evidence without promoting it
     to the V50.2 production result.
