@@ -239,6 +239,12 @@ def test_pareto_report_recomputes_front_and_deterministic_selected_candidate():
             ),
             "underlying training evidence",
         ),
+        (
+            lambda report: report["candidates"][0]["metrics"]["training_validation"]["expression_stability"].update(
+                dominant_fraction=0.25
+            ),
+            "stability objective does not match training evidence",
+        ),
     ],
 )
 def test_pareto_report_rejects_inconsistent_membership_objectives_or_winner(mutate, message):
