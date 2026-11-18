@@ -356,3 +356,19 @@ def test_multi_candidate_provenance_requires_both_audit_fields():
     del report["provenance"]["pareto_source_coverage"]
     with pytest.raises(ValueError, match="must include both source counts"):
         VALIDATOR._discovery_report_from_result({"discovery_report": report})
+
+
+def test_deduplicated_candidate_retains_cross_source_provenance_for_worker_audit():
+    report = _valid_report()
+    report["candidates"][0]["metrics"]["source_provenance"] = [
+        {"source": "llm_proposal", "strategy": "llm_hypothesis"},
+        {"source": "pysr_search", "strategy": "pysr_refinement"},
+    ]
+    report["provenance"].update({
+        "candidate_source_counts": {"llm_proposal": 1, "pysr_search": 1},
+        "pareto_source_coverage": {
+            "sources": ["llm_proposal", "pysr_search"],
+            "contains_llm_and_pysr": True,
+        },
+    })
+    VALIDATOR._discovery_report_from_result({"discovery_report": report})
