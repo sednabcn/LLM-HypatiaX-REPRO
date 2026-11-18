@@ -290,6 +290,8 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
     fold_timeout_seconds: int = 20,
     allow_pow: bool | None = None,
     minimum_valid_folds: int = 2,
+    minimum_structure_recurrence: int = 2,
+    minimum_structure_recurrence_fraction: float = 0.5,
 ) -> dict:
     """Run a fresh Hybrid/PySR structural search inside every training fold.
 
@@ -346,6 +348,7 @@ def evaluate_nested_hybrid_structure_search_on_training_folds(
         variable_names,
         minimum_recurrence=minimum_structure_recurrence,
         minimum_recurrence_fraction=minimum_structure_recurrence_fraction,
+        total_fold_count=len(fold_tuple),
     )
     result.update({
         "structure_matching": structure_matching,
