@@ -2537,7 +2537,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                     "seed": int(random_state),
                     "generation_attempt": 1,
                     "fit_expression": _fit_expression,
-                    "fit_variable_names": list(fit_names or safe_names),
+                    "fit_variable_names": list(fit_names or variable_names),
                     "fit_transform_state": dict(transform_state or {}),
                     "training_fit_metrics": None,
                 }
@@ -2547,7 +2547,7 @@ class SymbolicEngineWithLLM(SymbolicEngine):
             # LLM equations have already been mapped to this engine call's fit
             # space by _evaluate_hypotheses. They use an explicit identity inner
             # transform; the outer fold evaluator still learns its own transforms.
-            _llm_names = list(result.get("variable_names") or safe_names)
+            _llm_names = list(result.get("variable_names") or variable_names)
             _llm_identity_state = {
                 "input_feature_count": len(_llm_names),
                 "x_scales": [1.0] * len(_llm_names),
