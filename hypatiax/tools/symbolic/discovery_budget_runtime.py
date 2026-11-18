@@ -36,10 +36,10 @@ class DiscoveryBudgetRuntime:
         if self.expired():
             return False
         if self.search_attempts >= min(int(configured_limit), self.budget.max_search_attempts):
-            self.stop_reason = "max_search_attempts"
+            self.stop_reason = self.stop_reason or "max_search_attempts"
             return False
         if self.candidates_admitted >= self.budget.max_candidates:
-            self.stop_reason = "max_candidates"
+            self.stop_reason = self.stop_reason or "max_candidates"
             return False
         return True
 
