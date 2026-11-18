@@ -1408,3 +1408,34 @@ Every candidate's `metrics.pareto_selection` now includes an ordered, deduplicat
 `eligible_for_pareto` is derived from that complete reason list, so the boolean and explanation cannot drift independently. These reasons describe selection eligibility; they do not imply that a rejected equation is scientifically false. The full candidate record and constraint outcomes remain available for review, including soft warnings that do not constitute hard rejection.
 
 Report provenance now labels the nested-evidence policy consistently in both accepted and no-selection outcomes: `training_only_pareto_v2_nested_structure_gate` when nested recurrence is required, otherwise `training_only_pareto_v1`. This is audit metadata only; the objective set remains mean normalized training-fold RMSE, worst-fold normalized RMSE, and symbolic operation count. No far/test score enters eligibility, Pareto ranking, or tie-breaking.
+
+
+## 34. Persist complete discovery reports in Exp2 worker artifacts
+
+The typed DiscoveryReport is attached to each HybridDiscovery method result,
+but a worker's protocol JSON is the durable boundary used by downstream
+consumers. The Exp2 worker-output validator now extracts reports attached
+directly to a method result or nested in its metadata/discovery object and
+writes complete records to discovery_reports_extrap.json. Each record is keyed
+by domain, equation description, method, and source protocol file.
+
+The report is retained intact: candidate expressions and IDs, candidate
+metrics and constraint outcomes, Pareto membership, eligibility/rejection
+reasons, selection status, failure reasons, and provenance are not reduced to
+a selected-equation summary. The worker summary records the sidecar SHA-256,
+byte count, report count, and whether typed reports were present.
+
+A legacy run with no typed reports still produces an explicit empty artifact
+with status no_typed_discovery_reports; absence is not silently interpreted
+as a successful scientific discovery. Present reports are checked for the
+required versioned envelope, unique candidate IDs, valid selected/Pareto
+references, and the explicit far_evaluation_used_for_selection: false
+boundary before persistence.
+
+This is an artifact-transport change, not a new discovery or scoring policy.
+The worker does not reconstruct missing reports, call an LLM, or infer a
+report from far metrics. It preserves the report emitted by the discovery
+engine. Existing protocol and flat benchmark outputs remain unchanged, and
+post-run comparative analysis remains the responsibility of the DEV
+repository. No experiments, workers, smoke workflows, benchmarks, CI jobs,
+or LLM API calls are launched by this implementation.
