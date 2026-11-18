@@ -1487,7 +1487,7 @@ class HybridDiscoverySystem:
                 _sources_for_record = {str(_record.source)}
                 _record_source_provenance = (
                     _record.metrics.get("source_provenance", [])
-                    if isinstance(_record.metrics, dict) else []
+                    if hasattr(_record.metrics, "get") else []
                 )
                 _sources_for_record.update(
                     str(_item["source"])
