@@ -1650,3 +1650,22 @@ observations. Regression source covers consistent evidence, aggregate
 tampering, and incomplete evidence without a matching exclusion. Tests have
 not been run; no CI, experiment, worker, benchmark, smoke workflow, or LLM
 API call was launched.
+
+---
+
+## 42. Verify serialized Pareto objectives, front membership, and selection
+
+The Exp2 worker artifact validator now independently checks the serialized training-only Pareto decision for policy versions v3–v6 (stability and optional nested-structure/soft-constraint variants).
+
+For every Pareto-eligible candidate it:
+- Recomputes mean and worst normalized RMSE from the serialized training-fold metrics.
+- Checks the recorded fold count, minimum-fold requirement, symbolic complexity, and measured expression-stability summary.
+- Reconstructs the expected objective vector, including negative expression stability and, where declared, the audited soft-constraint aggregate.
+- Rejects ineligible candidates that carry an objective vector, or eligible candidates whose eligibility reasons are non-empty.
+- Recomputes the nondominated front from the candidate objective vectors and compares it with the report's ordered Pareto candidate IDs.
+- Recomputes the deterministic tie-break and checks the selected candidate ID.
+
+This is an artifact-integrity check, not a second discovery run. It consumes only serialized report evidence from the training region and does not inspect far/test observations, refit expressions, call PySR, or invoke an LLM. Legacy reports without one of the recognized versioned Pareto policies retain the prior compatibility path.
+
+Regression source covers a valid two-candidate front, tampered objective values, incorrect front membership, and an incorrect selected ID. The tests were added but not run. No CI, experiments, workers, benchmarks, smoke workflows, or LLM API calls were launched.
+
