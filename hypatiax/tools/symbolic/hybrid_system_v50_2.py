@@ -927,7 +927,32 @@ class HybridDiscoverySystem:
                     # Every inner-engine proposal gets its own scientific gate
                     # and report record. Do not attach the compatibility winner's
                     # training R2 or transform state to another proposal.
-                    for _inner_candidate in result.get("discovery_candidates", []):
+                    _raw_inner_candidates = result.get("discovery_candidates", [])
+                    _envelope_items_are_list = isinstance(_raw_inner_candidates, list)
+                    if not _envelope_items_are_list:
+                        _raw_inner_candidates = []
+                    _envelope_item_count = len(_raw_inner_candidates)
+                    _envelope_malformed_count = 0
+                    _generation_summary = result.get("discovery_candidate_generation", {})
+                    _generation_candidate_count = (
+                        _generation_summary.get("deduplicated_candidate_count")
+                        if isinstance(_generation_summary, dict) else None
+                    )
+                    for _inner_index, _raw_inner_candidate in enumerate(_raw_inner_candidates):
+                        _inner_item_malformed = not isinstance(_raw_inner_candidate, dict)
+                        if _inner_item_malformed:
+                            _envelope_malformed_count += 1
+                            _inner_candidate = {
+                                "candidate_id": f"malformed-envelope-item-{_inner_index}",
+                                "expression": "<invalid>",
+                                "fit_expression": "<invalid>",
+                                "source": "unknown",
+                                "search_strategy": "malformed_candidate_envelope_item",
+                                "seed": seed,
+                                "source_provenance": [],
+                            }
+                        else:
+                            _inner_candidate = _raw_inner_candidate
                         _inner_result = dict(result)
                         _inner_result.update({
                             "expression": _inner_candidate.get("expression"),
@@ -950,10 +975,18 @@ class HybridDiscoverySystem:
                             _inner_candidate.get("fit_expression")
                             or _inner_candidate.get("expression") or ""
                         ).strip()
-                        _inner_valid = bool(_inner_expression) and _inner_expression not in (
-                            "DISCOVERY_FAILED", "NO_VALID_EQUATIONS",
-                            "VALIDATION_FAILED", "N/A",
+                        _inner_valid = (
+                            not _inner_item_malformed
+                            and bool(_inner_expression)
+                            and _inner_expression not in (
+                                "DISCOVERY_FAILED", "NO_VALID_EQUATIONS",
+                                "VALIDATION_FAILED", "N/A",
+                            )
                         )
+                        if _inner_item_malformed:
+                            _inner_reasons.append(
+                                f"malformed_candidate_envelope_item:{_inner_index}"
+                            )
                         _inner_gate = None
                         _inner_reasons = []
                         if not _inner_valid:
@@ -1099,6 +1132,38 @@ class HybridDiscoverySystem:
                                 _inner_reasons,
                             )
                     result["candidate_envelope_consumed"] = True
+                    result["candidate_envelope_audit"] = {
+                        "schema": "discovery_candidates_v1",
+                        "container_valid": _envelope_items_are_list,
+                        "declared_item_count": (
+                            _envelope_item_count if _envelope_items_are_list else None
+                        ),
+                        "retained_item_count": _envelope_item_count,
+                        "malformed_item_count": _envelope_malformed_count,
+                        "ingestion_failure_count": (
+                            (0 if _envelope_items_are_list else 1)
+                            + _envelope_malformed_count
+                        ),
+                        "generation_reported_candidate_count": _generation_candidate_count,
+                        "count_matches_generation_metadata": (
+                            _envelope_item_count == _generation_candidate_count
+                            if isinstance(_generation_candidate_count, int)
+                            and not isinstance(_generation_candidate_count, bool)
+                            and _envelope_items_are_list else None
+                        ),
+                        "ingestion_complete": (
+                            _envelope_items_are_list
+                            and _envelope_malformed_count == 0
+                            and (
+                                _generation_candidate_count is None
+                                or (
+                                    isinstance(_generation_candidate_count, int)
+                                    and not isinstance(_generation_candidate_count, bool)
+                                    and _envelope_item_count == _generation_candidate_count
+                                )
+                            )
+                        ),
+                    }
 
                 if (
                     _valid_expression and _valid_score
@@ -1588,6 +1653,9 @@ class HybridDiscoverySystem:
                     "multi_candidate_handoff_consumed": any(
                         bool(_attempt_result.get("inner_candidate_id"))
                         for _, _attempt_result in _candidate_attempts
+                    ),
+                    "candidate_envelope_audit": dict(
+                        result.get("candidate_envelope_audit") or {}
                     ),
                 },
                 minimum_valid_folds=_minimum_folds,
