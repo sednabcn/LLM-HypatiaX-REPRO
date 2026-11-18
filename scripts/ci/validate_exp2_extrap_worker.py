@@ -151,7 +151,6 @@ def _validate_training_pareto_contract(report: dict[str, Any]) -> None:
         raise ValueError("training Pareto policy cannot use far/test data for selection")
     objective_names = provenance.get("objectives")
     eligible_vectors: dict[str, dict[str, float]] = {}
-    candidates_by_id = {item["candidate_id"]: item for item in report["candidates"]}
 
     for index, candidate in enumerate(report["candidates"]):
         selection = candidate.get("metrics", {}).get("pareto_selection")
@@ -345,7 +344,6 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
                 raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
 
     _validate_soft_constraint_pareto_contract(report)
-    _validate_training_pareto_contract(report)
 
     if len(ids) != len(set(ids)):
         raise ValueError("discovery_report candidate records must have unique candidate IDs")
@@ -366,6 +364,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
         "search_budget_exhausted",
     } and selected_id is not None:
         raise ValueError("discovery_report failure status cannot carry a selected candidate")
+    _validate_training_pareto_contract(report)
     return report
 
 def validate_worker_outputs(
