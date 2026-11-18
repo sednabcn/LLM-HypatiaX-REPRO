@@ -2756,6 +2756,10 @@ try:
                 ),
                 "candidate_selection": "prefer_non_overfit_then_training_r2_with_simplicity_tiebreak",
                 "training_only_search_selection": _training_selection_audit,
+                # Copy the runtime's own counters into the worker-level
+                # benchmark provenance; contract limits alone do not prove
+                # which resources were actually reserved, started, or used.
+                "discovery_budget": _discovery.get("discovery_budget"),
                 "fold_search_llm_enabled": False,
                 "fold_search_timeout_seconds": (
                     _meta.get("training_only_search_validation", {}).get(
