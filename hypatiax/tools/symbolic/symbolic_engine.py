@@ -2128,6 +2128,13 @@ class SymbolicEngine:
                     _trace.append(f"selection={_sel_rule}")
                     _trace.append(f"best_expr={expression[:80]}")
 
+                    # Keep the exact unannotated fit-space structure and feature
+                    # schema separately. Candidate-level fold validation must refit
+                    # this structure with transforms learned inside each fold; the
+                    # display expression below contains scale annotations.
+                    _fit_expression = str(expression)
+                    _fit_variable_names = list(safe_names)
+
                     # If y was scaled, fold the scale factor into the expression so
                     # the string represents the original (physical) equation.
                     if _y_std != 1.0:
@@ -2171,6 +2178,9 @@ class SymbolicEngine:
                     _result = {
                         "expression": expression,
                         "equation": expression,
+                        "fit_expression": _fit_expression,
+                        "fit_variable_names": _fit_variable_names,
+                        "fit_transform_state": dict(self._last_fold_transform_state),
                         "r2_score": r2,
                         "complexity": _best_complexity,
                         "variable_names": safe_names,
