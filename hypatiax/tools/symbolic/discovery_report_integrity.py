@@ -41,6 +41,13 @@ def _canonical_digest(payload: Mapping[str, Any]) -> str:
     return sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def _is_sha256_digest(value: Any) -> bool:
+    return (
+        isinstance(value, str) and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def seal_discovery_report(report: DiscoveryReport | Mapping[str, Any]) -> dict[str, Any]:
     """Create a JSON-safe, checksummed envelope from a typed report or mapping."""
     payload = report.to_dict() if isinstance(report, DiscoveryReport) else dict(report)
@@ -249,7 +256,7 @@ def _verify_native_final_model_audit(audit: Any) -> None:
             raise ValueError("selected native final model must mark selection_performed=true")
         model = audit.get("selected_model")
         supplied = audit.get("selected_model_sha256")
-        if not isinstance(model, Mapping) or not isinstance(supplied, str) or len(supplied) != 64:
+        if not isinstance(model, Mapping) or not _is_sha256_digest(supplied):
             raise ValueError("selected native final model is missing its identity digest")
         canonical = json.dumps(dict(model), sort_keys=True, separators=(",", ":"), allow_nan=False)
         if sha256(canonical.encode("utf-8")).hexdigest() != supplied:
@@ -367,6 +374,22 @@ def _verify_native_final_model_audit(audit: Any) -> None:
             value = model.get(key)
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
                 raise ValueError(f"native final-model {key} must be finite or null")
+        training_nrmse = model.get("training_nrmse")
+        target_std = float(model["training_target_std"])
+        training_rmse = float(model["training_rmse"])
+        if training_nrmse is not None and float(training_nrmse) < 0:
+            raise ValueError("native final-model training_nrmse must be non-negative or null")
+        if target_std > 0:
+            expected_nrmse = training_rmse / target_std
+            if training_nrmse is None or not math.isclose(
+                float(training_nrmse), expected_nrmse, rel_tol=1e-9, abs_tol=1e-12,
+            ):
+                raise ValueError("native final-model training NRMSE does not reproduce from RMSE and target standard deviation")
+        elif training_nrmse is not None:
+            raise ValueError("native final-model training NRMSE must be null for a zero-variance target")
+        condition_number = model.get("training_design_condition_number")
+        if condition_number is not None and float(condition_number) < 0:
+            raise ValueError("native final-model design condition number cannot be negative")
         rank = model.get("training_design_rank")
         if isinstance(rank, bool) or not isinstance(rank, int) or rank < 1 or rank > len(expressions) + 1:
             raise ValueError("native final-model design rank is invalid")
@@ -409,8 +432,8 @@ def _verify_native_far_evaluation_audit(
     if status == "completed":
         digest = audit.get("selected_model_sha256")
         far_digest = audit.get("far_set_sha256")
-        if not isinstance(digest, str) or len(digest) != 64 or not isinstance(far_digest, str) or len(far_digest) != 64:
-            raise ValueError("completed far evaluation requires model and far-set digests")
+        if not _is_sha256_digest(digest) or not _is_sha256_digest(far_digest):
+            raise ValueError("completed far evaluation requires valid lowercase SHA-256 model and far-set digests")
         if (not isinstance(final_model_audit, Mapping)
                 or final_model_audit.get("execution_status") != "selected"
                 or final_model_audit.get("selection_performed") is not True):
@@ -435,6 +458,9 @@ def _verify_native_far_evaluation_audit(
             value = metrics.get(key)
             if value is not None and (isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value))):
                 raise ValueError(f"far evaluation {key} must be finite or null")
+        normalized_rmse = metrics.get("nrmse_by_training_target_std")
+        if normalized_rmse is not None and float(normalized_rmse) < 0:
+            raise ValueError("far evaluation nrmse_by_training_target_std must be non-negative or null")
         bias = metrics.get("bias")
         if isinstance(bias, bool) or not isinstance(bias, (int, float)) or not math.isfinite(float(bias)):
             raise ValueError("far evaluation bias must be finite")
@@ -463,7 +489,7 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
     if envelope.get("envelope_schema") != ENVELOPE_SCHEMA:
         raise ValueError("unsupported discovery report envelope schema")
     supplied = envelope.get("integrity_sha256")
-    if not isinstance(supplied, str) or len(supplied) != 64:
+    if not _is_sha256_digest(supplied):
         raise ValueError("invalid discovery report integrity digest")
     unsigned = {"envelope_schema": envelope["envelope_schema"], "report": envelope["report"]}
     _json_value(unsigned)
