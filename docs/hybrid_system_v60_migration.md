@@ -85,6 +85,10 @@ Result `implementation_provenance` records:
   normalized basis candidates, with group IDs, term-level coefficients,
   lineage, training metrics, design diagnostics, and budget/rejection audit;
   audit-only, with `selection_performed` false and no far/evaluation data
+- `native_v60_multi_basis_evidence_audit`: independently recomputed fold
+  coefficients, metrics, rank/condition diagnostics, verified row indices,
+  producer lineage, and canonical evidence fingerprints; rejected/tampered
+  groups fail closed; audit-only and far-data-free
 - `native_v60_multi_basis_validation_audit`: per-group fold metrics,
   independent fold-local joint coefficients, row-index evidence, lineage
   checks, and budget/rejection accounting; audit-only, with
@@ -163,8 +167,16 @@ non-finite data, invalid basis outputs, mismatched lineage, and folds with too
 few training rows; no rows are silently dropped. The validator has no far-set
 argument and always reports `selection_performed: false`. This evidence is
 not yet accepted by the single-basis objective selector or discovery-report
-candidate schema; joint groups remain ineligible for selection until a
-dedicated verifier and group-level objective-selection contract are added.
+candidate schema. A separate evidence verifier now reconstructs every fold's
+joint least-squares coefficients, held-out predictions, RMSE/NRMSE/R², rank,
+condition number, and aggregate metrics directly from the supplied training
+arrays. It checks fold row-index integrity, basis expression identity, producer
+lineage, and the validation audit's far-data exclusion declaration. Verified
+group evidence receives a canonical SHA-256 fingerprint. Tampered, incomplete,
+or non-reproducible groups fail closed. Verification remains audit-only:
+`selection_performed` is false, no far/evaluation arrays are accepted, and
+groups remain ineligible for selection until a dedicated group-level
+objective-selection contract is added.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
