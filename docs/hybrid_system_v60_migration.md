@@ -50,7 +50,7 @@ The normalization stage:
 
 The native fitting stage:
 - Processes at most `min(max_candidates, max_search_attempts)` normalized
-  candidates and honors the optional per-discovery wall-time budget.
+  candidates and checks the optional per-discovery wall-time deadline between candidates.
 - Uses the restricted expression parser and NumPy evaluation over the complete
   supplied training matrix.
 - Fits only a scale and offset by least squares; it does not introduce an
@@ -62,7 +62,7 @@ The native fitting stage:
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_contract_generation_normalization_v50_2_discovery`
+- `implementation_mode: native_contract_generation_normalization_fitting_v50_2_discovery`
 - `native_v60_pipeline: false`
 - `native_v60_stages`: contract/run context, bounded template generation,
   expression normalization, semantic identity, deduplication, lineage, and
