@@ -302,6 +302,79 @@ def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
         raise ValueError("selected candidate does not match deterministic Pareto tie-break")
 
 
+def _validate_multi_candidate_provenance(report: dict[str, Any]) -> None:
+    """Recompute serialized candidate-source and Pareto-source audit claims."""
+    provenance = report.get("provenance", {})
+    if not isinstance(provenance, dict):
+        raise ValueError("discovery_report provenance must be an object")
+
+    count_key = "candidate_source_counts"
+    coverage_key = "pareto_source_coverage"
+    has_counts = count_key in provenance
+    has_coverage = coverage_key in provenance
+    if has_counts != has_coverage:
+        raise ValueError("multi-candidate provenance must include both source counts and Pareto coverage")
+    if not has_counts:
+        return
+
+    allowed_sources = DISCOVERY_CANDIDATE_SOURCES
+    recomputed_counts: Counter[str] = Counter()
+    candidate_sources: dict[str, set[str]] = {}
+    for index, candidate in enumerate(report.get("candidates", [])):
+        source = candidate.get("source")
+        if source not in allowed_sources:
+            raise ValueError(f"multi-candidate candidate[{index}] has unsupported source")
+        sources = {source}
+        metrics = candidate.get("metrics", {})
+        source_provenance = metrics.get("source_provenance", [])
+        if not isinstance(source_provenance, list):
+            raise ValueError(
+                f"multi-candidate candidate[{index}] source_provenance must be a list"
+            )
+        for provenance_index, item in enumerate(source_provenance):
+            if not isinstance(item, dict) or item.get("source") not in allowed_sources:
+                raise ValueError(
+                    f"multi-candidate candidate[{index}] source_provenance[{provenance_index}] has invalid source"
+                )
+            if not isinstance(item.get("strategy"), str) or not item["strategy"].strip():
+                raise ValueError(
+                    f"multi-candidate candidate[{index}] source provenance needs a strategy"
+                )
+            sources.add(item["source"])
+        candidate_sources[candidate["candidate_id"]] = sources
+        for candidate_source in sources:
+            recomputed_counts[candidate_source] += 1
+
+    recorded_counts = provenance[count_key]
+    if not isinstance(recorded_counts, dict):
+        raise ValueError("candidate_source_counts must be an object")
+    normalized_counts = {}
+    for source, count in recorded_counts.items():
+        if source not in allowed_sources or isinstance(count, bool) or not isinstance(count, int) or count < 1:
+            raise ValueError("candidate_source_counts contains an invalid source/count")
+        normalized_counts[source] = count
+    if normalized_counts != dict(sorted(recomputed_counts.items())):
+        raise ValueError("candidate_source_counts do not match candidate source provenance")
+
+    pareto_ids = report.get("pareto_candidate_ids", [])
+    expected_pareto_sources = sorted({
+        source
+        for candidate_id in pareto_ids
+        for source in candidate_sources.get(candidate_id, set())
+    })
+    recorded_coverage = provenance[coverage_key]
+    if not isinstance(recorded_coverage, dict):
+        raise ValueError("pareto_source_coverage must be an object")
+    if recorded_coverage.get("sources") != expected_pareto_sources:
+        raise ValueError("Pareto source coverage does not match candidate provenance")
+    expected_both = (
+        "llm_proposal" in expected_pareto_sources
+        and "pysr_search" in expected_pareto_sources
+    )
+    if recorded_coverage.get("contains_llm_and_pysr") is not expected_both:
+        raise ValueError("Pareto cross-source coverage flag does not match candidate provenance")
+
+
 def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
     """Extract a typed report and validate its versioned, serialized contract."""
     if not isinstance(result, dict):
@@ -390,6 +463,7 @@ def _discovery_report_from_result(result: Any) -> dict[str, Any] | None:
             if not isinstance(outcome.get("reason"), str) or not isinstance(outcome.get("evidence"), dict):
                 raise ValueError("discovery_report constraint outcome reason/evidence have invalid types")
 
+    _validate_multi_candidate_provenance(report)
     _validate_soft_constraint_pareto_contract(report)
     _validate_pareto_selection_consistency(report)
 
