@@ -933,6 +933,11 @@ class HybridDiscoverySystem:
                         _raw_inner_candidates = []
                     _envelope_item_count = len(_raw_inner_candidates)
                     _envelope_malformed_count = 0
+                    _generation_summary = result.get("discovery_candidate_generation", {})
+                    _generation_candidate_count = (
+                        _generation_summary.get("deduplicated_candidate_count")
+                        if isinstance(_generation_summary, dict) else None
+                    )
                     for _inner_index, _raw_inner_candidate in enumerate(_raw_inner_candidates):
                         _inner_item_malformed = not isinstance(_raw_inner_candidate, dict)
                         if _inner_item_malformed:
@@ -1135,9 +1140,28 @@ class HybridDiscoverySystem:
                         ),
                         "retained_item_count": _envelope_item_count,
                         "malformed_item_count": _envelope_malformed_count,
+                        "ingestion_failure_count": (
+                            (0 if _envelope_items_are_list else 1)
+                            + _envelope_malformed_count
+                        ),
+                        "generation_reported_candidate_count": _generation_candidate_count,
+                        "count_matches_generation_metadata": (
+                            _envelope_item_count == _generation_candidate_count
+                            if isinstance(_generation_candidate_count, int)
+                            and not isinstance(_generation_candidate_count, bool)
+                            and _envelope_items_are_list else None
+                        ),
                         "ingestion_complete": (
                             _envelope_items_are_list
                             and _envelope_malformed_count == 0
+                            and (
+                                _generation_candidate_count is None
+                                or (
+                                    isinstance(_generation_candidate_count, int)
+                                    and not isinstance(_generation_candidate_count, bool)
+                                    and _envelope_item_count == _generation_candidate_count
+                                )
+                            )
                         ),
                     }
 
