@@ -2,15 +2,20 @@
 
 ## Status
 
-V60 remains opt-in. It now performs typed problem-contract preflight, captures
-an immutable data-free run context, and generates a bounded, deterministic
-pool of algebraic template proposals in
-`hypatiax/tools/symbolic/v60_candidate_generation.py`. Candidate fitting,
-LLM/PySR production, normalization, scientific gates, validation, and
-selection still use the V50.2 compatibility baseline. The template pool is
-reported as generation evidence; it is not yet the selected/fit candidate pool.
-This is a staged migration, not a completed native V60 pipeline or a claim of
-improved scientific performance.
+V60 remains opt-in. It now performs typed problem-contract preflight,
+captures an immutable data-free run context, generates a bounded deterministic
+pool of algebraic templates, and normalizes that pool using the restricted
+symbolic-expression parser. Normalization creates stable semantic candidate
+IDs, deduplicates equivalent expressions, and preserves every contributing
+producer record as lineage. The input-proposal processing ceiling is bounded
+by the problem's `max_candidates` budget.
+
+Candidate fitting, external LLM/PySR production, scientific gates, training
+validation, Pareto selection, and final evaluation still use the V50.2
+compatibility baseline. The normalized native pool is currently reported as
+proposal evidence; it is not yet handed to fitting or selection. This is a
+staged migration, not a completed native V60 pipeline or a claim of improved
+scientific performance.
 
 For calls carrying a typed contract, V60 accepts either:
 - `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
@@ -21,15 +26,30 @@ The preflight checks exact variable-name/order alignment, two-dimensional
 feature shape, feature width, and one target per feature row. It records a
 canonical SHA-256 contract digest plus target/variable identity and input
 shapes. It does not retain training values or accept far/evaluation data.
-Malformed or misaligned explicit contracts fail closed. Calls without a
-typed contract retain the compatibility path.
+Malformed or misaligned explicit contracts fail closed. Calls without a typed
+contract retain the compatibility path.
+
+The normalization stage:
+- Parses expressions with the repository's restricted AST-to-SymPy parser and
+  rejects undeclared variables or unsupported syntax.
+- Uses a simplified symbolic representation for semantic identity, so
+  commutative equivalents such as `x + y` and `y + x` share one candidate ID.
+- Computes candidate IDs from canonical symbolic identity, independent of
+  producer, strategy, or seed.
+- Retains original expression, producer-supplied ID, source, strategy, and seed
+  for every proposal merged into a deduplicated candidate.
+- Records rejected proposal reasons and input-budget truncation counts.
+- Does not inspect targets, training residuals, validation folds, or far data.
 
 Result `implementation_provenance` records:
 - `engine_version: 6.0.0`
-- `implementation_mode: native_bounded_templates_v50_2_compatibility`
+- `implementation_mode: native_contract_generation_normalization_v50_2_discovery`
 - `native_v60_pipeline: false`
-- `native_v60_stages`: typed contract/run context plus bounded data-independent template generation
-- `native_v60_candidate_proposals`: generated proposal records with deterministic IDs, source, strategy, and seed
+- `native_v60_stages`: contract/run context, bounded template generation,
+  expression normalization, semantic identity, deduplication, and lineage
+- `native_v60_candidate_proposals`: normalized proposals with stable IDs and
+  complete producer lineage
+- `native_v60_normalization_audit`: rejection and budget accounting
 - Candidate count and IDs in implementation provenance
 - `native_v60_contract_preflight` and the data-free `v60_run_context`
 - `compatibility_baseline: hybrid_system_v50_2`
@@ -42,13 +62,12 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
 ## Remaining native V60 stages
 
-1. Bounded candidate generation with LLM/PySR producer adapters.
-2. Candidate normalization, identity, deduplication, and lineage.
-3. Hard scientific gates and separately recorded soft diagnostics.
-4. Training-only fold evidence, residual diagnostics, and structure stability.
-5. Pareto selection with independently verifiable objective evidence.
-6. Frozen far-set evaluation after selection.
-7. Versioned discovery report and worker-side integrity verification.
+1. Native candidate fitting and bounded LLM/PySR producer adapters.
+2. Hard scientific gates and separately recorded soft diagnostics.
+3. Training-only fold evidence, residual diagnostics, and structure stability.
+4. Pareto selection with independently verifiable objective evidence.
+5. Frozen far-set evaluation after selection.
+6. Versioned discovery report and worker-side integrity verification.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
@@ -59,8 +78,11 @@ and the Exp2 normalized extrapolation score remain compatibility requirements.
 
 - V50.2 remains the default and is not modified by this stage.
 - V60 is opt-in; no silent selector fallback is permitted.
-- V60 currently owns only contract preflight/run-context capture. Discovery
-  behavior after preflight remains V50.2.
+- V60 currently owns contract preflight, bounded template generation, and
+  proposal normalization/lineage only. Fitting and discovery behavior after
+  those stages remains V50.2.
+- Candidate IDs identify canonical symbolic expressions; producer lineage is
+  stored separately so deduplication never erases source attribution.
 - No benchmark or scientific improvement claim is valid until explicitly
   authorized evaluation provides evidence.
 - Do not launch experiments, workers, benchmarks, smoke workflows, or live

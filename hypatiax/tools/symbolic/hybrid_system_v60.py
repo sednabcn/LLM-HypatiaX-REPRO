@@ -16,6 +16,7 @@ import numpy as np
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 
 
 @dataclass(frozen=True)
@@ -86,13 +87,19 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_preflight_v50_2_discovery"
-    NATIVE_STAGES = ("typed_problem_contract_and_immutable_run_context",)
+    IMPLEMENTATION_MODE = "native_contract_generation_normalization_v50_2_discovery"
+    NATIVE_STAGES = (
+        "typed_problem_contract_and_immutable_run_context",
+        "bounded_data_independent_template_generation",
+        "restricted_expression_normalization_semantic_identity_and_deduplication",
+        "producer_lineage_preservation",
+    )
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._last_v60_run_context: V60RunContext | None = None
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
+        self._last_v60_normalization_audit: dict[str, Any] = {}
 
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
@@ -108,7 +115,9 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_stages": list(self.NATIVE_STAGES),
             "native_v60_contract_preflight": self._last_v60_run_context is not None,
             "native_v60_candidate_generation": self._last_v60_run_context is not None,
+            "native_v60_candidate_normalization": self._last_v60_run_context is not None,
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
+            "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
             "compatibility_baseline": "hybrid_system_v50_2",
@@ -140,6 +149,21 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         prepared, self._last_v60_run_context = _prepare_v60_contract_context(
             X, y, var_names, metadata, self.domain
         )
+        self._last_v60_candidate_proposals = ()
+        self._last_v60_normalization_audit = {}
+        if self._last_v60_run_context is not None:
+            problem = prepared["discovery_problem"]
+            generated = generate_native_template_candidates(problem)
+            normalized = normalize_candidate_proposals(
+                generated,
+                variable_names=problem.variable_names,
+                max_candidates=problem.budget.max_candidates,
+            )
+            self._last_v60_candidate_proposals = tuple(
+                item.to_dict() for item in normalized.candidates
+            )
+            self._last_v60_normalization_audit = normalized.to_dict()
+            self._last_v60_normalization_audit.pop("candidates", None)
         if forwarded is not None:
             if len(forwarded) > 4:
                 forwarded[4] = prepared
