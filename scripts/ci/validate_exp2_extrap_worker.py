@@ -210,6 +210,14 @@ def _validate_pareto_selection_consistency(report: dict[str, Any]) -> None:
             if (isinstance(stability, bool) or not isinstance(stability, (int, float))
                 or not math.isfinite(float(stability)) or not 0.0 <= float(stability) <= 1.0):
                 raise ValueError(f"Pareto candidate[{index}] expression stability audit is invalid")
+            stability_evidence = validation.get("expression_stability")
+            if not isinstance(stability_evidence, dict) or stability_evidence.get("status") != "measured":
+                raise ValueError(f"Pareto candidate[{index}] lacks measured expression-stability evidence")
+            evidence_fraction = stability_evidence.get("dominant_fraction")
+            if (isinstance(evidence_fraction, bool) or not isinstance(evidence_fraction, (int, float))
+                or not math.isfinite(float(evidence_fraction)) or not 0.0 <= float(evidence_fraction) <= 1.0
+                or not math.isclose(float(stability), float(evidence_fraction), rel_tol=1e-9, abs_tol=1e-12)):
+                raise ValueError(f"Pareto candidate[{index}] stability objective does not match training evidence")
             expected_training_values.update({
                 "complexity": float(complexity),
                 "negative_expression_stability": -float(stability),
