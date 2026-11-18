@@ -72,3 +72,62 @@ def test_invalid_held_out_predictions_fail_validation():
         evaluate_pysr_search_on_training_folds(
             BadPySR, X, y, folds, minimum_valid_folds=2
         )
+
+
+class FakeDeadline:
+    def __init__(self, *, expires_after_fit=False):
+        self.is_expired = False
+        self.expires_after_fit = expires_after_fit
+
+    def expired(self):
+        return self.is_expired
+
+    def mark_fit_complete(self):
+        if self.expires_after_fit:
+            self.is_expired = True
+
+
+def test_expired_deadline_prevents_starting_fold_search():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=4)
+    deadline = FakeDeadline()
+    deadline.is_expired = True
+    created = []
+
+    class MustNotFit(FakePySR):
+        def fit(self, X, y):
+            created.append(self)
+            raise AssertionError("expired fold search must not start")
+
+    with pytest.raises(ValueError, match="insufficient valid training folds"):
+        evaluate_pysr_search_on_training_folds(
+            MustNotFit, X, y, folds, minimum_valid_folds=2,
+            budget_runtime=deadline,
+        )
+    assert created == []
+
+
+def test_fold_result_returned_after_deadline_is_rejected():
+    X = np.arange(40, dtype=float).reshape(20, 2)
+    y = X[:, 0]
+    folds = make_training_folds(20, n_splits=2, n_repeats=1, seed=4)
+    deadline = FakeDeadline(expires_after_fit=True)
+    calls = []
+
+    class LatePySR(FakePySR):
+        def fit(self, X, y):
+            calls.append("fit")
+            super().fit(X, y)
+            deadline.mark_fit_complete()
+
+        def get_best(self):
+            calls.append("get_best")
+            return super().get_best()
+
+    with pytest.raises(ValueError, match="insufficient valid training folds"):
+        evaluate_pysr_search_on_training_folds(
+            LatePySR, X, y, folds, minimum_valid_folds=2,
+            budget_runtime=deadline,
+        )
+    assert calls == ["fit"]
