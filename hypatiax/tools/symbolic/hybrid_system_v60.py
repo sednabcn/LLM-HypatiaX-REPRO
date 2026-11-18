@@ -16,6 +16,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
+from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
@@ -159,6 +160,17 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         annotated["native_v60_candidate_proposals"] = [
             dict(item) for item in self._last_v60_candidate_proposals
         ]
+        if self._last_v60_run_context is not None:
+            try:
+                annotated["discovery_report_envelope"] = build_native_discovery_report(
+                    list(self._last_v60_candidate_proposals),
+                    self._last_v60_gate_audit,
+                    self._last_v60_training_validation_audit,
+                    self._last_v60_objective_selection_audit,
+                    run_context=self._last_v60_run_context.to_dict(),
+                )
+            except Exception as exc:
+                annotated["discovery_report_error"] = f"{type(exc).__name__}: {exc}"
         annotated["implementation_provenance"] = provenance
         return annotated
 
