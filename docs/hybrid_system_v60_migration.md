@@ -18,8 +18,8 @@ rejects candidates that cannot produce finite predictions over every training
 row. This fit evidence is audit-only: V50.2 still owns candidate fitting,
 external LLM/PySR production, scientific gates, validation, Pareto selection,
 and final evaluation. Native fit metrics do not rank candidates or influence
-V50.2 selection. This is a staged migration, not a completed native V60 pipeline or a claim of improved
-scientific performance.
+V50.2 selection. This is a staged migration, not a completed native V60
+pipeline or a claim of improved scientific performance.
 
 For calls carrying a typed contract, V60 accepts either:
 - `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
