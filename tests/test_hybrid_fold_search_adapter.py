@@ -145,3 +145,40 @@ def test_engine_rejects_validation_outside_fit_selected_positive_domain():
         assert "positive GM feature domain" in str(exc)
     else:
         raise AssertionError("positive-domain violation must fail closed")
+
+
+
+def test_nested_structure_search_fits_a_fresh_engine_inside_each_fold(monkeypatch):
+    from hypatiax.tools.symbolic.training_validation import make_training_folds
+
+    monkeypatch.setattr(fold_search, "SymbolicEngine", FakeEngine)
+    FakeEngine.instances.clear()
+    X = np.arange(40, dtype=float).reshape(-1, 1)
+    y = np.linspace(1.0, 3.0, 40)
+    folds = make_training_folds(
+        len(y), n_splits=2, n_repeats=1,
+        validation_fraction=0.2, seed=73,
+    )
+
+    result = fold_search.evaluate_nested_hybrid_structure_search_on_training_folds(
+        X,
+        y,
+        folds,
+        variable_names=["x0"],
+        equation_name="nested structure test",
+        domain="general",
+        base_config=FakeConfig(),
+        fold_iterations=10,
+        fold_timeout_seconds=5,
+        minimum_valid_folds=2,
+    )
+
+    assert result["validation_design"] == "nested_fresh_symbolic_search_per_training_fold"
+    assert result["candidate_specific_score"] is False
+    assert result["far_test_data_used"] is False
+    assert result["llm_enabled_in_fold_search"] is False
+    assert len(result["fold_searches"]) == len(folds)
+    assert len(FakeEngine.instances) == len(folds)
+    for engine, fold in zip(FakeEngine.instances, folds):
+        assert engine.fit_X.shape[0] == len(fold.train_indices)
+        assert engine.fit_y.shape[0] == len(fold.train_indices)
