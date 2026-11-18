@@ -1210,3 +1210,45 @@ structure that does not match the final equation cannot lend its validation
 scores to the final equation. This fail-closed boundary prevents a strong but
 different fold-discovered equation from being presented as validation of the
 final selected model.
+
+
+## 25. Production candidate-level Pareto integration of nested structure evidence
+
+The production `HybridDiscoverySystem` report assembly now supports an explicit
+`training_only_search_validation.nested_structure_evidence` setting. This is
+opt-in because it adds fresh fold-local symbolic searches when the experiment
+is run; implementation and PR creation do not execute those searches.
+
+Example runner metadata:
+
+```python
+"training_only_search_validation": {
+    # Existing fold validation settings remain here.
+    "nested_structure_evidence": {
+        "enabled": True,
+        "require_for_selection": True,
+        "minimum_recurrence": 2,
+        "minimum_recurrence_fraction": 0.5,
+    },
+}
+```
+
+When enabled, the discovery path performs one independent pure-PySR structure
+search per already-defined internal training fold, then crosswalks each
+full-training candidate against the recurrent structure groups. Only a unique
+eligible structural match receives candidate-specific nested evidence. A
+parse failure, absent match, ambiguous match, failed fold search, or insufficient
+recurrence is represented as `NO_CREDIBLE_CANDIDATE` for that candidate.
+
+The Pareto selector can require this evidence through
+`require_nested_structure_evidence=True`. Candidates without a successful
+crosswalk are then excluded from the Pareto objective set; if none remain, the
+report fails closed with `insufficient_validation_evidence`. This gate is
+separate from fixed-structure coefficient-refit metrics: nested scores are
+not substituted for, averaged with, or copied into those metrics. Candidate
+complexity and normalized-error objectives remain unchanged.
+
+The nested searches use only the existing internal training folds, remain
+LLM-free, and do not accept far/test arrays. The feature defaults off for
+backward compatibility. Set `require_for_selection=False` only when the
+crosswalk is desired as an audit annotation rather than a selection gate.
