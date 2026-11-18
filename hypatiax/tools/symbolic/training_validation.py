@@ -249,8 +249,11 @@ def make_symbolic_refit_predictor(
     from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
 
     names = tuple(variable_names)
-    if not names or len(set(names)) != len(names):
-        raise ValueError("variable_names must be non-empty and unique")
+    if len(set(names)) != len(names):
+        raise ValueError("variable_names must be unique")
+    # PySR's printable equations use Julia-style '^' for powers; the
+    # restricted Python AST parser requires '**'. No other syntax is rewritten.
+    expression = str(expression).replace("^", "**")
     parsed = parse_sympy_expression(expression, list(names))
     symbols = [sp.Symbol(name, real=True) for name in names]
     exponent_literals = {
@@ -818,11 +821,248 @@ def evaluate_preprocessed_symbolic_candidate_on_training_folds(
     )
 
 
+
+class FoldCandidateFeaturePipeline:
+    """Rebuild exactly the feature symbols used by one candidate inside a fold.
+
+    Unlike FoldFeaturePipeline's complete generated schema, this adapter emits
+    only the candidate's declared symbols, in the candidate's original order.
+    Raw signed-log flags and extreme-column scales are fitted on X_fit only.
+    GM and directed-ratio values are then computed from those frozen transformed
+    columns. Candidate-selected pairs are not silently replaced by a different
+    top-k ratio set in another fold.
+    """
+
+    def __init__(
+        self,
+        raw_feature_names: list[str] | tuple[str, ...],
+        candidate_variable_names: list[str] | tuple[str, ...],
+    ) -> None:
+        self.raw_feature_names = tuple(str(name) for name in raw_feature_names)
+        self.candidate_variable_names = tuple(str(name) for name in candidate_variable_names)
+        if not self.raw_feature_names or len(set(self.raw_feature_names)) != len(self.raw_feature_names):
+            raise ValueError("raw_feature_names must be non-empty and unique")
+        if len(set(self.candidate_variable_names)) != len(self.candidate_variable_names):
+            raise ValueError("candidate_variable_names must be unique")
+        self.preprocessor = FoldFeaturePreprocessor(self.raw_feature_names)
+        self._fitted = False
+
+    def fit(self, X_fit: np.ndarray) -> "FoldCandidateFeaturePipeline":
+        values = np.asarray(X_fit, dtype=float)
+        base = self.preprocessor.fit_transform(values)
+        raw_index = {name: index for index, name in enumerate(self.raw_feature_names)}
+        engineered: dict[str, tuple[str, int, int]] = {}
+        for left_index, left in enumerate(self.raw_feature_names):
+            for right_index in range(left_index + 1, len(self.raw_feature_names)):
+                right = self.raw_feature_names[right_index]
+                engineered[f"gm_{left}_{right}"] = ("gm", left_index, right_index)
+            for right_index, right in enumerate(self.raw_feature_names):
+                if left_index != right_index:
+                    engineered[f"ratio_{left}_{right}"] = ("ratio", left_index, right_index)
+
+        collisions = set(raw_index).intersection(engineered)
+        if collisions:
+            raise ValueError(
+                f"raw and engineered feature names collide: {sorted(collisions)}"
+            )
+        missing = [
+            name for name in self.candidate_variable_names
+            if name not in raw_index and name not in engineered
+        ]
+        if missing:
+            raise ValueError(f"candidate references unknown engineered feature(s): {missing}")
+
+        self._feature_specs = []
+        for name in self.candidate_variable_names:
+            if name in raw_index:
+                self._feature_specs.append(("raw", raw_index[name], -1))
+            else:
+                kind, left, right = engineered[name]
+                self._feature_specs.append((kind, left, right))
+        self.n_features_in_ = int(values.shape[1])
+        self._fitted = True
+        # Fail on invalid fit-domain features before scoring any validation rows.
+        self.transform(values)
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldCandidateFeaturePipeline must be fitted first")
+        values = self.preprocessor.transform(X)
+        columns = []
+        for kind, left, right in self._feature_specs:
+            if kind == "raw":
+                feature = values[:, left]
+            elif kind == "gm":
+                a, b = values[:, left], values[:, right]
+                if np.any(a <= 0.0) or np.any(b <= 0.0):
+                    raise ValueError("candidate geometric-mean feature left its positive domain")
+                with np.errstate(invalid="ignore", over="ignore"):
+                    feature = np.sqrt(a * b)
+            else:
+                a, b = values[:, left], values[:, right]
+                if np.any(a <= 0.0) or np.any(b <= 0.0):
+                    raise ValueError("candidate ratio feature left its positive domain")
+                with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+                    feature = a / (b + 1e-300)
+            if not np.isfinite(feature).all():
+                raise FloatingPointError("candidate engineered feature is non-finite")
+            columns.append(np.asarray(feature, dtype=float).reshape(-1, 1))
+        result = (
+            np.column_stack(columns)
+            if columns else np.empty((values.shape[0], 0), dtype=float)
+        )
+        if result.shape != (values.shape[0], len(self.candidate_variable_names)):
+            raise RuntimeError("candidate fold feature matrix has an invalid schema")
+        return result
+
+    def audit_state(self) -> dict:
+        if not self._fitted:
+            raise RuntimeError("FoldCandidateFeaturePipeline is not fitted")
+        return {
+            "raw_feature_names": list(self.raw_feature_names),
+            "candidate_variable_names": list(self.candidate_variable_names),
+            "feature_specs": [
+                {"kind": kind, "left_index": left, "right_index": right}
+                for kind, left, right in self._feature_specs
+            ],
+            "preprocessing": self.preprocessor.audit_state(),
+            "fit_scope": "fold_fitting_rows_only",
+            "validation_used_for_feature_selection": False,
+            "ratio_selection": "candidate_specific_pair_reconstructed_per_fold",
+        }
+
+
+class FoldTargetPreprocessor:
+    """Reproduce Hybrid's outer signed-log and inner std target transforms per fold."""
+
+    def __init__(self, *, log_range_threshold: float = 4.0,
+                 scale_low: float = 1e-4, scale_high: float = 1e4) -> None:
+        if log_range_threshold <= 0 or not 0 < scale_low < scale_high:
+            raise ValueError("invalid target preprocessing thresholds")
+        self.log_range_threshold = float(log_range_threshold)
+        self.scale_low = float(scale_low)
+        self.scale_high = float(scale_high)
+        self._fitted = False
+
+    @staticmethod
+    def _signed_log10(values: np.ndarray) -> np.ndarray:
+        return np.sign(values) * np.log10(np.abs(values) + 1.0)
+
+    def fit(self, y_fit: np.ndarray) -> "FoldTargetPreprocessor":
+        values = np.asarray(y_fit, dtype=float).reshape(-1)
+        if values.size < 2 or not np.isfinite(values).all():
+            raise ValueError("y_fit must contain at least two finite observations")
+        nonzero = np.abs(values[values != 0.0])
+        self.log_enabled_ = bool(
+            nonzero.size >= 2
+            and np.log10(float(nonzero.max())) - np.log10(float(nonzero.min()))
+                > self.log_range_threshold
+        )
+        outer = self._signed_log10(values) if self.log_enabled_ else values.copy()
+        std = float(np.std(outer))
+        self.scale_ = std if std > 0.0 and (
+            std < self.scale_low or std > self.scale_high
+        ) else 1.0
+        self._fitted = True
+        return self
+
+    def transform(self, y: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetPreprocessor must be fitted first")
+        values = np.asarray(y, dtype=float).reshape(-1)
+        if not np.isfinite(values).all():
+            raise ValueError("target values must be finite")
+        outer = self._signed_log10(values) if self.log_enabled_ else values
+        result = outer / self.scale_
+        if not np.isfinite(result).all():
+            raise FloatingPointError("fold target transform produced non-finite values")
+        return result
+
+    def inverse_transform(self, y_fit_space: np.ndarray) -> np.ndarray:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetPreprocessor must be fitted first")
+        values = np.asarray(y_fit_space, dtype=float).reshape(-1) * self.scale_
+        if not np.isfinite(values).all():
+            raise FloatingPointError("fold target inverse scale is non-finite")
+        if self.log_enabled_:
+            exponent = np.clip(np.abs(values), 0.0, 308.0)
+            with np.errstate(over="ignore", invalid="ignore"):
+                values = np.sign(values) * (np.power(10.0, exponent) - 1.0)
+        if not np.isfinite(values).all():
+            raise FloatingPointError("fold target inverse transform is non-finite")
+        return values
+
+    def audit_state(self) -> dict:
+        if not self._fitted:
+            raise RuntimeError("FoldTargetPreprocessor is not fitted")
+        return {
+            "signed_log10": bool(self.log_enabled_),
+            "std_scale": float(self.scale_),
+            "fit_scope": "fold_fitting_targets_only",
+            "centering": "none",
+        }
+
+
+def evaluate_engine_candidate_on_training_folds(
+    expression: str,
+    candidate_variable_names: list[str] | tuple[str, ...],
+    raw_feature_names: list[str] | tuple[str, ...],
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    folds: tuple[TrainingFold, ...],
+    *,
+    minimum_valid_folds: int = 2,
+    max_nfev: int = 500,
+) -> CandidateValidationSummary:
+    """Evaluate an engine-space candidate with fold-local features and target transforms.
+
+    The expression must be the unannotated PySR fit-space expression, and its
+    variable names must be the exact PySR feature schema for that candidate.
+    Coefficients are refitted on each fold's fitting partition; validation rows
+    are transformed with parameters learned only from that partition.
+    """
+    names = tuple(candidate_variable_names)
+    raw_names = tuple(raw_feature_names)
+    import sympy as sp
+    from hypatiax.tools.validation.safe_sympy_parser import parse_sympy_expression
+
+    normalized_expression = str(expression).replace("^", "**")
+    parsed = parse_sympy_expression(normalized_expression, list(names))
+    used_names = tuple(
+        name for name in names
+        if sp.Symbol(name, real=True) in parsed.free_symbols
+    )
+    refit = make_symbolic_refit_predictor(
+        normalized_expression, used_names, max_nfev=max_nfev
+    )
+
+    def predict(X_fit, y_fit, X_validation):
+        feature_pipeline = FoldCandidateFeaturePipeline(raw_names, used_names).fit(X_fit)
+        X_fit_features = feature_pipeline.transform(X_fit)
+        X_validation_features = feature_pipeline.transform(X_validation)
+        target_pipeline = FoldTargetPreprocessor().fit(y_fit)
+        y_fit_transformed = target_pipeline.transform(y_fit)
+        prediction_transformed, fitted_expression = refit(
+            X_fit_features, y_fit_transformed, X_validation_features
+        )
+        prediction = target_pipeline.inverse_transform(prediction_transformed)
+        return prediction, fitted_expression
+
+    return evaluate_candidate_on_training_folds(
+        expression, predict, X_train, y_train, tuple(folds),
+        minimum_valid_folds=minimum_valid_folds,
+    )
+
+
 __all__ = [
     "FoldFeaturePreprocessor",
     "FoldFeaturePlan",
     "FoldFeaturePipeline",
     "FoldTargetScaler",
+    "FoldCandidateFeaturePipeline",
+    "FoldTargetPreprocessor",
+    "evaluate_engine_candidate_on_training_folds",
     "make_fold_preprocessed_symbolic_predictor",
     "evaluate_preprocessed_symbolic_candidate_on_training_folds",
     "TrainingFold",

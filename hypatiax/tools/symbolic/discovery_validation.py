@@ -51,6 +51,8 @@ class CandidateValidator:
         source: str = "pysr_search",
         search_strategy: str = "default",
         seed: int | None = None,
+        candidate_variable_names: list[str] | tuple[str, ...] | None = None,
+        feature_substitutions: Mapping[str, str] | None = None,
     ) -> CandidateRecord:
         """Parse and validate a candidate; no training or far target data accepted."""
         if not isinstance(problem, DiscoveryProblem):
@@ -62,9 +64,32 @@ class CandidateValidator:
         try:
             import sympy as sp
 
-            parsed = parse_sympy_expression(normalized, list(problem.variable_names))
+            expression_names = tuple(
+                candidate_variable_names or problem.variable_names
+            )
+            parsed = parse_sympy_expression(normalized, list(expression_names))
             if parsed is None or parsed.has(sp.zoo, sp.nan, sp.oo, -sp.oo):
                 raise ValueError("expression contains a non-finite symbolic value")
+            substitutions = dict(feature_substitutions or {})
+            unknown_substitutions = set(substitutions) - set(expression_names)
+            if unknown_substitutions:
+                raise ValueError(
+                    f"feature substitutions contain undeclared symbols: {sorted(unknown_substitutions)}"
+                )
+            if substitutions:
+                replacements = {}
+                for feature_name, raw_expression in substitutions.items():
+                    replacements[sp.Symbol(feature_name, real=True)] = (
+                        parse_sympy_expression(raw_expression, list(problem.variable_names))
+                    )
+                parsed = parsed.xreplace(replacements)
+                if parsed.free_symbols - {
+                    sp.Symbol(name, real=True) for name in problem.variable_names
+                }:
+                    raise ValueError("expanded expression still contains undeclared symbols")
+                normalized = sp.sstr(parsed)
+                if len(normalized) > 20000:
+                    raise ValueError("expanded physical expression is too long")
             outcomes.append(ConstraintOutcome(
                 self.BUILTIN_SYMBOLIC_ID, "pass", "hard",
                 "Expression parsed with the restricted mathematical grammar",
@@ -287,7 +312,7 @@ class CandidateValidator:
         }
         fn = sp.lambdify(
             [symbols[name] for name in problem.variable_names],
-            expression, modules=["math"],
+            expression, modules=[{"sign": lambda value: (value > 0) - (value < 0)}, "math"],
         )
         values = []
         for point in points:

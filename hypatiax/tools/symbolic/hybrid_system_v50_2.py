@@ -745,6 +745,71 @@ class HybridDiscoverySystem:
                 and candidate_complexity < current_complexity
             )
 
+
+        def _candidate_gate_payload(candidate_result, fallback_expression):
+            """Map the engine's fit-space expression back to raw input variables."""
+            fit_expression = str(
+                candidate_result.get("fit_expression") or fallback_expression
+            ).strip().replace("^", "**")
+            fit_names = list(
+                candidate_result.get("fit_variable_names")
+                or candidate_result.get("variable_names")
+                or variable_names
+            )
+            state = candidate_result.get("fit_transform_state") or {}
+            if not state:
+                return fit_expression, fit_names, {}
+
+            raw_names = list(variable_names)
+            if len(fit_names) < len(raw_names):
+                raise ValueError("fit feature schema omits declared raw variables")
+            scales = list(state.get("x_scales", []))
+            if len(scales) != len(raw_names):
+                raise ValueError("fit transform state does not match raw feature count")
+            log_flags = list(
+                getattr(self, "_discover_x_log_flags", [False] * len(raw_names))
+            )
+            if len(log_flags) != len(raw_names):
+                raise ValueError("outer log flags do not match raw feature count")
+
+            substitutions = {}
+            for index, (raw_name, fit_name) in enumerate(zip(raw_names, fit_names)):
+                if log_flags[index]:
+                    base = f"(sign({raw_name})*log10(abs({raw_name})+1))"
+                else:
+                    base = raw_name
+                scale = float(scales[index])
+                if not np.isfinite(scale) or scale <= 0:
+                    raise ValueError("fit feature scale must be finite and positive")
+                substitutions[fit_name] = f"(({base})/{scale:.17g})"
+
+            for left, right in state.get("gm_pairs", []):
+                left_name, right_name = fit_names[int(left)], fit_names[int(right)]
+                engineered_name = f"gm_{left_name}_{right_name}"
+                substitutions[engineered_name] = (
+                    f"sqrt(({substitutions[left_name]})*({substitutions[right_name]}))"
+                )
+            for numerator, denominator in state.get("ratio_pairs", []):
+                numerator_name = fit_names[int(numerator)]
+                denominator_name = fit_names[int(denominator)]
+                engineered_name = f"ratio_{numerator_name}_{denominator_name}"
+                substitutions[engineered_name] = (
+                    f"({substitutions[numerator_name]}/"
+                    f"({substitutions[denominator_name]}+1e-300))"
+                )
+
+            y_scale = float(state.get("y_std", 1.0))
+            if not np.isfinite(y_scale) or y_scale <= 0:
+                raise ValueError("fit target scale must be finite and positive")
+            fit_output = f"({y_scale:.17g}*({fit_expression}))"
+            if bool(getattr(self, "_discover_y_log", False)):
+                physical_expression = (
+                    f"(sign({fit_output})*(10**abs({fit_output})-1))"
+                )
+            else:
+                physical_expression = fit_output
+            return physical_expression, fit_names, substitutions
+
         for attempt in range(self.max_retries):
             result = None
             try:
@@ -812,12 +877,17 @@ class HybridDiscoverySystem:
                 _candidate_gate = None
                 _candidate_gate_passed = True
                 if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
+                    _gate_expression, _gate_variable_names, _gate_substitutions = (
+                        _candidate_gate_payload(result, expr)
+                    )
                     _candidate_gate = self._candidate_validator.validate(
                         getattr(self, "_active_discovery_problem", None),
-                        expr,
+                        _gate_expression,
                         source="pysr_search",
                         search_strategy="retry_search",
                         seed=seed,
+                        candidate_variable_names=_gate_variable_names,
+                        feature_substitutions=_gate_substitutions,
                     )
                     _candidate_gate_passed = bool(_candidate_gate.eligible)
                     result["candidate_validation"] = _candidate_gate.to_dict()
@@ -1077,9 +1147,21 @@ class HybridDiscoverySystem:
                 _metrics = dict(_record.metrics)
                 if _record.eligible and _folds:
                     try:
+                        _fit_expression = str(
+                            _attempt_result.get("fit_expression")
+                            or _attempt_result.get("expression")
+                            or _record.expression
+                        )
+                        _fit_variable_names = list(
+                            _attempt_result.get("fit_variable_names")
+                            or _attempt_result.get("variable_names")
+                            or _problem.variable_names
+                        )
+                        _raw_safe_names = _fit_variable_names[:len(_problem.variable_names)]
                         _summary = evaluate_hybrid_candidate_on_training_folds(
-                            _record.expression,
-                            list(_problem.variable_names),
+                            _fit_expression,
+                            _fit_variable_names,
+                            _raw_safe_names,
                             _raw_X,
                             _raw_y,
                             _folds,
@@ -1107,7 +1189,10 @@ class HybridDiscoverySystem:
                     "fold_count": len(_folds),
                     "fold_creation_error": _fold_creation_error,
                     "minimum_valid_folds": _minimum_folds,
-                    "candidate_evaluation": "fold_local_signed_log_scale_and_coefficient_refit",
+                    "candidate_evaluation": (
+                        "fold_local_signed_log_x_scale_engineered_features_target_transform_and_coefficient_refit"
+                    ),
+                    "candidate_feature_support": ["raw", "geometric_mean", "directed_ratio"],
                 },
                 minimum_valid_folds=_minimum_folds,
             )

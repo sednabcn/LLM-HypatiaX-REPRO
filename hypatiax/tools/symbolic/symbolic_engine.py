@@ -2128,6 +2128,13 @@ class SymbolicEngine:
                     _trace.append(f"selection={_sel_rule}")
                     _trace.append(f"best_expr={expression[:80]}")
 
+                    # Keep the exact unannotated fit-space structure and feature
+                    # schema separately. Candidate-level fold validation must refit
+                    # this structure with transforms learned inside each fold; the
+                    # display expression below contains scale annotations.
+                    _fit_expression = str(expression)
+                    _fit_variable_names = list(safe_names)
+
                     # If y was scaled, fold the scale factor into the expression so
                     # the string represents the original (physical) equation.
                     if _y_std != 1.0:
@@ -2171,6 +2178,9 @@ class SymbolicEngine:
                     _result = {
                         "expression": expression,
                         "equation": expression,
+                        "fit_expression": _fit_expression,
+                        "fit_variable_names": _fit_variable_names,
+                        "fit_transform_state": dict(self._last_fold_transform_state),
                         "r2_score": r2,
                         "complexity": _best_complexity,
                         "variable_names": safe_names,
@@ -2432,6 +2442,29 @@ class SymbolicEngineWithLLM(SymbolicEngine):
                 auto_sanitize=auto_sanitize,
                 **kwargs,
             )
+
+        # LLM-selected equations are expressed in the outer Hybrid fit space,
+        # but do not have PySR's inner X/y scaling or engineered-feature state.
+        # Publish an explicit identity inner-transform contract so the same
+        # candidate-level fold evaluator can replay the outer transforms learned
+        # independently inside each fold.
+        if (
+            isinstance(result, dict)
+            and "fit_expression" not in result
+            and str(result.get("llm_mode", "")).endswith("_llm_better")
+        ):
+            _llm_names = list(result.get("variable_names") or variable_names)
+            result["fit_expression"] = str(result.get("expression", "")).replace("^", "**")
+            result["fit_variable_names"] = _llm_names
+            result["fit_transform_state"] = {
+                "input_feature_count": len(_llm_names),
+                "x_scales": [1.0] * len(_llm_names),
+                "gm_pairs": [],
+                "ratio_pairs": [],
+                "y_std": 1.0,
+                "feature_names": list(_llm_names),
+                "transform_source": "llm_outer_fit_space_identity_inner_transform",
+            }
 
         # Keep the LLM client alive for the lifetime of this discovery engine.
         # HybridDiscoverySystem retries by calling discover() repeatedly; dropping

@@ -78,3 +78,65 @@ def test_untrusted_expression_is_rejected_by_restricted_parser():
 
     assert candidate.eligible is False
     assert candidate.constraint_outcomes[0].status == "fail"
+
+
+
+def test_candidate_validator_expands_engineered_features_to_declared_raw_variables():
+    problem = DiscoveryProblem(
+        target_name="amplitude",
+        variable_names=("a", "b"),
+        variable_domains={
+            "a": {"minimum": 1.0, "maximum": 5.0},
+            "b": {"minimum": 2.0, "maximum": 8.0},
+        },
+        constraints=(
+            ConstraintSpec(
+                constraint_id="amplitude-nonnegative",
+                kind="nonnegative_output",
+                severity="hard",
+            ),
+        ),
+    )
+
+    candidate = CandidateValidator().validate(
+        problem,
+        "1.0*gm_a_b",
+        candidate_variable_names=("a", "b", "gm_a_b"),
+        feature_substitutions={
+            "a": "a",
+            "b": "b",
+            "gm_a_b": "sqrt(a*b)",
+        },
+    )
+
+    assert candidate.eligible is True
+    assert "sqrt" in candidate.expression
+    assert candidate.constraint_outcomes[-1].status == "pass"
+
+
+def test_candidate_validator_supports_expanded_fold_log_transform_safely():
+    problem = DiscoveryProblem(
+        target_name="response",
+        variable_names=("x",),
+        variable_domains={"x": {"minimum": -5.0, "maximum": 5.0}},
+        constraints=(
+            ConstraintSpec(
+                constraint_id="finite-response",
+                kind="finite_output",
+                severity="hard",
+            ),
+        ),
+    )
+
+    candidate = CandidateValidator().validate(
+        problem,
+        "u",
+        candidate_variable_names=("u",),
+        feature_substitutions={
+            "u": "sign(x)*log10(abs(x)+1)",
+        },
+    )
+
+    assert candidate.eligible is True
+    assert "sign" in candidate.expression
+    assert candidate.constraint_outcomes[-1].status == "pass"
