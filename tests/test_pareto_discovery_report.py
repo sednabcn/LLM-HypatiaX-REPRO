@@ -8,7 +8,7 @@ from hypatiax.tools.symbolic.pareto_discovery import (
 )
 
 
-def _candidate(expression, seed, scores, *, eligible=True, outcomes=()):
+def _candidate(expression, seed, scores, *, eligible=True, outcomes=(), stability=1.0):
     return CandidateRecord(
         expression=expression,
         source="pysr_search",
@@ -21,8 +21,9 @@ def _candidate(expression, seed, scores, *, eligible=True, outcomes=()):
                     {"normalized_rmse": score} for score in scores
                 ],
                 "expression_stability": {
-                    "status": "measured",
-                    "dominant_fraction": 1.0,
+                    "status": "measured" if stability is not None else "insufficient_evidence",
+                    "expression_count": len(scores) if stability is not None else 0,
+                    "dominant_fraction": stability,
                 },
             }
         },
@@ -166,7 +167,7 @@ def test_required_nested_evidence_has_explicit_exclusion_reason_and_policy():
         "eligibility_reasons"
     ]
     assert report.provenance["selection_policy"] == (
-        "training_only_pareto_v2_nested_structure_gate"
+        "training_only_pareto_v4_nested_structure_stability"
     )
 
 
@@ -190,3 +191,54 @@ def test_candidate_declared_rejection_reason_is_retained_in_pareto_audit():
     )
     reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
     assert "candidate_failed_domain_gate" in reasons
+
+
+
+def test_expression_stability_is_a_pareto_objective_not_only_a_tie_break():
+    stable = _candidate("x + 1.0", 21, [0.1, 0.2], stability=1.0)
+    unstable = _candidate("x + 2.0", 22, [0.1, 0.2], stability=0.5)
+
+    report = select_pareto_discovery_report(
+        [stable, unstable], variable_names=["x"]
+    )
+
+    assert report.pareto_candidate_ids == (stable.candidate_id,)
+    assert report.selected_candidate_id == stable.candidate_id
+    stable_objectives = report.candidates[0].metrics["pareto_selection"]["objectives"]
+    assert stable_objectives["negative_expression_stability"] == -1.0
+    assert "expression_stability_fraction_max" in report.provenance["objectives"]
+
+
+def test_missing_expression_stability_excludes_candidate_with_reason():
+    candidate = _candidate("x", 23, [0.1, 0.2], stability=None)
+    report = select_pareto_discovery_report(
+        [candidate], variable_names=["x"]
+    )
+
+    assert report.status == "insufficient_validation_evidence"
+    assert report.selected_candidate_id is None
+    reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
+    assert "expression_stability_unavailable" in reasons
+
+
+
+def test_stability_requires_a_measured_expression_for_each_required_fold():
+    candidate = _candidate("x", 24, [0.1, 0.2])
+    metrics = candidate.to_dict()["metrics"]
+    metrics["training_validation"]["expression_stability"]["expression_count"] = 1
+    incomplete = CandidateRecord(
+        expression=candidate.expression,
+        source=candidate.source,
+        search_strategy=candidate.search_strategy,
+        seed=candidate.seed,
+        metrics=metrics,
+        eligible=True,
+    )
+
+    report = select_pareto_discovery_report(
+        [incomplete], variable_names=["x"], minimum_valid_folds=2
+    )
+
+    reasons = report.candidates[0].metrics["pareto_selection"]["eligibility_reasons"]
+    assert "expression_stability_unavailable" in reasons
+    assert report.selected_candidate_id is None

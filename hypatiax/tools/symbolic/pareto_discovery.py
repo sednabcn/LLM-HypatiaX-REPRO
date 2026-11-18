@@ -58,23 +58,36 @@ def _complexity(candidate: CandidateRecord, variable_names: Sequence[str]) -> in
         return None
 
 
-def _stability(candidate: CandidateRecord) -> float | None:
+def _stability(
+    candidate: CandidateRecord, minimum_expression_count: int
+) -> float | None:
     validation = candidate.metrics.get("training_validation", {})
     if not isinstance(validation, Mapping):
         return None
     stability = validation.get("expression_stability", {})
-    if not isinstance(stability, Mapping):
+    if not isinstance(stability, Mapping) or stability.get("status") != "measured":
+        return None
+    count = stability.get("expression_count")
+    if (
+        isinstance(count, bool)
+        or not isinstance(count, int)
+        or count < minimum_expression_count
+    ):
         return None
     value = stability.get("dominant_fraction")
-    if isinstance(value, (int, float)) and math.isfinite(float(value)):
-        if 0.0 <= float(value) <= 1.0:
-            return float(value)
+    if (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and 0.0 <= float(value) <= 1.0
+    ):
+        return float(value)
     return None
 
 
 def _dominates(left: Mapping[str, float], right: Mapping[str, float]) -> bool:
     """All objectives are minimized; require one strict improvement."""
-    keys = ("mean_normalized_rmse", "worst_normalized_rmse", "complexity")
+    keys = ("mean_normalized_rmse", "worst_normalized_rmse", "complexity", "negative_expression_stability")
     no_worse = all(left[key] <= right[key] for key in keys)
     strictly_better = any(left[key] < right[key] for key in keys)
     return no_worse and strictly_better
@@ -120,7 +133,7 @@ def select_pareto_discovery_report(
         metrics = dict(candidate.metrics)
         scores = _finite_fold_scores(candidate)
         node_count = _complexity(candidate, variable_names)
-        stable_fraction = _stability(candidate)
+        stable_fraction = _stability(candidate, minimum_valid_folds)
         gate_ok = _hard_gates_pass(candidate)
         if gate_ok:
             gate_eligible_count += 1
@@ -152,6 +165,8 @@ def select_pareto_discovery_report(
             eligibility_reasons.append("missing_or_nonfinite_normalized_fold_scores")
         if node_count is None:
             eligibility_reasons.append("symbolic_complexity_unavailable")
+        if stable_fraction is None:
+            eligibility_reasons.append("expression_stability_unavailable")
         if require_nested_structure_evidence and not nested_ok:
             eligibility_reasons.append("required_nested_structure_evidence_not_matched")
         eligibility_reasons = list(dict.fromkeys(eligibility_reasons))
@@ -161,6 +176,8 @@ def select_pareto_discovery_report(
                 "mean_normalized_rmse": sum(scores) / len(scores),
                 "worst_normalized_rmse": max(scores),
                 "complexity": float(node_count),
+                # Minimize the negative fraction, i.e. maximize recurrence.
+                "negative_expression_stability": -float(stable_fraction),
             }
         metrics["pareto_selection"] = {
             "hard_gates_passed": gate_ok,
@@ -193,7 +210,11 @@ def select_pareto_discovery_report(
             failure_reasons=(reason,),
             provenance={
                 **dict(provenance or {}),
-                "selection_policy": "training_only_pareto_v2_nested_structure_gate" if require_nested_structure_evidence else "training_only_pareto_v1",
+                "selection_policy": (
+                    "training_only_pareto_v4_nested_structure_stability"
+                    if require_nested_structure_evidence
+                    else "training_only_pareto_v3_stability"
+                ),
                 "selection_data_scope": "training_region_only",
             },
         )
@@ -207,8 +228,8 @@ def select_pareto_discovery_report(
             for other_id in ids
         )
     )
-    # Deterministic recommendation among the Pareto set. Stability is a
-    # diagnostic tie-break only; missing stability sorts after measured values.
+    # All scientific objectives are represented in the Pareto front.
+    # This deterministic tie-break only resolves exact objective ties.
     selected_candidate = {
         candidate.candidate_id: candidate for candidate in enriched
     }
@@ -218,8 +239,6 @@ def select_pareto_discovery_report(
             objectives[candidate_id]["mean_normalized_rmse"],
             objectives[candidate_id]["worst_normalized_rmse"],
             objectives[candidate_id]["complexity"],
-            _stability(selected_candidate[candidate_id]) is None,
-            -(_stability(selected_candidate[candidate_id]) or 0.0),
             candidate_id,
         ),
     )
@@ -237,20 +256,20 @@ def select_pareto_discovery_report(
         provenance={
             **dict(provenance or {}),
             "selection_policy": (
-                "training_only_pareto_v2_nested_structure_gate"
-                if require_nested_structure_evidence else "training_only_pareto_v1"
+                "training_only_pareto_v4_nested_structure_stability"
+                if require_nested_structure_evidence else "training_only_pareto_v3_stability"
             ),
             "selection_data_scope": "training_region_only",
             "objectives": [
                 "mean_normalized_rmse_min",
                 "worst_normalized_rmse_min",
                 "symbolic_operation_count_min",
+                "expression_stability_fraction_max",
             ],
             "tie_break": [
                 "mean_normalized_rmse",
                 "worst_normalized_rmse",
                 "symbolic_operation_count",
-                "expression_stability_fraction_diagnostic",
                 "candidate_id",
             ],
             "far_test_data_used_for_selection": False,

@@ -185,7 +185,7 @@ def _pareto_candidate(nested_evidence=None):
                 {"normalized_rmse": 0.1},
                 {"normalized_rmse": 0.12},
             ],
-            "expression_stability": {"dominant_fraction": 1.0},
+            "expression_stability": {"status": "measured", "expression_count": 2, "dominant_fraction": 1.0},
         }
     }
     if nested_evidence is not None:
