@@ -1351,3 +1351,25 @@ The search-attempt counter continues to mean outer HybridDiscovery retries;
 fold searches are not re-labelled as outer attempts. Fold-level work is bounded
 by the shared wall-time deadline and its existing explicit fold iteration and
 per-fit timeout settings. No far/test data is passed to these stages.
+
+
+## 31. Deadline enforcement for fixed-candidate fold validation
+
+The shared discovery deadline also applies to the fixed-structure candidate
+evaluation used by the production Pareto report. The evaluator checks the
+monotonic deadline before starting each fold and immediately after the
+fold-local preprocessing, coefficient refit, and validation prediction
+callback returns. A late result raises a deadline error and is not converted
+into a failed-fold metric or included in a partial validation summary.
+
+For a typed `DiscoveryProblem` with training-only candidate validation
+configured, expiry before report assembly no longer bypasses the report and
+returns the retry loop's highest-training-R² candidate. Instead, the report
+is assembled with explicit missing validation evidence and the Pareto selector
+fails closed with `insufficient_validation_evidence`. The retry-loop score is
+not a substitute for held-out training-fold evidence.
+
+This is cooperative enforcement: a coefficient optimizer or prediction
+callback already in progress is not interrupted. Its result is discarded if
+it returns after the shared deadline. No far/test data is introduced, and the
+outer search-attempt counter remains distinct from fold-level work.
