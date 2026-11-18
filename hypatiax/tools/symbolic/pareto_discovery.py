@@ -58,17 +58,30 @@ def _complexity(candidate: CandidateRecord, variable_names: Sequence[str]) -> in
         return None
 
 
-def _stability(candidate: CandidateRecord) -> float | None:
+def _stability(
+    candidate: CandidateRecord, minimum_expression_count: int
+) -> float | None:
     validation = candidate.metrics.get("training_validation", {})
     if not isinstance(validation, Mapping):
         return None
     stability = validation.get("expression_stability", {})
-    if not isinstance(stability, Mapping):
+    if not isinstance(stability, Mapping) or stability.get("status") != "measured":
+        return None
+    count = stability.get("expression_count")
+    if (
+        isinstance(count, bool)
+        or not isinstance(count, int)
+        or count < minimum_expression_count
+    ):
         return None
     value = stability.get("dominant_fraction")
-    if isinstance(value, (int, float)) and math.isfinite(float(value)):
-        if 0.0 <= float(value) <= 1.0:
-            return float(value)
+    if (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(float(value))
+        and 0.0 <= float(value) <= 1.0
+    ):
+        return float(value)
     return None
 
 
@@ -120,7 +133,7 @@ def select_pareto_discovery_report(
         metrics = dict(candidate.metrics)
         scores = _finite_fold_scores(candidate)
         node_count = _complexity(candidate, variable_names)
-        stable_fraction = _stability(candidate)
+        stable_fraction = _stability(candidate, minimum_valid_folds)
         gate_ok = _hard_gates_pass(candidate)
         if gate_ok:
             gate_eligible_count += 1
