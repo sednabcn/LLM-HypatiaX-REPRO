@@ -426,3 +426,18 @@ well-formed but unrelated model digest or fabricated/malformed metric fields
 can no longer make the far-evaluation section appear attached to the
 finalized result. The worker still performs no far-set computation, model
 refit, selection, retry, provider call, or discovery.
+
+
+## Stage 25 — verify native fit metric arithmetic at worker ingress
+
+The worker now checks that the finalized model's training NRMSE is
+mathematically consistent with its recorded training RMSE and target standard
+deviation. A positive target standard deviation requires the corresponding
+finite, non-negative ratio; a zero-variance target requires NRMSE to be null,
+matching the native finalizer's undefined-normalizer semantics. The worker
+also rejects negative design condition numbers and negative far-set NRMSE.
+
+Completed far-evaluation model and far-set identifiers must be lowercase
+64-character SHA-256 digests, rather than merely strings of the right length.
+These checks strengthen the serialized metric contract without recomputing
+training or far predictions, loading datasets, or changing model selection.
