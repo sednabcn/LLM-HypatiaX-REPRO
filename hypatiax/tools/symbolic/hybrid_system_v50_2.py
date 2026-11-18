@@ -471,6 +471,7 @@ class HybridDiscoverySystem:
         self.max_retries = max_retries
         self.enable_auto_config = enable_auto_config
         self._active_discovery_problem: DiscoveryProblem | None = None
+        self._active_budget_runtime = None
         self._candidate_validator = CandidateValidator()
         self.use_llm = use_llm
         self.requested_llm_mode = llm_mode if use_llm else "none"  # Issue-5: immutable intent
@@ -810,12 +811,24 @@ class HybridDiscoverySystem:
                 physical_expression = fit_output
             return physical_expression, fit_names, substitutions
 
-        for attempt in range(self.max_retries):
+        _budget_runtime = getattr(self, "_active_budget_runtime", None)
+        _search_limit = (
+            min(self.max_retries, _budget_runtime.budget.max_search_attempts)
+            if _budget_runtime is not None else self.max_retries
+        )
+        for attempt in range(_search_limit):
+            if _budget_runtime is not None:
+                if not _budget_runtime.can_start_search(self.max_retries):
+                    break
+                _budget_runtime.record_search_attempt()
             result = None
             try:
                 # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
                 # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
-                seed = int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")) + attempt
+                seed = int(
+                    getattr(self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+                ) + attempt
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
 
@@ -902,6 +915,13 @@ class HybridDiscoverySystem:
                 elif getattr(self, "_active_discovery_problem", None) is None:
                     result["candidate_validation_status"] = "not_configured"
                 if _valid_expression and _valid_score:
+                    _result_is_llm_proposal = str(result.get("llm_mode", "")).endswith("_llm_better")
+                    if (
+                        _budget_runtime is not None and not _result_is_llm_proposal
+                        and _budget_runtime.record_candidates(1) == 0
+                    ):
+                        _candidate_gate_passed = False
+                        result["candidate_validation_status"] = "rejected_budget"
                     quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
@@ -917,6 +937,12 @@ class HybridDiscoverySystem:
                             "training_r2": float(r2),
                             "quality_check": quality,
                         },
+                        eligible=bool(_candidate_gate.eligible and _candidate_gate_passed),
+                        rejection_reasons=(
+                            tuple(_candidate_gate.rejection_reasons)
+                            if _candidate_gate_passed else
+                            tuple(_candidate_gate.rejection_reasons) + ("discovery_candidate_budget_exhausted",)
+                        ),
                     )
                     _candidate_attempts.append((_candidate_record, result))
 
@@ -1016,6 +1042,10 @@ class HybridDiscoverySystem:
                     )
                     break
 
+        else:
+            if _budget_runtime is not None and _budget_runtime.search_attempts >= _search_limit:
+                _budget_runtime.stop_reason = _budget_runtime.stop_reason or "max_search_attempts"
+
         if best_result is None and flagged_result is not None:
             # Do not discard all discoveries when every candidate triggers the
             # complexity screen, but make the exception visible to downstream
@@ -1041,6 +1071,9 @@ class HybridDiscoverySystem:
 
         if self.enable_physics_fallback and (
             not best_result or best_r2 < self.physics_fallback_threshold
+        ) and (
+            _budget_runtime is None
+            or (_budget_runtime.remaining_candidates > 0 and not _budget_runtime.expired())
         ):
             try:
                 logger.info("\n[FALLBACK] Using PhysicsAwareRegressor...")
@@ -1060,6 +1093,8 @@ class HybridDiscoverySystem:
                 r2 = physics_regressor.best_fitness_
                 logger.info(f"   PhysicsAware: {expression}")
                 logger.info(f"   R2 = {r2:.4f}")
+                if _budget_runtime is not None and _budget_runtime.record_candidates(1) == 0:
+                    raise RuntimeError("discovery candidate budget exhausted before physics fallback")
                 physics_result = {
                     "expression": expression,
                     "r2_score": r2,
@@ -1073,7 +1108,10 @@ class HybridDiscoverySystem:
                         expression,
                         source="domain_template",
                         search_strategy="physics_aware_fallback",
-                        seed=int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")),
+                        seed=int(getattr(
+                            self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"),
+                        )),
                     )
                     physics_result["candidate_validation"] = _physics_gate.to_dict()
                     physics_result["candidate_validation_status"] = (
@@ -1108,7 +1146,13 @@ class HybridDiscoverySystem:
 
         _problem = getattr(self, "_active_discovery_problem", None)
         _validation_settings = getattr(self, "_active_training_validation_settings", None)
-        if _problem is not None and _validation_settings:
+        if (
+            _problem is not None and _validation_settings
+            and not (
+                getattr(self, "_active_budget_runtime", None) is not None
+                and self._active_budget_runtime.expired()
+            )
+        ):
             from hypatiax.tools.symbolic.hybrid_fold_search import (
                 evaluate_hybrid_candidate_on_training_folds,
             )
@@ -1487,6 +1531,10 @@ class HybridDiscoverySystem:
                     logger.warning(f"   [WARM-START] Phase 2 failed ({_ws_err}) — keeping Phase 1.")
                     # Config is already restored by the inner try/finally above.
 
+            _budget_runtime = getattr(self, "_active_budget_runtime", None)
+            if _budget_runtime is not None:
+                discovery_result["discovery_budget"] = _budget_runtime.to_dict()
+
             engine = discovery_result.get("discovery_engine", "unknown")
             llm_info = discovery_result.get("llm_mode", "")
             print("\n[OK] Discovery complete")
@@ -1606,15 +1654,31 @@ class HybridDiscoverySystem:
         # Reset per-call scientific and training-only selection state so no
         # equation's validation result or contract can leak into the next call.
         self._active_discovery_problem = _problem
+        self._active_budget_runtime = None
+        if _problem is not None:
+            from hypatiax.tools.symbolic.discovery_budget_runtime import DiscoveryBudgetRuntime
+            self._active_budget_runtime = DiscoveryBudgetRuntime(
+                _problem.budget, configured_search_attempts=self.max_retries
+            )
+        _llm_runtime_engine = getattr(self.symbolic_engine, "llm_engine", None)
+        if _llm_runtime_engine is not None:
+            _llm_runtime_engine.budget_runtime = self._active_budget_runtime
         self._training_only_search_selection = None
 
         _validation_settings = metadata.get("training_only_search_validation")
         self._active_training_validation_settings = _validation_settings or None
         self._active_training_validation_seed = int(
-            metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+            metadata.get(
+                "random_seed",
+                _problem.budget.seed if _problem is not None
+                else os.environ.get("HYPATIAX_ENGINE_SEED", "42"),
+            )
         )
         self._last_discovery_report = None
-        if _validation_settings:
+        if _validation_settings and not (
+            self._active_budget_runtime is not None
+            and self._active_budget_runtime.expired()
+        ):
             if not isinstance(_validation_settings, dict):
                 raise TypeError(
                     "metadata['training_only_search_validation'] must be a dict"
@@ -1622,9 +1686,7 @@ class HybridDiscoverySystem:
             from hypatiax.tools.symbolic.hybrid_fold_search import (
                 select_hybrid_search_configuration,
             )
-            _selection_seed = int(
-                metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
-            )
+            _selection_seed = self._active_training_validation_seed
             try:
                 _selection, _parsimony_options = select_hybrid_search_configuration(
                     X,

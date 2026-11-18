@@ -564,6 +564,7 @@ class IntegratedLLMEngine:
         self.last_proposal_generated = False
         self.last_error = None
         self.last_call_info = {}
+        self.budget_runtime = None
 
         if not config.enabled:
             return
@@ -622,6 +623,12 @@ class IntegratedLLMEngine:
             return []
 
         n_candidates = n_candidates or self.config.n_candidates
+        _budget_runtime = getattr(self, "budget_runtime", None)
+        if _budget_runtime is not None:
+            n_candidates = min(int(n_candidates), _budget_runtime.remaining_candidates)
+            if n_candidates <= 0:
+                self.last_error = "discovery_budget_exhausted:max_candidates"
+                return []
 
         prompt = self._build_prompt(
             domain, variables, description, data_patterns, n_candidates,
@@ -648,13 +655,23 @@ class IntegratedLLMEngine:
                 self.last_response_received = True
                 self._note_llm_sample(response)
                 hypotheses = self._parse_response(response)
+                if _budget_runtime is not None and hypotheses:
+                    _accepted_count = _budget_runtime.record_candidates(len(hypotheses))
+                    hypotheses = hypotheses[:_accepted_count]
                 self.last_proposal_generated = bool(hypotheses)
                 if not hypotheses:
                     self.last_error = "parse_failed_or_empty_response"
                 return hypotheses
+        _request_max_tokens = int(self.config.max_tokens)
+        if _budget_runtime is not None:
+            _reserved_tokens = _budget_runtime.reserve_llm_request(_request_max_tokens)
+            if _reserved_tokens is None:
+                self.last_error = "discovery_budget_exhausted:llm_call_or_token_or_wall_time"
+                return []
+            _request_max_tokens = _reserved_tokens
         self.last_call_attempted = True
         try:
-            response = self._call_llm(prompt)
+            response = self._call_llm(prompt, max_tokens=_request_max_tokens)
             from hypatiax.core.llm_call import last_call_info
             self.last_call_info = last_call_info()
             self._note_llm_sample(response)
@@ -674,6 +691,9 @@ class IntegratedLLMEngine:
                 raise
             return []
         hypotheses = self._parse_response(response)
+        if _budget_runtime is not None and hypotheses:
+            _accepted_count = _budget_runtime.record_candidates(len(hypotheses))
+            hypotheses = hypotheses[:_accepted_count]
         self.last_proposal_generated = bool(hypotheses)
         if not hypotheses:
             self.last_error = "parse_failed_or_empty_response"
@@ -759,14 +779,14 @@ JSON ARRAY:"""
 
         return prompt
 
-    def _call_llm(self, prompt: str) -> str:
-        """Call Anthropic API."""
+    def _call_llm(self, prompt: str, max_tokens: int | None = None) -> str:
+        """Call Anthropic API with an optional runtime-enforced token ceiling."""
         from hypatiax.core.llm_call import create_message
 
         message = create_message(
             self.client,
             model=self.config.model,
-            max_tokens=self.config.max_tokens,
+            max_tokens=int(max_tokens if max_tokens is not None else self.config.max_tokens),
             temperature=self.config.temperature,
             messages=[{"role": "user", "content": prompt}],
         )
