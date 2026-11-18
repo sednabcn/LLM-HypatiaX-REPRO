@@ -90,6 +90,43 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         self.assertAlmostEqual(result["far_metrics"]["rmse"], 0.0, places=12)
         self.assertEqual(result["evaluation_scope"], "single_frozen_finalized_model")
 
+    def test_frozen_evaluator_rejects_reordered_variable_contract(self):
+        model = {
+            "family": "single_basis",
+            "candidate_id": "c1",
+            "candidate_group_id": None,
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x + 10*y"],
+            "variable_names": ["x", "y"],
+            "fitted_expression": "(1)*(x + 10*y) + (0)",
+            "coefficients": [1.0, 0.0],
+            "training_row_count": 8,
+            "training_target_std": 1.0,
+            "training_rmse": 0.0,
+            "training_nrmse": 0.0,
+            "training_r2": 1.0,
+        }
+        audit = _audit(model)
+        with self.assertRaisesRegex(ValueError, "exactly match"):
+            evaluate_frozen_native_v60_model(
+                audit, np.array([[1.0, 2.0]]), np.array([21.0]),
+                variable_names=["y", "x"],
+            )
+
+    def test_final_model_verifier_rejects_self_rehashed_formula_mismatch(self):
+        model = {
+            "family": "single_basis",
+            "candidate_id": "c1",
+            "candidate_group_id": None,
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "fitted_expression": "999*x",
+            "coefficients": [2.0, 1.0],
+        }
+        with self.assertRaisesRegex(ValueError, "fitted expression"):
+            verify_final_model_audit(_audit(model))
+
     def test_tampered_final_model_is_rejected(self):
         audit = _audit({
             "basis_candidate_ids": ["c1"],

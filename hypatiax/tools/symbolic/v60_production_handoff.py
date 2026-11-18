@@ -59,17 +59,35 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
     expressions = model.get("basis_expressions")
     ids = model.get("basis_candidate_ids")
     coefficients = model.get("coefficients")
+    names = model.get("variable_names")
     if (
         not isinstance(expressions, list) or not 1 <= len(expressions) <= 3
         or not isinstance(ids, list) or len(ids) != len(expressions)
         or not isinstance(coefficients, list) or len(coefficients) != len(expressions) + 1
     ):
         raise ValueError("selected model basis lineage and coefficient dimensions do not align")
+    if any(not isinstance(item, str) or not item for item in ids) or len(ids) != len(set(ids)):
+        raise ValueError("selected model basis IDs must be unique non-empty strings")
+    if (not isinstance(names, list) or not names
+            or any(not isinstance(item, str) or not item for item in names)
+            or len(names) != len(set(names))):
+        raise ValueError("selected model variable_names must be unique non-empty strings")
+    numeric_coefficients = []
     for value in coefficients:
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
             raise ValueError("selected model coefficients must be finite")
+        numeric_coefficients.append(float(value))
     if any(not isinstance(item, str) or not item for item in expressions):
         raise ValueError("selected model expressions must be non-empty strings")
+    for expression in expressions:
+        parse_sympy_expression(expression, names)
+    expected_formula = " + ".join(
+        [f"({coefficient:.17g})*({expression})"
+         for coefficient, expression in zip(numeric_coefficients[:-1], expressions)]
+        + [f"({numeric_coefficients[-1]:.17g})"]
+    )
+    if model.get("fitted_expression") != expected_formula:
+        raise ValueError("selected model fitted expression does not reproduce from its bases and coefficients")
     return json.loads(json.dumps(dict(model), sort_keys=True, separators=(",", ":"), allow_nan=False))
 
 
@@ -85,6 +103,8 @@ def evaluate_frozen_native_v60_model(
     names = tuple(variable_names)
     if not names or len(set(names)) != len(names) or any(not isinstance(n, str) or not n for n in names):
         raise ValueError("variable_names must be unique non-empty strings")
+    if names != tuple(model["variable_names"]):
+        raise ValueError("far-evaluation variable_names must exactly match the frozen model's declared order")
     far = _array(X_far, "X_far", len(names))
     far_y = _targets(y_far, far.shape[0], "y_far")
 
