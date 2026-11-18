@@ -83,6 +83,7 @@ class HybridFoldPySRSearcher:
         self.expression: str | None = None
         self.x_log_flags: list[bool] = []
         self.y_log = False
+        self.fit_variable_names = list(self.variable_names)
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         X_fit = np.asarray(X, dtype=float)
@@ -145,6 +146,10 @@ class HybridFoldPySRSearcher:
         ):
             raise RuntimeError("fold-local SymbolicEngine search produced no usable model")
         self.expression = expression
+        _fit_state = getattr(self.engine, "_last_fold_transform_state", None) or {}
+        _feature_names = _fit_state.get("feature_names")
+        if isinstance(_feature_names, (list, tuple)) and _feature_names:
+            self.fit_variable_names = [str(name) for name in _feature_names]
         return self
 
     def get_best(self) -> dict[str, str]:
