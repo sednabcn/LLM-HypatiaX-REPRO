@@ -121,9 +121,10 @@ def _multi_basis_audit():
 
 def test_worker_verifier_accepts_embedded_multi_basis_selection():
     payload = copy.deepcopy(_envelope()["report"])
-    payload["provenance"]["native_multi_basis_selection"] = _multi_basis_audit()
+    audit = _multi_basis_audit()
+    payload["provenance"]["native_multi_basis_selection"] = audit
     verified = verify_discovery_report_envelope(seal_discovery_report(payload))
-    assert verified["provenance"]["native_multi_basis_selection"]["selected_candidate_group_id"] == "v60mb_group"
+    assert verified["provenance"]["native_multi_basis_selection"]["selected_candidate_group_id"] == audit["selected_candidate_group_id"]
 
 
 def test_worker_verifier_rejects_multi_basis_selected_reference_tampering():
