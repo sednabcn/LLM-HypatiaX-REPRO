@@ -230,3 +230,39 @@ discovery time; post-selection evaluation must not mutate selection evidence.
 The result provenance includes `native_v60_external_producer_audit`, including
 reported usage, producer-call status, accepted/rejected counts, and budget
 truncation. The audit explicitly records `producer_calls_performed: false`.
+
+
+## Verified native joint multi-basis selection
+
+Joint basis groups now have a dedicated objective selector in
+`v60_multi_basis_objective_selection.py`. It is intentionally separate from
+the single-basis selector and consumes only normalized proposals, completed
+candidate-level hard-gate outcomes, the bounded joint-fit audit, the
+joint-fold validation audit, and the independent verifier's output. It accepts
+no training arrays and no far/evaluation arrays.
+
+A group is eligible only when its fit and validation records are complete,
+every basis candidate passed its completed hard gates, the candidate IDs and
+normalized expressions match across all stages, producer lineage matches, and
+the verifier marked every fold as verified. The selector reconstructs the
+verifier's canonical SHA-256 payload and rejects mismatched fingerprints,
+altered fold rows/metrics, missing groups, or incomplete evidence. Fold row
+indices must be actual integers (booleans and floats are rejected).
+
+The three minimized Pareto objectives are:
+- mean fold NRMSE when every eligible group has defined NRMSE; otherwise mean
+  fold RMSE is used consistently for the entire eligible pool;
+- the corresponding population standard deviation across fold errors;
+- symbolic complexity, defined as the sum of SymPy operator counts in each
+  basis expression plus one additive-model term per basis (including the
+  intercept).
+
+Pareto membership uses componentwise dominance; deterministic tie-breaking
+orders by primary error, symbolic complexity, error variability, then stable
+group ID. The result records each group's verified-evidence fingerprint,
+objective evidence, Pareto group IDs, and selected ordered basis IDs and
+expressions. It reports `selection_performed: true` only for a completed
+selection or an explicit no-credible-candidate decision. It never changes or
+overrides the existing single-basis selected candidate and is exposed
+separately as `native_v60_multi_basis_selection_audit`. This stage remains
+opt-in/audit provenance and does not make V60 the production discovery path.
