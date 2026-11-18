@@ -48,6 +48,7 @@ def match_fold_discovered_structures(
     *,
     minimum_recurrence: int = 2,
     minimum_recurrence_fraction: float = 0.5,
+    total_fold_count: int | None = None,
 ) -> dict:
     """Group fold equations by conservative structure and aggregate matched-fold scores.
 
@@ -69,7 +70,9 @@ def match_fold_discovered_structures(
     }
     grouped: dict[str, list[dict]] = defaultdict(list)
     unmatched: list[dict] = []
-    denominator = len(searches)
+    denominator = len(searches) if total_fold_count is None else int(total_fold_count)
+    if denominator < len(searches) or denominator < 1:
+        raise ValueError("total_fold_count cannot be smaller than observed fold searches")
 
     for search in searches:
         fold_id = (int(search["repeat"]), int(search["fold"]))
