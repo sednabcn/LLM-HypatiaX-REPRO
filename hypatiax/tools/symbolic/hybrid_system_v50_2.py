@@ -915,7 +915,140 @@ class HybridDiscoverySystem:
                     else "pysr_search"
                 )
                 result["candidate_source"] = _candidate_source
-                if _valid_expression and _valid_score and getattr(self, "_active_discovery_problem", None) is not None:
+                _candidate_envelope_handled = bool(
+                    result.get("discovery_candidates_schema") == "discovery_candidates_v1"
+                    and getattr(self, "_active_discovery_problem", None) is not None
+                )
+                if _candidate_envelope_handled:
+                    # Every inner-engine proposal gets its own scientific gate
+                    # and report record. Do not attach the compatibility winner's
+                    # training R2 or transform state to another proposal.
+                    for _inner_candidate in result.get("discovery_candidates", []):
+                        _inner_result = dict(result)
+                        _inner_result.update({
+                            "expression": _inner_candidate.get("expression"),
+                            "fit_expression": _inner_candidate.get("fit_expression"),
+                            "fit_variable_names": list(
+                                _inner_candidate.get("fit_variable_names") or variable_names
+                            ),
+                            "fit_transform_state": dict(
+                                _inner_candidate.get("fit_transform_state") or {}
+                            ),
+                            "r2_score": None,
+                            "candidate_source": _inner_candidate.get("source"),
+                            "inner_candidate_id": _inner_candidate.get("candidate_id"),
+                            "source_provenance": list(
+                                _inner_candidate.get("source_provenance") or []
+                            ),
+                        })
+                        _inner_source = str(_inner_candidate.get("source") or "")
+                        _inner_expression = str(
+                            _inner_candidate.get("fit_expression")
+                            or _inner_candidate.get("expression") or ""
+                        ).strip()
+                        _inner_valid = bool(_inner_expression) and _inner_expression not in (
+                            "DISCOVERY_FAILED", "NO_VALID_EQUATIONS",
+                            "VALIDATION_FAILED", "N/A",
+                        )
+                        _inner_gate = None
+                        _inner_reasons = []
+                        if not _inner_valid:
+                            _inner_reasons.append("invalid_or_empty_candidate_expression")
+                        _inner_budget_rejected = False
+                        # LLM hypotheses are already counted by IntegratedLLMEngine
+                        # when generated (including replay). Only charge this adapter
+                        # for a real PySR proposal carried in the candidate provenance.
+                        _inner_sources = {
+                            _inner_source,
+                            *(
+                                str(_item.get("source"))
+                                for _item in (_inner_candidate.get("source_provenance") or [])
+                                if isinstance(_item, dict) and _item.get("source")
+                            ),
+                        }
+                        if (
+                            _inner_valid and _budget_runtime is not None
+                            and "pysr_search" in _inner_sources
+                        ):
+                            _inner_budget_rejected = (
+                                _budget_runtime.record_candidates(1) == 0
+                            )
+                            if _inner_budget_rejected:
+                                _inner_reasons.append("discovery_candidate_budget_exhausted")
+                        if _inner_valid:
+                            try:
+                                (
+                                    _inner_gate_expression,
+                                    _inner_gate_names,
+                                    _inner_substitutions,
+                                ) = _candidate_gate_payload(
+                                    _inner_result, _inner_result["expression"]
+                                )
+                                _inner_gate = self._candidate_validator.validate(
+                                    getattr(self, "_active_discovery_problem", None),
+                                    _inner_gate_expression,
+                                    source=_inner_source,
+                                    search_strategy=str(
+                                        _inner_candidate.get("search_strategy") or "inner_hybrid_candidate"
+                                    ),
+                                    seed=int(_inner_candidate.get("seed", seed)),
+                                    candidate_variable_names=_inner_gate_names,
+                                    feature_substitutions=_inner_substitutions,
+                                )
+                                _inner_result["raw_candidate_expression"] = _inner_gate_expression
+                                _inner_result["candidate_validation"] = _inner_gate.to_dict()
+                                _inner_result["candidate_validation_status"] = (
+                                    "eligible" if _inner_gate.eligible else "rejected"
+                                )
+                                if not _inner_gate.eligible:
+                                    _inner_reasons.extend(list(_inner_gate.rejection_reasons))
+                            except Exception as _inner_exc:
+                                _inner_reasons.append(
+                                    "candidate_gate_error:"
+                                    + f"{type(_inner_exc).__name__}:{_inner_exc}"[:300]
+                                )
+                        if _budget_runtime is not None and _budget_runtime.expired():
+                            _inner_reasons.append("discovery_deadline_exhausted")
+                        if _inner_gate is not None:
+                            _inner_record = dataclass_replace(
+                                _inner_gate,
+                                metrics={
+                                    "inner_candidate_id": _inner_candidate.get("candidate_id"),
+                                    "source_provenance": list(
+                                        _inner_candidate.get("source_provenance") or []
+                                    ),
+                                    "quality_check": {
+                                        "complexity": len(_inner_expression),
+                                        "is_overfit": False,
+                                        "warnings": [],
+                                        "status": "not_scored_from_compatibility_winner",
+                                    },
+                                },
+                                eligible=bool(
+                                    _inner_gate.eligible
+                                    and not _inner_budget_rejected
+                                    and not (_budget_runtime is not None and _budget_runtime.expired())
+                                ),
+                                rejection_reasons=tuple(
+                                    dict.fromkeys(
+                                        list(_inner_gate.rejection_reasons) + _inner_reasons
+                                    )
+                                ),
+                            )
+                            _candidate_attempts.append((_inner_record, _inner_result))
+                        else:
+                            logger.warning(
+                                "   [REJECTED] Inner candidate %s could not enter validation: %s",
+                                _inner_candidate.get("candidate_id"),
+                                _inner_reasons,
+                            )
+                    result["candidate_envelope_consumed"] = True
+
+                if (
+                    _valid_expression and _valid_score
+                    and getattr(self, "_active_discovery_problem", None) is not None
+                    and not _candidate_envelope_handled
+                ):
                     _gate_expression, _gate_variable_names, _gate_substitutions = (
                         _candidate_gate_payload(result, expr)
                     )
@@ -954,7 +1087,8 @@ class HybridDiscoverySystem:
                         ("_llm_better", "_llm_only")
                     )
                     if (
-                        _budget_runtime is not None and not _result_is_llm_proposal
+                        not _candidate_envelope_handled
+                        and _budget_runtime is not None and not _result_is_llm_proposal
                         and _budget_runtime.record_candidates(1) == 0
                     ):
                         _budget_candidate_rejected = True
@@ -1348,6 +1482,19 @@ class HybridDiscoverySystem:
                 _reported_candidates.append(_enriched)
                 _candidate_result_by_id[_enriched.candidate_id] = _attempt_result
 
+            _candidate_source_counts = {}
+            for _record, _attempt_result in _candidate_attempts:
+                _sources_for_record = {str(_record.source)}
+                _sources_for_record.update(
+                    str(_item["source"])
+                    for _item in (_attempt_result.get("source_provenance") or [])
+                    if isinstance(_item, dict) and _item.get("source")
+                )
+                for _source in _sources_for_record:
+                    _candidate_source_counts[_source] = (
+                        _candidate_source_counts.get(_source, 0) + 1
+                    )
+
             _report = select_pareto_discovery_report(
                 _reported_candidates,
                 variable_names=list(_problem.variable_names),
@@ -1377,6 +1524,11 @@ class HybridDiscoverySystem:
                     "nested_structure_matching": _nested_matching,
                     "nested_structure_search_error": _nested_error,
                     "nested_structure_search_scope": "fresh_pure_pysr_per_training_fold",
+                    "candidate_source_counts": dict(sorted(_candidate_source_counts.items())),
+                    "multi_candidate_handoff_consumed": any(
+                        bool(_attempt_result.get("inner_candidate_id"))
+                        for _, _attempt_result in _candidate_attempts
+                    ),
                 },
                 minimum_valid_folds=_minimum_folds,
                 require_nested_structure_evidence=_require_nested,
@@ -1386,13 +1538,73 @@ class HybridDiscoverySystem:
                 ],
             )
             self._last_discovery_report = _report.to_dict()
+            _pareto_ids = set(_report.pareto_candidate_ids or ())
+            _pareto_sources_set = set()
+            _result_by_candidate_id = {
+                _record.candidate_id: _attempt_result
+                for _record, _attempt_result in _candidate_attempts
+            }
+            for _record in _reported_candidates:
+                if _record.candidate_id not in _pareto_ids:
+                    continue
+                _pareto_sources_set.add(str(_record.source))
+                _candidate_provenance = _result_by_candidate_id.get(
+                    _record.candidate_id, {}
+                ).get("source_provenance", [])
+                for _source_item in _candidate_provenance:
+                    if isinstance(_source_item, dict) and _source_item.get("source"):
+                        _pareto_sources_set.add(str(_source_item["source"]))
+            _pareto_sources = sorted(_pareto_sources_set)
+            if isinstance(self._last_discovery_report, dict):
+                self._last_discovery_report.setdefault("provenance", {})[
+                    "pareto_source_coverage"
+                ] = {
+                    "sources": _pareto_sources,
+                    "contains_llm_and_pysr": (
+                        "llm_proposal" in _pareto_sources
+                        and "pysr_search" in _pareto_sources
+                    ),
+                }
             if _report.selected_candidate_id is None:
                 raise ValueError(
                     "NO_CREDIBLE_CANDIDATE: training-only candidate report "
                     f"did not select an equation ({_report.status})"
                 )
             best_result = _candidate_result_by_id[_report.selected_candidate_id]
-            best_r2 = float(best_result.get("r2_score", -np.inf))
+            # The report is already frozen using fold-only evidence. A full-training
+            # R2 may now be recomputed for the selected equation as a diagnostic only;
+            # it is never fed back into candidate admission, ranking, or tie-breaking.
+            _selected_raw_expression = best_result.get("raw_candidate_expression")
+            if _selected_raw_expression:
+                best_result["expression"] = _selected_raw_expression
+                try:
+                    _selected_predictions = np.asarray(
+                        self.symbolic_engine._predict_from_equation(
+                            _selected_raw_expression, _raw_X, list(variable_names)
+                        ),
+                        dtype=float,
+                    ).reshape(-1)
+                    if (
+                        _selected_predictions.shape == _raw_y.shape
+                        and np.isfinite(_selected_predictions).all()
+                    ):
+                        from sklearn.metrics import r2_score as _diagnostic_r2_score
+                        best_result["predictions"] = _selected_predictions
+                        best_result["r2_score"] = float(
+                            _diagnostic_r2_score(_raw_y, _selected_predictions)
+                        )
+                        best_result["training_r2_role"] = "post_selection_diagnostic_only"
+                except Exception as _diagnostic_exc:
+                    best_result["training_r2_diagnostic_error"] = (
+                        f"{type(_diagnostic_exc).__name__}: {_diagnostic_exc}"[:300]
+                    )
+            _selected_training_r2 = best_result.get("r2_score")
+            best_r2 = (
+                float(_selected_training_r2)
+                if isinstance(_selected_training_r2, (int, float, np.integer, np.floating))
+                and np.isfinite(_selected_training_r2)
+                else -np.inf
+            )
             best_result["discovery_report"] = self._last_discovery_report
             best_result["candidate_selection_policy"] = "training_only_physics_gated_pareto"
 
