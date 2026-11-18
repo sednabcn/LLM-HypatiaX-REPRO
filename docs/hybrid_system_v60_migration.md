@@ -84,6 +84,9 @@ Result `implementation_provenance` records:
   fold-local coefficients, with candidate eligibility inherited from the
   native hard-gate audit; no far/evaluation data is accepted or consumed and
   `selection_performed` is always false
+- `native_v60_residual_stability_audit`: per-fold held-out training residual
+  summaries and fold-local coefficient stability; diagnostic only, with no
+  ranking/selection and no far/evaluation data
 - `native_v60_objective_selection_audit`: recomputed fold objectives,
   symbolic complexity, Pareto candidate IDs, selected candidate ID, and
   SHA-256 evidence fingerprints; selection cannot receive far/evaluation data
@@ -100,9 +103,8 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
 1. Bounded LLM/PySR producer adapters and richer native candidate fitting
    beyond the current single-basis affine least-squares stage.
-2. Training-only residual diagnostics and structure stability.
-3. Frozen far-set evaluation after selection, through a separate evaluator.
-4. Versioned discovery report and worker-side integrity verification.
+2. Frozen far-set evaluation after selection, through a separate evaluator.
+3. Versioned discovery report and worker-side integrity verification.
 
 Each stage must retain candidate IDs, source provenance, rejection reasons,
 budget accounting, and deterministic failure states. The far set must remain
