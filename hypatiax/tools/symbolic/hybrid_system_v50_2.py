@@ -750,7 +750,7 @@ class HybridDiscoverySystem:
             """Map the engine's fit-space expression back to raw input variables."""
             fit_expression = str(
                 candidate_result.get("fit_expression") or fallback_expression
-            ).strip()
+            ).strip().replace("^", "**")
             fit_names = list(
                 candidate_result.get("fit_variable_names")
                 or candidate_result.get("variable_names")
