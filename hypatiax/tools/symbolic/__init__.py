@@ -9,6 +9,7 @@ __all__ = [
     "DiscoveryConfig",
     "LLMConfig",
     "DiscoveryProblem",
+    "discovery_problem_from_dict",
     "DiscoveryBudget",
     "ConstraintSpec",
     "ConstraintOutcome",
@@ -97,6 +98,7 @@ def __getattr__(name: str):
         module = import_module(".pareto_discovery", __name__)
     elif name in {
         "DiscoveryProblem",
+        "discovery_problem_from_dict",
         "DiscoveryBudget",
         "ConstraintSpec",
         "ConstraintOutcome",

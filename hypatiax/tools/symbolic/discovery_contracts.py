@@ -195,6 +195,70 @@ class DiscoveryProblem:
         })
 
 
+
+def discovery_problem_from_dict(spec: Mapping[str, Any]) -> DiscoveryProblem:
+    """Strictly deserialize a JSON-safe scientific contract at a worker boundary.
+
+    Unknown keys and implicit variable-name coercion are rejected. This helper
+    reconstructs typed contracts; it never invents units, domains, or constraints.
+    """
+    if not isinstance(spec, Mapping):
+        raise TypeError("discovery_problem_spec must be a mapping")
+    allowed = {
+        "schema_version", "target_name", "variable_names", "domain",
+        "target_unit", "variable_units", "variable_domains", "constraints",
+        "allowed_unary_operators", "allowed_binary_operators", "noise_model",
+        "split_protocol", "budget", "metadata",
+    }
+    unknown = set(spec) - allowed
+    if unknown:
+        raise ValueError(f"unknown discovery problem fields: {sorted(unknown)}")
+    version = spec.get("schema_version", CONTRACT_VERSION)
+    if version != CONTRACT_VERSION:
+        raise ValueError(f"unsupported discovery contract schema_version {version!r}")
+    budget_spec = spec.get("budget", {})
+    if not isinstance(budget_spec, Mapping):
+        raise TypeError("discovery problem budget must be a mapping")
+    budget_allowed = {
+        "max_search_attempts", "max_candidates", "max_llm_calls",
+        "max_llm_tokens", "max_wall_time_seconds", "seed",
+    }
+    budget_unknown = set(budget_spec) - budget_allowed
+    if budget_unknown:
+        raise ValueError(f"unknown discovery budget fields: {sorted(budget_unknown)}")
+    constraints_spec = spec.get("constraints", ())
+    if not isinstance(constraints_spec, (list, tuple)):
+        raise TypeError("discovery problem constraints must be a list")
+    constraints = []
+    constraint_allowed = {
+        "constraint_id", "kind", "severity", "source", "parameters",
+        "applicability", "description",
+    }
+    for index, item in enumerate(constraints_spec):
+        if not isinstance(item, Mapping):
+            raise TypeError(f"constraint at index {index} must be a mapping")
+        extra = set(item) - constraint_allowed
+        if extra:
+            raise ValueError(f"unknown constraint fields at index {index}: {sorted(extra)}")
+        constraints.append(ConstraintSpec(**dict(item)))
+    return DiscoveryProblem(
+        target_name=str(spec["target_name"]),
+        variable_names=tuple(spec["variable_names"]),
+        domain=str(spec.get("domain", "general")),
+        target_unit=spec.get("target_unit"),
+        variable_units=spec.get("variable_units", {}),
+        variable_domains=spec.get("variable_domains", {}),
+        constraints=tuple(constraints),
+        allowed_unary_operators=tuple(spec.get("allowed_unary_operators", ())),
+        allowed_binary_operators=tuple(spec.get("allowed_binary_operators", ())),
+        noise_model=spec.get("noise_model"),
+        split_protocol=spec.get("split_protocol", {}),
+        budget=DiscoveryBudget(**dict(budget_spec)),
+        metadata=spec.get("metadata", {}),
+        schema_version=version,
+    )
+
+
 CONSTRAINT_STATUSES = frozenset({
     "pass", "fail", "warning", "not_applicable", "unknown", "not_checked"
 })
@@ -348,6 +412,7 @@ __all__ = [
     "ConstraintSpec",
     "DiscoveryBudget",
     "DiscoveryProblem",
+    "discovery_problem_from_dict",
     "ConstraintOutcome",
     "CandidateRecord",
     "DiscoveryReport",
