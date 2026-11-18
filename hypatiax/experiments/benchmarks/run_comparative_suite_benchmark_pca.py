@@ -2732,9 +2732,6 @@ class SymbolicEngineMethod(BaseMethod):
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
-            _tc_kwargs["hybrid_implementation"] = getattr(
-                _active, "_hybrid_implementation", "v50_2"
-            )
             _p = getattr(_active, "_parsimony", None)
             if _p is not None:
                 _se_kwargs["parsimony"] = _p
@@ -2902,6 +2899,9 @@ class HybridSystemV50_2Method(BaseMethod):
         }
         _active = globals().get("_ACTIVE_SUITE")
         if _active is not None:
+            _tc_kwargs["hybrid_implementation"] = getattr(
+                _active, "_hybrid_implementation", "v50_2"
+            )
             _p = getattr(_active, "_parsimony", None)
             if _p is not None:
                 _tc_kwargs["parsimony"] = _p
