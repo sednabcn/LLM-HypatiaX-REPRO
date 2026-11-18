@@ -253,6 +253,7 @@ def test_engine_candidate_with_engineered_feature_passes_gate_and_fold_report():
 
 
 def test_llm_selected_candidate_exposes_identity_inner_transform_contract():
+    import numpy as np
     from hypatiax.tools.symbolic.symbolic_engine import SymbolicEngineWithLLM
 
     engine = SymbolicEngineWithLLM.__new__(SymbolicEngineWithLLM)
