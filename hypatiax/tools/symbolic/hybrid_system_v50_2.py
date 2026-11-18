@@ -825,7 +825,10 @@ class HybridDiscoverySystem:
             try:
                 # HYPATIAX_ENGINE_SEED (set only by exp1_ablation) makes repeat-seed runs vary
                 # the hybrid's PySR attempts too; default 42 keeps every other experiment unchanged.
-                seed = int(os.environ.get("HYPATIAX_ENGINE_SEED", "42")) + attempt
+                seed = int(
+                    getattr(self, "_active_training_validation_seed",
+                            os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
+                ) + attempt
                 logger.info(f"\n[SYMBOLIC] Attempt {attempt + 1}/{self.max_retries} (seed={seed})")
                 self.stats["symbolic_attempts"] += 1
 
@@ -914,6 +917,7 @@ class HybridDiscoverySystem:
                 if _valid_expression and _valid_score:
                     if _budget_runtime is not None and _budget_runtime.record_candidates(1) == 0:
                         _candidate_gate_passed = False
+                        result["candidate_validation_status"] = "rejected_budget"
                     quality = self._check_expression_quality(expr, float(r2))
                     if quality["is_overfit"]:
                         logger.warning("   [WARNING] Possible overfit")
@@ -929,6 +933,12 @@ class HybridDiscoverySystem:
                             "training_r2": float(r2),
                             "quality_check": quality,
                         },
+                        eligible=bool(_candidate_gate.eligible and _candidate_gate_passed),
+                        rejection_reasons=(
+                            tuple(_candidate_gate.rejection_reasons)
+                            if _candidate_gate_passed else
+                            tuple(_candidate_gate.rejection_reasons) + ("discovery_candidate_budget_exhausted",)
+                        ),
                     )
                     _candidate_attempts.append((_candidate_record, result))
 
@@ -1053,6 +1063,9 @@ class HybridDiscoverySystem:
 
         if self.enable_physics_fallback and (
             not best_result or best_r2 < self.physics_fallback_threshold
+        ) and (
+            _budget_runtime is None
+            or (_budget_runtime.remaining_candidates > 0 and not _budget_runtime.expired())
         ):
             try:
                 logger.info("\n[FALLBACK] Using PhysicsAwareRegressor...")
@@ -1072,6 +1085,8 @@ class HybridDiscoverySystem:
                 r2 = physics_regressor.best_fitness_
                 logger.info(f"   PhysicsAware: {expression}")
                 logger.info(f"   R2 = {r2:.4f}")
+                if _budget_runtime is not None and _budget_runtime.record_candidates(1) == 0:
+                    raise RuntimeError("discovery candidate budget exhausted before physics fallback")
                 physics_result = {
                     "expression": expression,
                     "r2_score": r2,
@@ -1655,9 +1670,7 @@ class HybridDiscoverySystem:
             from hypatiax.tools.symbolic.hybrid_fold_search import (
                 select_hybrid_search_configuration,
             )
-            _selection_seed = int(
-                metadata.get("random_seed", os.environ.get("HYPATIAX_ENGINE_SEED", "42"))
-            )
+            _selection_seed = self._active_training_validation_seed
             try:
                 _selection, _parsimony_options = select_hybrid_search_configuration(
                     X,
