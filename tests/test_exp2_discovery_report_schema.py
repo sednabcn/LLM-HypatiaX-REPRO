@@ -35,7 +35,7 @@ def _valid_report():
         "eligible": True,
     }
     return {
-        "schema_version": "1.0",
+        "schema_version": "discovery_contract_v1",
         "status": "accepted",
         "candidates": [candidate],
         "selected_candidate_id": "candidate-1",
@@ -60,7 +60,7 @@ def test_valid_serialized_discovery_report_is_preserved():
     [
         (lambda report: report.update(schema_version="2.0"), "unsupported.*schema_version"),
         (lambda report: report.update(status="success"), "unsupported.*status"),
-        (lambda report: report.update(far_evaluation_used_for_selection=True), "far evaluation"),
+        (lambda report: report.update(far_evaluation_used_for_selection=True), "far evaluation as unused"),
         (lambda report: report.update(selected_candidate_id="missing"), "selected candidate"),
         (lambda report: report.update(pareto_candidate_ids=["missing"]), "Pareto IDs"),
         (lambda report: report["candidates"][0].update(seed=True), "seed must be an integer"),
