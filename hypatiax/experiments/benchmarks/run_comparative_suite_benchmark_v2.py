@@ -91,6 +91,48 @@ _PKG_ROOT = _REPO_ROOT / "hypatiax"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+
+def _resolve_hybrid_implementation(cli_value=None) -> str:
+    """Resolve the runner engine selector without changing the V50.2 default.
+
+    Precedence is explicit CLI value, current environment override, legacy
+    environment override, then engine.implementation in REPRO_CFG.
+    """
+    import yaml
+
+    config_path = Path(os.environ.get("REPRO_CFG", _REPO_ROOT / "config" / "repro.yaml"))
+    if not config_path.is_absolute():
+        config_path = _REPO_ROOT / config_path
+    with config_path.open("r", encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file) or {}
+    if not isinstance(config, dict):
+        raise TypeError("repro config must be a mapping")
+    engine = config.get("engine", {})
+    if not isinstance(engine, dict):
+        raise TypeError("repro config 'engine' section must be a mapping")
+
+    selected = (
+        cli_value
+        or os.environ.get("HYPATIAX_ENGINE_IMPLEMENTATION")
+        or os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION")
+        or engine.get("implementation", "v50_2")
+    )
+    selected = str(selected).strip().lower()
+    aliases = {
+        "v50_2": "v50_2",
+        "hybrid_system_v50_2": "v50_2",
+        "v60": "v60",
+        "hybrid_system_v60": "v60",
+    }
+    if selected not in aliases:
+        raise ValueError(
+            f"Unsupported HybridDiscovery implementation {selected!r}; expected 'v50_2' or 'v60'."
+        )
+    return aliases[selected]
+
+
+
+
 # Canonical shared implementation used by both Exp2 Feynman runners.
 from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     REGIMES,
@@ -3458,6 +3500,10 @@ class HybridSystemV50_2Method(BaseMethod):
         # The isolated worker validates the schema and exact sanitized variable
         # names before constructing DiscoveryProblem.
         _meta["discovery_problem_spec"] = _contract_spec
+        # Selecting V60 must activate its native training/finalization path;
+        # constructing the V60 adapter alone otherwise retains V50.2 fallback.
+        if kwargs.get("hybrid_implementation", "v50_2") in {"v60", "hybrid_system_v60"}:
+            _meta["v60_activate_native_model"] = True
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
         )
@@ -5115,11 +5161,12 @@ Examples
 
     parser.add_argument(
         "--hybrid-implementation", choices=["v50_2", "v60"],
-        default=os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION", "v50_2"),
-        help="HybridDiscovery implementation for method 6 (default: v50_2; v60 is an opt-in compatibility adapter).",
+        default=None,
+        help="HybridDiscovery implementation for method 6 (default: config/repro.yaml engine.implementation; v50_2 if unset).",
     )
 
     args = parser.parse_args()
+    args.hybrid_implementation = _resolve_hybrid_implementation(args.hybrid_implementation)
 
     # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
     # is a PySR-fit setting only; applying it to the method deadline can silently
