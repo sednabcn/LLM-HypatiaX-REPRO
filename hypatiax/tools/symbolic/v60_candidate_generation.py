@@ -55,7 +55,7 @@ def generate_native_template_candidates_with_audit(
             "proposals": (),
             "generation_attempt_count": 0,
             "candidate_count": 0,
-            "base_variable_candidate_count": 0,
+            "base_variable_candidate_count": len(problem.variable_names),
             "operator_candidate_count": 0,
             "duplicate_expression_count": 0,
             "search_attempt_budget": budget.max_search_attempts,
@@ -64,9 +64,21 @@ def generate_native_template_candidates_with_audit(
             "search_attempt_budget_exhausted": budget.max_search_attempts == 0,
             "candidate_cap_reached": cap == 0,
             "declared_unary_operators": list(problem.allowed_unary_operators),
+            "accepted_unary_operators": list(dict.fromkeys(
+                op for op in problem.allowed_unary_operators if op in ALLOWED_UNARY_FUNCTIONS
+            )),
+            "ignored_unary_operators": [
+                op for op in problem.allowed_unary_operators if op not in ALLOWED_UNARY_FUNCTIONS
+            ],
             "declared_binary_operators": list(problem.allowed_binary_operators),
-            "ignored_unary_operators": [],
-            "ignored_binary_operators": [],
+            "accepted_binary_operators": list(dict.fromkeys(
+                op for op in (problem.allowed_binary_operators or ("+", "-", "*", "/"))
+                if op in {"+", "-", "*", "/"}
+            )) + (["**"] if "**" in problem.allowed_binary_operators else []),
+            "ignored_binary_operators": [
+                op for op in problem.allowed_binary_operators
+                if op not in {"+", "-", "*", "/", "**"}
+            ],
             "seed": int(budget.seed),
         }
 
@@ -89,9 +101,21 @@ def generate_native_template_candidates_with_audit(
             "search_attempt_budget_exhausted": False,
             "candidate_cap_reached": False,
             "declared_unary_operators": list(problem.allowed_unary_operators),
+            "accepted_unary_operators": list(dict.fromkeys(
+                op for op in problem.allowed_unary_operators if op in ALLOWED_UNARY_FUNCTIONS
+            )),
+            "ignored_unary_operators": [
+                op for op in problem.allowed_unary_operators if op not in ALLOWED_UNARY_FUNCTIONS
+            ],
             "declared_binary_operators": list(problem.allowed_binary_operators),
-            "ignored_unary_operators": [],
-            "ignored_binary_operators": [],
+            "accepted_binary_operators": list(dict.fromkeys(
+                op for op in (problem.allowed_binary_operators or ("+", "-", "*", "/"))
+                if op in {"+", "-", "*", "/"}
+            )) + (["**"] if "**" in problem.allowed_binary_operators else []),
+            "ignored_binary_operators": [
+                op for op in problem.allowed_binary_operators
+                if op not in {"+", "-", "*", "/", "**"}
+            ],
             "seed": int(budget.seed),
         }
 
