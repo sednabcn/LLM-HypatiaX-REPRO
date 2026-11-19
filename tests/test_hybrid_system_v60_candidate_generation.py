@@ -22,6 +22,32 @@ def test_v60_template_generation_is_deterministic_and_budget_bounded():
     assert all(item.source == "domain_template" for item in first)
     assert len({item.candidate_id for item in first}) == len(first)
 
+def test_v60_template_generation_uses_only_declared_supported_unary_operators():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "sqrt", "unknown"),
+        allowed_binary_operators=("+",),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "x", "y", "sin(x)", "sqrt(x)", "sin(y)",
+    ]
+
+
+def test_v60_unary_templates_obey_candidate_cap_and_attempt_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("exp", "log"),
+        budget=DiscoveryBudget(max_search_attempts=1, max_candidates=3, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == ["x", "y", "exp(x)"]
+
 
 def test_v60_template_generation_respects_zero_candidate_budget():
     problem = _problem(budget=DiscoveryBudget(
