@@ -312,3 +312,16 @@ introduced.
 Regression-test source covers the combined operator path and budget order.
 Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
 or provider call was launched.
+
+
+## Stage 50 — validate candidate-generation limits without coercion
+
+The public native template generator now rejects boolean, floating-point,
+string, and negative limit values rather than coercing them into a candidate
+cap. Declared unary and binary operator lists are deduplicated in stable
+first-seen order before proposal attempts are charged, so repeated declarations
+cannot consume the bounded search budget or suppress distinct templates.
+
+Regression-test source covers strict limit types and duplicate operator
+declarations. Tests have not been run; no CI, experiment, worker, benchmark,
+smoke workflow, or provider call was launched.
