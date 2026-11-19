@@ -17,9 +17,7 @@ import numpy as np
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
 from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
-from hypatiax.tools.symbolic.v60_candidate_generation import (
-    generate_native_template_candidates, generate_native_template_candidates_with_audit,
-)
+from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates_with_audit
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
