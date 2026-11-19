@@ -367,8 +367,11 @@ class CandidateValidator:
             evaluation_count = len(comparisons)
             violation_count = sum(not passed_pair for passed_pair in comparisons)
             passed = violation_count == 0
+        expected_grid_size = 3 ** len(axes)
         evidence = {
             "sample_count": len(points),
+            "expected_grid_size": expected_grid_size,
+            "grid_is_exhaustive": len(points) == expected_grid_size,
             "finite_sample_count": sum(math.isfinite(value) for value in values),
             "sample_min": min((value for value in values if math.isfinite(value)), default=None),
             "sample_max": max((value for value in values if math.isfinite(value)), default=None),
@@ -378,11 +381,18 @@ class CandidateValidator:
                 float(violation_count / evaluation_count) if evaluation_count else None
             ),
             "sampling": "deterministic_cartesian_bounds_grid",
+            "sampled_screening_status": "pass" if passed else "fail",
+            "proof_scope": "finite_sample_screening_only_not_continuous_domain_proof",
+            "continuous_domain_proof_established": False,
         }
+        if not passed:
+            return (
+                "fail", "declared constraint failed on deterministic domain samples", evidence
+            )
         return (
-            ("pass", "declared constraint passed on deterministic domain samples", evidence)
-            if passed else
-            ("fail", "declared constraint failed on deterministic domain samples", evidence)
+            "unknown",
+            "deterministic domain samples passed, but finite-grid screening does not prove the constraint over the continuous declared domain",
+            evidence,
         )
 
 
