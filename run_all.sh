@@ -818,7 +818,7 @@ _exp1_llm_sens_step() {
   local seeds="${SHARD_SEEDS:-${PYSR_SEED:-42}}"
   local -a seed_args=() only_args=()
   local condition
-  read -r -a seed_args <<< "${seeds}"
+  IFS=', ' read -r -a seed_args <<< "${seeds}"
   for condition in ${TASK_IDS:-}; do
     only_args+=( "${condition}" )
   done
