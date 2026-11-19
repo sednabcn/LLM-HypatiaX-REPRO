@@ -154,3 +154,14 @@ string values from bypassing the configured deadline contract.
 Regression-test source covers malformed IDs, non-mapping candidate entries,
 and invalid deadline values. No tests, CI, experiments, workers, benchmarks,
 smoke workflows, or provider calls are run as part of this change.
+
+
+## Stage 31 — per-call V60 audit state isolation
+
+Every V60 discovery entry point now resets the complete set of native audit,
+selection, final-model, far-evaluation, and activation fields before processing
+a call. This prevents a later typed or compatibility call from inheriting a
+previous call's selected model, production-handoff status, or audit payload.
+The reset is centralized and idempotent. Regression-test source covers stale
+state clearing and repeated resets. No tests, CI, experiments, workers,
+benchmarks, smoke workflows, or provider calls are run as part of this change.
