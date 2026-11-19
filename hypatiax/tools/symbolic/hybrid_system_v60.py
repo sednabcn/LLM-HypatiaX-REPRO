@@ -107,6 +107,26 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_fitting_audit: dict[str, Any] = {}
 
+    def _reset_v60_call_state(self) -> None:
+        """Clear every V60 audit before a new call to prevent cross-call leakage."""
+        self._last_v60_run_context = None
+        self._last_v60_candidate_proposals = ()
+        self._last_v60_normalization_audit = {}
+        self._last_v60_fitting_audit = {}
+        self._last_v60_training_fit_audit = {}
+        self._last_v60_multi_basis_fit_audit = {}
+        self._last_v60_multi_basis_validation_audit = {}
+        self._last_v60_multi_basis_evidence_audit = {}
+        self._last_v60_multi_basis_selection_audit = {}
+        self._last_v60_gate_audit = {}
+        self._last_v60_training_validation_audit = {}
+        self._last_v60_objective_selection_audit = {}
+        self._last_v60_residual_stability_audit = {}
+        self._last_v60_external_producer_audit = {}
+        self._last_v60_final_model_audit = {}
+        self._last_v60_far_evaluation_audit = {}
+        self._last_v60_activate_native_result = False
+
     def _annotate_v60_result(self, result: Any) -> Any:
         if not isinstance(result, dict):
             return result
@@ -186,6 +206,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
 
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
+        self._reset_v60_call_state()
         if args:
             if len(args) < 3:
                 raise TypeError("discover requires X, y, and var_names")
@@ -278,21 +299,6 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         call could cause stale native audits or even a stale native formula
         to be attached to this unrelated legacy result.
         """
-        self._last_v60_run_context = None
-        self._last_v60_candidate_proposals = ()
-        self._last_v60_normalization_audit = {}
-        self._last_v60_training_fit_audit = {}
-        self._last_v60_multi_basis_fit_audit = {}
-        self._last_v60_multi_basis_validation_audit = {}
-        self._last_v60_multi_basis_evidence_audit = {}
-        self._last_v60_multi_basis_selection_audit = {}
-        self._last_v60_gate_audit = {}
-        self._last_v60_training_validation_audit = {}
-        self._last_v60_objective_selection_audit = {}
-        self._last_v60_residual_stability_audit = {}
-        self._last_v60_external_producer_audit = {}
-        self._last_v60_final_model_audit = {}
-        self._last_v60_far_evaluation_audit = {}
-        self._last_v60_activate_native_result = False
+        self._reset_v60_call_state()
         result = super().discover_validate_interpret(*args, **kwargs)
         return self._annotate_v60_result(result)
