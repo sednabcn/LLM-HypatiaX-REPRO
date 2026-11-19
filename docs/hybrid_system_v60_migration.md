@@ -246,3 +246,22 @@ longer sufficient to reach the frozen production model. Regression-test
 source covers the stricter single- and multi-basis evidence contracts. Tests
 have not been run; no CI, experiment, worker, benchmark, smoke workflow, or
 provider call was launched.
+
+
+## Stage 46 — require identifiable final training designs
+
+Before cross-family comparison, finalization now constructs each selected
+family winner's training design and requires full column rank, including the
+intercept. A rank-deficient family winner is recorded as rejected and cannot
+be promoted merely because its fold error is lower; the other independently
+selected family remains eligible. If no family has an identifiable training
+design, native finalization returns an explicit no-credible-candidate result.
+The frozen-model verifier independently requires the finalized design-rank
+audit to match the full coefficient dimension.
+
+This is an identifiability check on the supplied training observations, not a
+claim of global parameter identifiability or numerical stability outside the
+observed training design. Regression-test source covers a collinear joint
+basis that loses to an identifiable single-basis alternative. Tests have not
+been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
+call was launched.
