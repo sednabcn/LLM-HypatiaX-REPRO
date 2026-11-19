@@ -254,7 +254,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             llm_token_count=external_spec.get("llm_token_count", 0),
             pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
         )
-        cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+        cap = problem.budget.max_candidates
         remaining_search_attempts = max(
             0, problem.budget.max_search_attempts
             - external["pysr_usage"]["search_attempt_count"]
@@ -485,7 +485,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 llm_token_count=external_spec.get("llm_token_count", 0),
                 pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
             )
-            candidate_cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+            candidate_cap = problem.budget.max_candidates
             remaining_search_attempts = max(
                 0, problem.budget.max_search_attempts
                 - external_audit["pysr_usage"]["search_attempt_count"]
