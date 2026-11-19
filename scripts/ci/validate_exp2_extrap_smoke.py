@@ -285,7 +285,7 @@ def main() -> int:
     print(f"[exp2-extrap-smoke] error-% available: {summary['far_error_pct_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] diagnostic statuses: {summary['far_diagnostic_status_counts']}")
     print(f"[exp2-extrap-smoke] row-level prediction audits verified/unavailable: {summary['prediction_audit_verified_count']}/{summary['prediction_audit_unavailable_count']}")
-    print(f"[exp2-extrap-smoke] native V60 method-6 handoffs verified: {summary[\"native_v60_method_6_verified_count\"]}/{summary[\"equation_direction_count\"]}")
+    print(f"[exp2-extrap-smoke] native V60 method-6 handoffs verified: {summary['native_v60_method_6_verified_count']}/{summary['equation_direction_count']}")
     print(f"[exp2-extrap-smoke] summary: {target}")
     return 0
 
