@@ -4376,7 +4376,11 @@ class ProtocolBenchmarkSuite:
                 or res.metadata.get("nn_applied")
             )
         }
-        _SYMBOLIC_NAMES = {"SymbolicEngineWithLLM (tools)", "HybridDiscoverySystem v50_2 (tools)"}
+        _SYMBOLIC_NAMES = {
+            "SymbolicEngineWithLLM (tools)",
+            "HybridDiscoverySystem v50_2 (tools)",
+            "HybridDiscoverySystem v60 (tools)",
+        }
 
         formula_hashes: Dict[str, List[str]] = {}
         for name, res in results.items():
