@@ -37,7 +37,7 @@ def test_pca_adapter_builds_a_declaration_only_typed_problem_spec():
 
     assert '_meta.get("discovery_problem_spec")' in source
     assert "def _remap_declared_contract_mapping" in source
-    assert "field_name contains undeclared variable" in source
+    assert "contains undeclared variable" in source
     assert '"variable_names": list(safe_names)' in source
     assert '"contract_origin": "exp2_protocol_adapter"' in source
     assert '"physical_declarations_inferred": False' in source
