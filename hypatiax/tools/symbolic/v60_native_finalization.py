@@ -171,6 +171,68 @@ def finalize_native_v60_model(
             "selection_performed": False,
             "far_or_evaluation_data_used": False,
             "candidate_options": [],
+            "rejected_candidate_options": [],
+            "selected_model": None,
+        }
+
+    # A symbolic basis must be identifiable on the supplied training design.
+    # Do not let a rank-deficient multi-basis family win merely because its
+    # validation error is lower; retain the other family as a possible winner.
+    identifiable_options: list[dict[str, Any]] = []
+    rejected_options: list[dict[str, Any]] = []
+    symbols = [sp.Symbol(name, real=True) for name in names]
+    for option in options:
+        columns = []
+        for expression in option["expressions"]:
+            parsed = parse_sympy_expression(expression, list(names))
+            fn = sp.lambdify(symbols, parsed, modules="numpy")
+            values = np.asarray(fn(*[X[:, i] for i in range(X.shape[1])]), dtype=float)
+            if values.ndim == 0:
+                values = np.full(X.shape[0], float(values))
+            values = values.reshape(-1)
+            if values.size != y.size or not np.all(np.isfinite(values)):
+                rejected_options.append({
+                    "family": option["family"],
+                    "candidate_id": option.get("candidate_id"),
+                    "candidate_group_id": option.get("candidate_group_id"),
+                    "reason": "non_finite_or_misaligned_training_basis",
+                })
+                columns = []
+                break
+            columns.append(values)
+        if not columns:
+            continue
+        option_design = np.column_stack((*columns, np.ones(y.size, dtype=float)))
+        _, _, option_rank, option_singular = np.linalg.lstsq(option_design, y, rcond=None)
+        if int(option_rank) < option_design.shape[1]:
+            rejected_options.append({
+                "family": option["family"],
+                "candidate_id": option.get("candidate_id"),
+                "candidate_group_id": option.get("candidate_group_id"),
+                "reason": "rank_deficient_training_design",
+                "training_design_rank": int(option_rank),
+                "required_design_rank": int(option_design.shape[1]),
+            })
+            continue
+        option_scale = max(float(option_singular[0]) if option_singular.size else 0.0, 1.0)
+        option_condition = (
+            float(option_singular[0] / option_singular[-1])
+            if option_singular.size and option_singular[-1] > np.finfo(float).eps * option_scale
+            else None
+        )
+        option["training_design_rank"] = int(option_rank)
+        option["training_design_condition_number"] = option_condition
+        identifiable_options.append(option)
+
+    options = identifiable_options
+    if not options:
+        return {
+            "schema": "v60_native_final_model_v1",
+            "execution_status": "no_credible_candidate",
+            "selection_performed": False,
+            "far_or_evaluation_data_used": False,
+            "candidate_options": [],
+            "rejected_candidate_options": rejected_options,
             "selected_model": None,
         }
 
@@ -182,7 +244,6 @@ def finalize_native_v60_model(
         item["complexity"], item["family"],
     ))
     winner = options[0]
-
     symbols = [sp.Symbol(name, real=True) for name in names]
     columns = []
     for expression in winner["expressions"]:
@@ -243,6 +304,7 @@ def finalize_native_v60_model(
         "cross_family_policy": "minimum_common_cv_error_then_fold_variability_then_complexity_then_family",
         "objective_metric": metric,
         "candidate_options": options,
+        "rejected_candidate_options": rejected_options,
         "selected_model": selected,
         "selected_model_sha256": sha256(json.dumps(digest_payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest(),
     }
