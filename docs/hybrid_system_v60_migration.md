@@ -365,3 +365,18 @@ only when the exact same parser accepts that function name.
 Regression-test source remains offline and exercises supported and
 unsupported declarations. Tests have not been run; no CI, experiment, worker,
 benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 54 — compose binary operators over admitted basis terms
+
+Pairwise binary templates now operate over the bounded one-level basis pool:
+raw variables plus any declared unary, square, and self-product templates
+already admitted. This allows mixed forms such as sin(x) + y without
+unbounded recursive expression growth. Unary wrapping of each admitted binary
+expression remains bounded by the same shared attempt and candidate budgets.
+With no additional declared operators, the default pairwise variable order is
+unchanged.
+
+Regression-test source covers a binary combination that uses a unary basis
+term. Tests have not been run; no CI, experiment, worker, benchmark, smoke
+workflow, or provider call was launched.
