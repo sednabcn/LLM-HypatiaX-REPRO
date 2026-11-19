@@ -91,6 +91,36 @@ class NativeV60FinalizationTests(unittest.TestCase):
         self.assertEqual(result["selected_model"]["basis_candidate_ids"], ["c1", "c2"])
         self.assertAlmostEqual(result["selected_model"]["training_rmse"], 0.0, places=10)
 
+    def test_training_cv_quality_gate_rejects_weak_selected_winner(self):
+        candidates = [{
+            "candidate_id": "c1", "normalized_expression": "x",
+            "producer_provenance": [],
+        }]
+        single = {
+            "schema": "v60_native_objective_selection_v1",
+            "selection_status": "selected", "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"], "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 2.0, "mean_validation_nrmse": 1.2,
+                "std_validation_rmse": 0.1, "std_validation_nrmse": 0.05,
+                "complexity": 1,
+            }],
+        }
+        _seal_selection(single)
+        result = finalize_native_v60_model(
+            candidates, single,
+            {"selection_status": "no_credible_candidate", "objective_evidence": []},
+            self.X, self.y, variable_names=["x"], max_training_cv_nrmse=1.0,
+        )
+        self.assertEqual(result["execution_status"], "no_credible_candidate")
+        self.assertEqual(
+            result["rejected_candidate_options"][0]["reason"],
+            "training_cv_quality_gate_failed",
+        )
+        self.assertFalse(result["far_or_evaluation_data_used"])
+
     def test_no_selector_winner_returns_explicit_no_candidate(self):
         result = finalize_native_v60_model(
             [], {"selection_status": "no_credible_candidate", "objective_evidence": []},
