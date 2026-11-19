@@ -22,6 +22,7 @@ on:
           - portfolio_pca_tail_error
 #         - exp1c
           - exp1_ablation
+          - exp1_llm_sens
           - exp1_four_way_matched
           - exp2_protocol30_random_8020
           - exp2_protocol30_pca_4060
@@ -58,7 +59,7 @@ on:
         default: ""
 
       n_shards:
-        description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact). exp1_four_way_matched and both manuscript Protocol-30 variants: forced to 5 isolated equation shards with strict aggregation. exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
+        description: "Number of parallel worker shards (user input). exp1-provenance: forced to 5 (one seed per worker, fixed seeds 42,99,123,777,2024). exp1b/exp1c/portfolio: forced to 5 (one shard per seed — table minimum, exact). exp1_ablation: forced to 5 (one shard per domain, exact); exp1_llm_sens: forced to 6 (one worker per condition). exp1_four_way_matched and both manuscript Protocol-30 variants: forced to 5 isolated equation shards with strict aggregation. exp3b: floored to 4 (table minimum). exp1b_seeds: exactly one shard (= one runner) per seed, so the default 99,123,777,2024 always runs as 4 parallel workers and the input is ignored (exp1_pca_seeds follows the same rule for the PCA 40/60 variant, default 99,123,777,2024) — running the seeds back-to-back on one worker would blow the 6h GitHub job clock. suppB: forced to 5 regardless of input (one shard per noise level — divmod(55,5)=11 tasks each, preserving one-noise-level-per-shard alignment required by run_all.sh STEP 10). suppB_sc: forced to 6 regardless of input (one shard per sample size — divmod(66,6)=11 tasks each). All other experiments: forced to 1 regardless of input. Input is accepted and logged but may be overridden by the per-experiment shard table."
         required: false
         default: "1"
 
@@ -254,7 +255,7 @@ jobs:
             exit 1
           fi
 
-          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
+          VALID_IDS="exp1 exp1b exp1b_seeds exp1-provenance portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1c exp1_ablation exp1_llm_sens exp1_four_way_matched exp1_five exp1_pca exp1b_pca exp1_pca_seeds \
             exp2_feynman_pca exp2_feynman exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2 exp2_five \
             exp3 exp3b suppA suppB suppB_sc hybrid_all_domains instability extrap"
 
@@ -537,6 +538,13 @@ jobs:
               echo "ablation_seed=${ABL_SEED}" >> "$GITHUB_OUTPUT"
               ;;
 
+            exp1_llm_sens)
+              SCRIPT="hypatiax/experiments/benchmarks/exp1_llm_sens.py"
+              NEEDS_JULIA=true
+              RESULT_SUBDIR="ablation/exp1_llm_sens/run-${{ github.run_id }}-attempt-${{ github.run_attempt }}"
+              DEFAULT_SEEDS="${SEEDS_IN:-42}"
+              ;;
+
             exp1_four_way_matched)
               SCRIPT="hypatiax/experiments/benchmarks/exp1_four_way_matched.py"
               NEEDS_JULIA=true
@@ -754,6 +762,7 @@ jobs:
               "exp1_pca_seeds":    4,   # same rule as exp1b_seeds (PCA 40/60 variant)
               "exp1c":              5,
               "exp1_ablation":      5,   # one shard per domain (chemistry, defi_risk, biology, physics, defi_amm)
+               "exp1_llm_sens":      6,   # one shard per preregistered arm/description condition
               "exp1_four_way_matched": 5, # Core-15 equation IDs partitioned into five isolated workers
               "exp2_protocol30_random_8020": 5, # 30 manuscript equations, five isolated workers
               "exp2_protocol30_pca_4060": 5, # same registry, separate PCA split and aggregate
@@ -882,6 +891,7 @@ jobs:
               "exp1_pca_seeds":   [f"{d}_seed{s}" for s in SEEDS for d in DEFI_TASKS],
               "exp1c":             [f"seed{s}" for s in SEEDS],
               "exp1_ablation":     ["chemistry", "defi_risk", "biology", "physics", "defi_amm"],
+               "exp1_llm_sens":     ["pysr_only__na", "hypatia_nollm__na", "pure_llm__named", "pure_llm__neutral", "hypatia__named", "hypatia__neutral"],
               "exp1_four_way_matched": [str(i) for i in range(15)],
               "exp2_protocol30_random_8020": MULTI30,
               "exp2_protocol30_pca_4060": MULTI30,
@@ -1046,6 +1056,10 @@ jobs:
       EFFECTIVE_SEEDS: ${{ needs.plan.outputs.effective_seeds }}
       N_SHARDS:       ${{ needs.plan.outputs.n_shards }}
       NOISE_LEVELS:   "${{ github.event.inputs.noise_levels || '0.0,0.05,0.1,0.5,1.0' }}"
+      LLM_SENS_RUNNER: "llm_sens_adapter:run"
+      LLM_SENS_PRIOR_TARGETS: "hypatia:get_llm_prior"
+      LLM_SENS_HOOKS: "hypatia_llm_hook:hybrid_llm_condition"
+      LLM_SENS_N: "40"
 
     steps:
       - name: Checkout
@@ -1545,6 +1559,10 @@ jobs:
             # exp3/exp3b only: no other experiment ever sees SPARSE_SEED from CI.
             export SPARSE_SEED="${SPARSE_SEED_INPUT:-fallback}"
             echo "  [exp3/exp3b] SPARSE_SEED=${SPARSE_SEED}"
+          elif [[ "${EXP}" == "exp1_llm_sens" ]]; then
+            # One condition per shard; all explicitly requested seeds run for that condition.
+            SHARD_SEEDS="${EFFECTIVE_SEEDS}"
+            echo "  [exp1_llm_sens] condition shard ${SHARD_INDEX}; seeds=${SHARD_SEEDS}"
           elif [[ "${EXP}" == "exp1b_seeds" || "${EXP}" == "exp1_pca_seeds" || "${EXP}" == "exp1-provenance" ]]; then
             # pending IDs are "<domain>_seed<N>"; exp1's benchmark filters on the bare domain keys.
             TASK_IDS="$(sed -E 's/_seed[0-9]+$//' /tmp/pending_ids.txt | awk '!seen[$0]++' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
