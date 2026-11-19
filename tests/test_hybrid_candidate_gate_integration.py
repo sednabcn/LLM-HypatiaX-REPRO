@@ -116,7 +116,7 @@ def test_training_only_report_selects_candidate_from_candidate_specific_fold_evi
             ConstraintSpec(
                 constraint_id="energy-nonnegative",
                 kind="nonnegative_output",
-                severity="hard",
+                severity="soft",
             ),
         ),
     )
@@ -162,7 +162,7 @@ def test_candidate_report_fails_closed_when_training_folds_cannot_be_built():
             ConstraintSpec(
                 constraint_id="energy-nonnegative",
                 kind="nonnegative_output",
-                severity="hard",
+                severity="soft",
             ),
         ),
     )
