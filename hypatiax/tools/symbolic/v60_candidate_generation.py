@@ -14,6 +14,7 @@ import re
 from typing import Any
 
 from .discovery_contracts import DiscoveryProblem
+from hypatiax.tools.validation.safe_sympy_parser import ALLOWED_UNARY_FUNCTIONS
 
 
 @dataclass(frozen=True)
@@ -61,14 +62,8 @@ def generate_native_template_candidates(
     allow_square = "**" in binary
     # Keep generated calls inside the same explicit function allowlist as the
     # restricted AST parser. Unknown contract operators are never guessed.
-    parser_unary = {
-        "exp", "log", "ln", "log10", "sqrt", "sin", "cos", "tan",
-        "abs", "Abs", "sign", "safe_asin", "safe_acos", "asin", "acos",
-        "atan", "arcsin", "arccos", "arctan", "asin_of_sin",
-        "acos_of_cos", "atan_of_tan",
-    }
     allowed_unary = tuple(dict.fromkeys(
-        op for op in problem.allowed_unary_operators if op in parser_unary
+        op for op in problem.allowed_unary_operators if op in ALLOWED_UNARY_FUNCTIONS
     ))
     proposals: list[str] = list(names)
     attempts = 0
