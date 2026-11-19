@@ -316,19 +316,40 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             max_wall_time_seconds=budget.max_wall_time_seconds,
         )
         self._last_v60_multi_basis_validation_audit = multi_validation
-        multi_evidence = verify_native_multi_basis_validation_evidence(
-            multi_validation, eligible_candidates, X, y,
-            variable_names=problem.variable_names,
-            max_groups=budget.max_candidates,
-            max_search_attempts=budget.max_search_attempts,
-        )
+        if multi_validation.get("validation_status") == "completed":
+            multi_evidence = verify_native_multi_basis_validation_evidence(
+                multi_validation, eligible_candidates, X, y,
+                variable_names=problem.variable_names,
+                max_groups=budget.max_candidates,
+                max_search_attempts=budget.max_search_attempts,
+            )
+            multi_selection = select_native_multi_basis_candidates_from_verified_evidence(
+                eligible_candidates, gate, multi_fit, multi_validation, multi_evidence,
+                variable_names=problem.variable_names,
+                max_groups=budget.max_candidates,
+                max_search_attempts=budget.max_search_attempts,
+            )
+        else:
+            multi_evidence = {
+                "schema": "v60_native_multi_basis_evidence_verification_v1",
+                "verification_status": "partial_or_rejected",
+                "reason": "multi-basis training-fold validation did not complete",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+                "verified_candidate_groups": [],
+                "rejected_candidate_groups": [],
+            }
+            multi_selection = {
+                "schema": "v60_native_multi_basis_objective_selection_v1",
+                "selection_status": "insufficient_validation_evidence",
+                "reason": "multi-basis training-fold validation did not complete",
+                "selection_performed": False,
+                "far_or_evaluation_data_used": False,
+                "objective_evidence": [],
+                "pareto_candidate_group_ids": [],
+                "selected_candidate_group_id": None,
+            }
         self._last_v60_multi_basis_evidence_audit = multi_evidence
-        multi_selection = select_native_multi_basis_candidates_from_verified_evidence(
-            eligible_candidates, gate, multi_fit, multi_validation, multi_evidence,
-            variable_names=problem.variable_names,
-            max_groups=budget.max_candidates,
-            max_search_attempts=budget.max_search_attempts,
-        )
         self._last_v60_multi_basis_selection_audit = multi_selection
 
         self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
