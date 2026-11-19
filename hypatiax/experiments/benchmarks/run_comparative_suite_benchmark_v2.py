@@ -3508,7 +3508,7 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta["discovery_problem_spec"] = _contract_spec
         # Selecting V60 must activate its native training/finalization path;
         # constructing the V60 adapter alone otherwise retains V50.2 fallback.
-        if kwargs.get("hybrid_implementation", "v50_2") in {"v60", "hybrid_system_v60"}:
+        if _tc_kwargs.get("hybrid_implementation", "v50_2") in {"v60", "hybrid_system_v60"}:
             _meta["v60_activate_native_model"] = True
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
