@@ -2559,7 +2559,7 @@ except ImportError:
     _sp.run([sys.executable, "-m", "pip", "install", "--quiet", "psutil"], check=False)
 
 # Receive pickled args via stdin
-import pickle, base64
+import pickle, base64, hashlib
 payload = pickle.loads(base64.b64decode(sys.stdin.buffer.read()))
 
 sys.path.insert(0, payload["pkg_root_parent"])
