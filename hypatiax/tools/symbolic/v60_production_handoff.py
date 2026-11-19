@@ -128,8 +128,8 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
     if condition is not None and float(condition) < 0:
         raise ValueError("selected model design condition number cannot be negative")
     rank = model.get("training_design_rank")
-    if isinstance(rank, bool) or not isinstance(rank, int) or not 1 <= rank <= len(expressions) + 1:
-        raise ValueError("selected model design rank is invalid")
+    if isinstance(rank, bool) or not isinstance(rank, int) or rank != len(expressions) + 1:
+        raise ValueError("selected model training design must have full column rank")
 
     metric = model.get("selection_metric")
     if metric not in {"cv_rmse", "cv_nrmse"}:
