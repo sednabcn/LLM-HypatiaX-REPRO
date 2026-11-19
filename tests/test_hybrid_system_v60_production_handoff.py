@@ -14,6 +14,7 @@ from hypatiax.tools.symbolic.v60_production_handoff import (
     calibrate_frozen_native_v60_model,
     predict_frozen_native_v60_interval,
     verify_final_model_audit,
+    build_native_v60_result,
 )
 
 
@@ -384,3 +385,49 @@ class NativeV60SplitConformalTests(unittest.TestCase):
                     "exchangeability_assumed": True,
                 },
             )
+
+    def _calibration(self):
+        final = self._frozen_model()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        calibration = calibrate_frozen_native_v60_model(
+            final, X_cal, predictions + np.arange(1.0, 20.0),
+            variable_names=["x"], nominal_coverage=0.95,
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v1",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        return final, calibration
+
+    def test_prediction_rejects_tampered_finite_sample_rank(self):
+        final, calibration = self._calibration()
+        calibration["finite_sample_quantile_rank"] = 18
+        with self.assertRaisesRegex(ValueError, "quantile rank"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[40.0]]), variable_names=["x"],
+            )
+
+    def test_prediction_rejects_removed_split_attestation(self):
+        final, calibration = self._calibration()
+        calibration["calibration_provenance"]["disjoint_from_training"] = False
+        with self.assertRaisesRegex(ValueError, "caller attestations"):
+            predict_frozen_native_v60_interval(
+                final, calibration, np.asarray([[40.0]]), variable_names=["x"],
+            )
+
+    def test_native_result_preserves_verified_calibration_audit(self):
+        final, calibration = self._calibration()
+        result = build_native_v60_result(final, calibration)
+        self.assertEqual(result["native_model_calibration"], calibration)
+        self.assertEqual(result["native_model_calibration_status"], "calibrated")
+        with self.assertRaisesRegex(ValueError, "different frozen model"):
+            build_native_v60_result(_audit({
+                "basis_candidate_ids": ["other"],
+                "basis_expressions": ["x"],
+                "variable_names": ["x"],
+                "fitted_expression": "(3)*(x) + (2)",
+                "coefficients": [3.0, 2.0],
+            }), calibration)
