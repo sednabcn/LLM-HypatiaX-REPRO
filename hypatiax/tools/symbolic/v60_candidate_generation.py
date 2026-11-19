@@ -147,50 +147,89 @@ def generate_native_template_candidates_with_audit(
     proposals: list[str] = list(names)
     attempts = 0
 
-    # Unary templates are generated only when explicitly declared by the
-    # scientific contract; the attempt and candidate caps apply to each one.
-    for name in names:
-        for op in allowed_unary:
+    def add_template(expression: str) -> bool:
+        """Add one declared structural template within both hard budgets."""
+        nonlocal attempts
+        if attempts >= search_cap or len(proposals) >= cap:
+            return False
+        attempts += 1
+        proposals.append(expression)
+        return True
+
+    # Prioritize physically useful declared powers and compound structures.
+    # These remain generic algebraic templates: no target values or far data
+    # are inspected, and variable names carry no inferred physical meaning.
+    if allow_square:
+        for name in names:
+            if not add_template(f"({name} ** 2)"):
+                break
+
+    if allow_square and "*" in binary:
+        for base in names:
+            for powered in names:
+                if base == powered:
+                    continue
+                if not add_template(f"({base} * ({powered} ** 2))"):
+                    break
             if attempts >= search_cap or len(proposals) >= cap:
                 break
-            attempts += 1
-            proposals.append(f"{op}({name})")
+
+    if allow_square and "*" in binary and "/" in binary:
+        for numerator_left in names:
+            for numerator_right in names:
+                if numerator_right == numerator_left:
+                    continue
+                for denominator in names:
+                    if denominator in {numerator_left, numerator_right}:
+                        continue
+                    if not add_template(
+                        f"(({numerator_left} * {numerator_right}) / ({denominator} ** 2))"
+                    ):
+                        break
+                if attempts >= search_cap or len(proposals) >= cap:
+                    break
+            if attempts >= search_cap or len(proposals) >= cap:
+                break
+
+    # Reduced-mass-like rational structures are generated only when all
+    # required operators are explicitly declared.
+    if "*" in binary and "/" in binary and "+" in binary:
+        for left_index, left in enumerate(names):
+            for right in names[left_index + 1:]:
+                if not add_template(f"(({left} * {right}) / ({left} + {right}))"):
+                    break
+            if attempts >= search_cap or len(proposals) >= cap:
+                break
+
+    # A self-product is a safe square fallback when exponentiation was not
+    # declared. Prefer it before unary and generic pairwise compositions.
+    if "*" in binary and not allow_square:
+        for name in names:
+            if not add_template(f"({name} * {name})"):
+                break
+
+    # Unary templates follow the higher-value power/product/quotient family.
+    for name in names:
+        for op in allowed_unary:
+            if not add_template(f"{op}({name})"):
+                break
         if attempts >= search_cap or len(proposals) >= cap:
             break
 
-    if allow_square:
-        for name in names:
-            if attempts >= search_cap or len(proposals) >= cap:
-                break
-            attempts += 1
-            proposals.append(f"({name} ** 2)")
-
-    # Multiplication also permits a variable's self-product. Prefer the
-    # explicit square form when exponentiation was declared as well.
-    if "*" in problem.allowed_binary_operators and not allow_square:
-        for name in names:
-            if attempts >= search_cap or len(proposals) >= cap:
-                break
-            attempts += 1
-            proposals.append(f"({name} * {name})")
-
     # Compose pairwise operators over the admitted one-level basis terms,
-    # not just raw variables. This enables forms such as sin(x) + y while
-    # keeping recursion bounded to one composition layer.
+    # not just raw variables. This remains the final, lower-priority family.
     base_terms = tuple(dict.fromkeys(proposals))
     for i, left in enumerate(base_terms):
         for right in base_terms[i + 1:]:
             for op in allowed_binary:
+                if not add_template(f"({left} {op} {right})"):
+                    break
+                binary_expression = proposals[-1]
+                for unary_op in allowed_unary:
+                    if not add_template(f"{unary_op}({binary_expression})"):
+                        break
                 if attempts >= search_cap or len(proposals) >= cap:
                     break
-                attempts += 1
-                binary_expression = f"({left} {op} {right})"
-                proposals.append(binary_expression)
-                for unary_op in allowed_unary:
-                    if attempts >= search_cap or len(proposals) >= cap:
-                        break
-                    attempts += 1
-                    proposals.append(f"{unary_op}({binary_expression})")
             if attempts >= search_cap or len(proposals) >= cap:
                 break
         if attempts >= search_cap or len(proposals) >= cap:
