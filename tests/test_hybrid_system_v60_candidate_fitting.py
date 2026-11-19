@@ -1,5 +1,6 @@
 """Offline regression tests for bounded native V60 candidate fitting."""
 import numpy as np
+import pytest
 
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
 
@@ -60,3 +61,33 @@ def test_non_finite_training_input_fails_closed():
         assert "finite" in str(exc)
     else:
         raise AssertionError("non-finite training data must be rejected")
+
+
+@pytest.mark.parametrize("candidate_id", [None, 7, True, "   "])
+def test_malformed_candidate_identity_is_rejected(candidate_id):
+    result = fit_native_candidates(
+        [_candidate(candidate_id=candidate_id)],
+        np.array([[1.0], [2.0]]), np.array([1.0, 2.0]),
+        variable_names=("x",), max_candidates=1, max_search_attempts=1,
+    )
+    assert result.records[0].status == "rejected"
+    assert "non-empty strings" in result.records[0].reason
+
+
+@pytest.mark.parametrize("deadline", [0, -1, float("nan"), float("inf"), True, "1"])
+def test_invalid_wall_time_budget_is_rejected(deadline):
+    with pytest.raises(ValueError, match="finite and > 0"):
+        fit_native_candidates(
+            [_candidate()], np.array([[1.0], [2.0]]), np.array([1.0, 2.0]),
+            variable_names=("x",), max_candidates=1, max_search_attempts=1,
+            max_wall_time_seconds=deadline,
+        )
+
+
+def test_non_mapping_candidate_is_rejected_without_aborting_batch():
+    result = fit_native_candidates(
+        [None, _candidate("valid")],
+        np.array([[1.0], [2.0]]), np.array([1.0, 2.0]),
+        variable_names=("x",), max_candidates=2, max_search_attempts=2,
+    )
+    assert [record.status for record in result.records] == ["rejected", "fitted"]
