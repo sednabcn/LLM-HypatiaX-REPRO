@@ -215,6 +215,20 @@ def test_worker_verifier_accepts_semantically_consistent_final_model():
     verified = verify_discovery_report_envelope(seal_discovery_report(payload))
     assert verified["provenance"]["native_final_model"]["execution_status"] == "selected"
 
+def test_worker_verifier_rejects_rank_deficient_final_model():
+    from hashlib import sha256
+    import json
+
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["training_design_rank"] = 1
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="full column rank"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
 
 def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
     payload = copy.deepcopy(_envelope()["report"])
