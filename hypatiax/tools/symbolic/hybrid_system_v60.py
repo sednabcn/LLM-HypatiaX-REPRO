@@ -1,9 +1,9 @@
-"""Opt-in HybridDiscovery V60 migration boundary.
+"""Opt-in HybridDiscovery V60 native training orchestration.
 
-V60 validates an explicit immutable problem contract, generates and normalizes
-a bounded data-independent template pool, and records bounded affine fitting
-evidence from training data. External LLM/PySR production, scientific gates,
-validation, and selection remain on the V50.2 baseline.
+Explicit activation requires a typed immutable problem contract and connects
+bounded proposal ingestion, scientific gates, training-fold validation,
+verified single-/multi-basis selection, finalization, and a separate frozen
+far-evaluation API. The default path remains V50.2 compatible.
 """
 from __future__ import annotations
 
@@ -101,7 +101,7 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 
 
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
-    """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
+    """V60 native orchestration with V50.2 as the default compatibility path."""
     VERSION = "6.0.0"
     IMPLEMENTATION_MODE = "native_v60_training_selection_with_separate_frozen_far_evaluation"
     NATIVE_STAGES = (
