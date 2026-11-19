@@ -94,7 +94,13 @@ def generate_native_template_candidates(
                 if attempts >= budget.max_search_attempts or len(proposals) >= cap:
                     break
                 attempts += 1
-                proposals.append(f"({left} {op} {right})")
+                binary_expression = f"({left} {op} {right})"
+                proposals.append(binary_expression)
+                for unary_op in allowed_unary:
+                    if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                        break
+                    attempts += 1
+                    proposals.append(f"{unary_op}({binary_expression})")
             if attempts >= budget.max_search_attempts or len(proposals) >= cap:
                 break
         if attempts >= budget.max_search_attempts or len(proposals) >= cap:
