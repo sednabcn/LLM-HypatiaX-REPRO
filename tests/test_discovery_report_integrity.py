@@ -419,3 +419,26 @@ def test_worker_verifier_rejects_multi_basis_option_with_single_candidate_identi
     payload["provenance"]["native_final_model"] = audit
     with pytest.raises(ValueError, match="multi-basis final-model option has invalid basis lineage"):
         verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_single_basis_model_with_mismatched_basis_identity():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["basis_candidate_ids"] = ["different-candidate"]
+    _reseal_final_model_digest(audit)
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="single-basis final model identity is inconsistent"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+def test_worker_verifier_rejects_multi_basis_model_with_single_basis_shape():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    model = audit["selected_model"]
+    model["family"] = "multi_basis"
+    model["candidate_id"] = None
+    model["candidate_group_id"] = "group-y"
+    _reseal_final_model_digest(audit)
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="multi-basis final model identity is inconsistent"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))

@@ -497,3 +497,19 @@ envelope could pass weaker option validation than the production handoff.
 Regression-test source covers nullability, expression parsing, and both
 family-identity boundaries. No tests, CI, experiments, workers, benchmarks,
 or provider calls are run as part of this change.
+
+
+## Stage 29 — explicit selected-model family identity at worker ingress
+
+The worker verifier now applies the production-handoff selected-model identity
+contract directly, before reconstructing the cross-family winner. A single-
+basis model must contain exactly one basis whose ID equals its candidate ID,
+and must not carry a group ID. A multi-basis model must contain two or three
+bases, no single-basis candidate ID, and a non-empty group ID. Unsupported
+families fail closed.
+
+The cross-family winner check remains in place as an independent consistency
+check against the serialized candidate options. Regression-test source covers
+a mismatched single-basis ID and a multi-basis family with an invalid
+single-basis shape. No tests, CI, experiments, workers, benchmarks, smoke
+workflows, or provider calls are run as part of this change.
