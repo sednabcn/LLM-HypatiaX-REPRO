@@ -21,7 +21,18 @@ from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_tem
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
-from hypatiax.tools.symbolic.v60_production_handoff import build_native_v60_result
+from hypatiax.tools.symbolic.v60_candidate_gating import validate_native_candidate_pool
+from hypatiax.tools.symbolic.v60_training_validation import validate_native_training_candidates
+from hypatiax.tools.symbolic.v60_multi_basis_fitting import fit_native_multi_basis_candidates
+from hypatiax.tools.symbolic.v60_multi_basis_validation import validate_native_multi_basis_candidates
+from hypatiax.tools.symbolic.v60_multi_basis_evidence import verify_native_multi_basis_validation_evidence
+from hypatiax.tools.symbolic.v60_multi_basis_objective_selection import select_native_multi_basis_candidates_from_verified_evidence
+from hypatiax.tools.symbolic.v60_objective_selection import select_native_candidates_from_training_evidence
+from hypatiax.tools.symbolic.v60_residual_stability import diagnose_native_training_residuals
+from hypatiax.tools.symbolic.v60_native_finalization import finalize_native_v60_model
+from hypatiax.tools.symbolic.v60_production_handoff import (
+    build_native_v60_result, evaluate_frozen_native_v60_model,
+)
 
 
 @dataclass(frozen=True)
@@ -92,13 +103,21 @@ def _prepare_v60_contract_context(X: Any, y: Any, var_names: list[str],
 class HybridDiscoverySystemV60(HybridDiscoverySystem):
     """V60 contract-preflight stage with V50.2 candidate discovery baseline."""
     VERSION = "6.0.0"
-    IMPLEMENTATION_MODE = "native_contract_generation_normalization_fitting_v50_2_discovery"
+    IMPLEMENTATION_MODE = "native_v60_training_selection_with_separate_frozen_far_evaluation"
     NATIVE_STAGES = (
         "typed_problem_contract_and_immutable_run_context",
         "bounded_data_independent_template_generation",
         "restricted_expression_normalization_semantic_identity_and_deduplication",
         "producer_lineage_preservation",
         "bounded_training_only_affine_candidate_fitting",
+        "data_independent_scientific_candidate_gates",
+        "training_only_single_basis_fold_validation",
+        "training_only_multi_basis_joint_fitting_and_fold_validation",
+        "independent_multi_basis_evidence_verification",
+        "training_only_single_and_multi_basis_objective_selection",
+        "training_only_residual_stability_diagnostics",
+        "cross_family_finalization_and_frozen_model_audit",
+        "separate_post_finalization_frozen_far_evaluation",
     )
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -154,6 +173,14 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_candidate_ids": [item["candidate_id"] for item in self._last_v60_candidate_proposals],
             "v60_run_context": self._last_v60_run_context.to_dict() if self._last_v60_run_context else None,
             "compatibility_baseline": "hybrid_system_v50_2",
+            "native_v60_gate_audit": dict(self._last_v60_gate_audit),
+            "native_v60_training_validation_audit": dict(self._last_v60_training_validation_audit),
+            "native_v60_multi_basis_fit_audit": dict(self._last_v60_multi_basis_fit_audit),
+            "native_v60_multi_basis_validation_audit": dict(self._last_v60_multi_basis_validation_audit),
+            "native_v60_multi_basis_evidence_audit": dict(self._last_v60_multi_basis_evidence_audit),
+            "native_v60_objective_selection_audit": dict(self._last_v60_objective_selection_audit),
+            "native_v60_multi_basis_selection_audit": dict(self._last_v60_multi_basis_selection_audit),
+            "native_v60_residual_stability_audit": dict(self._last_v60_residual_stability_audit),
         })
         annotated["native_v60_candidate_proposals"] = [
             dict(item) for item in self._last_v60_candidate_proposals
@@ -205,6 +232,135 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         annotated["implementation_provenance"] = provenance
         return annotated
 
+    def _run_native_v60_training_pipeline(
+        self, X: Any, y: Any, problem: DiscoveryProblem,
+        external_spec: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Run the complete native training-only pipeline; far data is not accepted."""
+        generated = list(generate_native_template_candidates(problem))
+        unknown_fields = set(external_spec) - {
+            "llm_proposals", "pysr_proposals", "llm_call_count",
+            "llm_token_count", "pysr_search_attempt_count",
+        }
+        if unknown_fields:
+            raise ValueError(f"unknown external producer fields: {sorted(unknown_fields)}")
+        external = ingest_external_candidate_proposals(
+            problem,
+            llm_proposals=external_spec.get("llm_proposals", ()),
+            pysr_proposals=external_spec.get("pysr_proposals", ()),
+            llm_call_count=external_spec.get("llm_call_count", 0),
+            llm_token_count=external_spec.get("llm_token_count", 0),
+            pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
+        )
+        cap = min(problem.budget.max_candidates, problem.budget.max_search_attempts)
+        combined = (external["proposals"] + [item.to_dict() for item in generated])[:cap]
+        self._last_v60_external_producer_audit = dict(external)
+        normalized = normalize_candidate_proposals(
+            combined, variable_names=problem.variable_names,
+            max_candidates=problem.budget.max_candidates,
+        )
+        candidates = tuple(item.to_dict() for item in normalized.candidates)
+        self._last_v60_candidate_proposals = candidates
+        self._last_v60_normalization_audit = normalized.to_dict()
+        self._last_v60_normalization_audit.pop("candidates", None)
+
+        budget = problem.budget
+        fitted = fit_native_candidates(
+            candidates, X, y, variable_names=problem.variable_names,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+            max_wall_time_seconds=budget.max_wall_time_seconds,
+        )
+        self._last_v60_fitting_audit = fitted.to_dict()
+
+        gate = validate_native_candidate_pool(candidates, problem)
+        self._last_v60_gate_audit = gate
+        eligible_ids = [
+            item["native_candidate_id"] for item in gate["candidate_gates"]
+            if item.get("eligible") is True and item.get("gate_execution") == "completed"
+        ]
+        single_validation = validate_native_training_candidates(
+            candidates, X, y, variable_names=problem.variable_names,
+            eligible_candidate_ids=eligible_ids,
+            split_protocol=problem.split_protocol, seed=budget.seed,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+            max_wall_time_seconds=budget.max_wall_time_seconds,
+        )
+        self._last_v60_training_validation_audit = single_validation
+        single_selection = select_native_candidates_from_training_evidence(
+            candidates, gate, single_validation,
+            variable_names=problem.variable_names,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+        )
+        self._last_v60_objective_selection_audit = single_selection
+
+        eligible_candidates = [
+            item for item in candidates if item.get("candidate_id") in set(eligible_ids)
+        ]
+        multi_fit = fit_native_multi_basis_candidates(
+            eligible_candidates, X, y, variable_names=problem.variable_names,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+            max_basis_terms=3,
+            max_wall_time_seconds=budget.max_wall_time_seconds,
+        )
+        self._last_v60_multi_basis_fit_audit = multi_fit
+        multi_validation = validate_native_multi_basis_candidates(
+            multi_fit["fitted_candidate_groups"], eligible_candidates, X, y,
+            variable_names=problem.variable_names,
+            split_protocol=problem.split_protocol, seed=budget.seed,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+            max_wall_time_seconds=budget.max_wall_time_seconds,
+        )
+        self._last_v60_multi_basis_validation_audit = multi_validation
+        multi_evidence = verify_native_multi_basis_validation_evidence(
+            multi_validation, eligible_candidates, X, y,
+            variable_names=problem.variable_names,
+            max_groups=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+        )
+        self._last_v60_multi_basis_evidence_audit = multi_evidence
+        multi_selection = select_native_multi_basis_candidates_from_verified_evidence(
+            eligible_candidates, gate, multi_fit, multi_validation, multi_evidence,
+            variable_names=problem.variable_names,
+            max_groups=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+        )
+        self._last_v60_multi_basis_selection_audit = multi_selection
+
+        self._last_v60_residual_stability_audit = diagnose_native_training_residuals(
+            candidates, single_validation, X, y,
+            variable_names=problem.variable_names,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+        )
+        final_audit = finalize_native_v60_model(
+            candidates, single_selection, multi_selection, X, y,
+            variable_names=problem.variable_names,
+        )
+        self._last_v60_final_model_audit = final_audit
+        return build_native_v60_result(final_audit) if final_audit.get("execution_status") == "selected" else {
+            "success": False, "error": "NO_CREDIBLE_CANDIDATE",
+            "formula": "N/A", "expression": "N/A", "final_formula": "N/A",
+            "strategy": "native_v60",
+        }
+
+    def evaluate_native_far_set(self, X_far: Any, y_far: Any) -> dict[str, Any]:
+        """Evaluate only the frozen finalized model; this method cannot change selection."""
+        if self._last_v60_activate_native_result is not True:
+            raise RuntimeError("native V60 activation must complete before far evaluation")
+        if self._last_v60_final_model_audit.get("execution_status") != "selected":
+            raise RuntimeError("a selected frozen native V60 final model is required")
+        audit = evaluate_frozen_native_v60_model(
+            self._last_v60_final_model_audit, X_far, y_far,
+            variable_names=self._last_v60_run_context.variable_names,
+        )
+        self._last_v60_far_evaluation_audit = audit
+        return dict(audit)
+
     def discover(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         """Run native V60 discovery; preserve V50.2 unless explicit handoff is requested."""
         self._reset_v60_call_state()
@@ -231,59 +387,27 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         if not isinstance(activation_requested, bool):
             raise TypeError("v60_activate_native_model must be a boolean")
         if activation_requested:
-            raise NotImplementedError(
-                "native V60 production activation is not wired into discover(); "
-                "the request is rejected rather than silently falling back to V50.2"
+            if run_context is None:
+                raise ValueError(
+                    "v60_activate_native_model=true requires a typed DiscoveryProblem contract"
+                )
+            if "X_far" in kwargs or "y_far" in kwargs:
+                raise ValueError(
+                    "far/evaluation arrays are not accepted by discover(); use evaluate_native_far_set() after finalization"
+                )
+            if not isinstance(prepared.get("v60_external_candidate_proposals", {}), Mapping):
+                raise TypeError("v60_external_candidate_proposals must be a mapping")
+            self._last_v60_run_context = run_context
+            self._last_v60_activate_native_result = True
+            native_result = self._run_native_v60_training_pipeline(
+                X, y, prepared["discovery_problem"],
+                prepared.get("v60_external_candidate_proposals", {}) or {},
             )
+            return self._annotate_v60_result(native_result)
         self._last_v60_run_context = run_context
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}
-        if self._last_v60_run_context is not None:
-            problem = prepared["discovery_problem"]
-            generated = list(generate_native_template_candidates(problem))
-            external_spec = prepared.get("v60_external_candidate_proposals", {})
-            if external_spec is None:
-                external_spec = {}
-            if not isinstance(external_spec, Mapping):
-                raise TypeError("v60_external_candidate_proposals must be a mapping")
-            unknown_producer_fields = set(external_spec) - {
-                "llm_proposals", "pysr_proposals", "llm_call_count",
-                "llm_token_count", "pysr_search_attempt_count",
-            }
-            if unknown_producer_fields:
-                raise ValueError(f"unknown external producer fields: {sorted(unknown_producer_fields)}")
-            external_audit = ingest_external_candidate_proposals(
-                problem,
-                llm_proposals=external_spec.get("llm_proposals", ()),
-                pysr_proposals=external_spec.get("pysr_proposals", ()),
-                llm_call_count=external_spec.get("llm_call_count", 0),
-                llm_token_count=external_spec.get("llm_token_count", 0),
-                pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
-            )
-            combined = external_audit["proposals"] + [item.to_dict() for item in generated]
-            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
-            self._last_v60_external_producer_audit = dict(external_audit)
-            normalized = normalize_candidate_proposals(
-                combined,
-                variable_names=problem.variable_names,
-                max_candidates=problem.budget.max_candidates,
-            )
-            self._last_v60_candidate_proposals = tuple(
-                item.to_dict() for item in normalized.candidates
-            )
-            self._last_v60_normalization_audit = normalized.to_dict()
-            self._last_v60_normalization_audit.pop("candidates", None)
-            fitted = fit_native_candidates(
-                self._last_v60_candidate_proposals,
-                X,
-                y,
-                variable_names=problem.variable_names,
-                max_candidates=problem.budget.max_candidates,
-                max_search_attempts=problem.budget.max_search_attempts,
-                max_wall_time_seconds=problem.budget.max_wall_time_seconds,
-            )
-            self._last_v60_fitting_audit = fitted.to_dict()
         if forwarded is not None:
             if len(forwarded) > 4:
                 forwarded[4] = prepared
