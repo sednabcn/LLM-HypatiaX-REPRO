@@ -462,3 +462,38 @@ class NativeV60SplitConformalTests(unittest.TestCase):
                 "fitted_expression": "(3)*(x) + (2)",
                 "coefficients": [3.0, 2.0],
             }), calibration)
+
+    def test_result_calibration_accepts_serialized_method_metadata_handoff(self):
+        final, _ = self._calibration()
+        X_cal = np.arange(20.0, 39.0).reshape(-1, 1)
+        predictions = 3.0 * X_cal[:, 0] + 2.0
+        result = {
+            "success": True,
+            "metadata": {
+                "native_v60_final_model": final,
+                "discovery_report_envelope": None,
+            },
+        }
+        calibrated = calibrate_native_v60_result(
+            result,
+            X_cal,
+            predictions + np.arange(1.0, 20.0),
+            variable_names=["x"],
+            calibration_provenance={
+                "training_split_id": "train-v1",
+                "calibration_split_id": "cal-v3",
+                "disjoint_from_training": True,
+                "exchangeability_assumed": True,
+            },
+        )
+        self.assertEqual(calibrated["native_v60_final_model"], final)
+        self.assertEqual(
+            calibrated["metadata"]["native_v60_calibration_audit"],
+            calibrated["native_v60_calibration_audit"],
+        )
+        self.assertEqual(
+            calibrated["metadata"]["native_v60_calibration_status"],
+            "calibrated",
+        )
+        self.assertIsNone(calibrated["metadata"]["discovery_report_envelope"])
+
