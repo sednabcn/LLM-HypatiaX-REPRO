@@ -537,9 +537,7 @@ def calibrate_native_v60_result(
         raise ValueError("calibration requires a successful native V60 discovery result")
     final_model_audit = discovery_result.get("native_v60_final_model")
     if not isinstance(final_model_audit, Mapping):
-        final_model_audit = discovery_result.get("native_model")
-    if not isinstance(final_model_audit, Mapping):
-        raise ValueError("discovery result does not contain a finalized native V60 model")
+        raise ValueError("discovery result does not contain a finalized native V60 model audit")
 
     calibration = calibrate_frozen_native_v60_model(
         final_model_audit,
