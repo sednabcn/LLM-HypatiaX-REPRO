@@ -95,8 +95,12 @@ def generate_native_template_candidates(
             attempts += 1
             proposals.append(f"({name} * {name})")
 
-    for i, left in enumerate(names):
-        for right in names[i + 1:]:
+    # Compose pairwise operators over the admitted one-level basis terms,
+    # not just raw variables. This enables forms such as sin(x) + y while
+    # keeping recursion bounded to one composition layer.
+    base_terms = tuple(dict.fromkeys(proposals))
+    for i, left in enumerate(base_terms):
+        for right in base_terms[i + 1:]:
             for op in allowed_binary:
                 if attempts >= budget.max_search_attempts or len(proposals) >= cap:
                     break
