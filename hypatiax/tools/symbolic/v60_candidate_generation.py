@@ -36,7 +36,8 @@ class CandidateProposal:
 
 
 def generate_native_template_candidates_with_audit(
-    problem: DiscoveryProblem, *, limit: int | None = None
+    problem: DiscoveryProblem, *, limit: int | None = None,
+    search_attempt_limit: int | None = None,
 ) -> dict[str, Any]:
     """Generate a deterministic, strictly bounded set of algebraic templates."""
     if not isinstance(problem, DiscoveryProblem):
@@ -47,8 +48,17 @@ def generate_native_template_candidates_with_audit(
             raise TypeError("limit must be a non-negative integer")
         if limit < 0:
             raise ValueError("limit must be a non-negative integer")
+    if search_attempt_limit is not None:
+        if isinstance(search_attempt_limit, bool) or not isinstance(search_attempt_limit, int):
+            raise TypeError("search_attempt_limit must be a non-negative integer")
+        if search_attempt_limit < 0:
+            raise ValueError("search_attempt_limit must be a non-negative integer")
+    search_cap = (
+        budget.max_search_attempts if search_attempt_limit is None
+        else min(budget.max_search_attempts, search_attempt_limit)
+    )
     cap = budget.max_candidates if limit is None else min(budget.max_candidates, limit)
-    if cap == 0 or budget.max_search_attempts == 0:
+    if cap == 0 or search_cap == 0:
         return {
             "schema": "v60_native_template_generation_v1",
             "generation_status": "completed",
@@ -58,10 +68,11 @@ def generate_native_template_candidates_with_audit(
             "base_variable_candidate_count": len(problem.variable_names),
             "operator_candidate_count": 0,
             "duplicate_expression_count": 0,
-            "search_attempt_budget": budget.max_search_attempts,
+            "search_attempt_budget": search_cap,
+            "contract_search_attempt_budget": budget.max_search_attempts,
             "candidate_budget": budget.max_candidates,
             "effective_candidate_cap": cap,
-            "search_attempt_budget_exhausted": budget.max_search_attempts == 0,
+            "search_attempt_budget_exhausted": search_cap == 0,
             "candidate_cap_reached": cap == 0,
             "declared_unary_operators": list(problem.allowed_unary_operators),
             "accepted_unary_operators": list(dict.fromkeys(
@@ -139,16 +150,16 @@ def generate_native_template_candidates_with_audit(
     # scientific contract; the attempt and candidate caps apply to each one.
     for name in names:
         for op in allowed_unary:
-            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+            if attempts >= search_cap or len(proposals) >= cap:
                 break
             attempts += 1
             proposals.append(f"{op}({name})")
-        if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+        if attempts >= search_cap or len(proposals) >= cap:
             break
 
     if allow_square:
         for name in names:
-            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+            if attempts >= search_cap or len(proposals) >= cap:
                 break
             attempts += 1
             proposals.append(f"({name} ** 2)")
@@ -157,7 +168,7 @@ def generate_native_template_candidates_with_audit(
     # explicit square form when exponentiation was declared as well.
     if "*" in problem.allowed_binary_operators and not allow_square:
         for name in names:
-            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+            if attempts >= search_cap or len(proposals) >= cap:
                 break
             attempts += 1
             proposals.append(f"({name} * {name})")
@@ -169,19 +180,19 @@ def generate_native_template_candidates_with_audit(
     for i, left in enumerate(base_terms):
         for right in base_terms[i + 1:]:
             for op in allowed_binary:
-                if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                if attempts >= search_cap or len(proposals) >= cap:
                     break
                 attempts += 1
                 binary_expression = f"({left} {op} {right})"
                 proposals.append(binary_expression)
                 for unary_op in allowed_unary:
-                    if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                    if attempts >= search_cap or len(proposals) >= cap:
                         break
                     attempts += 1
                     proposals.append(f"{unary_op}({binary_expression})")
-            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+            if attempts >= search_cap or len(proposals) >= cap:
                 break
-        if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+        if attempts >= search_cap or len(proposals) >= cap:
             break
 
     output = []
@@ -218,10 +229,11 @@ def generate_native_template_candidates_with_audit(
         "base_variable_candidate_count": len(names),
         "operator_candidate_count": int(attempts),
         "duplicate_expression_count": max(0, len(proposals[:cap]) - len(output)),
-        "search_attempt_budget": int(budget.max_search_attempts),
+        "search_attempt_budget": int(search_cap),
+            "contract_search_attempt_budget": int(budget.max_search_attempts),
         "candidate_budget": int(budget.max_candidates),
         "effective_candidate_cap": int(cap),
-        "search_attempt_budget_exhausted": attempts >= budget.max_search_attempts,
+        "search_attempt_budget_exhausted": attempts >= search_cap,
         "candidate_cap_reached": len(proposals) >= cap,
         "declared_unary_operators": list(problem.allowed_unary_operators),
         "accepted_unary_operators": list(allowed_unary),
@@ -234,7 +246,10 @@ def generate_native_template_candidates_with_audit(
 
 
 def generate_native_template_candidates(
-    problem: DiscoveryProblem, *, limit: int | None = None
+    problem: DiscoveryProblem, *, limit: int | None = None,
+    search_attempt_limit: int | None = None,
 ) -> tuple[CandidateProposal, ...]:
     """Compatibility wrapper returning only the deterministic proposal tuple."""
-    return generate_native_template_candidates_with_audit(problem, limit=limit)["proposals"]
+    return generate_native_template_candidates_with_audit(
+        problem, limit=limit, search_attempt_limit=search_attempt_limit
+    )["proposals"]
