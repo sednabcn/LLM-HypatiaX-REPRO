@@ -500,13 +500,19 @@ statements without upgrading them to independently verified facts.
 
 The optional calibration_audit argument to build_native_v60_result carries
 the verified calibration audit and its status alongside the frozen model.
-It does not claim that prediction intervals have already been calculated;
-callers use predict_frozen_native_v60_interval for new feature rows.
+For durable discovery-report artifacts, attach_native_v60_calibration_to_report
+adds the same verified audit to the sealed report provenance and reseals the
+envelope; the worker verifier rechecks it against the embedded finalized
+model. This makes calibration lineage available to the existing report
+sidecar path without changing the core report schema. Neither operation
+claims that prediction intervals have already been calculated; callers use
+predict_frozen_native_v60_interval for new feature rows.
 Insufficient calibration size remains explicit and cannot produce finite
 intervals. The audit continues to disclaim conditional coverage,
 extrapolation, and distribution-shift guarantees.
 
 Regression-test source covers tampered quantile rank, removed split
-attestation, and calibration/model digest mismatch. No tests, CI, experiments,
+attestation, calibration/model digest mismatch, sealed-report round trips,
+and rejection of a calibration audit without an embedded finalized model. No tests, CI, experiments,
 workers, benchmarks, smoke workflows, or provider calls are run as part of
 this change.
