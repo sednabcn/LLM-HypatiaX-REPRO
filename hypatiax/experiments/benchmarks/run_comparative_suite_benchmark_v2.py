@@ -131,6 +131,13 @@ def _resolve_hybrid_implementation(cli_value=None) -> str:
     return aliases[selected]
 
 
+def _exp2_binary_operators(X):
+    """Use the bounded power operator only when the training features are non-negative."""
+    values = np.asarray(X, dtype=float)
+    operators = ["+", "-", "*", "/"]
+    if values.size and np.isfinite(values).all() and float(np.min(values)) >= 0.0:
+        operators.append("pow")
+    return operators
 
 
 # Canonical shared implementation used by both Exp2 Feynman runners.
@@ -3405,7 +3412,7 @@ class HybridSystemV50_2Method(BaseMethod):
             "llm_n_candidates": 3,
             "llm_temperature": 0.25,
             # Match config/repro.yaml's declared PySR operator search space.
-            "binary_operators": ["+", "-", "*", "/"],
+            "binary_operators": _exp2_binary_operators(X),
             "unary_operators": ["exp", "log", "sin", "cos", "sqrt"],
             "maxsize": 30,
             "use_transcendental_compositions": True,
@@ -3441,6 +3448,9 @@ class HybridSystemV50_2Method(BaseMethod):
         _meta = dict(metadata)
         if not _meta.get("domain"):
             _meta["domain"] = "general"
+        # The worker reports this threshold as an acceptance policy; V50.2
+        # now enforces it before returning a successful discovery result.
+        _meta["training_acceptance_threshold"] = 0.97
 
         # Always activate the typed scientific contract for the Exp2
         # HybridDiscovery arm. Only caller-declared units/domains/constraints
