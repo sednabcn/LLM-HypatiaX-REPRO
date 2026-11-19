@@ -3516,6 +3516,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     "contract_origin": "exp2_protocol_adapter",
                     "physical_declarations_inferred": False,
                     "v60_search_budget_policy": "dedicated_bounded_30_attempts" if _v60_requested else None,
+                    "max_training_cv_nrmse": 1.0 if _v60_requested else None,
                 },
             }
         if not isinstance(_contract_spec, dict):
