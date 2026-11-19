@@ -91,6 +91,15 @@ def generate_native_template_candidates(
             attempts += 1
             proposals.append(f"({name} ** 2)")
 
+    # Multiplication also permits a variable's self-product. Prefer the
+    # explicit square form when exponentiation was declared as well.
+    if "*" in allowed_binary and not allow_square:
+        for name in names:
+            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                break
+            attempts += 1
+            proposals.append(f"({name} * {name})")
+
     for i, left in enumerate(names):
         for right in names[i + 1:]:
             for op in allowed_binary:
