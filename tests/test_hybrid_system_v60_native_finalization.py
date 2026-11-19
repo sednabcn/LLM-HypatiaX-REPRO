@@ -187,6 +187,45 @@ class NativeV60FinalizationTests(unittest.TestCase):
                 self.X, self.y, variable_names=["x"],
             )
 
+    def test_rank_deficient_multi_basis_is_excluded_before_cross_family_choice(self):
+        candidates = [
+            {"candidate_id": "c1", "normalized_expression": "x", "producer_provenance": []},
+            {"candidate_id": "c2", "normalized_expression": "2*x", "producer_provenance": []},
+        ]
+        single = {
+            "schema": "v60_native_objective_selection_v1",
+            "selection_status": "selected", "selection_performed": True,
+            "far_or_evaluation_data_used": False, "pareto_candidate_ids": ["c1"],
+            "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 0.2, "mean_validation_nrmse": 0.2,
+                "std_validation_rmse": 0.01, "std_validation_nrmse": 0.01,
+                "complexity": 1,
+            }],
+        }
+        multi = {
+            "schema": "v60_native_multi_basis_objective_selection_v1",
+            "selection_status": "selected", "selection_performed": True,
+            "far_or_evaluation_data_used": False, "pareto_candidate_group_ids": ["g1"],
+            "selected_candidate_group_id": "g1",
+            "objective_evidence": [{
+                "candidate_group_id": "g1", "basis_candidate_ids": ["c1", "c2"],
+                "basis_expressions": ["x", "2*x"],
+                "mean_validation_rmse": 0.01, "mean_validation_nrmse": 0.01,
+                "std_validation_rmse": 0.001, "std_validation_nrmse": 0.001,
+                "symbolic_complexity": 2,
+            }],
+        }
+        _seal_selection(single)
+        _seal_selection(multi)
+        result = finalize_native_v60_model(
+            candidates, single, multi, self.X, self.y, variable_names=["x"]
+        )
+        self.assertEqual(result["execution_status"], "selected")
+        self.assertEqual(result["selected_model"]["family"], "single_basis")
+        self.assertEqual(result["rejected_candidate_options"][0]["reason"], "rank_deficient_training_design")
+
 
 if __name__ == "__main__":
     unittest.main()
