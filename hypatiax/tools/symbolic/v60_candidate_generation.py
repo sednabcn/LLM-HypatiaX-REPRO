@@ -41,9 +41,12 @@ def generate_native_template_candidates(
     if not isinstance(problem, DiscoveryProblem):
         raise TypeError("problem must be a DiscoveryProblem")
     budget = problem.budget
-    cap = budget.max_candidates if limit is None else min(
-        budget.max_candidates, max(0, int(limit))
-    )
+    if limit is not None:
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise TypeError("limit must be a non-negative integer")
+        if limit < 0:
+            raise ValueError("limit must be a non-negative integer")
+    cap = budget.max_candidates if limit is None else min(budget.max_candidates, limit)
     if cap == 0 or budget.max_search_attempts == 0:
         return ()
 
@@ -54,7 +57,7 @@ def generate_native_template_candidates(
         return ()
 
     binary = problem.allowed_binary_operators or ("+", "-", "*", "/")
-    allowed_binary = tuple(op for op in binary if op in {"+", "-", "*", "/"})
+    allowed_binary = tuple(dict.fromkeys(op for op in binary if op in {"+", "-", "*", "/"}))
     allow_square = "**" in binary
     # Keep generated calls inside the same explicit function allowlist as the
     # restricted AST parser. Unknown contract operators are never guessed.
@@ -64,9 +67,9 @@ def generate_native_template_candidates(
         "atan", "arcsin", "arccos", "arctan", "asin_of_sin",
         "acos_of_cos", "atan_of_tan",
     }
-    allowed_unary = tuple(
+    allowed_unary = tuple(dict.fromkeys(
         op for op in problem.allowed_unary_operators if op in parser_unary
-    )
+    ))
     proposals: list[str] = list(names)
     attempts = 0
 
