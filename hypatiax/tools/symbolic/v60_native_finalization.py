@@ -55,7 +55,11 @@ def _selected_record(
         raise ValueError("selected candidate must resolve to exactly one objective evidence record")
     evidence = matches[0]
     digest = evidence.get("objective_evidence_sha256")
-    if (not isinstance(digest, str) or len(digest) != 64
+    payload = dict(evidence)
+    payload.pop("objective_evidence_sha256", None)
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    expected_digest = sha256(encoded.encode("utf-8")).hexdigest()
+    if (not isinstance(digest, str) or digest != expected_digest
             or audit.get("selected_objective_evidence_sha256") != digest):
         raise ValueError("selected objective evidence fingerprint is missing or inconsistent")
     return evidence
