@@ -282,3 +282,18 @@ candidate sequence. Regression-test source covers explicit allowlisting,
 unsupported names, deterministic order, and budget truncation. Tests have not
 been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
 call was launched.
+
+
+## Stage 48 — generate bounded square templates for declared exponentiation
+
+The native generator now emits the bounded variable-to-the-second-power
+structural template only when exponentiation (**) is explicitly declared in
+the contract's binary-operator allowlist. Each square consumes one search
+attempt and obeys the same candidate cap. Undeclared exponentiation, caret
+notation, and unknown operators remain excluded. This adds a minimal nonlinear
+polynomial basis without introducing arbitrary exponents or unrestricted
+expression search.
+
+Regression-test source covers explicit declaration and the unsupported-operator
+case. Tests have not been run; no CI, experiment, worker, benchmark, smoke
+workflow, or provider call was launched.
