@@ -387,6 +387,14 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         if not isinstance(activation_requested, bool):
             raise TypeError("v60_activate_native_model must be a boolean")
         if activation_requested:
+            far_metadata_keys = {
+                "X_far", "y_far", "far_X", "far_y",
+                "v60_far_X", "v60_far_y", "far_evaluation_data",
+            }
+            if far_metadata_keys.intersection(prepared):
+                raise ValueError(
+                    "far/evaluation data must be supplied only to evaluate_native_far_set() after finalization"
+                )
             if run_context is None:
                 raise ValueError(
                     "v60_activate_native_model=true requires a typed DiscoveryProblem contract"
@@ -408,6 +416,44 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}
+        if self._last_v60_run_context is not None:
+            problem = prepared["discovery_problem"]
+            generated = list(generate_native_template_candidates(problem))
+            external_spec = prepared.get("v60_external_candidate_proposals", {}) or {}
+            if not isinstance(external_spec, Mapping):
+                raise TypeError("v60_external_candidate_proposals must be a mapping")
+            unknown_producer_fields = set(external_spec) - {
+                "llm_proposals", "pysr_proposals", "llm_call_count",
+                "llm_token_count", "pysr_search_attempt_count",
+            }
+            if unknown_producer_fields:
+                raise ValueError(f"unknown external producer fields: {sorted(unknown_producer_fields)}")
+            external_audit = ingest_external_candidate_proposals(
+                problem,
+                llm_proposals=external_spec.get("llm_proposals", ()),
+                pysr_proposals=external_spec.get("pysr_proposals", ()),
+                llm_call_count=external_spec.get("llm_call_count", 0),
+                llm_token_count=external_spec.get("llm_token_count", 0),
+                pysr_search_attempt_count=external_spec.get("pysr_search_attempt_count", 0),
+            )
+            combined = external_audit["proposals"] + [item.to_dict() for item in generated]
+            combined = combined[:min(problem.budget.max_candidates, problem.budget.max_search_attempts)]
+            self._last_v60_external_producer_audit = dict(external_audit)
+            normalized = normalize_candidate_proposals(
+                combined, variable_names=problem.variable_names,
+                max_candidates=problem.budget.max_candidates,
+            )
+            self._last_v60_candidate_proposals = tuple(item.to_dict() for item in normalized.candidates)
+            self._last_v60_normalization_audit = normalized.to_dict()
+            self._last_v60_normalization_audit.pop("candidates", None)
+            fitted = fit_native_candidates(
+                self._last_v60_candidate_proposals, X, y,
+                variable_names=problem.variable_names,
+                max_candidates=problem.budget.max_candidates,
+                max_search_attempts=problem.budget.max_search_attempts,
+                max_wall_time_seconds=problem.budget.max_wall_time_seconds,
+            )
+            self._last_v60_fitting_audit = fitted.to_dict()
         if forwarded is not None:
             if len(forwarded) > 4:
                 forwarded[4] = prepared
