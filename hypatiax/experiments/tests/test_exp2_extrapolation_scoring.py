@@ -586,3 +586,42 @@ def test_exp2_v50_2_search_selection_uses_three_paired_training_only_folds():
     assert '"fold_timeout_seconds": 30' in method
     assert "_reserved_overhead = 300" in method
     assert "_fold_validation_reserve = 270" in method
+    assert '"binary_operators": _exp2_binary_operators(X)' in method
+    assert '_meta["training_acceptance_threshold"] = 0.97' in method
+
+
+def test_exp2_power_operator_is_enabled_only_for_finite_nonnegative_training_features():
+    import ast
+    from pathlib import Path
+    import numpy as np
+
+    root = Path(__file__).resolve().parents[3]
+    source = (
+        root / "hypatiax/experiments/benchmarks/run_comparative_suite_benchmark_v2.py"
+    ).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    helper = next(
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_exp2_binary_operators"
+    )
+    namespace = {"np": np}
+    exec(compile(ast.Module(body=[helper], type_ignores=[]), "<exp2-operator-policy>", "exec"), namespace)
+    choose = namespace["_exp2_binary_operators"]
+
+    assert choose(np.array([[1.0, 2.0], [3.0, 4.0]])) == ["+", "-", "*", "/", "pow"]
+    assert choose(np.array([[-1.0, 2.0]])) == ["+", "-", "*", "/"]
+    assert choose(np.array([[np.nan, 2.0]])) == ["+", "-", "*", "/"]
+
+
+def test_v50_2_enforces_explicit_training_acceptance_threshold():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[3]
+    source = (
+        root / "hypatiax/tools/symbolic/hybrid_system_v50_2.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'metadata["training_acceptance_threshold"]' not in source
+    assert "metadata['training_acceptance_threshold']" in source
+    assert "TRAINING_ACCEPTANCE_FAILED" in source
+    assert "best_r2 < _acceptance_threshold" in source
