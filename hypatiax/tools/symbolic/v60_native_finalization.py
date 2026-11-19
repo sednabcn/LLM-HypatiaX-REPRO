@@ -26,17 +26,39 @@ def _finite(value: Any, label: str, *, nullable: bool = False) -> float | None:
     return float(value)
 
 
-def _selected_record(audit: Mapping[str, Any], id_key: str, records_key: str, record_id_key: str):
-    selected_id = audit.get(id_key)
-    if audit.get("selection_status") != "selected" or not isinstance(selected_id, str):
+def _selected_record(
+    audit: Mapping[str, Any], *, schema: str, id_key: str,
+    records_key: str, record_id_key: str, pareto_key: str,
+):
+    status = audit.get("selection_status")
+    if status != "selected":
+        if audit.get(id_key) is not None:
+            raise ValueError("unselected audit must not expose a selected candidate")
         return None
+    if audit.get("schema") != schema:
+        raise ValueError("selected objective audit has an unsupported schema")
+    if audit.get("selection_performed") is not True:
+        raise ValueError("selected objective audit must certify that selection was performed")
+    if audit.get("far_or_evaluation_data_used") is not False:
+        raise ValueError("selected objective audit must certify training-only selection")
+    selected_id = audit.get(id_key)
+    pareto_ids = audit.get(pareto_key)
+    if not isinstance(selected_id, str) or not selected_id:
+        raise ValueError("selected objective audit must identify its winner")
+    if not isinstance(pareto_ids, list) or selected_id not in pareto_ids:
+        raise ValueError("selected winner must belong to the serialized Pareto front")
     records = audit.get(records_key)
     if not isinstance(records, list):
         raise ValueError(f"{records_key} must be a list")
     matches = [item for item in records if isinstance(item, Mapping) and item.get(record_id_key) == selected_id]
     if len(matches) != 1:
         raise ValueError("selected candidate must resolve to exactly one objective evidence record")
-    return matches[0]
+    evidence = matches[0]
+    digest = evidence.get("objective_evidence_sha256")
+    if (not isinstance(digest, str) or len(digest) != 64
+            or audit.get("selected_objective_evidence_sha256") != digest):
+        raise ValueError("selected objective evidence fingerprint is missing or inconsistent")
+    return evidence
 
 
 def finalize_native_v60_model(
@@ -72,8 +94,23 @@ def finalize_native_v60_model(
         by_id[cid] = candidate
 
     options: list[dict[str, Any]] = []
-    single = _selected_record(single_selection, "selected_candidate_id", "objective_evidence", "candidate_id")
+    single = _selected_record(
+        single_selection, schema="v60_native_objective_selection_v1",
+        id_key="selected_candidate_id", records_key="objective_evidence",
+        record_id_key="candidate_id", pareto_key="pareto_candidate_ids",
+    )
     if single is not None:
+        for key in ("mean_validation_rmse", "std_validation_rmse"):
+            value = _finite(single.get(key), f"single {key}")
+            if value < 0:
+                raise ValueError(f"single {key} cannot be negative")
+        for key in ("mean_validation_nrmse", "std_validation_nrmse"):
+            value = _finite(single.get(key), f"single {key}", nullable=True)
+            if value is not None and value < 0:
+                raise ValueError(f"single {key} cannot be negative")
+        complexity = single.get("complexity")
+        if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+            raise ValueError("single symbolic complexity must be a non-negative integer")
         cid = single["candidate_id"]
         proposal = by_id.get(cid)
         if proposal is None or single.get("expression") != (proposal.get("normalized_expression") or proposal.get("expression")):
@@ -85,11 +122,26 @@ def finalize_native_v60_model(
             "cv_nrmse": _finite(single.get("mean_validation_nrmse"), "single CV NRMSE", nullable=True),
             "cv_rmse_std": _finite(single.get("std_validation_rmse"), "single CV RMSE std"),
             "cv_nrmse_std": _finite(single.get("std_validation_nrmse"), "single CV NRMSE std", nullable=True),
-            "complexity": int(single.get("complexity", 0)),
+            "complexity": complexity,
         })
 
-    multi = _selected_record(multi_selection, "selected_candidate_group_id", "objective_evidence", "candidate_group_id")
+    multi = _selected_record(
+        multi_selection, schema="v60_native_multi_basis_objective_selection_v1",
+        id_key="selected_candidate_group_id", records_key="objective_evidence",
+        record_id_key="candidate_group_id", pareto_key="pareto_candidate_group_ids",
+    )
     if multi is not None:
+        for key in ("mean_validation_rmse", "std_validation_rmse"):
+            value = _finite(multi.get(key), f"multi {key}")
+            if value < 0:
+                raise ValueError(f"multi {key} cannot be negative")
+        for key in ("mean_validation_nrmse", "std_validation_nrmse"):
+            value = _finite(multi.get(key), f"multi {key}", nullable=True)
+            if value is not None and value < 0:
+                raise ValueError(f"multi {key} cannot be negative")
+        complexity = multi.get("symbolic_complexity")
+        if isinstance(complexity, bool) or not isinstance(complexity, int) or complexity < 0:
+            raise ValueError("multi symbolic complexity must be a non-negative integer")
         ids = multi.get("basis_candidate_ids")
         expressions = multi.get("basis_expressions")
         if not isinstance(ids, list) or not isinstance(expressions, list) or len(ids) != len(expressions) or not 2 <= len(ids) <= 3:
@@ -105,7 +157,7 @@ def finalize_native_v60_model(
             "cv_nrmse": _finite(multi.get("mean_validation_nrmse"), "multi CV NRMSE", nullable=True),
             "cv_rmse_std": _finite(multi.get("std_validation_rmse"), "multi CV RMSE std"),
             "cv_nrmse_std": _finite(multi.get("std_validation_nrmse"), "multi CV NRMSE std", nullable=True),
-            "complexity": int(multi.get("symbolic_complexity", 0)),
+            "complexity": complexity,
         })
 
     if not options:
