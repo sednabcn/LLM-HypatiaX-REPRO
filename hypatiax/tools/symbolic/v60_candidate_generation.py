@@ -35,9 +35,9 @@ class CandidateProposal:
         }
 
 
-def generate_native_template_candidates(
+def generate_native_template_candidates_with_audit(
     problem: DiscoveryProblem, *, limit: int | None = None
-) -> tuple[CandidateProposal, ...]:
+) -> dict[str, Any]:
     """Generate a deterministic, strictly bounded set of algebraic templates."""
     if not isinstance(problem, DiscoveryProblem):
         raise TypeError("problem must be a DiscoveryProblem")
@@ -49,22 +49,65 @@ def generate_native_template_candidates(
             raise ValueError("limit must be a non-negative integer")
     cap = budget.max_candidates if limit is None else min(budget.max_candidates, limit)
     if cap == 0 or budget.max_search_attempts == 0:
-        return ()
+        return {
+            "schema": "v60_native_template_generation_v1",
+            "generation_status": "completed",
+            "proposals": (),
+            "generation_attempt_count": 0,
+            "candidate_count": 0,
+            "base_variable_candidate_count": 0,
+            "operator_candidate_count": 0,
+            "duplicate_expression_count": 0,
+            "search_attempt_budget": budget.max_search_attempts,
+            "candidate_budget": budget.max_candidates,
+            "effective_candidate_cap": cap,
+            "search_attempt_budget_exhausted": budget.max_search_attempts == 0,
+            "candidate_cap_reached": cap == 0,
+            "declared_unary_operators": list(problem.allowed_unary_operators),
+            "declared_binary_operators": list(problem.allowed_binary_operators),
+            "ignored_unary_operators": [],
+            "ignored_binary_operators": [],
+            "seed": int(budget.seed),
+        }
 
     names = problem.variable_names
     if any(not re.fullmatch(r"[A-Za-z_]\w*", name) for name in names):
         # The restricted expression grammar uses identifiers; do not guess a
         # lossy sanitization or create a candidate with changed semantics.
-        return ()
+        return {
+            "schema": "v60_native_template_generation_v1",
+            "generation_status": "no_candidates_invalid_variable_names",
+            "proposals": (),
+            "generation_attempt_count": 0,
+            "candidate_count": 0,
+            "base_variable_candidate_count": 0,
+            "operator_candidate_count": 0,
+            "duplicate_expression_count": 0,
+            "search_attempt_budget": budget.max_search_attempts,
+            "candidate_budget": budget.max_candidates,
+            "effective_candidate_cap": cap,
+            "search_attempt_budget_exhausted": False,
+            "candidate_cap_reached": False,
+            "declared_unary_operators": list(problem.allowed_unary_operators),
+            "declared_binary_operators": list(problem.allowed_binary_operators),
+            "ignored_unary_operators": [],
+            "ignored_binary_operators": [],
+            "seed": int(budget.seed),
+        }
 
     binary = problem.allowed_binary_operators or ("+", "-", "*", "/")
+    supported_binary = {"+", "-", "*", "/", "**"}
     allowed_binary = tuple(dict.fromkeys(op for op in binary if op in {"+", "-", "*", "/"}))
+    ignored_binary = [op for op in problem.allowed_binary_operators if op not in supported_binary]
     allow_square = "**" in binary
     # Keep generated calls inside the same explicit function allowlist as the
     # restricted AST parser. Unknown contract operators are never guessed.
     allowed_unary = tuple(dict.fromkeys(
         op for op in problem.allowed_unary_operators if op in ALLOWED_UNARY_FUNCTIONS
     ))
+    ignored_unary = [
+        op for op in problem.allowed_unary_operators if op not in ALLOWED_UNARY_FUNCTIONS
+    ]
     proposals: list[str] = list(names)
     attempts = 0
 
@@ -142,4 +185,32 @@ def generate_native_template_candidates(
         ))
         if len(output) >= cap:
             break
-    return tuple(output)
+    return {
+        "schema": "v60_native_template_generation_v1",
+        "generation_status": "completed",
+        "proposals": tuple(output),
+        "generation_attempt_count": int(attempts),
+        "candidate_count": len(output),
+        "base_variable_candidate_count": len(names),
+        "operator_candidate_count": int(attempts),
+        "duplicate_expression_count": max(0, len(proposals[:cap]) - len(output)),
+        "search_attempt_budget": int(budget.max_search_attempts),
+        "candidate_budget": int(budget.max_candidates),
+        "effective_candidate_cap": int(cap),
+        "search_attempt_budget_exhausted": attempts >= budget.max_search_attempts,
+        "candidate_cap_reached": len(proposals) >= cap,
+        "declared_unary_operators": list(problem.allowed_unary_operators),
+        "accepted_unary_operators": list(allowed_unary),
+        "ignored_unary_operators": ignored_unary,
+        "declared_binary_operators": list(problem.allowed_binary_operators),
+        "accepted_binary_operators": list(allowed_binary) + (["**"] if allow_square else []),
+        "ignored_binary_operators": ignored_binary,
+        "seed": int(budget.seed),
+    }
+
+
+def generate_native_template_candidates(
+    problem: DiscoveryProblem, *, limit: int | None = None
+) -> tuple[CandidateProposal, ...]:
+    """Compatibility wrapper returning only the deterministic proposal tuple."""
+    return generate_native_template_candidates_with_audit(problem, limit=limit)["proposals"]
