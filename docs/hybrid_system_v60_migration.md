@@ -380,3 +380,18 @@ unchanged.
 Regression-test source covers a binary combination that uses a unary basis
 term. Tests have not been run; no CI, experiment, worker, benchmark, smoke
 workflow, or provider call was launched.
+
+
+## Stage 55 — persist bounded template-generation audit
+
+Native proposal generation now has an audit-returning API alongside the
+backward-compatible tuple-returning function. The audit records declared,
+accepted, and ignored operator declarations; attempt and candidate budgets;
+effective cap; generated/base/operator candidate counts; duplicate count;
+budget-exhaustion flags; and seed. V60 attaches this audit to implementation
+provenance for both native activation and typed-contract compatibility calls.
+
+The audit contains no training values, far/evaluation data, credentials, or
+provider output. Regression-test source checks budget/operator accounting and
+parity with the compatibility API. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
