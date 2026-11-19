@@ -265,3 +265,20 @@ observed training design. Regression-test source covers a collinear joint
 basis that loses to an identifiable single-basis alternative. Tests have not
 been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
 call was launched.
+
+
+## Stage 47 — honor declared unary operators in native proposal generation
+
+The bounded native template generator now emits unary-function proposals only
+when the immutable problem contract explicitly declares a supported function.
+The function allowlist matches the restricted expression parser; unknown
+operator names are ignored rather than guessed or evaluated. Unary proposals
+consume the same search-attempt and candidate budgets as binary templates,
+remain deterministic under the declared seed, and do not inspect training
+targets or evaluation data.
+
+The default contract with no declared unary functions retains its previous
+candidate sequence. Regression-test source covers explicit allowlisting,
+unsupported names, deterministic order, and budget truncation. Tests have not
+been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
+call was launched.
