@@ -543,6 +543,13 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
     final_model_audit = provenance.get("native_final_model")
     if "native_final_model" in provenance:
         _verify_native_final_model_audit(final_model_audit)
+    if "native_split_conformal_calibration" in provenance:
+        if not isinstance(final_model_audit, Mapping):
+            raise ValueError("split-conformal calibration requires an embedded finalized native model")
+        from hypatiax.tools.symbolic.v60_production_handoff import verify_native_v60_calibration_audit
+        verify_native_v60_calibration_audit(
+            final_model_audit, provenance["native_split_conformal_calibration"]
+        )
     if "native_residual_diagnostics" in provenance:
         _verify_native_residual_diagnostics(provenance["native_residual_diagnostics"])
     _verify_native_far_evaluation_audit(report["far_evaluation"], final_model_audit)
@@ -565,7 +572,24 @@ def verify_discovery_report_envelope(envelope: Mapping[str, Any]) -> dict[str, A
     return json.loads(json.dumps(report, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
 
 
-__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report"]
+def attach_native_v60_calibration_to_report(
+    envelope: Mapping[str, Any], calibration_audit: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Attach a verified post-selection calibration audit to a sealed report."""
+    report = verify_discovery_report_envelope(envelope)
+    provenance = dict(report["provenance"])
+    final_model_audit = provenance.get("native_final_model")
+    if not isinstance(final_model_audit, Mapping):
+        raise ValueError("discovery report does not contain a finalized native V60 model")
+    from hypatiax.tools.symbolic.v60_production_handoff import verify_native_v60_calibration_audit
+    provenance["native_split_conformal_calibration"] = verify_native_v60_calibration_audit(
+        final_model_audit, calibration_audit
+    )
+    report["provenance"] = provenance
+    return seal_discovery_report(report)
+
+
+__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report", "attach_native_v60_calibration_to_report"]
 
 
 def build_native_discovery_report(
