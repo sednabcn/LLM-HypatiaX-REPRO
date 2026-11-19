@@ -325,3 +325,16 @@ cannot consume the bounded search budget or suppress distinct templates.
 Regression-test source covers strict limit types and duplicate operator
 declarations. Tests have not been run; no CI, experiment, worker, benchmark,
 smoke workflow, or provider call was launched.
+
+
+## Stage 51 — use declared multiplication for self-product templates
+
+When multiplication is declared but exponentiation is not, native proposal
+generation now includes bounded self-products such as x*x. If exponentiation
+is also declared, the generator prefers the explicit x**2 form and avoids
+spending budget on the duplicate self-product. Each self-product consumes one
+search attempt and remains subject to the candidate cap.
+
+Regression-test source covers multiplication-only self-products. Tests have
+not been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
+call was launched.
