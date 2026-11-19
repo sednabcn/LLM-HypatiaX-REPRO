@@ -23,6 +23,60 @@ def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"), parse_constant=_reject_constant)
 
 
+def _find_nested_value(payload: Any, key: str) -> Any:
+    """Find a provenance field in serialized method-result metadata."""
+    if isinstance(payload, dict):
+        if key in payload:
+            return payload[key]
+        for value in payload.values():
+            found = _find_nested_value(value, key)
+            if found is not None:
+                return found
+    elif isinstance(payload, list):
+        for value in payload:
+            found = _find_nested_value(value, key)
+            if found is not None:
+                return found
+    return None
+
+
+def _validate_native_v60_method(result: Any, description: str) -> dict[str, Any]:
+    """Fail closed unless method 6 records a completed native V60 handoff."""
+    provenance = _find_nested_value(result, "implementation_provenance")
+    if not isinstance(provenance, dict):
+        raise ValueError(f"{description}: method 6 has no implementation_provenance")
+    if provenance.get("engine_family") != "hybrid_discovery":
+        raise ValueError(f"{description}: method 6 did not identify the HybridDiscovery engine")
+    if provenance.get("native_v60_pipeline") is not True:
+        raise ValueError(f"{description}: native V60 pipeline was not confirmed")
+    if provenance.get("native_v60_production_handoff_enabled") is not True:
+        raise ValueError(f"{description}: native V60 production handoff was not enabled")
+    mode = provenance.get("implementation_mode")
+    if not isinstance(mode, str) or not mode.startswith("native_v60"):
+        raise ValueError(f"{description}: implementation mode is not native V60 (found {mode!r})")
+    strategy = _find_nested_value(result, "strategy")
+    if strategy != "native_v60":
+        raise ValueError(f"{description}: method 6 strategy is not native_v60 (found {strategy!r})")
+    final_model = _find_nested_value(result, "native_v60_final_model")
+    if not isinstance(final_model, dict) or final_model.get("execution_status") != "selected":
+        raise ValueError(f"{description}: native V60 final model was not selected")
+    handoff = _find_nested_value(result, "native_v60_production_handoff")
+    if not isinstance(handoff, dict) or handoff.get("status") != "active":
+        raise ValueError(f"{description}: native V60 production handoff is not active")
+    compatibility = _find_nested_value(result, "v50_2_compatibility_result")
+    if not isinstance(compatibility, dict) or compatibility.get("status") != "not_executed":
+        raise ValueError(f"{description}: V50.2 compatibility result is not explicitly marked not_executed")
+    return {
+        "engine_family": provenance["engine_family"],
+        "engine_version": provenance.get("engine_version"),
+        "implementation_mode": mode,
+        "native_v60_pipeline": True,
+        "strategy": strategy,
+        "final_model_execution_status": final_model["execution_status"],
+        "production_handoff_status": handoff["status"],
+        "v50_2_compatibility_status": compatibility["status"],
+    }
+
 def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
                             expected_methods: int = 6) -> dict[str, Any]:
     output_dir = Path(output_dir)
@@ -47,6 +101,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     far_r2_available = 0
     far_rmse_available = 0
     far_error_pct_available = 0
+    native_v60_method_audits: list[dict[str, Any]] = []
     diagnostic_status_counts: Counter[str] = Counter()
     for test in tests:
         description = str(test.get("description") or "")
@@ -87,6 +142,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             result = results[method]
             if not isinstance(result, dict) or not isinstance(result.get("success"), bool):
                 raise ValueError(f"{description}/{method}: missing method success status")
+            if method == methods[-1]:
+                native_v60_method_audits.append(_validate_native_v60_method(result, f"{description}/{method}"))
             if "r2" not in result or "rmse" not in result:
                 raise ValueError(f"{description}/{method}: missing ordinary R²/RMSE scores")
             if method not in far_r2 or method not in far_rmse:
@@ -198,6 +255,8 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "equation_direction_count": len(direction_names),
         "method_count": expected_methods,
         "method_equation_rows": method_rows,
+        "native_v60_method_6_audits": native_v60_method_audits,
+        "native_v60_method_6_verified_count": len(native_v60_method_audits),
         "equations": equation_names,
         "methods": methods,
         "far_r2_non_null_count": far_r2_available,
@@ -226,6 +285,7 @@ def main() -> int:
     print(f"[exp2-extrap-smoke] error-% available: {summary['far_error_pct_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] diagnostic statuses: {summary['far_diagnostic_status_counts']}")
     print(f"[exp2-extrap-smoke] row-level prediction audits verified/unavailable: {summary['prediction_audit_verified_count']}/{summary['prediction_audit_unavailable_count']}")
+    print(f"[exp2-extrap-smoke] native V60 method-6 handoffs verified: {summary[\"native_v60_method_6_verified_count\"]}/{summary[\"equation_direction_count\"]}")
     print(f"[exp2-extrap-smoke] summary: {target}")
     return 0
 
