@@ -272,6 +272,19 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         if (any(not isinstance(value, str) or not value for value in ids)
                 or len(ids) != len(set(ids))):
             raise ValueError("native final-model basis IDs must be unique non-empty strings")
+        family = model.get("family")
+        candidate_id = model.get("candidate_id")
+        group_id = model.get("candidate_group_id")
+        if family == "single_basis":
+            if (len(expressions) != 1 or not isinstance(candidate_id, str)
+                    or not candidate_id or group_id is not None or ids != [candidate_id]):
+                raise ValueError("single-basis final model identity is inconsistent")
+        elif family == "multi_basis":
+            if (not 2 <= len(expressions) <= 3 or candidate_id is not None
+                    or not isinstance(group_id, str) or not group_id):
+                raise ValueError("multi-basis final model identity is inconsistent")
+        else:
+            raise ValueError("selected model family is unsupported")
         if (not isinstance(names, list) or not names
                 or any(not isinstance(value, str) or not value for value in names)
                 or len(names) != len(set(names))):
