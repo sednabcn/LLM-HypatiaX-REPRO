@@ -15,6 +15,7 @@ from typing import Any, Mapping
 import numpy as np
 
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
+from hypatiax.tools.symbolic.discovery_budget_runtime import DiscoveryBudgetRuntime
 from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
 from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates_with_audit
@@ -127,6 +128,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_fitting_audit: dict[str, Any] = {}
         self._last_v60_generation_audit: dict[str, Any] = {}
+        self._last_v60_budget_runtime: DiscoveryBudgetRuntime | None = None
 
     def _reset_v60_call_state(self) -> None:
         """Clear every V60 audit before a new call to prevent cross-call leakage."""
@@ -135,6 +137,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}
         self._last_v60_generation_audit = {}
+        self._last_v60_budget_runtime = None
         self._last_v60_training_fit_audit = {}
         self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_multi_basis_validation_audit = {}
@@ -170,6 +173,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_candidate_fitting": self._last_v60_run_context is not None,
             "native_v60_fitting_audit": dict(self._last_v60_fitting_audit),
             "native_v60_generation_audit": dict(self._last_v60_generation_audit),
+            "native_v60_budget_runtime": (
+                self._last_v60_budget_runtime.to_dict()
+                if self._last_v60_budget_runtime is not None else None
+            ),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
@@ -240,6 +247,14 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         external_spec: Mapping[str, Any],
     ) -> dict[str, Any]:
         """Run the complete native training-only pipeline; far data is not accepted."""
+        budget = problem.budget
+        budget_runtime = DiscoveryBudgetRuntime(budget)
+        self._last_v60_budget_runtime = budget_runtime
+
+        def _remaining_wall_time() -> float | None:
+            remaining = budget_runtime.remaining_wall_time_seconds
+            return None if remaining is None else max(remaining, 1e-9)
+
         unknown_fields = set(external_spec) - {
             "llm_proposals", "pysr_proposals", "llm_call_count",
             "llm_token_count", "pysr_search_attempt_count",
@@ -264,6 +279,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             problem, limit=remaining_candidate_slots,
             search_attempt_limit=remaining_search_attempts,
         )
+        for _ in range(external["pysr_usage"]["search_attempt_count"]):
+            budget_runtime.record_search_attempt()
+        for _ in range(generation["generation_attempt_count"]):
+            budget_runtime.record_search_attempt()
         generated = list(generation["proposals"])
         self._last_v60_generation_audit = {
             key: value for key, value in generation.items() if key != "proposals"
@@ -282,11 +301,11 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             max_candidates=problem.budget.max_candidates,
         )
         candidates = tuple(item.to_dict() for item in normalized.candidates)
+        budget_runtime.record_candidates(len(candidates))
         self._last_v60_candidate_proposals = candidates
         self._last_v60_normalization_audit = normalized.to_dict()
         self._last_v60_normalization_audit.pop("candidates", None)
 
-        budget = problem.budget
         gate = validate_native_candidate_pool(candidates, problem)
         self._last_v60_gate_audit = gate
         eligible_ids = [
@@ -300,7 +319,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             eligible_candidates, X, y, variable_names=problem.variable_names,
             max_candidates=budget.max_candidates,
             max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
+            max_wall_time_seconds=_remaining_wall_time(),
         )
         self._last_v60_fitting_audit = fitted.to_dict()
         single_validation = validate_native_training_candidates(
@@ -337,7 +356,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             max_wall_time_seconds=budget.max_wall_time_seconds,
         )
         self._last_v60_multi_basis_validation_audit = multi_validation
-        if multi_validation.get("validation_status") == "completed":
+        if multi_validation.get("validation_status") == "completed" and not budget_runtime.expired():
             multi_evidence = verify_native_multi_basis_validation_evidence(
                 multi_validation, eligible_candidates, X, y,
                 variable_names=problem.variable_names,
@@ -468,6 +487,12 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
+            budget_runtime = DiscoveryBudgetRuntime(problem.budget)
+            self._last_v60_budget_runtime = budget_runtime
+
+            def _remaining_wall_time() -> float | None:
+                remaining = budget_runtime.remaining_wall_time_seconds
+                return None if remaining is None else max(remaining, 1e-9)
             external_spec = prepared.get("v60_external_candidate_proposals", {}) or {}
             if not isinstance(external_spec, Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
@@ -495,6 +520,10 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 problem, limit=remaining_candidate_slots,
                 search_attempt_limit=remaining_search_attempts,
             )
+            for _ in range(external_audit["pysr_usage"]["search_attempt_count"]):
+                budget_runtime.record_search_attempt()
+            for _ in range(generation["generation_attempt_count"]):
+                budget_runtime.record_search_attempt()
             generated = list(generation["proposals"])
             self._last_v60_generation_audit = {
                 key: value for key, value in generation.items() if key != "proposals"
@@ -514,6 +543,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 max_candidates=problem.budget.max_candidates,
             )
             self._last_v60_candidate_proposals = tuple(item.to_dict() for item in normalized.candidates)
+            budget_runtime.record_candidates(len(self._last_v60_candidate_proposals))
             self._last_v60_normalization_audit = normalized.to_dict()
             self._last_v60_normalization_audit.pop("candidates", None)
             fitted = fit_native_candidates(
@@ -521,7 +551,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 variable_names=problem.variable_names,
                 max_candidates=problem.budget.max_candidates,
                 max_search_attempts=problem.budget.max_search_attempts,
-                max_wall_time_seconds=problem.budget.max_wall_time_seconds,
+                max_wall_time_seconds=_remaining_wall_time(),
             )
             self._last_v60_fitting_audit = fitted.to_dict()
         if forwarded is not None:
