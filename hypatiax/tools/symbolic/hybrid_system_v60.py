@@ -420,9 +420,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                 raise ValueError(
                     "v60_activate_native_model=true requires a typed DiscoveryProblem contract"
                 )
-            if "X_far" in kwargs or "y_far" in kwargs:
+            far_keys = {
+                "X_far", "y_far", "far_X", "far_y",
+                "v60_far_X", "v60_far_y", "far_evaluation_data",
+            }
+            problem_metadata = prepared["discovery_problem"].metadata
+            if far_keys.intersection(kwargs) or far_keys.intersection(prepared) or far_keys.intersection(problem_metadata):
                 raise ValueError(
-                    "far/evaluation arrays are not accepted by discover(); use evaluate_native_far_set() after finalization"
+                    "far/evaluation arrays are not accepted by discover() or the problem metadata; "
+                    "use evaluate_native_far_set() after finalization"
                 )
             if not isinstance(prepared.get("v60_external_candidate_proposals", {}), Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
