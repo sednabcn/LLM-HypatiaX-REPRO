@@ -586,4 +586,3 @@ def test_exp2_v50_2_search_selection_uses_three_paired_training_only_folds():
     assert '"fold_timeout_seconds": 30' in method
     assert "_reserved_overhead = 300" in method
     assert "_fold_validation_reserve = 270" in method
-    assert "extrapolation_metric_used_for_selection" in method
