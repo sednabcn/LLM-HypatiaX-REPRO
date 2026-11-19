@@ -228,3 +228,21 @@ without V50.2 fallback, audit-level training/far separation, separate frozen
 far evaluation, and rejection before finalization. No tests or CI were run;
 no experiments, workers, benchmarks, smoke workflows, or provider calls were
 launched as part of this change.
+
+
+## Stage 45 — verify selected objective evidence at finalization
+
+The native finalizer now accepts a selected single-basis or multi-basis winner
+only when its objective-selection audit has the expected schema, explicitly
+certifies training-only selection, and places the selected identity on the
+recorded Pareto front. The selected objective evidence fingerprint must match
+the corresponding unique evidence record. Finalization also rejects negative,
+non-finite, boolean, or incorrectly typed error, variability, and complexity
+values rather than coercing them into cross-family ranking inputs.
+
+This closes the boundary between the two independently produced Pareto
+families and the final cross-family comparison: a selected ID alone is no
+longer sufficient to reach the frozen production model. Regression-test
+source covers the stricter single- and multi-basis evidence contracts. Tests
+have not been run; no CI, experiment, worker, benchmark, smoke workflow, or
+provider call was launched.
