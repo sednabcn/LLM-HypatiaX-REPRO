@@ -535,7 +535,15 @@ def calibrate_native_v60_result(
         raise TypeError("discovery_result must be a mapping")
     if discovery_result.get("success") is not True:
         raise ValueError("calibration requires a successful native V60 discovery result")
+    # Worker-backed benchmark records place the native audit inside
+    # MethodResult.metadata; accept that serialized handoff as well as the
+    # direct in-process discovery result shape.
+    result_metadata = discovery_result.get("metadata")
+    if not isinstance(result_metadata, Mapping):
+        result_metadata = {}
     final_model_audit = discovery_result.get("native_v60_final_model")
+    if final_model_audit is None:
+        final_model_audit = result_metadata.get("native_v60_final_model")
     if not isinstance(final_model_audit, Mapping):
         raise ValueError("discovery result does not contain a finalized native V60 model audit")
 
@@ -552,16 +560,32 @@ def calibrate_native_v60_result(
     updated["native_v60_final_model"] = dict(final_model_audit)
     updated["native_v60_calibration_audit"] = calibration
 
+    # Mirror calibrated fields into metadata so the record remains complete
+    # when it is serialized in the benchmark's MethodResult envelope.
+    if isinstance(discovery_result.get("metadata"), Mapping):
+        updated_metadata = dict(discovery_result["metadata"])
+        updated_metadata["native_v60_final_model"] = dict(final_model_audit)
+        updated_metadata["native_v60_calibration_audit"] = calibration
+        updated_metadata["native_v60_calibration_status"] = calibration["calibration_status"]
+        updated["metadata"] = updated_metadata
+
     report_envelope = discovery_result.get("discovery_report_envelope")
+    if report_envelope is None:
+        report_envelope = result_metadata.get("discovery_report_envelope")
     if report_envelope is not None:
         if not isinstance(report_envelope, Mapping):
             raise TypeError("discovery_report_envelope must be a mapping")
         from hypatiax.tools.symbolic.discovery_report_integrity import (
             attach_native_v60_calibration_to_report,
         )
-        updated["discovery_report_envelope"] = attach_native_v60_calibration_to_report(
+        updated_envelope = attach_native_v60_calibration_to_report(
             report_envelope, calibration
         )
+        updated["discovery_report_envelope"] = updated_envelope
+        if isinstance(updated.get("metadata"), Mapping):
+            updated_metadata = dict(updated["metadata"])
+            updated_metadata["discovery_report_envelope"] = updated_envelope
+            updated["metadata"] = updated_metadata
     return updated
 
 

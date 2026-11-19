@@ -91,6 +91,48 @@ _PKG_ROOT = _REPO_ROOT / "hypatiax"
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+
+def _resolve_hybrid_implementation(cli_value=None) -> str:
+    """Resolve the runner engine selector without changing the V50.2 default.
+
+    Precedence is explicit CLI value, current environment override, legacy
+    environment override, then engine.implementation in REPRO_CFG.
+    """
+    import yaml
+
+    config_path = Path(os.environ.get("REPRO_CFG", _REPO_ROOT / "config" / "repro.yaml"))
+    if not config_path.is_absolute():
+        config_path = _REPO_ROOT / config_path
+    with config_path.open("r", encoding="utf-8") as config_file:
+        config = yaml.safe_load(config_file) or {}
+    if not isinstance(config, dict):
+        raise TypeError("repro config must be a mapping")
+    engine = config.get("engine", {})
+    if not isinstance(engine, dict):
+        raise TypeError("repro config 'engine' section must be a mapping")
+
+    selected = (
+        cli_value
+        or os.environ.get("HYPATIAX_ENGINE_IMPLEMENTATION")
+        or os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION")
+        or engine.get("implementation", "v50_2")
+    )
+    selected = str(selected).strip().lower()
+    aliases = {
+        "v50_2": "v50_2",
+        "hybrid_system_v50_2": "v50_2",
+        "v60": "v60",
+        "hybrid_system_v60": "v60",
+    }
+    if selected not in aliases:
+        raise ValueError(
+            f"Unsupported HybridDiscovery implementation {selected!r}; expected 'v50_2' or 'v60'."
+        )
+    return aliases[selected]
+
+
+
+
 # Canonical shared implementation used by both Exp2 Feynman runners.
 from hypatiax.experiments.benchmarks.exp2_extrapolation_core import (
     REGIMES,
@@ -2724,10 +2766,16 @@ try:
             _training_selection_audit = getattr(
                 system, "_training_only_search_selection", None
             )
+            _native_v60_selected = result.get("strategy") == "native_v60"
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
-                "engine_version": "5.4",
-                "engine_variant": "llm_hybrid" if system.llm_mode != "none" else "pysr_fallback",
+                "engine_implementation": kwargs.get("hybrid_implementation", "v50_2"),
+                "engine_version": str(getattr(system, "VERSION", "5.4")),
+                "engine_variant": (
+                    "native_v60" if _native_v60_selected
+                    else "llm_hybrid" if system.llm_mode != "none"
+                    else "pysr_fallback"
+                ),
                 "domain": _domain,
                 "discovery_problem_contract": _contract_audit,
                 "llm_requested": _use_llm,
@@ -3458,6 +3506,10 @@ class HybridSystemV50_2Method(BaseMethod):
         # The isolated worker validates the schema and exact sanitized variable
         # names before constructing DiscoveryProblem.
         _meta["discovery_problem_spec"] = _contract_spec
+        # Selecting V60 must activate its native training/finalization path;
+        # constructing the V60 adapter alone otherwise retains V50.2 fallback.
+        if kwargs.get("hybrid_implementation", "v50_2") in {"v60", "hybrid_system_v60"}:
+            _meta["v60_activate_native_model"] = True
         _meta["training_only_search_validation"] = dict(
             _tc_kwargs["training_only_search_validation"]
         )
@@ -3470,8 +3522,9 @@ class HybridSystemV50_2Method(BaseMethod):
             )
         _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
 
+        _engine_label = str(_tc_kwargs.get("hybrid_implementation", "v50_2")).upper()
         print(
-            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+            f"[ADAPTIVE-{_engine_label}] {_n_iter_adaptive} iters"
             f" (spread={_spread:.1f}dec, vars={_n_vars}, depth={_op_depth}, diff={_diff}, score={_score:.2f})"
             f" — eq='{_eq_name_lower or _domain_lower}'",
             flush=True,
@@ -3531,6 +3584,18 @@ class HybridSystemV50_2Method(BaseMethod):
                     "training_only_search_selection": result.get(
                         "training_only_search_selection"
                     ),
+
+                    # Keep the native frozen-model handoff intact across the
+                    # isolated-worker -> MethodResult -> protocol artifact boundary.
+                    "implementation_provenance": result.get("implementation_provenance"),
+                    "native_v60_final_model": result.get("native_v60_final_model"),
+                    "native_v60_far_evaluation": result.get("native_v60_far_evaluation"),
+                    "native_v60_production_handoff": result.get("native_v60_production_handoff"),
+                    "native_model": result.get("native_model"),
+                    "native_model_sha256": result.get("native_model_sha256"),
+                    "native_v60_calibration_audit": result.get("native_v60_calibration_audit"),
+                    "native_v60_calibration_status": result.get("native_v60_calibration_status"),
+                    "discovery_report_envelope": result.get("discovery_report_envelope"),
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
@@ -5115,11 +5180,12 @@ Examples
 
     parser.add_argument(
         "--hybrid-implementation", choices=["v50_2", "v60"],
-        default=os.environ.get("HYPATIAX_HYBRID_IMPLEMENTATION", "v50_2"),
-        help="HybridDiscovery implementation for method 6 (default: v50_2; v60 is an opt-in compatibility adapter).",
+        default=None,
+        help="HybridDiscovery implementation for method 6 (default: config/repro.yaml engine.implementation; v50_2 if unset).",
     )
 
     args = parser.parse_args()
+    args.hybrid_implementation = _resolve_hybrid_implementation(args.hybrid_implementation)
 
     # Keep method and PySR budgets independent.  The legacy FEYNMAN_TIMEOUT
     # is a PySR-fit setting only; applying it to the method deadline can silently
