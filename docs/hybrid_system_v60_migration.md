@@ -395,3 +395,20 @@ The audit contains no training values, far/evaluation data, credentials, or
 provider output. Regression-test source checks budget/operator accounting and
 parity with the compatibility API. Tests have not been run; no CI, experiment,
 worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 56 — share search-attempt budget with injected PySR usage
+
+External PySR search attempts are now accounted before deterministic template
+generation. The generator receives only the remaining search-attempt budget
+and remaining candidate slots after externally supplied proposals are admitted.
+The combined audit records external PySR attempts and total search attempts,
+so native templates cannot independently consume a fresh copy of the same
+per-discovery search budget. The typed-contract compatibility path uses the
+same accounting.
+
+LLM calls/tokens remain separately governed by their dedicated budget fields.
+No producer is invoked by this change; externally produced proposals and usage
+counters are still supplied by the caller. Regression-test source covers
+remaining-budget enforcement. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
