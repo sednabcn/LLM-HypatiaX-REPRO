@@ -3137,6 +3137,17 @@ class HybridSystemV50_2Method(BaseMethod):
                         "binary_operators": list(_tc_kwargs["binary_operators"]),
                         "unary_operators": list(_tc_kwargs["unary_operators"]),
                     },
+
+                    # Keep the native frozen-model handoff intact across the
+                    # isolated-worker -> MethodResult -> protocol artifact boundary.
+                    "native_v60_final_model": result.get("native_v60_final_model"),
+                    "native_v60_far_evaluation": result.get("native_v60_far_evaluation"),
+                    "native_v60_production_handoff": result.get("native_v60_production_handoff"),
+                    "native_model": result.get("native_model"),
+                    "native_model_sha256": result.get("native_model_sha256"),
+                    "native_v60_calibration_audit": result.get("native_v60_calibration_audit"),
+                    "native_v60_calibration_status": result.get("native_v60_calibration_status"),
+                    "discovery_report_envelope": result.get("discovery_report_envelope"),
                 },
             )
         err = (result.get("error") or "Discovery failed") if result else "No result"
