@@ -2766,10 +2766,16 @@ try:
             _training_selection_audit = getattr(
                 system, "_training_only_search_selection", None
             )
+            _native_v60_selected = result.get("strategy") == "native_v60"
             result["benchmark_provenance"] = {
                 "engine": "HybridDiscoverySystem",
-                "engine_version": "5.4",
-                "engine_variant": "llm_hybrid" if system.llm_mode != "none" else "pysr_fallback",
+                "engine_implementation": kwargs.get("hybrid_implementation", "v50_2"),
+                "engine_version": str(getattr(system, "VERSION", "5.4")),
+                "engine_variant": (
+                    "native_v60" if _native_v60_selected
+                    else "llm_hybrid" if system.llm_mode != "none"
+                    else "pysr_fallback"
+                ),
                 "domain": _domain,
                 "discovery_problem_contract": _contract_audit,
                 "llm_requested": _use_llm,
@@ -3516,8 +3522,9 @@ class HybridSystemV50_2Method(BaseMethod):
             )
         _meta.setdefault("random_seed", int(metadata.get("random_seed") or 42))
 
+        _engine_label = str(_tc_kwargs.get("hybrid_implementation", "v50_2")).upper()
         print(
-            f"[ADAPTIVE-V50_2] {_n_iter_adaptive} iters"
+            f"[ADAPTIVE-{_engine_label}] {_n_iter_adaptive} iters"
             f" (spread={_spread:.1f}dec, vars={_n_vars}, depth={_op_depth}, diff={_diff}, score={_score:.2f})"
             f" — eq='{_eq_name_lower or _domain_lower}'",
             flush=True,
@@ -3580,6 +3587,7 @@ class HybridSystemV50_2Method(BaseMethod):
 
                     # Keep the native frozen-model handoff intact across the
                     # isolated-worker -> MethodResult -> protocol artifact boundary.
+                    "implementation_provenance": result.get("implementation_provenance"),
                     "native_v60_final_model": result.get("native_v60_final_model"),
                     "native_v60_far_evaluation": result.get("native_v60_far_evaluation"),
                     "native_v60_production_handoff": result.get("native_v60_production_handoff"),
