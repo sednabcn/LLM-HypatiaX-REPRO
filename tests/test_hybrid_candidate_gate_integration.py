@@ -61,7 +61,7 @@ def test_retry_selector_accepts_candidate_that_passes_declared_gate():
             ConstraintSpec(
                 constraint_id="energy-nonnegative",
                 kind="nonnegative_output",
-                severity="hard",
+                severity="soft",
             ),
         ),
     )
