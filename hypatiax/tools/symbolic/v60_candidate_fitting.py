@@ -8,6 +8,8 @@ Training metrics are audit evidence only; this module does not select a winner.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
+import numbers
 import time
 from typing import Any, Mapping, Sequence
 
@@ -86,8 +88,12 @@ def fit_native_candidates(
         raise ValueError("max_candidates must be a non-negative integer")
     if not isinstance(max_search_attempts, int) or isinstance(max_search_attempts, bool) or max_search_attempts < 0:
         raise ValueError("max_search_attempts must be a non-negative integer")
-    if max_wall_time_seconds is not None and max_wall_time_seconds <= 0:
-        raise ValueError("max_wall_time_seconds must be > 0 or None")
+    if max_wall_time_seconds is not None:
+        if (isinstance(max_wall_time_seconds, bool)
+                or not isinstance(max_wall_time_seconds, numbers.Real)
+                or not math.isfinite(float(max_wall_time_seconds))
+                or max_wall_time_seconds <= 0):
+            raise ValueError("max_wall_time_seconds must be finite and > 0 or None")
     if not isinstance(candidates, Sequence):
         raise TypeError("candidates must be a finite sequence")
 
@@ -113,11 +119,16 @@ def fit_native_candidates(
             deadline_exhausted = True
             break
         attempted += 1
-        candidate_id = str(candidate.get("candidate_id", ""))
-        expression = str(candidate.get("normalized_expression") or candidate.get("expression") or "")
+        candidate_id_value = candidate.get("candidate_id") if isinstance(candidate, Mapping) else None
+        expression_value = (
+            (candidate.get("normalized_expression") or candidate.get("expression"))
+            if isinstance(candidate, Mapping) else None
+        )
+        candidate_id = candidate_id_value if isinstance(candidate_id_value, str) else ""
+        expression = expression_value if isinstance(expression_value, str) else ""
         try:
-            if not candidate_id or not expression:
-                raise ValueError("candidate_id and expression are required")
+            if not candidate_id.strip() or not expression.strip():
+                raise ValueError("candidate_id and expression must be non-empty strings")
             import sympy as sp
             parsed = parse_sympy_expression(expression, list(names))
             symbols = [sp.Symbol(name) for name in names]
