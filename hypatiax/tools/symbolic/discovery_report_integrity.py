@@ -706,4 +706,4 @@ def build_native_discovery_report(
     return seal_discovery_report(report)
 
 
-__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report"]
+__all__ = ["ENVELOPE_SCHEMA", "seal_discovery_report", "verify_discovery_report_envelope", "build_native_discovery_report", "attach_native_v60_calibration_to_report"]
