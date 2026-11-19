@@ -2,10 +2,13 @@
 
 ## Status
 
-V60 remains opt-in. It now performs typed problem-contract preflight,
-captures an immutable data-free run context, generates a bounded deterministic
-pool of algebraic templates, and normalizes that pool using the restricted
-symbolic-expression parser. Normalization creates stable semantic candidate
+V60 remains opt-in. With v60_activate_native_model=true and a required typed
+problem contract, it runs the complete native training-only orchestration:
+contract preflight, bounded deterministic template generation, proposal
+normalization, scientific gates, single- and multi-basis fold validation,
+independent multi-basis evidence verification, objective selection, residual
+diagnostics, cross-family finalization, and verified production handoff.
+Without explicit activation, V50.2 remains the compatibility path. Normalization creates stable semantic candidate
 IDs, deduplicates equivalent expressions, and preserves every contributing
 producer record as lineage. The input-proposal processing ceiling is bounded
 by the problem's `max_candidates` budget.
@@ -189,3 +192,48 @@ false behavior remain on the existing compatibility path. Regression-test
 source covers both rejection and flag typing. No tests, CI, experiments,
 workers, benchmarks, smoke workflows, or provider calls are run as part of
 this change.
+
+## Stage 34 — native V60 training orchestration and separate far evaluation
+
+Explicit metadata[v60_activate_native_model] = true now requires a valid
+DiscoveryProblem (or strict discovery_problem_spec) and executes the native
+training pipeline instead of delegating to V50.2. The pipeline is connected in
+this order:
+
+1. Generate bounded deterministic templates and ingest only caller-supplied
+   proposal records; no live LLM or PySR producer is invoked.
+2. Normalize proposals, preserve lineage, and run data-independent scientific
+   gates. Only candidates with completed eligible hard-gate evidence proceed.
+3. Produce single-basis training-fold validation evidence and independently
+   verified single-basis objective selection.
+4. Fit eligible additive multi-basis groups, validate them within training
+   folds, independently recompute their fold evidence, and select only from
+   verified evidence.
+5. Compute training-fold residual/stability diagnostics without using them as
+   a ranking input.
+6. Compare the single- and multi-basis winners, refit the selected basis on all
+   training rows, and verify the final-model audit before building the outward
+   native result.
+
+Native activation fails closed when the typed contract is absent or invalid.
+No successful native handoff is reported unless finalization produces a
+selected, verified model. The default and explicit-false paths retain the
+existing V50.2 compatibility discovery behavior, including the earlier
+contract/generation/normalization/fitting audit stages when a typed contract
+is supplied.
+
+Far/evaluation arrays are deliberately excluded from discover() and from
+DiscoveryProblem. After a successful native finalization, callers may invoke
+engine.evaluate_native_far_set(X_far, y_far). This separate method delegates
+to the frozen-model evaluator, verifies the final-model audit, evaluates only
+the already-selected model, and records selection_changed=false,
+selection_performed=false, and explicit no-selection/no-retry far-data flags.
+It does not invoke a selector or modify the final-model audit. Far arrays
+supplied in native discovery metadata or as discover() keyword arguments are
+rejected.
+
+Regression-test source covers typed-contract enforcement, native handoff
+without V50.2 fallback, audit-level training/far separation, separate frozen
+far evaluation, and rejection before finalization. No tests or CI were run;
+no experiments, workers, benchmarks, smoke workflows, or provider calls were
+launched as part of this change.
