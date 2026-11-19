@@ -2844,6 +2844,23 @@ try:
                     "use_transcendental_compositions": _disc_cfg.use_transcendental_compositions,
                 },
             }
+            # V50.2 does not use the native-V60 provenance envelope. Emit an
+            # explicit implementation record at the worker boundary so the
+            # protocol artifact can distinguish a real V50.2 execution from
+            # a missing/ambiguous implementation handoff.
+            _selected_implementation = kwargs.get("hybrid_implementation", "v50_2")
+            if (
+                _selected_implementation == "v50_2"
+                and not _native_v60_selected
+                and not isinstance(result.get("implementation_provenance"), dict)
+            ):
+                result["implementation_provenance"] = {
+                    "engine_family": "hybrid_discovery",
+                    "engine_version": str(getattr(system, "VERSION", "5.4")),
+                    "implementation_mode": "v50_2",
+                    "native_v60_pipeline": False,
+                    "provenance_source": "hybrid_factory_selection",
+                }
     else:
         result = {"success": False, "error": f"Unknown method: {method}"}
 except Exception as exc:
