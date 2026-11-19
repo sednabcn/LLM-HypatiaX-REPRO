@@ -109,8 +109,8 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         "bounded_data_independent_template_generation",
         "restricted_expression_normalization_semantic_identity_and_deduplication",
         "producer_lineage_preservation",
-        "bounded_training_only_affine_candidate_fitting",
         "data_independent_scientific_candidate_gates",
+        "bounded_training_only_affine_candidate_fitting",
         "training_only_single_basis_fold_validation",
         "training_only_multi_basis_joint_fitting_and_fold_validation",
         "independent_multi_basis_evidence_verification",
@@ -265,20 +265,22 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_normalization_audit.pop("candidates", None)
 
         budget = problem.budget
-        fitted = fit_native_candidates(
-            candidates, X, y, variable_names=problem.variable_names,
-            max_candidates=budget.max_candidates,
-            max_search_attempts=budget.max_search_attempts,
-            max_wall_time_seconds=budget.max_wall_time_seconds,
-        )
-        self._last_v60_fitting_audit = fitted.to_dict()
-
         gate = validate_native_candidate_pool(candidates, problem)
         self._last_v60_gate_audit = gate
         eligible_ids = [
             item["native_candidate_id"] for item in gate["candidate_gates"]
             if item.get("eligible") is True and item.get("gate_execution") == "completed"
         ]
+        eligible_candidates = [
+            item for item in candidates if item.get("candidate_id") in set(eligible_ids)
+        ]
+        fitted = fit_native_candidates(
+            eligible_candidates, X, y, variable_names=problem.variable_names,
+            max_candidates=budget.max_candidates,
+            max_search_attempts=budget.max_search_attempts,
+            max_wall_time_seconds=budget.max_wall_time_seconds,
+        )
+        self._last_v60_fitting_audit = fitted.to_dict()
         single_validation = validate_native_training_candidates(
             candidates, X, y, variable_names=problem.variable_names,
             eligible_candidate_ids=eligible_ids,
@@ -296,9 +298,6 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         )
         self._last_v60_objective_selection_audit = single_selection
 
-        eligible_candidates = [
-            item for item in candidates if item.get("candidate_id") in set(eligible_ids)
-        ]
         multi_fit = fit_native_multi_basis_candidates(
             eligible_candidates, X, y, variable_names=problem.variable_names,
             max_candidates=budget.max_candidates,
