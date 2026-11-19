@@ -297,3 +297,18 @@ expression search.
 Regression-test source covers explicit declaration and the unsupported-operator
 case. Tests have not been run; no CI, experiment, worker, benchmark, smoke
 workflow, or provider call was launched.
+
+
+## Stage 49 — compose declared unary and binary templates
+
+When both operator families are declared, native proposal generation now
+also emits bounded unary applications over each admitted pairwise binary
+template (for example, sin(x + y)). The inner binary expression is retained
+as its own proposal, and the composed expression is a separate candidate.
+Each generation consumes one attempt, preserving deterministic ordering and
+the shared attempt/candidate limits. No undeclared function or operator is
+introduced.
+
+Regression-test source covers the combined operator path and budget order.
+Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
+or provider call was launched.
