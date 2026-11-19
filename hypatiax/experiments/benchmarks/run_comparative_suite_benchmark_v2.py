@@ -3575,7 +3575,6 @@ class HybridSystemV50_2Method(BaseMethod):
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                     "benchmark_provenance": result.get("benchmark_provenance", {}),
-                "v50_2_compatibility_result": result.get("v50_2_compatibility_result"),
                     # Preserve the scientific report and contract audit across
                     # the MethodResult boundary into protocol JSON artifacts.
                     "discovery_report": result.get("discovery_report"),
@@ -3613,6 +3612,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     "training_only_search_selection"
                 ),
                 "benchmark_provenance": result.get("benchmark_provenance", {}),
+                "v50_2_compatibility_result": result.get("v50_2_compatibility_result"),
             })
         return self._unavailable(
             str(err)[:150],
