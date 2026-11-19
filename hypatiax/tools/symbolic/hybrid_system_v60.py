@@ -430,13 +430,15 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
                     "far/evaluation arrays are not accepted by discover() or the problem metadata; "
                     "use evaluate_native_far_set() after finalization"
                 )
-            if not isinstance(prepared.get("v60_external_candidate_proposals", {}), Mapping):
+            external_spec = prepared.get("v60_external_candidate_proposals", {})
+            if external_spec is None:
+                external_spec = {}
+            if not isinstance(external_spec, Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
             self._last_v60_run_context = run_context
             self._last_v60_activate_native_result = True
             native_result = self._run_native_v60_training_pipeline(
-                X, y, prepared["discovery_problem"],
-                prepared.get("v60_external_candidate_proposals", {}) or {},
+                X, y, prepared["discovery_problem"], external_spec,
             )
             return self._annotate_v60_result(native_result)
         self._last_v60_run_context = run_context
