@@ -516,3 +516,18 @@ attestation, calibration/model digest mismatch, sealed-report round trips,
 and rejection of a calibration audit without an embedded finalized model. No tests, CI, experiments,
 workers, benchmarks, smoke workflows, or provider calls are run as part of
 this change.
+
+
+## Stage 36 — per-instance V60 call-state serialization
+
+The V60 engine stores the latest run context, selected-model audit, budget
+accounting, and far-evaluation audit on the engine instance. Sequential reset
+prevents stale state from leaking between ordinary calls, but it does not
+protect two threads that call discovery or far evaluation concurrently on
+the same instance. The stateful public entry points now share a per-instance
+reentrant lock, so each discovery, compatibility discovery, and frozen
+far-evaluation operation observes one coherent call state. Independent engine
+instances remain independent and can run concurrently. This is serialization
+of calls on one shared instance, not parallel execution within a single V60
+run. Regression-test source checks that two concurrent compatibility calls
+on one instance do not overlap. No tests or CI were run.
