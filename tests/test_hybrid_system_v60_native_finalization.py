@@ -19,13 +19,19 @@ class NativeV60FinalizationTests(unittest.TestCase):
             "producer_provenance": [],
         }]
         single = {
+            "schema": "v60_native_objective_selection_v1",
             "selection_status": "selected",
+            "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"],
+            "selected_objective_evidence_sha256": "a" * 64,
             "selected_candidate_id": "c1",
             "objective_evidence": [{
                 "candidate_id": "c1", "expression": "x",
                 "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
                 "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
                 "complexity": 1,
+                "objective_evidence_sha256": "a" * 64,
             }],
         }
         multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
@@ -44,7 +50,12 @@ class NativeV60FinalizationTests(unittest.TestCase):
         ]
         single = {"selection_status": "no_credible_candidate", "objective_evidence": []}
         multi = {
+            "schema": "v60_native_multi_basis_objective_selection_v1",
             "selection_status": "selected",
+            "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_group_ids": ["g1"],
+            "selected_objective_evidence_sha256": "b" * 64,
             "selected_candidate_group_id": "g1",
             "objective_evidence": [{
                 "candidate_group_id": "g1",
@@ -53,6 +64,7 @@ class NativeV60FinalizationTests(unittest.TestCase):
                 "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
                 "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
                 "symbolic_complexity": 3,
+                "objective_evidence_sha256": "b" * 64,
             }],
         }
         result = finalize_native_v60_model(
@@ -78,22 +90,28 @@ class NativeV60FinalizationTests(unittest.TestCase):
             {"candidate_id": "c2", "normalized_expression": "x**2", "producer_provenance": []},
         ]
         single = {
+            "schema": "v60_native_objective_selection_v1",
             "selection_status": "selected", "selected_candidate_id": "c1",
+            "selection_performed": True, "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"], "selected_objective_evidence_sha256": "c" * 64,
             "objective_evidence": [{
                 "candidate_id": "c1", "expression": "x",
                 "mean_validation_rmse": 0.1, "mean_validation_nrmse": None,
                 "std_validation_rmse": 0.01, "std_validation_nrmse": None,
-                "complexity": 1,
+                "complexity": 1, "objective_evidence_sha256": "c" * 64,
             }],
         }
         multi = {
+            "schema": "v60_native_multi_basis_objective_selection_v1",
             "selection_status": "selected", "selected_candidate_group_id": "g2",
+            "selection_performed": True, "far_or_evaluation_data_used": False,
+            "pareto_candidate_group_ids": ["g2"], "selected_objective_evidence_sha256": "d" * 64,
             "objective_evidence": [{
                 "candidate_group_id": "g2", "basis_candidate_ids": ["c1", "c2"],
                 "basis_expressions": ["x", "x**2"],
                 "mean_validation_rmse": 0.2, "mean_validation_nrmse": 0.001,
                 "std_validation_rmse": 0.02, "std_validation_nrmse": 0.0001,
-                "symbolic_complexity": 3,
+                "symbolic_complexity": 3, "objective_evidence_sha256": "d" * 64,
             }],
         }
         result = finalize_native_v60_model(
