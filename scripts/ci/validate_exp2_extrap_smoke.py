@@ -40,6 +40,35 @@ def _find_nested_value(payload: Any, key: str) -> Any:
     return None
 
 
+def _validate_hybrid_method(result: Any, description: str, expected: str) -> dict[str, Any]:
+    """Fail closed unless method 6 provenance matches the requested engine."""
+    if expected == "v60":
+        return _validate_native_v60_method(result, description)
+    benchmark = _find_nested_value(result, "benchmark_provenance")
+    if not isinstance(benchmark, dict):
+        raise ValueError(f"{description}: method 6 has no benchmark_provenance")
+    if benchmark.get("engine") != "HybridDiscoverySystem":
+        raise ValueError(f"{description}: method 6 did not identify HybridDiscoverySystem")
+    if benchmark.get("engine_implementation") != "v50_2":
+        raise ValueError(f"{description}: requested V50.2 but executed {benchmark.get('engine_implementation')!r}")
+    if benchmark.get("engine_variant") not in {"llm_hybrid", "pysr_fallback"}:
+        raise ValueError(f"{description}: unexpected V50.2 engine variant {benchmark.get('engine_variant')!r}")
+    if _find_nested_value(result, "strategy") == "native_v60":
+        raise ValueError(f"{description}: V50.2 result contains native V60 strategy")
+    implementation = _find_nested_value(result, "implementation_provenance")
+    if not isinstance(implementation, dict) or implementation.get("engine_family") != "hybrid_discovery":
+        raise ValueError(f"{description}: method 6 lacks HybridDiscovery implementation provenance")
+    if implementation.get("native_v60_pipeline") is True:
+        raise ValueError(f"{description}: V50.2 result activated native V60")
+    return {
+        "engine_family": implementation["engine_family"],
+        "engine_version": benchmark.get("engine_version"),
+        "engine_implementation": "v50_2",
+        "engine_variant": benchmark["engine_variant"],
+        "native_v60_pipeline": False,
+    }
+
+
 def _validate_native_v60_method(result: Any, description: str) -> dict[str, Any]:
     """Fail closed unless method 6 records a completed native V60 handoff."""
     provenance = _find_nested_value(result, "implementation_provenance")
@@ -78,7 +107,8 @@ def _validate_native_v60_method(result: Any, description: str) -> dict[str, Any]
     }
 
 def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
-                            expected_methods: int = 6) -> dict[str, Any]:
+                            expected_methods: int = 6,
+                            hybrid_implementation: str = "v50_2") -> dict[str, Any]:
     output_dir = Path(output_dir)
     protocol_files = sorted(output_dir.glob("protocol_core_extrap_*.json"))
     if len(protocol_files) != 1:
@@ -101,7 +131,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
     far_r2_available = 0
     far_rmse_available = 0
     far_error_pct_available = 0
-    native_v60_method_audits: list[dict[str, Any]] = []
+    hybrid_method_audits: list[dict[str, Any]] = []
     diagnostic_status_counts: Counter[str] = Counter()
     for test in tests:
         description = str(test.get("description") or "")
@@ -143,7 +173,7 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
             if not isinstance(result, dict) or not isinstance(result.get("success"), bool):
                 raise ValueError(f"{description}/{method}: missing method success status")
             if method == methods[-1]:
-                native_v60_method_audits.append(_validate_native_v60_method(result, f"{description}/{method}"))
+                hybrid_method_audits.append(_validate_hybrid_method(result, f"{description}/{method}", hybrid_implementation))
             if "r2" not in result or "rmse" not in result:
                 raise ValueError(f"{description}/{method}: missing ordinary R²/RMSE scores")
             if method not in far_r2 or method not in far_rmse:
@@ -255,8 +285,9 @@ def validate_smoke_outputs(output_dir: Path, expected_equations: int = 3,
         "equation_direction_count": len(direction_names),
         "method_count": expected_methods,
         "method_equation_rows": method_rows,
-        "native_v60_method_6_audits": native_v60_method_audits,
-        "native_v60_method_6_verified_count": len(native_v60_method_audits),
+        "hybrid_implementation": hybrid_implementation,
+        "method_6_implementation_audits": hybrid_method_audits,
+        "method_6_implementation_verified_count": len(hybrid_method_audits),
         "equations": equation_names,
         "methods": methods,
         "far_r2_non_null_count": far_r2_available,
@@ -275,8 +306,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--summary-name", default="exp2_extrap_smoke_summary.json")
+    parser.add_argument("--hybrid-implementation", choices=("v50_2", "v60"), default="v50_2")
     args = parser.parse_args()
-    summary = validate_smoke_outputs(args.output_dir)
+    summary = validate_smoke_outputs(args.output_dir, hybrid_implementation=args.hybrid_implementation)
     target = args.output_dir / args.summary_name
     target.write_text(json.dumps(summary, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(f"[exp2-extrap-smoke] PASS: {summary['equation_count']} equations x {summary['method_count']} methods")
@@ -285,7 +317,7 @@ def main() -> int:
     print(f"[exp2-extrap-smoke] error-% available: {summary['far_error_pct_non_null_count']}/{summary['method_equation_rows']}")
     print(f"[exp2-extrap-smoke] diagnostic statuses: {summary['far_diagnostic_status_counts']}")
     print(f"[exp2-extrap-smoke] row-level prediction audits verified/unavailable: {summary['prediction_audit_verified_count']}/{summary['prediction_audit_unavailable_count']}")
-    print(f"[exp2-extrap-smoke] native V60 method-6 handoffs verified: {summary['native_v60_method_6_verified_count']}/{summary['equation_direction_count']}")
+    print(f"[exp2-extrap-smoke] {args.hybrid_implementation} method-6 provenance verified: {summary['method_6_implementation_verified_count']}/{summary['equation_direction_count']}")
     print(f"[exp2-extrap-smoke] summary: {target}")
     return 0
 
