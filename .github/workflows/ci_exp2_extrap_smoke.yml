@@ -26,6 +26,7 @@ jobs:
     timeout-minutes: 90
     env:
       HYPATIAX_R2_SIGN_FLIP: "0"
+      HYPATIAX_ENGINE_IMPLEMENTATION: "v60"
       HYPATIAX_STRICT: "1"
       HYPATIAX_DISABLE_HARDCODED: "1"
       HYPATIAX_DISABLE_PROMPT_HINTS: "1"
@@ -93,6 +94,7 @@ jobs:
               --domain feynman_mechanics \
               --equations 1 2 3 \
               --methods 1 2 3 4 5 6 \
+              --hybrid-implementation v60 \
               --samples "${FEYNMAN_SAMPLES}" \
               --noiseless --threshold 0.999999 \
               --extrap --extrap-multiplier 2.0 --extrap-train-frac 0.8 \
