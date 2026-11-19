@@ -26,7 +26,7 @@ Reproducibility repository for **HypatiaX**, a research project on LLM-guided sy
 └── LICENSE
 ```
 
-The repository also includes root-level audit and reproducibility utilities, experiment-specific configuration files, and archived historical scripts. Those archives are retained as project history and are not the primary execution entry points.
+The repository also includes root-level audit and reproducibility utilities and experiment-specific configuration files. Historical run outputs, one-off repair scripts, superseded patches, and recovery inventories are retained in the companion [LLM-HypatiaX-REPRO-Improvements repository](https://github.com/sednabcn/LLM-HypatiaX-REPRO-Improvements), with their original relative paths preserved. The active experiment pipeline and its validation contracts remain in this repository.
 
 ## Main entry points
 
@@ -123,7 +123,7 @@ hypatiax/data/results/
 
 The exact result subdirectory depends on the experiment. Consult the runner workflow's experiment metadata and the corresponding experiment implementation before interpreting or moving result files.
 
-Project documentation and reports are under `docs/`. The repository includes phase-closure documentation and report source/output files. Workflow-specific behavior, inputs, permissions, and dispatch conditions are defined in the corresponding YAML files under `.github/workflows/`.
+Active pipeline documentation, experiment contracts, and validation guidance are under `docs/`. Historical phase-closure reports and post-run investigations are maintained in the companion Improvements repository. Workflow-specific behavior, inputs, permissions, and dispatch conditions are defined in the corresponding YAML files under `.github/workflows/`.
 
 ## License
 
