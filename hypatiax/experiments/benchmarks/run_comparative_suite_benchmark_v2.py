@@ -3575,6 +3575,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
                     "benchmark_provenance": result.get("benchmark_provenance", {}),
+                "v50_2_compatibility_result": result.get("v50_2_compatibility_result"),
                     # Preserve the scientific report and contract audit across
                     # the MethodResult boundary into protocol JSON artifacts.
                     "discovery_report": result.get("discovery_report"),
@@ -3591,6 +3592,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     "native_v60_final_model": result.get("native_v60_final_model"),
                     "native_v60_far_evaluation": result.get("native_v60_far_evaluation"),
                     "native_v60_production_handoff": result.get("native_v60_production_handoff"),
+                    "v50_2_compatibility_result": result.get("v50_2_compatibility_result"),
                     "native_model": result.get("native_model"),
                     "native_model_sha256": result.get("native_model_sha256"),
                     "native_v60_calibration_audit": result.get("native_v60_calibration_audit"),
