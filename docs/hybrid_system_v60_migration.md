@@ -20,12 +20,12 @@ records training RMSE/R², coefficients, fitted expression, status, and failure
 reason. Every accepted fit uses every supplied training row; non-finite or
 complex predictions are rejected rather than scored on a filtered subset.
 
-This is training-set resubstitution evidence, not cross-validation and not a
-selection score. The records are not handed to V50.2 or used to choose a winner.
-External LLM/PySR production, scientific gates, fold validation, Pareto
-selection, and final evaluation remain on the V50.2 compatibility baseline.
-This is a staged migration, not a completed native V60 pipeline or a claim of
-improved scientific performance.
+This affine-fit audit is training-set resubstitution evidence, not
+cross-validation and not a selection score. Native selection uses the
+separate training-fold validation and independently checked objective
+evidence described in Stage 34. V60 ingests only caller-supplied LLM/PySR
+proposal records; it does not invoke live external producers. This integration
+does not constitute a scientific performance claim.
 
 For calls carrying a typed contract, V60 accepts either:
 - `metadata["discovery_problem"]`: an existing `DiscoveryProblem`; or
@@ -116,27 +116,22 @@ or the Exp2 benchmark runner selector. Unknown selectors fail closed.
 
 ## Frozen far-set evaluation boundary
 
-1. Bounded LLM/PySR producer adapters, subject to explicit authorization and
-   configured call/token budgets.
-2. Hard scientific gates and separately recorded soft diagnostics.
-3. Training-only fold evidence, residual diagnostics, and structure stability.
-4. Pareto selection with independently verifiable objective evidence.
-5. Frozen far-set evaluation after selection.
-6. Versioned discovery report and worker-side integrity verification.
-
-Each stage must retain candidate IDs, source provenance, rejection reasons,
-budget accounting, and deterministic failure states. The far set must remain
-inaccessible to selection and retry logic. Existing worker report contracts
-and the Exp2 normalized extrapolation score remain compatibility requirements.
+The training-only native selection and finalization stages are connected in
+Stage 34. Far-set evaluation is a separate post-finalization call to
+evaluate_native_far_set(X_far, y_far); the far arrays never enter discover(),
+the typed problem contract, candidate gates, fold validation, selectors, or
+retry logic. Existing worker report contracts and the Exp2 normalized
+extrapolation score remain compatibility requirements.
 
 ## Migration rules and limitations
 
 - V50.2 remains the default and is not modified by this stage.
 - V60 is opt-in; no silent selector fallback is permitted.
-- V60 owns contract preflight, bounded template generation, proposal
-  normalization/lineage, and bounded training-only affine fitting evidence.
-  Scientific gates, fold validation, selection, and discovery output behavior
-  remain V50.2.
+- Without explicit v60_activate_native_model=true, V50.2 remains the default
+  discovery implementation.
+- With explicit activation and a typed DiscoveryProblem, V60 owns the complete
+  bounded training-only gate/validation/selection/finalization pipeline.
+- Far evaluation is always a separate post-finalization API call.
 - Candidate IDs identify canonical symbolic expressions; producer lineage is
   stored separately so deduplication never erases source attribution.
 - No benchmark or scientific improvement claim is valid until explicitly
@@ -183,15 +178,10 @@ selection and evaluation stages are wired into `discover()`.
 
 ## Stage 33 — fail closed on unsupported native activation
 
-The v60_activate_native_model metadata flag is now validated as a strict
-boolean. Until the complete native gates, fold evidence, selection,
-finalization, and frozen evaluation sequence is connected to discover(), an
-explicit true request raises NotImplementedError instead of silently
-running the V50.2 compatibility discovery path. The default and explicit
-false behavior remain on the existing compatibility path. Regression-test
-source covers both rejection and flag typing. No tests, CI, experiments,
-workers, benchmarks, smoke workflows, or provider calls are run as part of
-this change.
+At this stage the v60_activate_native_model metadata flag was validated as a
+strict boolean and explicit true was rejected until orchestration existed.
+Stage 34 supersedes that guard by connecting the complete training-only
+pipeline. The strict boolean and typed-contract requirements remain.
 
 ## Stage 34 — native V60 training orchestration and separate far evaluation
 
