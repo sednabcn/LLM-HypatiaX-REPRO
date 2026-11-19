@@ -93,6 +93,9 @@ def test_native_templates_share_search_budget_with_injected_pysr_attempts():
     assert audit["external_pysr_search_attempt_count"] == 1
     assert audit["generation_attempt_count"] <= 1
     assert audit["total_search_attempt_count"] <= problem.budget.max_search_attempts
+    runtime_audit = result["implementation_provenance"]["native_v60_budget_runtime"]
+    assert runtime_audit["actual"]["search_attempts"] == audit["total_search_attempt_count"]
+    assert runtime_audit["actual"]["candidates_admitted"] == result["implementation_provenance"]["native_v60_candidate_count"]
 
 
 def test_far_evaluation_is_separate_and_cannot_change_frozen_selection():
