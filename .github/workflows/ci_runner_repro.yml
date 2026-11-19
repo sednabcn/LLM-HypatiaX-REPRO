@@ -1714,6 +1714,44 @@ jobs:
             fi
           fi
 
+      - name: Verify Exp1 LLM-sensitivity shard output and arm isolation
+        if: ${{ needs.plan.outputs.exp_id == 'exp1_llm_sens' && steps.resolve_ids.outputs.has_work == 'true' && github.event.inputs.dry_run != 'true' }}
+        env:
+          SHARD_IDS: ${{ matrix.ids }}
+          EFFECTIVE_SEEDS: ${{ needs.plan.outputs.effective_seeds }}
+          RESULT_SUBDIR: ${{ needs.plan.outputs.result_subdir }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, sys
+          root = pathlib.Path(os.environ['OUT_BASE']) / os.environ['RESULT_SUBDIR']
+          conditions = json.loads(os.environ['SHARD_IDS'])
+          seeds = [s for s in os.environ['EFFECTIVE_SEEDS'].split(',') if s]
+          if len(conditions) != 1:
+              raise SystemExit(f'expected exactly one condition in shard, got {conditions}')
+          condition = conditions[0]
+          if condition not in {'pysr_only__na', 'hypatia_nollm__na', 'pure_llm__named', 'pure_llm__neutral', 'hypatia__named', 'hypatia__neutral'}:
+              raise SystemExit(f'unrecognized Exp1 LLM-sensitivity condition: {condition}')
+          for seed in seeds:
+              path = root / f'exp1_llm_sens_{condition}_seed{seed}.json'
+              try:
+                  rows = json.loads(path.read_text())
+              except Exception as exc:
+                  raise SystemExit(f'cannot read expected result {path}: {exc}')
+              if len(rows) != 27:
+                  raise SystemExit(f'{path}: expected 27 protocol cases, found {len(rows)}')
+              flags = []
+              for case_id, row in rows.items():
+                  result = row.get('result') if isinstance(row, dict) else None
+                  if not isinstance(result, dict):
+                      raise SystemExit(f'{path}: {case_id} has no result object')
+                  flags.append(result.get('llm_called') is True)
+              if condition.startswith(('pysr_only', 'hypatia_nollm')) and any(flags):
+                  raise SystemExit(f'{path}: baseline/no-LLM arm made an LLM call')
+              if condition.startswith(('pure_llm', 'hypatia')) and not any(flags):
+                  raise SystemExit(f'{path}: no live LLM call was evidenced in any case')
+              print(f'OK {condition} seed={seed}: {len(rows)} cases; live_llm_calls={sum(flags)}')
+          PY
       - name: Preserve shard-specific exp1_ablation output
         if: always() && env.EXP == 'exp1_ablation'
         run: |
