@@ -50,6 +50,17 @@ For each expected method/equation row whose method name is exactly `HybridDiscov
 
 A report with a legitimate failure status (for example, `no_credible_candidate`) is still an auditable report. The discovery exception path retains the last report and training-only selection summary, and the parent adapter preserves them even when the equation result is unsuccessful. The worker rejects missing or malformed evidence; it does not force an equation to be accepted.
 
+## Exp2 PCA typed-contract adapter parity
+
+The PCA/40-60 runner now mirrors the V2 runner's typed-contract boundary for Method 6:
+
+1. It builds a JSON-safe `discovery_problem_spec` from caller-declared units, domains, constraints, and target metadata. Variable-keyed declarations are remapped only through the existing reserved-name sanitization map; unknown names fail closed.
+2. It carries the training-only split protocol and bounded discovery budget in the contract while preserving the `v50_2` default selector.
+3. The isolated PCA worker deserializes the spec with `discovery_problem_from_dict()`, requires exact equality with the sanitized subprocess variable names, attaches the immutable `DiscoveryProblem` to discovery metadata, and records a canonical contract digest in benchmark provenance.
+4. The worker passes the selected implementation through the existing factory. This is contract-boundary parity with the V2 adapter; selecting the V60 implementation does not silently set `v60_activate_native_model`. Native V60 activation remains an explicit separate choice.
+
+Static regression coverage checks contract construction, worker deserialization, variable-name alignment, provenance, and selector forwarding. These checks were added as source only; they were not run here.
+
 ## Remaining follow-up work (not silently claimed as solved)
 
 ### Candidate provenance and diversity
