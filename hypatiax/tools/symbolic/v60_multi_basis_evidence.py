@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
+import math
+from time import monotonic
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -28,6 +30,7 @@ def verify_native_multi_basis_validation_evidence(
     variable_names: Sequence[str],
     max_groups: int = 100,
     max_search_attempts: int = 100,
+    max_wall_time_seconds: float | None = None,
     rtol: float = 1e-8,
     atol: float = 1e-10,
 ) -> dict[str, Any]:
@@ -37,6 +40,13 @@ def verify_native_multi_basis_validation_evidence(
             raise ValueError(f"{name} must be a non-negative integer")
     if not np.isfinite(rtol) or not np.isfinite(atol) or rtol < 0 or atol < 0:
         raise ValueError("comparison tolerances must be finite and non-negative")
+    if max_wall_time_seconds is not None and (
+        isinstance(max_wall_time_seconds, bool)
+        or not isinstance(max_wall_time_seconds, (int, float))
+        or not math.isfinite(float(max_wall_time_seconds))
+        or max_wall_time_seconds <= 0
+    ):
+        raise ValueError("max_wall_time_seconds must be finite and > 0 or None")
     if validation_audit.get("schema") != "v60_native_multi_basis_validation_v1":
         raise ValueError("unsupported multi-basis validation schema")
     if validation_audit.get("selection_performed") is not False:
@@ -65,11 +75,19 @@ def verify_native_multi_basis_validation_evidence(
 
     groups = validation_audit["candidate_group_validation"]
     cap = min(len(groups), max_groups, max_search_attempts)
+    started = monotonic()
+    deadline = started + float(max_wall_time_seconds) if max_wall_time_seconds is not None else None
     verified: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     seen_group_ids: set[str] = set()
+    attempted_groups = 0
+    timed_out = False
 
     for record in groups[:cap]:
+        if deadline is not None and monotonic() >= deadline:
+            timed_out = True
+            break
+        attempted_groups += 1
         group_id = record.get("candidate_group_id")
         ids = record.get("basis_candidate_ids")
         expressions = record.get("basis_expressions")
@@ -130,6 +148,9 @@ def verify_native_multi_basis_validation_evidence(
             validation_seen: list[int] = []
             verified_folds = []
             for expected_fold_index, fold in enumerate(folds):
+                if deadline is not None and monotonic() >= deadline:
+                    timed_out = True
+                    break
                 if fold.get("fold") != expected_fold_index:
                     raise ValueError("fold IDs must be contiguous and ordered")
                 raw_train_idx = fold.get("training_row_indices")
@@ -197,6 +218,8 @@ def verify_native_multi_basis_validation_evidence(
                     "recomputed_condition_number": condition,
                 })
 
+            if timed_out:
+                break
             if len(set(validation_seen)) != len(validation_seen):
                 raise ValueError("validation rows are repeated across folds")
             rmse_values = [item["recomputed_rmse"] for item in verified_folds]
@@ -245,12 +268,16 @@ def verify_native_multi_basis_validation_evidence(
 
     return {
         "schema": "v60_native_multi_basis_evidence_verification_v1",
-        "verification_status": "completed" if not rejected and len(verified) == len(groups) else "partial_or_rejected",
+        "verification_status": (
+            "timed_out" if timed_out else
+            ("completed" if not rejected and attempted_groups == len(groups) else "partial_or_rejected")
+        ),
         "input_group_count": len(groups),
-        "attempted_group_count": min(len(groups), max_groups, max_search_attempts),
+        "attempted_group_count": attempted_groups,
+        "timed_out": timed_out,
         "verified_group_count": len(verified),
         "rejected_group_count": len(rejected),
-        "budget_truncated_count": len(groups) - min(len(groups), max_groups, max_search_attempts),
+        "budget_truncated_count": len(groups) - len(verified) - len(rejected),
         "selection_performed": False,
         "far_or_evaluation_data_used": False,
         "verified_candidate_groups": verified,

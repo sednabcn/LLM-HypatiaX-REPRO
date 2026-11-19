@@ -340,6 +340,15 @@ def _verify_native_final_model_audit(audit: Any) -> None:
             expressions_option = option.get("expressions")
             if not isinstance(expressions_option, list) or not 1 <= len(expressions_option) <= 3:
                 raise ValueError("native final-model option expressions are invalid")
+            option_rank = option.get("training_design_rank")
+            if isinstance(option_rank, bool) or not isinstance(option_rank, int) or option_rank != len(expressions_option) + 1:
+                raise ValueError("native final-model option training design must have full column rank")
+            option_condition = option.get("training_design_condition_number")
+            if option_condition is not None and (
+                isinstance(option_condition, bool) or not isinstance(option_condition, (int, float))
+                or not math.isfinite(float(option_condition)) or float(option_condition) < 0
+            ):
+                raise ValueError("native final-model option condition number must be finite, non-negative, or null")
             if any(not isinstance(value, str) or not value for value in expressions_option):
                 raise ValueError("native final-model option expressions must be non-empty strings")
             for expression in expressions_option:
@@ -383,7 +392,9 @@ def _verify_native_final_model_audit(audit: Any) -> None:
                 or model.get("basis_expressions") != expected_winner["expressions"]
                 or model.get("cross_validation_metric") != expected_winner[expected_metric]
                 or model.get("cross_validation_metric_std") != expected_winner.get(expected_variability)
-                or model.get("symbolic_complexity") != expected_winner["complexity"]):
+                or model.get("symbolic_complexity") != expected_winner["complexity"]
+                or model.get("training_design_rank") != expected_winner.get("training_design_rank")
+                or model.get("training_design_condition_number") != expected_winner.get("training_design_condition_number")):
             raise ValueError("native final model does not match the reconstructed cross-family selection winner")
         row_count = model.get("training_row_count")
         if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
@@ -413,8 +424,8 @@ def _verify_native_final_model_audit(audit: Any) -> None:
         if condition_number is not None and float(condition_number) < 0:
             raise ValueError("native final-model design condition number cannot be negative")
         rank = model.get("training_design_rank")
-        if isinstance(rank, bool) or not isinstance(rank, int) or rank < 1 or rank > len(expressions) + 1:
-            raise ValueError("native final-model design rank is invalid")
+        if isinstance(rank, bool) or not isinstance(rank, int) or rank != len(expressions) + 1:
+            raise ValueError("native final-model training design must have full column rank")
     elif status in {"no_credible_candidate", "stage_failed", "not_run"}:
         if audit.get("selection_performed") is not False:
             raise ValueError("unselected native final model cannot claim selection")

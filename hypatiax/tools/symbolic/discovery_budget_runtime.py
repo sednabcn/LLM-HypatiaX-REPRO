@@ -32,6 +32,13 @@ class DiscoveryBudgetRuntime:
             self.stop_reason = "max_wall_time_seconds"
         return expired
 
+    @property
+    def remaining_wall_time_seconds(self) -> float | None:
+        """Return the remaining per-discovery wall-time budget, clamped at zero."""
+        if self.deadline is None:
+            return None
+        return max(0.0, self.deadline - time.monotonic())
+
     def can_start_search(self, configured_limit: int) -> bool:
         if self.expired():
             return False

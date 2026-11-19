@@ -128,8 +128,8 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
     if condition is not None and float(condition) < 0:
         raise ValueError("selected model design condition number cannot be negative")
     rank = model.get("training_design_rank")
-    if isinstance(rank, bool) or not isinstance(rank, int) or not 1 <= rank <= len(expressions) + 1:
-        raise ValueError("selected model design rank is invalid")
+    if isinstance(rank, bool) or not isinstance(rank, int) or rank != len(expressions) + 1:
+        raise ValueError("selected model training design must have full column rank")
 
     metric = model.get("selection_metric")
     if metric not in {"cv_rmse", "cv_nrmse"}:
@@ -169,6 +169,15 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
         option_expressions = option.get("expressions")
         if not isinstance(option_expressions, list) or not 1 <= len(option_expressions) <= 3 or any(not isinstance(item, str) or not item for item in option_expressions):
             raise ValueError("final-model option expressions are invalid")
+        option_rank = option.get("training_design_rank")
+        if isinstance(option_rank, bool) or not isinstance(option_rank, int) or option_rank != len(option_expressions) + 1:
+            raise ValueError("final-model option training design must have full column rank")
+        option_condition = option.get("training_design_condition_number")
+        if option_condition is not None and (
+            isinstance(option_condition, bool) or not isinstance(option_condition, (int, float))
+            or not math.isfinite(float(option_condition)) or float(option_condition) < 0
+        ):
+            raise ValueError("final-model option condition number must be finite, non-negative, or null")
         for expression in option_expressions:
             parse_sympy_expression(expression, names)
         if option_family == "single_basis":
@@ -201,7 +210,9 @@ def verify_final_model_audit(audit: Mapping[str, Any]) -> dict[str, Any]:
             or expressions != winner["expressions"]
             or cv_metric != winner[expected_metric]
             or cv_std != winner.get(expected_variability)
-            or model.get("symbolic_complexity") != winner["complexity"]):
+            or model.get("symbolic_complexity") != winner["complexity"]
+            or model.get("training_design_rank") != winner.get("training_design_rank")
+            or model.get("training_design_condition_number") != winner.get("training_design_condition_number")):
         raise ValueError("selected model does not match the reconstructed cross-family winner")
     return json.loads(json.dumps(dict(model), sort_keys=True, separators=(",", ":"), allow_nan=False))
 

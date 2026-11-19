@@ -62,6 +62,43 @@ def test_native_activation_runs_training_only_pipeline_without_v50_fallback():
     assert engine._last_v60_far_evaluation_audit == {}
 
 
+
+def test_native_templates_share_search_budget_with_injected_pysr_attempts():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "z"),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=13),
+    )
+    X = np.column_stack((np.linspace(1.0, 8.0, 16), np.linspace(2.0, 9.0, 16)))
+    y = 2.0 * X[:, 0] + 3.0 * X[:, 1] + 1.0
+    engine = HybridDiscoverySystemV60(use_llm=False)
+
+    result = engine.discover(
+        X=X, y=y, var_names=["x", "z"],
+        metadata={
+            "discovery_problem": problem,
+            "v60_activate_native_model": True,
+            "v60_external_candidate_proposals": {
+                "pysr_proposals": [{
+                    "expression": "x + z",
+                    "source": "pysr_search",
+                    "search_strategy": "injected_test_proposal",
+                }],
+                "pysr_search_attempt_count": 1,
+            },
+        },
+    )
+
+    audit = result["implementation_provenance"]["native_v60_generation_audit"]
+    assert audit["external_pysr_search_attempt_count"] == 1
+    assert audit["generation_attempt_count"] <= 1
+    assert audit["total_search_attempt_count"] <= problem.budget.max_search_attempts
+    runtime_audit = result["implementation_provenance"]["native_v60_budget_runtime"]
+    assert runtime_audit["actual"]["search_attempts"] == audit["total_search_attempt_count"]
+    assert runtime_audit["actual"]["candidates_admitted"] == runtime_audit["actual"]["candidates_seen"]
+    assert runtime_audit["actual"]["candidates_admitted"] <= problem.budget.max_candidates
+
+
 def test_far_evaluation_is_separate_and_cannot_change_frozen_selection():
     engine = HybridDiscoverySystemV60(use_llm=False)
     X, y = _training_data()

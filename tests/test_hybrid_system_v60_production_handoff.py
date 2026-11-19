@@ -45,6 +45,8 @@ def _audit(model):
         "cv_rmse_std": 0.0,
         "cv_nrmse_std": 0.0,
         "complexity": model["symbolic_complexity"],
+        "training_design_rank": len(expressions) + 1,
+        "training_design_condition_number": model["training_design_condition_number"],
     }
     encoded = json.dumps(model, sort_keys=True, separators=(",", ":"), allow_nan=False)
     return {
@@ -261,6 +263,59 @@ class NativeV60ProductionHandoffTests(unittest.TestCase):
         self.assertIsNone(result["implementation_provenance"]["v60_run_context"])
         self.assertEqual(result["native_v60_candidate_proposals"], [])
         self.assertNotIn("native_v60_production_handoff", result)
+
+    def test_final_model_verifier_rejects_rank_deficient_training_design(self):
+        X = np.arange(1.0, 9.0).reshape(-1, 1)
+        y = 3.0 * X[:, 0] + 2.0
+        candidates = [{
+            "candidate_id": "c1",
+            "expression": "x",
+            "normalized_expression": "x",
+            "producer_provenance": [],
+        }]
+        single = {
+            "schema": "v60_native_objective_selection_v1",
+            "selection_status": "selected",
+            "selection_performed": True,
+            "far_or_evaluation_data_used": False,
+            "pareto_candidate_ids": ["c1"],
+            "selected_candidate_id": "c1",
+            "objective_evidence": [{
+                "candidate_id": "c1", "expression": "x",
+                "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
+                "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
+                "complexity": 1,
+            }],
+        }
+        evidence = single["objective_evidence"][0]
+        digest = hashlib.sha256(
+            json.dumps(evidence, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        ).hexdigest()
+        evidence["objective_evidence_sha256"] = digest
+        single["selected_objective_evidence_sha256"] = digest
+        multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
+        final = finalize_native_v60_model(
+            candidates, single, multi, X, y, variable_names=["x"]
+        )
+        final["selected_model"]["training_design_rank"] = 1
+        encoded = json.dumps(
+            final["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        final["selected_model_sha256"] = hashlib.sha256(encoded.encode()).hexdigest()
+        with self.assertRaisesRegex(ValueError, "full column rank"):
+            verify_final_model_audit(final)
+
+    def test_final_model_verifier_rejects_rank_deficient_family_option(self):
+        audit = _audit({
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "coefficients": [2.0, 1.0],
+            "fitted_expression": "(2)*(x) + (1)",
+        })
+        audit["candidate_options"][0]["training_design_rank"] = 1
+        with self.assertRaisesRegex(ValueError, "option training design"):
+            verify_final_model_audit(audit)
 
 
 if __name__ == "__main__":

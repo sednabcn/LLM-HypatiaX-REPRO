@@ -205,6 +205,7 @@ def _native_final_model_audit():
             "family": "single_basis", "candidate_id": "candidate-x",
             "expressions": ["x"], "cv_rmse": 0.0, "cv_nrmse": 0.0,
             "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 1,
+            "training_design_rank": 2, "training_design_condition_number": 3.0,
         }],
     }
 
@@ -214,6 +215,30 @@ def test_worker_verifier_accepts_semantically_consistent_final_model():
     payload["provenance"]["native_final_model"] = _native_final_model_audit()
     verified = verify_discovery_report_envelope(seal_discovery_report(payload))
     assert verified["provenance"]["native_final_model"]["execution_status"] == "selected"
+
+def test_worker_verifier_rejects_rank_deficient_final_model():
+    from hashlib import sha256
+    import json
+
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["selected_model"]["training_design_rank"] = 1
+    audit["selected_model_sha256"] = sha256(
+        json.dumps(audit["selected_model"], sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="full column rank"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
+
+
+
+def test_worker_verifier_rejects_rank_deficient_family_option():
+    payload = copy.deepcopy(_envelope()["report"])
+    audit = _native_final_model_audit()
+    audit["candidate_options"][0]["training_design_rank"] = 1
+    payload["provenance"]["native_final_model"] = audit
+    with pytest.raises(ValueError, match="option training design"):
+        verify_discovery_report_envelope(seal_discovery_report(payload))
 
 
 def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
@@ -225,6 +250,7 @@ def test_worker_verifier_rejects_forged_cross_family_finalization_winner():
         "expressions": ["x", "x**2"],
         "cv_rmse": 0.0, "cv_nrmse": 0.0,
         "cv_rmse_std": 0.0, "cv_nrmse_std": 0.0, "complexity": 0,
+        "training_design_rank": 3, "training_design_condition_number": 5.0,
     })
     # A re-sealed report must not be able to retain the old winner after the
     # serialized options now make the multi-basis family the deterministic winner.

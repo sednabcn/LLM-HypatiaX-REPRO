@@ -46,6 +46,26 @@ def test_rejects_misattributed_producer_source():
     assert "source" in result["rejected_proposals"][0]["reason"]
 
 
+def test_llm_candidate_volume_uses_candidate_budget_not_search_attempt_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x",),
+        budget=DiscoveryBudget(
+            max_search_attempts=1, max_candidates=4, max_llm_calls=1
+        ),
+    )
+    proposals = [
+        {"expression": f"x + {index}", "source": "llm_proposal"}
+        for index in range(4)
+    ]
+
+    audit = ingest_external_candidate_proposals(
+        problem, llm_proposals=proposals, llm_call_count=1
+    )
+    assert audit["accepted_proposal_count"] == 4
+    assert audit["budget_truncated_count"] == 0
+
+
 def test_combined_external_pool_is_bounded():
     result = ingest_external_candidate_proposals(
         _problem(),
