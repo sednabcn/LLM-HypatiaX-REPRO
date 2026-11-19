@@ -67,6 +67,37 @@ def test_v60_template_generation_composes_declared_unary_and_binary_operators():
     ]
 
 
+def test_v60_power_templates_are_prioritized_over_unary_templates():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("m", "v"),
+        allowed_unary_operators=("sin",),
+        allowed_binary_operators=("*", "**"),
+        budget=DiscoveryBudget(max_search_attempts=2, max_candidates=10, seed=17),
+    )
+
+    proposals = generate_native_template_candidates(problem)
+    assert [item.expression for item in proposals] == [
+        "m", "v", "(m ** 2)", "(v ** 2)",
+    ]
+
+
+def test_v60_generates_declared_compound_physics_shapes_within_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("m1", "m2", "r"),
+        allowed_binary_operators=("+", "*", "/", "**"),
+        budget=DiscoveryBudget(max_search_attempts=20, max_candidates=30, seed=17),
+    )
+
+    expressions = [item.expression for item in generate_native_template_candidates(problem)]
+    assert "(m1 ** 2)" in expressions
+    assert "(m1 * (m2 ** 2))" in expressions
+    assert "((m1 * m2) / (r ** 2))" in expressions
+    assert "((m1 * m2) / (m1 + m2))" in expressions
+    assert len(expressions) <= 33  # three immutable variable bases plus 20 attempts
+
+
 def test_v60_template_generation_emits_square_only_when_power_is_declared():
     problem = DiscoveryProblem(
         target_name="target",

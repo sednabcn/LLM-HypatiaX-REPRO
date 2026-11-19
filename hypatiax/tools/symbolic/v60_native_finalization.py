@@ -73,6 +73,7 @@ def finalize_native_v60_model(
     y_train: Any,
     *,
     variable_names: Sequence[str],
+    max_training_cv_nrmse: float | None = None,
 ) -> dict[str, Any]:
     """Choose between verified family winners and refit the winner on training rows.
 
@@ -84,6 +85,10 @@ def finalize_native_v60_model(
     X = np.asarray(X_train, dtype=float)
     y = np.asarray(y_train, dtype=float).reshape(-1)
     names = tuple(variable_names)
+    if max_training_cv_nrmse is not None:
+        max_training_cv_nrmse = _finite(max_training_cv_nrmse, "max_training_cv_nrmse")
+        if max_training_cv_nrmse < 0:
+            raise ValueError("max_training_cv_nrmse must be >= 0 or None")
     if X.ndim != 2 or X.shape[1] != len(names) or X.shape[0] != y.size or not y.size:
         raise ValueError("training arrays must be aligned with the declared variable names")
     if not np.all(np.isfinite(X)) or not np.all(np.isfinite(y)):
@@ -164,14 +169,37 @@ def finalize_native_v60_model(
             "complexity": complexity,
         })
 
+    rejected_options: list[dict[str, Any]] = []
+    if max_training_cv_nrmse is not None:
+        quality_eligible = []
+        for option in options:
+            value = option["cv_nrmse"]
+            if value is None or value > max_training_cv_nrmse:
+                rejected_options.append({
+                    "family": option["family"],
+                    "candidate_id": option.get("candidate_id"),
+                    "candidate_group_id": option.get("candidate_group_id"),
+                    "reason": "training_cv_quality_gate_failed",
+                    "observed_mean_validation_nrmse": value,
+                    "maximum_training_cv_nrmse": max_training_cv_nrmse,
+                })
+            else:
+                quality_eligible.append(option)
+        options = quality_eligible
+
     if not options:
         return {
             "schema": "v60_native_final_model_v1",
             "execution_status": "no_credible_candidate",
             "selection_performed": False,
             "far_or_evaluation_data_used": False,
+            "training_cv_quality_gate": {
+                "status": "failed" if max_training_cv_nrmse is not None else "not_applicable",
+                "maximum_validation_nrmse": max_training_cv_nrmse,
+                "far_or_evaluation_data_used": False,
+            },
             "candidate_options": [],
-            "rejected_candidate_options": [],
+            "rejected_candidate_options": rejected_options,
             "selected_model": None,
         }
 
@@ -179,7 +207,6 @@ def finalize_native_v60_model(
     # Do not let a rank-deficient multi-basis family win merely because its
     # validation error is lower; retain the other family as a possible winner.
     identifiable_options: list[dict[str, Any]] = []
-    rejected_options: list[dict[str, Any]] = []
     symbols = [sp.Symbol(name, real=True) for name in names]
     for option in options:
         columns = []
@@ -302,6 +329,12 @@ def finalize_native_v60_model(
         "selection_performed": True,
         "far_or_evaluation_data_used": False,
         "cross_family_policy": "minimum_common_cv_error_then_fold_variability_then_complexity_then_family",
+        "training_cv_quality_gate": {
+            "status": "passed" if max_training_cv_nrmse is not None else "not_applicable",
+            "maximum_validation_nrmse": max_training_cv_nrmse,
+            "metric_definition": "validation_rmse / training_fold_target_standard_deviation",
+            "far_or_evaluation_data_used": False,
+        },
         "objective_metric": metric,
         "candidate_options": options,
         "rejected_candidate_options": rejected_options,
