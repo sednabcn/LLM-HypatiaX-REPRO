@@ -17,7 +17,9 @@ import numpy as np
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem, discovery_problem_from_dict
 from hypatiax.tools.symbolic.discovery_report_integrity import build_native_discovery_report
 from hypatiax.tools.symbolic.hybrid_system_v50_2 import HybridDiscoverySystem
-from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_candidate_generation import (
+    generate_native_template_candidates, generate_native_template_candidates_with_audit,
+)
 from hypatiax.tools.symbolic.v60_external_producers import ingest_external_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_normalization import normalize_candidate_proposals
 from hypatiax.tools.symbolic.v60_candidate_fitting import fit_native_candidates
@@ -126,6 +128,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals: tuple[dict[str, Any], ...] = ()
         self._last_v60_normalization_audit: dict[str, Any] = {}
         self._last_v60_fitting_audit: dict[str, Any] = {}
+        self._last_v60_generation_audit: dict[str, Any] = {}
 
     def _reset_v60_call_state(self) -> None:
         """Clear every V60 audit before a new call to prevent cross-call leakage."""
@@ -133,6 +136,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_candidate_proposals = ()
         self._last_v60_normalization_audit = {}
         self._last_v60_fitting_audit = {}
+        self._last_v60_generation_audit = {}
         self._last_v60_training_fit_audit = {}
         self._last_v60_multi_basis_fit_audit = {}
         self._last_v60_multi_basis_validation_audit = {}
@@ -167,6 +171,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             "native_v60_candidate_normalization": self._last_v60_run_context is not None,
             "native_v60_candidate_fitting": self._last_v60_run_context is not None,
             "native_v60_fitting_audit": dict(self._last_v60_fitting_audit),
+            "native_v60_generation_audit": dict(self._last_v60_generation_audit),
             "native_v60_candidate_count": len(self._last_v60_candidate_proposals),
             "native_v60_external_producer_audit": dict(self._last_v60_external_producer_audit),
             "native_v60_normalization_audit": dict(self._last_v60_normalization_audit),
@@ -237,7 +242,11 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         external_spec: Mapping[str, Any],
     ) -> dict[str, Any]:
         """Run the complete native training-only pipeline; far data is not accepted."""
-        generated = list(generate_native_template_candidates(problem))
+        generation = generate_native_template_candidates_with_audit(problem)
+        generated = list(generation["proposals"])
+        self._last_v60_generation_audit = {
+            key: value for key, value in generation.items() if key != "proposals"
+        }
         unknown_fields = set(external_spec) - {
             "llm_proposals", "pysr_proposals", "llm_call_count",
             "llm_token_count", "pysr_search_attempt_count",
@@ -446,7 +455,11 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         self._last_v60_fitting_audit = {}
         if self._last_v60_run_context is not None:
             problem = prepared["discovery_problem"]
-            generated = list(generate_native_template_candidates(problem))
+            generation = generate_native_template_candidates_with_audit(problem)
+            generated = list(generation["proposals"])
+            self._last_v60_generation_audit = {
+                key: value for key, value in generation.items() if key != "proposals"
+            }
             external_spec = prepared.get("v60_external_candidate_proposals", {}) or {}
             if not isinstance(external_spec, Mapping):
                 raise TypeError("v60_external_candidate_proposals must be a mapping")
