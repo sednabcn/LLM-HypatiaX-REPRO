@@ -442,6 +442,8 @@ shared deadline has expired.
 The compatibility typed-contract path uses the same runtime and remaining-time
 accounting for its fitting stage. Residual diagnostics are skipped with an
 explicit budget-limited audit when the shared deadline has already expired.
+If the deadline is exhausted before finalization completes, the selected-model
+handoff is replaced by a stage-failed audit and no production model is emitted.
 Regression-test source checks the runtime clock API and the shared
 search/candidate counters. Tests have not been run;
 no CI, experiment, worker, benchmark, smoke workflow, or provider call was
