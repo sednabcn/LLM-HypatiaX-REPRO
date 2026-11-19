@@ -8,10 +8,11 @@ contract preflight, bounded deterministic template generation, proposal
 normalization, scientific gates, single- and multi-basis fold validation,
 independent multi-basis evidence verification, objective selection, residual
 diagnostics, cross-family finalization, and verified production handoff.
-Without explicit activation, V50.2 remains the compatibility path. Normalization creates stable semantic candidate
-IDs, deduplicates equivalent expressions, and preserves every contributing
-producer record as lineage. The input-proposal processing ceiling is bounded
-by the problem's `max_candidates` budget.
+Without explicit activation, V50.2 remains the compatibility path.
+Normalization creates stable semantic candidate IDs, deduplicates equivalent
+expressions, and preserves every contributing producer record as lineage. The
+input-proposal processing ceiling is bounded by the problem's `max_candidates`
+budget.
 
 V60 now performs a bounded native affine calibration of each normalized
 template against the supplied training observations. For each expression it
