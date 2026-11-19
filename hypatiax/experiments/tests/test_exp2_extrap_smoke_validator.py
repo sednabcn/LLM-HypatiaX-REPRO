@@ -94,7 +94,7 @@ def _write_fixture(output_dir: Path, *, omit_far_rmse: bool = False) -> None:
 
 def test_three_equation_six_method_smoke_artifacts_validate(tmp_path):
     _write_fixture(tmp_path)
-    summary = validator.validate_smoke_outputs(tmp_path)
+    summary = validator.validate_smoke_outputs(tmp_path, hybrid_implementation="v60")
     assert summary["equation_count"] == 3
     assert summary["method_count"] == 6
     assert summary["method_equation_rows"] == 18
@@ -114,7 +114,7 @@ def test_smoke_rejects_prediction_audit_metric_mismatch(tmp_path):
     audit["y_pred"][0] += 1.0
     protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
     try:
-        validator.validate_smoke_outputs(tmp_path)
+        validator.validate_smoke_outputs(tmp_path, hybrid_implementation="v60")
     except ValueError as exc:
         assert "audited RMSE" in str(exc)
     else:
@@ -124,7 +124,7 @@ def test_smoke_rejects_prediction_audit_metric_mismatch(tmp_path):
 def test_smoke_rejects_missing_far_metric_for_one_method(tmp_path):
     _write_fixture(tmp_path, omit_far_rmse=True)
     try:
-        validator.validate_smoke_outputs(tmp_path)
+        validator.validate_smoke_outputs(tmp_path, hybrid_implementation="v60")
     except ValueError as exc:
         assert "far-region RMSE map" in str(exc)
     else:
@@ -137,7 +137,7 @@ def test_smoke_rejects_incomplete_flat_method_coverage(tmp_path):
     rows = json.loads(flat_path.read_text(encoding="utf-8"))
     flat_path.write_text(json.dumps(rows[:-1]), encoding="utf-8")
     try:
-        validator.validate_smoke_outputs(tmp_path)
+        validator.validate_smoke_outputs(tmp_path, hybrid_implementation="v60")
     except ValueError as exc:
         assert "direction-specific test" in str(exc)
     else:
@@ -173,7 +173,7 @@ def test_smoke_validator_accepts_multiple_directions_per_equation(tmp_path):
 
     protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
     flat_path.write_text(json.dumps(flat), encoding="utf-8")
-    summary = validator.validate_smoke_outputs(tmp_path)
+    summary = validator.validate_smoke_outputs(tmp_path, hybrid_implementation="v60")
     assert summary["equation_count"] == 3
     assert summary["direction_count"] == 2
     assert summary["equation_direction_count"] == 6
