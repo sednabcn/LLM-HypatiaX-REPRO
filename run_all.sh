@@ -266,7 +266,7 @@ ONLY_STEP=""
 FROM_STEP=""
 DRY_RUN=false
 
-_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
+_STEP_ORDER="env_check gt_leak_guard exp1 exp1b portfolio portfolio_random_holdout portfolio_bootstrap_pca portfolio_feature_ranking portfolio_pca_tail_error exp1_ablation exp1_llm_sens exp1_ablation_aggregate exp1_four_way_matched exp1_four_way_matched_aggregate exp1_five exp1_pca exp1b_pca extrap hybrid_all_domains instability exp2_regression_tests exp2_feynman exp2_feynman_pca_4060 exp2_feynman_extrap exp2_protocol30_random_8020 exp2_protocol30_pca_4060 exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate exp2 exp2_all_domains_pca_4060 exp2_five exp3 exp3b suppA suppB suppB_sc validate qualify audit_paper audit_setup audit_nb01 audit_nb02 audit_nb03 audit_nb04 audit_nb05 audit_nb06_fixc3_disclosure audit_nb06_fixc3_rerun audit_guard audit_print_verify audit_print_findings audit_figures_tables audit_final_gate"
 _DEFERRED_STEPS="instability exp2_all_domains_pca_4060 exp1_four_way_matched_aggregate exp2_protocol30_random_8020_aggregate exp2_protocol30_pca_4060_aggregate"
 RUN_DEFERRED="${RUN_DEFERRED:-0}"
 
@@ -810,6 +810,43 @@ _exp1_ablation_step() {
 
 # PYPROV: exp1_ablation checkpoint policy is complete.
 run exp1_ablation "Core-15 LLM ablation: PySR-only vs HypatiaX vs HypatiaX-noLLM (Tab 5, §10.6)" _exp1_ablation_step
+
+# Exp1 LLM-sensitivity: six preregistered condition shards, 27 cases each.
+# One worker runs exactly one condition and all explicitly requested seeds.
+_exp1_llm_sens_step() {
+  local out_dir="${RESULTS_DIR}/${RESULT_SUBDIR:-ablation/exp1_llm_sens}"
+  local seeds="${SHARD_SEEDS:-${PYSR_SEED:-42}}"
+  local -a seed_args=() only_args=()
+  local condition
+  IFS=', ' read -r -a seed_args <<< "${seeds}"
+  for condition in ${TASK_IDS:-}; do
+    only_args+=( "${condition}" )
+  done
+  if [[ "${#only_args[@]}" -ne 1 ]]; then
+    echo "::error::exp1_llm_sens requires exactly one condition per shard."
+    return 2
+  fi
+  export LLM_SENS_RUNNER="${LLM_SENS_RUNNER:-llm_sens_adapter:run}"
+  export LLM_SENS_PRIOR_TARGETS="${LLM_SENS_PRIOR_TARGETS:-hypatia:get_llm_prior}"
+  export LLM_SENS_HOOKS="${LLM_SENS_HOOKS:-hypatia_llm_hook:hybrid_llm_condition}"
+  mkdir -p "${out_dir}"
+  python3 "${EXPERIMENTS_DIR}/exp1_llm_sens.py" \
+    --out "${out_dir}" \
+    --only "${only_args[@]}" \
+    --seeds "${seed_args[@]}" \
+    --n "${LLM_SENS_N:-40}" \
+    --shard "${SHARD_INDEX:-0}" \
+    --run-tag "exp1_llm_sens-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-1}" \
+    --runner "${LLM_SENS_RUNNER}"
+  local produced
+  produced=$(find "${out_dir}" -maxdepth 1 -type f -name "exp1_llm_sens_*.json" ! -name "*run_report*" | wc -l)
+  if [[ "${produced}" -lt "${#seed_args[@]}" ]]; then
+    echo "::error::exp1_llm_sens did not produce the expected condition/seed result files."
+    return 1
+  fi
+  echo "OK: exp1_llm_sens wrote ${produced} condition/seed result file(s) to ${out_dir}"
+}
+run exp1_llm_sens "Exp1 LLM-sensitive DeFi ablation (six conditions; 27 cases)" _exp1_llm_sens_step
 
 # ---------------------------------------------------------------------------
 # exp1_ablation_aggregate: merge the per-shard checkpoints produced by the CI
