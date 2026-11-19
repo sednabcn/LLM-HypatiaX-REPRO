@@ -55,6 +55,7 @@ def generate_native_template_candidates(
 
     binary = problem.allowed_binary_operators or ("+", "-", "*", "/")
     allowed_binary = tuple(op for op in binary if op in {"+", "-", "*", "/"})
+    allow_square = "**" in binary
     # Keep generated calls inside the same explicit function allowlist as the
     # restricted AST parser. Unknown contract operators are never guessed.
     parser_unary = {
@@ -79,6 +80,13 @@ def generate_native_template_candidates(
             proposals.append(f"{op}({name})")
         if attempts >= budget.max_search_attempts or len(proposals) >= cap:
             break
+
+    if allow_square:
+        for name in names:
+            if attempts >= budget.max_search_attempts or len(proposals) >= cap:
+                break
+            attempts += 1
+            proposals.append(f"({name} ** 2)")
 
     for i, left in enumerate(names):
         for right in names[i + 1:]:
