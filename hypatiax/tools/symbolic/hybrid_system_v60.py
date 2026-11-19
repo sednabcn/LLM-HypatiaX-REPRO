@@ -433,6 +433,7 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
         final_audit = finalize_native_v60_model(
             candidates, single_selection, multi_selection, X, y,
             variable_names=problem.variable_names,
+            max_training_cv_nrmse=problem.metadata.get("max_training_cv_nrmse", 1.0),
         )
         if budget_runtime.expired():
             final_audit = {
