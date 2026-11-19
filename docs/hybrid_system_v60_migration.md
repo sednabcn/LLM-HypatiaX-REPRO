@@ -448,3 +448,21 @@ Regression-test source checks the runtime clock API and the shared
 search/candidate counters. Tests have not been run;
 no CI, experiment, worker, benchmark, smoke workflow, or provider call was
 launched.
+
+
+## Stage 59 — make post-validation V60 diagnostics deadline-aware
+
+Independent multi-basis evidence verification and training-only residual
+stability diagnostics now accept the remaining per-discovery wall-time
+allowance. Both check a monotonic deadline between candidate/group and fold
+operations, stop without emitting partially verified evidence for an
+incomplete group/candidate, and report timeout/attempt/truncation metadata.
+The native orchestration passes the remaining shared deadline to both stages.
+This closes the prior gap where post-validation reconstruction could continue
+after the main fitting deadline had elapsed.
+
+The deadline is cooperative: an individual NumPy/SymPy operation already in
+progress cannot be preempted, but no subsequent group/fold begins after the
+deadline is observed. Regression-test source covers already-expired budgets.
+Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
+or provider call was launched.
