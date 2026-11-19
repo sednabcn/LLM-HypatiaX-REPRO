@@ -2540,7 +2540,16 @@ try:
             _benchmark_provenance = result.get("benchmark_provenance")
             if not isinstance(_benchmark_provenance, dict):
                 _benchmark_provenance = {}
-            _benchmark_provenance["discovery_problem_contract"] = _contract_audit
+            _benchmark_provenance.update({
+                "engine": "HybridDiscoverySystem",
+                "engine_implementation": kwargs.get("hybrid_implementation", "v50_2"),
+                "engine_version": str(getattr(system, "VERSION", "5.4")),
+                "engine_variant": (
+                    "native_v60" if result.get("strategy") == "native_v60"
+                    else "v50_2_compatibility"
+                ),
+                "discovery_problem_contract": _contract_audit,
+            })
             result["benchmark_provenance"] = _benchmark_provenance
     else:
         result = {"success": False, "error": f"Unknown method: {method}"}
@@ -3129,6 +3138,7 @@ class HybridSystemV50_2Method(BaseMethod):
                     **_provenance(result),
                     "strategy":    result.get("strategy", "unknown"),
                     "validations": result.get("validations", 0),
+                    "benchmark_provenance": result.get("benchmark_provenance", {}),
                     "search_config": {
                         "max_iterations": _n_iter_adaptive,
                         "pysr_timeout_seconds": _per_attempt_to,
