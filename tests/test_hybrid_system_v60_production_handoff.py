@@ -313,25 +313,13 @@ if __name__ == "__main__":
 
 class NativeV60SplitConformalTests(unittest.TestCase):
     def _frozen_model(self):
-        X = np.arange(1.0, 9.0).reshape(-1, 1)
-        y = 3.0 * X[:, 0] + 2.0
-        candidates = [{
-            "candidate_id": "c1", "expression": "x",
-            "normalized_expression": "x", "producer_provenance": [],
-        }]
-        single = {
-            "selection_status": "selected", "selected_candidate_id": "c1",
-            "objective_evidence": [{
-                "candidate_id": "c1", "expression": "x",
-                "mean_validation_rmse": 0.0, "mean_validation_nrmse": 0.0,
-                "std_validation_rmse": 0.0, "std_validation_nrmse": 0.0,
-                "complexity": 1,
-            }],
-        }
-        multi = {"selection_status": "no_credible_candidate", "objective_evidence": []}
-        return finalize_native_v60_model(
-            candidates, single, multi, X, y, variable_names=["x"]
-        )
+        return _audit({
+            "basis_candidate_ids": ["c1"],
+            "basis_expressions": ["x"],
+            "variable_names": ["x"],
+            "fitted_expression": "(3)*(x) + (2)",
+            "coefficients": [3.0, 2.0],
+        })
 
     def test_split_conformal_calibrates_and_predicts_without_changing_model(self):
         final = self._frozen_model()
