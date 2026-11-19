@@ -380,3 +380,89 @@ unchanged.
 Regression-test source covers a binary combination that uses a unary basis
 term. Tests have not been run; no CI, experiment, worker, benchmark, smoke
 workflow, or provider call was launched.
+
+
+## Stage 55 — persist bounded template-generation audit
+
+Native proposal generation now has an audit-returning API alongside the
+backward-compatible tuple-returning function. The audit records declared,
+accepted, and ignored operator declarations; attempt and candidate budgets;
+effective cap; generated/base/operator candidate counts; duplicate count;
+budget-exhaustion flags; and seed. V60 attaches this audit to implementation
+provenance for both native activation and typed-contract compatibility calls.
+
+The audit contains no training values, far/evaluation data, credentials, or
+provider output. Regression-test source checks budget/operator accounting and
+parity with the compatibility API. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 56 — share search-attempt budget with injected PySR usage
+
+External PySR search attempts are now accounted before deterministic template
+generation. The generator receives only the remaining search-attempt budget
+and remaining candidate slots after externally supplied proposals are admitted.
+The combined audit records external PySR attempts and total search attempts,
+so native templates cannot independently consume a fresh copy of the same
+per-discovery search budget. The typed-contract compatibility path uses the
+same accounting.
+
+LLM calls/tokens remain separately governed by their dedicated budget fields.
+No producer is invoked by this change; externally produced proposals and usage
+counters are still supplied by the caller. Regression-test source covers
+remaining-budget enforcement. Tests have not been run; no CI, experiment,
+worker, benchmark, smoke workflow, or provider call was launched.
+
+
+## Stage 57 — keep candidate and search budgets independent
+
+External proposal ingestion and V60 orchestration now use max_candidates as
+the candidate-pool ceiling, while max_search_attempts governs the combined
+native-template and injected-PySR search work. This preserves the separate
+contract budgets: LLM proposals are constrained by LLM call/token budgets and
+the candidate cap; PySR and native template generation share the search-attempt
+ceiling. Remaining candidate slots and remaining search attempts are both
+calculated before native templates are generated.
+
+Regression-test source verifies that multiple injected LLM proposals are not
+incorrectly truncated by a smaller search-attempt budget. Tests have not been
+run; no CI, experiment, worker, benchmark, smoke workflow, or provider call
+was launched.
+
+
+## Stage 58 — enforce one V60 wall-time budget across fitting stages
+
+V60 now creates a single monotonic per-discovery budget runtime. Remaining wall
+time, rather than the original full allowance, is passed into single-basis
+fitting/validation and multi-basis fitting/validation. The runtime records
+actual shared search attempts and admitted candidate count in implementation
+provenance. A multi-basis evidence-verification stage is not entered after the
+shared deadline has expired.
+
+The compatibility typed-contract path uses the same runtime and remaining-time
+accounting for its fitting stage. Residual diagnostics are skipped with an
+explicit budget-limited audit when the shared deadline has already expired.
+If the deadline is exhausted before finalization completes, the selected-model
+handoff is replaced by a stage-failed audit and no production model is emitted.
+Regression-test source checks the runtime clock API and the shared
+search/candidate counters. Tests have not been run;
+no CI, experiment, worker, benchmark, smoke workflow, or provider call was
+launched.
+
+
+## Stage 59 — make post-validation V60 diagnostics deadline-aware
+
+Independent multi-basis evidence verification and training-only residual
+stability diagnostics now accept the remaining per-discovery wall-time
+allowance. Both check a monotonic deadline between candidate/group and fold
+operations, stop without emitting partially verified evidence for an
+incomplete group/candidate, and report timeout/attempt/truncation metadata.
+The native orchestration passes the remaining shared deadline to both stages.
+This closes the prior gap where post-validation reconstruction could continue
+after the main fitting deadline had elapsed.
+
+The deadline is cooperative: an individual NumPy/SymPy operation already in
+progress cannot be preempted, but no subsequent group/fold begins after the
+deadline is observed. Regression-test source covers already-expired budgets.
+Tests have not been run; no CI, experiment, worker, benchmark, smoke workflow,
+or provider call was launched.

@@ -1,6 +1,9 @@
 """Offline contract tests for native V60 bounded template proposals."""
 from hypatiax.tools.symbolic.discovery_contracts import DiscoveryBudget, DiscoveryProblem
-from hypatiax.tools.symbolic.v60_candidate_generation import generate_native_template_candidates
+from hypatiax.tools.symbolic.v60_candidate_generation import (
+    generate_native_template_candidates,
+    generate_native_template_candidates_with_audit,
+)
 
 
 def _problem(*, budget=None):
@@ -137,6 +140,44 @@ def test_v60_template_generation_uses_declared_multiplication_for_self_products(
     assert [item.expression for item in proposals] == [
         "x", "y", "(x * x)", "(y * y)",
     ]
+
+
+def test_v60_template_generation_returns_auditable_budget_and_operator_counts():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y"),
+        allowed_unary_operators=("sin", "unsupported"),
+        allowed_binary_operators=("+", "unknown"),
+        budget=DiscoveryBudget(max_search_attempts=3, max_candidates=8, seed=19),
+    )
+
+    audit = generate_native_template_candidates_with_audit(problem)
+    assert audit["schema"] == "v60_native_template_generation_v1"
+    assert audit["candidate_count"] == 5
+    assert audit["generation_attempt_count"] == 3
+    assert audit["base_variable_candidate_count"] == 2
+    assert audit["ignored_unary_operators"] == ["unsupported"]
+    assert audit["ignored_binary_operators"] == ["unknown"]
+    assert audit["seed"] == 19
+    assert [item.to_dict() for item in audit["proposals"]] == [
+        item.to_dict() for item in generate_native_template_candidates(problem)
+    ]
+
+
+def test_v60_template_generation_honors_remaining_global_search_budget():
+    problem = DiscoveryProblem(
+        target_name="target",
+        variable_names=("x", "y", "z"),
+        budget=DiscoveryBudget(max_search_attempts=5, max_candidates=10, seed=17),
+    )
+
+    audit = generate_native_template_candidates_with_audit(
+        problem, search_attempt_limit=2
+    )
+    assert audit["contract_search_attempt_budget"] == 5
+    assert audit["search_attempt_budget"] == 2
+    assert audit["generation_attempt_count"] == 2
+    assert audit["search_attempt_budget_exhausted"] is True
 
 
 def test_v60_template_generation_respects_zero_candidate_budget():

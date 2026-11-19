@@ -7,6 +7,7 @@ data input and never ranks, filters, or selects candidates.
 from __future__ import annotations
 
 import math
+from time import monotonic
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -70,12 +71,20 @@ def diagnose_native_training_residuals(
     variable_names: Sequence[str],
     max_candidates: int = 100,
     max_search_attempts: int = 100,
+    max_wall_time_seconds: float | None = None,
 ) -> dict[str, Any]:
     """Reconstruct held-out fold residuals and coefficient stability on training rows."""
     for name, value in (("max_candidates", max_candidates),
                         ("max_search_attempts", max_search_attempts)):
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             raise ValueError(f"{name} must be a non-negative integer")
+    if max_wall_time_seconds is not None and (
+        isinstance(max_wall_time_seconds, bool)
+        or not isinstance(max_wall_time_seconds, (int, float))
+        or not math.isfinite(float(max_wall_time_seconds))
+        or max_wall_time_seconds <= 0
+    ):
+        raise ValueError("max_wall_time_seconds must be finite and > 0 or None")
     features = np.asarray(X, dtype=float)
     targets = np.asarray(y, dtype=float)
     if features.ndim != 2 or features.shape[1] != len(variable_names):
@@ -109,10 +118,17 @@ def diagnose_native_training_residuals(
     if not isinstance(records, list):
         raise ValueError("candidate_validation must be a list")
     cap = min(len(records), max_candidates, max_search_attempts)
+    started = monotonic()
+    deadline = started + float(max_wall_time_seconds) if max_wall_time_seconds is not None else None
     diagnostics: list[dict[str, Any]] = []
     rejected: list[dict[str, str]] = []
-    attempted = records[:cap]
-    for record in attempted:
+    attempted_count = 0
+    timed_out = False
+    for record in records[:cap]:
+        if deadline is not None and monotonic() >= deadline:
+            timed_out = True
+            break
+        attempted_count += 1
         candidate_id = record.get("candidate_id")
         expression = record.get("expression")
         try:
@@ -140,6 +156,9 @@ def diagnose_native_training_residuals(
             scales, intercepts = [], []
             seen = set()
             for fold in folds:
+                if deadline is not None and monotonic() >= deadline:
+                    timed_out = True
+                    break
                 fold_id = fold.get("fold")
                 if isinstance(fold_id, bool) or not isinstance(fold_id, int) or fold_id in seen:
                     raise ValueError("fold identifiers must be unique integers")
@@ -165,6 +184,8 @@ def diagnose_native_training_residuals(
                     "validation_row_indices": list(indices),
                     **_residual_summary(residual, prediction, row_idx),
                 })
+            if timed_out:
+                break
             if seen != set(range(expected)):
                 raise ValueError("fold identifiers must be contiguous from zero")
             scale_array, intercept_array = np.asarray(scales), np.asarray(intercepts)
@@ -198,11 +219,16 @@ def diagnose_native_training_residuals(
 
     return {
         "schema": "v60_native_residual_stability_v1",
-        "diagnostic_status": "completed" if len(attempted) == len(records) else "budget_limited",
+        "diagnostic_status": (
+            "timed_out" if timed_out else
+            ("completed" if attempted_count == len(records) else "budget_limited")
+        ),
+        "timed_out": timed_out,
+        "attempted_candidate_count": attempted_count,
         "input_candidate_count": len(records),
         "diagnosed_candidate_count": len(diagnostics),
         "rejected_candidate_count": len(rejected),
-        "budget_truncated_count": len(records) - len(attempted),
+        "budget_truncated_count": len(records) - len(diagnostics) - len(rejected),
         "candidate_diagnostics": diagnostics,
         "rejected_candidates": rejected,
         "diagnostic_scope": "training_only_held_out_fold_residuals_and_fold_local_coefficients",
