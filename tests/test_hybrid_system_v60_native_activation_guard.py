@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from hypatiax.tools.symbolic.discovery_contracts import DiscoveryProblem
+from hypatiax.tools.symbolic.discovery_contracts import DiscoveryBudget, DiscoveryProblem
 from hypatiax.tools.symbolic.hybrid_system_v60 import HybridDiscoverySystemV60
 
 
@@ -11,11 +11,11 @@ def _problem():
     return DiscoveryProblem(
         target_name="y",
         variable_names=("x",),
-        budget={
-            "max_search_attempts": 10,
-            "max_candidates": 10,
-            "seed": 7,
-        },
+        budget=DiscoveryBudget(
+            max_search_attempts=10,
+            max_candidates=10,
+            seed=7,
+        ),
     )
 
 
