@@ -165,3 +165,14 @@ previous call's selected model, production-handoff status, or audit payload.
 The reset is centralized and idempotent. Regression-test source covers stale
 state clearing and repeated resets. No tests, CI, experiments, workers,
 benchmarks, smoke workflows, or provider calls are run as part of this change.
+
+
+## Stage 32 — native production-result binding
+
+The V60 result annotator's selected-native-model branch now imports the
+canonical result builder from the production-handoff module. This makes the
+existing handoff code path resolve its result-builder dependency rather than
+raising a runtime NameError when native handoff is activated. Regression-test
+source verifies the binding is exposed by the V60 integration module. This
+does not activate native production handoff or claim that the remaining
+selection and evaluation stages are wired into `discover()`.
