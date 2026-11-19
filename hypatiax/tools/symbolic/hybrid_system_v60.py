@@ -295,13 +295,13 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             ),
         })
         combined = (external["proposals"] + [item.to_dict() for item in generated])[:cap]
+        budget_runtime.record_candidates(len(combined))
         self._last_v60_external_producer_audit = dict(external)
         normalized = normalize_candidate_proposals(
             combined, variable_names=problem.variable_names,
             max_candidates=problem.budget.max_candidates,
         )
         candidates = tuple(item.to_dict() for item in normalized.candidates)
-        budget_runtime.record_candidates(len(candidates))
         self._last_v60_candidate_proposals = candidates
         self._last_v60_normalization_audit = normalized.to_dict()
         self._last_v60_normalization_audit.pop("candidates", None)
@@ -537,13 +537,13 @@ class HybridDiscoverySystemV60(HybridDiscoverySystem):
             })
             combined = external_audit["proposals"] + [item.to_dict() for item in generated]
             combined = combined[:candidate_cap]
+            budget_runtime.record_candidates(len(combined))
             self._last_v60_external_producer_audit = dict(external_audit)
             normalized = normalize_candidate_proposals(
                 combined, variable_names=problem.variable_names,
                 max_candidates=problem.budget.max_candidates,
             )
             self._last_v60_candidate_proposals = tuple(item.to_dict() for item in normalized.candidates)
-            budget_runtime.record_candidates(len(self._last_v60_candidate_proposals))
             self._last_v60_normalization_audit = normalized.to_dict()
             self._last_v60_normalization_audit.pop("candidates", None)
             fitted = fit_native_candidates(
