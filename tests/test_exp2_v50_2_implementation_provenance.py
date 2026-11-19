@@ -19,3 +19,12 @@ def test_v50_2_validator_requires_the_explicit_implementation_record():
     source = VALIDATOR.read_text(encoding="utf-8")
     assert 'implementation.get("engine_family") != "hybrid_discovery"' in source
     assert 'implementation.get("native_v60_pipeline") is True' in source
+
+
+
+def test_hybrid_method_label_tracks_selected_implementation():
+    source = BENCHMARK.read_text(encoding="utf-8")
+    assert 'super().__init__(f"HybridDiscoverySystem {implementation} (tools)", verbose)' in source
+    assert 'implementation=self._hybrid_implementation' in source
+    assert 'hybrid_implementation=args.hybrid_implementation' in source
+    assert '"HybridDiscoverySystem v60 (tools)"' in source
