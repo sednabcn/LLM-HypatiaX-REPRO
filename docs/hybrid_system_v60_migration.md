@@ -265,3 +265,17 @@ observed training design. Regression-test source covers a collinear joint
 basis that loses to an identifiable single-basis alternative. Tests have not
 been run; no CI, experiment, worker, benchmark, smoke workflow, or provider
 call was launched.
+
+
+## Stage 52 — verify identifiability for every cross-family option
+
+The frozen production verifier and worker artifact verifier now require each
+serialized single-/multi-basis family option to carry a full-column-rank
+training-design audit. The selected model's rank and condition-number record
+must match the winning family option. This prevents a report from hiding a
+rank-deficient alternative inside the cross-family comparison while claiming
+only the final winner was identifiable.
+
+Regression-test source covers rank-deficient family options at both
+verification boundaries. Tests have not been run; no CI, experiment, worker,
+benchmark, smoke workflow, or provider call was launched.
